@@ -4,8 +4,8 @@ import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import ts from 'typescript';
 import {loadPortableModules} from './support/portableTypeScript.mjs';
-const {exports: {centeredViewportFit, sameFitCamera, EmbeddedDrawingFit}} = loadPortableModules([
-  'src/ui/components/viewportFit.ts', 'src/adapters/obsidian/EmbeddedDrawingFit.ts']);
+const {exports: {centeredViewportFit, sameFitCamera, EmbeddedDrawingFit, centerArrivalFrames}} = loadPortableModules([
+  'src/ui/components/viewportFit.ts', 'src/adapters/obsidian/EmbeddedDrawingFit.ts', 'src/ui/components/centerArrival.ts']);
 const source=ts.createSourceFile('graph.tsx',readFileSync('src/ui/PlexGraph.tsx','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
 
 /** Run production callbacks with explicit finite composition dependencies, without a second policy. */
@@ -32,13 +32,78 @@ function graphFixture() {
     centralEditorMaximized:false,Platform:{isIosApp:false},IOS_MAX_ZOOM:2,MAX_ZOOM:5,ZONES:['child'],zoneForRole:role=>role==='child'?'child':null,
     centeredViewportFit,sameFitCamera,sceneMotion:{cancelAll(){}},preserveCameraOnNextLayout:{current:false},displayResizeLayout:{current:false},
     centralEditorAvailabilityRef:{current:false},centralEditorAvailable:false,centralEditorSize:null,centralEditorSizeKeyRef:{current:''},
-    previousNodeRects:{current:new Map([['prior',{}]])},pathChangedThisRender:true,settings:{allowAutozoom:true,animationSpeed:0},incomingCenter:{current:null}};
+    previousNodeRects:{current:new Map([['prior',{}]])},pathChangedThisRender:true,navigationOrigin:'user',settings:{allowAutozoom:true,animationSpeed:0},incomingCenter:{current:null}};
   ctx.viewport={current:{clientWidth:800,clientHeight:600,ownerDocument:{defaultView:{}},querySelectorAll:()=>[
     {dataset:{kplexPath:ctx.activePath},getBoundingClientRect:()=>({left:300,top:250,width:200,height:100})}]}};
   /** Rebind render-owned callbacks after navigation just as React composition does. */
   ctx.render=()=>{ctx.applyCamera=callback('applyCamera',ctx);ctx.flushCameraTransform=callback('flushCameraTransform',ctx);ctx.fit=callback('fit',ctx);ctx.layout=callback('layout',ctx);};
   ctx.render();return ctx;
 }
+
+test('passive follow cancels existing motion and suppresses immediate and late-layout arrivals while deliberate navigation still animates', /** Run the production preparation/layout owners with positive animation speed and inspect actual emitted frames. */ () => {
+  const ctx=graphFixture(),plays=[],classes=['kplex-role-center'];
+  classes.contains=/** Supply native class membership used by the production layout callback. */ value=>classes.includes(value);
+  let cancels=0;
+  Object.assign(ctx,{selection:{readSelected:()=>null},navigationOccurrence:{current:null},wanderMotion:{current:false},centerArrivalFrames,
+    sceneMotion:{cancelAll(){cancels++},play(element,frames,options){plays.push({frames,options})}},
+    areaResizeDrag:{current:null},nodeDrag:null,connectDrag:null,suppressLayoutMotionUntil:{current:0}});
+  ctx.viewport.current.getBoundingClientRect=/** Bound captured deliberate source geometry. */ ()=>({left:0,top:0,right:800,bottom:600});
+  ctx.viewport.current.querySelectorAll=/** Present one live center whose old geometry differs from its final layout. */ ()=>[{
+    dataset:{kplexPath:ctx.activePath},classList:classes,getBoundingClientRect:()=>({left:300,top:250,width:200,height:100,right:500,bottom:350})}];
+  ctx.settings.animationSpeed=1;
+  const prepare=callback('prepareNavigation',ctx);
+  ctx.incomingCenter.current={identity:ctx.activePath,rect:{left:10,top:10,width:200,height:100},origin:'user'};
+  ctx.navigationOccurrence.current={identity:ctx.activePath,id:'old'};
+  prepare(ctx.activePath,'follow');assert.equal(cancels,1);assert.equal(ctx.incomingCenter.current,null);assert.equal(ctx.navigationOccurrence.current,null);
+  ctx.navigationOrigin='follow';ctx.render();ctx.layout();assert.equal(plays.length,0);
+  ctx.pathChangedThisRender=false;ctx.scene.nodes.push({role:'right',page:{path:'Late.md'},x:1000,y:0,width:200,height:100});ctx.render();ctx.layout();assert.equal(plays.length,0);
+  ctx.navigationOrigin='user';ctx.pathChangedThisRender=true;
+  ctx.incomingCenter.current={identity:ctx.activePath,rect:{left:10,top:10,width:200,height:100},origin:'user'};
+  ctx.render();ctx.layout();assert.equal(plays.length,1);assert(plays[0].frames.length>2,'deliberate center retains its curved arrival');
+});
+
+test('same-center navigation-origin changes retain outline expansion while genuine center changes reset it', /** Execute the real outline effect with React-style dependency comparisons. */ () => {
+  let effect;
+  /** Locate the production owner instead of recreating its outline policy. */
+  const visit=node=>{
+    if(ts.isCallExpression(node)&&node.expression.getText(source)==='useEffect'
+      &&node.arguments[0]?.getText(source).includes('transitionPath.current = activePath'))effect=node;
+    ts.forEachChild(node,visit);
+  };
+  visit(source);assert(effect);
+  const ctx={activePath:'Center.md',navigationOrigin:'follow',settings:{animationSpeed:1},transitionPath:{current:'Center.md'},sectionFoldCenter:{current:'Center.md'},
+    setSectionExpanded(){ctx.expanded=false},setSectionExpansion(){ctx.expansion=null},setExpandedSectionIds(ids){ctx.ids=ids}};
+  const js=ts.transpileModule(`const effect=${effect.arguments[0].getText(source)};const deps=${effect.arguments[1].getText(source)};`,{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
+  let previous;
+  /** Run only when the production effect's actual dependency values change. */
+  const render=()=>{
+    const {effect:run,deps}=Function(...Object.keys(ctx),`${js}\nreturn {effect,deps};`)(...Object.values(ctx));
+    if(!previous||deps.some((value,index)=>!Object.is(value,previous[index])))run();previous=deps;
+  };
+  render();ctx.expanded=true;ctx.expansion={outline:true};ctx.ids=new Set(['section']);
+  ctx.navigationOrigin='user';render();assert.equal(ctx.expanded,true);assert.deepEqual([...ctx.ids],['section']);assert(ctx.expansion);
+  ctx.activePath='Next.md';render();assert.equal(ctx.expanded,false);assert.equal(ctx.expansion,null);assert.equal(ctx.ids.size,0);
+});
+
+test('passive follow retires a deliberate transition through its original owning window', /** Execute the production transition effect across two window identities. */ () => {
+  let selected;
+  /** Locate the real timer owner rather than substituting a timer policy. */
+  const visit=node=>{
+    if(ts.isCallExpression(node)&&node.expression.getText(source)==='useEffect'
+      &&node.arguments[0]?.getText(source).includes('setSceneTransitioning(navigationOrigin !== "follow")'))selected=node.arguments[0].getText(source);
+    ts.forEachChild(node,visit);
+  };
+  visit(source);assert(selected);
+  const cleared=[],created=[],prior={clearTimeout:id=>cleared.push(['prior',id])},owner={
+    clearTimeout:id=>cleared.push(['owner',id]),setTimeout(fn,ms){created.push({fn,ms});return 9}};
+  const ctx={navigationOrigin:'follow',settings:{animationSpeed:1},viewport:{current:{ownerDocument:{defaultView:owner}}},window:owner,
+    sceneTransitionTimer:{current:4},sceneTransitionTimerWindow:{current:prior},setSceneTransitioning:value=>{ctx.transitioning=value}};
+  const js=ts.transpileModule(`const selected=${selected};`,{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
+  const run=()=>Function(...Object.keys(ctx),`${js}\nreturn selected();`)(...Object.values(ctx));
+  run();assert.deepEqual(cleared,[['prior',4]]);assert.equal(created.length,0);assert.equal(ctx.transitioning,false);assert.equal(ctx.sceneTransitionTimerWindow.current,null);
+  ctx.navigationOrigin='user';run();assert.equal(created.length,1);assert.equal(ctx.sceneTransitionTimerWindow.current,owner);assert.equal(ctx.transitioning,true);
+  ctx.navigationOrigin='follow';run();assert.deepEqual(cleared,[['prior',4],['owner',9]]);assert.equal(created.length,1);assert.equal(ctx.transitioning,false);
+});
 
 test('asymmetric bounds keep the focus centered and every padded displayed extent inside the viewport',()=>{
   for(const [width,height]of [[800,600],[240,300],[1440,875]]){

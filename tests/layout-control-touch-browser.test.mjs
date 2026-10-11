@@ -122,6 +122,24 @@ test("trusted thumb/track immediate and hold drags keep native range values, ste
   } finally { try { await host.evaluate("fixture?.dispose()"); } finally { await host.cleanup(); } }
 });
 
+test("phone and narrow panes expose readable captions for every layout rail and follow scenes skip CSS arrivals", /** Use actual narrow browser media queries plus production stacked controls and shipped CSS. */ async () => {
+  const host = await browser();
+  try {
+    for (const [viewportWidth, paneWidth] of [[390,390], [1100,390], [1100,700]]) {
+      await host.command("Emulation.setDeviceMetricsOverride", {width: viewportWidth, height: 900, deviceScaleFactor: 1, mobile: false});
+      await host.evaluate(`fixture.resize(${paneWidth},700)`);
+      const captions = await host.evaluate(`(()=>{const panel=fixture.pane.querySelector('.kplex-layout-panel');return [...panel.querySelectorAll('.kplex-density-heading > span:last-of-type')].map(caption=>{caption.scrollIntoView({block:'nearest'});const r=caption.getBoundingClientRect(),p=panel.getBoundingClientRect(),style=getComputedStyle(caption);return{text:caption.textContent,display:style.display,font:Number.parseFloat(style.fontSize),width:r.width,height:r.height,inBounds:r.left>=p.left&&r.right<=p.right&&r.top>=p.top&&r.bottom<=p.bottom}})})()`);
+      assert.deepEqual(captions.map(caption=>caption.text), ["Horizontal","Vertical","Parents","Children","Font","Label","Width"]);
+      for (const caption of captions) {
+        assert.notEqual(caption.display,"none"); assert(caption.width>0&&caption.height>0, `${viewportWidth}/${paneWidth}: ${caption.text}`);
+        assert(caption.font>=10,"compressed labels need readable type"); assert(caption.inBounds, "scrolled captions remain inside the bounded panel");
+      }
+    }
+    const motion = await host.evaluate(`(()=>{const edge=document.createElement('div');edge.className='kplex-edge';fixture.pane.append(edge);fixture.pane.classList.add('is-following-document');const followed=getComputedStyle(edge).animationName;fixture.pane.classList.remove('is-following-document');const deliberate=getComputedStyle(edge).animationName;edge.remove();return{followed,deliberate}})()`);
+    assert.equal(motion.followed,"none"); assert.equal(motion.deliberate,"kplex-edge-arrive");
+  } finally { try { await host.evaluate("fixture?.dispose()"); } finally { await host.cleanup(); } }
+});
+
 test("pane-fit disclosure stays bottom-left with bounded controls above, no zoom overlap and no collapsed hit shield", /** Rectangles verify the typography stack and pane-fit policy while hit tests preserve usable native controls. */ async () => {
   const host = await browser();
   try {

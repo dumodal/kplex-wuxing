@@ -695,8 +695,8 @@ function Edge({
   </g>;
 }
 
-/** Compose the deterministic Plex scene and interaction handlers, using localized UI copy without rebuilding semantic state for presentation changes. */
-export function PlexGraph({ plugin, index, settings: viewSettings, surface, hostLeaf, predicate, lenses, filterLayoutMode, predicateRevision, showCrossLinks, activePath, renderRevision, semanticRevision, findFocusRequest, areaSettingsMode, onAreaSettingsModeChange, onApplyFindFilter, appliedFindFilterQuery, onClearFindFilter, onActivate, onWanderActivate, onOpen, onOpenInSidecar, onCentralNodeEditorChange, onCentralNodeModeChange, actionPorts, actionSurfaceId, displayState, fullscreenAvailable }: {
+/** Compose the deterministic Plex scene; native-follow layouts land immediately while explicit navigation retains motion and central Open uses a main tab. */
+export function PlexGraph({ plugin, index, settings: viewSettings, surface, hostLeaf, predicate, lenses, filterLayoutMode, predicateRevision, showCrossLinks, activePath, navigationOrigin = "user", onSemanticDemandAcquired, renderRevision, semanticRevision, findFocusRequest, areaSettingsMode, onAreaSettingsModeChange, onApplyFindFilter, appliedFindFilterQuery, onClearFindFilter, onActivate, onWanderActivate, onOpen, onOpenInSidecar, onCentralNodeEditorChange, onCentralNodeModeChange, actionPorts, actionSurfaceId, displayState, fullscreenAvailable }: {
   plugin: KplexPlugin;
   index: GraphIndex;
   settings: KplexSettings;
@@ -708,6 +708,8 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
   predicateRevision: number;
   showCrossLinks: boolean;
   activePath: string;
+  navigationOrigin?: "user" | "wander" | "follow";
+  onSemanticDemandAcquired?: (path: string) => void;
   renderRevision: number;
   semanticRevision: number;
   findFocusRequest: number;
@@ -742,7 +744,14 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
   // publications; mutating one temporary facade would discard slow slider changes mid-gesture.
   const settings = useMemo(() => Object.assign(withAreaHeightOverrides(viewSettings, areaHeightOverrides), layoutOverrides), [viewSettings, areaHeightOverrides, layoutOverrides]);
   const predicateEngine = useMemo(() => new GraphPredicateEngine(plugin.app), [plugin]);
-  useEffect(() => index.acquireSemanticDemand(activePath), [index, activePath]);
+  useEffect(/** Acquire before acknowledging App's preview handover so the center never loses its final live demand. */ () => {
+    const release = index.acquireSemanticDemand(activePath);
+    onSemanticDemandAcquired?.(activePath);
+    return release;
+  }, [index, activePath, onSemanticDemandAcquired]);
+  useEffect(/** A borrowed preview can vanish during acquisition; acknowledge again once publication makes this live center readable. */ () => {
+    onSemanticDemandAcquired?.(activePath);
+  }, [activePath, onSemanticDemandAcquired, renderRevision]);
   // getNeighborhood() performs relationship classification/filtering. Keep it stable during local
   // pointer/camera/hover state updates; only rebuild it when navigation, settings, or the index
   // actually changes. This removes the largest source of wasted work in dense Plex scenes.
@@ -990,6 +999,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     setSectionExpanded((current) => !current);
   };
   const sceneTransitionTimer = useRef<number | null>(null);
+  const sceneTransitionTimerWindow = useRef<Window | null>(null);
   const transitionPath = useRef(activePath);
   const pathChangedThisRender = transitionPath.current !== activePath;
   const touchLongPress = useRef<{
@@ -1096,19 +1106,28 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
       : current);
   };
 
-  useEffect(() => {
+  useEffect(/** Reset outline state for a changed center or animation preference, retaining it when only navigation origin changes. */ () => {
     transitionPath.current = activePath;
     setSectionExpanded(false);
     setSectionExpansion(null);
     setExpandedSectionIds(new Set());
     sectionFoldCenter.current = null;
-    setSceneTransitioning(true);
-    if (sceneTransitionTimer.current !== null) window.clearTimeout(sceneTransitionTimer.current);
-    sceneTransitionTimer.current = window.setTimeout(() => {
+  }, [activePath, settings.animationSpeed]);
+
+  useEffect(/** Passive follow has no transition timer or arrival delay; deliberate navigation keeps its temporary transition. */ () => {
+    const viewWindow = viewport.current?.ownerDocument.defaultView ?? window;
+    if (sceneTransitionTimer.current !== null) (sceneTransitionTimerWindow.current ?? viewWindow).clearTimeout(sceneTransitionTimer.current);
+    sceneTransitionTimer.current = null;
+    sceneTransitionTimerWindow.current = null;
+    setSceneTransitioning(navigationOrigin !== "follow");
+    if (navigationOrigin === "follow") return;
+    sceneTransitionTimerWindow.current = viewWindow;
+    sceneTransitionTimer.current = viewWindow.setTimeout(/** Retire this center's temporary deliberate-transition state. */ () => {
       sceneTransitionTimer.current = null;
+      sceneTransitionTimerWindow.current = null;
       setSceneTransitioning(false);
     }, settings.animationSpeed <= 0 ? 0 : Math.max(140, Math.round(620 / Math.max(0.25, settings.animationSpeed))));
-  }, [activePath, settings.animationSpeed]);
+  }, [activePath, navigationOrigin, settings.animationSpeed]);
 
   useEffect(() => {
     if (!centralEditorAvailable || !sectionExpanded) return;
@@ -1128,7 +1147,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     setCentralEditorMaximized(false);
   }, [centralEditorAvailable, centralEditorMaximized]);
 
-  useEffect(() => {
+  useEffect(/** Load this center's outline and fence late results when expansion or its native owner changes. */ () => {
     let cancelled = false;
     if (!sectionExpanded || !persistentNeighborhood?.center.file || persistentNeighborhood.center.file.extension !== "md") {
       setSectionExpansion(null);
@@ -1151,9 +1170,12 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
         return new Set([...current].filter((id) => expandable.has(id)));
       });
       setSceneTransitioning(true);
-      if (sceneTransitionTimer.current !== null) window.clearTimeout(sceneTransitionTimer.current);
-      sceneTransitionTimer.current = window.setTimeout(() => {
+      const viewWindow = viewport.current?.ownerDocument.defaultView ?? window;
+      if (sceneTransitionTimer.current !== null) (sceneTransitionTimerWindow.current ?? viewWindow).clearTimeout(sceneTransitionTimer.current);
+      sceneTransitionTimerWindow.current = viewWindow;
+      sceneTransitionTimer.current = viewWindow.setTimeout(/** Retire the outline arrival in the window that created its timer. */ () => {
         sceneTransitionTimer.current = null;
+        sceneTransitionTimerWindow.current = null;
         setSceneTransitioning(false);
       }, settings.animationSpeed <= 0 ? 0 : Math.max(140, Math.round(620 / Math.max(0.25, settings.animationSpeed))));
     });
@@ -1305,7 +1327,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
 
     const speed = Math.max(0, Math.min(2, settings.animationSpeed));
     const reduceMotion = root.ownerDocument.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
-    if (speed > 0 && !reduceMotion && !displayResizeLayout.current && !areaResizeDrag.current && !nodeDrag && !connectDrag && Date.now() >= suppressLayoutMotionUntil.current) {
+    if (speed > 0 && navigationOrigin !== "follow" && !reduceMotion && !displayResizeLayout.current && !areaResizeDrag.current && !nodeDrag && !connectDrag && Date.now() >= suppressLayoutMotionUntil.current) {
       // At 1x, shared thoughts migrate for ~520ms so their old→new position is legible without
       // making navigation feel delayed. Intentional centers use the shared curved landing,
       // while genuinely new thoughts enter over ~390ms. The slider is a speed multiplier.
@@ -1349,7 +1371,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     preserveCameraOnNextLayout.current = false;
     displayResizeLayout.current = false;
     syncCentralEditorOverlay();
-  }, [sceneLayoutKey, settings.animationSpeed, nodeDrag?.path, connectDrag?.originPath, sceneMotion, viewportSize.width, viewportSize.height, displayState.revision]);
+  }, [sceneLayoutKey, navigationOrigin, settings.animationSpeed, nodeDrag?.path, connectDrag?.originPath, sceneMotion, viewportSize.width, viewportSize.height, displayState.revision]);
 
   /** Center the actual central node and fit symmetric displayed bounds; explicit Fit renews ownership. */
   const fit = () => {
@@ -1647,7 +1669,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     };
   }, []);
 
-  useEffect(() => () => {
+  useEffect(/** Release this graph's delayed writes, motion and owning-window tasks when its surface retires. */ () => () => {
     if (layoutSaveTimer.current !== null) window.clearTimeout(layoutSaveTimer.current);
     layoutDraft.current = null;
     // Only an unstarted debounce needs flushing. A save already awaiting view refresh has written
@@ -1661,7 +1683,9 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     sceneMotion.cancelAll();
     if (hoverIntentTimer.current !== null) window.clearTimeout(hoverIntentTimer.current);
     if (edgeTooltipTimer.current !== null) window.clearTimeout(edgeTooltipTimer.current);
-    if (sceneTransitionTimer.current !== null) window.clearTimeout(sceneTransitionTimer.current);
+    if (sceneTransitionTimer.current !== null) (sceneTransitionTimerWindow.current ?? window).clearTimeout(sceneTransitionTimer.current);
+    sceneTransitionTimer.current = null;
+    sceneTransitionTimerWindow.current = null;
     if (cameraFrame.current !== null) (cameraFrameWindow.current ?? window).cancelAnimationFrame(cameraFrame.current);
     cameraFrameWindow.current = null;
     viewport.current?.classList.remove("is-touch-gesturing", "is-pinch-gesturing");
@@ -2056,8 +2080,15 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
       clearHoverIntent(true); revealFindHit(node.path, node.id);
     },
   });
-  /** Capture live screen geometry before shared App navigation changes layout or camera fit. */
-  const prepareNavigation = (identity: string, origin: "user" | "wander"): void => {
+  /** Cancel passive-follow motion immediately; deliberate navigation captures its live source rectangle. */
+  const prepareNavigation = (identity: string, origin: "user" | "wander" | "follow"): void => {
+    if (origin === "follow") {
+      sceneMotion.cancelAll();
+      incomingCenter.current = null;
+      navigationOccurrence.current = null;
+      wanderMotion.current = false;
+      return;
+    }
     const root = viewport.current;
     const selected = selection.readSelected();
     const explicit = navigationOccurrence.current?.identity === identity ? navigationOccurrence.current.id : null;
@@ -3174,16 +3205,20 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
       onActivate(page);
       return;
     }, context => Boolean(graphActionPage(context))),
-    "node.open": graphAction(/** Center existing content and ensure its owned sidecar; ghosts retain deliberate materialization. */ context => {
+    "node.open": graphAction(/** Central files open beneath the sidebar; other content retains owned Sidecar and ghost materialization behavior. */ context => {
       const page = graphActionPage(context);
       if (page?.transient?.kind === "section") return plugin.openSection(page);
+      if (page?.file && page.path === activePath) return plugin.openFileInMainTab(page.file);
       if (page?.file || page?.url) {
         if (context.target.kind === "node" && context.target.occurrenceId) navigationOccurrence.current = { identity: page.path, id: context.target.occurrenceId };
         return onOpenInSidecar(page);
       }
       if (page) return onOpen(page);
       return;
-    }, context => surface !== "sidepanel" && Boolean(graphActionPage(context))),
+    }, /** A central file has a native main-tab destination even where Sidecar is unavailable. */ context => {
+      const page = graphActionPage(context);
+      return Boolean(page) && (surface !== "sidepanel" || Boolean(page?.file && page.path === activePath));
+    }),
     "node.edit": graphAction(/** Explicit editing opens this accepted file through existing host policy. */ context => {
       const page = graphActionPage(context); if (page?.file) return onOpen(page);
     }, context => Boolean(graphActionPage(context)?.file)),
@@ -3872,7 +3907,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
 
   return <div
     ref={viewport}
-    className={`kplex-plex${finding ? " is-finding" : ""}${sceneTransitioning || pathChangedThisRender ? " is-scene-transitioning" : ""}${sectionExpanded ? " is-section-expanded" : ""}${centralEditorMaximized ? " is-central-editor-maximized" : ""}${Platform.isIosApp ? " is-ios" : ""}${areaSettingsMode ? " is-area-settings-mode" : ""}${areaHover?.edgeActive ? " is-area-resize-ready" : ""}${resizingArea ? " is-area-resizing" : ""}`}
+    className={`kplex-plex${finding ? " is-finding" : ""}${navigationOrigin === "follow" ? " is-following-document" : sceneTransitioning || pathChangedThisRender ? " is-scene-transitioning" : ""}${sectionExpanded ? " is-section-expanded" : ""}${centralEditorMaximized ? " is-central-editor-maximized" : ""}${Platform.isIosApp ? " is-ios" : ""}${areaSettingsMode ? " is-area-settings-mode" : ""}${areaHover?.edgeActive ? " is-area-resize-ready" : ""}${resizingArea ? " is-area-resizing" : ""}`}
     style={{
       background: alphaHexToCss(settings.backgroundColor, "#0c2233"),
       "--kplex-motion-scale": String(Math.max(0, Math.min(2, settings.animationSpeed))),

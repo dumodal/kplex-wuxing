@@ -1613,6 +1613,8 @@ button.kplex-sidecar-unfold-plex,
 .kplex-expanded-edge {
   animation: kplex-edge-arrive max(120ms, calc(var(--kplex-motion-ms, 560ms) * .55)) ease-out both;
 }
+.kplex-plex.is-following-document .kplex-edge,
+.kplex-plex.is-following-document .kplex-expanded-edge { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   .kplex-edge, .kplex-expanded-edge { animation: none; }
 }
@@ -1665,7 +1667,6 @@ button.kplex-sidecar-unfold-plex,
     width: auto;
   }
   .kplex-view-host .kplex-history-bar { min-height: 26px; }
-  .kplex-view-host .kplex-density-heading span:not(output) { display: none; }
   .kplex-view-host .kplex-layout-controls { max-width: calc(100% - 70px); }
 }
 
@@ -3439,6 +3440,9 @@ button.kplex-style-manager-row { height: fit-content; }
   max-width: 100%;
 }
 .kplex-layout-controls.is-stacked .kplex-layout-panel > .kplex-density-axes > .kplex-density-control { width: 100%; }
+.kplex-layout-controls.is-stacked .kplex-density-control { grid-template-rows: auto 12px; }
+.kplex-layout-controls.is-stacked .kplex-density-heading { font-size: var(--font-ui-smaller, 12px); line-height: 1.2; letter-spacing: normal; text-transform: none; }
+.kplex-layout-controls.is-stacked .kplex-density-heading > span { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 /* Toggles retain one common active state instead of changing their surface palette. */
 .kplex-topbar button.is-on,
 .kplex-find button[aria-pressed="true"],

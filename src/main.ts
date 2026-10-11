@@ -2262,6 +2262,30 @@ export default class KplexPlugin extends Plugin {
     await this.app.workspace.revealLeaf(leaf);
   }
 
+  /** Open a central note in the visible main tab beneath a sidebar, excluding embedded views and owned Sidecars. */
+  async openFileInMainTab(file: TFile): Promise<void> {
+    if (this.unloading || this.app.vault.getFileByPath(file.path) !== file) return;
+    this.validateLinkedDocumentLeaf();
+    /** Main-root visibility identifies the current tab even when a sidebar owns keyboard focus. */
+    const qualifies = (leaf: WorkspaceLeaf | null): leaf is WorkspaceLeaf => Boolean(leaf
+      && leaf.getRoot() === this.app.workspace.rootSplit
+      && this.isDocumentLeafCandidate(leaf) && this.leafIsVisible(leaf));
+    let leaf: WorkspaceLeaf | null = this.app.workspace.getMostRecentLeaf(this.app.workspace.rootSplit);
+    if (!qualifies(leaf)) leaf = null;
+    for (let index = this.recentLeafHistory.length - 1; !leaf && index >= 0; index -= 1) {
+      const candidate = this.recentLeafHistory[index];
+      if (qualifies(candidate)) leaf = candidate;
+    }
+    if (!leaf) this.app.workspace.iterateRootLeaves(/** Prefer a visible native document/empty tab when activation history is unavailable. */ candidate => {
+      if (!leaf && qualifies(candidate)) leaf = candidate;
+    });
+    if (!leaf) leaf = this.app.workspace.getLeaf("tab");
+    this.lastDocumentLeaf = leaf;
+    this.retirePassiveSidecarRequestsForLeaf(leaf);
+    await leaf.openFile(file, { active: true });
+    await this.app.workspace.revealLeaf(leaf);
+  }
+
   /**
    * Share the outer anchor's allocation when pixel bases retained by a Sidecar
    * move leave a newly inserted native pane with no usable extent. Preserve
@@ -2416,6 +2440,14 @@ export default class KplexPlugin extends Plugin {
     this.validateLinkedDocumentLeaf();
     const leaf = this.settings.documentSyncMode === "pinned" ? this.linkedDocumentLeaf : this.findRecentDocumentLeaf();
     return this.fileForLeaf(leaf)?.path === file.path;
+  }
+
+  /** Reacquire the eligible linked native file on sidebar reveal without requiring that sidebar to lose focus. */
+  getDocumentFollowFile(): TFile | null {
+    const leaf = this.documentSyncTargetLeaf();
+    if (!leaf || isEmbeddedMarkdownLeaf(leaf)) return null;
+    const file = this.fileForLeaf(leaf);
+    return file && this.shouldFollowDocumentFile(file) ? file : null;
   }
 
   private targetNoteLeaf(createIfMissing = true): WorkspaceLeaf | null {
