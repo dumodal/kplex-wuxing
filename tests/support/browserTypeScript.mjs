@@ -1,4 +1,7 @@
-/** Real Chromium runner for production TypeScript modules. Explicit host stubs do not emulate IDB. The test-only command capability delivers trusted CDP input to native controls; it shares the existing browser lifetime and deadlines. */
+/** Real Chromium runner for production TypeScript modules, using shared desktop browser discovery.
+ * Explicit host stubs do not emulate IDB. The test-only command capability delivers trusted CDP
+ * input to native controls; it shares the existing browser lifetime and deadlines. */
+import { browserExecutable } from "./browserExecutable.mjs";
 import { createRequire } from "node:module";
 import { mkdtemp, readFile, writeFile, mkdir, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -46,7 +49,7 @@ window.sourceModules=Object.assign({},${ids.map(id => `require(${JSON.stringify(
 }
 /** Own a disposable real profile; restart() reopens precisely that profile in a new browser process. */
 export async function chromiumHarness(bundle) {
-  const executable = process.env.KPLEX_CHROMIUM ?? process.env.KPLEX_TEST_BROWSER ?? ["/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"].find(existsSync);
+  const executable = browserExecutable();
   if (!executable) throw new Error("Real Chromium required (set KPLEX_CHROMIUM); this lane is not a mock or a skip.");
   const directory = await mkdtemp(join(tmpdir(), "kplex-source-idb-"));
   const profile = join(directory, "profile"); await mkdir(profile);

@@ -33,18 +33,53 @@ Do not consider a change complete until it builds against the real installed Obs
 
 SI3 source storage has two focused lanes: `npm run test:sources` exercises production codecs, storage-degraded facts, host acquisition and GraphBuilder integration; `npm run test:sources:browser` exercises real Chromium IndexedDB, including a fresh browser-process restart. Both are included in `npm test`. The same `KPLEX_TEST_BROWSER` setting selects Chromium (`KPLEX_CHROMIUM` is also accepted). Missing or administratively blocked browser access fails that lane, rather than substituting a mock. See [the source repository contract](docs/SOURCE_REPOSITORY.md) for current Review limitations.
 
-For a desktop integration smoke test, enable **Settings → General → Command line interface** in Obsidian and use a disposable development vault with K-Plex installed. Set all three variables to that vault's actual identity and absolute paths:
+### Desktop CLI setup (Windows and macOS)
+
+Install a CLI-capable Obsidian desktop installer, enable **Settings → General → Advanced → Command line interface**, and complete registration. Keep Obsidian running and the test vault open. Restart the terminal (and an already-running IDE/agent session) after registration so it sees the updated PATH. See [Obsidian's CLI installation and troubleshooting](https://help.obsidian.md/cli).
+
+Use `kplex-test-small` for functional checks and `kplex-test` for scale work. Names alone do not establish a large fixture: record its actual file counts. Both must be disposable vaults, separate from personal notes. Existing prepared vaults need no recloning or configuration reset.
+
+When a new vault is needed, an agent must obtain the user's consent for its new repository/destination, then clone [kplex-help](https://github.com/zsviczian/kplex-help) into a **new** `kplex-test-small` or `kplex-test` directory (`git clone https://github.com/zsviczian/kplex-help <new-directory>`). Alternatively copy the local `../kplex-help` checkout into a new disposable folder, including `.obsidian` and excluding `.git`. Never overwrite an existing vault. The help repository supplies content and plugin settings, not the executable K-Plex bundle. Open the folder as a vault, accept Obsidian's first-open trust prompt for this known source, then close and reopen that vault so enabled plugins initialize. Install/enable K-Plex and any companion required by the selected test; check **Settings → Community plugins** before running the lane. A trust dialog requires native UI interaction and can block CLI tests until accepted.
+
+All native drivers honor `KPLEX_OBSIDIAN_CLI` as an executable path (without enclosing quote characters or extra arguments). With no override they discover standard installations, then fall back to `obsidian` on PATH:
+
+| Platform | Launcher | Shell configuration |
+| --- | --- | --- |
+| Windows | `Obsidian.com` beside `Obsidian.exe`, commonly under `C:\Program Files\Obsidian` or `%LOCALAPPDATA%\Obsidian`. Use the console launcher to capture output. | PowerShell uses `$env:NAME='value'`; registration updates the user PATH. |
+| macOS | `/Applications/Obsidian.app/Contents/MacOS/obsidian-cli` (legacy installs may use `Obsidian`); registration provides `/usr/local/bin/obsidian`. | zsh/bash use `export NAME=value`; registration may request administrator permission. |
+
+Verification launches npm through the current Node executable and `npm-cli.js`, without a shell. Browser tests discover installed Chrome/Chromium/Edge; set `KPLEX_TEST_BROWSER` (or `KPLEX_CHROMIUM`) to an absolute executable path for a nonstandard install. Browser profiles and default reports are temporary. Do not paste shell-specific environment assignments between PowerShell and zsh/bash.
+
+Large Windows `eval` controllers can exceed the native command-line limit. The shared process helper writes long or multiline local test scripts to an owned temporary directory, sends a short single-line CLI eval that reads that exact file, then removes the directory after command completion/failure. This affects test tooling only; it downloads or runs no remote code. Keep driver process deadlines and controller cleanup intact. If CLI requests time out across vaults, check for a pending native dialog first: an Obsidian main-process JSON parsing error blocked requests during Windows setup, and dismissing it restored access. Retry through the shared helper; if access still fails, save work before restarting Obsidian. A timeout alone does not identify its cause.
+
+On this Windows PC, the prepared vaults are `C:\Obsidian\kplex-test-small` and `C:\Obsidian\kplex-test`. Run from the K-Plex source checkout:
+
+```powershell
+$env:KPLEX_TEST_VAULT_NAME = 'kplex-test-small'
+$env:KPLEX_TEST_VAULT_PATH = 'C:\Obsidian\kplex-test-small'
+$env:KPLEX_TEST_CONFIG_DIR = Join-Path $env:KPLEX_TEST_VAULT_PATH '.obsidian'
+$env:KPLEX_OBSIDIAN_CLI = 'C:\Program Files\Obsidian\Obsidian.com'
+$env:KPLEX_HOST_REPORT_DIR = Join-Path $env:TEMP ('kplex-host-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+& $env:KPLEX_OBSIDIAN_CLI "vault=$env:KPLEX_TEST_VAULT_NAME" vault info=path
+npm run verify:obsidian
+```
+
+For macOS, substitute your actual paths:
 
 ```bash
-export KPLEX_TEST_VAULT_NAME=kplex-test
-export KPLEX_TEST_VAULT_PATH=/absolute/path/to/kplex-test
-export KPLEX_TEST_CONFIG_DIR=/absolute/path/to/kplex-test/.obsidian
+export KPLEX_TEST_VAULT_NAME=kplex-test-small
+export KPLEX_TEST_VAULT_PATH=/absolute/path/to/kplex-test-small
+export KPLEX_TEST_CONFIG_DIR="$KPLEX_TEST_VAULT_PATH/.obsidian"
+export KPLEX_HOST_REPORT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/kplex-host.XXXXXX")"
+obsidian "vault=$KPLEX_TEST_VAULT_NAME" vault info=path
 npm run verify:obsidian
 ```
 
 The strict host lane checks the CLI-reported vault path before changing anything, runs `verify`, then disables K-Plex, copies this build's three installable artifacts into the test vault, checks hashes, enables it and asserts a rendered K-Plex view with no captured JavaScript errors. It preserves plugin `data.json` and creates no bundle backup. It writes `report.json` in a printed temporary directory, or `KPLEX_HOST_REPORT_DIR` if set. A missing CLI, wrong vault, failed build or failed assertion returns nonzero. The portable `verify` lane never invokes Obsidian. CLI commands target the named vault explicitly; do not use a personal/default vault for test deployment.
 
 For live plugin/index diagnostics, CLI fault injection, reload-safe references and evidence capture, see [Obsidian runtime testing](docs/OBSIDIAN_RUNTIME_TESTING.md).
+
+Run native drivers serially and keep the selected Obsidian window foreground. Native focus helpers call the [macOS-only Electron `app.show()`](https://www.electronjs.org/docs/latest/api/app#appshow-macos) only when available, while still showing/focusing the selected window on Windows. After strict staging passes, use a fresh report directory and the same vault variables for the applicable focused lane. To switch vaults, update **all three** identity/path/config variables. A sandboxed agent may need permission to connect to Obsidian's local IPC and write the selected vault outside its source checkout; an IPC failure inside a sandbox does not establish that Obsidian is closed. A CLI-disabled message requires enabling the host setting, not reinstalling K-Plex. Never resolve a failed preflight by targeting the default/personal vault. Windows PowerShell 5.1 can strip embedded double quotes from direct native `eval` arguments; run complex probes through a Node script with `spawnSync(executable, args)` as the drivers do.
 
 After staging the verified build, `npm run verify:obsidian:si4` uses the same three disposable-vault variables to run native settings acceptance. It checks installed artifact hashes, waits for actual startup/source readiness, then tests saved ontology/inference/image policies, rendered gates/labels, siblings, search/provenance and stale writes with zero body reads/parses/acquisitions or full builds. The default requires at least 20,015 Markdown files; `KPLEX_SI4_REQUIRED_FILES=0` selects a small-vault harness check. It restores settings, owned fixtures, wrappers, demand and renderer throttling; `si4-native.json` records actual results in `KPLEX_HOST_REPORT_DIR`. This functional diagnostic does not replace SI5 foreground, restart, popout or physical-device acceptance.
 

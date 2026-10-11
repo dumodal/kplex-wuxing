@@ -4,7 +4,7 @@
  * restoration. Requires the explicit disposable small vault, an unlocked foreground Mac and
  * exactly matching built/installed artifacts; Electron input does not prove physical-device use.
  */
-import { spawnSync } from 'node:child_process';
+import { spawnNativeSync as spawnSync, obsidianCliExecutable } from "./processTools.mjs";
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -26,7 +26,7 @@ const backups=names.map(name=>({name,bytes:existsSync(`${config}/${name}`)?readF
 const sourceHead=spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8',timeout:5000});assert.equal(sourceHead.status,0,'Read actual native receipt source provenance');
 const report={startedAt:new Date().toISOString(),base:sourceHead.stdout.trim(),driverSha256:sha(driver),vault:vaultName,scope:'native representation/command routing, passive destination identity and embedded initial defaults',limits:['Electron trusted input is not physical keyboard or Windows acceptance','Bounded settlement/DOM checks do not establish actual paint latency','Embedded leaf capture is temporary native-call observation, not a production diagnostic API'],artifacts:{}};
 /** Invoke one bounded CLI operation and retain exact failure text. */
-function cli(command,...args){const r=spawnSync(process.env.KPLEX_OBSIDIAN_CLI??'obsidian',[`vault=${vaultName}`,command,...args],{cwd:root,encoding:'utf8',timeout:30000,killSignal:'SIGKILL',maxBuffer:8*1024*1024});if(r.error||r.status!==0||/^Error:/m.test(r.stdout))throw r.error??Error(r.stderr||r.stdout);return r.stdout.trim();}
+function cli(command,...args){const r=spawnSync(obsidianCliExecutable(),[`vault=${vaultName}`,command,...args],{cwd:root,encoding:'utf8',timeout:30000,killSignal:'SIGKILL',maxBuffer:8*1024*1024});if(r.error||r.status!==0||/^Error:/m.test(r.stdout))throw r.error??Error(r.stderr||r.stdout);return r.stdout.trim();}
 /** Read the serializable result of a native owning-window operation. */
 function evaluate(code){return JSON.parse(cli('eval',`code=${code}`).replace(/^=>\s*/,''));}
 /** Yield between bounded native controller reads without blocking the renderer. */
@@ -42,7 +42,7 @@ function probe(){
  const win=windows[0],wc=win.webContents;
  if(remote.powerMonitor.getSystemIdleState(10)==='locked')throw Error('Locked native session');
  if(app.setting.isOpen||document.querySelector('.modal-container'))throw Error('Existing modal');
- remote.app.show();remote.app.focus({steal:true});win.show();win.moveTop();win.focus();wc.focus();
+ remote.app.show?.();remote.app.focus({steal:true});win.show();win.moveTop();win.focus();wc.focus();
  const host=app.workspace.getLeavesOfType('k-plex-react-view').find(leaf=>leaf.view.containerEl.isShown());
  if(!p||!host||!ex?.createDrawing||!ex.ea?.toggleViewMode||!app.hotkeyManager?.setHotkeys)throw Error('Native prerequisites unavailable');
  const c=window.__kplexInteractionFinal={p,ex,host,folder:`Kplex-Interaction-Final-${Date.now()}`,originalSettings:JSON.parse(JSON.stringify(p.settings)),originalExModes:{...ex.excalidrawFileModes},layout:app.workspace.getLayout(),originalLeaf:app.workspace.activeLeaf,owners:{linkedDocumentLeaf:p.linkedDocumentLeaf,lastDocumentLeaf:p.lastDocumentLeaf,recentLeafHistory:[...p.recentLeafHistory],sidecarLeaves:new Map(p.sidecarLeaves)},leaves:[],wrappers:[],events:[],cases:[],done:false};

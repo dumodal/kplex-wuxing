@@ -89,6 +89,14 @@ Rules:
 9. Folder and tag nodes may be central nodes. Relationship creation/relinking involving folder/tag endpoints stays disabled, except that dragging outward from a folder's child gate is an explicit file-creation gesture for creating a real child file inside that physical folder.
 10. A Markdown document property overrides an equivalent relationship discovered in body text. This rule is important for deterministic relinking.
 
+## Disposable native test vaults
+
+Follow [CONTRIBUTING.md → Desktop CLI setup](CONTRIBUTING.md#desktop-cli-setup-windows-and-macos) on Windows and macOS. Prefer `kplex-test-small` for functional probes; establish actual fixture counts before treating `kplex-test` as a scale fixture. Require explicit `KPLEX_TEST_VAULT_NAME`, `KPLEX_TEST_VAULT_PATH` and `KPLEX_TEST_CONFIG_DIR`, and verify the CLI-reported path before writes. Reuse prepared vaults without resetting their settings or trust state.
+
+Obtain user consent before creating a new test repository/destination. Use `https://github.com/zsviczian/kplex-help` as its starting point, or copy the local sibling checkout (including `.obsidian`, excluding `.git`) into a new disposable folder. Never overwrite an existing vault. Accept the first-open trust prompt for this known source, then close/reopen that vault before checking plugin enablement. The help repository contains settings/content; install or stage the executable plugin separately.
+
+Use `obsidianCliExecutable()` and `spawnNativeSync()` from `scripts/testing/obsidian/processTools.mjs` in native drivers and retain explicit overrides, bounded process deadlines and argument arrays. Windows automation must capture through `Obsidian.com`; the shared process helper handles long or multiline local evals via an owned temporary script to keep console transport short and single-line. Invoke npm through `runPortableVerification()` rather than spawning `npm`/`npm.cmd` or enabling shell execution. Convert filesystem paths to `file:` URLs for dynamic ESM imports/browser navigation and normalize test inventory paths before repository-path comparisons. Use the shared browser discovery helper for Windows Chrome/Edge and macOS Chromium-family installations. Guard macOS-only Electron app methods, while preserving selected-window foreground/throttling rules. Run native drivers serially and report actual Node/host versions; Windows evidence does not replace macOS or physical-device acceptance.
+
 ## Documentation contract
 
 `README.md` is strictly end-user-facing. It should explain what K-Plex is, why it exists, how to get started, how to use major features, where to report issues/contribute, and how to support development. Do not add Node/npm build steps, source architecture, cache internals, performance implementation details or developer-only invariants to the README.

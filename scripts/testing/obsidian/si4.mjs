@@ -4,7 +4,7 @@
  * policies and live consumers, and restores settings, methods, demand, fixtures and throttling.
  * This functional lane does not claim foreground latency, restart or physical-device acceptance.
  */
-import { spawnSync } from "node:child_process";
+import { spawnNativeSync as spawnSync, obsidianCliExecutable } from "./processTools.mjs";
 import { createHash } from "node:crypto";
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -19,7 +19,7 @@ mkdirSync(reportDir, { recursive: true });
 
 /** Execute only in the named vault; Obsidian eval errors can otherwise have a zero exit status. */
 function cli(command, ...args) {
-  const result = spawnSync(process.env.KPLEX_OBSIDIAN_CLI || "obsidian", [`vault=${vaultName}`, command, ...args],
+  const result = spawnSync(obsidianCliExecutable(), [`vault=${vaultName}`, command, ...args],
     { cwd: projectRoot, encoding: "utf8", timeout: 30_000, killSignal: "SIGKILL", maxBuffer: 8 * 1024 * 1024 });
   if (result.error || result.status !== 0 || /^Error:/m.test(result.stdout || "")) {
     throw new Error(result.error?.message || result.stderr || result.stdout || `CLI status ${result.status}`);

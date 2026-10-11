@@ -4,55 +4,19 @@
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { accessSync, constants, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { delimiter, dirname, join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { browserExecutable } from "./support/browserExecutable.mjs";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { buildSync } from "esbuild";
 import ts from "typescript";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-function executable(path) {
-  try {
-    accessSync(path, constants.X_OK);
-    return path;
-  } catch {
-    return null;
-  }
-}
-
-function findOnPath(name) {
-  for (const directory of (process.env.PATH ?? "").split(delimiter)) {
-    if (!directory) continue;
-    const candidate = executable(join(directory, process.platform === "win32" ? `${name}.exe` : name));
-    if (candidate) return candidate;
-  }
-  return null;
-}
-
-function findBrowser() {
-  if (process.env.KPLEX_TEST_BROWSER) return executable(process.env.KPLEX_TEST_BROWSER);
-  for (const name of ["chromium", "chromium-browser", "google-chrome", "google-chrome-stable", "chrome"]) {
-    const candidate = findOnPath(name);
-    if (candidate) return candidate;
-  }
-  const known = process.platform === "darwin"
-    ? [
-      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-      "/Applications/Chromium.app/Contents/MacOS/Chromium",
-      "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
-    ]
-    : process.platform === "win32"
-      ? [
-        join(process.env.PROGRAMFILES ?? "", "Google/Chrome/Application/chrome.exe"),
-        join(process.env["PROGRAMFILES(X86)"] ?? "", "Google/Chrome/Application/chrome.exe"),
-        join(process.env.LOCALAPPDATA ?? "", "Google/Chrome/Application/chrome.exe"),
-      ]
-      : [];
-  return known.map(executable).find(Boolean) ?? null;
-}
+/** Discover the same real browser used by the IndexedDB acceptance lane. */
+function findBrowser() { return browserExecutable(); }
 
 function browserEntry() {
   return `
@@ -1198,6 +1162,7 @@ ${production}
 `;
 }
 
+/** Run a production DOM fixture in an isolated profile and navigate with an encoded file URL. */
 function runBrowserDom(entry, successText) {
   const browser = findBrowser();
   assert(browser, "A Chromium-family browser is required for the DOM behavior lane; set KPLEX_TEST_BROWSER to its executable path.");
@@ -1225,9 +1190,12 @@ function runBrowserDom(entry, successText) {
       "--disable-gpu",
       "--no-sandbox",
       "--allow-file-access-from-files",
+      `--user-data-dir=${join(temp, "profile")}`,
+      "--no-first-run",
+      "--no-default-browser-check",
       "--virtual-time-budget=2000",
       "--dump-dom",
-      `file://${htmlPath}`,
+      pathToFileURL(htmlPath).href,
     ];
     const run = spawnSync(browser, args, { encoding: "utf8", timeout: 20_000 });
     assert.equal(run.error, undefined, run.error?.message);

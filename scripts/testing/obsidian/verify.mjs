@@ -3,7 +3,7 @@
  * the exact build in an explicit disposable vault. CLI deadlines and test-window activation belong
  * to this driver; no renderer scheduling, cache authority or production settings are modified.
  */
-import { spawnSync } from "node:child_process";
+import { spawnNativeSync as spawnSync, obsidianCliExecutable, runPortableVerification } from "./processTools.mjs";
 import { mkdtempSync } from "node:fs";
 import { release } from "node:os";
 import { tmpdir } from "node:os";
@@ -25,7 +25,7 @@ function command(file, args, timeout = 30_000) {
 const git = (...args) => command("git", args, 10_000).trim();
 /** Restore the desktop test window before enabling the staged build after browser verification. */
 function runNativeCli(vaultName, name, ...args) {
-  const executable = process.env.KPLEX_OBSIDIAN_CLI || "obsidian";
+  const executable = obsidianCliExecutable();
   if (name === "plugin:enable") {
     command(executable, [`vault=${vaultName}`, "eval", 'code=(()=>{const remote=require("@electron/remote"),win=remote.getCurrentWindow();remote.app.focus({steal:true});win.restore();win.show();win.focus();return true})()']);
   }
@@ -44,11 +44,7 @@ const report = await runObsidianVerification({
     os: `${process.platform} ${release()}`,
   },
   runCli: runNativeCli,
-  runVerify: () => {
-    const result = spawnSync("npm", ["run", "verify"], { cwd: projectRoot, stdio: "inherit", timeout: 1_200_000 });
-    if (result.error) throw result.error;
-    if (result.status !== 0) throw new Error(`npm run verify failed (${result.status})`);
-  },
+  runVerify: () => runPortableVerification(projectRoot),
 });
 
 console.log(`Obsidian verification ${report.status}; report: ${join(reportDir, "report.json")}`);

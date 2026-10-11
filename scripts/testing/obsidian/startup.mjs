@@ -3,7 +3,7 @@
  * Native wrappers count operations without substituting promises, results, authority or throttling.
  * One deferred controller keeps each CLI request bounded; every wrapper and opt-in is restored.
  */
-import { spawnSync } from "node:child_process";
+import { spawnNativeSync as spawnSync, obsidianCliExecutable } from "./processTools.mjs";
 import { createHash } from "node:crypto";
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -23,7 +23,7 @@ let lastCommand;
 /** Execute one CLI command with the established 30-second process cap. */
 function cli(command, ...args) {
   lastCommand = command;
-  const result = spawnSync(process.env.KPLEX_OBSIDIAN_CLI || "obsidian", [`vault=${vaultName}`, command, ...args],
+  const result = spawnSync(obsidianCliExecutable(), [`vault=${vaultName}`, command, ...args],
     { cwd: root, encoding: "utf8", timeout: 30000, killSignal: "SIGKILL", maxBuffer: 8 * 1024 * 1024 });
   if (result.error || result.status !== 0 || /^Error:/m.test(result.stdout || "")) throw Error(result.error?.message || result.stderr || result.stdout);
   return result.stdout.trim();
@@ -68,7 +68,7 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
 // Streaming verification occurs outside timed startup and never exports owner paths.
 const digest=async p=>{const db=await p.index.indexedDb.open();return new Promise((resolve,reject)=>{const hash=require('crypto').createHash('sha256'),tx=db.transaction('sourceHeads','readonly'),request=tx.objectStore('sourceHeads').openCursor();request.onsuccess=()=>{const cursor=request.result;if(cursor){hash.update(JSON.stringify(cursor.value));cursor.continue()}};tx.oncomplete=()=>resolve(hash.digest('hex'));tx.onabort=tx.onerror=()=>reject(tx.error)})};
 const remote=require('@electron/remote'),w=remote.getCurrentWindow();
-remote.app.show();remote.app.focus({steal:true});w.show();w.moveTop();w.focus();await delay(350);
+remote.app.show?.();remote.app.focus({steal:true});w.show();w.moveTop();w.focus();await delay(350);
 const foreground=()=>({hidden:document.hidden,documentFocused:document.hasFocus(),windowFocused:w.isFocused(),throttle:w.webContents.getBackgroundThrottling()});
 let p=app.plugins.plugins['k-plex'];assert(p?.getIndexStatus().upToDate&&!p.index.sourceAcquisition.inventory,'Previous index must be settled');
 assert(!document.hidden&&document.hasFocus()&&w.isFocused()&&w.webContents.getBackgroundThrottling(),'Real foreground required');
@@ -135,7 +135,7 @@ try {
   }
   if (selectedCenter) report.preflight = await probe(`
     const remote=require('@electron/remote'),w=remote.getCurrentWindow();
-    remote.app.show();remote.app.focus({steal:true});w.show();w.moveTop();w.focus();
+    remote.app.show?.();remote.app.focus({steal:true});w.show();w.moveTop();w.focus();
     await new Promise(resolve=>window.setTimeout(resolve,350));
     const p=app.plugins.plugins['k-plex'];if(!app.vault.getFileByPath(${JSON.stringify(selectedCenter)}))throw Error('Selected existing center missing');
     for(const leaf of app.workspace.getLeavesOfType('k-plex-react-view'))leaf.detach();

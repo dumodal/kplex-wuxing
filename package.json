@@ -8,7 +8,7 @@
     "dev": "node esbuild.config.mjs",
     "build": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
     "check:architecture": "node --test tests/architecture.test.mjs && node scripts/check-architecture.mjs",
-    "lint:obsidian": "eslint 'src/**/*.{ts,tsx}'",
+    "lint:obsidian": "eslint \"src/**/*.{ts,tsx}\"",
     "verify": "npm run check:architecture && npm run check:core && npm run lint:obsidian && npm test && npm run build",
     "verify:obsidian": "node scripts/testing/obsidian/verify.mjs",
     "verify:obsidian:actions": "node scripts/testing/obsidian/actions.mjs",

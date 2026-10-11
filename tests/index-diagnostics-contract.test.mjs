@@ -2,7 +2,8 @@
  * Type-checks the two diagnostic report calls against the actual GraphIndex source and exported
  * result contracts. A negative control removes those methods to reproduce TS2339. This focused
  * consumer check is not a substitute for npm run build against the installed host dependencies.
- * Compiler-host overlays are memory-only. The positive lane uses unmodified production source;
+ * Compiler-host overlays are memory-only and use TypeScript's slash-normalized paths on Windows.
+ * The positive lane uses unmodified production source;
  * only the negative control removes declarations. No dependency stub is supplied by this test.
  */
 import assert from "node:assert/strict";
@@ -13,8 +14,8 @@ import test from "node:test";
 import ts from "typescript";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const indexPath = join(root, "src/index/GraphIndex.ts");
-const probePath = join(root, "tests/__indexDiagnosticsReportContract__.ts");
+const indexPath = join(root, "src/index/GraphIndex.ts").replaceAll("\\", "/");
+const probePath = join(root, "tests/__indexDiagnosticsReportContract__.ts").replaceAll("\\", "/");
 const probe = `
 import type { GraphIndex } from "../src/index/GraphIndex";
 /** Exercise the exact report operations that previously produced TS2339. */

@@ -4,7 +4,7 @@
  * establish host delivery/control behavior, not trusted OS input or physical-device acceptance.
  * Native settings assert row-local scope and separately retained command/global-key state.
  */
-import { spawnSync } from "node:child_process";
+import { spawnNativeSync as spawnSync, obsidianCliExecutable } from "./processTools.mjs";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -42,7 +42,7 @@ let installed = false;
 
 /** Fail closed on process errors and Obsidian's error text even when the CLI exits zero. */
 function cli(command, ...args) {
-  const result = spawnSync(process.env.KPLEX_OBSIDIAN_CLI || "obsidian", [`vault=${vaultName}`, command, ...args], { encoding: "utf8", timeout: 30000, killSignal: "SIGKILL", maxBuffer: 4 * 1024 * 1024 });
+  const result = spawnSync(obsidianCliExecutable(), [`vault=${vaultName}`, command, ...args], { encoding: "utf8", timeout: 30000, killSignal: "SIGKILL", maxBuffer: 4 * 1024 * 1024 });
   if (result.error || result.status !== 0 || /^Error:/m.test(result.stdout)) throw new Error(result.error?.message || result.stderr || result.stdout);
   return result.stdout.trim();
 }
@@ -59,7 +59,7 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
   const p = app.plugins.plugins["k-plex"];
   if (!p?.actionManager) throw new Error("Exact action-manager plugin is not loaded");
   const remote = require("@electron/remote"), nativeWindow = remote.getCurrentWindow();
-  remote.app.show(); remote.app.focus({ steal: true }); nativeWindow.restore(); nativeWindow.show(); nativeWindow.moveTop(); nativeWindow.focus(); nativeWindow.webContents.focus();
+  remote.app.show?.(); remote.app.focus({ steal: true }); nativeWindow.restore(); nativeWindow.show(); nativeWindow.moveTop(); nativeWindow.focus(); nativeWindow.webContents.focus();
   const c = window.__kplexActionTest = { p, originalSettings: JSON.parse(JSON.stringify(p.settings)), folder: `Kplex-Action-Regression-${Date.now()}`,
     owned: [], created: [], wrappers: [], newLeaves: [], scenarios: [], done: false, cancelled: false };
   /** The controller owns every native fixture and async wrapper until the driver restores them. */
@@ -276,7 +276,7 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
       };
       captureForeground("before-activation");
       // Native plugin restart/popout closure can release foreground without changing the main-window pointer target.
-      remote.app.show(); remote.app.focus({ steal: true }); owner.restore(); owner.show(); owner.moveTop(); owner.focus(); owner.webContents.focus();
+      remote.app.show?.(); remote.app.focus({ steal: true }); owner.restore(); owner.show(); owner.moveTop(); owner.focus(); owner.webContents.focus();
       try {
         await until(() => remote.powerMonitor.getSystemIdleState(10) !== "locked" && owner.isFocused() && doc.hasFocus() && !doc.hidden, "Trusted pointer lost actual unlocked native foreground", 5000, allowCancelled);
       } catch (error) { captureForeground("foreground-failed"); throw error; }
@@ -1073,7 +1073,7 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
       await p.updateActionPreferences(JSON.parse(livePreferences));
       await c.closeSettings();
       check(await p.revealActionSurface(c.surfaceId), "Graph could not be revealed after native Settings closed");
-      remote.app.show(); remote.app.focus({steal:true}); nativeWindow.show(); nativeWindow.focus(); nativeWindow.webContents.focus();
+      remote.app.show?.(); remote.app.focus({steal:true}); nativeWindow.show(); nativeWindow.focus(); nativeWindow.webContents.focus();
       await until(() => remote.powerMonitor.getSystemIdleState(10) !== "locked" && nativeWindow.isFocused() && document.hasFocus() && !document.hidden, "Main graph foreground was not restored after native Settings closed", 5000);
       const launchRoot = c.hostLeaf.view.containerEl.querySelector(".kplex-app"); launchRoot.focus();
       await until(() => document.activeElement === launchRoot && p.isKplexLeafVisible(c.hostLeaf), "Graph launch focus missing after native Settings closed");

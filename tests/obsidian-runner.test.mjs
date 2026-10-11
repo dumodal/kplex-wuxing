@@ -10,6 +10,78 @@ import test from "node:test";
 import { runInNewContext } from "node:vm";
 import { runObsidianVerification, validateTarget } from "../scripts/testing/obsidian/runner.mjs";
 import { createWaitTimingProbe } from "../scripts/testing/obsidian/waitTiming.mjs";
+import { npmInvocation, obsidianCliExecutable, spawnNativeSync } from "../scripts/testing/obsidian/processTools.mjs";
+import { browserExecutable } from "./support/browserExecutable.mjs";
+import { createRequire } from "node:module";
+
+test("Windows large eval preserves literal code and retires its temporary script on success/failure", () => {
+  const code = 'JSON.stringify({quoted:"literal \\\"quotes\\\"",path:"C:\\\\fixture",lines:"a\\nb"})' + " ".repeat(40_000);
+  const options = { timeout: 30_000, encoding: "utf8" };
+  let path;
+  const spawn = (file, args, passedOptions) => {
+    assert.equal(file, "Obsidian.com"); assert.equal(passedOptions, options);
+    assert.equal(args[0], "vault=kplex-test-small"); assert.equal(args[1], "eval");
+    assert(args[2].length < 1000);
+    const require = createRequire(import.meta.url);
+    const read = require("node:fs").readFileSync;
+    const payload = runInNewContext(args[2].slice(5), { require: () => ({ readFileSync: (script, encoding) => {
+      path = script; return read(script, encoding);
+    } }) });
+    assert.equal(payload, runInNewContext(code));
+    return { status: 0, stdout: payload };
+  };
+  assert.equal(spawnNativeSync("Obsidian.com", ["vault=kplex-test-small", "eval", `code=${code}`], options, { platform: "win32", spawn }).status, 0);
+  assert.equal(existsSync(path), false);
+  assert.throws(() => spawnNativeSync("Obsidian.com", ["vault=kplex-test-small", "eval", `code=${code}`], options, {
+    platform: "win32", spawn: (...args) => { spawn(...args); throw new Error("transport failed"); },
+  }), /transport failed/);
+  assert.equal(existsSync(path), false);
+});
+
+test("short Windows and large macOS commands keep argument/result identity", () => {
+  for (const [platform, code] of [["win32", "true"], ["darwin", " ".repeat(40_000) + "true"]]) {
+    const args = ["vault=kplex-test-small", "eval", `code=${code}`], options = {}, result = { status: 0 };
+    assert.equal(spawnNativeSync("obsidian", args, options, { platform, spawn: (file, forwarded, passedOptions) => {
+      assert.equal(forwarded, args); assert.equal(passedOptions, options); return result;
+    } }), result);
+  }
+});
+
+test("Windows multiline controllers use a single-line transport even when the code is short", () => {
+  const source = '(\n()=>JSON.stringify({ok:true})\n)()';
+  const result = spawnNativeSync("Obsidian.com", ["vault=kplex-test-small", "eval", `code=${source}`], {}, {
+    platform: "win32", spawn: (file, args) => {
+      assert(!/[\r\n]/.test(args[2]));
+      return runInNewContext(args[2].slice(5), { require: createRequire(import.meta.url) });
+    },
+  });
+  assert.equal(result, '{"ok":true}');
+});
+
+test("desktop CLI discovery honors overrides and selects Windows console and macOS launchers", () => {
+  const env = { PROGRAMFILES: "C:/Program Files", LOCALAPPDATA: "C:/Users/Test/AppData/Local" };
+  const console = join(env.PROGRAMFILES, "Obsidian", "Obsidian.com");
+  assert.equal(obsidianCliExecutable(env, "win32", path => path === console), console);
+  assert.equal(obsidianCliExecutable({ KPLEX_OBSIDIAN_CLI: "custom cli" }, "win32", () => false), "custom cli");
+  assert.equal(obsidianCliExecutable({}, "darwin", () => true), "/Applications/Obsidian.app/Contents/MacOS/obsidian-cli");
+  assert.equal(obsidianCliExecutable({}, "linux", () => false), "obsidian");
+});
+
+test("portable verification invokes npm-cli.js with the same Node and preserves spaces", () => {
+  const npm = "C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js", node = "C:/Program Files/nodejs/node.exe";
+  assert.deepEqual(npmInvocation({ npm_execpath: npm }, node, path => path === npm), { file: node, args: [npm, "run", "verify"] });
+  const adjacent = join("C:/tools", "node_modules", "npm", "bin", "npm-cli.js");
+  assert.equal(npmInvocation({}, "C:/tools/node.exe", path => path === adjacent).args[0], adjacent);
+  assert.throws(() => npmInvocation({}, node, () => false), /Cannot locate npm-cli.js/);
+});
+
+test("browser discovery supports Windows Edge and explicit paths without silent fallback", () => {
+  const env = { "PROGRAMFILES(X86)": "C:/Program Files (x86)" };
+  const edge = join(env["PROGRAMFILES(X86)"], "Microsoft", "Edge", "Application", "msedge.exe");
+  assert.equal(browserExecutable(env, "win32", path => path === edge), edge);
+  assert.equal(browserExecutable({ KPLEX_TEST_BROWSER: "missing custom browser" }, "win32", () => false), "missing custom browser");
+  assert.equal(browserExecutable({}, "linux", () => false), null);
+});
 
 test("native wait probe preserves exact promise/value/rejection identity and counts completion", async () => {
   let time = 0, resolve;

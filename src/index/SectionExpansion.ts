@@ -1,5 +1,7 @@
 /**
- * Host-side heading and transient section projection over indexed relationship evidence. Transient explanation codes reuse the UI language boundary without persisting section nodes.
+ * Host-side heading and transient section projection over indexed relationship evidence. Heading
+ * slices retain physical LF/CRLF offsets to match native metadata positions. Transient explanation
+ * codes reuse the UI language boundary without persisting section nodes.
  */
 import type { App, CachedMetadata } from "obsidian";
 import type KplexPlugin from "../main";
@@ -63,8 +65,10 @@ const clonePage = (page: GraphPage, path = page.path): GraphPage => ({
   styleTags: [...page.styleTags],
 });
 
+/** Find heading ranges in the original body, preserving newline widths for slicing/cache offsets. */
 function scanHeadings(content: string): HeadingRange[] {
-  const lines = content.split(/\r?\n/);
+  // Keep CR in each physical line: dropping it shifts every subsequent slice in Windows notes.
+  const lines = content.split("\n");
   const output: HeadingRange[] = [];
   let offset = 0;
   let fence: "`" | "~" | null = null;

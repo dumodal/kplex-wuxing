@@ -6,7 +6,8 @@
  * layout/configuration and temporary controller ownership is restored independently on failure.
  */
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { obsidianCliExecutable } from "./processTools.mjs";
+import { spawnNativeSync as spawnSync } from "./processTools.mjs";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -38,7 +39,7 @@ let baseline, attempted = false;
 
 /** Invoke only the configured native vault using explicit arguments, rejecting zero-exit CLI errors. */
 function cli(command, ...args) {
-  const result = spawnSync(process.env.KPLEX_OBSIDIAN_CLI ?? "obsidian", [`vault=${vaultName}`, command, ...args], { cwd: root, encoding: "utf8", timeout: 30000, killSignal: "SIGKILL", maxBuffer: 8 * 1024 * 1024 });
+  const result = spawnSync(obsidianCliExecutable(), [`vault=${vaultName}`, command, ...args], { cwd: root, encoding: "utf8", timeout: 30000, killSignal: "SIGKILL", maxBuffer: 8 * 1024 * 1024 });
   if (result.error || result.status !== 0 || /^Error:/m.test(result.stdout)) throw result.error ?? Error(result.stderr || result.stdout);
   return result.stdout.trim();
 }
@@ -89,7 +90,7 @@ function startProbe(token, width, height, expected) {
     await until(/** The passive capture receipt must come from Electron, not an assigned test flag. */ () => c.trusted, "Native support control lacked trusted Electron input");
   };
   c.task = (async () => {
-    win.setMinimumSize(200, 200); win.setContentSize(width, height); remote.app.show(); remote.app.focus({ steal: true }); win.show(); win.moveTop(); win.focus(); win.webContents.focus();
+    win.setMinimumSize(200, 200); win.setContentSize(width, height); remote.app.show?.(); remote.app.focus({ steal: true }); win.show(); win.moveTop(); win.focus(); win.webContents.focus();
     await until(/** Compare actual measured owner width; macOS may constrain height to its screen. */ () => win.getContentBounds().width === width && Math.abs(innerWidth - width) <= 2 && document.hasFocus() && win.isFocused(), "Native viewport/focus did not settle");
     check(document.body.classList.contains("is-mobile") && app.isMobile, "Actual mobile host/body classification missing");
     await until(/** Native resize must reach the production classifier before profile measurement. */ () => p.getTypographyDevice() === (expected === "phone" ? "mobile" : "tablet"), "Native device classification did not settle");

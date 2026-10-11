@@ -400,6 +400,8 @@ If you find a bug, have a feature request, or want to suggest an improvement, pl
 
 Contributions are welcome, including bug fixes, documentation improvements, testing and code contributions. See [CONTRIBUTING.md](CONTRIBUTING.md) before preparing a pull request.
 
+To try K-Plex with sample notes, download the [K-Plex Help vault](https://github.com/zsviczian/kplex-help), open its folder in Obsidian, accept the trust prompt for the downloaded vault, then close and reopen it and enable K-Plex. Contributors testing on Windows or macOS can follow the [desktop CLI setup guide](CONTRIBUTING.md#desktop-cli-setup-windows-and-macos), which covers disposable vaults and platform-specific commands.
+
 Community discussion and announcements are also available through the [Sketch Your Mind Community](https://community.sketch-your-mind.com).
 
 ## Support development
