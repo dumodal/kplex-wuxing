@@ -94,7 +94,7 @@ test("transient ExcaliBrain drawing paths are discarded from imported and saved 
 });
 
 test("cross-link visibility persists across reload and uses a presentation-only Plex settings toggle", async () => {
-  assert.equal(defaults.showCrossLinks, false, "new and missing preferences use the disabled default");
+  assert.equal(defaults.showCrossLinks, false, "fresh and unspecified settings retain the committed 0.1.2 disabled default");
   assert.equal(migrateAndMergeSettings({ showCrossLinks: "invalid" }).showCrossLinks, false);
   const saves = [];
   const plugin = { manifest: { id: "k-plex" }, settings: structuredClone(defaults),

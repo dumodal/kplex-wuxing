@@ -47,7 +47,10 @@ export class KplexDisplayModes {
     return /** Retire the exact graph generation's resize preparation. */ () => { this.transitions.delete(listener); };
   }
   /** Native event releases share the controller lifetime, independent of view close ordering. */
-  ownCleanup(release: () => void): void { this.lifecycleCleanup.add(release); }
+  ownCleanup(release: () => void): () => void {
+    this.lifecycleCleanup.add(release);
+    return /** A migrated renderer releases its exact cleanup without retaining retired controller ports. */ () => { this.lifecycleCleanup.delete(release); };
+  }
   /** Notify the graph before dimensions change, then publish one new session snapshot. */
   private prepare(): void { for (const listener of this.transitions) listener(); }
   /** Publish independent mode facts without persisted settings or semantic notifications. */
@@ -61,8 +64,12 @@ export class KplexDisplayModes {
   }
   /** Hide or restore only K-Plex chrome, retaining graph controls and the other mode. */
   toggleZen(): void {
-    if (this.disposed) return;
-    this.prepare(); this.publish(this.state.fullscreen, !this.state.zen);
+    this.setZen(!this.state.zen);
+  }
+  /** Enforce an exact session state without blind toggles or changing fullscreen. */
+  setZen(enabled: boolean): void {
+    if (this.disposed || this.state.zen === enabled) return;
+    this.prepare(); this.publish(this.state.fullscreen, enabled);
   }
   /** Move the same React host into its viewport overlay and acquire entry-scoped Windows chrome facts. */
   toggleFullscreen(): void {

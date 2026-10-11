@@ -2,10 +2,12 @@
  * Host-bound surface registration and focused-region keyboard delivery. App and graph provide
  * fresh implementation/snapshot ports; one dispatcher accepts native events before asynchronous
  * work and serves both the focus-leased Obsidian Scope and root-local DOM fallback. Migration,
- * unmount and preference changes release precisely their own leases, listeners and registrations.
+ * Wander Escape has session priority; accepted user actions pause through a caller-owned capability.
+ * Unmount and preference changes release precisely their own leases, listeners and registrations.
  */
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { Notice, Scope } from "obsidian";
+import type { WanderDestination, WanderScene } from "../application/WanderController";
 import type KplexPlugin from "../main";
 import type { WorkspaceLeaf } from "obsidian";
 import type { GraphPage } from "../types";
@@ -23,6 +25,11 @@ import { registerActionHotkeys } from "./internalHotkeyScope";
 export type SurfaceActionImplementations = Partial<Record<ActionId, ActionImplementation>>;
 export interface GraphActionPorts {
   implementations: SurfaceActionImplementations;
+  prepareNavigation?: (identity: string, origin: "user" | "wander") => void;
+  readWanderScene?: () => WanderScene;
+  highlightWander?: (destination: WanderDestination) => boolean;
+  clearWander?: () => void;
+  navigateWander?: (destination: WanderDestination) => boolean;
   readSelected: () => { node: NodeRef; occurrenceId: string } | null;
   normalMode: boolean;
   clearSelection?: () => void;
@@ -36,7 +43,7 @@ export function usePlexActions(options: {
   plugin: KplexPlugin; hostLeaf: WorkspaceLeaf; root: RefObject<HTMLDivElement | null>;
   convention: KeyConvention; center: GraphPage | undefined; graph: RefObject<GraphActionPorts | null>;
   implementations: SurfaceActionImplementations; historyBack: boolean; historyForward: boolean;
-  mounted: boolean; onReady?: () => void; readEscapeAction?: () => ActionId | null;
+  mounted: boolean; onReady?: () => void; readEscapeAction?: () => ActionId | null; onUserInteraction?: () => void;
 }): { surfaceId: string; dispatch: (request: ActionRequest) => void; readSnapshot: () => SurfaceSnapshot } {
   const [surfaceId] = useState(/** IDs are opaque and do not depend on undocumented workspace leaf IDs. */ () => `kplex-surface-${++surfaceCounter}`);
   const current = useRef(options);
@@ -78,6 +85,7 @@ export function usePlexActions(options: {
           return owner?.availability(context) ?? { state: "disabled", reasonKey: "actions.unavailable" };
         },
         execute: /** Preserve one operation owner and let the manager recheck its accepted target. */ context => {
+          if (context.request.source !== "internal" && id !== "view.wander.start" && id !== "view.wander.stop") current.current.onUserInteraction?.();
           const owner = current.current.graph.current?.implementations[id] ?? current.current.implementations[id];
           return owner?.execute(context) ?? { status: "unavailable", reasonKey: "actions.unavailable" };
         },
@@ -150,6 +158,13 @@ export function usePlexActions(options: {
       const latest = current.current;
       const region = plexFocusRegion(root, event.target);
       if (region === "external") return;
+      const control = (event.target as Element | null)?.closest?.("[data-kplex-wander-control]");
+      const bareEscape = event.key === "Escape" && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey;
+      const nativeShell = Array.from(root.ownerDocument.querySelectorAll<HTMLElement>(".menu, .modal-container, .prompt")).some(/** Owning native dialogs retain their Escape protocol. */ element => element.getClientRects().length > 0);
+      if (bareEscape && !nativeShell && latest.readEscapeAction?.() === "view.wander.stop") {
+        acceptPlexKeyEvent(event); void plugin.actionManager.dispatch({ id: "view.wander.stop", source: "internal", surfaceId }); return false;
+      }
+      if (!control && !bareEscape) latest.onUserInteraction?.();
       // A configured physical shortcut may intentionally use an Option accent position on the
       // graph. Native editors and fields retain that accent/composition gesture even when the
       // same explicit focus-action binding is eligible in their ordinary keyboard context.

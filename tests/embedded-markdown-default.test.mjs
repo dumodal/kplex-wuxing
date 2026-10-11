@@ -26,8 +26,9 @@ const modules = loadPortableModules(["src/adapters/obsidian/embeddedMarkdownLeaf
       /** Expose representation-specific native capabilities from the currently requested state. */
       makeView() {
         const type = this.state.type;
+        this.app.canvasState.viewModeEnabled = this.state.state?.mode === "view";
         return { getViewType: () => type, scope: {},
-          excalidrawAPI: type === "excalidraw" ? {} : undefined,
+          excalidrawAPI: type === "excalidraw" ? {getAppState: () => this.app.canvasState} : undefined,
           onResize: () => { this.app.resizes++; }, setEphemeralState() {} };
       }
       /** Return native request state independently from its awaited completion. */
@@ -54,6 +55,7 @@ class NativeElement {
   /** Associate the native host double with its owning document. */
   constructor(document) {
     this.ownerDocument = document; this.isConnected = true; this.children = []; this.style = {};
+    this.listeners = new Map();
     const classes = new Set();
     this.classList = { add: (...values) => values.forEach(value => classes.add(value)),
       remove: (...values) => values.forEach(value => classes.delete(value)), contains: value => classes.has(value) };
@@ -66,6 +68,10 @@ class NativeElement {
   setCssStyles(values) { Object.assign(this.style, values); }
   /** Mark the synthetic split detached on disposal. */
   remove() { this.isConnected = false; }
+  /** Model exact delegated native input leases without dispatching unrelated workspace input. */
+  addEventListener(name, listener) { this.listeners.set(name, listener); }
+  /** Remove only the matching native listener during controller teardown. */
+  removeEventListener(name, listener) { if (this.listeners.get(name) === listener) this.listeners.delete(name); }
 }
 
 /** Capture asynchronous native request completion independently of its immediate view replacement. */
@@ -80,6 +86,8 @@ function fixture({ frontmatter, path = "Drawing.excalidraw.md", bridgePresent = 
     removeEventListener: (name, listener) => listeners.delete(listener) };
   const window = { document, Element: NativeElement,
     setTimeout: callback => setTimeout(callback, 0),
+    requestAnimationFrame: callback => setTimeout(callback, 0),
+    cancelAnimationFrame: frame => clearTimeout(frame),
     MutationObserver: class {
       /** Track observer ownership without manufacturing native DOM replacement notifications. */
       constructor(callback) { this.callback = callback; observers.add(this); }
@@ -90,6 +98,7 @@ function fixture({ frontmatter, path = "Drawing.excalidraw.md", bridgePresent = 
     } };
   document.defaultView = window;
   const app = { requests: [], openFiles: [], resizes: 0, detaches: 0, hooks: 0, zooms: 0, viewModes: [],
+    canvasState: {width: 300, height: 200, scrollX: 0, scrollY: 0, zoom: {value: 0.55}, viewModeEnabled: false},
     metadata: frontmatter,
     metadataCache: { getFileCache: () => app.metadata === undefined ? null : {frontmatter: app.metadata} },
     vault: { getFileByPath: target => files.get(target) ?? null },
@@ -99,7 +108,8 @@ function fixture({ frontmatter, path = "Drawing.excalidraw.md", bridgePresent = 
     verifyMinimumPluginVersion: () => true,
     registerViewLinkClickHook: () => { app.hooks++; return () => { app.hooks--; }; },
     viewZoomToFit: () => { app.zooms++; },
-    setViewModeEnabled: enabled => app.viewModes.push(enabled),
+    setViewModeEnabled: enabled => { app.viewModes.push(enabled); app.canvasState.viewModeEnabled = enabled; },
+    getExcalidrawAPI: () => app.embeddedLeaf.view.excalidrawAPI,
     isExcalidraw: () => app.embeddedLeaf.getViewState().type === "excalidraw",
     /** Toggle only the exact current embedded view, preserving the adapter-owned mode restoration. */
     async toggleViewMode(view) {
@@ -120,10 +130,10 @@ function fixture({ frontmatter, path = "Drawing.excalidraw.md", bridgePresent = 
     embeddedPolicy ? /** Read current normal-node intent without retaining a settings snapshot. */ () => embeddedPolicy.enabled && !embeddedPolicy.maximized : undefined);
   /** Restore global ownership and prove controller teardown removes its document leases. */
   function cleanup() {
-    controller.dispose(); assert.equal(listeners.size, 0); assert.equal(observers.size, 0);
+    controller.dispose(); assert.equal(listeners.size, 0); assert.equal(observers.size, 0); assert.equal(mount.listeners.size, 0);
     assert.equal(app.hooks, 0); globalThis.window = priorWindow;
   }
-  return { app, file, controller, changes, observers, bridge, overlay, cleanup };
+  return { app, file, controller, changes, observers, bridge, overlay, mount, cleanup };
 }
 
 for (const mode of ["source", "preview"]) {
@@ -325,7 +335,7 @@ for (const scenario of [
   });
 }
 
-test("normal override changes do not fit during resize or render and take effect at the next opening", /** Preserve manual viewport authority until a real subsequent file/representation opening. */ async () => {
+test("edit and maximized drawing resizes do not apply the normal-node override", /** Preserve excluded native modes and read live policy at subsequent openings. */ async () => {
   const policy = {enabled: true, maximized: false}, context = fixture({embeddedPolicy: policy, zoomPreference: false});
   try {
     await context.controller.open(context.file, "source");
@@ -369,4 +379,33 @@ test("explicit normal-node override remains authoritative when companion prefere
     await context.controller.open(context.file, "source");
     assert.equal(context.app.requests[0].state.state.zoomToFit, true);
   } finally { context.cleanup(); }
+});
+
+test("actual adapter refits untouched view-mode drawings after resize and direct input retires the opening", /** Exercise live native read/policy and exact mount event wiring, not only the fit coordinator. */ async () => {
+  const context = fixture({embeddedPolicy: {enabled: true, maximized: false}, zoomPreference: false});
+  try {
+    await context.controller.open(context.file, "preview");
+    await new Promise(resolve => setTimeout(resolve, 20));
+    context.app.canvasState.width = 600;context.controller.resize();
+    await new Promise(resolve => setTimeout(resolve, 10));assert.equal(context.app.zooms, 1);
+    context.mount.listeners.get("pointerdown")();context.app.canvasState.width = 800;context.controller.resize();
+    await new Promise(resolve => setTimeout(resolve, 10));assert.equal(context.app.zooms, 1);
+    await context.controller.open(context.file, "preview");await new Promise(resolve => setTimeout(resolve, 20));
+    context.app.canvasState.height = 400;context.controller.resize();await new Promise(resolve => setTimeout(resolve, 10));
+    assert.equal(context.app.zooms, 2,"another opening renews untouched drawing fit");
+  } finally {context.cleanup();}
+});
+
+test("actual adapter preserves API-adjusted viewport and ignores editing or fullscreen resize", /** Manual intent and native modes remain authoritative even without pointer event simulation. */ async () => {
+  const context=fixture({embeddedPolicy:{enabled:true,maximized:false},zoomPreference:false});
+  try {
+    await context.controller.open(context.file,"preview");await new Promise(resolve=>setTimeout(resolve,20));
+    context.app.canvasState.scrollX=123;context.app.canvasState.width=600;context.controller.resize();
+    await new Promise(resolve=>setTimeout(resolve,10));assert.equal(context.app.zooms,0);
+    await context.controller.open(context.file,"source");await new Promise(resolve=>setTimeout(resolve,20));
+    context.app.canvasState.width=800;context.controller.resize();await new Promise(resolve=>setTimeout(resolve,10));assert.equal(context.app.zooms,0);
+    await context.controller.open(context.file,"preview");await new Promise(resolve=>setTimeout(resolve,20));
+    context.overlay.classList.add("excalidraw-visible");context.app.canvasState.width=1000;context.controller.resize();
+    await new Promise(resolve=>setTimeout(resolve,10));assert.equal(context.app.zooms,0);
+  } finally {context.cleanup();}
 });

@@ -1,10 +1,14 @@
 /**
  * Host-bound React shell for K-Plex navigation, startup guidance, File Explorer note drops, toolbar and Sidecar controls. It composes shared components and injected environment/localization capabilities; plugin methods own host effects. The native view owns session display modes; React projects Zen chrome and supplies exact camera-resize preparation without replacing its root. Search/Find scopes and hints use effective action bindings; each surface releases its own registrations on teardown.
+ * Wander owns one cancellable per-view session over graph projection ports and the shared activation path;
+ * explicit navigation origins and native input pause it without replacing history, editor or Zen owners.
+ * The root leases one shared delayed-hover/long-press tooltip owner for its rendering document.
  * Cross-link visibility reads shared persisted settings rather than temporary quick-filter or Find snapshots.
  */
 import {
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -26,6 +30,8 @@ import { KeyboardHelpModal } from "./KeyboardHelpModal";
 import { ActionTargetPicker, type ActionPickerItem } from "./ActionTargetPicker";
 import { usePlexActions, type GraphActionPorts, type SurfaceActionImplementations } from "./usePlexActions";
 import type { Translator } from "../lang";
+import { WanderController } from "../application/WanderController";
+import { WanderControls } from "./features/WanderControls";
 import type { KplexDisplayModes } from "./KplexDisplayModes";
 import { physicalPositionLabel } from "./features/positionPresentation";
 import { effectiveActionBindings } from "../core/plex/actionPreferences";
@@ -174,10 +180,36 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
   onReady?: () => void;
   displayModes: KplexDisplayModes;
 }) {
+  const canvasNameId = useId();
   const displayState = useSyncExternalStore(displayModes.subscribe, displayModes.getSnapshot);
   const rootRef = useRef<HTMLDivElement>(null);
   const graphActionPorts = useRef<GraphActionPorts | null>(null);
   useEffect(/** Camera preparation must precede native overlay movement and React toolbar visibility changes. */ () => displayModes.onBeforeResize(/** Prepare only the currently mounted graph generation. */ () => graphActionPorts.current?.prepareDisplayResize?.()), [displayModes]);
+  const [wander] = useState(/** One controller owns this view generation; all graph capabilities are read live. */ () => new WanderController({
+    readScene: /** A detached graph cannot claim readiness or navigation eligibility. */ () => graphActionPorts.current?.readWanderScene?.() ?? { center: null, ready: false, candidates: [] },
+    highlight: /** Selection/reveal remain owned by the graph's existing controller. */ destination => graphActionPorts.current?.highlightWander?.(destination) ?? false,
+    clear: /** Retire only this session's highlight and arrival motion. */ () => graphActionPorts.current?.clearWander?.(),
+    navigate: /** Graph preflight revalidates before the shared App activation. */ destination => graphActionPorts.current?.navigateWander?.(destination) ?? false,
+    readZen: /** Snapshot the per-view session mode, independently of fullscreen. */ () => displayModes.getSnapshot().zen,
+    setZen: /** Restore exact entry state through the existing resize owner. */ enabled => displayModes.setZen(enabled),
+    now: /** Use monotonic time in the actual owning window. */ () => (rootRef.current?.ownerDocument.defaultView ?? window).performance.now(),
+    schedule: /** Retain the scheduling window so migration cancels the exact timer. */ (callback, delay) => {
+      const owner = rootRef.current?.ownerDocument.defaultView ?? window;
+      const id = owner.setTimeout(callback, delay);
+      return /** Clear this timer even after the native content moves documents. */ () => owner.clearTimeout(id);
+    },
+    random: /** Route tests inject seeded randomness; production uses ordinary local randomness. */ () => Math.random(),
+  }));
+  const wanderState = useSyncExternalStore(wander.subscribe, wander.getSnapshot);
+  useEffect(/** Native unload and source-window retirement stop Wander even before React closes. */ () => {
+    const release = displayModes.ownCleanup(/** Native view teardown cancels every pending cycle. */ () => wander.dispose());
+    const owner = rootRef.current?.ownerDocument.defaultView;
+    const retire = /** Window destruction cannot leave a live session retaining the old realm. */ (): void => wander.dispose();
+    owner?.addEventListener("pagehide", retire);
+    return /** Migration/unmount restores entry Zen and removes the exact lifetime lease. */ () => {
+      owner?.removeEventListener("pagehide", retire); release(); wander.dispose();
+    };
+  }, [wander, displayModes]);
   const actionDialogs = useRef(new Set<{ close(): void }>());
   const dialogSerial = useRef(0);
   useEffect(/** Retire captured modal actions before a migrated/unmounted surface can receive work. */ () => () => {
@@ -248,7 +280,11 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
    * Passive follow keeps companion propagation: each host destination independently skips an
    * exact same-file observation, while other linked destinations still receive genuine navigation.
    */
-  const activate = useCallback((target: GraphPage, record = true, syncDocuments = true) => {
+  const activate = useCallback((target: GraphPage, record = true, syncDocuments = true, origin: "user" | "wander" = "user") => {
+    if (target.path !== activePathRef.current) {
+      if (origin === "user") wander.pause();
+      graphActionPorts.current?.prepareNavigation?.(target.path, origin);
+    }
     // Any newer explicit navigation supersedes a note waiting for partial indexing.
     pendingFileExplorerDropRef.current = null;
     activePathRef.current = target.path;
@@ -265,7 +301,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
       void plugin.syncPageToDocumentLeaf(target);
       void plugin.syncSidecarToPage(hostLeaf, target);
     }
-  }, [plugin, hostLeaf]);
+  }, [plugin, hostLeaf, wander]);
 
   /** Complete a queued File Explorer note drop as soon as partial indexing publishes that note. */
   const activatePendingFileExplorerDrop = useCallback(() => {
@@ -444,8 +480,8 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
   </div>;
 
   // The first render can show the empty indexing view, which has no rootRef. Attach once the
-  // graph root appears, and release the document-scoped listener if it disappears again.
-  useEffect(() => {
+  // graph root appears, and release the document-scoped hover/long-press owner on teardown.
+  useEffect(/** Share delayed control hints across ordinary and portalled surfaces in this document. */ () => {
     const el = rootRef.current;
     if (!el) return;
     return installKplexLongPressTooltips(el.ownerDocument);
@@ -645,6 +681,8 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
   const handlePlexPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     plugin.dismissKplexMenu();
     const target = event.target as Element | null;
+    if (target?.closest("[data-kplex-wander-control]")) return;
+    wander.pause();
     // React portal capture still reaches this shell before the header's native drag listener.
     if (target?.closest(".kplex-central-editor-content, .kplex-filter-panel, input, textarea, select, button, a, [contenteditable='true'], [role='button']")) return;
     graphActionPorts.current?.clearSelection?.();
@@ -776,6 +814,8 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     "pins.open": uiAction(/** Preserve saved order and unavailable rows in the complete searchable pins picker. */ () => openSavedPicker("pins")),
     "view.aliases.toggle": uiAction(/** Reuse the current toolbar's presentation-only mutation. */ () => toggleToolbarSetting("renderAlias")),
     "view.fullscreen.toggle": uiAction(/** The view owns reversible native DOM placement, never workspace split changes. */ () => displayModes.toggleFullscreen(), () => displayModes.fullscreenAvailable),
+    "view.wander.start": uiAction(/** All start surfaces resume the same per-view session. */ () => wander.start(), () => Boolean(page && rootRef.current?.querySelector(".kplex-plex"))),
+    "view.wander.stop": uiAction(/** Stop restores the immutable entry Zen state. */ () => wander.stop(), () => wander.getSnapshot().phase !== "stopped"),
     "view.zen.toggle": uiAction(/** Independent session chrome visibility never changes persisted settings. */ () => displayModes.toggleZen()),
     "view.depth.toggle": uiAction(/** Reuse the established projection depth setting. */ () => toggleExpandedView()),
     "view.connectors.toggle": uiAction(/** Camera and connector appearance remain presentation-only. */ () => toggleConnectorStyle()),
@@ -836,7 +876,8 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
   const viewSettings = useMemo(/** Display-mode-only renders retain the current scene settings identity; real settings/index changes still refresh it. */ () => plugin.getViewSettings(profileSurface), [plugin, profileSurface, renderRevision]);
   const actions = usePlexActions({ plugin, hostLeaf, root: rootRef, convention: environment.keyConvention,
     center: page, graph: graphActionPorts, implementations: appImplementations, mounted: hasPage,
-    readEscapeAction: /** Only the keyboard owner invokes this after graph transient interactions have declined. */ () => displayModes.getSnapshot().zen ? "view.zen.toggle" : displayModes.getSnapshot().fullscreen ? "view.fullscreen.toggle" : null,
+    onUserInteraction: /** Native commands/keyboard interactions pause before their accepted work. */ () => wander.pause(),
+    readEscapeAction: /** Wander stops first; subsequent Escapes follow the existing display hierarchy. */ () => wander.getSnapshot().phase !== "stopped" ? "view.wander.stop" : displayModes.getSnapshot().zen ? "view.zen.toggle" : displayModes.getSnapshot().fullscreen ? "view.fullscreen.toggle" : null,
     historyBack: historyCursor > 0, historyForward: historyCursor < plugin.settings.navigationHistory.length - 1, onReady });
   /** Forward intentional toolbar/control actions with explicit owning surface. */
   const runAction = (id: ActionId): void => actions.dispatch({ id, source: "toolbar" });
@@ -846,11 +887,13 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     ref={rootRef}
     tabIndex={0}
     role="region"
-    aria-label={translate("view.displayName")}
+    aria-labelledby={canvasNameId}
     className="kplex-app kplex-empty"
+    data-kplex-tooltip-scope
     onDragOver={handlePlexDragOver}
     onDrop={handlePlexDrop}
   >
+    <span id={canvasNameId} className="kplex-accessible-name">{translate("view.displayName")}</span>
     <div className="kplex-index-status-empty">
       <IndexStatusIndicator
         status={indexStatus}
@@ -912,11 +955,15 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     data-kplex-tooltip-scope
     tabIndex={0}
     role="region"
-    aria-label={translate("view.displayName")}
+    aria-labelledby={canvasNameId}
     onPointerDownCapture={handlePlexPointerDown}
+    onWheelCapture={/** A real graph/editor wheel gesture pauses; playback widgets retain their own input. */ event => { if (!(event.target as Element).closest("[data-kplex-wander-control]")) wander.pause(); }}
+    onDragStartCapture={/** External/graph drag input is user-owned even without node activation. */ () => wander.pause()}
+    onContextMenuCapture={/** Opening native menus holds the current route. */ () => wander.pause()}
     onDragOver={handlePlexDragOver}
     onDrop={handlePlexDrop}
   >
+    <span id={canvasNameId} className="kplex-accessible-name">{translate("view.displayName")}</span>
     <div className={`kplex-main-column${plugin.settings.wrapNodeLabels ? " is-two-line-history" : ""}`}>
       <div className="kplex-top-stack">
         <header className="kplex-topbar">
@@ -1024,7 +1071,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
           {pinnedPages.map((pinned) => {
             const title = plugin.index.titleFor(pinned);
             return <div key={pinned.path} className={`kplex-pinned-chip${pinned.path === page.path ? " is-active" : ""}`}>
-              <button className="kplex-pinned-open" data-kplex-pinned-path={pinned.path} title={`${title}\n${pinned.path}`} onClick={() => actions.dispatch({ id: "node.activate", source: "toolbar", target: { kind: "explicit", node: actionNodeRef(pinned) } })}><ObsidianIcon name="pin" size={12} /><span>{title}</span></button>
+              <button className="kplex-pinned-open" data-kplex-pinned-path={pinned.path} aria-label={`${title}\n${pinned.path}`} onClick={() => actions.dispatch({ id: "node.activate", source: "toolbar", target: { kind: "explicit", node: actionNodeRef(pinned) } })}><ObsidianIcon name="pin" size={12} /><span>{title}</span></button>
               <button className="kplex-pinned-remove" aria-label={translate("app.unpinNode", { title })} onClick={() => actions.dispatch({ id: "pin.remove", source: "toolbar", target: { kind: "explicit", node: actionNodeRef(pinned) } })}><ObsidianIcon name="x" size={11} /></button>
             </div>;
           })}
@@ -1032,15 +1079,20 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
       </div>
 
       <main className="kplex-workspace">
-        <section className="kplex-graph-area">
+        <section className="kplex-graph-area" data-kplex-tooltip-boundary>
           <div className="kplex-zone-label zone-parent">{translate("app.zoneParents")}</div>
           <div className="kplex-zone-label zone-left">{translate("app.zoneFriendsPrevious")}</div>
           <div className="kplex-zone-label zone-right">{translate("app.zoneChallengersNext")}</div>
           <div className="kplex-zone-label zone-child">{translate("app.zoneChildren")}</div>
           <PlexGraph plugin={plugin} index={plugin.index} settings={viewSettings} surface={profileSurface} hostLeaf={hostLeaf} predicate={plexFilterPredicate} lenses={compiledGraphLenses} filterLayoutMode={filterLayoutMode} predicateRevision={predicateRevision} showCrossLinks={plugin.settings.showCrossLinks} activePath={page.path} renderRevision={renderRevision} findFocusRequest={findFocusRequest}
           actionPorts={graphActionPorts} actionSurfaceId={actions.surfaceId} displayState={displayState} fullscreenAvailable={displayModes.fullscreenAvailable && environment.device === "desktop"}
-          semanticRevision={plugin.index.getSemanticRevision()} onActivate={activate} onOpen={open} onOpenInSidecar={centerAndOpenSidecar} onCentralNodeEditorChange={setCentralNodeEditorEnabled} onCentralNodeModeChange={rememberCentralNodeMarkdownMode} areaSettingsMode={areaSettingsMode} onAreaSettingsModeChange={setAreaSettingsMode}
+          semanticRevision={plugin.index.getSemanticRevision()} onActivate={/** Manual graph navigation keeps the existing history and sync path. */ target => activate(target)} onWanderActivate={/** Explicit Wander origin survives asynchronous scene publications. */ target => activate(target, true, true, "wander")} onOpen={open} onOpenInSidecar={centerAndOpenSidecar} onCentralNodeEditorChange={setCentralNodeEditorEnabled} onCentralNodeModeChange={rememberCentralNodeMarkdownMode} areaSettingsMode={areaSettingsMode} onAreaSettingsModeChange={setAreaSettingsMode}
           onApplyFindFilter={applyFindFilter} appliedFindFilterQuery={findFilterOwner?.query ?? null} onClearFindFilter={clearFindFilter} />
+          {wanderState.phase !== "stopped" && <WanderControls state={wanderState} translate={translate}
+            stopIcon={<ObsidianIcon name="x" size={17} />} playbackIcon={<ObsidianIcon name={wanderState.phase === "paused" ? "play" : "pause"} size={17} />} paceIcon={<ObsidianIcon name="timer" size={11} />}
+            onStop={/** Stop is the same catalog operation as Escape/native actions. */ () => runAction("view.wander.stop")}
+            onToggle={/** Playback controls never feed the auto-pause input path. */ () => wanderState.phase === "paused" ? wander.play() : wander.pause()}
+            onSeconds={/** Pace affects the next cycle, not global animation speed. */ seconds => wander.setSeconds(seconds)} />}
         </section>
       </main>
 
@@ -1060,7 +1112,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
             const item = plugin.index.get(path);
             if (!item) return null;
             const title = plugin.index.titleFor(item);
-            return <button key={`${path}:${indexValue}`} data-kplex-history-path={path} title={`${title}\n${path}`} className={path === page.path ? "is-active" : ""} onClick={() => actions.dispatch({ id: "node.activate", source: "toolbar", target: { kind: "explicit", node: actionNodeRef(item) } })}><span className="kplex-history-text">{title}</span></button>;
+            return <button key={`${path}:${indexValue}`} data-kplex-history-path={path} aria-label={`${title}\n${path}`} className={path === page.path ? "is-active" : ""} onClick={() => actions.dispatch({ id: "node.activate", source: "toolbar", target: { kind: "explicit", node: actionNodeRef(item) } })}><span className="kplex-history-text">{title}</span></button>;
           })}
         </div>
       </footer>

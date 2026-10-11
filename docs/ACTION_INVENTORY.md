@@ -33,7 +33,7 @@ All IDs below are **local Obsidian IDs**; Obsidian owns the existing `k-plex:` p
 | `kplex-ontology-hidden` | `ontology.assign.hidden` | Supplied editor field → hidden assignment |
 | `kplex-ontology-excluded` | `ontology.assign.excluded` | Supplied editor field → excluded assignment |
 
-Seven newly default-published commands are `kplex-actions`, `kplex-configure-actions`, `kplex-focus-graph`, `kplex-history-back`, `kplex-history-forward`, `kplex-toggle-pin` and `kplex-open-pins`. Other configurable actions are publishable with their catalog's stable IDs, initially unpublished. Composer session entries have no host command.
+Nine newly default-published commands are `kplex-actions`, `kplex-configure-actions`, `kplex-focus-graph`, `kplex-history-back`, `kplex-history-forward`, `kplex-toggle-pin`, `kplex-open-pins`, `kplex-support-report-bug` and `kplex-wander`. Other configurable actions are publishable with their catalog's stable IDs, initially unpublished. Composer session entries have no host command.
 
 ## Preserved local mappings
 
@@ -88,6 +88,8 @@ The compatibility exports in `internalHotkeys.ts` remain available. Migration re
 
 Pointer drag/resize/touch suppression remains in the scene implementation. Those mechanics do not become action-manager state. Context-menu and toolbar callbacks must converge on the same manager operation/target/outcome where configurable; direct calls to the canonical service must be audited for parity before delivery sign-off.
 
+`view.fit` centers the current central node and renews its automatic fit lifetime. With Auto fit on navigation enabled, later displayed geometry follows that camera until manual `view.zoom-*`, `view.pan.*` or camera gestures retire it; a new navigation renews fitting. This remains PlexGraph policy, with no new action ID or manager camera state. Native embedded drawing fitting has a separate untouched view-mode lifetime and keeps the existing untransformed host surface.
+
 ## Acceptance and evidence boundary
 
 Foundation tests are in `tests/action-foundation.test.mjs`. They cover command/catalog identity, cheap availability, shared/local targets, strict selection, capture and generation checks, run/cancel/session guards, malformed arguments, outcomes, migration, exact chord/ambiguity policy and public command diffs. They do not establish native Scope precedence, global-hotkey retention, keyboard layout transport, physical-device touch or complete operation availability. Those remain in the assignment's exact-build Obsidian H01–H28/platform acceptance lane.
@@ -97,3 +99,23 @@ No fallback plugin discovery, global graph-key capture, second semantic classifi
 ## Laptop-friendly fresh defaults
 
 The legacy migration table above describes preserved existing bindings. Fresh defaults use / search, ? read-only help, R rename, 0 select center, M node menu, Ctrl/Cmd+Shift+G graph focus and Ctrl/Cmd+Shift+E associated editor focus. No fresh default requires a function key, Home or ContextMenu key. Saved bindings and explicit disables survive; Reset adopts the current default. Printable-only chords, including Shift punctuation, are registered and compiled only for the graph region.
+
+## Wander session
+
+`view.wander.start` publishes `kplex-wander` by default and routes through the same owning surface as the existing action palette and Plex/node native context menus. The node-menu label explicitly starts from the current center. `view.wander.stop` is configurable and initially unpublished. The bottom X and priority Escape dispatch this same stop operation. Neither action changes saved settings or command hotkeys.
+
+`WanderController` owns one per-view cancellable cycle and immutable entry-Zen snapshot; `PlexGraph` supplies finite displayed occurrence candidates, selection/reveal and exact-incarnation preflight. App’s normal activation/history/document-sync owner receives explicit user/Wander navigation intent. Native input and other accepted surface actions pause without intercepting playback widgets; native dialogs retain Escape ownership. View unload/migration retires the controller and its owning-window timer.
+
+## Bare-canvas context menu
+
+`createPlexContextMenu` composes Wander, K-Plex settings, checked Zen and desktop fullscreen toggles,
+the background picker, and a final separated Report a bug item. It captures the launching surface
+for existing playback/display actions. Settings uses the existing guarded native bridge; support
+uses the existing synchronous clipboard-first entry point before any action-dispatch await. These
+local menu labels introduce no new published command IDs or default command-count changes.
+
+`PlexBackgroundModal` owns a local native ColorComponent draft and Save/Cancel controls. The graph
+view closes its owned picker on unmount/migration. Cancel/retired callbacks never persist; unchanged
+Save preserves alpha, and a changed color follows the native Settings opaque-color policy and normal
+settings persistence/presentation refresh. No graph policy, storage schema or relationship data is
+introduced.

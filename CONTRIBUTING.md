@@ -702,3 +702,48 @@ configuration bytes and removes its note, wrappers and controller independently 
 Set `KPLEX_LARGE_PASTE_INPUT` to a local diagnostic Markdown file to reproduce a supplied
 paragraph; its content is not written to the report or committed as a fixture. This desktop
 check does not prove physical-device behavior, actual paint timing or full application restart.
+
+### Wander and shared navigation acceptance
+
+After exact-build staging, run `npm run verify:obsidian:wander` with the three explicit disposable `kplex-test-small` vault variables and a fresh `KPLEX_HOST_REPORT_DIR`. The driver checks installed hashes, attachment candidate eligibility, actual shared center keyframes, retained camera scale, selection before navigation, normal history, trusted pointer pause/play, manual-center resume, native read/edit auto-pause, priority Escape, entry Zen restoration, fullscreen independence, Stop during anticipation, animation-off/reduced-motion and two-way popout session retirement. Its context-menu assertion selects Obsidian's DOM menu backend for observable trusted input; native OS menu behavior remains a separate check. It restores settings/workspace and removes only its own fixtures, controller and wrappers even on failure.
+
+`tests/wander.test.mjs` covers route backtracking/exhaustion, bounded weighted recency, stale preflight rejection, single-callback generation fencing, cycle pacing/readiness, actual occurrence geometry, selection ownership and real Chromium controls/motion. The controls use `LayoutSlider` and shared Plex button CSS, with computed-style parity checked against real graph zoom buttons. Native keyframe/geometry assertions do not establish perceived paint, physical touch or every device lifecycle; validate those separately.
+
+## Shared control hints and canvas menu acceptance
+
+After exact-build staging, run `npm run verify:obsidian:tooltips` with the three explicit disposable
+`kplex-test-small` vault variables and a fresh `KPLEX_HOST_REPORT_DIR`. The driver checks every-hover
+delay (including warm transitions), themed tooltip rectangles, bottom-to-top flipping, shared range
+help, portalled controls, canvas accessible naming without a hover tooltip, and two-way popout
+ownership. It also exercises the actual native canvas menu in its public DOM backend: display-mode
+toggles, Settings, native color Save/Cancel and the owning-view support entry point. Item selection
+uses trusted Electron input; context opening is a DOM event, and support's existing entry point is
+wrapped to avoid clipboard/external effects. It restores the saved background, layout, display state,
+wrappers and temporary global. Missing host, failed assertions or cleanup fail the lane. Run native
+drivers serially. Physical touch and subjective paint remain separate from native geometry checks.
+
+`tests/control-tooltips.test.mjs` checks the compiled shared owner in real Chromium;
+`tests/canvas-menu.test.mjs` checks callback/draft/lifetime contracts with finite native-component
+doubles. Both are in `npm test`; the installed Obsidian typings and native lane remain authoritative
+for real host component behavior.
+
+## Navigation and embedded drawing fit acceptance
+
+After exact-build staging, run `npm run verify:obsidian:adaptive-fit` with the three explicit
+disposable `kplex-test-small` vault variables and a fresh `KPLEX_HOST_REPORT_DIR`. The driver
+uses ordinary native frontmatter changes and source/index publication to check central-node
+centering, late-neighbor fitting, manual zoom/pan/wheel preservation, explicit Fit renewal,
+new-navigation renewal and auto-fit-off scale preservation. Bounded list viewports supply fit
+extents; offscreen overflow rows do not enlarge the fit. It owns and removes one fixture folder,
+restores preferences/workspace/native follow ownership and checks errors and installed hashes.
+
+`verify:obsidian:embedded-zoom` additionally checks untouched reading drawings at changed Plex zoom,
+matched native fit references, manual API zoom/pan, trusted native panning and pointer mapping at
+non-unit Plex zoom, and edit/disabled exclusions. It retains the opening/maximize/native preference
+matrix. Native Excalidraw/Canvas surfaces remain untransformed; never move these views inside the
+graph's scaled camera. Run native drivers serially. Geometry and Electron input do not prove
+physical touch or perceived paint.
+
+`tests/viewport-fit.test.mjs` compiles actual fit math, the native resize coordinator and graph
+camera/layout callbacks. `tests/embedded-markdown-default.test.mjs` checks native-controller wiring
+and cleanup with finite host doubles; native lanes remain authoritative for real geometry.

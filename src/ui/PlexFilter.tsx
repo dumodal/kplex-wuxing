@@ -1,6 +1,7 @@
 /**
  * Host-bound Plex filter and Graph Lens editor. Shared predicates own matching; this surface localizes
  * choices and validation. FloatingLayer owns portaling, dismissal and header drag in the owning document.
+ * Portalled controls opt into the shell's shared delayed hover hints without browser title duplicates.
  */
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { GraphIndex } from "../index/GraphIndex";
@@ -651,11 +652,11 @@ export function PlexFilter({
               aria-pressed={lens.enabled}
               onClick={() => onLensesChange(lenses.map((item) => item.id === lens.id ? { ...item, enabled: !item.enabled } : item))}
             ><ObsidianIcon name={lens.enabled ? "eye" : "eye-off"} size={14} /></button>
-            <button className="kplex-lens-main" onClick={() => editLens(lens)} title={expressionErrorMessage ?? lens.expression}>
+            <button className="kplex-lens-main" onClick={() => editLens(lens)} aria-label={`${displayName}\n${expressionErrorMessage ?? lens.expression}`}>
               <span className="kplex-lens-name">{displayName}</span>
               <span className="kplex-lens-meta">{translate(lens.enabled ? "filter.on" : "filter.off")} · {modeLabel(lens.mode, translate)} · {scopeLabel(lens.scope, translate)}</span>
             </button>
-            {expressionErrorMessage && <span className="kplex-lens-error-dot" title={expressionErrorMessage}>!</span>}
+            {expressionErrorMessage && <span className="kplex-lens-error-dot" aria-label={expressionErrorMessage} data-kplex-control-tooltip>!</span>}
             <button className="kplex-icon-button" aria-label={translate("filter.editLens", { name: displayName })} onClick={() => editLens(lens)}><ObsidianIcon name="pencil" size={13} /></button>
             <button className="kplex-icon-button" aria-label={translate("filter.deleteLens", { name: displayName })} onClick={() => onLensesChange(lenses.filter((item) => item.id !== lens.id))}><ObsidianIcon name="trash-2" size={13} /></button>
           </div>;

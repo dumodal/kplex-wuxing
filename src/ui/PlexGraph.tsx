@@ -1,7 +1,9 @@
 /**
- * Host-bound Plex scene composition, layout and relationship interactions. Semantic resolution stays index/core-owned; UI labels and on-demand evidence hints use the injected translator. View-owned display transitions retain camera coordinates and scene settings; ordinary pane resizes keep their existing autozoom policy. Device typography stages scalar live preferences and persists after input settles; unmount flushes storage without replaying stale overrides. Area-height gestures own viewport pointer capture and persist existing presentation settings on completion or interruption. History and pinned drag targets share composer eligibility; external file drops follow the rendered area's semantic role. Theme-native area previews follow the existing drop action without intercepting capture or moving the dragged thought. Visible rows retain finite cache-only presentation demand; hidden surfaces and effect teardown release it. Geometry defers gate/count queries until a row intersects the displayed viewport, including partially clipped rows. Ordinary unfiltered scenes project cross-links for clipped visible rows; filtered and section scenes retain their established edge/count policy. Scene-local React keys capture paths before canonical pages can mutate during rename; semantic pages and actions retain their live identity. Normal-mode keyboard and exact-phrase typing selection are view-local; the displayed occurrence projection supplies all candidates and the shared selection owner reveals them without changing the center, filters or native search. Host methods own activation/rename/creation. Filtered badge numerators use revision-scoped semantic endpoint membership independently of connector routing and viewport clipping. Pane-fit native layout controls own local touch containment and bounded scrolling without changing preferences or browser range behavior.
+ * Host-bound Plex scene composition, shared captured center-arrival motion and finite Wander navigation ports, layout and relationship interactions. Semantic resolution stays index/core-owned; UI labels and on-demand evidence hints use the injected translator. Navigation fits keep the central node centered and follow late geometry until manual camera input; publication and ordinary pane resizing preserve manual intent. View-owned display transitions retain camera coordinates and scene settings. Device typography stages scalar live preferences and persists after input settles; unmount flushes storage without replaying stale overrides. Area-height gestures own viewport pointer capture and persist existing presentation settings on completion or interruption. History and pinned drag targets share composer eligibility; external file drops follow the rendered area's semantic role. Theme-native area previews follow the existing drop action without intercepting capture or moving the dragged thought. Visible rows retain finite cache-only presentation demand; hidden surfaces and effect teardown release it. Geometry defers gate/count queries until a row intersects the displayed viewport, including partially clipped rows. Ordinary unfiltered scenes project cross-links for clipped visible rows; filtered and section scenes retain their established edge/count policy. Scene-local React keys capture paths before canonical pages can mutate during rename; semantic pages and actions retain their live identity. Normal-mode keyboard and exact-phrase typing selection are view-local; the displayed occurrence projection supplies all candidates and the shared selection owner reveals them without changing the center, filters or native search. Host methods own activation/rename/creation. Filtered badge numerators use revision-scoped semantic endpoint membership independently of connector routing and viewport clipping. Pane-fit native layout controls own local touch containment and bounded scrolling without changing preferences or browser range behavior. Accessible layout-wrapper hints use the shell's shared tooltip owner; inputs retain concise accessible names.
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent, type RefObject } from "react";
+import { createPlexContextMenu } from "./plexContextMenu";
+import { PlexBackgroundModal } from "./PlexBackgroundModal";
 import { Menu, Notice, Platform, type WorkspaceLeaf } from "obsidian";
 import { addNativeSubmenu } from "../adapters/obsidian/nativeSubmenu";
 import { getDraggedFile } from "../adapters/obsidian/fileExplorerDrag";
@@ -16,8 +18,11 @@ import { alphaHexToCss, resolveLinkStyle, resolveNodeStyle } from "../index/styl
 import { TYPOGRAPHY_FIELDS, TYPOGRAPHY_LIMITS, type TypographyValues } from "../core/plex/typographyPreferences";
 import { buildScene, buildSectionExpandedScene, appendVisibleCrossLinks, projectNodeCounts, rowIntersectsViewport, effectiveLabelLimit, expandedChildReserve, expandedNodeWidth, expandedMiniLayout, horizontalDensity, layoutColumns, spacingPolicy, gateDiameter, siblingScale, withAreaHeightOverrides, type CenterNodeSize, type ZoneViewport, type ZoneAreaBounds } from "./layout";
 import { LayoutSlider } from "./components/LayoutSlider";
+import { centeredViewportFit, sameFitCamera, type FitCamera } from "./components/viewportFit";
 import { projectFilteredGateCounts } from "./filteredGateCounts";
 import { LayoutControls } from "./components/LayoutControls";
+import { centerArrivalFrames, type MotionRect } from "./components/centerArrival";
+import type { WanderDestination, WanderScene } from "../application/WanderController";
 import { ElementMotion } from "./components/ElementMotion";
 import { ResizableAreaFrame } from "./components/ResizableAreaFrame";
 import { ThoughtNode, type ConnectionDragState } from "./ThoughtNode";
@@ -691,7 +696,7 @@ function Edge({
 }
 
 /** Compose the deterministic Plex scene and interaction handlers, using localized UI copy without rebuilding semantic state for presentation changes. */
-export function PlexGraph({ plugin, index, settings: viewSettings, surface, hostLeaf, predicate, lenses, filterLayoutMode, predicateRevision, showCrossLinks, activePath, renderRevision, semanticRevision, findFocusRequest, areaSettingsMode, onAreaSettingsModeChange, onApplyFindFilter, appliedFindFilterQuery, onClearFindFilter, onActivate, onOpen, onOpenInSidecar, onCentralNodeEditorChange, onCentralNodeModeChange, actionPorts, actionSurfaceId, displayState, fullscreenAvailable }: {
+export function PlexGraph({ plugin, index, settings: viewSettings, surface, hostLeaf, predicate, lenses, filterLayoutMode, predicateRevision, showCrossLinks, activePath, renderRevision, semanticRevision, findFocusRequest, areaSettingsMode, onAreaSettingsModeChange, onApplyFindFilter, appliedFindFilterQuery, onClearFindFilter, onActivate, onWanderActivate, onOpen, onOpenInSidecar, onCentralNodeEditorChange, onCentralNodeModeChange, actionPorts, actionSurfaceId, displayState, fullscreenAvailable }: {
   plugin: KplexPlugin;
   index: GraphIndex;
   settings: KplexSettings;
@@ -712,6 +717,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
   appliedFindFilterQuery: string | null;
   onClearFindFilter: () => void;
   onActivate: (page: GraphPage) => void;
+  onWanderActivate: (page: GraphPage) => void;
   onOpen: (page: GraphPage) => void | Promise<unknown>;
   onOpenInSidecar: (page: GraphPage) => Promise<void>;
   onCentralNodeEditorChange: (enabled: boolean) => void;
@@ -794,6 +800,11 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
   const [sceneTransitioning, setSceneTransitioning] = useState(false);
   const [sceneMotion] = useState(() => new ElementMotion());
   const suppressLayoutMotionUntil = useRef(0);
+  const incomingCenter = useRef<{ identity: string; rect: MotionRect | null; origin: "user" | "wander" } | null>(null);
+  const navigationOccurrence = useRef<{ identity: string; id: string } | null>(null);
+  const wanderMotion = useRef(false);
+  const wanderSelection = useRef<{ center: string; previous: string | null; owned: string } | null>(null);
+  const renderedCenterGates = useRef<{ identity: string; stats: PositionedNode["gateStats"] } | null>(null);
   const previousNodeRects = useRef<Map<string, { left: number; top: number; width: number; height: number }>>(new Map());
   const [layoutRevision, setLayoutRevision] = useState(0);
   const [optimisticRelink, setOptimisticRelink] = useState<{ targetPath: string; role: GateRole } | null>(null);
@@ -921,6 +932,9 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
   const cameraFrameWindow = useRef<Window | null>(null);
   const zoneScrollRefs = useRef<Partial<Record<ScrollZone, HTMLDivElement>>>({});
   const camera = useRef({ x: 0, y: 0, scale: 1 });
+  const cameraIntentPlaced = useRef(false);
+  const automaticFit = useRef<{ path: string; camera: FitCamera } | null>(null);
+  const fitCurrentScene = useRef<() => void>(/** Native resize callbacks must wait for the first composed scene fit. */ () => {});
   const [hover, setHover] = useState<HoverState>(null);
   const hoverIntentTimer = useRef<number | null>(null);
   const edgeTooltipTimer = useRef<number | null>(null);
@@ -1163,9 +1177,13 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     overlay.style.setProperty("--kplex-editor-camera-scale", String(current.scale));
   };
 
-  const applyCamera = (nextOrUpdater: { x: number; y: number; scale: number } | ((current: { x: number; y: number; scale: number }) => { x: number; y: number; scale: number })) => {
+  /** Apply camera intent; manual movement retires late-layout fitting until navigation or explicit Fit. */
+  const applyCamera = (nextOrUpdater: FitCamera | ((current: FitCamera) => FitCamera), fitted = false) => {
     const next = typeof nextOrUpdater === "function" ? nextOrUpdater(camera.current) : nextOrUpdater;
     camera.current = next;
+    cameraIntentPlaced.current = true;
+    if (fitted) automaticFit.current = { path: activePath, camera: { ...next } };
+    else automaticFit.current = null;
     // Pointer streams on iOS can deliver substantially more events than the screen can paint.
     // Coalesce camera writes to one per animation frame, and use a 2D transform for graph-only
     // content. Native embedded views are positioned separately above the camera so Excalidraw and
@@ -1247,24 +1265,25 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     }),
   ].join("::");
 
-  useLayoutEffect(() => {
+  useLayoutEffect(/** Measure final layout after cancelling old motion, then land an intentional center from its captured screen origin. */ () => {
     const root = viewport.current;
     if (!root) return;
     // Measure actual target layout, never a retained or still-running transform from the prior
     // scene. Live configuration and relationship gestures own coordinates directly.
     sceneMotion.cancelAll();
 
-    // Recenter only for initial display, explicit navigation, or an explicit central-editor mode
-    // toggle. Index/metadata updates often add or move thoughts after an autosave or Sync event;
-    // those updates must preserve the
-    // user's exact camera and bounded-list scroll positions. FLIP still animates nodes into their
-    // new layout, but the canvas itself stays anchored.
+    // Navigation starts automatic fit ownership. Later requested-neighborhood publications may
+    // enlarge the scene; follow them only while no manual camera action has retired that ownership.
+    // Explicit presentation/display transitions still preserve their camera and bounded-list scroll.
     const preserveCamera = preserveCameraOnNextLayout.current;
     const editorModeChanged = centralEditorAvailabilityRef.current !== centralEditorAvailable;
     const editorSizeKey = centralEditorSize ? `${centralEditorSize.width}:${centralEditorSize.height}` : "";
     const editorSizeChanged = centralEditorSizeKeyRef.current !== editorSizeKey;
-    const shouldRecenter = !preserveCamera && (previousNodeRects.current.size === 0 || pathChangedThisRender || editorModeChanged || editorSizeChanged);
-    if (shouldRecenter) {
+    const followAutomaticFit = !preserveCamera && !displayResizeLayout.current && !centralEditorMaximized
+      && automaticFit.current?.path === activePath && sameFitCamera(automaticFit.current.camera, camera.current);
+    const shouldRecenter = !preserveCamera && (!cameraIntentPlaced.current || pathChangedThisRender || editorModeChanged
+      || (settings.allowAutozoom && editorSizeChanged && followAutomaticFit));
+    if (shouldRecenter || (settings.allowAutozoom && followAutomaticFit)) {
       if (settings.allowAutozoom) fit();
       else {
         const el = viewport.current;
@@ -1280,6 +1299,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
       const path = element.dataset.kplexPath;
       if (!path) return;
       const rect = element.getBoundingClientRect();
+      if (nextRects.has(path)) return;
       nextRects.set(path, { left: rect.left, top: rect.top, width: rect.width, height: rect.height });
     });
 
@@ -1287,16 +1307,17 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     const reduceMotion = root.ownerDocument.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
     if (speed > 0 && !reduceMotion && !displayResizeLayout.current && !areaResizeDrag.current && !nodeDrag && !connectDrag && Date.now() >= suppressLayoutMotionUntil.current) {
       // At 1x, shared thoughts migrate for ~520ms so their old→new position is legible without
-      // making navigation feel delayed. The newly selected center moves more briskly (~300ms),
+      // making navigation feel delayed. Intentional centers use the shared curved landing,
       // while genuinely new thoughts enter over ~390ms. The slider is a speed multiplier.
       const duration = Math.max(170, Math.round(520 / Math.max(0.25, speed)));
       const easing = "cubic-bezier(.2,.72,.22,1)";
       elements.forEach((element) => {
         const path = element.dataset.kplexPath;
         if (!path) return;
-        const current = nextRects.get(path);
-        if (!current) return;
-        const previous = previousNodeRects.current.get(path);
+        const measured = element.getBoundingClientRect();
+        const current = { left: measured.left, top: measured.top, width: measured.width, height: measured.height };
+        const isIncoming = element.classList.contains("kplex-role-center") && pathChangedThisRender && incomingCenter.current?.identity === path;
+        const previous = isIncoming ? incomingCenter.current?.rect : previousNodeRects.current.get(path);
         if (previous) {
           // Bounding rectangles are screen pixels; transforms live inside the scaled camera.
           const dx = (previous.left - current.left) / camera.current.scale;
@@ -1304,11 +1325,11 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
           const sx = current.width > 0 ? previous.width / current.width : 1;
           const sy = current.height > 0 ? previous.height / current.height : 1;
           if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5 || Math.abs(sx - 1) > 0.02 || Math.abs(sy - 1) > 0.02) {
-            const isCenter = element.classList.contains("kplex-role-center");
-            sceneMotion.play(element, [
+            const curved = isIncoming && !centralEditorAvailable;
+            sceneMotion.play(element, curved ? centerArrivalFrames(previous, current, camera.current.scale) : [
               { transformOrigin: "0 0", transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`, opacity: 0.90 },
               { transformOrigin: "0 0", transform: "translate(0, 0) scale(1, 1)", opacity: 1 },
-            ], { duration: isCenter ? Math.max(150, Math.round(duration * 0.58)) : duration, easing });
+            ], { duration: curved ? Math.max(220, Math.round((incomingCenter.current?.origin === "wander" ? 820 : 520) / Math.max(0.25, speed))) : element.classList.contains("kplex-role-center") ? Math.max(150, Math.round(duration * 0.58)) : duration, easing });
           }
           return;
         }
@@ -1321,6 +1342,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
         ], { duration: Math.max(160, Math.round(duration * 0.75)), easing });
       });
     }
+    incomingCenter.current = null;
     previousNodeRects.current = nextRects;
     centralEditorAvailabilityRef.current = centralEditorAvailable;
     centralEditorSizeKeyRef.current = editorSizeKey;
@@ -1329,11 +1351,12 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     syncCentralEditorOverlay();
   }, [sceneLayoutKey, settings.animationSpeed, nodeDrag?.path, connectDrag?.originPath, sceneMotion, viewportSize.width, viewportSize.height, displayState.revision]);
 
+  /** Center the actual central node and fit symmetric displayed bounds; explicit Fit renews ownership. */
   const fit = () => {
     const el = viewport.current;
     if (!el) return;
     if (centralEditorMaximized) {
-      applyCamera({ x: el.clientWidth / 2, y: el.clientHeight / 2, scale: 1 });
+      applyCamera({ x: el.clientWidth / 2, y: el.clientHeight / 2, scale: 1 }, true);
       return;
     }
 
@@ -1360,25 +1383,16 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     }
 
     if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
-      applyCamera({ x: el.clientWidth / 2, y: el.clientHeight / 2, scale: 1 });
+      applyCamera({ x: el.clientWidth / 2, y: el.clientHeight / 2, scale: 1 }, true);
       return;
     }
 
-    const graphWidth = Math.max(1, maxX - minX);
-    const graphHeight = Math.max(1, maxY - minY);
-    const padding = 46;
-    const availableWidth = Math.max(80, el.clientWidth - padding * 2);
-    const availableHeight = Math.max(80, el.clientHeight - padding * 2);
     const maxScale = Platform.isIosApp ? IOS_MAX_ZOOM : MAX_ZOOM;
-    const scale = Math.max(0.18, Math.min(maxScale, availableWidth / graphWidth, availableHeight / graphHeight));
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
-    applyCamera({
-      scale,
-      x: el.clientWidth / 2 - centerX * scale,
-      y: el.clientHeight / 2 - centerY * scale,
-    });
+    const center = scene.nodes.find(/** Use the central occurrence as the focal point instead of the asymmetric bounds midpoint. */ node => node.role === "center") ?? { x: 0, y: 0 };
+    applyCamera(centeredViewportFit(el.clientWidth, el.clientHeight, center,
+      { left: minX, top: minY, right: maxX, bottom: maxY }, maxScale), true);
   };
+  fitCurrentScene.current = fit;
 
   const toWorld = (clientX: number, clientY: number): Point => {
     const el = viewport.current;
@@ -1548,7 +1562,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     return () => window.clearTimeout(resetTimer);
   }, [activePath]);
 
-  useEffect(() => {
+  useEffect(/** Observe the actual pane, preserving manual/display-transition intent and fitting only the current owned scene. */ () => {
     const el = viewport.current;
     if (!el) return;
     type WindowWithResizeObserver = Window & { ResizeObserver: typeof ResizeObserver };
@@ -1562,13 +1576,14 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
       if (preserveDisplayCamera) { preserveCameraOnNextLayout.current = true; displayResizeLayout.current = true; }
       setViewportSize({ width, height });
       if (preserveDisplayCamera || centralEditorMaximized || Date.now() < suppressAutoFitUntil.current) return;
-      if (settings.allowAutozoom) fit();
+      if (settings.allowAutozoom && automaticFit.current?.path === activePath
+        && sameFitCamera(automaticFit.current.camera, camera.current)) fitCurrentScene.current();
     };
     updateViewport();
     const observer = new owningWindow.ResizeObserver(updateViewport);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [settings.allowAutozoom, centralEditorMaximized, displayState.revision]);
+  }, [settings.allowAutozoom, centralEditorMaximized, displayState.revision, activePath]);
 
   useEffect(() => {
     const el = viewport.current;
@@ -2041,6 +2056,59 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
       clearHoverIntent(true); revealFindHit(node.path, node.id);
     },
   });
+  /** Capture live screen geometry before shared App navigation changes layout or camera fit. */
+  const prepareNavigation = (identity: string, origin: "user" | "wander"): void => {
+    const root = viewport.current;
+    const selected = selection.readSelected();
+    const explicit = navigationOccurrence.current?.identity === identity ? navigationOccurrence.current.id : null;
+    navigationOccurrence.current = null;
+    const occurrences = Array.from(root?.querySelectorAll<HTMLElement>("[data-kplex-path]") ?? []).filter(/** Paths remain exact opaque projection identities. */ element => element.dataset.kplexPath === identity);
+    const element = occurrences.find(/** The selected duplicate owns its source geometry when explicitly chosen. */ item => item.dataset.kplexKeyboardId === (explicit ?? selected?.id)) ?? occurrences[0];
+    const rect = element?.getBoundingClientRect();
+    const bounds = root?.getBoundingClientRect();
+    const visible = rect && bounds && rect.width > 0 && rect.height > 0 && rect.bottom > bounds.top && rect.top < bounds.bottom && rect.right > bounds.left && rect.left < bounds.right;
+    incomingCenter.current = { identity, origin, rect: visible ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height } : null };
+    wanderMotion.current = origin === "wander";
+  };
+  const wanderCandidates = useMemo<readonly WanderDestination[]>(/** Reuse the finite occurrence projection once per publication instead of rescanning it on every readiness poll. */ () => {
+    const pages = new Map(scene.nodes.map(/** Exact occurrence keys disambiguate repeated semantic endpoints. */ node => [sceneNodeKeys.get(node), node.page]));
+    for (const cluster of expandedClusters) for (const child of cluster.children) pages.set(child.key, child.relation.page);
+    return keyboardNodes.flatMap(/** Transient headings/section targets and unresolved placeholders cannot start autonomous navigation. */ node => {
+      const projected = pages.get(node.id);
+      const page = index.get(node.path);
+      if (!page || projected?.transient || page.transient || page.path === activePath || !(page.file || page.isFolder || page.isTag || page.url)
+        || !index.isVisiblePage(page, settings) || page.file && plugin.app.vault.getFileByPath(page.file.path) !== page.file) return [];
+      return [{ node: actionNodeRef(page), occurrenceId: node.id }];
+    });
+  }, [keyboardNodes, scene.nodes, sceneNodeKeys, expandedClusters, index, plugin, settings, activePath, renderRevision, semanticRevision]);
+  /** Read current local scene/motion readiness without acquiring sources or rebuilding projection. */
+  const readWanderScene = (): WanderScene => {
+    const root = viewport.current;
+    const center = persistentNeighborhood?.center;
+    const gates = renderedCenterGates.current?.identity === center?.path ? renderedCenterGates.current?.stats : null;
+    return { center: root?.isConnected && center ? center.path : null,
+      ready: Boolean(root?.isConnected && plugin.isKplexLeafVisible(hostLeaf) && center && !sceneTransitioning && !pathChangedThisRender
+        && !sceneMotion.isRunning() && !nodeDrag && !connectDrag && !areaSettingsMode && !relationshipUpdating
+        && gates && Object.values(gates).every(/** Cached or unavailable incidence waits for existing local demand; global completeness is unnecessary. */ gate => !gate.countUnavailable && (gate.complete || gate.coverage === "local"))), candidates: wanderCandidates };
+  };
+  /** Revalidate occurrence, visibility and native incarnation after anticipation or an index publication. */
+  const resolveWanderDestination = (destination: WanderDestination): GraphPage | null => {
+    if (!readWanderScene().candidates.some(item => item.occurrenceId === destination.occurrenceId && item.node.identity === destination.node.identity)) return null;
+    const page = resolveActionPage(index, destination.node);
+    return page && index.isVisiblePage(page, settings) && (!page.file || plugin.app.vault.getFileByPath(page.file.path) === page.file) ? page : null;
+  };
+  /** Use existing selection/reveal and keep an exact lease so user-owned selection is never erased. */
+  const highlightWander = (destination: WanderDestination): boolean => {
+    if (!resolveWanderDestination(destination)) return false;
+    wanderSelection.current = { center: activePath, previous: selection.readSelected()?.id ?? null, owned: destination.occurrenceId };
+    return selection.select(destination.occurrenceId);
+  };
+  /** Release only a still-owned temporary highlight and cancel Wander-origin motion on interruption. */
+  const clearWander = (): void => {
+    const owned = wanderSelection.current; wanderSelection.current = null;
+    if (owned?.center === activePath && selection.readSelected()?.id === owned.owned && !selection.select(owned.previous)) selection.select(null);
+    if (wanderMotion.current) { sceneMotion.cancelAll(); incomingCenter.current = null; wanderMotion.current = false; }
+  };
   const keyboardSelection = selection.selectedId;
   const [keyboardConnect, setKeyboardConnect] = useState<NodeRef | null>(null);
   const keyboardConnectRef = useRef<NodeRef | null>(null);
@@ -2542,7 +2610,8 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
       suppressNativeDoubleClickUntil.current = Date.now() + 500;
       runNodeAction("node.open", target);
     } else {
-      runNodeAction("node.activate", target);
+      const occurrence = event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-kplex-keyboard-id]")?.dataset.kplexKeyboardId;
+      runNodeAction("node.activate", target, occurrence);
     }
   };
 
@@ -2833,6 +2902,8 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
           completeTouchTap(original.page, e);
         } else {
           suppressActivateUntil.current = Date.now() + 180;
+          const occurrence = sceneNodeKeys.get(original);
+          if (occurrence) navigationOccurrence.current = { identity: original.page.path, id: occurrence };
           onActivate(original.page);
         }
       }
@@ -3099,13 +3170,17 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
       if (!page) return;
       if (page.transient?.kind === "section") return plugin.openSection(page);
       if (context.request.source === "local-hotkey" && page.path === activePath && page.file) return renameFrom(context);
+      if (context.target.kind === "node" && context.target.occurrenceId) navigationOccurrence.current = { identity: page.path, id: context.target.occurrenceId };
       onActivate(page);
       return;
     }, context => Boolean(graphActionPage(context))),
     "node.open": graphAction(/** Center existing content and ensure its owned sidecar; ghosts retain deliberate materialization. */ context => {
       const page = graphActionPage(context);
       if (page?.transient?.kind === "section") return plugin.openSection(page);
-      if (page?.file || page?.url) return onOpenInSidecar(page);
+      if (page?.file || page?.url) {
+        if (context.target.kind === "node" && context.target.occurrenceId) navigationOccurrence.current = { identity: page.path, id: context.target.occurrenceId };
+        return onOpenInSidecar(page);
+      }
       if (page) return onOpen(page);
       return;
     }, context => surface !== "sidepanel" && Boolean(graphActionPage(context))),
@@ -3222,6 +3297,12 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
   }
   actionPorts.current = {
     implementations: graphImplementations,
+    prepareNavigation, readWanderScene, highlightWander, clearWander,
+    navigateWander: /** Accept only an exact still-displayed destination through the shared App activation path. */ destination => {
+      const page = resolveWanderDestination(destination);
+      if (!page || !readWanderScene().ready) return false;
+      onWanderActivate(page); return true;
+    },
     prepareDisplayResize: /** Keep exact zoom/pan across toolbar/overlay resizing, including viewport-dependent central editors. */ () => {
       displayResizePending.current = true; displayResizeLayout.current = true; preserveCameraOnNextLayout.current = true;
     },
@@ -3273,10 +3354,10 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
   };
 
   /** Navigate through click-based input while ignoring compatibility clicks already handled by pointer-up. */
-  const activateNode = (page: GraphPage): void => {
+  const activateNode = (page: GraphPage, occurrenceId?: string): void => {
     if (page.transient?.kind === "section") return;
     const target = persistentPageFor(page);
-    if (target && Date.now() >= Math.max(suppressActivateUntil.current, suppressSyntheticClickUntil.current)) runNodeAction("node.activate", target);
+    if (target && Date.now() >= Math.max(suppressActivateUntil.current, suppressSyntheticClickUntil.current)) runNodeAction("node.activate", target, occurrenceId);
   };
 
   /** Open through mouse double-click unless a completed touch pair already performed the same action. */
@@ -3299,6 +3380,10 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     const isMarkdown = Boolean(persistent?.file?.extension === "md");
     const canExpand = canExpandCentralSections(persistent, activePath);
     const menu = new Menu();
+    menu.addItem(/** Start/resume from the current center, independent of the clicked node. */ item => item
+      .setTitle(translate("wander.fromCenter")).setIcon("shuffle")
+      .onClick(/** All native entry points dispatch the same surface-owned action. */ () => void plugin.actionManager.dispatch({ id: "view.wander.start", source: "context-menu", surfaceId: actionSurfaceId })));
+    menu.addSeparator();
     const capturedPage = actionNodeRef(page);
     const capturedPersistent = persistent ? actionNodeRef(persistent) : null;
     /** Preserve menu-launch native identity even when a canonical graph page mutates while open. */
@@ -3474,6 +3559,9 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
       },
     }) : {};
     const countedDisplayNode = hydrateCounts ? projectNodeCounts(displayNode, index) : displayNode;
+    // Layout counts are deliberately deferred placeholders. Reuse the center's actual render-time
+    // coverage for autonomous readiness without querying counts/acquiring sources in timer polls.
+    if (baseNode.role === "center") renderedCenterGates.current = { identity: baseNode.page.path, stats: countedDisplayNode.gateStats };
     const styledDisplayNode = Object.keys(lensNodeStyle).length ? { ...countedDisplayNode, style: { ...countedDisplayNode.style, ...lensNodeStyle } } : countedDisplayNode;
     const gateCounts = filteredGateCounts?.isCurrent() ? filteredGateCounts.counts.get(baseNode.page.path) : undefined;
     const nodeForDisplay = globalFiltering && gateCounts
@@ -3511,7 +3599,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
       dragging={nodeDrag?.path === baseNode.page.path}
       flair={activeNodeFlair === baseNode.page.path}
       connectionState={connectionStateFor(baseNode)}
-      onActivate={() => activateNode(baseNode.page)}
+      onActivate={/** Capture the clicked occurrence before its semantic role changes. */ () => activateNode(baseNode.page, sceneNodeKeys.get(baseNode))}
       onOpen={() => openNode(baseNode.page)}
       onHoverNode={() => { if (!connectDrag && !nodeDrag) scheduleHoverIntent({ kind: "node", path: baseNode.page.path }); }}
       onHoverGate={(_, gate) => { if (!connectDrag && !nodeDrag) scheduleHoverIntent({ kind: "gate", path: baseNode.page.path, gate }); }}
@@ -3680,7 +3768,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
                 fontSize: 8 * (cluster.parent.role === "sibling" ? siblingScale(settings) : 1) * (settings.baseFontSize ?? 12.4) / 12.4,
               }}
               title={translate("graph.relatedNotePath", { label: child.label, path: child.relation.page.path })}
-              onClick={(event: MouseEvent<HTMLDivElement>) => { event.stopPropagation(); activateNode(child.relation.page); }}
+              onClick={(event: MouseEvent<HTMLDivElement>) => { event.stopPropagation(); activateNode(child.relation.page, child.key); }}
               onDoubleClick={(event: MouseEvent<HTMLDivElement>) => { event.stopPropagation(); openNode(child.relation.page); }}
               onContextMenu={/** Mini occurrences reuse the same captured native node menu policy. */ (event: MouseEvent<HTMLDivElement>) => {
                 event.preventDefault(); event.stopPropagation(); runNodeAction("node.context-menu", child.relation.page, child.key);
@@ -3802,7 +3890,23 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     onPointerLeave={(event: PointerEvent<HTMLDivElement>) => {
       if (!areaResizeDrag.current && event.pointerType !== "touch") setAreaHoverIfChanged(null);
     }}
-    onContextMenu={(event: MouseEvent<HTMLDivElement>) => event.preventDefault()}
+    onContextMenu={/** Bare Plex context uses the existing native menu owner; node/edge menus stop propagation themselves. */ (event: MouseEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const target = event.target as Element;
+      if (target.closest("[data-kplex-path], .kplex-edge-hit, button, input, .kplex-central-editor-overlay") || Date.now() < suppressActivateUntil.current) return;
+      const menu = createPlexContextMenu({ translate, zen: displayState.zen, fullscreen: displayState.fullscreen, fullscreenAvailable,
+        runAction: /** Reuse the exact view-scoped action owner for playback and display modes. */ id => { void plugin.actionManager.dispatch({ id, source: "context-menu", surfaceId: actionSurfaceId }); },
+        openSettings: /** Preserve the guarded native settings bridge. */ () => plugin.openSettings(),
+        chooseBackground: /** The view owns this picker and closes it on migration/unmount. */ () => {
+          const dialog = new PlexBackgroundModal(plugin.app, plugin.settings.backgroundColor, translate,
+            /** Use the same settings policy/persistence path as the native Settings color control. */ async color => { plugin.settings.backgroundColor = color; await plugin.saveSettings(false); },
+            /** Native close releases exactly this view's picker reference. */ () => { graphDialogs.current.delete(dialog); });
+          graphDialogs.current.add(dialog); dialog.open();
+        },
+        reportBug: /** Start the existing clipboard-first support flow before any async dispatch. */ () => plugin.reportBug(viewport.current ?? undefined, actionSurfaceId),
+      });
+      plugin.showKplexMenuAtMouseEvent(menu, event.nativeEvent, hostLeaf);
+    }}
   >
     {keyboardConnect && <div className="kplex-find kplex-connection-session" role="status">
       <span><strong>{translate("actions.connectFrom", { origin: connectionOrigin ? index.titleFor(connectionOrigin) : keyboardConnect.path })}</strong> · {connectionSearchHint
@@ -4016,7 +4120,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
           value={settings.baseNodeStyle.maxWidth ?? 286} displayValue={String(settings.baseNodeStyle.maxWidth ?? 286)} min={TYPOGRAPHY_LIMITS.maxWidth.min} max={TYPOGRAPHY_LIMITS.maxWidth.max} step={TYPOGRAPHY_LIMITS.maxWidth.step}
           onChange={/** Override this device regular-node width before explicit style precedence. */ (value) => changeTypography({ maxWidth: value })} />
         </div>
-        <label className="kplex-density-control kplex-wrap-label-control" title={typographyHint("wrapNodeLabels", translate("settings.ui.wrap.node.labels.help"))}>
+        <label className="kplex-density-control kplex-wrap-label-control" aria-label={typographyHint("wrapNodeLabels", translate("settings.ui.wrap.node.labels.help"))} data-kplex-control-tooltip>
           <input type="checkbox" checked={settings.wrapNodeLabels} aria-label={translate("settings.ui.wrap.node.labels")}
             onChange={/** Set this device fixed two-line label setting. */ (event) => changeTypography({ wrapNodeLabels: event.currentTarget.checked })} />
           <span className="kplex-wrap-label-caption">{translate("settings.ui.wrap.node.labels")}</span>

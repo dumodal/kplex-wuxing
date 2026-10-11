@@ -1243,6 +1243,8 @@ const activePath = "Editor.md", centralEditorAvailable = true, sectionExpanded =
 const page = (path, materialized = true) => ({ path, name: path, file: materialized ? { extension: "png", path } : null });
 const centerPage = page(activePath), attachmentPage = page("Before.png"), placeholderPage = page("After.png", false), sentinelPage = page("Other.png");
 const neighborhood = { center: centerPage }, miniPage = page("Descendant.png");
+// The production center renderer publishes already-rendered local gate coverage for readiness.
+const renderedCenterGates = { current: null };
 const gates = Object.fromEntries(["top", "bottom", "left", "right"].map((gate) => [gate, { visibleCount: 0, hasAny: false, complete: true }]));
 const index = { gateStats: () => gates, neighbours: () => [{ page: miniPage, role: "child", relationType: 1 }], titleFor: (page) => page.name };
 const node = (page, role, x, y, height = 26) => ({ page, role, x, y, width: 180, height, style: { fontSize: 18 }, label: page.name, neighbourCount: 0, gateStats: gates });

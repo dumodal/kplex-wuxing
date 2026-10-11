@@ -435,6 +435,8 @@ for (const file of [
   "src/adapters/obsidian/adjacentFileLeaf.ts",
   "src/adapters/obsidian/excalidrawIntegrationVersion.ts",
   "src/adapters/obsidian/embeddedMarkdownLeaf.ts",
+  "src/adapters/obsidian/EmbeddedDrawingFit.ts",
+  "src/ui/components/viewportFit.ts",
   "src/adapters/obsidian/embeddedMarkdownFocus.ts",
   "src/adapters/obsidian/externalUrl.ts",
   "src/adapters/obsidian/indexDiagnosticsReport.ts",

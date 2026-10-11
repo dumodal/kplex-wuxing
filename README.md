@@ -71,9 +71,10 @@ On phones, K-Plex opens naturally in the side panel. Tablets can use either a no
 - Drag empty graph space to pan and use the mouse wheel or pinch gesture to zoom.
 - Long-press on touch devices opens the same context menus available with right-click on desktop.
 - Clicking or touching empty graph space clears temporary node, gate and connector highlights.
+- Right-click empty Plex space for **K-Plex settings**, **Zen mode**, **Full-screen mode**, **Set background color…**, **Wander**, and **Report a bug**. The background picker saves only when you select **Save**.
 - Use **Fit graph** whenever you want to bring the visible Plex back into view.
 
-K-Plex uses positional animation when navigating: notes that exist in both scenes visibly move to their new location, while new notes enter from the direction of their relationship. Animation speed can be changed in **Settings → K-Plex → Plex behavior**, including turning it off completely.
+K-Plex uses positional animation when navigating: the incoming center glides from its previous position along a gentle arc, while other nodes move to their new locations. Nodes without a visible starting position use a simple entry animation. Animation speed can be changed in **Settings → K-Plex → Plex behavior**, including turning it off completely.
 
 ### Fullscreen and Zen mode
 
@@ -82,6 +83,14 @@ Use **Maximize** beside **Fit to screen** to cover the Obsidian workspace with K
 Use **Expand** to enter **Zen mode**, hiding K-Plex’s top toolbar, pins and bottom history. **Shrink** restores them. Zen mode also works on tablets and phones. Both modes are independent, and the bottom-right graph controls remain available. They preserve zoom, pan and selection; use **Fit to screen** when you want to reframe the graph.
 
 An unclaimed **Escape** with the graph focused exits Zen first, then fullscreen. Search queries, connection sessions and native editors, menus and dialogs retain their own Escape behavior. Fullscreen exits when you switch to another native pane or close the view. These modes last only for the current view session.
+
+With **Auto fit on navigation** enabled, the central node stays centered and the Plex adjusts as additional related nodes load. Panning or zooming manually keeps your chosen view until the next navigation or **Fit graph**.
+
+### Wander
+
+Select **Wander** in K-Plex’s actions or Obsidian’s Command Palette, or right-click the Plex and select **Wander**. K-Plex enters Zen mode and explores displayed, navigable nodes, highlighting each destination before moving. The bottom controls let you pause/resume, choose **3–15 seconds per move**, or stop with **X**.
+
+Navigating, editing, panning or using other controls pauses wandering. Select **Play** to continue from the current center. At an exhausted route, Wander pauses so you can choose another node or explore again. **X** or **Escape** stops wandering and restores your previous Zen state; fullscreen stays independent.
 
 ### Search, history and pins
 
@@ -387,7 +396,7 @@ Sibling relative size (30–85%) is under **Plex behavior → Layout & sizing**.
 4. **Sidecar** — companion-pane behavior and Markdown mode
 5. **Compatibility** — ExcaliBrain settings import and Excalidraw editor-node behavior
 
-Excalidraw drawings fit automatically when opened or navigated to in a normal editor node, even if Excalidraw’s own fit-on-open preference is off. Change this in **K-Plex settings → Compatibility → Excalidraw → Fit drawings when opening an editor node**. Fullscreen editors follow Excalidraw’s preference. Resizing or maximizing an already-open drawing preserves your manual zoom.
+Excalidraw drawings fit automatically when opened or navigated to in a normal editor node, even if Excalidraw’s own fit-on-open preference is off. Change this in **K-Plex settings → Compatibility → Excalidraw → Fit drawings when opening an editor node**. Untouched drawings in view mode also refit when Plex zoom changes their frame size. After you interact with a drawing, its pan and zoom are preserved until another opening. Edit mode and fullscreen editors retain their native behavior.
 
 ## Help, issues and contributing
 
