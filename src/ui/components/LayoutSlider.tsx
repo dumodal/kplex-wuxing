@@ -1,6 +1,8 @@
 /**
  * Compact, accessible layout rail shared by density axes, columns and typography. The caller owns
  * localization, numeric policy and persistence; this component only displays and emits values.
+ * A marked accessible wrapper supplies help to the shell's shared delayed control-tooltip owner;
+ * the input retains its concise name and no competing browser title tooltip is emitted.
  */
 import type { ChangeEvent, ReactNode } from "react";
 
@@ -18,7 +20,7 @@ export function LayoutSlider({ label, caption, hint, icon, value, displayValue, 
   onChange: (value: number) => void;
 }) {
   const percent = Math.max(0, Math.min(100, (value - min) / (max - min) * 100));
-  return <label className="kplex-density-control" title={hint}>
+  return <label className="kplex-density-control" aria-label={hint ?? label} data-kplex-control-tooltip>
     <span className="kplex-density-heading">{icon}<span>{caption}</span><output>{displayValue}</output></span>
     <span className={`kplex-density-rail${step === 1 ? " is-stepped" : ""}`}>
       <span className="kplex-density-fill" style={{ width: `${percent}%` }} />

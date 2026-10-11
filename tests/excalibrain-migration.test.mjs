@@ -94,10 +94,10 @@ test("transient ExcaliBrain drawing paths are discarded from imported and saved 
 });
 
 test("cross-link visibility persists across reload and uses a presentation-only Plex settings toggle", async () => {
-  assert.equal(defaults.showCrossLinks, true, "older settings retain the enabled default");
-  assert.equal(migrateAndMergeSettings({ showCrossLinks: "invalid" }).showCrossLinks, true);
+  assert.equal(defaults.showCrossLinks, false, "fresh and unspecified settings retain the committed 0.1.2 disabled default");
+  assert.equal(migrateAndMergeSettings({ showCrossLinks: "invalid" }).showCrossLinks, false);
   const saves = [];
-  const plugin = { manifest: { id: "k-plex" }, settings: structuredClone(defaults),
+  const plugin = { manifest: { id: "k-plex" }, settings: { ...structuredClone(defaults), showCrossLinks: true },
     saveSettings: async (...args) => { saves.push(args); },
     index: { unassignedOntologyFields: () => [], allPages: () => [] } };
   plugin.translator = createObsidianTranslator();
@@ -113,7 +113,7 @@ test("cross-link visibility persists across reload and uses a presentation-only 
   assert.equal(migrateAndMergeSettings({ showCrossLinks: true }).showCrossLinks, true);
   assert.equal(importExcaliBrainGraphSettings({ ...fixture, showCrossLinks: true }, restored).showCrossLinks, false,
     "foreign imports preserve the local preference");
-  assert.deepEqual(classifySettingsChange(captureSettingsPolicy(defaults), captureSettingsPolicy(restored)), {
+  assert.deepEqual(classifySettingsChange(captureSettingsPolicy({ ...defaults, showCrossLinks: true }), captureSettingsPolicy(restored)), {
     semanticInvalidation: false, presentationFacets: false, searchTerms: false,
     nodeVisuals: false, render: true, typographyOnly: false, changedKeys: ["showCrossLinks"],
   });

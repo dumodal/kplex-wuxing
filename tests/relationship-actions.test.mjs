@@ -539,7 +539,7 @@ test("visible metadata preview captures the event's new source revision", async 
 test("portaled filter heading preserves form focus while bare Plex space focuses the shell", () => {
   let focused = 0, dismissed = 0;
   const down = productionFunction("src/ui/App.tsx", "handlePlexPointerDown", {
-    graphActionPorts: { current: { clearSelection() {} } }, plugin: { dismissKplexMenu: () => dismissed++ }, rootRef: { current: { focus: () => focused++ } },
+    wander: { pause() {} }, graphActionPorts: { current: { clearSelection() {} } }, plugin: { dismissKplexMenu: () => dismissed++ }, rootRef: { current: { focus: () => focused++ } },
   });
   down({ target: { closest: selector => selector.includes(".kplex-filter-panel") ? {} : null } });
   assert.equal(focused, 0, "Portal capture must not steal the filter input's focus before dragging");
@@ -569,8 +569,11 @@ test("navigation with autofit disabled recenters without resetting manual scale"
     viewport: { current: { clientWidth: 800, clientHeight: 600, querySelectorAll: () => [], ownerDocument: { defaultView: { matchMedia: () => ({ matches: false }) } } } },
     sceneMotion: { cancelAll: () => {} }, preserveCameraOnNextLayout: { current: false }, displayResizeLayout: { current: false },
     centralEditorAvailabilityRef: { current: false }, centralEditorAvailable: false, centralEditorSize: null,
-    centralEditorSizeKeyRef: { current: "" }, previousNodeRects: { current: new Map([["prior", {}]]) },
+    incomingCenter: { current: null }, centralEditorSizeKeyRef: { current: "" }, previousNodeRects: { current: new Map([["prior", {}]]) },
     pathChangedThisRender: true, settings: { allowAutozoom: false, animationSpeed: 0 },
+    automaticFit: { current: null }, activePath: "Center.md", centralEditorMaximized: false,
+    camera: { current: camera }, sameFitCamera: (a, b) => a.x === b.x && a.y === b.y && a.scale === b.scale,
+    cameraIntentPlaced: { current: true },
     fit: () => { calls.push("fit"); Object.assign(camera, { scale: 0.4, x: 90, y: 120 }); },
     applyCamera: update => Object.assign(camera, typeof update === "function" ? update(camera) : update),
     flushCameraTransform: () => calls.push("flush"), syncCentralEditorOverlay: () => {},

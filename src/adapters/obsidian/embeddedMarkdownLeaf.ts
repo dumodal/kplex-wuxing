@@ -8,11 +8,12 @@
  * Drawing capability remains separate from the initial Markdown preference in current metadata;
  * explicit representation changes belong to Excalidraw and never reapply that opening preference.
  * Normal node editors may request opening fit through a live, narrow host policy. Maximized
- * editors and native fullscreen follow the companion preference. Rendering and resizing never
- * reapply K-Plex opening fit, so user viewport adjustments survive those updates.
+ * editors and native fullscreen follow the companion preference. Untouched reading-mode drawings
+ * follow native viewport resizing; direct input or manual camera changes retire that fit lifetime.
  */
 import { FileView, Platform, WorkspaceLeaf, WorkspaceSplit, type App, type Scope, type TFile, type Workspace } from "obsidian";
 import { focusEmbeddedMarkdownView, registerEmbeddedMarkdownFocus, registerEmbeddedMarkdownFocusTarget } from "./embeddedMarkdownFocus";
+import { EmbeddedDrawingFit } from "./EmbeddedDrawingFit";
 import {
   hasMinimumExcalidrawIntegrationVersion,
   MINIMUM_EXCALIDRAW_INTEGRATION_VERSION,
@@ -68,7 +69,7 @@ type LinkOpeningLeaf = WorkspaceLeaf & {
   openLinkText?: (linkText: string, sourcePath: string, state?: unknown) => Promise<void>;
 };
 type ResizableView = WorkspaceLeaf["view"] & { onResize?: () => void };
-type ExcalidrawView = WorkspaceLeaf["view"] & { excalidrawAPI?: unknown };
+type ExcalidrawView = WorkspaceLeaf["view"] & { excalidrawAPI?: unknown; isLoaded?: boolean };
 type ExcalidrawPaneTarget = "active-pane" | "new-pane" | "popout-window" | "new-tab" | "md-properties";
 type ExcalidrawViewLinkClickContext = {
   linkText: string,
@@ -78,6 +79,10 @@ type ExcalidrawViewLinkClickContext = {
   ea: ExcalidrawAutomateApi,
 };
 type ExcalidrawAutomateApi = {
+  getExcalidrawAPI?: () => { getAppState: () => {
+    zoom: { value: number }; scrollX: number; scrollY: number; width: number; height: number;
+    viewModeEnabled: boolean; isLoading?: boolean;
+  } } | null;
   isExcalidraw?: () => boolean;
   verifyMinimumPluginVersion?: (requiredVersion: string) => boolean;
   toggleViewMode?: (view: WorkspaceLeaf["view"]) => Promise<WorkspaceLeaf["view"] | null>;
@@ -219,7 +224,7 @@ function markdownLinkTargetAt(sourceLine: string, sourceOffset: number): string 
  *
  * @remarks This intentionally mirrors Hover Editor's narrow WorkspaceSplit seam. The returned
  * controller owns the leaf and must be disposed when the React host unmounts.
- * @param preferEmbeddedDrawingFit Live normal-node fit intent; omit to follow companion policy.
+ * @param preferEmbeddedDrawingFit Live normal-node opening/untouched-reading resize intent; omit to follow companion opening policy.
  */
 export function mountEmbeddedMarkdownLeaf(
   app: App,
@@ -389,10 +394,12 @@ export function mountEmbeddedMarkdownLeaf(
   // stacks keeps the same-leaf behavior consistent without disturbing clicks outside this mount.
   viewWindow.document.addEventListener("click", onEmbeddedLinkClick, true);
 
-  /** Ask the current native view to recompute its editor/preview geometry after host resizing. */
+  let drawingFit: EmbeddedDrawingFit | null = null;
+  /** Ask the current native view to recompute geometry, then coalesce eligible reading-mode fit. */
   const resize = (): void => {
     if (disposed) return;
     (leaf.view as ResizableView | undefined)?.onResize?.();
+    drawingFit?.resize();
   };
 
   /** Keep command routing on the correct real or embedded leaf for the owning K-Plex surface. */
@@ -618,14 +625,15 @@ export function mountEmbeddedMarkdownLeaf(
    * native first-render fit can need the one-shot request even when its own preference is enabled.
    * The host callback already excludes a maximized editor; native Excalidraw fullscreen is excluded
    * here using its actual ancestry marker. With no host override, a missing companion preference
-   * leaves saved zoom alone. This helper is read only on opening/representation transitions.
+   * leaves saved zoom alone. The resize caller additionally requires an untouched normal reading
+   * session; it does not apply companion opening preferences as a resize override.
    */
   const shouldFitExcalidrawOnOpen = (): boolean => (
     (!fullscreenHost?.classList.contains("excalidraw-visible") && preferEmbeddedDrawingFit?.() === true)
     || getExcalidrawBridge()?.plugin?.settings?.zoomToFitOnOpen === true
   );
 
-  /** Apply current normal-node or companion opening-fit intent after a compatibility view transition. */
+  /** Use the companion's fitting owner after opening or separately authorized reading-mode resizing. */
   const zoomExcalidrawToFit = (api: ExcalidrawAutomateApi | null): void => {
     if (!api || !shouldFitExcalidrawOnOpen()) return;
     try {
@@ -638,6 +646,29 @@ export function mountEmbeddedMarkdownLeaf(
       // Excalidraw can briefly expose the API before its scene has finished attaching to the view.
     }
   };
+
+  drawingFit = new EmbeddedDrawingFit(viewWindow,
+    /** Read only exact mounted native geometry; stale, loading, edit and fullscreen views cannot fit. */ () => {
+      if (disposed || !mountEl.isConnected || getDocumentView() !== "excalidraw") return null;
+      const view = leaf.view as ExcalidrawView;
+      if (!view.excalidrawAPI || view.isLoaded === false) return null;
+      const state = excalidrawApiForView(view)?.getExcalidrawAPI?.()?.getAppState();
+      if (!state || state.isLoading) return null;
+      return { owner: view, width: state.width, height: state.height,
+        camera: { x: state.scrollX, y: state.scrollY, scale: state.zoom.value },
+        eligible: requestedMode === "preview" && state.viewModeEnabled
+          && preferEmbeddedDrawingFit?.() === true && !fullscreenHost?.classList.contains("excalidraw-visible") };
+    },
+    /** Reuse the companion's complete-scene fitting and safety limits after current policy authorization. */ () => {
+      zoomExcalidrawToFit(excalidrawApiForView(leaf.view));
+    });
+  /** Any direct drawing input conservatively preserves the user's viewport until another opening. */
+  const onDrawingInteraction = (): void => {
+    if (getDocumentView() === "excalidraw") drawingFit?.interrupt();
+  };
+  mountEl.addEventListener("pointerdown", onDrawingInteraction, true);
+  mountEl.addEventListener("wheel", onDrawingInteraction, true);
+  mountEl.addEventListener("keydown", onDrawingInteraction, true);
 
   /** Map K-Plex reading/edit mode onto Excalidraw view/edit mode once its React canvas is ready. */
   const setExcalidrawMode = async (mode: EmbeddedMarkdownMode): Promise<void> => {
@@ -745,6 +776,7 @@ export function mountEmbeddedMarkdownLeaf(
     // View replacement can briefly expose an intermediate/null type. Wait for the final native
     // representation so the toolbar never flickers to an indeterminate state.
     if (!nextView || nextView === observedDocumentView) return;
+    drawingFit?.reset();
     observedDocumentView = nextView;
     onDocumentViewChange?.(nextView);
     if (!reconcile || documentViewTransitionDepth > 0) return;
@@ -822,6 +854,7 @@ export function mountEmbeddedMarkdownLeaf(
       documentViewTransitionDepth += 1;
       try {
         const sequence = ++openSequence;
+        drawingFit?.reset();
         currentFile = file;
         requestedMode = mode;
         const bridge = getExcalidrawBridge();
@@ -877,6 +910,7 @@ export function mountEmbeddedMarkdownLeaf(
     async openUrl(url) {
       if (disposed) return;
       const sequence = ++openSequence;
+      drawingFit?.reset();
       currentFile = null;
       restoreExcalidrawLinkRouting();
       await leaf.setViewState({ type: "webviewer", state: { url, navigate: true }, active: false }, { focus: false });
@@ -896,6 +930,10 @@ export function mountEmbeddedMarkdownLeaf(
     dispose() {
       if (disposed) return;
       disposed = true;
+      drawingFit?.dispose(); drawingFit = null;
+      mountEl.removeEventListener("pointerdown", onDrawingInteraction, true);
+      mountEl.removeEventListener("wheel", onDrawingInteraction, true);
+      mountEl.removeEventListener("keydown", onDrawingInteraction, true);
       releaseFocus();
       releaseFocusTarget();
       embeddedScopeOwners.delete(mountEl);
