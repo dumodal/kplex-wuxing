@@ -2,6 +2,7 @@
  * Reusable React suggestion control independent of Obsidian and graph semantics. Callers supply ranked results, localized labels and actions; the control owns focus, navigation and owner-document portal cleanup.
  * Programmatic focus establishes component state even when a native host already focused the input
  * and repeating DOM focus emits no event. Focus alone never enables a typing-only suggestion list.
+ * Results expose accessible names and a tooltip scope; the host shell owns delayed hover hints.
  */
 import {
   useCallback,
@@ -381,7 +382,7 @@ export function FuzzySuggester<T>({
   };
 
   const list = focused && visibleResults.length > 0
-    ? <div ref={resultsRef} data-fuzzy-owner={resultsOwnerId} className={`kplex-search-results${floating ? " kplex-fuzzy-floating-results" : " kplex-fuzzy-inline-results"}`} style={floating ? overlayStyle ?? undefined : undefined}>
+    ? <div ref={resultsRef} data-fuzzy-owner={resultsOwnerId} data-kplex-tooltip-scope className={`kplex-search-results${floating ? " kplex-fuzzy-floating-results" : " kplex-fuzzy-inline-results"}`} style={floating ? overlayStyle ?? undefined : undefined}>
       {visibleResults.map((item, resultIndex) => {
         const label = getLabel(item);
         const detail = getDetail?.(item);
@@ -390,7 +391,7 @@ export function FuzzySuggester<T>({
           key={getKey(item)}
           data-kplex-fuzzy-index={resultIndex}
           className={`kplex-search-result${resultIndex === clampedSelectedIndex ? " is-selected" : ""}`}
-          title={detail ? `${label}\n${detail}` : label}
+          aria-label={detail ? `${label}\n${detail}` : label}
           onMouseDown={(event: MouseEvent<HTMLButtonElement>) => event.preventDefault()}
           onMouseEnter={() => setSelectedIndex(resultIndex)}
           onClick={() => choose(item)}

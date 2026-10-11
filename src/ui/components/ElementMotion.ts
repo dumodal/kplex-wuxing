@@ -19,6 +19,9 @@ export class ElementMotion {
     return animation;
   }
 
+  /** Report only this owner’s still-running effects to coordinate arrival with the next cycle. */
+  isRunning(): boolean { return this.animations.size > 0; }
+
   /** Restore actual layout before a new measurement, interrupted gesture or owning-view teardown. */
   cancelAll(): void {
     for (const animation of this.animations.values()) animation.cancel();

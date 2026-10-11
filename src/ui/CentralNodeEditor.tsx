@@ -1,5 +1,5 @@
 /** Native Obsidian view for a file- or URL-backed central Plex node. Live editor geometry supplies
- * the small-node drawing-fit policy only when opening or switching a drawing, never on rendering.
+ * the small-node drawing-fit policy on opening and untouched reading-mode viewport resizing.
  * Per-note Markdown scaling affects only native Markdown content; controls, fullscreen and canvas
  * views retain untransformed native geometry and pointer coordinates. */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -80,7 +80,7 @@ export function CentralNodeEditor({
         }), 6000);
       }, (nextView) => {
         setDocumentView(nextView);
-      }, activateHostLeafOnInteraction, /** Read current preference and editor geometry only at a native opening boundary. */ () =>
+      }, activateHostLeafOnInteraction, /** Read current normal-node policy for opening and untouched reading-mode resizing. */ () =>
         plugin.settings.excalidrawFitOnNodeOpen && !maximizedRef.current);
     } catch (error) {
       console.error("K-Plex failed to create the embedded central leaf.", error);

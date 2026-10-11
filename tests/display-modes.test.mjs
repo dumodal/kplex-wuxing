@@ -33,7 +33,7 @@ async function bundle() {
     import {ObsidianIcon} from './src/ui/ObsidianIcon';
     export {ActionManager} from './src/application/ActionManager';export {surfaceAction} from './src/ui/surfaceActionImplementation';export {createTranslator} from './src/lang';
     export function DisplayControls({plugin,translate,displayState,fullscreenAvailable,actionSurfaceId}){return ${controls}}
-    export function resizePolicy(ports){const{el,displayResizePending,measuredViewport,preserveCameraOnNextLayout,displayResizeLayout,setViewportSize,centralEditorMaximized,suppressAutoFitUntil,settings,fit}=ports;const viewport={current:el},centralEditorAvailable=true,restoreCentralEditorCamera={current:false},centralEditorRestoreCamera={current:null},applyCamera=()=>ports.applyCount++,flushCameraTransform=()=>{};return{update:${resize},prepare:${prepare},editor:${editorResize}}}
+    export function resizePolicy(ports){const{el,displayResizePending,measuredViewport,preserveCameraOnNextLayout,displayResizeLayout,setViewportSize,centralEditorMaximized,suppressAutoFitUntil,settings,fit}=ports;const viewport={current:el},centralEditorAvailable=true,restoreCentralEditorCamera={current:false},centralEditorRestoreCamera={current:null},applyCamera=()=>ports.applyCount++,flushCameraTransform=()=>{},activePath='Center.md',camera={current:{}},automaticFit={current:{path:activePath,camera:camera.current}},sameFitCamera=(a,b)=>a===b,fitCurrentScene={current:fit};return{update:${resize},prepare:${prepare},editor:${editorResize}}}
     const readObsidianPresentationEnvironment=()=>({device:'desktop'});
     class NativeBase {async onOpen(){}async onClose(){}getSurface(){return'leaf'}}
     class NativeView extends NativeBase {${methods}}

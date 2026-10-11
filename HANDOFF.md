@@ -18,32 +18,22 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Support diagnostics and zoom batch — validated for publication
+# Wander, shared tooltips/menu and adaptive fit — validated return for authorized PR merge
 
-Direction: scoped offline implementation, trace and driver returns accepted by the main validation agent. The main agent had Node 22.22.2, npm 10.9.7, installed Obsidian 1.13.0 types and the CLI; offline agents did not invoke Obsidian. Only the explicitly configured disposable `kplex-test-small` vault was used.
+Maintainer-requested implementation and equipped-agent validation. Branch `plex-wandering`, base `85edbbc8ea505651610674bded3375764ad690fa`. Preserve the earlier Wander/tooltips/menu return; this follow-up fixes navigation fitting during late dynamic indexing and untouched Excalidraw view-mode resize fitting. The maintainer explicitly requires preservation of customized Excalidraw/Obsidian Canvas transforms and pointer mapping. C14 accepted; C15–C26 paused. The maintainer subsequently authorized committing, publishing the branch, creating and merging a PR, then switching to main and fetching. GitHub commit/PR/merge identities belong in the PR and final delivery; prior validation records retain their historical uncommitted scope.
 
-Branch `2026-10-10-support-diagnostics-and-zoom`, base `fa4fc62e7493312a050f8bcef5c6f5c0dc2f8fc2`. The review inventory contains 50 files: 45 runtime/test/config inputs and 5 documentation files, with no required deletions. The ignored assignment stays excluded. The maintainer authorized commit, branch publication, PR creation and merge, followed by switching to main and fetching. Issue closure, a release and a version bump are outside this publication request. C14 accepted; C15–C26 paused.
+- [x] Trace current graph and drawing fit owners, native APIs and manual-input lifetimes.
+- [x] Center the central node and fit bounded displayed extents; follow late layout/pane changes until manual camera input, with new navigation/explicit Fit renewal.
+- [x] Refit untouched normal editor-node drawings in actual view mode through the native companion fit; preserve input/API-adjusted cameras and edit/fullscreen/disabled exclusions.
+- [x] Preserve custom native geometry and pointer mapping; retain prior Wander, shared Plex toolbar, delayed tooltips and native canvas-menu work.
+- [x] Complete real build/full verification, final affected tests, exact native graph7/drawing27/Wander17, cleanup audit and durable evidence.
 
-- [x] Deliver #109 fresh Friend `::f` / Previous `::s`, preserving saved triggers.
-- [x] Deliver #111 bounded immutable native support reporting and passive events, including active plugins, custom theme and snippet counts. No raw console or vault-content capture or report I/O.
-- [x] Deliver #92's amended normal-editor drawing-fit override, with native fullscreen policy and manual zoom preservation.
-- [x] Deliver the per-note normal Markdown text-size/scaling toggle, shared by source and reading, with reload/rename/delete persistence and native fullscreen/Canvas/Excalidraw isolation. Eight localized catalogs.
-- [x] Review ownership, lifetime, localization, privacy and settings boundaries; complete full production verification and exact-build native acceptance.
-- [x] Restore and audit native state and persistent plugin enablement; finalize durable evidence.
+Full `npm run verify:obsidian` passed architecture7/core88/aggregate626/UI53/portable sources333/real IndexedDB428/official lint/actual installed-type build/exact stage/native smoke. Frozen aggregate/UI arguments preceded the final initially-empty-camera, fluid-editor-resize and native-loading guards; later build/stage/smoke consumed final runtime code. Final affected83 (fit8/native wiring29/relationships46), official lint and all three native lanes passed after those guards. Final TSDoc-only edit rebuilt byte-identically. No complete final-source aggregate rerun is claimed. Failed receipts and exact evidence are in the durable record.
 
-Full `npm run verify:obsidian` passed: architecture 7, core 88, aggregate 612, Chromium UI 30, portable sources 333, real IndexedDB 428, official Obsidian lint, actual installed-type build and exact staging/native smoke. Root focused 50, migration 24, core 88 and affected menu 1 passed. A final TSDoc-only callback comment rebuilt byte-identical artifacts; touched lint passed.
+Customized `syncCentralEditorOverlay`, `toWorld` and native-fullscreen geometry bodies match HEAD; stylesheet unchanged from preceding return. Trusted native drawing pan at non-unit Plex zoom maps30×10 pixels correctly, and its camera survives later frame resizing. Untouched resize fits match native reference at each exact viewport. No new fork API, dependency, settings key, graph meaning, index/store/schema or network behavior. Existing companion-native opening/resize preferences remain separate.
 
-Serial native acceptance passed: Markdown 12/12 (trusted CodeMirror caret/text, fixed/scaled geometry, reading, reload/per-note choices, fullscreen and canvas isolation); matched Excalidraw fit 21/21 with a verified serialized two-element fixture; original Excalidraw 18/18; UX 56/56; support 22/22; reloaded tablet/phone emulation 2/2. Earlier failed setup, empty fixture and device-unavailability receipts are retained, never counted as passes. Assertions and deadlines were not weakened. No executable product change followed full verification.
+Final SHA-256: main `81c69f9799bc681766269bd8f2e9c01554479702eae270a196128027b9c794bf`; styles `d15a037e214cab29e303054061b83b197701cfb7dfb2117308aeaa52e62765b2`; unchanged manifest/0.1.2 `0beacdb94adc4a0ec318d69dba87fcb4dc9c1a86784058db341fdefe0dfb4250`. Combined40-input ledger `438b66dce1bf3743fbec69037c1065b64e4c577fcc1aa4c7f2d07bbade383e3a`, `/private/tmp/kplex-auto-fit-source-ledger.json`;49 deliverable files. Built/installed bytes match, index empty, whitespace passed. Audit restored loaded/enabled K-Plex/Excalidraw, desktop1440×875 at(0,25), original throttling,74 Markdown files and background #0c3e6aff, with no owned fixtures/probes/UI or captured errors.
 
-Final artifact SHA-256:
+Implementation and available automated validation are complete; no remaining implementation ETA. Prioritized manual checks: physical Android/iOS navigation versus manual Plex/drawing pinch/pan and touch controls; Windows/community themes with narrow/docked Plex and a popout drawing, checking untouched resize fit, manual-camera preservation and pointer alignment at non-unit zoom. Main-window Electron geometry/input does not prove physical touch, every platform lifecycle or perceived paint. Prior OS menu/color-picker and Wander large-vault limits remain in their records. No further scope queued.
 
-- Main: `0121a6398387abdb90bf34091c4332eb65bc8786c9cabcece6f34ec0b2737fe8`
-- Styles: `1e7a037c153feb41810a3f9bf0e6761bbe0790f011e299cc18ba2cfd6e775342`
-- Unchanged manifest: `19799fff9ae459130d707901e7c0d98b3e14a8567881a393f07d457c2fa8ec1c`
-- 45-input ledger: `c86c545e7120dbb500e7086be6c7a6996a160eef949d6ad5add104be604cd898`
-
-Installed and built bytes match. Whitespace and reviewed inputs were rechecked before staging. Final native audit at 17:00 UTC confirmed K-Plex and Excalidraw loaded, enabled in memory and persisted; desktop bounds restored to 900×700 at (270,113), original throttling, 74 Markdown files, no owned fixtures/controllers/report dialogs, no Settings window/debugger/errors.
-
-A failed device attempt found an empty enabled list despite present exact artifacts. Root restored the two required plugins through verified `enablePluginAndSave` / `saveConfig`, original serialized workspace and bounds. The strict rerun passed from a valid persisted baseline. The empty-list cause remains unconfirmed and is recorded for later harness-lifecycle investigation.
-
-Available implementation and acceptance are complete; no implementation ETA remains. Prioritized manual checks: physical Android/iOS report clipboard/touch/permissions; affected-device perceived Excalidraw scale/manual zoom; physical Markdown fixed/scaled visual and selection behavior. Emulation and trusted desktop input do not establish physical Mobile acceptance. Durable decisions are in `Refactor plan.md` and the [validation record](docs/validation/support-diagnostics-and-zoom-2026-10-10.md). No further scope queued.
+Durable records: [current adaptive fit](docs/validation/adaptive-fit-2026-10-11.md), [prior tooltips/menu](docs/validation/control-tooltips-and-canvas-menu-2026-10-11.md), [original Wander](docs/validation/wander-2026-10-11.md). Existing suggested future menu additions (Fit graph, Configure layout, Filters/Graph Lenses) remain outside the canvas-menu implementation.
