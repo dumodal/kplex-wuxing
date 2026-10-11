@@ -42,7 +42,8 @@
     "verify:obsidian:remote-images": "node scripts/testing/obsidian/remoteNodeImages.mjs",
     "verify:obsidian:sidebar-follow": "node scripts/testing/obsidian/sidebarFollow.mjs",
     "verify:obsidian:arrow-direction": "node scripts/testing/obsidian/arrowDirection.mjs",
-    "verify:obsidian:rename": "node scripts/testing/obsidian/renameIdentity.mjs"
+    "verify:obsidian:rename": "node scripts/testing/obsidian/renameIdentity.mjs",
+    "verify:obsidian:menu-anchor": "node scripts/testing/obsidian/menuAnchor.mjs"
   },
   "engines": {
     "node": ">=22.22.2 <23"
