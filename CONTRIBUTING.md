@@ -746,6 +746,26 @@ drivers serially. Physical touch and subjective paint remain separate from nativ
 doubles. Both are in `npm test`; the installed Obsidian typings and native lane remain authoritative
 for real host component behavior.
 
+## Remote node image consent acceptance
+
+After exact-build staging with `npm run verify:obsidian`, run
+`npm run verify:obsidian:remote-images` with the three explicit disposable
+`kplex-test-small` vault variables and a fresh `KPLEX_HOST_REPORT_DIR`.
+The driver serves tiny images from an owned loopback origin and counts actual image requests.
+It checks denied initial/navigation/expanded/hover rendering, local vault images, a fresh
+no-consent popout, opt-in in both documents, opt-out plus native metadata refresh, and saved
+opt-in after plugin reload. It restores preferences, native follow ownership, workspace and
+configuration bytes and removes only its own fixtures, probe and server, even on failure.
+Installed/build hash mismatch or failed cleanup fails the lane. Run native drivers serially.
+Physical-device networking remains separate; opt-out cannot undo requests already sent.
+
+`tests/remote-node-images.test.mjs` uses real Chromium, React and IndexedDB with finite
+Obsidian input doubles and a controlled loopback image server. It checks supported resolver
+forms, local fallback, both inline cache paths, held reads across revocation/off-on/unload,
+the actual settings save method's zero-semantic-work boundary, and actual DOM/network output
+in two documents. New permission copy uses the existing English fallback until translations
+are reviewed. No third-party image source is contacted by either lane.
+
 ## Navigation and embedded drawing fit acceptance
 
 After exact-build staging, run `npm run verify:obsidian:adaptive-fit` with the three explicit

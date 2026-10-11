@@ -406,6 +406,7 @@ for (const file of [
   "src/core/plex/viewPresentation.ts",
   "src/core/plex/internalHotkeys.ts",
   "src/core/plex/markdownZoomPreferences.ts",
+  "src/core/plex/nodeImagePolicy.ts",
   "src/core/plex/shortcutPresentation.ts",
   "src/core/contracts/fieldName.ts",
   "src/core/graph/model.ts",
@@ -3271,6 +3272,9 @@ try {
   noteA.stat.mtime += 1000;
   noteACache.frontmatter.thumbnail = "https://example.com/thumb.png";
   let visuals = await index.resolveNodeVisuals([index.get("Note A.md")]);
+  assert.equal(visuals.has("Note A.md"), false, "Remote imagery requires explicit consent, including old settings without the key");
+  settings.allowRemoteNodeImages = true;
+  visuals = await index.resolveNodeVisuals([index.get("Note A.md")]);
   assert.equal(visuals.get("Note A.md")?.mode, "thumbnail");
   assert.equal(visuals.get("Note A.md")?.src, "https://example.com/thumb.png");
   assert.equal("visual" in index.get("Note A.md"), false, "Node visuals must not expand the semantic GraphPage index");
@@ -3280,6 +3284,9 @@ try {
   visuals = await index.resolveNodeVisuals([index.get("Note A.md")]);
   assert.equal(visuals.get("Note A.md")?.mode, "replace");
   assert.equal(visuals.get("Note A.md")?.src, "https://example.com/replacement.png");
+  settings.allowRemoteNodeImages = false;
+  visuals = await index.resolveNodeVisuals([index.get("Note A.md")]);
+  assert.equal(visuals.has("Note A.md"), false, "Revocation rejects cached remote visuals without changing file mtime");
 
   const imageFile = new TFile("Visuals/Picture.jpg", noteA.stat.mtime + 1000);
   files.set(imageFile.path, imageFile);
