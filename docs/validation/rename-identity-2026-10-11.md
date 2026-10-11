@@ -59,6 +59,14 @@ Receipts: `/private/tmp/kplex139-full-retry/report.json` (obsolete expectation),
 
 On 2026-10-11, after reviewing the verification retry and remaining launcher failures, the maintainer explicitly authorized commit, push, merge of PR #139, closure of issue #126, and return to main, stating that the remaining investigation would continue on Windows. This accepts the recorded verification limitation for repository completion; it does not turn the failed full gate or outstanding Linux/mobile/popout scenarios into passes. Windows should test the committed implementation rather than the former plan-only draft, distinguish standalone browser failures from native CLI failures, retain the original deadlines/assertions, and record its own source/artifact identities and cleanup. No release or personal-vault deployment is included.
 
+## Final main integration
+
+Before publication, fetched main `e30f85d412c334cf4f1327439ee8c8a4dba5ed6e` includes separately accepted PR #142, which fixes the startup duplicate-read cause: restart inventory discarded current-version parser input left by cancelled foreground work. Its durable Windows report is `docs/validation/startup-body-reuse-2026-10-11.json`. This is an upstream fix, not a production change made during the earlier rename verification retry.
+
+The rename implementation checkpoint `3aab882` integrates that main. Only the transient `HANDOFF.md` conflicted; its standing header/current rename acceptance and Windows follow-up were preserved, along with the upstream durable startup report. On Node 22.22.2, the combined real production build passes, `tests/host-metadata-preview.test.mjs` passes **28/28**, and the serial real-Chromium `tests/source-startup-indexeddb.test.mjs` plus `tests/on-demand-indexing.test.mjs` lane passes **125/125**, zero failures/skips, including cancelled foreground parsing and all four parser-cache collision guards. Logs: `/private/tmp/kplex139-final-integration-portable.log` and `/private/tmp/kplex139-final-integration-browser.log`.
+
+Combined source/artifact identities are recorded separately in JSON. Earlier 436-test/full-gate/native receipts still describe the pre-#142 candidate; the combined artifact was built but not restaged or natively tested in this final integration. The maintainer accepted the recorded gate limitation and assigned remaining Windows verification. No failed gate is relabeled as a pass.
+
 ## Remaining manual acceptance
 
 1. On the reported Linux host, rename a linked note from Obsidian and K-Plex; check one physical/materialized note, the new filename label, search, pins and Back/Forward before and after restart. Repeat a move with duplicate basenames.
