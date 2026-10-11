@@ -454,6 +454,7 @@ for (const file of [
   "src/index/RelationEvidence.ts",
   "src/index/RelationResolver.ts",
   "src/index/GraphState.ts",
+  "src/index/remapGraphEndpoint.ts",
   "src/index/IndexSnapshot.ts",
   "src/index/IndexedDbCache.ts",
   "src/index/SourceFacts.ts",

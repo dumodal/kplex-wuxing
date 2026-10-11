@@ -782,6 +782,19 @@ the actual settings save method's zero-semantic-work boundary, and actual DOM/ne
 in two documents. New permission copy uses the existing English fallback until translations
 are reviewed. No third-party image source is contacted by either lane.
 
+## Native rename identity acceptance
+
+After exact-build staging, run `npm run verify:obsidian:rename` with the three explicit
+disposable `kplex-test-small` vault variables and a fresh `KPLEX_HOST_REPORT_DIR`.
+Run browser/native lanes serially. The driver checks synchronous retained incidence and
+settled visible labels through FileManager and K-Plex's actual rename action/modal, with
+automatic link updates on/off, filename/alias labels, moves, case-only spelling, duplicate
+basenames, pins/history and warm plugin reload in eager and on-demand modes. It restores
+its fixture subtree, wrappers, workspace, follow ownership and original configuration bytes.
+DOM modal activation is programmatic; Linux, OS rename UI, popout migration, full application
+restart and physical mobile touch remain separate acceptance. See the
+[rename validation record](docs/validation/rename-identity-2026-10-11.md).
+
 ## Navigation and embedded drawing fit acceptance
 
 After exact-build staging, run `npm run verify:obsidian:adaptive-fit` with the three explicit
