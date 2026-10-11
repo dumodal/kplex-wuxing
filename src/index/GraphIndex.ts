@@ -55,8 +55,11 @@
  * launched by atomic source publication release that host turn before independent preparation.
  * Filtered scene gate reads reuse cached visible all-role incidence under its captured policy;
  * synchronous read epochs retire detached numerators without acquiring count proof or sources.
+ * Node imagery remains lazy presentation data. Live consent and a visual epoch fence cache reads,
+ * pending durable-body results and mounted consumers without changing graph semantics or sources.
  */
 import { canonicalWebUrl } from "../adapters/obsidian/urlIdentity";
+import { isRemoteNodeImageSource } from "../core/plex/nodeImagePolicy";
 import { yieldToHostTask } from "../adapters/obsidian/yieldToHostTask";
 import { ForegroundWorkScheduler, INDEX_WORK_PRIORITY, type IndexWorkPriority } from "./ForegroundWorkScheduler";
 import { HostMetadataPreview } from "./HostMetadataPreview";
@@ -559,6 +562,7 @@ export class GraphIndex {
   private previewSnapshotPublished = false;
   private activeSnapshotGeneration: string | null = null;
   private nodeVisualCache = new Map<string, { signature: string; visual: NodeVisual | null }>();
+  private nodeVisualRevision = 0;
   constructor(private plugin: KplexPlugin, private app: App = plugin.app) {
     this.workScheduler = new ForegroundWorkScheduler({
       /** The plugin-global index and storage belong to the main application window. */
@@ -2646,7 +2650,7 @@ export class GraphIndex {
       if (effects.searchTerms) this.titleCache.clear();
       if (search) this.installSearchIndex(search);
       if (effects.presentationFacets) this.suggestionCatalogCache = null;
-      if (effects.nodeVisuals) this.nodeVisualCache.clear();
+      if (effects.nodeVisuals) this.invalidateNodeVisuals();
       this.recordIndexDiagnostic("restore", facets?.pending ? "presentation-inputs-pending" : "presentation-settings-adapted",
         { changedKeys: [...keys], modified: facets?.pending ?? 0 });
       this.emitPresentation();
@@ -2748,33 +2752,56 @@ export class GraphIndex {
 
   private static readonly IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "avif", "bmp"]);
 
-  private imageVisualFromValue(value: unknown, hostFile: TFile, mode: NodeVisual["mode"]): NodeVisual | null {
+  /** Resolve existing property syntax without I/O; skip denied remote candidates and try local fallback. */
+  private imageVisualFromValue(value: unknown, hostFile: TFile, mode: NodeVisual["mode"], allowRemote: boolean): NodeVisual | null {
     for (const target of extractLinksFromValue(this.app, value, hostFile)) {
-      if (/^https?:\/\//i.test(target)) {
+      if (isRemoteNodeImageSource(target)) {
+        if (!allowRemote) continue;
         return { mode, src: target, path: target, alt: target };
       }
-      const file = this.app.vault.getAbstractFileByPath(target);
+      const file = this.app.vault.getFileByPath(target);
       if (!(file instanceof TFile) || !GraphIndex.IMAGE_EXTENSIONS.has(file.extension.toLowerCase())) continue;
       return { mode, src: this.app.vault.getResourcePath(file), path: file.path, alt: file.basename };
     }
     return null;
   }
 
-  /**
-   * Resolve imagery only for the nodes a Plex is about to render. This deliberately stays outside
-   * GraphPage/persisted snapshots: frontmatter comes from Obsidian's metadata cache and Dataview-
-   * style inline fields come from K-Plex's existing parsed-body cache in one batched IndexedDB read.
-   */
+  /** Retire one changed node's cached visual without cancelling other visible nodes' resolution. */
   invalidateNodeVisual(path: string): void {
     this.nodeVisualCache.delete(path);
   }
 
+  /** Retire all visuals before consent changes can cross an await or notify a mounted surface. */
+  invalidateNodeVisuals(): void {
+    this.nodeVisualRevision += 1;
+    this.nodeVisualCache.clear();
+  }
+
+  /** Expose only the presentation epoch so consumers can reject already-resolved stale promises. */
+  getNodeVisualRevision(): number { return this.nodeVisualRevision; }
+
+  /**
+   * Resolve only requested visible nodes, outside GraphPage/snapshots. MetadataCache supplies
+   * frontmatter and one existing durable-body batch supplies cold inline fields. Consent participates
+   * in cache signatures; revocation, settings changes, invalidation and unload fence awaited results.
+   * Denied candidates fall through to the first allowed local value, then the normal node label.
+   */
   async resolveNodeVisuals(pages: readonly GraphPage[]): Promise<Map<string, NodeVisual>> {
     const result = new Map<string, NodeVisual>();
+    const revision = this.nodeVisualRevision;
+    const allowRemote = this.plugin.settings.allowRemoteNodeImages === true;
     const thumbnailField = normalizeFieldName(this.plugin.settings.thumbnailProperty);
     const replaceField = normalizeFieldName(this.plugin.settings.nodeImageProperty);
+    const attachmentDisplay = this.plugin.settings.attachmentImageDisplay;
+    /** Compare the live permission as well as the epoch, including callers with unsaved mutations. */
+    const current = (): boolean => !this.diagnosticsClosed && revision === this.nodeVisualRevision
+      && allowRemote === (this.plugin.settings.allowRemoteNodeImages === true)
+      && thumbnailField === normalizeFieldName(this.plugin.settings.thumbnailProperty)
+      && replaceField === normalizeFieldName(this.plugin.settings.nodeImageProperty)
+      && attachmentDisplay === this.plugin.settings.attachmentImageDisplay;
     const bodyRequests: Array<{ page: GraphPage; file: TFile; signature: string }> = [];
 
+    /** Read the configured normalized field without scanning any other note's metadata. */
     const frontmatterValue = (file: TFile, normalized: string): unknown => {
       if (!normalized) return undefined;
       const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
@@ -2788,12 +2815,12 @@ export class GraphIndex {
     for (const page of pages) {
       const file = page.file;
       if (!file) continue;
-      const signature = [file.stat.mtime, thumbnailField, replaceField, this.plugin.settings.attachmentImageDisplay].join("\u0001");
+      const signature = [file.stat.mtime, thumbnailField, replaceField, attachmentDisplay, allowRemote].join("\u0001");
       const cached = this.nodeVisualCache.get(page.path);
       if (cached?.signature === signature) { if (cached.visual) result.set(page.path, cached.visual); continue; }
 
       if (file.extension !== "md" && GraphIndex.IMAGE_EXTENSIONS.has(file.extension.toLowerCase())) {
-        const display = this.plugin.settings.attachmentImageDisplay;
+        const display = attachmentDisplay;
         const visual = display === "label" ? null : {
           mode: display === "image" ? "replace" as const : "thumbnail" as const,
           src: this.app.vault.getResourcePath(file), path: file.path, alt: file.basename,
@@ -2804,8 +2831,8 @@ export class GraphIndex {
       }
       if (file.extension !== "md") { this.nodeVisualCache.set(page.path, { signature, visual: null }); continue; }
 
-      const replacement = this.imageVisualFromValue(frontmatterValue(file, replaceField), file, "replace");
-      const thumbnail = replacement ? null : this.imageVisualFromValue(frontmatterValue(file, thumbnailField), file, "thumbnail");
+      const replacement = this.imageVisualFromValue(frontmatterValue(file, replaceField), file, "replace", allowRemote);
+      const thumbnail = replacement ? null : this.imageVisualFromValue(frontmatterValue(file, thumbnailField), file, "thumbnail", allowRemote);
       const visual = replacement ?? thumbnail;
       if (visual) {
         this.nodeVisualCache.set(page.path, { signature, visual });
@@ -2815,8 +2842,8 @@ export class GraphIndex {
 
       const hot = this.fieldCache.get(page.path);
       if (hot && hot.mtime === file.stat.mtime) {
-        const inlineReplacement = this.imageVisualFromValue(hot.body.inlineFields[replaceField], file, "replace");
-        const inlineThumbnail = inlineReplacement ? null : this.imageVisualFromValue(hot.body.inlineFields[thumbnailField], file, "thumbnail");
+        const inlineReplacement = this.imageVisualFromValue(hot.body.inlineFields[replaceField], file, "replace", allowRemote);
+        const inlineThumbnail = inlineReplacement ? null : this.imageVisualFromValue(hot.body.inlineFields[thumbnailField], file, "thumbnail", allowRemote);
         const inlineVisual = inlineReplacement ?? inlineThumbnail;
         this.nodeVisualCache.set(page.path, { signature, visual: inlineVisual });
         if (inlineVisual) result.set(page.path, inlineVisual);
@@ -2827,16 +2854,17 @@ export class GraphIndex {
 
     if (bodyRequests.length) {
       const bodies = await this.indexedDb.getBodies(bodyRequests.map(({ file }) => ({ path: file.path, mtime: file.stat.mtime })));
+      if (!current()) return new Map();
       for (const { page, file, signature } of bodyRequests) {
         const body = bodies.get(file.path);
-        const replacement = body ? this.imageVisualFromValue(body.inlineFields[replaceField], file, "replace") : null;
-        const thumbnail = body && !replacement ? this.imageVisualFromValue(body.inlineFields[thumbnailField], file, "thumbnail") : null;
+        const replacement = body ? this.imageVisualFromValue(body.inlineFields[replaceField], file, "replace", allowRemote) : null;
+        const thumbnail = body && !replacement ? this.imageVisualFromValue(body.inlineFields[thumbnailField], file, "thumbnail", allowRemote) : null;
         const visual = replacement ?? thumbnail;
         this.nodeVisualCache.set(page.path, { signature, visual });
         if (visual) result.set(page.path, visual);
       }
     }
-    return result;
+    return current() ? result : new Map();
   }
 
   setSearchEntryPoints(paths: string[]): boolean {
