@@ -95,7 +95,7 @@ the existing label-only behavior. The final driver asserts the real central/firs
 separately navigates every controlled note. Every failed probe completed cleanup. These corrections
 changed test setup/expectations, not production behavior or existing acceptance bounds.
 
-## Identities and review
+## Pre-integration identities and review
 
 Final `main.js` SHA256: `e2a47f009ec0f2e07711f0772e39e993ba79ee46de5fad22e040c080405f39da`.
 Final `styles.css` SHA256: `e8c9279e8904888aa71d5dd2b01f320d5b32fd10e15feb0b9a9576a34f11cea3`.
@@ -124,3 +124,23 @@ vault, display local imagery and a controlled remote thumbnail with consent off 
 and hover/long-press where applicable, then reload. Expect local imagery throughout, remote loading
 only during explicit opt-in and preserved consent after reload. Desktop/iframe/native popout evidence
 does not establish physical WebView, touch or actual paint behavior.
+
+## Current main integration before publication
+
+Implementation commit `30e480484cc54d341dbc13ffca44a31ba67759f4` was integrated with `main@1b0ac271e380aa715d0fd5e93521c16ab937d85e` (PR #136 arrow direction).
+Conflicts were limited to HANDOFF's current assignment and native-driver entries in package.json;
+the standing header, current accepted PR #137 handoff, and both drivers are retained. GraphIndex
+and indexing tests merged cleanly; source review preserves both features' changes.
+
+The combined tree passes architecture **7**/zero violations, core **92**/restricted typecheck,
+official lint, actual production build, focused consent/settings **32**, and the indexing fixture
+plus **24** settings-independence scenarios. The first indexing run under parallel build/check
+load failed its unchanged URL-heavy timer assertion at **84.3 ms**; a serial rerun passed.
+No bound or test was changed. Previously reported full-gate failures remain recorded.
+
+Exact rebuilt artifacts were staged separately in the same disposable vault with configuration
+and workspace preservation. Native consent revalidation passes **5/5** with no captured JS errors
+and cleanup confirmed. Combined runtime source inventory SHA256: `2ac330d5b4a706d4b9fbcd6a01e0d6672e2a39a03a25b24ef2f950855eb9c7e4`.
+Combined main.js SHA256: `a7ef4efef7707c24b05b5d137d0db16c96646cbf9878cf1817c56a41f6ab0258`. CSS/manifest hashes are unchanged.
+The JSON `mainIntegration` section holds current file identities, native receipt and staging
+receipt; earlier sections remain evidence for the pre-integration build the maintainer tested.

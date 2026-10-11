@@ -40,7 +40,8 @@
     "verify:obsidian:adaptive-fit": "node scripts/testing/obsidian/adaptiveFit.mjs",
     "verify:obsidian:tooltips": "node scripts/testing/obsidian/controlTooltips.mjs",
     "verify:obsidian:remote-images": "node scripts/testing/obsidian/remoteNodeImages.mjs",
-    "verify:obsidian:sidebar-follow": "node scripts/testing/obsidian/sidebarFollow.mjs"
+    "verify:obsidian:sidebar-follow": "node scripts/testing/obsidian/sidebarFollow.mjs",
+    "verify:obsidian:arrow-direction": "node scripts/testing/obsidian/arrowDirection.mjs"
   },
   "engines": {
     "node": ">=22.22.2 <23"

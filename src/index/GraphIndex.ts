@@ -68,7 +68,7 @@ import { graphCompilerSettingsFromLegacy, graphNodeViewFromLegacy } from "../ada
 import type { CompiledGraphNode, GraphCompilerRuntime, GraphCompilerSettings } from "../core/graph/compiler";
 import type { NodeId } from "../core/graph/model";
 import { estimateReferenceRecordBytes, sourceRevision, type SourceEntityFact, type SourceEntityRef } from "../core/graph/source";
-import { RelationEvidenceStore, emptyRelation, applyOntologyPrecedence, applyEvidenceToRelation } from "../core/graph/evidence";
+import { RelationEvidenceStore, emptyRelation, applyOntologyPrecedence, applyEvidenceDecisionsToRelation } from "../core/graph/evidence";
 import { Platform, TFile, TFolder, normalizePath, type App, type CachedMetadata } from "obsidian";
 import type KplexPlugin from "../main";
 import type { KplexSettings } from "../settings";
@@ -3911,7 +3911,10 @@ export class GraphIndex {
 
     const next = createGraphState();
     for (const saved of savedByPath.values()) addPersistedPageToState(next, saved, this.app);
-    for (const saved of savedByPath.values()) hydratePersistedPageRelations(next, saved);
+    const currentRelationPaths = new Set<string>();
+    for (const saved of savedByPath.values()) {
+      if (hydratePersistedPageRelations(next, saved)) currentRelationPaths.add(saved.path);
+    }
     next.discoveredFields = new Map(meta.discoveredFields);
     // Current presentation and search are prepared before the targeted preview becomes visible.
     // Attribute this newly awaited work to the existing search watchdog phase, not the page fetch.
@@ -3929,7 +3932,8 @@ export class GraphIndex {
     if (cachedCurrent?.()) for (const saved of savedByPath.values()) {
       const page = next.pages.get(saved.path);
       if (!page) continue;
-      const completeCover = (saved.relations ?? []).every(relation => next.pages.has(relation.targetPath));
+      const completeCover = currentRelationPaths.has(saved.path)
+        && (saved.relations ?? []).every(relation => next.pages.has(relation.targetPath));
       if (completeCover) this.cachedSnapshotPages.add(page);
       else this.preparedPageInfo.set(page, { entityId: this.semanticSourceRef(page).id,
         policyRevision: this.semanticPolicyRevision, settings: this.fullSemanticSettings, completeRelations: false });
@@ -4118,7 +4122,7 @@ export class GraphIndex {
       next.discoveredFields = new Map(meta.discoveredFields);
 
       // Schema-1/early schema-2 snapshots without cached relations still need the authoritative
-      // resolver after evidence has loaded. New schema-3 snapshots take the fast relation path above.
+      // resolver after evidence has loaded. Current-direction-policy rows take the fast relation path above.
       if (!relationsHydrated) {
         this.setSnapshotHydrationPhase(run, "resolve");
         const resolved = await finalizeHydratedGraphStateCooperative(
@@ -6675,7 +6679,7 @@ export class GraphIndex {
       const evidence = this.semanticEvidence(page.path, targetPath).evidence;
       if (!evidence.length) { copy.neighbours.delete(targetPath); continue; }
       const resolved: Relation = { ...emptyRelation<GraphPage>(), target };
-      for (const decision of applyOntologyPrecedence(evidence)) applyEvidenceToRelation(resolved, decision);
+      applyEvidenceDecisionsToRelation(resolved, applyOntologyPrecedence(evidence));
       copy.neighbours.set(targetPath, resolved);
     }
     this.urlProjectionCache.set(page, { epoch: this.relationViewCache,
