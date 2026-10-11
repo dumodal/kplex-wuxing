@@ -4,7 +4,7 @@
  * and restoration. Requires the explicit disposable small vault, an unlocked foreground Mac and
  * exactly matching built/installed artifacts; Electron input does not prove physical-device use.
  */
-import { spawnSync } from 'node:child_process';
+import { spawnNativeSync as spawnSync, obsidianCliExecutable } from "./processTools.mjs";
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -29,7 +29,7 @@ const report={startedAt:new Date().toISOString(),base:gitHead.stdout.trim(),driv
 /** Invoke one bounded CLI operation and retain only a safe command label, timing and outcome. */
 function invoke(label,command,args,deadline=Infinity){
  const started=Date.now(),remaining=deadline-started;if(remaining<=0)throw Error(label+' exceeded its existing deadline');
- const run=spawnSync(process.env.KPLEX_OBSIDIAN_CLI??'obsidian',[`vault=${vaultName}`,command,...args],{cwd:root,encoding:'utf8',timeout:Math.min(30000,remaining),killSignal:'SIGKILL',maxBuffer:8*1024*1024});
+ const run=spawnSync(obsidianCliExecutable(),[`vault=${vaultName}`,command,...args],{cwd:root,encoding:'utf8',timeout:Math.min(30000,remaining),killSignal:'SIGKILL',maxBuffer:8*1024*1024});
  const elapsedMs=Date.now()-started,code=run.error?.code??(run.status!==0?'nonzero-exit':/^Error:/m.test(run.stdout)?'host-error':'success');
  const calls=report.cliCalls??(report.cliCalls=[]);if(calls.length<256)calls.push({label,command,elapsedMs,code,exitCode:run.status??null});
  if(code!=='success'){const error=new Error(`${label} (${command}) failed after ${elapsedMs} ms: ${code}`);error.code=code;throw error;}

@@ -5,14 +5,16 @@
  * window geometry, restores each independently, and never stages artifacts or claims physical Mobile.
  */
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { obsidianCliExecutable } from "./processTools.mjs";
+import { spawnNativeSync as spawnSync } from "./processTools.mjs";
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { Script } from 'node:vm';
 
 const projectRoot = resolve(process.env.KPLEX_PROJECT_ROOT ?? process.cwd());
-const { validateTarget } = await import(join(projectRoot, 'scripts/testing/obsidian/runner.mjs'));
+const { validateTarget } = await import(pathToFileURL(join(projectRoot, 'scripts/testing/obsidian/runner.mjs')));
 const vaultName = process.env.KPLEX_TEST_VAULT_NAME;
 assert.equal(vaultName, 'kplex-test-small', 'This probe is restricted to the explicitly configured disposable small vault');
 const target = validateTarget({ vaultName, vaultPath: process.env.KPLEX_TEST_VAULT_PATH, configDir: process.env.KPLEX_TEST_CONFIG_DIR });
@@ -34,7 +36,7 @@ let baseline, controllerStarted = false;
 
 /** Deliver explicit CLI arguments without a shell, retaining native failures rather than silent passes. */
 function cli(command, ...args) {
-  const result = spawnSync(process.env.KPLEX_OBSIDIAN_CLI ?? 'obsidian', [`vault=${vaultName}`, command, ...args], { cwd: projectRoot, encoding: 'utf8', timeout: 30000, killSignal: 'SIGKILL', maxBuffer: 8 * 1024 * 1024 });
+  const result = spawnSync(obsidianCliExecutable(), [`vault=${vaultName}`, command, ...args], { cwd: projectRoot, encoding: 'utf8', timeout: 30000, killSignal: 'SIGKILL', maxBuffer: 8 * 1024 * 1024 });
   if (result.error || result.status !== 0 || /^Error:/m.test(result.stdout)) throw result.error ?? Error(result.stderr || result.stdout);
   return result.stdout.trim();
 }
@@ -58,7 +60,7 @@ function startNative(token, mode, expected) {
   const remote = require('@electron/remote'), win = remote.getCurrentWindow();
   if (remote.powerMonitor.getSystemIdleState(10) === 'locked') throw Error('Unlocked native session required');
   if (win.webContents.debugger.isAttached()) throw Error('Another native debugger owner is attached');
-  remote.app.show(); remote.app.focus({ steal: true }); win.show(); win.moveTop(); win.focus(); win.webContents.focus();
+  remote.app.show?.(); remote.app.focus({ steal: true }); win.show(); win.moveTop(); win.focus(); win.webContents.focus();
   const c = window.__kplexInteractionTouch = { token, win, mode, events: [], cases: [], geometry: [], wrappers: [], leaves: [], done: false, debuggerOwned: false };
   /** Isolate bounded native waits; cancellation retires every loop before further host effects. */
   const wait = ms => new Promise(resolve => window.setTimeout(resolve, ms));

@@ -1,5 +1,7 @@
 # Inspecting the running plugin with Obsidian CLI
 
+For Windows PowerShell and macOS zsh/bash setup, launcher discovery, first-open trust and disposable help-vault preparation, follow [Desktop CLI setup](../CONTRIBUTING.md#desktop-cli-setup-windows-and-macos). The examples below use zsh/bash quoting. On Windows use the Node native drivers for complex `eval` payloads; PowerShell 5.1's native argument handling can remove embedded quotes. `KPLEX_OBSIDIAN_CLI` may point directly to `Obsidian.com` without a PATH change.
+
 Use an explicitly selected disposable vault. Agents without Obsidian run `npm run verify` and leave host evidence pending. Deploy the exact build with `npm run verify:obsidian` and the three test-vault variables in [CONTRIBUTING.md](../CONTRIBUTING.md). Inspect installed syntax with `obsidian help`, then confirm the target:
 
 ```bash

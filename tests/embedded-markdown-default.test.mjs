@@ -78,16 +78,20 @@ class NativeElement {
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; }
 
 /** Mount the actual adapter with explicit current metadata and a view-scoped Excalidraw bridge. */
-function fixture({ frontmatter, path = "Drawing.excalidraw.md", bridgePresent = true, zoomPreference = true, exposeZoomPreference = true, compatibilityOpening = false, embeddedPolicy } = {}) {
+function fixture({ frontmatter, path = "Drawing.excalidraw.md", bridgePresent = true, zoomPreference = true, exposeZoomPreference = true, compatibilityOpening = false, embeddedPolicy, manualFrames = false } = {}) {
   const priorWindow = globalThis.window;
   const listeners = new Map(), observers = new Set(), files = new Map();
   const document = { hasFocus: () => true,
     addEventListener: (name, listener) => listeners.set(listener, name),
     removeEventListener: (name, listener) => listeners.delete(listener) };
+  const frames = new Map(); let nextFrame = 0;
   const window = { document, Element: NativeElement,
     setTimeout: callback => setTimeout(callback, 0),
-    requestAnimationFrame: callback => setTimeout(callback, 0),
-    cancelAnimationFrame: frame => clearTimeout(frame),
+    requestAnimationFrame: callback => {
+      if (!manualFrames) return setTimeout(callback, 0);
+      const id = ++nextFrame; frames.set(id, callback); return id;
+    },
+    cancelAnimationFrame: frame => manualFrames ? frames.delete(frame) : clearTimeout(frame),
     MutationObserver: class {
       /** Track observer ownership without manufacturing native DOM replacement notifications. */
       constructor(callback) { this.callback = callback; observers.add(this); }
@@ -106,7 +110,10 @@ function fixture({ frontmatter, path = "Drawing.excalidraw.md", bridgePresent = 
       setActiveLeaf() {}, getActiveViewOfType: () => null, offref() {} } };
   const bridge = {
     verifyMinimumPluginVersion: () => true,
-    registerViewLinkClickHook: () => { app.hooks++; return () => { app.hooks--; }; },
+    registerViewLinkClickHook: () => {
+      const owner = app.embeddedLeaf.view; app.hooks++; app.routedView = owner;
+      return () => { app.hooks--; if (app.routedView === owner) app.routedView = null; };
+    },
     viewZoomToFit: () => { app.zooms++; },
     setViewModeEnabled: enabled => { app.viewModes.push(enabled); app.canvasState.viewModeEnabled = enabled; },
     getExcalidrawAPI: () => app.embeddedLeaf.view.excalidrawAPI,
@@ -131,9 +138,26 @@ function fixture({ frontmatter, path = "Drawing.excalidraw.md", bridgePresent = 
   /** Restore global ownership and prove controller teardown removes its document leases. */
   function cleanup() {
     controller.dispose(); assert.equal(listeners.size, 0); assert.equal(observers.size, 0); assert.equal(mount.listeners.size, 0);
-    assert.equal(app.hooks, 0); globalThis.window = priorWindow;
+    assert.equal(app.hooks, 0); assert.equal(frames.size, 0); globalThis.window = priorWindow;
   }
-  return { app, file, controller, changes, observers, bridge, overlay, mount, cleanup };
+  /** Advance distinct owning-window frames without depending on operating-system timer resolution. */
+  function flushFrames() {
+    for (let frame = 0; frame < 3; frame++) {
+      const current = [...frames]; frames.clear();
+      for (const [, callback] of current) callback(frame);
+    }
+    assert.equal(frames.size, 0, "drawing frame work must settle within three frames");
+  }
+  /** Wait for actual opening completion before measuring the new view's initial geometry. */
+  async function settleOpening(mode = "preview") {
+    const deadline = Date.now() + 1000;
+    while (app.hooks !== 1 || app.routedView !== app.embeddedLeaf.view || app.canvasState.viewModeEnabled !== (mode === "preview")) {
+      assert(Date.now() < deadline, "drawing opening did not complete");
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+    flushFrames();
+  }
+  return { app, file, controller, changes, observers, bridge, overlay, mount, cleanup, flushFrames, settleOpening };
 }
 
 for (const mode of ["source", "preview"]) {
@@ -382,30 +406,30 @@ test("explicit normal-node override remains authoritative when companion prefere
 });
 
 test("actual adapter refits untouched view-mode drawings after resize and direct input retires the opening", /** Exercise live native read/policy and exact mount event wiring, not only the fit coordinator. */ async () => {
-  const context = fixture({embeddedPolicy: {enabled: true, maximized: false}, zoomPreference: false});
+  const context = fixture({embeddedPolicy: {enabled: true, maximized: false}, zoomPreference: false, manualFrames: true});
   try {
     await context.controller.open(context.file, "preview");
-    await new Promise(resolve => setTimeout(resolve, 20));
+    await context.settleOpening();
     context.app.canvasState.width = 600;context.controller.resize();
-    await new Promise(resolve => setTimeout(resolve, 10));assert.equal(context.app.zooms, 1);
+    context.flushFrames();assert.equal(context.app.zooms, 1);
     context.mount.listeners.get("pointerdown")();context.app.canvasState.width = 800;context.controller.resize();
-    await new Promise(resolve => setTimeout(resolve, 10));assert.equal(context.app.zooms, 1);
-    await context.controller.open(context.file, "preview");await new Promise(resolve => setTimeout(resolve, 20));
-    context.app.canvasState.height = 400;context.controller.resize();await new Promise(resolve => setTimeout(resolve, 10));
+    context.flushFrames();assert.equal(context.app.zooms, 1);
+    await context.controller.open(context.file, "preview");await context.settleOpening();
+    context.app.canvasState.height = 400;context.controller.resize();context.flushFrames();
     assert.equal(context.app.zooms, 2,"another opening renews untouched drawing fit");
   } finally {context.cleanup();}
 });
 
 test("actual adapter preserves API-adjusted viewport and ignores editing or fullscreen resize", /** Manual intent and native modes remain authoritative even without pointer event simulation. */ async () => {
-  const context=fixture({embeddedPolicy:{enabled:true,maximized:false},zoomPreference:false});
+  const context=fixture({embeddedPolicy:{enabled:true,maximized:false},zoomPreference:false,manualFrames:true});
   try {
-    await context.controller.open(context.file,"preview");await new Promise(resolve=>setTimeout(resolve,20));
+    await context.controller.open(context.file,"preview");await context.settleOpening();
     context.app.canvasState.scrollX=123;context.app.canvasState.width=600;context.controller.resize();
-    await new Promise(resolve=>setTimeout(resolve,10));assert.equal(context.app.zooms,0);
-    await context.controller.open(context.file,"source");await new Promise(resolve=>setTimeout(resolve,20));
-    context.app.canvasState.width=800;context.controller.resize();await new Promise(resolve=>setTimeout(resolve,10));assert.equal(context.app.zooms,0);
-    await context.controller.open(context.file,"preview");await new Promise(resolve=>setTimeout(resolve,20));
+    context.flushFrames();assert.equal(context.app.zooms,0);
+    await context.controller.open(context.file,"source");await context.settleOpening("source");
+    context.app.canvasState.width=800;context.controller.resize();context.flushFrames();assert.equal(context.app.zooms,0);
+    await context.controller.open(context.file,"preview");await context.settleOpening();
     context.overlay.classList.add("excalidraw-visible");context.app.canvasState.width=1000;context.controller.resize();
-    await new Promise(resolve=>setTimeout(resolve,10));assert.equal(context.app.zooms,0);
+    context.flushFrames();assert.equal(context.app.zooms,0);
   } finally {context.cleanup();}
 });

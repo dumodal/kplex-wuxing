@@ -4,7 +4,8 @@
  * cleanup. Measurements are inclusive renderer observations, not paint or physical-device guarantees.
  */
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { obsidianCliExecutable } from "./processTools.mjs";
+import { spawnNativeSync as spawnSync } from "./processTools.mjs";
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from 'node:fs';
 import { resolve, join } from 'node:path';
@@ -25,7 +26,7 @@ const token = `large-paste-${process.pid}-${Date.now()}`, ownedPath = `Kplex-Lar
 const report = { status: 'running', startedAt: new Date().toISOString(), driverSha256: createHash('sha256').update(source).digest('hex'), input: { characters: input.length, bytes: Buffer.byteLength(input), sha256: createHash('sha256').update(input).digest('hex') }, artifacts: {}, scenarios: [], limitations: ['Native Electron paste and editor/suggester observations; no OS keyboard, physical device, screen-reader or actual-paint acceptance.', 'Short heartbeat gaps include other host work; no universal performance bound is claimed.'] };
 let baseline, settings, configuration = [], controllerStarted = false;
 /** Enforce an explicit-vault process deadline, including native eval errors with zero exit status. */
-function cli(command, ...args) { const r = spawnSync(process.env.KPLEX_OBSIDIAN_CLI || 'obsidian', [`vault=${vaultName}`, command, ...args], { cwd: projectRoot, encoding: 'utf8', timeout: 30000, killSignal: 'SIGKILL', maxBuffer: 8 * 1024 * 1024 }); if (r.error || r.status !== 0 || /^Error:/m.test(r.stdout))
+function cli(command, ...args) { const r = spawnSync(obsidianCliExecutable(), [`vault=${vaultName}`, command, ...args], { cwd: projectRoot, encoding: 'utf8', timeout: 30000, killSignal: 'SIGKILL', maxBuffer: 8 * 1024 * 1024 }); if (r.error || r.status !== 0 || /^Error:/m.test(r.stdout))
     throw r.error ?? new Error(r.stderr || r.stdout); return r.stdout.trim(); }
 /** Decode detached native data; mutations are never silently retried. */
 function evaluate(code) { return JSON.parse(cli('eval', `code=${code}`).replace(/^=>\s*/, '')); }
@@ -90,7 +91,7 @@ function install(token, text, ownedPath) {
     } const f = app.vault.getFileByPath(ownedPath); if (f)
         await app.vault.delete(f); c.cleaned = !app.vault.getFileByPath(ownedPath); };
     c.task = new Promise(r => window.setTimeout(r, 0)).then(async () => {
-        remote.app.show();
+        remote.app.show?.();
         remote.app.focus({ steal: true });
         native.show();
         native.focus();

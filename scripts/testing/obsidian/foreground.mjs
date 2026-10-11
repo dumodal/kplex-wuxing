@@ -1,5 +1,5 @@
 /** Serial native foreground smoke using only owned fixtures in the explicit disposable small vault. */
-import { spawnSync } from 'node:child_process';
+import { spawnNativeSync as spawnSync, obsidianCliExecutable } from "./processTools.mjs";
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
@@ -14,7 +14,7 @@ mkdirSync(out, { recursive: true });
 const data = readFileSync(join(target.pluginDir, 'data.json')), enabled = readFileSync(join(target.config, 'community-plugins.json'));
 const report = { status: 'running', startedAt: new Date().toISOString(), artifacts: {}, limitations: ['Desktop native API/DOM smoke, controlled acquisition pause outside transactions; no trusted pointer or physical mobile timing claim'] };
 /** Execute one serial native command with the established deadline and fail closed on eval errors. */
-const cli = (name, ...args) => { const r = spawnSync(process.env.KPLEX_OBSIDIAN_CLI || 'obsidian', [`vault=${vaultName}`, name, ...args], { encoding: 'utf8', timeout: 30000, killSignal: 'SIGKILL', maxBuffer: 4 * 1024 * 1024 }); if (r.error || r.status !== 0 || /^Error:/m.test(r.stdout))
+const cli = (name, ...args) => { const r = spawnSync(obsidianCliExecutable(), [`vault=${vaultName}`, name, ...args], { encoding: 'utf8', timeout: 30000, killSignal: 'SIGKILL', maxBuffer: 4 * 1024 * 1024 }); if (r.error || r.status !== 0 || /^Error:/m.test(r.stdout))
     throw Error(r.error?.message || r.stderr || r.stdout); return r.stdout.trim(); };
 /** Decode the bounded controller response while leaving native async work outside the CLI call. */
 const evaluate = code => { const raw = cli('eval', `code=${code}`); return JSON.parse(raw.slice(raw.indexOf('{'))); };
@@ -30,7 +30,7 @@ try {
         if (report.artifacts[name] !== hash(join(target.pluginDir, name)))
             throw Error('Installed build mismatch');
     }
-    evaluate(`(()=>{if(window.__kplexForegroundTest)throw Error('Controller exists');const p=app.plugins.plugins['k-plex'],remote=require('@electron/remote'),w=remote.getCurrentWindow();remote.app.show();remote.app.focus({steal:true});w.show();w.moveTop();w.focus();const c=window.__kplexForegroundTest={p,originalSettings:JSON.parse(JSON.stringify(p.settings)),folder:'Kplex-Foreground-Regression',owned:[],scenarios:[],pairTrace:[],done:false};c.timer=window.setTimeout(()=>{c.task=(async()=>{
+    evaluate(`(()=>{if(window.__kplexForegroundTest)throw Error('Controller exists');const p=app.plugins.plugins['k-plex'],remote=require('@electron/remote'),w=remote.getCurrentWindow();remote.app.show?.();remote.app.focus({steal:true});w.show();w.moveTop();w.focus();const c=window.__kplexForegroundTest={p,originalSettings:JSON.parse(JSON.stringify(p.settings)),folder:'Kplex-Foreground-Regression',owned:[],scenarios:[],pairTrace:[],done:false};c.timer=window.setTimeout(()=>{c.task=(async()=>{
  const delay=ms=>new Promise(r=>window.setTimeout(r,ms)),check=(v,m)=>{if(!v)throw Error(m)},until=async(fn,m,ms=15000)=>{const end=Date.now()+ms;while(!fn()){check(!c.cancelled,'Controller cancelled');if(Date.now()>end)throw Error(m);await delay(25)}};
  const timed=async(id,work)=>{check(!c.cancelled,'Controller cancelled');const start=performance.now();await work();check(!c.cancelled,'Controller cancelled');c.scenarios.push({id,elapsedMs:performance.now()-start,backgroundHeld:c.held===true})};
  // Observe only bounded scalar diagnostics. Wrappers return each original Promise unchanged.

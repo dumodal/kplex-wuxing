@@ -3,7 +3,8 @@
  * It owns only one fixture folder/view and restores settings, native window geometry and wrappers.
  */
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { obsidianCliExecutable } from "./processTools.mjs";
+import { spawnNativeSync as spawnSync } from "./processTools.mjs";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -36,7 +37,7 @@ let installed = false;
 
 /** Keep CLI arguments outside a shell, reject zero-exit eval errors and parse the CLI prefix. */
 function cli(name, ...args) {
-  const run = spawnSync(process.env.KPLEX_OBSIDIAN_CLI || "obsidian", [`vault=${vaultName}`, name, ...args], { cwd: projectRoot, encoding: "utf8", timeout: 30_000, killSignal: "SIGKILL", maxBuffer: 4 * 1024 * 1024 });
+  const run = spawnSync(obsidianCliExecutable(), [`vault=${vaultName}`, name, ...args], { cwd: projectRoot, encoding: "utf8", timeout: 30_000, killSignal: "SIGKILL", maxBuffer: 4 * 1024 * 1024 });
   if (run.error) throw run.error;
   assert.equal(run.status, 0, run.stderr || run.stdout);
   if (/^Error:/m.test(run.stdout)) throw new Error(run.stdout);

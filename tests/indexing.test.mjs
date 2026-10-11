@@ -2814,6 +2814,26 @@ try {
   expandedHas(urls.neighborhood, "child", "https://source.com/inferred", RelationType.INFERRED);
   expandedHas(urls.neighborhood, "child", "https://youtu.be/excalibrain-fixture-video", RelationType.INFERRED);
 
+  // Git may check this fixture out with CRLF on Windows. Both newline conventions must retain
+  // the same section relationships and physical heading ranges without weakening accepted goldens.
+  const originalSectionBody = contents.get("Note A.md");
+  try {
+    for (const newline of ["\n", "\r\n"]) {
+      const body = originalSectionBody.replace(/\r?\n/g, newline);
+      contents.set("Note A.md", body);
+      const expansion = await buildCentralSectionExpansion(plugin, index, index.get("Note A.md"));
+      assert(expansion, "Expected section expansion for both newline conventions");
+      const section = expansion.sections.find(item => item.page.name === "Inference and conflict cases");
+      expandedHas(section.neighborhood, "left", "Note G.md", RelationType.DEFINED);
+      for (const item of expansion.sections) {
+        const range = item.page.transient;
+        assert(body.slice(range.start, range.end).startsWith(`## ${item.page.name}`), "Section offsets must address the original physical body");
+      }
+    }
+  } finally {
+    contents.set("Note A.md", originalSectionBody);
+  }
+
   // Section-target explanations use transient pair identity but retain original body provenance.
   const dTarget = friends.neighborhood.leftFriends.find((item) => item.page.transient?.actualPath === "Note D.md");
   assert(dTarget);

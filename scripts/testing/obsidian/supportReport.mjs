@@ -7,7 +7,8 @@
  * Desktop narrow metrics/pop-outs are not physical Android/iOS clipboard permission acceptance.
  */
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { obsidianCliExecutable } from "./processTools.mjs";
+import { spawnNativeSync as spawnSync } from "./processTools.mjs";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -34,7 +35,7 @@ const report = { status: "running", startedAt: new Date().toISOString(), driverS
 
 /** Send explicit arguments to the selected native vault and reject CLI errors even with exit code zero. */
 function cli(command, ...args) {
-  const result = spawnSync(process.env.KPLEX_OBSIDIAN_CLI ?? "obsidian", [`vault=${vaultName}`, command, ...args], { cwd: root, encoding: "utf8", timeout: 30000, killSignal: "SIGKILL", maxBuffer: 8 * 1024 * 1024 });
+  const result = spawnSync(obsidianCliExecutable(), [`vault=${vaultName}`, command, ...args], { cwd: root, encoding: "utf8", timeout: 30000, killSignal: "SIGKILL", maxBuffer: 8 * 1024 * 1024 });
   if (result.error || result.status !== 0 || /^Error:/m.test(result.stdout)) throw result.error ?? Error(result.stderr || result.stdout);
   return result.stdout.trim();
 }

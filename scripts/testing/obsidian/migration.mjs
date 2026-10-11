@@ -3,7 +3,8 @@
  * Uses canonical K-Plex selectors/commands and restores test-owned settings, notes and controllers.
  */
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { obsidianCliExecutable, runPortableVerification } from "./processTools.mjs";
+import { spawnNativeSync as spawnSync } from "./processTools.mjs";
 import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -33,7 +34,7 @@ function command(file, args, timeout = 30_000) {
   return result.stdout;
 }
 const cli = (vault, name, ...args) => {
-  const executable = process.env.KPLEX_OBSIDIAN_CLI || "obsidian";
+  const executable = obsidianCliExecutable();
   // The start command can await initialization. Focus before invoking it, rather than after the
   // smoke runner has already waited on an occluded renderer's throttled hydration timer slices.
   if (name === "command" && args.includes("id=k-plex:kplex-start") && process.platform === "darwin") {
@@ -70,11 +71,7 @@ try {
   report = await runObsidianVerification({
     ...target, projectRoot, reportDir, runCli: cli,
     source: { revision: command("git", ["rev-parse", "HEAD"]).trim(), dirty: Boolean(command("git", ["status", "--porcelain"]).trim()), node: process.version },
-    runVerify: () => {
-      const result = spawnSync("npm", ["run", "verify"], { cwd: projectRoot, stdio: "inherit", timeout: 1_200_000 });
-      if (result.error) throw result.error;
-      if (result.status !== 0) throw new Error(`npm run verify failed (${result.status})`);
-    },
+    runVerify: () => runPortableVerification(projectRoot),
   });
   console.log("Built/staged plugin and native smoke passed");
   assert.equal(report.status, "passed", report.error);

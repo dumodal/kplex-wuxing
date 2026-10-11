@@ -5,7 +5,8 @@
  * The macOS lane rejects Windows toolbar reservations; real Windows control/DPI acceptance is separate.
  */
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { obsidianCliExecutable } from "./processTools.mjs";
+import { spawnNativeSync as spawnSync } from "./processTools.mjs";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, unlinkSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -30,7 +31,7 @@ let baseline, originalSettings, nativeStarted = false;
 
 /** Run one explicit-vault CLI process, rejecting zero-exit native eval errors as well. */
 function cli(command, ...args) {
-  const result = spawnSync(process.env.KPLEX_OBSIDIAN_CLI || "obsidian", [`vault=${vaultName}`, command, ...args], { cwd: projectRoot, encoding: "utf8", timeout: 30000, killSignal: "SIGKILL", maxBuffer: 8 * 1024 * 1024 });
+  const result = spawnSync(obsidianCliExecutable(), [`vault=${vaultName}`, command, ...args], { cwd: projectRoot, encoding: "utf8", timeout: 30000, killSignal: "SIGKILL", maxBuffer: 8 * 1024 * 1024 });
   if (result.error || result.status !== 0 || /^Error:/m.test(result.stdout)) throw result.error ?? new Error(result.stderr || result.stdout);
   return result.stdout.trim();
 }
@@ -126,7 +127,7 @@ function installDesktopProbe(token) {
     c.cleaned = true;
   };
   c.task = new Promise(resolve => window.setTimeout(resolve, 0)).then(async () => {
-    remote.app.show(); remote.app.focus({ steal: true }); owner.show(); owner.focus(); owner.webContents.focus();
+    remote.app.show?.(); remote.app.focus({ steal: true }); owner.show(); owner.focus(); owner.webContents.focus();
     await until(() => owner.isFocused() && document.hasFocus() && !document.hidden, "Native foreground unavailable", 5000);
     const original = app.workspace.getLeavesOfType("k-plex-react-view").find(leaf => leaf.view.contentEl.ownerDocument === document && p.isKplexLeafVisible(leaf));
     check(original, "Visible main-window K-Plex required"); await original.view.waitUntilReady();
@@ -232,7 +233,7 @@ async function cleanupController() {
 }
 /** Validate Zen and explicit desktop-only fullscreen availability after each native emulation reload. */
 async function deviceProbe(width, height, expected) {
-  evaluate(`(()=>{const r=require("@electron/remote"),w=r.getCurrentWindow();w.setMinimumSize(200,200);w.setContentSize(${width},${height});r.app.show();r.app.focus({steal:true});w.show();w.focus();return JSON.stringify(true)})()`); await delay(500);
+  evaluate(`(()=>{const r=require("@electron/remote"),w=r.getCurrentWindow();w.setMinimumSize(200,200);w.setContentSize(${width},${height});r.app.show?.();r.app.focus({steal:true});w.show();w.focus();return JSON.stringify(true)})()`); await delay(500);
   const environment = evaluate(`(()=>{const p=app.plugins.plugins["k-plex"],original=p.settings.layoutProfiles;p.settings.layoutProfiles={...original,"desktop:leaf":{...original["desktop:leaf"],compactingFactor:2.01},"tablet:leaf":{...original["tablet:leaf"],compactingFactor:2.02},"mobile:leaf":{...original["mobile:leaf"],compactingFactor:2.03}};try{const value=p.getActiveLayoutProfile("leaf").compactingFactor;return JSON.stringify({device:value===2.01?"desktop":value===2.02?"tablet":value===2.03?"phone":"unknown",mobile:app.isMobile,size:[innerWidth,innerHeight],bodyClasses:document.body.className})}finally{p.settings.layoutProfiles=original}})()`);
   assert.equal(environment.device, expected, JSON.stringify(environment));
   const result = evaluate(`(async()=>{const p=app.plugins.plugins["k-plex"],leaf=[...app.workspace.getLeavesOfType("k-plex-react-view"),...app.workspace.getLeavesOfType("k-plex-sidepanel-view")].find(l=>p.isKplexLeafVisible(l));if(!leaf)throw Error("Visible emulated K-Plex required");await leaf.view.waitUntilReady();const root=leaf.view.contentEl.querySelector(".kplex-app"),zen=root?.querySelector("[data-kplex-display-control=zen]");if(!zen)throw Error("Emulated Zen control missing");const controller=leaf.view.displayModes,normal=root.querySelector(".kplex-plex").getBoundingClientRect().height;controller.toggleZen();await new Promise(r=>window.setTimeout(r,100));const graph=root.querySelector(".kplex-plex").getBoundingClientRect(),b=zen.getBoundingClientRect(),value={mobile:app.isMobile,size:[innerWidth,innerHeight],fullscreenAvailable:controller.fullscreenAvailable,fullscreenButton:!!root.querySelector("[data-kplex-display-control=fullscreen]"),zen:controller.getSnapshot().zen,topVisible:root.querySelector(".kplex-top-stack").getClientRects().length>0,historyVisible:root.querySelector(".kplex-history-bar").getClientRects().length>0,normalGraphHeight:normal,zenGraphHeight:graph.height,control:{x:b.x,y:b.y,width:b.width,height:b.height},surface:root.className};controller.toggleFullscreen();value.refusedFullscreen=!controller.getSnapshot().fullscreen;controller.toggleZen();await new Promise(r=>window.setTimeout(r,100));value.restoredZen=!controller.getSnapshot().zen;return JSON.stringify(value)})()`);

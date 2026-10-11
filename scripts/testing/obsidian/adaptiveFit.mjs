@@ -4,7 +4,7 @@
  * Actual native rectangles establish functional camera fit, not subjective paint or touch quality.
  */
 import assert from 'node:assert/strict';
-import {spawnSync} from 'node:child_process';
+import {spawnNativeSync as spawnSync,obsidianCliExecutable} from './processTools.mjs';
 import {createHash} from 'node:crypto';
 import {existsSync,mkdirSync,readFileSync,readdirSync,writeFileSync,unlinkSync} from 'node:fs';
 import {join,resolve} from 'node:path';
@@ -20,7 +20,7 @@ const driver=readFileSync(fileURLToPath(import.meta.url));writeFileSync(join(out
 const report={status:'running',startedAt:new Date().toISOString(),node:process.version,driverSha256:createHash('sha256').update(driver).digest('hex'),artifacts:{},scenarios:[],limitations:['Electron input and observed native geometry/keyframes are functional evidence; physical touch and perceived paint remain separate.']};
 const configurations=['data.json','community-plugins.json'].map(name=>{const path=name==='data.json'?join(target.pluginDir,name):join(target.config,name);return{path,bytes:existsSync(path)?readFileSync(path):null}});
 /** Reject native eval errors even when CLI returns zero. */
-function cli(command,...args){const r=spawnSync(process.env.KPLEX_OBSIDIAN_CLI??'obsidian',[`vault=${vaultName}`,command,...args],{cwd:projectRoot,encoding:'utf8',timeout:30000,killSignal:'SIGKILL',maxBuffer:4*1024*1024});if(r.error||r.status!==0||/^Error:/m.test(r.stdout))throw r.error??Error(r.stderr||r.stdout);return r.stdout.trim()}
+function cli(command,...args){const r=spawnSync(obsidianCliExecutable(),[`vault=${vaultName}`,command,...args],{cwd:projectRoot,encoding:'utf8',timeout:30000,killSignal:'SIGKILL',maxBuffer:4*1024*1024});if(r.error||r.status!==0||/^Error:/m.test(r.stdout))throw r.error??Error(r.stderr||r.stdout);return r.stdout.trim()}
 /** Read detached JSON observations instead of retaining renderer objects. */
 function evaluate(code){return JSON.parse(cli('eval',`code=${code}`).replace(/^=>\s*/,''))}
 /** Poll briefly without blocking the renderer or changing its throttling. */

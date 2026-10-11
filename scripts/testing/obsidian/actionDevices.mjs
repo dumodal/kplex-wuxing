@@ -1,6 +1,7 @@
 /** Optional serialized action-manager responsive acceptance. Desktop mobile emulation is not physical touch or mobile WebView acceptance. */
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { obsidianCliExecutable } from "./processTools.mjs";
+import { spawnNativeSync as spawnSync } from "./processTools.mjs";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -29,7 +30,7 @@ let baseline, originalSettings, mutatedHost = false;
 
 /** Keep explicit native CLI arguments outside a shell and reject zero-exit eval errors. */
 function cli(command, ...args) {
-  const result = spawnSync(process.env.KPLEX_OBSIDIAN_CLI || "obsidian", [`vault=${vaultName}`, command, ...args], { cwd: projectRoot, encoding: "utf8", timeout: 30000, killSignal: "SIGKILL", maxBuffer: 4 * 1024 * 1024 });
+  const result = spawnSync(obsidianCliExecutable(), [`vault=${vaultName}`, command, ...args], { cwd: projectRoot, encoding: "utf8", timeout: 30000, killSignal: "SIGKILL", maxBuffer: 4 * 1024 * 1024 });
   if (result.error || result.status !== 0 || /^Error:/m.test(result.stdout)) throw new Error(result.error?.message || result.stderr || result.stdout);
   return result.stdout.trim();
 }
@@ -71,7 +72,7 @@ function startNativeProbe(token, width, height, catalogActionIds) {
     check(viewWindow === app.setting.win && typeof viewWindow.require === "function", "Inline Settings native document owner missing");
     const owner = viewWindow.require("@electron/remote").getCurrentWindow(); c.owner = owner; c.ownerId = owner.id; c.settingsUsesMainWindow = doc === document;
     c.restoreMainFocus = async deadline => {
-      remote.app.show(); remote.app.focus({steal:true}); mainOwner.show(); mainOwner.moveTop(); mainOwner.focus(); mainOwner.webContents.focus();
+      remote.app.show?.(); remote.app.focus({steal:true}); mainOwner.show(); mainOwner.moveTop(); mainOwner.focus(); mainOwner.webContents.focus();
       let trusted = false, clicked = false;
       const receipt = event => { if (event.target?.matches?.(".kplex-app input.kplex-search") && event.isTrusted) trusted = true; };
       document.addEventListener("mousedown",receipt,true);
@@ -89,7 +90,7 @@ function startNativeProbe(token, width, height, catalogActionIds) {
       } finally { document.removeEventListener("mousedown",receipt,true); }
     };
     c.ownerGeometry = { bounds: owner.getBounds(), minimum: owner.getMinimumSize() };
-    owner.setMinimumSize(200,200); owner.setContentSize(width,height); remote.app.show(); remote.app.focus({steal:true}); owner.show(); owner.moveTop(); owner.focus(); owner.webContents.focus();
+    owner.setMinimumSize(200,200); owner.setContentSize(width,height); remote.app.show?.(); remote.app.focus({steal:true}); owner.show(); owner.moveTop(); owner.focus(); owner.webContents.focus();
     const group = content.querySelector(".kplex-action-settings"); c.group = group;
     check(group, "Native Actions settings group did not render");
     const search = group.querySelector('[data-kplex-action-search]');
@@ -168,7 +169,7 @@ async function closeOwnedController() {
 /** Probe one actual production device classification using a temporary profile sentinel restored synchronously. */
 async function probe(width, height, expected) {
   cli("dev:errors", "clear");
-  evaluate(`(()=>{const r=require("@electron/remote"),w=r.getCurrentWindow();w.setMinimumSize(200,200);w.setContentSize(${width},${height});r.app.show();r.app.focus({steal:true});w.show();w.moveTop();w.focus();return JSON.stringify(true)})()`);
+  evaluate(`(()=>{const r=require("@electron/remote"),w=r.getCurrentWindow();w.setMinimumSize(200,200);w.setContentSize(${width},${height});r.app.show?.();r.app.focus({steal:true});w.show();w.moveTop();w.focus();return JSON.stringify(true)})()`);
   await delay(500);
   const foregroundDeadline = Date.now() + 3000;
   while (!evaluate('JSON.stringify((()=>{const r=require("@electron/remote");return r.powerMonitor.getSystemIdleState(10)!=="locked"&&!document.hidden&&document.hasFocus()&&r.getCurrentWindow().isFocused()})())')) {

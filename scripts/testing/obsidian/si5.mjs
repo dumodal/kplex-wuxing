@@ -1,5 +1,5 @@
 /** Exact-build SI5 native restart/cache recovery, including global vocabulary outside requested scopes, in a disposable vault. */
-import { spawnSync } from "node:child_process";
+import { spawnNativeSync as spawnSync, obsidianCliExecutable } from "./processTools.mjs";
 import { createHash } from "node:crypto";
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -11,7 +11,7 @@ const target=validateTarget({vaultName,vaultPath:process.env.KPLEX_TEST_VAULT_PA
 const reportDir=process.env.KPLEX_HOST_REPORT_DIR||"/private/tmp/kplex-si5-native";
 mkdirSync(reportDir,{recursive:true});
 let lastCliCommand;
-function cli(command,...args){lastCliCommand=command;const r=spawnSync(process.env.KPLEX_OBSIDIAN_CLI||"obsidian",[`vault=${vaultName}`,command,...args],
+function cli(command,...args){lastCliCommand=command;const r=spawnSync(obsidianCliExecutable(),[`vault=${vaultName}`,command,...args],
   {cwd:root,encoding:"utf8",timeout:30000,killSignal:"SIGKILL",maxBuffer:8*1024*1024});
   if(r.error||r.status!==0||/^Error:/m.test(r.stdout||""))throw Error(r.error?.message||r.stderr||r.stdout);return r.stdout.trim();}
 function evaluate(code){const s=cli("eval",`code=${code}`),start=s.indexOf("{");if(start<0)throw Error(`Missing native JSON: ${s.slice(0,200)}`);return JSON.parse(s.slice(start));}
@@ -34,7 +34,7 @@ const restartRuns=Number(process.env.KPLEX_SI5_RESTART_RUNS??3);
 if(!Number.isInteger(restartRuns)||restartRuns<1||restartRuns>3)throw Error('SI5 restart run count must be 1–3');
 let initialized=false;
 try{
-  report.preflight=await run(`${helper}const remote=require('@electron/remote'),win=remote.getCurrentWindow();remote.app.show();remote.app.focus({steal:true});await delay(100);win.show();win.moveTop();win.focus();await delay(300);const p=await settle();ok(current(),'Native test cancelled');
+  report.preflight=await run(`${helper}const remote=require('@electron/remote'),win=remote.getCurrentWindow();remote.app.show?.();remote.app.focus({steal:true});await delay(100);win.show();win.moveTop();win.focus();await delay(300);const p=await settle();ok(current(),'Native test cancelled');
     window.kplexSi5Native={settings:structuredClone(p.settings),created:[],reads:0,hidden:document.hidden,throttle:win.webContents.getBackgroundThrottling(),startCenter:p.settings.lastActivePath};
     const c=window.kplexSi5Native;c.parserWrappers=[];
     // Count canonical semantic acquisition across foreground/background owners. Independent URL

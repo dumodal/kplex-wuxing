@@ -6,7 +6,7 @@
  * saved workspace/display modes and removes observation/global state even after assertion failure.
  */
 import assert from 'node:assert/strict';
-import {spawnSync} from 'node:child_process';
+import {spawnNativeSync as spawnSync,obsidianCliExecutable} from './processTools.mjs';
 import {createHash} from 'node:crypto';
 import {existsSync,mkdirSync,readFileSync,readdirSync,writeFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
@@ -21,7 +21,7 @@ assert(output&&(!existsSync(output)||!readdirSync(output).length),'Choose a fres
 const report={status:'running',startedAt:new Date().toISOString(),node:process.version,artifacts:{},scenarios:[],limitations:['Native rectangles and trusted pointer input establish functional behavior, not physical-device or subjective paint acceptance.']};
 writeFileSync(join(output,'driver-source.mjs'),readFileSync(fileURLToPath(import.meta.url)));
 /** Reject explicit CLI errors as well as process/transport failures. */
-function cli(name,...args){const r=spawnSync(process.env.KPLEX_OBSIDIAN_CLI??'obsidian',[`vault=${vaultName}`,name,...args],{cwd:root,encoding:'utf8',timeout:30000,killSignal:'SIGKILL',maxBuffer:4*1024*1024});if(r.error||r.status!==0||/^Error:/m.test(r.stdout))throw r.error??Error(r.stderr||r.stdout);return r.stdout.trim()}
+function cli(name,...args){const r=spawnSync(obsidianCliExecutable(),[`vault=${vaultName}`,name,...args],{cwd:root,encoding:'utf8',timeout:30000,killSignal:'SIGKILL',maxBuffer:4*1024*1024});if(r.error||r.status!==0||/^Error:/m.test(r.stdout))throw r.error??Error(r.stderr||r.stdout);return r.stdout.trim()}
 /** Return detached observations, never retained native renderer references. */
 function evaluate(code){return JSON.parse(cli('eval',`code=${code}`).replace(/^=>\s*/,''))}
 /** Poll transport without blocking native rendering or altering throttling. */

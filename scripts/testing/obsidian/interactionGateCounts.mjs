@@ -8,7 +8,8 @@
  * This probe is not physical mobile acceptance, and it must run serially with other native drivers.
  */
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { obsidianCliExecutable } from "./processTools.mjs";
+import { spawnNativeSync as spawnSync } from "./processTools.mjs";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
@@ -37,7 +38,7 @@ const controller = "__kplexInteractionGateProbe";
 /** Run one validated expression without a shell or repeating mutating calls after a timeout. */
 function evaluate(code) {
   new Script(code);
-  const result = spawnSync(process.env.KPLEX_OBSIDIAN_CLI || "obsidian", [`vault=${vaultName}`, "eval", `code=${code}`],
+  const result = spawnSync(obsidianCliExecutable(), [`vault=${vaultName}`, "eval", `code=${code}`],
     { cwd: root, encoding: "utf8", timeout: 30_000, maxBuffer: 4 * 1024 * 1024 });
   if (result.error) throw result.error;
   assert.equal(result.status, 0, result.stderr || result.stdout);

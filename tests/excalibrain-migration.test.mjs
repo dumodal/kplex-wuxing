@@ -97,7 +97,7 @@ test("cross-link visibility persists across reload and uses a presentation-only 
   assert.equal(defaults.showCrossLinks, false, "fresh and unspecified settings retain the committed 0.1.2 disabled default");
   assert.equal(migrateAndMergeSettings({ showCrossLinks: "invalid" }).showCrossLinks, false);
   const saves = [];
-  const plugin = { manifest: { id: "k-plex" }, settings: { ...structuredClone(defaults), showCrossLinks: true },
+  const plugin = { manifest: { id: "k-plex" }, settings: structuredClone(defaults),
     saveSettings: async (...args) => { saves.push(args); },
     index: { unassignedOntologyFields: () => [], allPages: () => [] } };
   plugin.translator = createObsidianTranslator();
@@ -106,14 +106,16 @@ test("cross-link visibility persists across reload and uses a presentation-only 
   const row = page.items.flatMap(group => group.items ?? []).find(item => item.control?.key === "showCrossLinks");
   assert.equal(row.name, "Show cross-links");
   assert.equal(row.control.type, "toggle");
-  await tab.setControlValue("showCrossLinks", false);
+  await tab.setControlValue("showCrossLinks", true);
   assert.deepEqual(saves, [[]]);
   const restored = migrateAndMergeSettings(JSON.parse(JSON.stringify(plugin.settings)));
-  assert.equal(restored.showCrossLinks, false, "disabled visibility survives serialization and reload");
+  assert.equal(restored.showCrossLinks, true, "enabled visibility survives serialization and reload");
+  assert.equal(migrateAndMergeSettings(JSON.parse(JSON.stringify({ showCrossLinks: false }))).showCrossLinks, false,
+    "explicitly disabled visibility also survives serialization and reload");
   assert.equal(migrateAndMergeSettings({ showCrossLinks: true }).showCrossLinks, true);
-  assert.equal(importExcaliBrainGraphSettings({ ...fixture, showCrossLinks: true }, restored).showCrossLinks, false,
+  assert.equal(importExcaliBrainGraphSettings({ ...fixture, showCrossLinks: false }, restored).showCrossLinks, true,
     "foreign imports preserve the local preference");
-  assert.deepEqual(classifySettingsChange(captureSettingsPolicy({ ...defaults, showCrossLinks: true }), captureSettingsPolicy(restored)), {
+  assert.deepEqual(classifySettingsChange(captureSettingsPolicy(defaults), captureSettingsPolicy(restored)), {
     semanticInvalidation: false, presentationFacets: false, searchTerms: false,
     nodeVisuals: false, render: true, typographyOnly: false, changedKeys: ["showCrossLinks"],
   });

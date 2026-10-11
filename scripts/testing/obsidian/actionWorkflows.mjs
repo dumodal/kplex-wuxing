@@ -3,7 +3,7 @@
  * Runs separately from actions.mjs, owns bounded fixtures/dialogs/leaves and restores configuration
  * bytes. Real Electron keys and installed UI establish desktop behavior; physical input remains separate.
  */
-import { spawnSync } from "node:child_process";
+import { spawnNativeSync as spawnSync, obsidianCliExecutable } from "./processTools.mjs";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -32,7 +32,7 @@ const runToken = `action-workflows-${process.pid}-${Date.now()}`;
 
 /** Keep native CLI arguments out of a shell and reject eval errors even when Obsidian exits zero. */
 function cli(command, ...args) {
-  const result = spawnSync(process.env.KPLEX_OBSIDIAN_CLI || "obsidian", [`vault=${vaultName}`, command, ...args], { encoding: "utf8", timeout: 30000, killSignal: "SIGKILL", maxBuffer: 4 * 1024 * 1024 });
+  const result = spawnSync(obsidianCliExecutable(), [`vault=${vaultName}`, command, ...args], { encoding: "utf8", timeout: 30000, killSignal: "SIGKILL", maxBuffer: 4 * 1024 * 1024 });
   if (result.error) throw result.error;
   if (result.status !== 0 || /^Error:/m.test(result.stdout)) throw new Error(result.stderr || result.stdout);
   return result.stdout.trim();
@@ -79,7 +79,7 @@ function nativeWorkflowProbe(runToken) {
   if (!p?.actionManager) throw new Error("Exact action-manager build is not loaded");
   if (document.querySelector(".modal-container .modal, .modal-container .prompt")) throw new Error("Close existing dialogs before native workflow acceptance");
   const remote = require("@electron/remote"), nativeWindow = remote.getCurrentWindow();
-  remote.app.show(); remote.app.focus({ steal: true }); nativeWindow.show(); nativeWindow.moveTop(); nativeWindow.focus();
+  remote.app.show?.(); remote.app.focus({ steal: true }); nativeWindow.show(); nativeWindow.moveTop(); nativeWindow.focus();
   const c = window.__kplexActionWorkflows = { p, runToken, originalSettings: JSON.parse(JSON.stringify(p.settings)), originalLeaf: app.workspace.getMostRecentLeaf(),
     nativeWindow, folder: `Kplex-Action-Workflows-${Date.now()}`, owned: [], wrappers: [], leaves: [], dialogs: new Set(), scenarios: [], done: false, cancelled: false };
   /** All resources remain controller-owned until independent cleanup finishes. */

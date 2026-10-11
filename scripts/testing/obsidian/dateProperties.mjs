@@ -5,7 +5,8 @@
  * restored independently of assertions. This is desktop host evidence, not touch or paint acceptance.
  */
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { obsidianCliExecutable } from "./processTools.mjs";
+import { spawnNativeSync as spawnSync } from "./processTools.mjs";
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -25,7 +26,7 @@ const report = { status: 'running', startedAt: new Date().toISOString(), driverS
 let baseline, originalSettings, modeChanged = false, configuration = [], started = false;
 /** Target one named vault, reject native eval errors, and enforce an independent process deadline. */
 function cli(command, ...args) {
-    const began=Date.now(), r=spawnSync(process.env.KPLEX_OBSIDIAN_CLI || 'obsidian',[`vault=${vaultName}`,command,...args],{cwd:projectRoot,encoding:'utf8',timeout:30000,killSignal:'SIGKILL',maxBuffer:8*1024*1024});
+    const began=Date.now(), r=spawnSync(obsidianCliExecutable(),[`vault=${vaultName}`,command,...args],{cwd:projectRoot,encoding:'utf8',timeout:30000,killSignal:'SIGKILL',maxBuffer:8*1024*1024});
     if(command==='plugin:disable'||command==='plugin:enable'||r.error||r.status!==0||/^Error:/m.test(r.stdout)) {
         const receipt={command,durationMs:Date.now()-began,status:r.status,error:r.error?.message};
         (report.cliLifecycle??=[]).push(receipt); console.log(JSON.stringify({cliLifecycle:receipt}));

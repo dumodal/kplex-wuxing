@@ -2,6 +2,7 @@
  * Finite raw-degree parity with fresh full GraphBuilder/GraphIndex, negative coverage and lifetime
  * adversaries. Catalog memory envelopes are diagnostic coordinates, not IndexedDB proof. Tests
  * call production classification/binding/sorting only; raw counts must include hidden relations.
+ * Caller inventories normalize filesystem separators before comparing repository-relative paths.
  */
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -309,7 +310,8 @@ test("equal connection keys use exact entity ID as the final deterministic tie-b
 
 test("degree input is production-routed only through source acquisition and retains no storage/classifier/presentation authority", () => {
   const path = "src/index/CachedRequestedCandidateDegrees.ts", code = readFileSync(path, "utf8");
-  const walk = dir => readdirSync(dir, { withFileTypes: true }).flatMap(entry => entry.isDirectory() ? walk(join(dir, entry.name)) : [join(dir, entry.name)]);
+  /** Inventory source paths in the same slash-separated form used by the authority allowlist. */
+  const walk = dir => readdirSync(dir, { withFileTypes: true }).flatMap(entry => entry.isDirectory() ? walk(join(dir, entry.name)) : [join(dir, entry.name).replaceAll("\\", "/")]);
   const callers = walk("src").filter(file => (file.endsWith(".ts") || file.endsWith(".tsx")) && file !== path
     && readFileSync(file, "utf8").includes("CachedRequestedCandidateDegree"));
   assert.deepEqual(callers, ["src/adapters/obsidian/sourceAcquisition.ts"]);
