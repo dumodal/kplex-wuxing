@@ -19,28 +19,26 @@ Obsidian is the production host; preserve the established portable semantic, ide
 ---
 
 
-# PR 136 / issue 114 - reviewed implementation return
+# Startup offline-edit duplicate read - reviewed return
 
-State: inactive, returned to maintainer. Implementation is uncommitted on 2026-10-11-issue-114-arrow-direction; plan head 79a2b594dde32056ae2f667c606f48d1c4d7565f, base 2b128c89555b88ebf207a709d7c0669bed3dfd73. Maintainer now authorized commit, push, finalizing PR 136, merge, and issue 114 closure with a next-release note. Publication is in progress; release itself is not requested. Structural refactoring remains paused at accepted C14.
+State: inactive, returned to maintainer. Branch 2026-10-11-startup-offline-edit-double-read; base 1b0ac271e380aa715d0fd5e93521c16ab937d85e. Implementation uncommitted. Maintainer now authorizes commit, push, PR creation and merge, including conflict resolution. Publication in progress; no release requested. C14 remains accepted; structural refactoring paused.
 
-## Scope and canonical owner
+## Confirmed cause and fix
 
-Core evidence aggregation selects active non-hidden DEFINED direction before inferred direction. Existing roles, definitions, inference and explanation provenance remain intact; reciprocal explicit directions still resolve to BOTH. Full/pair/cooperative resolution, section projection and URL projection delegate to the same semantic owner. No renderer classifier, enum/default change or scheduler refactor.
+Requested foreground GraphBuilder preparation read/parsed A.md and cached its current-mtime body before graph cancellation. Restart inventory then indiscriminately set bodyDirty on physical drift, discarded that current-version input and reread/reparsed the same note. Real caller stacks and a deterministic actual-IndexedDB cancellation regression prove the cause. Original code fails the new regression with two reads; candidate passes with one. The original single-read/parse expectation remains unchanged.
 
-Canonical PersistedPage serialization stamps resolvedDirectionPolicyVersion=1. Legacy or unsupported resolved rows cannot hydrate or certify cached scopes; retained evidence rederives them using existing cooperative fallback. Current rows retain the fast path. Neutral sources, parsed bodies, DB/snapshot schema and settings signatures remain unchanged.
+The restart comparison now permits optional current-mtime parser input when a changed mtime already rejects the retired cache version. Same-mtime drift, changed known ctime, missing/tombstoned recreation and pre-existing native-event bodyDirty still force fresh native input. Source dirty/revision flags, normal reacquisition/authentication, CAS durability, exact native/caller/file fences and source authority remain intact. No scheduler/parser/schema/settings/semantic change. Module and affected-function TSDoc updated.
 
-The temporary plan-only docs/agent-handoffs/issue-114.md is removed. Permanent acceptance tooling is scripts/testing/obsidian/arrowDirection.mjs with CONTRIBUTING.md instructions and the reviewed evidence in docs/validation/arrow-direction-2026-10-11.json. That report contains exact source hashes (inventory 43f0f69e293751f559b109c89ee011e4e389f721ec532aff7e89e4b69a754fee) and final installed artifact hashes.
+Five new real-IndexedDB cases cover cancelled foreground parsing plus same-mtime size/ctime, different-mtime ctime and observed native-edit cache collisions. All require canonical source/head/payload outcomes; original vocabulary, requested/full distinctions, no-full-build and full-oracle graph assertions remain.
 
-## Actual independent validation
+## Actual independent acceptance
 
-Pinned Node v22.22.2; actual installed dependencies and Obsidian 1.13.0 types. Architecture 7/7, strict core 92/92, official lint clean, real production build passed. Full verifier passed indexing plus 654 portable, 54 UI browser and 334 portable source tests. Final source IndexedDB browser lane passed 427/428. Only failure is the unchanged source-startup-indexeddb.test.mjs:539 offline-edit assertion: A.md is read twice rather than once, also recorded before this feature. Full verification FAILED; maintainer explicitly accepted this recorded limitation for merging PR 136. No full-green claim.
+Pinned Node v22.22.2, real installed Obsidian 1.13.0 types, Windows Obsidian 1.14.0. Affected lane 75/75 passed. Strict verify:obsidian passed architecture 7/7, core 92/92, official lint, production indexing, 654 portable, 54 UI browser, 334 portable source and 433/433 source IndexedDB browser tests, including the original failure and five new cases. Zero failures/skips. Real type-check/production build and exact-byte native staging/smoke passed.
 
-Final native smoke staged byte-identical production artifacts into the explicitly selected existing kplex-test-small vault. Windows Obsidian 1.14.0 native arrow acceptance passed 32 observations across both centers, inversion and inferred visibility, initial reconciliation, repeated policy refresh, real warm plugin reload and second view. Real visible SVG markers, roles, defined/inferred provenance and canonical TFiles passed; warm reload preserved neutral source heads. No captured JavaScript errors.
+Native verify:obsidian:foreground passed all six paused-inventory scenarios: folder gates, navigation, add/remove relationship, note creation and visible edit. No broad foreground flush; inventory resumed and converged. Cleanup confirmed zero owned fixtures, controller removed, original 88 Markdown files and plugin enabled. Settings/configuration restored; no captured JavaScript errors. Disposable vault keeps the exact successful artifacts.
 
-Cleanup independently confirmed fixture absent, controller absent, original 88 Markdown files, plugin enabled. Original settings/workspace/navigation owners and configuration bytes restored. Installed disposable plugin intentionally retains the candidate artifacts.
+Durable record: docs/validation/startup-body-reuse-2026-10-11.json. Exact source inventory cb550742556e9b124e908888542eebd95638c66ec75f3c9179cd3ebb3381a979; source hashes and artifact hashes in that record. Main bundle SHA-256 e60f507d4f0d59bbef1df33186c4208480ed3701dd71445a0c244219e27ff98a. No source/runtime edits after independent validation began. Temporary trace copy removed; no production diagnostics introduced. git diff --check passed.
 
-## Delivery and remaining limitation
+## Remaining scope
 
-Feature implementation and independent native review are complete. Required full gate remains failed; maintainer accepted it for this merge only and requested a separate branch from updated main to resolve the startup double-read. No additional feature-specific manual tests required by review; no macOS/popout/physical-mobile acceptance claimed. Warm repeat policy refresh is not a physical source edit; real source patch add/remove and clean-build parity are covered by integration tests.
-
-Main-agent follow-up production changes were documentation only. Final build/native artifacts include them. git diff --check and native driver syntax check passed. Do not resume work or publish solely from this inactive handoff; follow the maintainer's next scoped instruction.
+No blockers or additional manual tests required for this scoped non-interaction fix. Native Windows small-vault checks do not claim macOS/popout/physical-mobile or paint/memory acceptance. Full verification is green; no earlier PR waiver is carried forward. Publication authorized; newer main from PR 137 is being integrated and the combined result will be validated before merging. This inactive handoff does not authorize another task.
