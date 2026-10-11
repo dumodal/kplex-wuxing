@@ -4,6 +4,7 @@
  * explicit navigation origins and native input pause it without replacing history, editor or Zen owners.
  * The root leases one shared delayed-hover/long-press tooltip owner for its rendering document.
  * Cross-link visibility reads shared persisted settings rather than temporary quick-filter or Find snapshots.
+ * Native follow retains the latest canonical file while hidden and suppresses fallback scenes/motion during partial hydration.
  */
 import {
   useCallback,
@@ -269,26 +270,43 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     );
   });
   const activePathRef = useRef(activePath);
+  const [navigationOrigin, setNavigationOrigin] = useState<"user" | "wander" | "follow">("user");
+  const pendingDocumentFollowRef = useRef<TFile | null>(null);
+  const pendingDocumentDemandRef = useRef<{ file: TFile; path: string; release: () => void } | null>(null);
+  const wasLeafVisibleRef = useRef(plugin.isKplexLeafVisible(hostLeaf));
   const pendingFileExplorerDropRef = useRef<TFile | null>(null);
   const activeFileRef = useRef<TFile | null>(
     plugin.index.get(activePath)?.file ?? (initialWorkspaceFile?.path === activePath ? initialWorkspaceFile : null),
   );
   const [historyCursor, setHistoryCursor] = useState(() => Math.max(0, plugin.settings.navigationHistory.length - 1));
 
+  /** Retire only this surface's native-center demand after graph handover, supersession, hiding or unmount. */
+  const releasePendingDocumentDemand = useCallback((): void => {
+    const demand = pendingDocumentDemandRef.current;
+    pendingDocumentDemandRef.current = null;
+    demand?.release();
+  }, []);
+  useEffect(/** The App retains exact-center acquisition while PlexGraph is absent or changing centers. */ () => releasePendingDocumentDemand, [releasePendingDocumentDemand]);
+
   /**
    * Center an exact page; sidecar-open commands defer document synchronization to their owned open.
    * Passive follow keeps companion propagation: each host destination independently skips an
    * exact same-file observation, while other linked destinations still receive genuine navigation.
    */
-  const activate = useCallback((target: GraphPage, record = true, syncDocuments = true, origin: "user" | "wander" = "user") => {
-    if (target.path !== activePathRef.current) {
-      if (origin === "user") wander.pause();
+  const activate = useCallback((target: GraphPage, record = true, syncDocuments = true, origin: "user" | "wander" | "follow" = "user") => {
+    if (target.path !== activePathRef.current || origin === "follow") {
+      if (origin !== "wander") wander.pause();
       graphActionPorts.current?.prepareNavigation?.(target.path, origin);
     }
     // Any newer explicit navigation supersedes a note waiting for partial indexing.
     pendingFileExplorerDropRef.current = null;
     activePathRef.current = target.path;
     activeFileRef.current = target.file;
+    pendingDocumentFollowRef.current = null;
+    // A just-published preview can depend on this lease. Keep it until the child graph acquires its own.
+    const demand = pendingDocumentDemandRef.current;
+    if (demand && (demand.file !== target.file || demand.path !== target.path)) releasePendingDocumentDemand();
+    setNavigationOrigin(origin);
     setActivePath(target.path);
     plugin.settings.lastActivePath = target.path;
     if (record) {
@@ -301,7 +319,66 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
       void plugin.syncPageToDocumentLeaf(target);
       void plugin.syncSidecarToPage(hostLeaf, target);
     }
-  }, [plugin, hostLeaf, wander]);
+  }, [plugin, hostLeaf, wander, releasePendingDocumentDemand]);
+
+  /** Transfer a settled preview lease only after this exact graph center has acquired its own semantic demand. */
+  const acknowledgeDocumentDemandHandover = useCallback((path: string): void => {
+    const demand = pendingDocumentDemandRef.current;
+    if (!pendingDocumentFollowRef.current && demand?.path === path
+      && plugin.index.get(path)?.file === demand.file) releasePendingDocumentDemand();
+  }, [plugin, releasePendingDocumentDemand]);
+
+  /** Settle only the latest eligible native file once its exact index page is available to a visible Plex. */
+  const activatePendingDocumentFollow = useCallback((): void => {
+    const file = pendingDocumentFollowRef.current;
+    if (!plugin.isKplexLeafVisible(hostLeaf)) {
+      releasePendingDocumentDemand();
+      return;
+    }
+    // Settled preview ownership survives intervening publications until the graph acknowledges acquisition.
+    if (!file) return;
+    if (plugin.app.vault.getFileByPath(file.path) !== file || !plugin.shouldFollowDocumentFile(file)) {
+      pendingDocumentFollowRef.current = null;
+      releasePendingDocumentDemand();
+      return;
+    }
+    setNavigationOrigin("follow");
+    // Show a loading surface rather than the previous history/folder scene while this file hydrates.
+    setActivePath(file.path);
+    // Even a readable page can be borrowed from the previous graph's preview scope.
+    // Retain this exact center before switching graphs and retiring that previous scope.
+    if (pendingDocumentDemandRef.current?.file !== file || pendingDocumentDemandRef.current.path !== file.path) {
+      releasePendingDocumentDemand();
+      const demand = { file, path: file.path, release: /** A synchronous preview may settle this intent before acquisition returns its release capability. */ (): void => {} };
+      pendingDocumentDemandRef.current = demand;
+      const release = plugin.index.acquireSemanticDemand(file.path);
+      if (pendingDocumentDemandRef.current === demand) demand.release = release;
+      else release();
+    }
+    // Synchronous acquisition/publication may already settle or supersede this observation.
+    if (pendingDocumentFollowRef.current !== file) return;
+    const target = plugin.index.get(file.path);
+    if (target?.file === file) activate(target, true, true, "follow");
+  }, [plugin, hostLeaf, activate, releasePendingDocumentDemand]);
+
+  /** Retain native identity while hidden without rendering the graph or starting relationship acquisition. */
+  const observeDocumentFollow = useCallback((file: TFile | null): void => {
+    if (!file || !plugin.shouldFollowDocumentFile(file) || plugin.app.vault.getFileByPath(file.path) !== file) return;
+    if (!pendingDocumentFollowRef.current && activeFileRef.current === file && activePathRef.current === file.path) {
+      const target = plugin.index.get(file.path);
+      // Native same-file echoes preserve explicit motion/representation, but other linked companions may still differ.
+      if (target?.file === file && plugin.isKplexLeafVisible(hostLeaf)) {
+        void plugin.syncPageToDocumentLeaf(target);
+        void plugin.syncSidecarToPage(hostLeaf, target);
+      }
+      return;
+    }
+    pendingDocumentFollowRef.current = file;
+    pendingFileExplorerDropRef.current = null;
+    activePathRef.current = file.path;
+    activeFileRef.current = file;
+    activatePendingDocumentFollow();
+  }, [plugin, hostLeaf, activatePendingDocumentFollow]);
 
   /** Complete a queued File Explorer note drop as soon as partial indexing publishes that note. */
   const activatePendingFileExplorerDrop = useCallback(() => {
@@ -325,7 +402,8 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
 
   useEffect(subscribePendingFileExplorerDrop, [subscribePendingFileExplorerDrop]);
 
-  useEffect(() => plugin.index.subscribe(() => {
+  useEffect(/** Publications settle a pending native identity before any visible scene catches up. */ () => plugin.index.subscribe(/** Keep rename identity and latest native-follow intent coherent with this publication. */ () => {
+    activatePendingDocumentFollow();
     // A TFile keeps its object identity while Obsidian renames or moves it. Track the central file
     // by that identity and adopt its new path only after the rebuilt index has published it. This
     // prevents the center from briefly/finally falling back to folder:/ when its filename changes.
@@ -345,16 +423,27 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     // Hidden tabs/sidebars stay mounted in Obsidian. Do not run the graph React tree for a shared
     // index publication unless this surface is actually visible; it catches up on reveal.
     if (plugin.isKplexLeafVisible(hostLeaf)) forceRender((value) => value + 1);
-  }), [plugin, hostLeaf]);
-  // Presentation publication is render-only; it must not trigger semantic subscriptions or reads.
-  useEffect(() => plugin.index.subscribePresentation(() => {
+  }), [plugin, hostLeaf, activatePendingDocumentFollow]);
+  useEffect(/** Host previews publish through presentation; settle the owned native intent without refreshing semantics. */ () => plugin.index.subscribePresentation(/** Adopt a newly readable exact center, then repaint only visible surfaces. */ () => {
+    activatePendingDocumentFollow();
     if (plugin.isKplexLeafVisible(hostLeaf)) forceRender((value) => value + 1);
-  }), [plugin, hostLeaf]);
-  useEffect(() => plugin.subscribeKplexVisibility(() => {
+  }), [plugin, hostLeaf, activatePendingDocumentFollow]);
+  /** Reconcile native visibility after workspace events or settled drawer geometry, retaining only the newest hidden file. */
+  const reconcileDocumentFollowVisibility = useCallback((): void => {
     // A hidden mounted view may have skipped one or more shared index publications while another
     // K-Plex surface was visible. Re-render exactly once when this leaf becomes visible again.
-    if (plugin.isKplexLeafVisible(hostLeaf)) forceRender((value) => value + 1);
-  }), [plugin, hostLeaf]);
+    const visible = plugin.isKplexLeafVisible(hostLeaf);
+    const revealed = visible && !wasLeafVisibleRef.current;
+    wasLeafVisibleRef.current = visible;
+    if (!visible) releasePendingDocumentDemand();
+    if (visible) {
+      if (revealed) observeDocumentFollow(plugin.getDocumentFollowFile());
+      activatePendingDocumentFollow();
+      forceRender(/** Catch up once with skipped shared publications. */ (value) => value + 1);
+    }
+  }, [plugin, hostLeaf, observeDocumentFollow, activatePendingDocumentFollow, releasePendingDocumentDemand]);
+  useEffect(/** Native workspace notifications share the geometry observer's reveal reconciliation. */ () =>
+    plugin.subscribeKplexVisibility(reconcileDocumentFollowVisibility), [plugin, reconcileDocumentFollowVisibility]);
   useEffect(() => {
     if (!plexFilterPredicate?.dependencies.usesFrontmatter && !compiledGraphLenses.usesFrontmatter) return;
     const ref = plugin.app.metadataCache.on("changed", (file) => {
@@ -375,36 +464,38 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     [plugin, hostLeaf],
   );
 
-  useEffect(() => {
+  useEffect(/** Native file/leaf events retain hidden follow intent without observing the Plex's own embedded view. */ () => {
     /** Observe an eligible external document; native destinations own same-file no-op decisions. */
     const followFile = (file: TFile | null) => {
-      if (!plugin.isKplexLeafVisible(hostLeaf)) return;
       const activeView = plugin.app.workspace.getActiveViewOfType(FileView);
       // Embedded navigation has its own callback. Re-activating/detaching that leaf must not
       // follow Obsidian's previous document back into the Plex's navigation history.
       if (!activeView || activeView.leaf === hostLeaf || isEmbeddedMarkdownLeaf(activeView.leaf)) return;
-      if (!file || !plugin.shouldFollowDocumentFile(file) || !plugin.index.get(file.path)) return;
-      const target = plugin.index.get(file.path);
-      if (target) activate(target, true);
+      observeDocumentFollow(file);
     };
 
     const fileRef = plugin.app.workspace.on("file-open", followFile);
-    const leafRef = plugin.app.workspace.on("active-leaf-change", () => {
-      if (!plugin.isKplexLeafVisible(hostLeaf)) return;
-      forceRender((value) => value + 1);
+    const leafRef = plugin.app.workspace.on("active-leaf-change", /** Hidden native activation still supplies the newest eligible file identity. */ () => {
+      if (plugin.isKplexLeafVisible(hostLeaf)) forceRender(/** Refresh native action availability only for visible leaves. */ (value) => value + 1);
       followFile(plugin.app.workspace.getActiveFile());
     });
-    return () => {
+    return /** Release only this mounted view's workspace observations. */ () => {
       plugin.app.workspace.offref(fileRef);
       plugin.app.workspace.offref(leafRef);
     };
-  }, [plugin, hostLeaf, activate]);
+  }, [plugin, hostLeaf, observeDocumentFollow]);
 
-  const exactPage = plugin.index.get(activePath);
-  const fallbackPath = exactPage ? null : plugin.resolveNavigationFallbackPath(activePath);
+  const indexedPage = plugin.index.get(activePath);
+  const exactPage = !pendingDocumentFollowRef.current || indexedPage?.file === pendingDocumentFollowRef.current
+    ? indexedPage : undefined;
+  // A borrowed preview can disappear when the old center retires, before the new preview publishes.
+  // Keep a followed native center through that gap instead of falling back to unrelated history.
+  const waitingForDocument = pendingDocumentFollowRef.current !== null || navigationOrigin === "follow"
+    && activeFileRef.current !== null && plugin.app.vault.getFileByPath(activeFileRef.current.path) === activeFileRef.current;
+  const fallbackPath = exactPage || waitingForDocument ? null : plugin.resolveNavigationFallbackPath(activePath);
   const page = exactPage
     ?? (fallbackPath ? plugin.index.get(fallbackPath) : undefined)
-    ?? plugin.index.get("folder:/");
+    ?? (waitingForDocument ? undefined : plugin.index.get("folder:/"));
   const hasPage = Boolean(page);
   const graphSearchRead = useMemo(() => createLegacyGraphSearchRead({
     /** Preserve Vault files and URL aliases independently of the current Plex and graph filters. */
@@ -488,18 +579,21 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
   }, [hasPage]);
 
   useEffect(/** Measure the original pane profile through the current rendering document’s observer. */ () => {
-    const el = rootRef.current;
+    // Workspace layout events can precede mobile drawer geometry. The host survives the loading
+    // surface, so observing it also catches a reveal while rootRef is temporarily absent.
+    const el = hostLeaf.view.containerEl;
     if (!el) return;
     type ResizeWindow = Window & { ResizeObserver: typeof ResizeObserver };
     const owningWindow = (el.ownerDocument.defaultView ?? window) as ResizeWindow;
     const update = /** Fullscreen coverage must not switch the original pane’s condensed scene profile. */ (): void => {
-      if (!displayModes.getSnapshot().fullscreen) setHostWidth(el.getBoundingClientRect().width);
+      reconcileDocumentFollowVisibility();
+      if (!displayModes.getSnapshot().fullscreen) setHostWidth((rootRef.current ?? el).getBoundingClientRect().width);
     };
     update();
     const observer = new owningWindow.ResizeObserver(update);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasPage, displayModes]);
+  }, [displayModes, hostLeaf, reconcileDocumentFollowVisibility]);
 
   useEffect(() => {
     if (!page) return;
@@ -1086,7 +1180,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
           <div className="kplex-zone-label zone-child">{translate("app.zoneChildren")}</div>
           <PlexGraph plugin={plugin} index={plugin.index} settings={viewSettings} surface={profileSurface} hostLeaf={hostLeaf} predicate={plexFilterPredicate} lenses={compiledGraphLenses} filterLayoutMode={filterLayoutMode} predicateRevision={predicateRevision} showCrossLinks={plugin.settings.showCrossLinks} activePath={page.path} renderRevision={renderRevision} findFocusRequest={findFocusRequest}
           actionPorts={graphActionPorts} actionSurfaceId={actions.surfaceId} displayState={displayState} fullscreenAvailable={displayModes.fullscreenAvailable && environment.device === "desktop"}
-          semanticRevision={plugin.index.getSemanticRevision()} onActivate={/** Manual graph navigation keeps the existing history and sync path. */ target => activate(target)} onWanderActivate={/** Explicit Wander origin survives asynchronous scene publications. */ target => activate(target, true, true, "wander")} onOpen={open} onOpenInSidecar={centerAndOpenSidecar} onCentralNodeEditorChange={setCentralNodeEditorEnabled} onCentralNodeModeChange={rememberCentralNodeMarkdownMode} areaSettingsMode={areaSettingsMode} onAreaSettingsModeChange={setAreaSettingsMode}
+          semanticRevision={plugin.index.getSemanticRevision()} navigationOrigin={navigationOrigin} onSemanticDemandAcquired={acknowledgeDocumentDemandHandover} onActivate={/** Manual graph navigation keeps the existing history and sync path. */ target => activate(target)} onWanderActivate={/** Explicit Wander origin survives asynchronous scene publications. */ target => activate(target, true, true, "wander")} onOpen={open} onOpenInSidecar={centerAndOpenSidecar} onCentralNodeEditorChange={setCentralNodeEditorEnabled} onCentralNodeModeChange={rememberCentralNodeMarkdownMode} areaSettingsMode={areaSettingsMode} onAreaSettingsModeChange={setAreaSettingsMode}
           onApplyFindFilter={applyFindFilter} appliedFindFilterQuery={findFilterOwner?.query ?? null} onClearFindFilter={clearFindFilter} />
           {wanderState.phase !== "stopped" && <WanderControls state={wanderState} translate={translate}
             stopIcon={<ObsidianIcon name="x" size={17} />} playbackIcon={<ObsidianIcon name={wanderState.phase === "paused" ? "play" : "pause"} size={17} />} paceIcon={<ObsidianIcon name="timer" size={11} />}

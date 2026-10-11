@@ -25,7 +25,7 @@ import { registerActionHotkeys } from "./internalHotkeyScope";
 export type SurfaceActionImplementations = Partial<Record<ActionId, ActionImplementation>>;
 export interface GraphActionPorts {
   implementations: SurfaceActionImplementations;
-  prepareNavigation?: (identity: string, origin: "user" | "wander") => void;
+  prepareNavigation?: (identity: string, origin: "user" | "wander" | "follow") => void;
   readWanderScene?: () => WanderScene;
   highlightWander?: (destination: WanderDestination) => boolean;
   clearWander?: () => void;

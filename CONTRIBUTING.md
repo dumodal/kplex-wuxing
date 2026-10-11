@@ -372,6 +372,25 @@ Test all navigation changes against these expectations:
 - pinned nodes are persistent quick-access bookmarks beneath the toolbar
 - command palette includes opening K-Plex in a pop-out window
 
+## Sidebar follow acceptance
+
+After exact-build staging with `npm run verify:obsidian`, run
+`npm run verify:obsidian:sidebar-follow` with the three explicit disposable
+`kplex-test-small` vault variables and a fresh `KPLEX_HOST_REPORT_DIR`. The driver
+switches native notes while the sidebar is collapsed, verifies the newest center
+on reveal, gates one exact page lookup to check stale-scene suppression and newer
+navigation, checks deliberate graph/history animations, sends stationary pointer
+tap pairs through the real central-node handlers, and checks main-tab reuse,
+empty-workspace tab creation and visible stacked layout captions.
+
+Run again with `KPLEX_SIDEBAR_EMULATE_PHONE=true` and another fresh report directory
+for a 390px native mobile-emulation viewport. It restores emulation, window bounds,
+workspace, settings bytes, native follow ownership and its own fixture notes and
+lookup wrapper independently of assertions. Run native drivers serially. DOM
+pointer events and desktop emulation do not prove physical Android/iOS touch,
+mobile lifecycle or actual paint latency; check sidebar reveal, central double
+taps versus pan/long-press, and the compact rails on a physical phone separately.
+
 ## Search interaction checklist
 
 When touching search, verify:
