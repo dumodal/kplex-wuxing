@@ -1,4 +1,5 @@
 /**
+ * Touched canonical physical facets retire their cached exact-pair facade before selected reads.
  * Published graph repository for K-Plex. Eager sessions retain global source adoption; on-demand
  * sessions publish a body-free host baseline, then canonicalize bounded direct owners without global
  * inventory. Host-only count covers separate available local numbers from semantic/write authority;
@@ -5637,18 +5638,24 @@ export class GraphIndex {
 
   /** Retire derived views for prepared paths without reparsing canonical URL identities.
    * Non-URL paths still select their current scoped facade through get(); canonical URLs always
-   * have that same identity in get(), so a dense source commit can use its direct map lookup. */
+   * have that same identity in get(), so a dense source commit can use its direct map lookup.
+   * Physical facet changes retire their exact-pair facade before any selected reader can reuse it. */
   private invalidatePatchedPages(paths: Iterable<string>): void {
     for (const path of paths) {
       this.titleCache.delete(path);
       this.nodeVisualCache.delete(path);
       const canonical = this.state.pages.get(path);
+      // Exact-pair facades copy physical facets as well as relations. A source/structural commit
+      // can change those facets without changing the pair revision, so retire this key before get()
+      // can return its former physical file after canonical dematerialization.
+      if (canonical) this.relationshipPairViews.delete(canonical);
       const page = canonical?.url ? canonical : this.get(path);
       // Prepared commits can mutate incoming incidence without replacing the broad cache epoch.
       // Retire both the selected reader and canonical fallback, while unrelated URL readers reuse
       // their projections throughout background indexing.
       if (canonical) this.urlProjectionCache.delete(canonical);
       if (page) {
+        this.relationshipPairViews.delete(page);
         this.urlProjectionCache.delete(page);
         this.relationViewCache.delete(page);
       }

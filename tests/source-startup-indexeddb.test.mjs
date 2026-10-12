@@ -537,14 +537,14 @@ test("late Eager bootstrap cannot certify an old-policy snapshot over a current 
 
 /** A cancelled foreground owner leaves reusable parser input, never durable source authority. */
 for (const [damage, cancelledForeground] of [
-  ["missing", false], ["metadata", false], ["chunks", false], ["offline-edit", false], ["offline-edit", true],
+  ["missing", false], ["metadata", false], ["chunks", false], ["offline-edit", false], ["offline-edit", true], ["offline-edit", "during-parser"],
 ]) {
-  test(`source-backed startup recovers ${damage} graph acceleration without reacquiring valid owners${cancelledForeground ? " after cancelled foreground parsing" : ""}`, async () => {
+  test(`source-backed startup recovers ${damage} graph acceleration without reacquiring valid owners${cancelledForeground === "during-parser" ? " during foreground parsing" : cancelledForeground ? " after cancelled foreground parsing" : ""}`, async () => {
     const browser = await chromiumHarness(bundle);
     try {
       assert.equal(await browser.evaluate(contributorBrowserInitialize), true);
       assert.equal(await browser.evaluate(`(async()=>{
-        const assert=Object.assign((v,m)=>ok(v,m),{equal}),M=sourceModules,damage=${JSON.stringify(damage)},cancelledForeground=${cancelledForeground},name='si5-graph-'+damage,f=await fixture(name);
+        const assert=Object.assign((v,m)=>ok(v,m),{equal}),M=sourceModules,damage=${JSON.stringify(damage)},cancelledForeground=${JSON.stringify(cancelledForeground)},name='si5-graph-'+damage,f=await fixture(name);
         const collect=${collect.toString()},hostOracle=${hostOracle.toString()},fullCenterIndex=${fullCenterIndex.toString()};
         const currentNeighborhoodView=${currentNeighborhoodView.toString()},centerGateSettings=${centerGateSettings.toString()};
         let initial,index,oracle,release;
@@ -572,7 +572,30 @@ for (const [damage, cancelledForeground] of [
           const originalParse=index.metadataParser.parse.bind(index.metadataParser);let actualParses=0;
           index.metadataParser.parse=(...args)=>{actualParses++;return originalParse(...args)};
           index.scheduleOrphanCleanup=()=>{};
-          if(cancelledForeground){
+          if(cancelledForeground==='during-parser'){
+            ok(await index.initializeOnDemandBaseline(),'Real foreground structural baseline');
+            const originalCompare=index.sourceAcquisition.durableHostInventory.bind(index.sourceAcquisition);
+            const checkpoint=index.sourceAcquisition.backgroundCheckpoint;
+            let resumeComparison,releaseParser,comparisonEntered,parserEntered,checkpointEntered,comparisonReturned=false;
+            const comparisonReached=new Promise(resolve=>{comparisonEntered=resolve}),parserReached=new Promise(resolve=>{parserEntered=resolve});
+            const comparisonHold=new Promise(resolve=>{resumeComparison=resolve}),parserHold=new Promise(resolve=>{releaseParser=resolve});
+            const checkpointReached=new Promise(resolve=>{checkpointEntered=resolve});
+            // P4 captures a real durable old metadata family, then P2 owns the actual current body
+            // parse. Resume comparison before the optional parser write, preserving native fences.
+            index.sourceAcquisition.durableHostInventory=async(...args)=>{const result=await originalCompare(...args);if(args[0]==='A.md'&&!comparisonReturned){comparisonEntered();await comparisonHold;comparisonReturned=true;}return result;};
+            index.sourceAcquisition.backgroundCheckpoint=()=>{const pending=checkpoint();if(comparisonReturned)checkpointEntered();return pending;};
+            index.metadataParser.parse=async(...args)=>{actualParses++;const body=await originalParse(...args);parserEntered();await parserHold;return body;};
+            try{
+              const inventory=index.sourceAcquisition.reconcile();await comparisonReached;
+              const foreground=index.withForegroundPriority(()=>index.patchMarkdownPaths(['A.md'],{useDurableCache:true}),2);
+              await parserReached;resumeComparison();await checkpointReached;releaseParser();
+              await foreground;ok(await inventory,'Interleaved actual source inventory closes');
+            }finally{
+              resumeComparison?.();releaseParser?.();index.sourceAcquisition.durableHostInventory=originalCompare;
+              index.sourceAcquisition.backgroundCheckpoint=checkpoint;
+              index.metadataParser.parse=(...args)=>{actualParses++;return originalParse(...args)};
+            }
+          }else if(cancelledForeground){
             ok(await index.initializeOnDemandBaseline(),'Real foreground structural baseline');
             let foregroundCurrent=true;const putBody=index.indexedDb.putBody.bind(index.indexedDb);
             // Cancel the graph owner only after its actual current-version parser write completes.

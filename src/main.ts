@@ -2,8 +2,14 @@
  * Obsidian plugin lifecycle and host orchestration for indexing, navigation and vault mutations. Portable owners determine semantics; this host boundary supplies effects, cleanup and localized product feedback. Native metadata events request finite visible presentation repair independently of semantic readiness. Passive document synchronization preserves the current representation of exact matching native destinations; explicit opening and source inspection retain their separate navigation contracts. Support reporting projects retained facts without starting index work; this lifetime owns its bounded recorder and native report dialogs. Per-note Markdown zoom preferences follow Vault rename/delete events independently of index readiness.
  * Remote node image consent publishes synchronously before persistence and never requests semantics.
  * Surface registration releases menus in its captured rendering document before migration/close retires that realm.
+ * Deletion captures bounded pre-trash property/body approval, writes only confirmed fields and retains
+ * partial commits. Deletion Hidden covers captured resolved spellings and observed native unresolved
+ * coordinates without guessing identities. Additive Hidden consent shares coherent source publication;
+ * originating graph/details owners retire pending dialogs while plugin lifetime owns saved work.
+ * Its foreground write lease ends before lower-priority source publication can checkpoint.
+ * Folder/tag notices supply complete literal references to the shared localization formatter.
  */
-import { FileView, MarkdownView, Menu, Notice, Platform, Plugin, TFile, TFolder, apiVersion, getLanguage, getAllTags, normalizePath, setIcon, type Editor, type EventRef, type HoverParent, type WorkspaceLeaf } from "obsidian";
+import { FileView, MarkdownView, Menu, Notice, Platform, Plugin, TFile, TFolder, apiVersion, getLanguage, getAllTags, normalizePath, setIcon, type Editor, type HoverParent, type WorkspaceLeaf } from "obsidian";
 import { captureSettingsPolicy, classifySettingsChange, type SettingsPolicy } from "./core/graph/settingsPolicy";
 import { removeMarkdownZoomModes, renameMarkdownZoomModes } from "./core/plex/markdownZoomPreferences";
 import { GraphIndex } from "./index/GraphIndex";
@@ -13,11 +19,11 @@ import { RelationModal, type RelationModalOptions } from "./ui/RelationModal";
 import { NewRelatedNoteModal, type RelatedNoteInvocation } from "./ui/NewRelatedNoteModal";
 import { CreateFolderNoteModal } from "./ui/CreateFolderNoteModal";
 import { MaterializeGhostModal, type GhostMaterializationKind, type GhostMaterializationLocation } from "./ui/MaterializeGhostModal";
-import { DeleteNodeConfirmationModal, RemainingNodeReferencesModal, type RemainingNodeReference } from "./ui/DeleteNodeModal";
+import { DeleteNodeConfirmationModal, RemainingNodeReferencesModal, HideRelationshipModal, type DeleteNodePreview, type DeleteSourcePreview, type RemainingNodeReference } from "./ui/DeleteNodeModal";
 import { LinkDirection, type GateRole, type GraphPage, type RelationshipRole } from "./types";
 import { OntologySuggester } from "./editor/OntologySuggester";
 import { isWebViewerAvailable, openExternalUrl } from "./adapters/obsidian/externalUrl";
-import { normalizeFieldName, parseBodyMetadata } from "./core/parser/metadata";
+import { normalizeFieldName, parseBodyMetadata, iterateLinkReferencesFromValue } from "./core/parser/metadata";
 import { extractLinksFromValue, iterateResolvedLinksFromValue } from "./index/fieldParser";
 import type { RelationEvidence } from "./index/RelationEvidence";
 import { AddToOntologyModal, type OntologyAssignmentRole } from "./ui/AddToOntologyModal";
@@ -3534,7 +3540,7 @@ export default class KplexPlugin extends Plugin {
       return;
     }
     if (page.isFolder || page.isTag) {
-      new Notice(this.translator(page.isFolder ? "notice.folder" : "notice.tag", { name: page.name }), 1600);
+      new Notice(this.translator(page.isFolder ? "notice.folder" : "notice.tag", { name: page.isTag ? `#${page.name}` : page.name }), 1600);
       return;
     }
     await this.createGhostNote(page);
@@ -4085,25 +4091,6 @@ export default class KplexPlugin extends Plugin {
     return value;
   }
 
-  private async waitForMetadataChange(file: TFile, timeoutMs = 1200): Promise<void> {
-    await new Promise<void>((resolve) => {
-      let ref: EventRef | null = null;
-      let timer = 0;
-      let settled = false;
-      const finish = () => {
-        if (settled) return;
-        settled = true;
-        if (timer) window.clearTimeout(timer);
-        if (ref) this.app.metadataCache.offref(ref);
-        resolve();
-      };
-      ref = this.app.metadataCache.on("changed", (changedFile) => {
-        if (changedFile.path === file.path) finish();
-      });
-      timer = window.setTimeout(finish, timeoutMs);
-    });
-  }
-
   /** Own the exact metadata/body observer; pending status is localized and never closes the composer early. */
   private async mutateRelationshipMetadata(file: TFile, fields: ReadonlySet<string>, mutate: (frontmatter: Record<string, unknown>) => void, targetPath: string, beforeMutation?: () => boolean): Promise<void> {
     const targetIdentity = this.app.vault.getFileByPath(targetPath);
@@ -4428,9 +4415,9 @@ export default class KplexPlugin extends Plugin {
     await this.saveSettings(false, false);
   }
 
-  private async frontmatterDocumentLineRange(file: TFile): Promise<{ start: number; end: number } | null> {
-    const content = await this.app.vault.cachedRead(file);
-    const lines = content.split(/\r?\n/);
+  /** Locate the document YAML boundary, borrowing captured lines when a preview already owns the body. */
+  private async frontmatterDocumentLineRange(file: TFile, capturedLines?: readonly string[]): Promise<{ start: number; end: number } | null> {
+    const lines = capturedLines ?? (await this.app.vault.cachedRead(file)).split(/\r?\n/);
     if (lines[0]?.trim() !== "---") return null;
     for (let line = 1; line < lines.length; line += 1) {
       const trimmed = lines[line].trim();
@@ -4444,10 +4431,11 @@ export default class KplexPlugin extends Plugin {
     return resolved?.path === targetPath || this.normalizedNoteReferenceMatches(rawLink, targetPath);
   }
 
-  private async markdownBodyReferenceLines(file: TFile, targetPath: string): Promise<number[]> {
+  /** Resolve actual native link positions before target deletion, excluding the existing YAML range. */
+  private async markdownBodyReferenceLines(file: TFile, targetPath: string, capturedLines?: readonly string[]): Promise<number[]> {
     const cache = this.app.metadataCache.getFileCache(file);
     if (!cache) return [];
-    const frontmatter = await this.frontmatterDocumentLineRange(file);
+    const frontmatter = await this.frontmatterDocumentLineRange(file,capturedLines);
     const lines = new Set<number>();
     for (const link of [...(cache.links ?? []), ...(cache.embeds ?? [])]) {
       if (!this.linkCacheMatchesTarget(link.link, file.path, targetPath)) continue;
@@ -4458,7 +4446,7 @@ export default class KplexPlugin extends Plugin {
     return [...lines].sort((a, b) => a - b);
   }
 
-  /** Collect remaining body references to the target after deletion, retaining source content and localizing only the missing-file display fallback. */
+  /** Capture actual body link and inline provenance while the target still resolves; deletion reuses these navigation coordinates. */
   private remainingBodyReferences(file: TFile, target: GraphPage, markdownLinkLines: readonly number[]): RemainingNodeReference[] {
     const references = new Map<number, RemainingNodeReference>();
 
@@ -4509,69 +4497,292 @@ export default class KplexPlugin extends Plugin {
     return files;
   }
 
-  private frontmatterContainsTarget(file: TFile, target: GraphPage): boolean {
-    const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
-    if (!frontmatter) return false;
-    return Object.values(frontmatter).some((value) => this.valueContainsTarget(value, file, target));
+  /** Capture bounded discovered property/body references and exact resolved spellings before trash retires target resolution. */
+  async captureDeleteNodePreview(target: GraphPage): Promise<DeleteNodePreview> {
+    const hiddenFields = [...new Set(this.settings.hierarchy.hidden.filter(/** Empty keys cannot form properties. */ field => field.trim()))];
+    const ontology = new Set([...this.allOntologyFields(), ...hiddenFields].map(normalizeFieldName));
+    const preview: DeleteNodePreview = {sources: [], hiddenFields, hiddenField: hiddenFields[0] ?? ""};
+    const targetPath = target.path, targetFile = target.file;
+    let retainedBytes = 2 * hiddenFields.join("").length;
+    for (const file of this.referencingMarkdownFiles(target)) {
+      const path = file.path, cache = this.app.metadataCache.getFileCache(file), frontmatter = cache?.frontmatter ?? {};
+      const source: DeleteSourcePreview = {file, path, properties: [], hiddenPayload: relationshipMetadataPayload(frontmatter,new Set(hiddenFields.map(normalizeFieldName))),bodyText:"",bodyStart:0,bodyReferences:[],targetSpellings:[]};
+      retainedBytes += 512 + 2 * (path.length + source.hiddenPayload.length);
+      if (retainedBytes + 2 * file.stat.size > SOURCE_DECODE_BUDGET_BYTES) throw new Error(this.translator("delete.cleanup.previewTooLarge"));
+      const content = await this.app.vault.cachedRead(file);
+      if (retainedBytes + 2 * content.length > SOURCE_DECODE_BUDGET_BYTES) throw new Error(this.translator("delete.cleanup.previewTooLarge"));
+      const lines = content.split(/\r?\n/);
+      const documentRange = await this.frontmatterDocumentLineRange(file,lines);
+      source.bodyStart = documentRange ? documentRange.end + 1 : 0;
+      source.bodyText = lines.slice(source.bodyStart).join("\n");
+      const spellings = new Set<string>([target.path]);
+      retainedBytes += 128 + 2 * target.path.length;
+      for (const reference of iterateLinkReferencesFromValue([frontmatter,source.bodyText])) {
+        if (reference.external) continue;
+        let spelling = reference.rawTarget.trim();
+        try {spelling = decodeURIComponent(spelling);} catch { /* Match the existing host resolver's undecodable spelling. */ }
+        spelling = spelling.split("#",1)[0];
+        const resolved = this.app.metadataCache.getFirstLinkpathDest(spelling,path);
+        if (!(targetFile ? resolved === targetFile : !resolved && this.normalizedNoteReferenceMatches(spelling,target.path)) || spellings.has(spelling)) continue;
+        retainedBytes += 128 + 2 * spelling.length;
+        if (retainedBytes + 4 * content.length > SOURCE_DECODE_BUDGET_BYTES) throw new Error(this.translator("delete.cleanup.previewTooLarge"));
+        spellings.add(spelling);
+      }
+      source.targetSpellings = [...spellings];
+      const bodyLines = await this.markdownBodyReferenceLines(file,target.path,lines);
+      source.bodyReferences = this.remainingBodyReferences(file,target,bodyLines).map(/** Relative positions survive an otherwise unchanged YAML rewrite. */ reference => ({...reference,line:reference.line-source.bodyStart}));
+      retainedBytes += 2 * source.bodyText.length + 256 * source.bodyReferences.length;
+      if (retainedBytes + 4 * content.length > SOURCE_DECODE_BUDGET_BYTES) throw new Error(this.translator("delete.cleanup.previewTooLarge"));
+      if (this.unloading || file.path !== path || this.app.vault.getFileByPath(path) !== file || this.app.metadataCache.getFileCache(file) !== cache
+        || target.path !== targetPath || target.file !== targetFile || targetFile && this.app.vault.getFileByPath(targetPath) !== targetFile) throw new Error(this.translator("addRelated.endpointChanged"));
+      for (const field of Object.keys(frontmatter)) {
+        if (!this.valueContainsTarget(frontmatter[field],file,target)) continue;
+        const payload = relationshipMetadataPayload(frontmatter,new Set([normalizeFieldName(field)]));
+        if (4 * file.stat.size + 4 * payload.length > SOURCE_DECODE_BUDGET_BYTES) throw new Error("decode-budget");
+        let after: unknown, supported = true;
+        try {after = this.removeTargetFromValue(frontmatter[field],file,target);} catch {supported = false;}
+        const afterPayload = supported ? relationshipMetadataPayload({[field]:after},new Set([normalizeFieldName(field)])) : "";
+        retainedBytes += 256 + 2 * (field.length + payload.length + afterPayload.length);
+        if (retainedBytes + 2 * content.length > SOURCE_DECODE_BUDGET_BYTES) throw new Error(this.translator("delete.cleanup.previewTooLarge"));
+        const location = await this.frontmatterPropertyLineRange(file,field,lines);
+        if (this.unloading || file.path !== path || this.app.vault.getFileByPath(path) !== file
+          || this.app.metadataCache.getFileCache(file) !== cache || target.path !== targetPath || target.file !== targetFile
+          || targetFile && this.app.vault.getFileByPath(targetPath) !== targetFile) throw new Error(this.translator("addRelated.endpointChanged"));
+        source.properties.push({field, ontology: ontology.has(normalizeFieldName(field)), choice: ontology.has(normalizeFieldName(field)) && supported ? "remove" : "keep",
+          line: location?.start ?? 0,payload,after,supported});
+      }
+      preview.sources.push(source);
+    }
+    return preview;
   }
 
-  private async removePropertyReferencesToNode(target: GraphPage): Promise<{
+  /** Add configured Hidden evidence; exact deletion coordinates must not collapse distinct opaque IDs. */
+  private appendHiddenReference(frontmatter: Record<string,unknown>, storage: TFile, target: GraphPage, field: string, reference: string, exactCoordinates?: readonly string[]): void {
+    const wanted = normalizeFieldName(field);
+    if (!this.settings.hierarchy.hidden.some(/** Consent cannot outlive actual Hidden configuration. */ key => normalizeFieldName(key) === wanted)) throw new Error(this.translator("hide.noField"));
+    const keys = Object.keys(frontmatter).filter(/** Preserve physical YAML spelling and reject ambiguity. */ key => normalizeFieldName(key) === wanted);
+    if (keys.length > 1) throw new Error(this.translator("explain.removeSourceChanged"));
+    const key = keys[0] ?? field, value = frontmatter[key];
+    let additions = [reference];
+    if (exactCoordinates === undefined) {
+      if (this.valueContainsTarget(value,storage,target)) return;
+    } else {
+      // A single streamed membership set and array assignment keep dense spelling scopes linear.
+      const declared = new Set(iterateResolvedLinksFromValue(this.app,value,storage));
+      additions = exactCoordinates.filter(/** Only this exact declared endpoint makes an entry redundant. */ path => !declared.has(path)).map(/** These coordinates were validated before the native callback changes any field. */ path => `[[${path}]]`);
+      if (!additions.length) return;
+    }
+    Object.defineProperty(frontmatter,key,{value:value === undefined || value === null || value === "" ? additions : Array.isArray(value) ? [...(value as unknown[]),...additions] : [value,...additions],enumerable:true,writable:true,configurable:true});
+  }
+
+  /** Bound Hidden to approved lexical endpoints and exact own-source unresolved keys, never basename guesses. */
+  private deletionHiddenCoordinates(source: DeleteSourcePreview, target: GraphPage): string[] {
+    const coordinates = new Set(source.targetSpellings), approved = new Set<string>();
+    let bytes = 0;
+    for (const spelling of coordinates) {
+      approved.add(normalizePath(spelling.split("#",1)[0].trim()).replace(/\.md$/i,""));
+      bytes += 128 + 4 * spelling.length;
+      if (bytes > SOURCE_DECODE_BUDGET_BYTES) throw new Error(this.translator("delete.cleanup.previewTooLarge"));
+    }
+    const unresolved = this.app.metadataCache.unresolvedLinks?.[source.path];
+    for (const key in unresolved) {
+      if (!Object.prototype.hasOwnProperty.call(unresolved,key)) continue;
+      bytes += 128 + 4 * key.length;
+      if (bytes > SOURCE_DECODE_BUDGET_BYTES) throw new Error(this.translator("delete.cleanup.previewTooLarge"));
+      if (!(unresolved[key] > 0) || !approved.has(normalizePath(key.split("#",1)[0].trim()).replace(/\.md$/i,""))) continue;
+      coordinates.add(key);
+    }
+    for (const coordinate of coordinates) {
+      // A formerly resolved short spelling may now refer to another file. Declaring it Hidden
+      // would change that unrelated relationship; refuse the source rather than adopt it.
+      if (this.app.metadataCache.getFirstLinkpathDest(coordinate,source.path)
+        || extractLinksFromValue(this.app,`[[${coordinate}]]`,source.file).join("\u0000") !== coordinate) throw new Error(this.translator("explain.removeSourceChanged"));
+    }
+    if (!coordinates.has(target.path)) throw new Error(this.translator("explain.removeSourceChanged"));
+    return [...coordinates];
+  }
+
+  /** Apply only confirmed properties and publish successful sources; prior commits survive later failures. */
+  private async removePropertyReferencesToNode(target: GraphPage, preview: DeleteNodePreview, currentTarget: () => boolean): Promise<{
     hosts: string[];
     remaining: RemainingNodeReference[];
+    issues: string[];
   }> {
-    const hosts = this.referencingMarkdownFiles(target);
-    const remaining = new Map<string, RemainingNodeReference>();
-
-    for (const file of hosts) {
-      if (this.frontmatterContainsTarget(file, target)) {
-        this.pruneManagedMetadataWrites();
-        this.managedMetadataWrites.set(file.path, Date.now() + 15000);
-        const metadataChanged = this.waitForMetadataChange(file);
-        let changed = false;
-        await this.app.fileManager.processFrontMatter(file, (frontmatter: Record<string, unknown>) => {
-          for (const key of Object.keys(frontmatter)) {
-            if (!this.valueContainsTarget(frontmatter[key], file, target)) continue;
-            const next = this.removeTargetFromValue(frontmatter[key], file, target);
-            if (next === undefined) delete frontmatter[key];
-            else frontmatter[key] = next;
-            changed = true;
+    const remaining: RemainingNodeReference[] = [], issues: string[] = [];
+    const hiddenFields = new Set(preview.hiddenFields.map(normalizeFieldName));
+    for (const source of preview.sources) {
+      const {file,path} = source;
+      /** Every awaited read/write retains exact source identity and the absent approved target. */
+      const current = (): boolean => !this.unloading && currentTarget() && file.path === path && this.app.vault.getFileByPath(path) === file;
+      if (!current()) {issues.push(this.translator("delete.cleanup.sourceFailed",{path}));continue;}
+      const selected = source.properties.filter(/** Keep grants no persistence capability. */ property => property.choice !== "keep");
+      try {
+        if (selected.length) {
+          if (!(await this.index.prepareRelationshipPair(path,target.path)) || !current()) throw new Error(this.translator("explain.removeSourceChanged"));
+          const hides = selected.some(/** Hidden adds evidence while preserving the selected original property. */ property => property.choice === "hide");
+          const hiddenMtime = file.stat.mtime;
+          if (hides) {
+            // Approval may include short body/inline spellings. Preserve their source identity
+            // through FileManager's later awaited read instead of hiding newly edited links.
+            if (4 * file.stat.size + 2 * source.bodyText.length > SOURCE_DECODE_BUDGET_BYTES) throw new Error(this.translator("delete.cleanup.previewTooLarge"));
+            const content = await this.app.vault.cachedRead(file), lines = content.split(/\r?\n/);
+            const range = await this.frontmatterDocumentLineRange(file,lines);
+            if (!current() || file.stat.mtime !== hiddenMtime || 4 * content.length + 2 * source.bodyText.length > SOURCE_DECODE_BUDGET_BYTES
+              || lines.slice(range ? range.end + 1 : 0).join("\n") !== source.bodyText) throw new Error(this.translator("explain.removeSourceChanged"));
           }
-        });
-        if (changed) await metadataChanged;
+          const fields = new Set(selected.map(/** Observe the approved physical field coordinates only. */ property => normalizeFieldName(property.field)));
+          if (hides) for (const field of hiddenFields) fields.add(field);
+          this.pruneManagedMetadataWrites();this.managedMetadataWrites.set(path,Date.now()+15000);
+          await this.mutateRelationshipMetadata(file,fields,/** Native reread reauthorizes approval before assigning private transformations. */ frontmatter => {
+            if (!current()) throw new Error(this.translator("explain.removeSourceChanged"));
+            for (const property of selected) if (relationshipMetadataPayload(frontmatter,new Set([normalizeFieldName(property.field)])) !== property.payload
+              || !Object.prototype.hasOwnProperty.call(frontmatter,property.field)) throw new Error(this.translator("explain.removeSourceChanged"));
+            if (hides && relationshipMetadataPayload(frontmatter,hiddenFields) !== source.hiddenPayload) throw new Error(this.translator("explain.removeSourceChanged"));
+            if (hides && file.stat.mtime !== hiddenMtime) throw new Error(this.translator("explain.removeSourceChanged"));
+            const hiddenCoordinates = hides ? this.deletionHiddenCoordinates(source,target) : [];
+            for (const property of selected) {
+              if (property.choice !== "remove") continue;
+              if (!property.supported) throw new Error(this.translator("explain.removeUnsupported"));
+              if (property.after === undefined) delete frontmatter[property.field];else frontmatter[property.field]=property.after;
+            }
+            if (hides) this.appendHiddenReference(frontmatter,file,target,preview.hiddenField,`[[${target.path}]]`,hiddenCoordinates);
+          },target.path,current);
+          if (!current()) throw new SavedRelationshipPendingError(this.translator("relation.savedUpdatePending"));
+          const patched = await this.index.patchMarkdownPaths([path],{isCurrent:current});
+          if (patched.outcome !== "patched" || !current()) throw new SavedRelationshipPendingError(this.translator("relation.savedUpdatePending"));
+        }
+      } catch(error) {
+        issues.push(this.translator(error instanceof SavedRelationshipPendingError ? "delete.cleanup.sourcePending" : "delete.cleanup.sourceFailed",{path}));
       }
-
-      const bodyLines = await this.markdownBodyReferenceLines(file, target.path);
-      this.index.removePropertyReferenceEvidence(file.path, target.path, bodyLines.length === 0);
-      for (const reference of this.remainingBodyReferences(file, target, bodyLines)) {
-        remaining.set(`${reference.path}\u0000${reference.line}`, reference);
+      if (!current()) continue;
+      try {
+      const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter ?? {};
+      for (const property of source.properties) {
+        if (!Object.prototype.hasOwnProperty.call(frontmatter,property.field)) continue;
+        const unchanged = relationshipMetadataPayload(frontmatter,new Set([normalizeFieldName(property.field)])) === property.payload;
+        if (!unchanged && !this.valueContainsTarget(frontmatter[property.field],file,target)) continue;
+        const location = await this.frontmatterPropertyLineRange(file,property.field);
+        if (!current()) throw new Error("source-retired");
+        remaining.push({path,line:location?.start ?? property.line,label:property.field,fieldName:property.field,sourceKind:"frontmatter-ontology"});
+      }
+      if (source.bodyReferences.length) {
+        if (4 * file.stat.size + 2 * source.bodyText.length > SOURCE_DECODE_BUDGET_BYTES) throw new Error("decode-budget");
+        const content = await this.app.vault.cachedRead(file), lines = content.split(/\r?\n/);
+        if (4 * content.length + 2 * source.bodyText.length > SOURCE_DECODE_BUDGET_BYTES) throw new Error("decode-budget");
+        const documentRange = await this.frontmatterDocumentLineRange(file,lines);
+        const bodyStart = documentRange ? documentRange.end + 1 : 0;
+        if (!current()) throw new Error("source-retired");
+        if (lines.slice(bodyStart).join("\n") !== source.bodyText) {
+          issues.push(this.translator("delete.cleanup.bodyChanged",{path}));
+          remaining.push({path,line:0,label:this.translator("delete.cleanup.reviewSource"),sourceKind:"obsidian-link"});
+        } else remaining.push(...source.bodyReferences.map(/** Retain canonical pre-trash target attribution with current unchanged-body line coordinates. */ reference => ({...reference,line:Math.max(0,bodyStart+reference.line)})));
+      }
+      } catch {
+        issues.push(this.translator("delete.cleanup.inspectFailed",{path}));
+        remaining.push({path,line:0,label:this.translator("delete.cleanup.reviewSource"),sourceKind:"obsidian-link"});
       }
     }
-
-    return { hosts: hosts.map((file) => file.path), remaining: [...remaining.values()] };
+    return {hosts:preview.sources.map(/** Retain displayed source coordinates instead of adopting a later rename. */ source=>source.path),remaining,issues};
   }
 
-  private async confirmDeleteNode(page: GraphPage): Promise<boolean> {
+  /** Confirm exact additive Hidden scope and release the foreground write before per-source publication. */
+  async hideRelationship(sourcePath: string, targetPath: string, beforeMutation?: () => boolean,
+    ownConfirmation?: (modal: HideRelationshipModal | null) => void): Promise<ActionOutcome> {
+    const source = this.index.get(sourcePath), target = this.index.get(targetPath);
+    const fields = [...new Set(this.settings.hierarchy.hidden.filter(/** Blank configured keys are not writable choices. */ field => field.trim()))];
+    if (!source || !target || source.isFolder || source.isTag || target.isFolder || target.isTag || !fields.length) {
+      if (!fields.length) new Notice(this.translator("hide.noField"));
+      return {status:"unavailable",reasonKey:"actions.target-unavailable"};
+    }
+    const affected = [actionNodeRef(source),actionNodeRef(target)];
+    const normalized = new Set(fields.map(normalizeFieldName));
+    const choices = [source,target].filter(/** Only physical Markdown endpoints own editable YAML. */ page => page.file?.extension === "md").map(
+      /** Capture both orientations and the affected payload before consent, without reading unrelated properties. */ page => ({
+        page,file:page.file!,path:page.path,other:page === source ? target : source,
+        canonical:this.index.pages.get(page.path),otherCanonical:this.index.pages.get((page === source ? target : source).path),
+        ref:actionNodeRef(page),otherRef:actionNodeRef(page === source ? target : source),
+        otherPath:(page === source ? target : source).path,otherFile:(page === source ? target : source).file,
+        payload:relationshipMetadataPayload(this.app.metadataCache.getFileCache(page.file!)?.frontmatter ?? {},normalized),
+      }));
+    if (!choices.length) return {status:"unavailable",reasonKey:"actions.target-unavailable"};
+    const selection = await new Promise<{sourcePath:string;field:string}|null>(/** Native closure and plugin teardown both retire pending consent. */ resolve => {
+      const modal = new HideRelationshipModal(this.app,choices.map(/** Picker exposes only captured writable endpoints. */ choice => choice.path),fields,[source.path,target.path],resolve);
+      const cancel = (): void => modal.close();
+      const close: () => void = modal.onClose.bind(modal) as () => void;
+      modal.onClose = /** Dispose the exact pending dialog independently of native source work. */ (): void => {close();this.relationshipWriteCancels.delete(cancel);ownConfirmation?.(null);};
+      this.relationshipWriteCancels.add(cancel);ownConfirmation?.(modal);
+      if (this.unloading || beforeMutation?.() === false) {modal.close();return;}
+      modal.open();
+    });
+    if (!selection) return {status:"cancelled"};
+    const choice = choices.find(/** A returned choice cannot introduce another source identity. */ item => item.path === selection.sourcePath);
+    if (!choice || !fields.includes(selection.field)) return {status:"unavailable",reasonKey:"actions.target-unavailable"};
+    /** Confirmation fences canonical/native incarnations while pair publication may refresh read facades. */
+    const current = (): boolean => !this.unloading && beforeMutation?.() !== false && choice.file.path === choice.path
+      && Boolean(resolveActionPage(this.index,choice.ref)) && Boolean(resolveActionPage(this.index,choice.otherRef))
+      && this.index.pages.get(choice.path) === choice.canonical && choice.canonical?.file === choice.file
+      && this.index.pages.get(choice.otherPath) === choice.otherCanonical && choice.otherCanonical?.file === choice.otherFile
+      && this.app.vault.getFileByPath(choice.path) === choice.file
+      && choice.other.path === choice.otherPath && this.app.vault.getFileByPath(choice.otherPath) === choice.otherFile;
+    try {
+      const saved = await this.index.withForegroundPriority(/** Own only pair preparation and the native write; P2 publication must not wait on this P0 lease. */ async () => {
+        if (!current() || !(await this.index.prepareRelationshipPair(choice.path,choice.other.path)) || !current()) return false;
+        this.pruneManagedMetadataWrites();this.managedMetadataWrites.set(choice.path,Date.now()+15000);
+        await this.mutateRelationshipMetadata(choice.file,normalized,/** Native FileManager reread validates the exact approved Hidden payload. */ frontmatter => {
+          if (!current() || relationshipMetadataPayload(frontmatter,normalized) !== choice.payload) throw new Error(this.translator("explain.removeSourceChanged"));
+          this.appendHiddenReference(frontmatter,choice.file,choice.other,selection.field,choice.other.url ?? `[[${choice.other.path}]]`);
+        },choice.other.path,current);
+        return true;
+      });
+      if (!saved) return {status:"unavailable",reasonKey:"actions.target-unavailable"};
+      if (!current()) throw new SavedRelationshipPendingError(this.translator("relation.savedUpdatePending"));
+      const patched = await this.index.patchMarkdownPaths([choice.path],{isCurrent:current});
+      if (patched.outcome !== "patched" || !current()) throw new SavedRelationshipPendingError(this.translator("relation.savedUpdatePending"));
+      await this.publishSavedRelationship(choice.path,choice.other.path);
+      return {status:"committed",affected};
+    } catch(error) {
+      if (error instanceof SavedRelationshipPendingError) {
+        if (!error.noticeReported) new Notice(error.message);
+        return {status:"saved-pending",affected,reasonKey:"actions.savedPending"};
+      }
+      new Notice(this.translator("delete.cleanup.sourceFailed",{path:choice.path}));
+      return {status:"failed",reasonKey:"actions.target-unavailable"};
+    }
+  }
+
+  /** File-trash preferences never authorize fresh changes to arbitrary properties. */
+  private async confirmDeleteNode(page: GraphPage, preview?: DeleteNodePreview, hostLeaf?: WorkspaceLeaf): Promise<boolean> {
     const hasFile = Boolean(page.file);
     const firstUse = !this.settings.deletePromptInitialized;
-    if (!firstUse && (!hasFile || !this.settings.confirmFileDelete)) return true;
+    if (!firstUse && (!hasFile || !this.settings.confirmFileDelete) && !preview?.sources.some(/** Only arbitrary-property choices need consent beyond the legacy physical-trash preference. */ source => source.properties.some(property => !property.ontology))) return true;
 
-    return new Promise<boolean>((resolve) => {
-      new DeleteNodeConfirmationModal(this.app, {
+    return new Promise<boolean>(/** Preference persistence failure rejects consent instead of authorizing trash. */ (resolve, reject) => {
+      const modal = new DeleteNodeConfirmationModal(this.app, {
         nodeName: page.name,
         hasFile,
         firstUse,
         confirmFileDelete: this.settings.confirmFileDelete,
-        onConfirm: async (confirmFileDelete) => {
-          const preferenceChanged = this.settings.confirmFileDelete !== confirmFileDelete;
-          if (firstUse || preferenceChanged) {
-            this.settings.deletePromptInitialized = true;
-            this.settings.confirmFileDelete = confirmFileDelete;
-            await this.saveSettings(false, false);
-          }
-          resolve(true);
+        preview,
+        onOpenLocation: /** Inspect the source through its originating native destination. */ reference => this.openRelationshipEvidenceLocation(reference,hostLeaf),
+        onConfirm: /** Only successful preference persistence approves the captured cleanup scope. */ async (confirmFileDelete) => {
+          try {
+            const preferenceChanged = this.settings.confirmFileDelete !== confirmFileDelete;
+            if (firstUse || preferenceChanged) {
+              this.settings.deletePromptInitialized = true;
+              this.settings.confirmFileDelete = confirmFileDelete;
+              await this.saveSettings(false, false);
+            }
+            resolve(true);
+          } catch (error) {reject(error instanceof Error ? error : new Error(String(error)));}
         },
-        onCancel: () => resolve(false),
-      }).open();
+        onCancel: /** Native dismissal or plugin unload cancels the pending property scope. */ () => resolve(false),
+      });
+      const cancel = (): void => modal.close();
+      const close: () => void = modal.onClose.bind(modal) as () => void;
+      modal.onClose = /** Retire the exact plugin-owned pending consent before asynchronous continuation. */ (): void => {close();this.relationshipWriteCancels.delete(cancel);};
+      this.relationshipWriteCancels.add(cancel);
+      if (this.unloading) {modal.close();return;}
+      modal.open();
     });
   }
 
@@ -4587,14 +4798,18 @@ export default class KplexPlugin extends Plugin {
     this.settings.navigationHistory = this.settings.navigationHistory.filter((candidate) => candidate !== path);
   }
 
-  /** Confirm once, fence captured native identity, then report the existing deletion workflow commitment. */
+  /** Confirm finite property scope before trash; navigation and earlier successful source commits survive later failures. */
   async deleteNode(page: GraphPage, hostLeaf?: WorkspaceLeaf, wasCenter = false): Promise<ActionOutcome> {
     const target = this.index.get(page.path);
     if (!target || target.isFolder || target.isTag || target.url || (target.file && target.file.extension !== "md")) return { status: "unavailable", reasonKey: "actions.target-unavailable" };
     const capturedFile = target.file;
     const captured = actionNodeRef(target);
-    if (!(await this.confirmDeleteNode(target))) return { status: "cancelled" };
-    if (resolveActionPage(this.index, captured) !== target || target.file !== capturedFile
+    const canonicalTarget = this.index.pages.get(target.path);
+    const preview = await this.captureDeleteNodePreview(target);
+    if (this.unloading || resolveActionPage(this.index,captured) !== target || target.path !== captured.path || target.file !== capturedFile
+      || capturedFile && this.app.vault.getFileByPath(captured.path) !== capturedFile) return {status:"unavailable",reasonKey:"actions.target-unavailable"};
+    if (!(await this.confirmDeleteNode(target,preview,hostLeaf))) return { status: "cancelled" };
+    if (this.unloading || resolveActionPage(this.index, captured) !== target || target.path !== captured.path || target.file !== capturedFile
       || capturedFile && this.app.vault.getFileByPath(capturedFile.path) !== capturedFile) {
       new Notice(this.translator("addRelated.endpointChanged"));
       return { status: "unavailable", reasonKey: "actions.target-unavailable" };
@@ -4606,7 +4821,8 @@ export default class KplexPlugin extends Plugin {
       await this.app.fileManager.trashFile(file);
       // Vault.delete normally dematerializes synchronously. Keep this idempotent fallback so the
       // workflow is correct even if an Obsidian version delivers the event on a later turn.
-      this.index.dematerializeFile(path);
+      if (this.app.vault.getFileByPath(path) === null && canonicalTarget && this.index.pages.get(path) === canonicalTarget
+        && (canonicalTarget.file === file || canonicalTarget.file === null)) this.index.dematerializeFile(path);
     }
 
     // Navigation is part of the delete command, not a side effect of the later metadata cleanup.
@@ -4626,14 +4842,18 @@ export default class KplexPlugin extends Plugin {
 
     const ghost = this.index.get(path);
     if (!ghost) return { status: "committed", affected: [captured] };
-    const { remaining } = await this.removePropertyReferencesToNode(ghost);
+    /** Pair publication may replace read facades, but cleanup cannot adopt another canonical/native endpoint. */
+    const currentTarget = (): boolean => Boolean(canonicalTarget) && this.index.pages.get(path) === canonicalTarget
+      && canonicalTarget!.file === null && this.index.get(path)?.file === null && this.app.vault.getFileByPath(path) === null;
+    const { remaining, issues } = await this.removePropertyReferencesToNode(ghost,preview,currentTarget);
 
-    if (remaining.length) {
+    if (remaining.length || issues.length) {
       new RemainingNodeReferencesModal(
         this.app,
         ghost.name,
         remaining,
         (reference) => this.openRelationshipEvidenceLocation({ path: reference.path, line: reference.line }, hostLeaf),
+        issues,
       ).open();
       return { status: "committed", affected: [captured] };
     }
@@ -4644,9 +4864,9 @@ export default class KplexPlugin extends Plugin {
     return { status: "committed", affected: [captured] };
   }
 
-  private async frontmatterPropertyLineRange(file: TFile, fieldName: string): Promise<{ start: number; end: number } | null> {
-    const content = await this.app.vault.cachedRead(file);
-    const lines = content.split(/\r?\n/);
+  /** Locate one physical YAML property with the existing grammar, sharing a captured body across finite preview fields. */
+  private async frontmatterPropertyLineRange(file: TFile, fieldName: string, capturedLines?: readonly string[]): Promise<{ start: number; end: number } | null> {
+    const lines = capturedLines ?? (await this.app.vault.cachedRead(file)).split(/\r?\n/);
     if (lines[0]?.trim() !== "---") return null;
 
     const wanted = normalizeFieldName(fieldName);

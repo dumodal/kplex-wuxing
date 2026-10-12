@@ -1,6 +1,6 @@
 /**
  * Compiles the canonical portable evidence/resolver owner and compares the retained compatibility
- * oracle plus explicit arrow-tier regressions. Finite doubles inject cooperative time/lifetime;
+ * oracle plus explicit arrow-tier and directional Hidden/inverse-inline regressions. Finite doubles inject cooperative time/lifetime;
  * temporary emitted modules are removed on exit and no native host behavior is claimed.
  */
 import assert from "node:assert/strict";
@@ -353,6 +353,27 @@ test("hidden and suppressed evidence cannot change direction tier; inferred-only
   store.removeDeclarations(item => item.relationType === DEFINED && item.role !== "hidden");
   core.resolveEvidencePair(pages, store, "A.md", "B.md");
   assert.equal(pages.get("A.md").neighbours.get("B.md").direction, BOTH, "removing definitions reveals retained ordinary directions");
+});
+
+/** Selecting the writable declaring note changes only that center's Hidden flag; inverse inline evidence survives. */
+for (const declaringSource of ["Folder/A.md", "Folder/B.md"]) test(`Hidden saved in ${declaringSource} preserves the opposite inline connection`, () => {
+  const paths = ["Folder/A.md", "Folder/B.md"], store = new core.RelationEvidenceStore();
+  const pages = new Map(paths.map(path => [path, page(path)]));
+  const original = {sourceKind:"inline-ontology",fieldName:"Children",rawValue:"[[Folder/B.md]]",line:4};
+  store.addPair(paths[0],paths[1],"child",core.RelationType.DEFINED,core.LinkDirection.FROM,original);
+  const before = [...store.declarations()].map(cleanEvidence);
+  const other = paths.find(path => path !== declaringSource);
+  store.addHidden(declaringSource,other,{sourceKind:"frontmatter-ontology",fieldName:"Private"});
+  core.resolveEvidenceStore(pages,store);
+  const fromSelected = core.explainResolvedRelationship(pages.get(declaringSource),pages.get(other),store.between(declaringSource,other),false);
+  const fromOther = core.explainResolvedRelationship(pages.get(other),pages.get(declaringSource),store.between(other,declaringSource),false);
+  assert.equal(fromSelected.hidden,true,"Selected write note is the affected central note");
+  assert.equal(fromOther.hidden,false,"The inverse center receives no automatic Hidden declaration");
+  assert.equal(pages.get(other).neighbours.get(declaringSource).isHidden,false);
+  assert(fromOther.resolvedRoles.some(item => item.role === (other === paths[0] ? "child" : "parent")),"Retained inline relation stays visible from the other center");
+  assert(fromOther.decisions.some(item => item.active && item.evidence.sourceKind === "inline-ontology" && item.evidence.declaredByPath === paths[0]),"Inverse inline provenance survives unchanged");
+  assert.deepEqual([...store.declarations()].filter(item => item.role !== "hidden").map(cleanEvidence),before);
+  assert.equal(store.declarationCount,2,"A one-note choice adds one directional declaration");
 });
 
 test("C13b cooperative resolution uses the injected 7ms budget and matches full resolution", async () => {

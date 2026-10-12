@@ -154,6 +154,13 @@ Missing host/device checks remain pending; a skip is not a pass. Any maintainer-
 
 Every new or changed plugin-owned user-facing string must use the English catalog and typed translator: labels, commands, help, menus, placeholders, tooltips, ARIA names, notifications and visible errors. Console diagnostics stay English. Preserve stable keys/IDs and user-authored vault content; use named parameters and the established plural/fallback rules. Translations remain outside this scope. The L01 presentation-sink gate runs in `npm test`; review dynamic labels and interpolation values in addition to its AST checks. See [localization](docs/LOCALIZATION.md).
 
+For an interpolated English entry, declare `referenceParams` with the names of literal note,
+path, property, tag, alias or other content references; use `[]` for counts, shortcuts and
+descriptive labels. The shared formatter adds one pair of double quotes and normalizes existing
+template-owned quote wrappers across locales. Pass raw values, including a tag's `#` prefix,
+and do not prequote caller data. When one consumer mixes a property name with a source-kind
+label, use separate catalog keys so the source metadata can distinguish them.
+
 Use `PresentationEnvironment` rather than new direct Platform/global checks in portable code. Desktop/tablet/phone, OS/key convention, hardware keyboard, pointer/touch and host-action availability are independent facts; unknown keyboard presence does not mean absent. Format catalog shortcut parameters from the actual available binding (Command/Option on macOS, Control/Alt on Windows where applicable), omit unknown/unavailable hints and preserve touch instructions. Desktop emulation tests layout/routing; physical touch, keyboard delivery and platform lifecycle still need their own evidence.
 
 ### Relationship semantics are spatial semantics
@@ -408,6 +415,18 @@ independently of assertions. Run native drivers serially.
 `KPLEX_ARROW_EXPECT_BASELINE=true` characterizes the unfixed `BOTH` direction and
 is explicitly reported as baseline reproduction, never candidate acceptance.
 Neither mode establishes physical-device interaction or paint latency.
+
+After exact-build staging, run `npm run verify:obsidian:delete-cleanup` with the
+three explicit `kplex-test-small` vault variables and a fresh
+`KPLEX_HOST_REPORT_DIR`. The owned issue 128 fixture checks ontology-only default
+cleanup, selective property removal/hiding, body and inline source navigation,
+property-only placeholders, legacy confirmation preferences, cancellation,
+partial native write failure and exact target/source replacement fences. It
+also exercises the connector's native Hide action, live save-note direction,
+both rendered central-note perspectives and inverse inline visibility after warm replay.
+Settings, workspace, temporary FileManager wrappers, raw configuration and owned
+notes are restored independently of assertions. Run native drivers serially;
+native DOM activation does not establish physical touch acceptance.
 
 ## Search interaction checklist
 

@@ -310,7 +310,7 @@ assert(plexGraphSource.includes("plugin.deleteNode(page, hostLeaf, page.path ===
 assert(mainSource.includes("this.removeFromNavigationHistory(path)"), "Every deleted node must be removed from navigation history immediately");
 assert(mainSource.includes("const fallback = this.deletionFallbackPath(path)"), "Deleting the active center must choose its replacement from remaining navigation history");
 assert(mainSource.includes('return this.index.get("folder:/")?.path ?? null'), "Delete navigation must fall back to the vault root when no valid history entry remains");
-assert(mainSource.indexOf("this.removeFromNavigationHistory(path)") < mainSource.indexOf("removePropertyReferencesToNode(ghost)"), "Delete navigation/history cleanup must happen before asynchronous relationship cleanup");
+assert(mainSource.indexOf("this.removeFromNavigationHistory(path)") < mainSource.indexOf("removePropertyReferencesToNode(ghost,preview,currentTarget)"), "Delete navigation/history cleanup must happen before asynchronous relationship cleanup");
 assert(mainSource.includes("removePropertyReferencesToNode"), "Node deletion must clean document-property references before considering a ghost removable");
 assert(mainSource.includes("normalizedNoteReferenceMatches"), "Property cleanup must still recognize a note link after deleting its backing file makes Obsidian resolution unavailable");
 assert(mainSource.includes("remainingBodyReferences"), "Deletion review must include parser-backed inline body relationships that may not appear in Obsidian's link cache");
