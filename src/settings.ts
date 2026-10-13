@@ -15,6 +15,8 @@
  * Remote node imagery requires explicit local opt-in; absent or malformed persisted consent stays off.
  * Style editors publish only durable queued drafts, exclude duplicate operations and distinguish
  * storage failure from saved changes whose presentation/manager refresh still needs recovery.
+ * File-deletion cleanup is a local workflow preference with a stable native settings anchor;
+ * changing it does not invalidate semantic data or change placeholder-removal policy.
  */
 import {
   AbstractInputSuggest,
@@ -298,6 +300,8 @@ export interface KplexSettings {
   deletePromptInitialized: boolean;
   /** Ask for confirmation before deleting a real note file from the node context menu. */
   confirmFileDelete: boolean;
+  /** Default ontology-property cleanup when deleting a physical Markdown file through K-Plex. */
+  removeOntologyLinksOnDelete: boolean;
 }
 
 export const DEFAULT_SETTINGS: KplexSettings = {
@@ -419,7 +423,8 @@ export const DEFAULT_SETTINGS: KplexSettings = {
   newNodeDefaultType: "markdown",
   startupIndexInfoBubbleSeen: false,
   deletePromptInitialized: false,
-  confirmFileDelete: true
+  confirmFileDelete: true,
+  removeOntologyLinksOnDelete: true,
 };
 
 const norm = (value: string) => value.toLowerCase().replaceAll(" ", "-").trim();
@@ -650,6 +655,7 @@ export function migrateAndMergeSettings(raw: unknown): KplexSettings {
     startupIndexInfoBubbleSeen: Boolean(old.startupIndexInfoBubbleSeen),
     deletePromptInitialized: Boolean(old.deletePromptInitialized),
     confirmFileDelete: old.confirmFileDelete !== false,
+    removeOntologyLinksOnDelete: old.removeOntologyLinksOnDelete !== false,
     internalHotkeys: sanitizeInternalHotkeys(old.internalHotkeys),
     actionPreferences: actionPreferences.preferences,
     ...(actionPreferences.unsupportedVersion !== undefined
@@ -1742,13 +1748,35 @@ export class KplexSettingTab extends PluginSettingTab {
 
   /** Activate the visible native page entry inside this tab after the host opens its root. */
   openActionSettingsPage(): boolean {
-    const name = createObsidianTranslator()("actions.settingsTitle");
-    const label = Array.from(this.containerEl.querySelectorAll<HTMLElement>(".setting-item-name"))
-      .find(/** Match the declarative entry without looking through another settings window. */ element => element.textContent === name);
+    return this.openSettingsPage(createObsidianTranslator()("actions.settingsTitle"));
+  }
+
+  /** Activate a localized declarative page in this tab's owning document; never navigate another settings window. */
+  openSettingsPage(name: string): boolean {
+    const label = Array.from(this.containerEl.ownerDocument.querySelectorAll<HTMLElement>(".setting-item.mod-navigable .setting-item-name"))
+      .find(/** Match a visible declarative entry in this owning settings document, including nested pages outside the root container. */ element => element.textContent === name && element.getClientRects().length > 0);
     const row = label?.closest<HTMLElement>(".setting-item.mod-navigable");
     if (!row?.isConnected) return false;
     row.click();
     return true;
+  }
+
+  /** Scroll and focus a translated native setting after its page mounts; description regeneration or window closure cannot redirect to another row. */
+  focusSetting(name: string, anchor?: string): void {
+    this.containerEl.ownerDocument.defaultView?.setTimeout(/** Let native page opening/scroll restoration settle, then reacquire the Settings window's document. */ () => {
+      const doc = this.containerEl.ownerDocument;
+      doc.defaultView?.requestAnimationFrame(/** Anchor navigation lands on the actual visible native row without altering its value. */ () => {
+        // Native subpages replace the tab's root container with a sibling page. The
+        // target row's own connection/visibility, not the retired root, owns focus.
+        if (doc.defaultView?.closed) return;
+        const label = Array.from(doc.querySelectorAll<HTMLElement>(".setting-item-name"))
+          .find(/** Native description fragments may be regenerated; the same visible localized label still identifies the exact target row. */ element => element.textContent === name && element.getClientRects().length > 0);
+        const row = label?.closest<HTMLElement>(".setting-item") ?? (anchor ? doc.getElementById(anchor) : null)?.closest<HTMLElement>(".setting-item");
+        if (!row?.isConnected || !row.getClientRects().length) return;
+        row.scrollIntoView({ block: "center" });
+        row.querySelector<HTMLElement>("input, textarea, button, [tabindex='0']")?.focus({ preventScroll: true });
+      });
+    }, 250);
   }
 
   /** Open a new style with a selectable family, or edit a style without changing its family. */
@@ -1940,6 +1968,8 @@ export class KplexSettingTab extends PluginSettingTab {
   /** Build localized native settings and subpages, including shared persisted Plex visibility controls. */
   getSettingDefinitions(): SettingDefinitionItem<DeclarativeSettingKey>[] {
     const translate = createObsidianTranslator();
+    const deleteCleanupDescription = createFragment();
+    deleteCleanupDescription.createSpan({ text: translate("settings.deletion.removeOntologyLinks.help"), attr: { id: "kplex-remove-ontology-links-on-delete" } });
     const nodeStyles = this.nodeStyleEntries();
     const unassignedFields = this.kplexPlugin.index.unassignedOntologyFields();
     const ontologyStyleFields = this.ontologyStyleFields();
@@ -1976,6 +2006,7 @@ export class KplexSettingTab extends PluginSettingTab {
               { name: translate("settings.ui.auto.fit.on.navigation"), control: { type: "toggle", key: "allowAutozoom" } },
               { name: translate("settings.ui.open.k.plex.in.a.pop.out.window"), desc: translate("settings.ui.when.k.plex.is.opened.and.no.k.plex.view.already.exists"), control: { type: "toggle", key: "startInPopout" } },
               { name: translate("settings.ui.confirm.before.deleting.files"), desc: translate("settings.ui.ask.before.a.node.context.menu.action.deletes.a.note.usi"), control: { type: "toggle", key: "confirmFileDelete" } },
+              { name: translate("settings.deletion.removeOntologyLinks"), desc: deleteCleanupDescription, control: { type: "toggle", key: "removeOntologyLinksOnDelete" } },
               {
                 name: translate("settings.ui.mouse.navigation"),
                 desc: translate("settings.ui.smart.reserves.right.click.for.context.menus.left.drag.e"),
@@ -2435,6 +2466,13 @@ export class KplexSettingTab extends PluginSettingTab {
     if (key === "indexingThrottle") {
       this.kplexPlugin.settings.indexingThrottle = sanitizeIndexingThrottle(value);
       // The scheduler reads this preference live; saving must not invalidate semantic caches.
+      await this.kplexPlugin.saveSettings(false, false);
+      return;
+    }
+    if (key === "removeOntologyLinksOnDelete") {
+      this.kplexPlugin.settings.removeOntologyLinksOnDelete = value === true;
+      // This preference only supplies defaults to the next deletion preview; it does not
+      // change ontology interpretation, source authority or the currently displayed graph.
       await this.kplexPlugin.saveSettings(false, false);
       return;
     }

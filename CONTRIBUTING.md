@@ -152,7 +152,7 @@ Missing host/device checks remain pending; a skip is not a pass. Any maintainer-
 
 ### Localization and environment rules
 
-Every new or changed plugin-owned user-facing string must use the English catalog and typed translator: labels, commands, help, menus, placeholders, tooltips, ARIA names, notifications and visible errors. Console diagnostics stay English. Preserve stable keys/IDs and user-authored vault content; use named parameters and the established plural/fallback rules. Translations remain outside this scope. The L01 presentation-sink gate runs in `npm test`; review dynamic labels and interpolation values in addition to its AST checks. See [localization](docs/LOCALIZATION.md).
+Every new or changed plugin-owned user-facing string must use the English catalog and typed translator: labels, commands, help, menus, placeholders, tooltips, ARIA names, notifications and visible errors. Update all supported catalogs in the same change: English, German, French, Spanish, Dutch, Japanese, Traditional Chinese and Russian. Preserve stable keys/IDs, parameter names, plural forms and user-authored vault content. Console diagnostics stay English. Existing English-fallback allowances do not authorize untranslated new work; English-only delivery requires explicit maintainer approval. The L01 presentation-sink gate runs in `npm test`; review dynamic labels and interpolation values in addition to its AST checks. See [localization](docs/LOCALIZATION.md).
 
 For an interpolated English entry, declare `referenceParams` with the names of literal note,
 path, property, tag, alias or other content references; use `[]` for counts, shortcuts and
@@ -457,6 +457,27 @@ both rendered central-note perspectives and inverse inline visibility after warm
 Settings, workspace, temporary FileManager wrappers, raw configuration and owned
 notes are restored independently of assertions. Run native drivers serially;
 native DOM activation does not establish physical touch acceptance.
+
+File deletion through K-Plex uses **Plex behavior → Remove ontology links when deleting a file**
+to choose automatic property cleanup. It defaults on for compatibility. Turning it off keeps
+property links unless the user explicitly overrides them in **Review property links**.
+Placeholder removal keeps its existing policy. The confirmation's anchor opens the native
+settings page and focuses this toggle, cancelling the pending deletion before navigation.
+The final deletion-cleanup acceptance lane must cover both toggle states, persistence/import
+preservation, a concurrent preference change, settings navigation in main/separate windows,
+and source-scoped overrides. All supported locales include this setting and its dialog copy.
+
+The connector's **Hide connection** menu stays active when Hidden fields are empty.
+Its native setup prompt offers an unused property name (`hidden`, then `kplex-hidden`
+or a numbered alternative), or navigation to **Ontology → Relationship fields → Hidden fields**.
+Suggestions read Obsidian's cached property registry and configured/discovered names, without
+scanning or reading notes. When that guarded registry is unavailable, use manual settings setup.
+Creation requires explicit approval, rechecks collisions on the shared settings disk queue,
+persists before publishing the new role and never moves a field from another role. It then
+opens the ordinary direction/source confirmation; creating configuration alone writes no note.
+Deferred acceptance must cover native settings navigation without a truthy return, regenerated
+description anchors, nested pages, collisions, cancellation, concurrent hierarchy edits and
+storage/refresh failure. Keep the same source/pair/native identity fences for the final hide write.
 
 ## Search interaction checklist
 

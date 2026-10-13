@@ -2,7 +2,8 @@
  * Native Connection details dialog over pair-scoped semantic explanations and provenance. This host UI
  * formats stable reason codes and offers additive ontology, source navigation and confirmed selected
  * frontmatter removal and additive Hidden declarations that preserve original links. Generation
- * fences own reads and child confirmation UI; saved writes remain plugin-owned.
+ * fences own reads and child setup/confirmation UI through a narrow close capability;
+ * saved writes remain plugin-owned.
  */
 import { Modal, Notice, setIcon, type WorkspaceLeaf } from "obsidian";
 import type KplexPlugin from "../main";
@@ -14,7 +15,6 @@ import type { Translator, PlainTranslationKey } from "../lang";
 import { frontmatterDeclarationKey, selectedFrontmatterDeclarations } from "../application/frontmatterUnlink";
 import { SavedRelationshipPendingError } from "../adapters/obsidian/relationshipMetadataWrite";
 import { RemoveRelationshipSourceModal } from "./RemoveRelationshipSourceModal";
-import type { HideRelationshipModal } from "./DeleteNodeModal";
 import type { RelationEvidence } from "../index/RelationEvidence";
 
 const ROLE_LABEL: Record<string, PlainTranslationKey> = {
@@ -132,7 +132,7 @@ export class RelationshipExplanationModal extends Modal {
   private closed = false;
   private loadGeneration = 0;
   private operation: "idle" | "confirming" | "removing" | "saved-pending" = "idle";
-  private confirmation: RemoveRelationshipSourceModal | HideRelationshipModal | null = null;
+  private confirmation: { close(): void } | null = null;
   private removalButtons: HTMLButtonElement[] = [];
   private mutationNavigationButtons: HTMLButtonElement[] = [];
   private renderedDeclarations = new Set<string>();
@@ -314,14 +314,15 @@ export class RelationshipExplanationModal extends Modal {
           return;
         }
         this.setOperation("confirming");
-        this.confirmation = new RemoveRelationshipSourceModal(this.app, this.plugin.translator,
+        const confirmation = new RemoveRelationshipSourceModal(this.app, this.plugin.translator,
           { note: actual.storagePath, field: actual.fieldKey, target: actual.targetPath }, /** Only this mounted generation can resume an explicit approval. */ confirmed => {
             this.confirmation = null;
             if (!this.isCurrent(generation)) return;
             if (!confirmed) { this.setOperation("idle"); return; }
             void this.removeDeclaration(evidence, actual, generation);
           });
-        this.confirmation.open();
+        this.confirmation = confirmation;
+        confirmation.open();
       });
       button.dataset.kplexRemoveField = expected.fieldKey;
       button.disabled = this.operation !== "idle";

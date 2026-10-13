@@ -3,7 +3,8 @@
  * Visual resolution and metadata refreshes retain the index consent epoch; teardown and revocation
  * reject late publication. Hover enlargement uses the same already-guarded image element.
  * Connector Hidden actions share the plugin writer; this surface owns their pending confirmation
- * dialogs and retires approval when its graph generation or owning window is released.
+ * dialogs and retires approval when its graph generation or owning window is released. Disabled
+ * Hidden menu entries remain available for explicit first-field setup when configuration is absent.
  * Evidence hints distinguish literal property references from descriptive source-kind labels;
  * shared localization metadata owns reference quoting.
  */
@@ -38,7 +39,6 @@ import { ObsidianIcon } from "./ObsidianIcon";
 import { CentralNodeEditor } from "./CentralNodeEditor";
 import { PlexFind, matchesFindNode, matchesOntologyFind } from "./features/PlexFind";
 import { RelationshipExplanationModal } from "./RelationshipExplanationModal";
-import type { HideRelationshipModal } from "./DeleteNodeModal";
 import { RenameNoteModal } from "./RenameNoteModal";
 import { buildCentralSectionExpansion, canExpandCentralSections, projectCentralSectionExpansion, type CentralSectionExpansion } from "../index/SectionExpansion";
 import { GraphPredicateEngine, type CompiledGraphPredicate, type GraphPredicateEdgeContext } from "../lens/GraphPredicate";
@@ -3118,7 +3118,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     };
     if (id === "relationship.details") return openDetails();
     if (id === "relationship.hide") {
-      let confirmation: HideRelationshipModal | null = null;
+      let confirmation: { close(): void } | null = null;
       return plugin.hideRelationship(sourcePath,targetPath, /** Retired surfaces cannot approve a late native read. */ () => context.generation !== undefined && plugin.isActionSurfaceCurrent(actionSurfaceId,context.generation),
         /** Exact surface/window teardown closes only its pending native confirmation. */ modal => {
           if (confirmation) graphDialogs.current.delete(confirmation);
@@ -3336,8 +3336,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
   }
   for (const id of ["relationship.details", "relationship.relink", "relationship.unlink", "relationship.hide"] as const) {
     graphImplementations[id] = {
-      availability: /** Configured Hidden capability is checked without source acquisition. */ context => id === "relationship.hide" && !plugin.settings.hierarchy.hidden.some(field => field.trim())
-        ? {state:"disabled",reasonKey:"hide.noField"} : context.target.kind === "edge" || Boolean(graphActionPage(context))
+      availability: /** Missing Hidden configuration is handled by explicit setup after activation, without source acquisition here. */ context => context.target.kind === "edge" || Boolean(graphActionPage(context))
         ? { state: "enabled" } : { state: "disabled", reasonKey: "actions.target-unavailable" },
       execute: /** A picker exposes every displayed incident edge; selected edge actions use current evidence. */ context => pickConnection(context, id),
     };
@@ -3591,7 +3590,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     showNodeContextMenuAt(node, event.clientX, event.clientY);
   };
 
-  /** Show host connection actions at the pointer position and end any pending node tap sequence. */
+  /** Show connection actions; absent Hidden configuration opens explicit setup rather than disabling the action. */
   const showEdgeContextMenuAt = (edge: PositionedEdge, clientX: number, clientY: number): void => {
     touchDoubleTap.current.reset();
     const menu = new Menu();
@@ -3600,7 +3599,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     if (!origin || !target) return;
     for (const [id, key, icon] of [["relationship.details", "graph.connectionDetails", "list-tree"], ["relationship.unlink", "graph.unlinkConnection", "unlink"], ["relationship.hide", "hide.title", "eye-off"]] as const) {
       menu.addItem(/** Capture exact endpoints while native menus own arrow/Enter/Escape protocol. */ item => item
-        .setTitle(translate(key)).setIcon(icon).setDisabled(id === "relationship.hide" && !plugin.settings.hierarchy.hidden.some(/** Blank fields cannot authorize an additive Hidden write. */ field => field.trim())).onClick(() => void plugin.actionManager.dispatch({ id, source: "context-menu", surfaceId: actionSurfaceId,
+        .setTitle(translate(key)).setIcon(icon).onClick(() => void plugin.actionManager.dispatch({ id, source: "context-menu", surfaceId: actionSurfaceId,
           target: { kind: "edge", origin: actionNodeRef(origin), target: actionNodeRef(target), evidenceId: edge.id } })));
     }
     const doc = viewport.current?.ownerDocument ?? document;

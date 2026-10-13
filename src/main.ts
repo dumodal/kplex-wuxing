@@ -3,6 +3,12 @@
  * Remote node image consent publishes synchronously before persistence and never requests semantics.
  * Style-manager drafts commit on the settings disk queue before live publication; style-only
  * completion refreshes cached presentation without clearing or reacquiring semantic scopes.
+ * Unsuccessful source-backed startup adoption reports incomplete coverage rather than implying
+ * that index preparation is still running; it never grants semantic write authority.
+ * File deletion captures its ontology-cleanup preference before consent; settings navigation
+ * cancels that approval, and concurrent preference changes require a fresh deletion request.
+ * Missing Hidden configuration offers an explicitly approved unused property or exact settings
+ * navigation. Configuration persists before policy publication and never reassigns existing fields.
  * Surface registration releases menus in its captured rendering document before migration/close retires that realm.
  * Linked-tab follow delegates managed companions to the Sidecar request owner so parallel App observations cannot reopen one destination twice.
  * Deletion captures bounded pre-trash property/body approval, writes only confirmed fields and retains
@@ -23,6 +29,9 @@ import { NewRelatedNoteModal, type RelatedNoteInvocation } from "./ui/NewRelated
 import { CreateFolderNoteModal } from "./ui/CreateFolderNoteModal";
 import { MaterializeGhostModal, type GhostMaterializationKind, type GhostMaterializationLocation } from "./ui/MaterializeGhostModal";
 import { DeleteNodeConfirmationModal, RemainingNodeReferencesModal, HideRelationshipModal, type DeleteNodePreview, type DeleteSourcePreview, type RemainingNodeReference } from "./ui/DeleteNodeModal";
+import { HiddenFieldSetupModal, type HiddenFieldSetupChoice } from "./ui/HiddenFieldSetupModal";
+import { navigatePluginSettings } from "./adapters/obsidian/settingsNavigation";
+import { suggestHiddenProperty } from "./adapters/obsidian/hiddenPropertyName";
 import { LinkDirection, type GateRole, type GraphPage, type RelationshipRole } from "./types";
 import { OntologySuggester } from "./editor/OntologySuggester";
 import { isWebViewerAvailable, openExternalUrl } from "./adapters/obsidian/externalUrl";
@@ -153,6 +162,7 @@ export default class KplexPlugin extends Plugin {
   private unloading = false;
   private initialIndexTask: Promise<void> | null = null;
   private initialIndexComplete = false;
+  private initialSourceIndexIncomplete = false;
   /** In-memory guard against duplicate claims while the persisted one-time startup guidance flag saves. */
   private startupIndexInfoBubbleClaimed = false;
   private snapshotRestoreTask: Promise<{ restored: boolean; fresh: boolean; createdAt: number | null; partial?: boolean }> | null = null;
@@ -1033,10 +1043,12 @@ export default class KplexPlugin extends Plugin {
     this.index.cancelPendingPersistence();
   }
 
-  /** Complete the initial source owner without treating its node catalog as a hydrated full graph. */
+  /** Complete the initial source owner; an unsuccessful adoption reports incomplete coverage until a later attempt succeeds. */
   private async adoptInitialSourceIndex(): Promise<void> {
+    this.initialSourceIndexIncomplete = false;
     const adopted = await this.index.adoptStartupSources();
     if (this.unloading) return;
+    this.initialSourceIndexIncomplete = !adopted;
     this.initialIndexComplete = adopted;
     if (adopted) {
       for (const reason of ["startup:no-snapshot", "startup:stale-snapshot", "startup:partial-restore-incomplete"]) {
@@ -1567,19 +1579,27 @@ export default class KplexPlugin extends Plugin {
 
   /** Navigate to the declarative shortcut page, including when optional commands are unpublished. */
   openActionSettings(): boolean {
-    // This is the same guarded, unpublished Settings bridge as openSettings(). The installed
-    // host's openPagePath preserves an already-open page instead of resetting its input state.
-    type SettingsController = {
-      open?: () => void;
-      openPagePath?: (tabId: string, pagePath: string[]) => unknown;
-    };
-    const controller = (this.app as unknown as { setting?: SettingsController }).setting;
-    if (controller?.open && controller.openPagePath) {
-      controller.open();
-      if (controller.openPagePath(this.manifest.id, [this.translator("actions.settingsTitle")])) return true;
+    return this.openSettingsPage(this.translator("actions.settingsTitle"));
+  }
+
+  /** Navigate to the deletion preference and its stable row anchor without changing settings or approving deletion. */
+  openDeleteCleanupSettings(): void {
+    if (this.openSettingsPage(this.translator("settings.ui.plex.behavior"))) this.settingsTab?.focusSetting(
+      this.translator("settings.deletion.removeOntologyLinks"), "kplex-remove-ontology-links-on-delete");
+  }
+
+  /** Open the actual Hidden-fields control without creating a field or approving a note write. */
+  openHiddenOntologySettings(): void {
+    if (this.openSettingsPage(this.translator("settings.ui.ontology"), this.translator("settings.ui.relationship.fields"))) {
+      this.settingsTab?.focusSetting(this.translator("settings.ui.hidden.fields"));
     }
+  }
+
+  /** Reuse native page-path navigation with the existing owning-tab fallback for settings cross-links. */
+  private openSettingsPage(...pageNames: string[]): boolean {
+    if (navigatePluginSettings(this.app, this.manifest.id, pageNames)) return true;
     this.openSettings();
-    return this.settingsTab?.openActionSettingsPage() ?? false;
+    return pageNames.every(/** Traverse the exact localized native page path only after explicit navigation refusal. */ name => this.settingsTab?.openSettingsPage(name) ?? false);
   }
 
   /** Reveal only the chosen native surface and wait for its current action registration. */
@@ -2792,7 +2812,7 @@ export default class KplexPlugin extends Plugin {
     return this.computeIndexStatusFacts(this.cachedMarkdownFileCount);
   }
 
-  /** Aggregate cache, requested-semantic and global-search readiness without scheduling work. */
+  /** Aggregate readiness without scheduling work; a completed unsuccessful startup attempt is incomplete even when its backlog remains dirty. */
   private computeIndexStatusFacts(totalFiles: number | null): {
     upToDate: boolean;
     phase: "ready" | "loading-cache" | "preparing" | "checking-cache" | "indexing" | "saving-cache" | "updating" | "incomplete";
@@ -2801,8 +2821,9 @@ export default class KplexPlugin extends Plugin {
   } {
     const loadingCache = this.index.hasPendingSnapshotHydration();
     const semanticPreparing = this.index.hasPendingSemanticPreparation();
+    const startupIncomplete = !this.initialIndexComplete && this.initialSourceIndexIncomplete;
     const semanticIncomplete = semanticPreparing && !this.index.hasActiveSemanticPreparation?.()
-      || Boolean(this.index.getSearchVocabularyFailure?.()) || Boolean(this.index.hasUnavailableLocalCounts?.());
+      || Boolean(this.index.getSearchVocabularyFailure?.()) || Boolean(this.index.hasUnavailableLocalCounts?.()) || startupIncomplete;
     const upToDate = (this.initialIndexComplete || this.index.isOnDemandMode() && this.index.hasLocalBaseline())
       && !this.indexDirty
       && this.rebuildTask === null
@@ -2823,7 +2844,7 @@ export default class KplexPlugin extends Plugin {
           ? "saving-cache"
         : !this.initialIndexComplete && this.rebuildTask !== null
           ? "indexing"
-          : semanticIncomplete && this.rebuildTask === null && this.rebuildTimer === null && !this.indexDirty
+          : semanticIncomplete && this.rebuildTask === null && this.rebuildTimer === null && (startupIncomplete || !this.indexDirty)
             ? "incomplete"
           : !this.initialIndexComplete && this.index.size > 0 && this.index.hasIncrementalRestorePatch()
             ? "checking-cache"
@@ -2863,6 +2884,8 @@ export default class KplexPlugin extends Plugin {
         : this.translator("indexing.urlsProgress", { processed: urlProgress.processed, total: urlProgress.total })
       : urlProgress.failed
         ? this.translator("indexing.urlsIncomplete")
+      : phase === "incomplete" && !failure && !this.initialIndexComplete && this.initialSourceIndexIncomplete
+      ? this.translator("index.statusStartupIncomplete")
       : this.index.isOnDemandMode() && ["ready", "preparing", "updating", "indexing", "incomplete"].includes(phase)
       ? this.translator(phase === "ready" ? "indexing.localReady" : phase === "incomplete" ? "indexing.localUnavailable" : "indexing.localPreparing")
       : searchFailure
@@ -4599,7 +4622,8 @@ export default class KplexPlugin extends Plugin {
   async captureDeleteNodePreview(target: GraphPage): Promise<DeleteNodePreview> {
     const hiddenFields = [...new Set(this.settings.hierarchy.hidden.filter(/** Empty keys cannot form properties. */ field => field.trim()))];
     const ontology = new Set([...this.allOntologyFields(), ...hiddenFields].map(normalizeFieldName));
-    const preview: DeleteNodePreview = {sources: [], hiddenFields, hiddenField: hiddenFields[0] ?? ""};
+    const removeOntologyLinksOnDelete = this.settings.removeOntologyLinksOnDelete !== false;
+    const preview: DeleteNodePreview = {sources: [], hiddenFields, hiddenField: hiddenFields[0] ?? "", removeOntologyLinksOnDelete};
     const targetPath = target.path, targetFile = target.file;
     let retainedBytes = 2 * hiddenFields.join("").length;
     for (const file of this.referencingMarkdownFiles(target)) {
@@ -4646,7 +4670,7 @@ export default class KplexPlugin extends Plugin {
         if (this.unloading || file.path !== path || this.app.vault.getFileByPath(path) !== file
           || this.app.metadataCache.getFileCache(file) !== cache || target.path !== targetPath || target.file !== targetFile
           || targetFile && this.app.vault.getFileByPath(targetPath) !== targetFile) throw new Error(this.translator("addRelated.endpointChanged"));
-        source.properties.push({field, ontology: ontology.has(normalizeFieldName(field)), choice: ontology.has(normalizeFieldName(field)) && supported ? "remove" : "keep",
+        source.properties.push({field, ontology: ontology.has(normalizeFieldName(field)), choice: ontology.has(normalizeFieldName(field)) && supported && (!targetFile || removeOntologyLinksOnDelete) ? "remove" : "keep",
           line: location?.start ?? 0,payload,after,supported});
       }
       preview.sources.push(source);
@@ -4783,14 +4807,91 @@ export default class KplexPlugin extends Plugin {
     return {hosts:preview.sources.map(/** Retain displayed source coordinates instead of adopting a later rename. */ source=>source.path),remaining,issues};
   }
 
-  /** Confirm exact additive Hidden scope and release the foreground write before per-source publication. */
+  /** Suggest only names absent from the native cached registry, configured roles and discovered inline/document fields. */
+  private suggestHiddenOntologyField(): string | null {
+    const reserved = [
+      ...Object.values(this.settings.hierarchy).flatMap(/** Optional legacy role lists contribute names only when present. */ fields => fields ?? []),
+      ...this.index.discoveredFields().map(/** Discovery supplies cached inline fields without reading sources. */ field => field.name),
+      this.settings.noteTypeField, this.settings.primaryTagField, this.settings.thumbnailProperty, this.settings.nodeImageProperty,
+      ...this.settings.nameFields.split(",").map(/** Title-property configuration is CSV; reserve full property names rather than individual characters. */ name => name.trim()).filter(Boolean),
+    ];
+    return suggestHiddenProperty(this.app, reserved);
+  }
+
+  /** Configure one explicitly approved unused Hidden field on the existing disk queue before publishing its semantic policy. */
+  private async createHiddenOntologyField(field: string, isCurrent: () => boolean): Promise<boolean> {
+    let persisted = false, configured = false, changed = false;
+    try {
+      await this.enqueueSettingsWrite(/** Recheck collisions and current consent when this configuration owns persistence. */ async () => {
+        if (this.unloading || !isCurrent()) return;
+        if (this.settings.hierarchy.hidden.some(/** Concurrent explicit setup can supply the needed capability without another assignment. */ name => name.trim())) {
+          configured = true;
+          return;
+        }
+        if (this.suggestHiddenOntologyField() !== field) { changed = true; return; }
+        const source = this.settings;
+        const hierarchyBefore = JSON.stringify(source.hierarchy);
+        const next = { ...source, hierarchy: { ...source.hierarchy, hidden: [...source.hierarchy.hidden, field] } };
+        await this.saveData(this.settingsSnapshotForPersistence(source.actionPreferencesFuture ?? source.actionPreferences, next));
+        persisted = true;
+        // A settings edit/import that occurred during storage owns its newer hierarchy. Never
+        // restore the captured hierarchy over it or turn an already-used field into Hidden.
+        if (JSON.stringify(this.settings.hierarchy) !== hierarchyBefore || this.suggestHiddenOntologyField() !== field) {
+          throw new Error("Hidden field configuration changed after persistence");
+        }
+        this.settings.hierarchy.hidden = next.hierarchy.hidden;
+        const policy = captureSettingsPolicy(this.settings);
+        this.savedSettingsPolicy = { values: { ...(this.savedSettingsPolicy ?? policy).values,
+          "hierarchy.hidden": policy.values["hierarchy.hidden"] } };
+        this.index.invalidateSemanticPolicy();
+        configured = true;
+      });
+      if (changed) new Notice(this.translator("hide.setup.changed"));
+      if (!configured || this.unloading || !isCurrent()) return false;
+      if (persisted) {
+        await this.index.refreshPresentationSettings();
+        await this.index.refreshSemanticSettings();
+      }
+      return isCurrent();
+    } catch (error) {
+      console.error(persisted ? "K-Plex saved Hidden configuration refresh failed" : "K-Plex Hidden configuration failed", error);
+      if (!this.unloading) new Notice(this.translator(persisted ? "hide.setup.savedPending" : "hide.setup.failed"));
+      return false;
+    }
+  }
+
+  /** Offer explicit first-field setup, then confirm directional Hidden scope; original links and native identity fences remain intact. */
   async hideRelationship(sourcePath: string, targetPath: string, beforeMutation?: () => boolean,
-    ownConfirmation?: (modal: HideRelationshipModal | null) => void): Promise<ActionOutcome> {
+    ownConfirmation?: (modal: { close(): void } | null) => void): Promise<ActionOutcome> {
     const source = this.index.get(sourcePath), target = this.index.get(targetPath);
     const fields = [...new Set(this.settings.hierarchy.hidden.filter(/** Blank configured keys are not writable choices. */ field => field.trim()))];
-    if (!source || !target || source.isFolder || source.isTag || target.isFolder || target.isTag || !fields.length) {
-      if (!fields.length) new Notice(this.translator("hide.noField"));
+    if (!source || !target || source.isFolder || source.isTag || target.isFolder || target.isTag
+      || source.file?.extension !== "md" && target.file?.extension !== "md") {
       return {status:"unavailable",reasonKey:"actions.target-unavailable"};
+    }
+    if (!fields.length) {
+      const sourceRef = actionNodeRef(source), targetRef = actionNodeRef(target);
+      /** Configuration consent retains exact endpoints and graph lifetime independently of later semantic-policy publication. */
+      const setupCurrent = (): boolean => !this.unloading && beforeMutation?.() !== false
+        && Boolean(resolveActionPage(this.index, sourceRef)) && Boolean(resolveActionPage(this.index, targetRef));
+      const proposed = this.suggestHiddenOntologyField();
+      const decision = await new Promise<HiddenFieldSetupChoice>(/** Native cancellation, settings navigation and surface teardown settle once. */ resolve => {
+        const modal = new HiddenFieldSetupModal(this.app, proposed, resolve);
+        const cancel = (): void => modal.close();
+        const close = modal.onClose.bind(modal);
+        modal.onClose = /** Release plugin and surface ownership before continuing setup or navigation. */ (): void => {
+          close(); this.relationshipWriteCancels.delete(cancel); ownConfirmation?.(null);
+        };
+        this.relationshipWriteCancels.add(cancel); ownConfirmation?.(modal);
+        if (!setupCurrent()) { modal.close(); return; }
+        modal.open();
+      });
+      if (!decision || !setupCurrent()) return { status: "cancelled" };
+      if (decision === "settings") { this.openHiddenOntologySettings(); return { status: "cancelled" }; }
+      if (!proposed || !(await this.createHiddenOntologyField(proposed, setupCurrent))) return { status: "unavailable", reasonKey: "actions.target-unavailable" };
+      // Configuration is not consent to edit a note. Recapture the current settings/endpoints
+      // before the ordinary source/direction dialog and its existing pair/native write guards.
+      return this.hideRelationship(sourcePath, targetPath, beforeMutation, ownConfirmation);
     }
     const affected = [actionNodeRef(source),actionNodeRef(target)];
     const normalized = new Set(fields.map(normalizeFieldName));
@@ -4861,6 +4962,7 @@ export default class KplexPlugin extends Plugin {
         firstUse,
         confirmFileDelete: this.settings.confirmFileDelete,
         preview,
+        onOpenCleanupSettings: /** Settings navigation cancels the old consent; a new deletion must capture the updated policy. */ () => this.openDeleteCleanupSettings(),
         onOpenLocation: /** Inspect the source through its originating native destination. */ reference => this.openRelationshipEvidenceLocation(reference,hostLeaf),
         onConfirm: /** Only successful preference persistence approves the captured cleanup scope. */ async (confirmFileDelete) => {
           try {
@@ -4907,6 +5009,12 @@ export default class KplexPlugin extends Plugin {
     if (this.unloading || resolveActionPage(this.index,captured) !== target || target.path !== captured.path || target.file !== capturedFile
       || capturedFile && this.app.vault.getFileByPath(captured.path) !== capturedFile) return {status:"unavailable",reasonKey:"actions.target-unavailable"};
     if (!(await this.confirmDeleteNode(target,preview,hostLeaf))) return { status: "cancelled" };
+    // Another settings window cannot silently change the automatic cleanup policy after its
+    // scope was captured. Reopening deletion prepares fresh defaults before granting trash/write consent.
+    if (capturedFile && preview.removeOntologyLinksOnDelete !== (this.settings.removeOntologyLinksOnDelete !== false)) {
+      new Notice(this.translator("delete.cleanup.settingsChanged"));
+      return { status: "cancelled" };
+    }
     if (this.unloading || resolveActionPage(this.index, captured) !== target || target.path !== captured.path || target.file !== capturedFile
       || capturedFile && this.app.vault.getFileByPath(capturedFile.path) !== capturedFile) {
       new Notice(this.translator("addRelated.endpointChanged"));
