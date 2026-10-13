@@ -10,6 +10,8 @@
 
 K-Plex is inspired by the navigation model of TheBrain. It provides a relationship-oriented way to explore your knowledge, with its own interface and indexing system. **Excalidraw and Dataview are not required.**
 
+[![Watch the video](https://img.youtube.com/vi/ii15UwpsvtU/maxresdefault.jpg)](https://www.youtube.com/watch?v=ii15UwpsvtU)
+
 K-Plex is designed for people who want to *move through* their notes rather than stare at an entire vault at once: follow a parent, compare challengers, see siblings, open a related document beside the graph, expand a note into sections, or temporarily reshape the Plex with Graph Lenses.
 
 > Warning: K-Plex is a new plugin and is still undergoing real-world testing. Bugs and unexpected behavior are possible. Before using K-Plex to create or modify relationships between important notes, I strongly recommend trying it first on a small set of test notes. As with any plugin that can modify your vault, keep a current backup of your data.
