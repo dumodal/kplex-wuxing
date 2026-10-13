@@ -4991,7 +4991,8 @@ export default class KplexPlugin extends Plugin {
       const decision = await new Promise<HiddenFieldSetupChoice>(/** Native cancellation, settings navigation and surface teardown settle once. */ resolve => {
         const modal = new HiddenFieldSetupModal(this.app, proposed, resolve);
         const cancel = (): void => modal.close();
-        const close: () => void = modal.onClose.bind(modal) as () => void;
+        /** Invoke the original class callback with this modal as its receiver. */
+        const close = (): void => { HiddenFieldSetupModal.prototype.onClose.call(modal); };
         modal.onClose = /** Release plugin and surface ownership before continuing setup or navigation. */ (): void => {
           close(); this.relationshipWriteCancels.delete(cancel); ownConfirmation?.(null);
         };
@@ -5020,7 +5021,8 @@ export default class KplexPlugin extends Plugin {
     const selection = await new Promise<{sourcePath:string;field:string}|null>(/** Native closure and plugin teardown both retire pending consent. */ resolve => {
       const modal = new HideRelationshipModal(this.app,choices.map(/** Picker exposes only captured writable endpoints. */ choice => choice.path),fields,[source.path,target.path],resolve);
       const cancel = (): void => modal.close();
-      const close: () => void = modal.onClose.bind(modal) as () => void;
+      /** Invoke the original class callback with this modal as its receiver. */
+      const close = (): void => { HideRelationshipModal.prototype.onClose.call(modal); };
       modal.onClose = /** Dispose the exact pending dialog independently of native source work. */ (): void => {close();this.relationshipWriteCancels.delete(cancel);ownConfirmation?.(null);};
       this.relationshipWriteCancels.add(cancel);ownConfirmation?.(modal);
       if (this.unloading || beforeMutation?.() === false) {modal.close();return;}
@@ -5091,7 +5093,8 @@ export default class KplexPlugin extends Plugin {
         onCancel: /** Native dismissal or plugin unload cancels the pending property scope. */ () => resolve(false),
       });
       const cancel = (): void => modal.close();
-      const close: () => void = modal.onClose.bind(modal) as () => void;
+      /** Invoke the original class callback with this modal as its receiver. */
+      const close = (): void => { DeleteNodeConfirmationModal.prototype.onClose.call(modal); };
       modal.onClose = /** Retire the exact plugin-owned pending consent before asynchronous continuation. */ (): void => {close();this.relationshipWriteCancels.delete(cancel);};
       this.relationshipWriteCancels.add(cancel);
       if (this.unloading) {modal.close();return;}

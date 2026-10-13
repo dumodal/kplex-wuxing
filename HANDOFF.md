@@ -18,30 +18,14 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Validated Sidecar and status improvements — publication handoff
+# Scanner assertion cleanup — validation return
 
-Direction: main validation agent → maintainer. Repository zsviczian/kplex, branch PR-cleanup, implementation base 186aec3aa6565a7014897b206c1f8cc0e9b9dba1. The maintainer explicitly authorized committing/pushing these session changes, creating/merging their PR, switching to main and fetching. This document captures the validated pre-commit checkpoint; Git and the PR supply the final publication identity. Structural refactoring stays paused at C14.
+Directly on main, base a77e9c0da44a65fdc173657e08740867986c6f3a; changes remain uncommitted. The maintainer requested the three unnecessary assertion findings in src/main.ts and explicitly excluded extensive tests.
 
-## Changes prepared for publication
+All three modal-close wrappers now invoke the original class callback through prototype.onClose.call(modal), preserving the receiver without bind's weak return type or a redundant assertion. The original consent/cancellation cleanup remains in its existing wrapper.
 
-- Explicit directional attachment of the visible eligible adjacent pane as Sidecar. Correct Lucide arrows on all edges; empty panes offer outward only; inward preserves native content/mode and reuses partial-index follow. Normal Open/geometry-only observations never adopt ordinary tabs.
-- All attachment labels/descriptions and the updated position explanation translated in every supported language, with required locale coverage and explicit no-English-fallback checks.
-- Indexing status uses one dedicated hover/focus/long-touch callout and retains accessible naming through aria-labelledby. Keyboard/double-tap and generic tooltip gestures remain covered.
-- Sidecar opening retains ownership through native split layout and repairs zero allocation after unlink/move/reopen.
-- Earlier deletion/Hidden native harness, style draft consent, rename startup and fixture corrections plus risk-based regression evidence are included. The branch's preceding deletion-message/context-menu fix is part of this PR as well.
+Node 22.22.2: `npx eslint src/main.ts` passes without warnings/errors; `npm run build` passes against actual Obsidian types; git diff --check passes. No extended suites ran. Logs are `/private/tmp/kplex-assertion-cleanup-lint.log` and `/private/tmp/kplex-assertion-cleanup-build-final.log`.
 
-## Verification and artifact identity
+The exact built artifacts were staged in CLI-confirmed kplex-test-small, preserving data.json. Main.js SHA-256: 9707dde2c484435a84d53ac3ea4d08955d3e969ec83caef74b552f6719a7b8d4. A single native Cancel smoke check passed: deletion consent cancelled, modal removed, pending ownership released, note retained; no errors captured. No note was deleted/edited and the temporary controller was removed. Receipt: `/private/tmp/kplex-assertion-cleanup-smoke.json`. Production and sibling repositories were untouched.
 
-Node 22.22.2; real build and targeted official scanner lint passed. 108 focused host/action/localization checks and seven architecture checks passed at the implementation checkpoint; after translations, 22 locale checks and the real build/lint passed. Seven focused tooltip/status browser checks and one directional-control browser case passed at their recorded checkpoints. Current installed main.js SHA-256: 0f0cd0f18df4ad80baec64b6dd876196868aa5141aa7577982d8a4c26081dcde; CSS/manifest unchanged.
-
-The exact build is installed in CLI-confirmed kplex-test-small; data.json was preserved at staging. Both installation checkpoints passed 12/12 native attachment cases with trusted Electron clicks and no errors captured. Test-created panes/demand/controllers were removed and pre-probe workspace/workflow state restored. Native UI stayed in English; other locales were verified through compiled catalogs and the actual translator without changing host preferences. Extended/performance suites were not rerun for each focused edit; the PR's normal CI runs the full verification lane.
-
-Evidence: [attachment and localization](docs/validation/sidecar-attachment-2026-10-13.md), [current artifact receipt](docs/validation/sidecar-attachment-locales-2026-10-13.json), [index callout](docs/validation/index-status-callout-2026-10-13.md), [risk regression](docs/validation/risk-based-regression-2026-10-13.md). Historical artifact identities remain unchanged in their original receipts.
-
-## PR verification follow-up
-
-PR #152 is open. Its first CI run caught a test extractor locating useIndexStatus through a neighboring comment that changed during the callout fix. The fixture now selects the actual function declaration through the TypeScript AST; notification/visibility assertions are unchanged. The complete local indexing fixture passes after correction (`node scripts/run-indexing-tests.mjs`). Production sources/artifacts are unchanged.
-
-## Remaining separately tracked observations
-
-Risk results retain 23 passed (maintainer accepted #21), one failed (#25 earlier ResizeObserver strict error gate), one pending (#14 physical Android). The old #25 burst is unresolved despite the new native runs capturing no errors. Windows production-vault search-vocabulary failure remains undiagnosed; production vault was not probed. Physical Android/screen-reader/popout-native attachment is not claimed. All validation deployments/probes were limited to kplex-test-small; sibling repositories remain untouched.
+Prior work is merged through PR #152. Its full verification CI passed after replacing a stale comment-based status-hook extractor with TypeScript AST selection. Prior [attachment/localization](docs/validation/sidecar-attachment-2026-10-13.md), [callout](docs/validation/index-status-callout-2026-10-13.md), and [risk regression](docs/validation/risk-based-regression-2026-10-13.md) evidence remains historical. The earlier #25 ResizeObserver error gate, physical Android acceptance and Windows production-vault vocabulary observation remain separately tracked; this cleanup does not claim to resolve them.
