@@ -117,7 +117,7 @@ test("reference metadata distinguishes literal source target field names from de
     assert(entry.referenceParams.every(name=>entry.params.includes(name)),`${key} reference names must be declared`);
   }
   assert.equal(translate("hide.confirmPair",{source:"Folder/A.md",target:"Folder/B.md"}), 'Hide "Folder/B.md" when "Folder/A.md" is the central note. Save the Hidden relationship in "Folder/A.md".');
-  assert.equal(translate("hide.retainsSources"),'Original property links, Markdown links and inline relationships are kept. Hiding is directional. It applies from note "A" to "B" when "A" is in the center. The connection may still be visible from the other note.');
+  assert.equal(translate("hide.retainsSources"),'All links are kept. The connection is hidden when the note you save in is in the center. It may still appear from the other note.');
   assert.equal(translate("delete.cleanup.property",{field:"Private connection"}), 'Property: "Private connection"');
   assert.equal(translate("delete.cleanup.sourceFailed",{path:"Folder/A.md"}), 'Source not changed: "Folder/A.md". Review it manually.');
   assert.equal(translate("graph.evidenceDecision",{source:"Markdown link",resolution:"Child · Inferred"}), "Markdown link — Child · Inferred");
@@ -178,7 +178,13 @@ test("every action explains its behavior beyond its label, and help is distinct 
 });
 
 test("bundled locale catalogs are complete and provide translated copy", () => {
-  const englishKeys = Object.keys(require(join(portableTemp, "src/lang/en.js")).englishCatalog).sort();
+  const english = require(join(portableTemp, "src/lang/en.js")).englishCatalog;
+  const englishKeys = Object.keys(english).sort();
+  const attachmentKeys = [
+    "actions.view.sidecar.attach-from-center", "actions.view.sidecar.attach-from-center.description",
+    "actions.view.sidecar.attach-from-pane", "actions.view.sidecar.attach-from-pane.description",
+    "settings.ui.where.k.plex.creates.its.dedicated.companion.document.pa",
+  ];
   const catalogs = [
     ["de", "de.js", "germanCatalog", "Graph öffnen"],
     ["fr", "fr.js", "frenchCatalog", "Ouvrir le graphe"],
@@ -193,6 +199,10 @@ test("bundled locale catalogs are complete and provide translated copy", () => {
     const catalog = require(join(portableTemp, `src/lang/${file}`))[exportName];
     assert.deepEqual(Object.keys(catalog).sort(), englishKeys, `${locale} must translate every English catalog key`);
     assert.equal(localization.createTranslator(locale)("command.openGraph"), expected);
+    for (const key of attachmentKeys) {
+      assert.notEqual(catalog[key].message, english[key].message, `${locale}:${key} must not silently fall back to English`);
+      assert.equal(localization.createTranslator(locale)(key), catalog[key].message);
+    }
   }
   assert.equal(localization.createTranslator("de-DE")("command.openGraph"), "Graph öffnen");
   assert.equal(localization.createTranslator("zh_TW")("command.openGraph"), "開啟圖譜");

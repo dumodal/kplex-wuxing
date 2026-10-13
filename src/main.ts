@@ -3,8 +3,15 @@
  * Remote node image consent publishes synchronously before persistence and never requests semantics.
  * Style-manager drafts commit on the settings disk queue before live publication; style-only
  * completion refreshes cached presentation without clearing or reacquiring semantic scopes.
+ * Unsuccessful source-backed startup adoption reports incomplete coverage rather than implying
+ * that index preparation is still running; it never grants semantic write authority.
+ * File deletion captures its ontology-cleanup preference before consent; settings navigation
+ * cancels that approval, and concurrent preference changes require a fresh deletion request.
+ * Missing Hidden configuration offers an explicitly approved unused property or exact settings
+ * navigation. Configuration persists before policy publication and never reassigns existing fields.
  * Surface registration releases menus in its captured rendering document before migration/close retires that realm.
  * Linked-tab follow delegates managed companions to the Sidecar request owner so parallel App observations cannot reopen one destination twice.
+ * Existing adjacent tabs enter Sidecar ownership only through explicit directional attachment; geometry offers eligibility without acquiring or resizing a pane.
  * Deletion captures bounded pre-trash property/body approval, writes only confirmed fields and retains
  * partial commits. Deletion Hidden covers captured resolved spellings and observed native unresolved
  * coordinates without guessing identities. Additive Hidden consent shares coherent source publication;
@@ -23,6 +30,9 @@ import { NewRelatedNoteModal, type RelatedNoteInvocation } from "./ui/NewRelated
 import { CreateFolderNoteModal } from "./ui/CreateFolderNoteModal";
 import { MaterializeGhostModal, type GhostMaterializationKind, type GhostMaterializationLocation } from "./ui/MaterializeGhostModal";
 import { DeleteNodeConfirmationModal, RemainingNodeReferencesModal, HideRelationshipModal, type DeleteNodePreview, type DeleteSourcePreview, type RemainingNodeReference } from "./ui/DeleteNodeModal";
+import { HiddenFieldSetupModal, type HiddenFieldSetupChoice } from "./ui/HiddenFieldSetupModal";
+import { navigatePluginSettings } from "./adapters/obsidian/settingsNavigation";
+import { suggestHiddenProperty } from "./adapters/obsidian/hiddenPropertyName";
 import { LinkDirection, type GateRole, type GraphPage, type RelationshipRole } from "./types";
 import { OntologySuggester } from "./editor/OntologySuggester";
 import { isWebViewerAvailable, openExternalUrl } from "./adapters/obsidian/externalUrl";
@@ -153,6 +163,7 @@ export default class KplexPlugin extends Plugin {
   private unloading = false;
   private initialIndexTask: Promise<void> | null = null;
   private initialIndexComplete = false;
+  private initialSourceIndexIncomplete = false;
   /** In-memory guard against duplicate claims while the persisted one-time startup guidance flag saves. */
   private startupIndexInfoBubbleClaimed = false;
   private snapshotRestoreTask: Promise<{ restored: boolean; fresh: boolean; createdAt: number | null; partial?: boolean }> | null = null;
@@ -314,8 +325,10 @@ export default class KplexPlugin extends Plugin {
       // materialized. Resolution walks this history backward and inspects each leaf's current view.
       this.rememberLeafActivation(leaf);
       this.validateLinkedDocumentLeaf();
+      this.notifySidecar(); // The selected neighboring tab can change while no Sidecar is owned.
       this.onKplexVisibilityMayHaveChanged();
     }));
+    this.registerEvent(this.app.workspace.on("file-open", /** Empty/document state changes can alter attachment eligibility without changing the split. */ () => this.notifySidecar()));
     this.registerEvent(this.app.workspace.on("layout-change", () => {
       let changed = false;
       for (const [host, collapsed] of [...this.collapsedPlexHosts.entries()]) {
@@ -363,9 +376,9 @@ export default class KplexPlugin extends Plugin {
       }
       this.validateLinkedDocumentLeaf();
       if (changed) void this.saveSettings(false, false);
-      // Sidecar controls belong only to leaves K-Plex explicitly manages. A separately pinned or
-      // adjacent document tab remains ordinary Obsidian content and is never promoted to sidecar UI.
-      if (changed || this.sidecarLeaves.size > 0) this.notifySidecar();
+      // Refresh explicit attachment offers as well as owned controls when native splits change.
+      // Geometry alone never promotes an ordinary adjacent tab to managed ownership.
+      this.notifySidecar();
       this.onKplexVisibilityMayHaveChanged();
     }));
 
@@ -1033,10 +1046,12 @@ export default class KplexPlugin extends Plugin {
     this.index.cancelPendingPersistence();
   }
 
-  /** Complete the initial source owner without treating its node catalog as a hydrated full graph. */
+  /** Complete the initial source owner; an unsuccessful adoption reports incomplete coverage until a later attempt succeeds. */
   private async adoptInitialSourceIndex(): Promise<void> {
+    this.initialSourceIndexIncomplete = false;
     const adopted = await this.index.adoptStartupSources();
     if (this.unloading) return;
+    this.initialSourceIndexIncomplete = !adopted;
     this.initialIndexComplete = adopted;
     if (adopted) {
       for (const reason of ["startup:no-snapshot", "startup:stale-snapshot", "startup:partial-restore-incomplete"]) {
@@ -1567,19 +1582,27 @@ export default class KplexPlugin extends Plugin {
 
   /** Navigate to the declarative shortcut page, including when optional commands are unpublished. */
   openActionSettings(): boolean {
-    // This is the same guarded, unpublished Settings bridge as openSettings(). The installed
-    // host's openPagePath preserves an already-open page instead of resetting its input state.
-    type SettingsController = {
-      open?: () => void;
-      openPagePath?: (tabId: string, pagePath: string[]) => unknown;
-    };
-    const controller = (this.app as unknown as { setting?: SettingsController }).setting;
-    if (controller?.open && controller.openPagePath) {
-      controller.open();
-      if (controller.openPagePath(this.manifest.id, [this.translator("actions.settingsTitle")])) return true;
+    return this.openSettingsPage(this.translator("actions.settingsTitle"));
+  }
+
+  /** Navigate to the deletion preference and its stable row anchor without changing settings or approving deletion. */
+  openDeleteCleanupSettings(): void {
+    if (this.openSettingsPage(this.translator("settings.ui.plex.behavior"))) this.settingsTab?.focusSetting(
+      this.translator("settings.deletion.removeOntologyLinks"), "kplex-remove-ontology-links-on-delete");
+  }
+
+  /** Open the actual Hidden-fields control without creating a field or approving a note write. */
+  openHiddenOntologySettings(): void {
+    if (this.openSettingsPage(this.translator("settings.ui.ontology"), this.translator("settings.ui.relationship.fields"))) {
+      this.settingsTab?.focusSetting(this.translator("settings.ui.hidden.fields"));
     }
+  }
+
+  /** Reuse native page-path navigation with the existing owning-tab fallback for settings cross-links. */
+  private openSettingsPage(...pageNames: string[]): boolean {
+    if (navigatePluginSettings(this.app, this.manifest.id, pageNames)) return true;
     this.openSettings();
-    return this.settingsTab?.openActionSettingsPage() ?? false;
+    return pageNames.every(/** Traverse the exact localized native page path only after explicit navigation refusal. */ name => this.settingsTab?.openSettingsPage(name) ?? false);
   }
 
   /** Reveal only the chosen native surface and wait for its current action registration. */
@@ -2792,7 +2815,7 @@ export default class KplexPlugin extends Plugin {
     return this.computeIndexStatusFacts(this.cachedMarkdownFileCount);
   }
 
-  /** Aggregate cache, requested-semantic and global-search readiness without scheduling work. */
+  /** Aggregate readiness without scheduling work; a completed unsuccessful startup attempt is incomplete even when its backlog remains dirty. */
   private computeIndexStatusFacts(totalFiles: number | null): {
     upToDate: boolean;
     phase: "ready" | "loading-cache" | "preparing" | "checking-cache" | "indexing" | "saving-cache" | "updating" | "incomplete";
@@ -2801,8 +2824,9 @@ export default class KplexPlugin extends Plugin {
   } {
     const loadingCache = this.index.hasPendingSnapshotHydration();
     const semanticPreparing = this.index.hasPendingSemanticPreparation();
+    const startupIncomplete = !this.initialIndexComplete && this.initialSourceIndexIncomplete;
     const semanticIncomplete = semanticPreparing && !this.index.hasActiveSemanticPreparation?.()
-      || Boolean(this.index.getSearchVocabularyFailure?.()) || Boolean(this.index.hasUnavailableLocalCounts?.());
+      || Boolean(this.index.getSearchVocabularyFailure?.()) || Boolean(this.index.hasUnavailableLocalCounts?.()) || startupIncomplete;
     const upToDate = (this.initialIndexComplete || this.index.isOnDemandMode() && this.index.hasLocalBaseline())
       && !this.indexDirty
       && this.rebuildTask === null
@@ -2823,7 +2847,7 @@ export default class KplexPlugin extends Plugin {
           ? "saving-cache"
         : !this.initialIndexComplete && this.rebuildTask !== null
           ? "indexing"
-          : semanticIncomplete && this.rebuildTask === null && this.rebuildTimer === null && !this.indexDirty
+          : semanticIncomplete && this.rebuildTask === null && this.rebuildTimer === null && (startupIncomplete || !this.indexDirty)
             ? "incomplete"
           : !this.initialIndexComplete && this.index.size > 0 && this.index.hasIncrementalRestorePatch()
             ? "checking-cache"
@@ -2863,6 +2887,8 @@ export default class KplexPlugin extends Plugin {
         : this.translator("indexing.urlsProgress", { processed: urlProgress.processed, total: urlProgress.total })
       : urlProgress.failed
         ? this.translator("indexing.urlsIncomplete")
+      : phase === "incomplete" && !failure && !this.initialIndexComplete && this.initialSourceIndexIncomplete
+      ? this.translator("index.statusStartupIncomplete")
       : this.index.isOnDemandMode() && ["ready", "preparing", "updating", "indexing", "incomplete"].includes(phase)
       ? this.translator(phase === "ready" ? "indexing.localReady" : phase === "incomplete" ? "indexing.localUnavailable" : "indexing.localPreparing")
       : searchFailure
@@ -3035,6 +3061,103 @@ export default class KplexPlugin extends Plugin {
 
   isSidecarOpen(hostLeaf: WorkspaceLeaf): boolean {
     return this.getSidecarPosition(hostLeaf) !== null;
+  }
+
+  /**
+   * Offer the visible tab in one unambiguous group on the configured edge, without acquiring it.
+   * Hidden tabs, embedded views, other Plex surfaces and already managed companions are ineligible.
+   * Multiple groups sharing that edge remain ambiguous, including utility-only groups.
+   */
+  getAdjacentSidecarCandidate(hostLeaf: WorkspaceLeaf): WorkspaceLeaf | null {
+    if (this.unloading || this.startupInitializing || !this.leafIsAttached(hostLeaf)
+      || hostLeaf.view.getViewType() === KPLEX_SIDEPANEL_VIEW_TYPE
+      || this.isSidecarOpen(hostLeaf) || this.sidecarMovingHosts.has(hostLeaf)) return null;
+    const groups = new Map<HTMLElement, WorkspaceLeaf[]>();
+    this.app.workspace.iterateAllLeaves(/** Inspect native geometry only; no file reads or ownership changes. */ leaf => {
+      if (leaf === hostLeaf || this.adjacentPosition(hostLeaf, leaf) !== this.settings.sidecarPosition) return;
+      const group = this.leafGroupElement(leaf);
+      if (!group) return;
+      const members = groups.get(group) ?? [];
+      members.push(leaf);
+      groups.set(group, members);
+    });
+    if (groups.size !== 1) return null;
+    const visible = [...groups.values()][0].filter(/** Select the displayed native tab, never a hidden sibling. */ leaf => this.leafIsVisible(leaf));
+    if (visible.length !== 1) return null;
+    const leaf = visible[0];
+    const type = leaf.getViewState().type;
+    if (type === KPLEX_VIEW_TYPE || type === KPLEX_SIDEPANEL_VIEW_TYPE
+      || isEmbeddedMarkdownLeaf(leaf) || this.isManagedSidecarLeaf(leaf)) return null;
+    return type === "empty" || this.fileForLeaf(leaf) || this.indexedUrlPathForLeaf(leaf) ? leaf : null;
+  }
+
+  /** Read the exact displayed note/URL identity; an empty pane cannot supply a graph center. */
+  getAdjacentSidecarTarget(hostLeaf: WorkspaceLeaf): { file: TFile | null; path: string } | null {
+    const leaf = this.getAdjacentSidecarCandidate(hostLeaf);
+    if (!leaf) return null;
+    const file = this.fileForLeaf(leaf);
+    const path = file?.path ?? this.indexedUrlPathForLeaf(leaf);
+    return path ? { file, path } : null;
+  }
+
+  /**
+   * Explicitly claim the currently eligible adjacent tab, then apply the selected initial flow.
+   * No split is created/resized. Reverse flow preserves native content/mode and returns its identity
+   * to this App's existing partial-index follow owner. Failure releases ownership without closing
+   * the user's pane; overlapping attachment/move requests cannot acquire it twice.
+   */
+  async attachAdjacentSidecar(hostLeaf: WorkspaceLeaf, direction: "to-leaf" | "to-plex", page?: GraphPage): Promise<{ file: TFile | null; path: string } | null> {
+    const leaf = this.getAdjacentSidecarCandidate(hostLeaf);
+    if (!leaf) return null;
+    const file = this.fileForLeaf(leaf);
+    const path = file?.path ?? this.indexedUrlPathForLeaf(leaf);
+    if (direction === "to-plex" && !path) return null;
+    if (direction === "to-leaf" && (!page || !page.file && !page.url
+      || page.file && this.app.vault.getFileByPath(page.file.path) !== page.file
+      || page.url && !isWebViewerAvailable(this.app))) return null;
+    const previous = {
+      linked: this.linkedDocumentLeaf, last: this.lastDocumentLeaf,
+      mode: this.settings.documentSyncMode, open: this.settings.sidecarOpen,
+      file: this.settings.sidecarLastFilePath, url: this.settings.sidecarLastUrl,
+    };
+    this.sidecarMovingHosts.add(hostLeaf);
+    this.sidecarLeaves.set(hostLeaf, leaf);
+    this.linkedDocumentLeaf = leaf;
+    this.lastDocumentLeaf = leaf;
+    this.settings.documentSyncMode = "pinned";
+    this.settings.sidecarOpen = true;
+    this.notifySidecar();
+    try {
+      if (direction === "to-leaf" && page) await this.openPageInSidecarLeaf(leaf, page);
+      else {
+        this.settings.sidecarLastFilePath = file?.path ?? "";
+        this.settings.sidecarLastUrl = this.webViewerUrlForLeaf(leaf) ?? "";
+      }
+      await this.saveSettings(false, false);
+      // A moved/closed leaf or an explicit detach during persistence wins over completion.
+      if (this.unloading || this.sidecarLeaves.get(hostLeaf) !== leaf) return null;
+      if (!this.leafIsAttached(leaf) || this.adjacentPosition(hostLeaf, leaf) !== this.settings.sidecarPosition) {
+        await this.releaseSidecar(hostLeaf, true);
+        return null;
+      }
+      const currentFile = this.fileForLeaf(leaf);
+      const currentPath = currentFile?.path ?? this.indexedUrlPathForLeaf(leaf);
+      return direction === "to-plex" && currentPath ? { file: currentFile, path: currentPath } : null;
+    } catch (error) {
+      if (this.sidecarLeaves.get(hostLeaf) === leaf) {
+        this.sidecarLeaves.delete(hostLeaf);
+        this.linkedDocumentLeaf = previous.linked;
+        this.lastDocumentLeaf = previous.last;
+        this.settings.documentSyncMode = previous.mode;
+        this.settings.sidecarOpen = previous.open;
+        this.settings.sidecarLastFilePath = previous.file;
+        this.settings.sidecarLastUrl = previous.url;
+      }
+      throw error;
+    } finally {
+      this.sidecarMovingHosts.delete(hostLeaf);
+      this.notifySidecar();
+    }
   }
 
   private createSidecarLeaf(hostLeaf: WorkspaceLeaf, position: SidecarPosition): WorkspaceLeaf {
@@ -3210,8 +3333,8 @@ export default class KplexPlugin extends Plugin {
       leaf = null;
     }
 
-    // Never adopt an arbitrary adjacent or pinned note tab. Sidecar actions may detach/move the
-    // managed leaf, so ownership must start with a leaf K-Plex created specifically for that role.
+    // Normal Open never adopts an arbitrary adjacent/pinned tab. Existing tabs require the
+    // separate explicit attachment gesture before Sidecar close/move can manage them.
     if (!leaf) leaf = this.createSidecarLeaf(hostLeaf, this.settings.sidecarPosition);
     this.sidecarLeaves.set(hostLeaf, leaf);
     this.settings.sidecarOpen = true;
@@ -3310,11 +3433,24 @@ export default class KplexPlugin extends Plugin {
   }
 
   async openSidecar(hostLeaf: WorkspaceLeaf, page: GraphPage): Promise<void> {
-    const leaf = this.ensureSidecarLeaf(hostLeaf);
-    if (!leaf) return;
-    await this.openPageInSidecarLeaf(leaf, page);
-    await this.saveSettings(false, false);
-    this.notifySidecar();
+    // Opening can emit layout-change before the new split has usable geometry,
+    // just like moving an existing companion. Retain ownership through that boundary.
+    const alreadyMoving = this.sidecarMovingHosts.has(hostLeaf);
+    this.sidecarMovingHosts.add(hostLeaf);
+    try {
+      const leaf = this.ensureSidecarLeaf(hostLeaf);
+      if (!leaf) return;
+      await this.openPageInSidecarLeaf(leaf, page);
+      await this.waitForWorkspaceLayout(hostLeaf);
+      // Retained pixel bases from an earlier move can leave the new companion
+      // with no allocation. Reuse the native adjacent-pane sizing repair.
+      this.ensureAdjacentFileLeafSize(hostLeaf, leaf);
+      await this.waitForWorkspaceLayout(hostLeaf);
+      await this.saveSettings(false, false);
+      this.notifySidecar();
+    } finally {
+      if (!alreadyMoving) this.sidecarMovingHosts.delete(hostLeaf);
+    }
   }
 
   async closeSidecar(hostLeaf: WorkspaceLeaf, persist = true): Promise<void> {
@@ -4599,7 +4735,8 @@ export default class KplexPlugin extends Plugin {
   async captureDeleteNodePreview(target: GraphPage): Promise<DeleteNodePreview> {
     const hiddenFields = [...new Set(this.settings.hierarchy.hidden.filter(/** Empty keys cannot form properties. */ field => field.trim()))];
     const ontology = new Set([...this.allOntologyFields(), ...hiddenFields].map(normalizeFieldName));
-    const preview: DeleteNodePreview = {sources: [], hiddenFields, hiddenField: hiddenFields[0] ?? ""};
+    const removeOntologyLinksOnDelete = this.settings.removeOntologyLinksOnDelete !== false;
+    const preview: DeleteNodePreview = {sources: [], hiddenFields, hiddenField: hiddenFields[0] ?? "", removeOntologyLinksOnDelete};
     const targetPath = target.path, targetFile = target.file;
     let retainedBytes = 2 * hiddenFields.join("").length;
     for (const file of this.referencingMarkdownFiles(target)) {
@@ -4646,7 +4783,7 @@ export default class KplexPlugin extends Plugin {
         if (this.unloading || file.path !== path || this.app.vault.getFileByPath(path) !== file
           || this.app.metadataCache.getFileCache(file) !== cache || target.path !== targetPath || target.file !== targetFile
           || targetFile && this.app.vault.getFileByPath(targetPath) !== targetFile) throw new Error(this.translator("addRelated.endpointChanged"));
-        source.properties.push({field, ontology: ontology.has(normalizeFieldName(field)), choice: ontology.has(normalizeFieldName(field)) && supported ? "remove" : "keep",
+        source.properties.push({field, ontology: ontology.has(normalizeFieldName(field)), choice: ontology.has(normalizeFieldName(field)) && supported && (!targetFile || removeOntologyLinksOnDelete) ? "remove" : "keep",
           line: location?.start ?? 0,payload,after,supported});
       }
       preview.sources.push(source);
@@ -4783,14 +4920,91 @@ export default class KplexPlugin extends Plugin {
     return {hosts:preview.sources.map(/** Retain displayed source coordinates instead of adopting a later rename. */ source=>source.path),remaining,issues};
   }
 
-  /** Confirm exact additive Hidden scope and release the foreground write before per-source publication. */
+  /** Suggest only names absent from the native cached registry, configured roles and discovered inline/document fields. */
+  private suggestHiddenOntologyField(): string | null {
+    const reserved = [
+      ...Object.values(this.settings.hierarchy).flatMap(/** Optional legacy role lists contribute names only when present. */ fields => fields ?? []),
+      ...this.index.discoveredFields().map(/** Discovery supplies cached inline fields without reading sources. */ field => field.name),
+      this.settings.noteTypeField, this.settings.primaryTagField, this.settings.thumbnailProperty, this.settings.nodeImageProperty,
+      ...this.settings.nameFields.split(",").map(/** Title-property configuration is CSV; reserve full property names rather than individual characters. */ name => name.trim()).filter(Boolean),
+    ];
+    return suggestHiddenProperty(this.app, reserved);
+  }
+
+  /** Configure one explicitly approved unused Hidden field on the existing disk queue before publishing its semantic policy. */
+  private async createHiddenOntologyField(field: string, isCurrent: () => boolean): Promise<boolean> {
+    let persisted = false, configured = false, changed = false;
+    try {
+      await this.enqueueSettingsWrite(/** Recheck collisions and current consent when this configuration owns persistence. */ async () => {
+        if (this.unloading || !isCurrent()) return;
+        if (this.settings.hierarchy.hidden.some(/** Concurrent explicit setup can supply the needed capability without another assignment. */ name => name.trim())) {
+          configured = true;
+          return;
+        }
+        if (this.suggestHiddenOntologyField() !== field) { changed = true; return; }
+        const source = this.settings;
+        const hierarchyBefore = JSON.stringify(source.hierarchy);
+        const next = { ...source, hierarchy: { ...source.hierarchy, hidden: [...source.hierarchy.hidden, field] } };
+        await this.saveData(this.settingsSnapshotForPersistence(source.actionPreferencesFuture ?? source.actionPreferences, next));
+        persisted = true;
+        // A settings edit/import that occurred during storage owns its newer hierarchy. Never
+        // restore the captured hierarchy over it or turn an already-used field into Hidden.
+        if (JSON.stringify(this.settings.hierarchy) !== hierarchyBefore || this.suggestHiddenOntologyField() !== field) {
+          throw new Error("Hidden field configuration changed after persistence");
+        }
+        this.settings.hierarchy.hidden = next.hierarchy.hidden;
+        const policy = captureSettingsPolicy(this.settings);
+        this.savedSettingsPolicy = { values: { ...(this.savedSettingsPolicy ?? policy).values,
+          "hierarchy.hidden": policy.values["hierarchy.hidden"] } };
+        this.index.invalidateSemanticPolicy();
+        configured = true;
+      });
+      if (changed) new Notice(this.translator("hide.setup.changed"));
+      if (!configured || this.unloading || !isCurrent()) return false;
+      if (persisted) {
+        await this.index.refreshPresentationSettings();
+        await this.index.refreshSemanticSettings();
+      }
+      return isCurrent();
+    } catch (error) {
+      console.error(persisted ? "K-Plex saved Hidden configuration refresh failed" : "K-Plex Hidden configuration failed", error);
+      if (!this.unloading) new Notice(this.translator(persisted ? "hide.setup.savedPending" : "hide.setup.failed"));
+      return false;
+    }
+  }
+
+  /** Offer explicit first-field setup, then confirm directional Hidden scope; original links and native identity fences remain intact. */
   async hideRelationship(sourcePath: string, targetPath: string, beforeMutation?: () => boolean,
-    ownConfirmation?: (modal: HideRelationshipModal | null) => void): Promise<ActionOutcome> {
+    ownConfirmation?: (modal: { close(): void } | null) => void): Promise<ActionOutcome> {
     const source = this.index.get(sourcePath), target = this.index.get(targetPath);
     const fields = [...new Set(this.settings.hierarchy.hidden.filter(/** Blank configured keys are not writable choices. */ field => field.trim()))];
-    if (!source || !target || source.isFolder || source.isTag || target.isFolder || target.isTag || !fields.length) {
-      if (!fields.length) new Notice(this.translator("hide.noField"));
+    if (!source || !target || source.isFolder || source.isTag || target.isFolder || target.isTag
+      || source.file?.extension !== "md" && target.file?.extension !== "md") {
       return {status:"unavailable",reasonKey:"actions.target-unavailable"};
+    }
+    if (!fields.length) {
+      const sourceRef = actionNodeRef(source), targetRef = actionNodeRef(target);
+      /** Configuration consent retains exact endpoints and graph lifetime independently of later semantic-policy publication. */
+      const setupCurrent = (): boolean => !this.unloading && beforeMutation?.() !== false
+        && Boolean(resolveActionPage(this.index, sourceRef)) && Boolean(resolveActionPage(this.index, targetRef));
+      const proposed = this.suggestHiddenOntologyField();
+      const decision = await new Promise<HiddenFieldSetupChoice>(/** Native cancellation, settings navigation and surface teardown settle once. */ resolve => {
+        const modal = new HiddenFieldSetupModal(this.app, proposed, resolve);
+        const cancel = (): void => modal.close();
+        const close: () => void = modal.onClose.bind(modal) as () => void;
+        modal.onClose = /** Release plugin and surface ownership before continuing setup or navigation. */ (): void => {
+          close(); this.relationshipWriteCancels.delete(cancel); ownConfirmation?.(null);
+        };
+        this.relationshipWriteCancels.add(cancel); ownConfirmation?.(modal);
+        if (!setupCurrent()) { modal.close(); return; }
+        modal.open();
+      });
+      if (!decision || !setupCurrent()) return { status: "cancelled" };
+      if (decision === "settings") { this.openHiddenOntologySettings(); return { status: "cancelled" }; }
+      if (!proposed || !(await this.createHiddenOntologyField(proposed, setupCurrent))) return { status: "unavailable", reasonKey: "actions.target-unavailable" };
+      // Configuration is not consent to edit a note. Recapture the current settings/endpoints
+      // before the ordinary source/direction dialog and its existing pair/native write guards.
+      return this.hideRelationship(sourcePath, targetPath, beforeMutation, ownConfirmation);
     }
     const affected = [actionNodeRef(source),actionNodeRef(target)];
     const normalized = new Set(fields.map(normalizeFieldName));
@@ -4861,6 +5075,7 @@ export default class KplexPlugin extends Plugin {
         firstUse,
         confirmFileDelete: this.settings.confirmFileDelete,
         preview,
+        onOpenCleanupSettings: /** Settings navigation cancels the old consent; a new deletion must capture the updated policy. */ () => this.openDeleteCleanupSettings(),
         onOpenLocation: /** Inspect the source through its originating native destination. */ reference => this.openRelationshipEvidenceLocation(reference,hostLeaf),
         onConfirm: /** Only successful preference persistence approves the captured cleanup scope. */ async (confirmFileDelete) => {
           try {
@@ -4907,6 +5122,12 @@ export default class KplexPlugin extends Plugin {
     if (this.unloading || resolveActionPage(this.index,captured) !== target || target.path !== captured.path || target.file !== capturedFile
       || capturedFile && this.app.vault.getFileByPath(captured.path) !== capturedFile) return {status:"unavailable",reasonKey:"actions.target-unavailable"};
     if (!(await this.confirmDeleteNode(target,preview,hostLeaf))) return { status: "cancelled" };
+    // Another settings window cannot silently change the automatic cleanup policy after its
+    // scope was captured. Reopening deletion prepares fresh defaults before granting trash/write consent.
+    if (capturedFile && preview.removeOntologyLinksOnDelete !== (this.settings.removeOntologyLinksOnDelete !== false)) {
+      new Notice(this.translator("delete.cleanup.settingsChanged"));
+      return { status: "cancelled" };
+    }
     if (this.unloading || resolveActionPage(this.index, captured) !== target || target.path !== captured.path || target.file !== capturedFile
       || capturedFile && this.app.vault.getFileByPath(capturedFile.path) !== capturedFile) {
       new Notice(this.translator("addRelated.endpointChanged"));

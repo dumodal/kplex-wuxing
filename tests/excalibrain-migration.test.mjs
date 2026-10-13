@@ -63,6 +63,8 @@ await build({
         querySelectorAll(selector) { const tags = selector.split(", "); const visit = el => el.children.flatMap(child => [...(tags.includes(child.tag) ? [child] : []), ...visit(child)]); return visit(this); }
         empty() { this.children = []; this.buttons = []; }
       }
+      // Obsidian provides this global DOM helper; retain its actual fragment/span contract in the finite form double.
+      globalThis.createFragment = () => new FormElement("fragment");
       export class ButtonComponent {} export class Modal {
         constructor(app) { this.app = app; this.titleEl = new FormElement(); this.contentEl = new FormElement(); this.modalEl = new FormElement(); Modal.latest = this; }
         open() { this.onOpen?.(); }
@@ -105,6 +107,19 @@ test("real ExcaliBrain fixture imports complete ontology and graph styles withou
 test("transient ExcaliBrain drawing paths are discarded from imported and saved settings", () => {
   assert.equal(Object.hasOwn(migrated, "excalibrainFilepath"), false);
   assert.equal(Object.hasOwn(migrateAndMergeSettings({ excalibrainFilepath: "Custom transient drawing.md" }), "excalibrainFilepath"), false);
+});
+
+/** Physical-file cleanup defaults preserve existing behavior, while foreign imports retain the local workflow preference. */
+test("automatic ontology cleanup migrates, persists and stays local during foreign import", async () => {
+  assert.equal(defaults.removeOntologyLinksOnDelete, true);
+  const off = migrateAndMergeSettings({ removeOntologyLinksOnDelete: false });
+  assert.equal(migrateAndMergeSettings(JSON.parse(JSON.stringify(off))).removeOntologyLinksOnDelete, false);
+  assert.equal(importExcaliBrainGraphSettings({ ...fixture, removeOntologyLinksOnDelete: true }, off).removeOntologyLinksOnDelete, false);
+  const saves = [];
+  const plugin = { settings: structuredClone(defaults), saveSettings: async (...args) => { saves.push(args); } };
+  await new KplexSettingTab({}, plugin).setControlValue("removeOntologyLinksOnDelete", false);
+  assert.equal(plugin.settings.removeOntologyLinksOnDelete, false);
+  assert.deepEqual(saves, [[false, false]], "Workflow preference does not request semantic reconstruction");
 });
 
 test("remote node image consent is explicit, durable and independent of foreign graph settings", /** Only boolean true grants permission; no semantic signature changes. */ () => {

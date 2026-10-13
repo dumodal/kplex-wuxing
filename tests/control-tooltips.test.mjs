@@ -66,3 +66,12 @@ test('a marked canvas boundary flips bottom controls above even when the window 
   assert(data.viewport-data.boundaryBottom>50);assert.equal(data.hint.above,true);assert(data.hint.bottom<=data.controlTop-8);assert(data.hint.top>=data.boundaryTop+8);
  }finally{await host.cleanup()}
 });
+
+test('dedicated callouts replace generic hover/touch hints and retain the long-press click guard', async()=>{
+ const host=await chromiumHarness(result.outputFiles[0].text);
+ try{await fixture(host);
+  const data=await host.evaluate(`(async()=>{const button=document.querySelector('#top');button.dataset.kplexTooltip='callout';let opened=0,clicks=0;button.addEventListener('kplex-control-long-press',()=>opened++);button.addEventListener('click',()=>clicks++);fire('#top','pointerover');await pause(720);const hover=read();button.removeAttribute('aria-label');const label=document.createElement('span');label.id='status-name';label.textContent='Current index status';document.querySelector('main').append(label);button.setAttribute('aria-labelledby',label.id);const touch={pointerType:'touch',clientX:50,clientY:20};fire('#top','pointerdown',null,touch);await pause(510);const long=read(),longOpened=opened;fire('#top','pointerup',null,touch);button.click();const consumed=clicks;button.click();const nextTap=clicks;fire('#top','pointerdown',null,{...touch,pointerId:2});fire('#top','pointermove',null,{...touch,pointerId:2,clientX:80});await pause(510);fire('#top','pointerup',null,{...touch,pointerId:2});return{hover,long,longOpened,opened,consumed,nextTap,accessibleName:document.getElementById(button.getAttribute('aria-labelledby')).textContent}})()`);
+  assert.equal(data.hover,null);assert.equal(data.long,null);assert.equal(data.longOpened,1);assert.equal(data.opened,1);
+  assert.equal(data.consumed,0);assert.equal(data.nextTap,1);assert.equal(data.accessibleName,'Current index status');
+ }finally{await host.cleanup()}
+});

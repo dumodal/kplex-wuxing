@@ -245,17 +245,17 @@ function start() {
         await app.vault.createFolder(folder);
         c.owned = true;
         const files = [];
-        for (const name of ["A", "B", "C"])
+        for (const name of ["A", "B", "C", "D"])
           files.push(
             await app.vault.create(
               folder + "/" + name + ".md",
-              "# " + name + "\n\n[[" + folder + "/" + (name === "C" ? "A" : String.fromCharCode(name.charCodeAt(0) + 1)) + "]]\n",
+              "# " + name + "\n\n[[" + folder + "/" + (name === "D" ? "A" : String.fromCharCode(name.charCodeAt(0) + 1)) + "]]\n",
             ),
           );
         for (const file of files) p.index.insertCreatedFile(file);
         c.fixture = {
           markdown: app.vault.getMarkdownFiles().length,
-          sequence: 3,
+          sequence: files.length,
           indexMode: p.settings.indexingMode,
           backgroundUrls: p.settings.urlIndexingMode,
           animationSpeed: 1,
@@ -348,16 +348,36 @@ function start() {
         p.notifyNavigation(files[0].path);
         p.notifyNavigation(files[1].path);
         p.notifyNavigation(files[2].path);
+        p.notifyNavigation(files[3].path);
         await until(
-          /** Require the newest rapid request in both graph and native document. */ () => center() === files[2].path && companion.view.file === files[2],
+          /** Require the newest rapid request in both graph and native document. */ () => center() === files[3].path && companion.view.file === files[3],
           "Rapid latest target lost",
         );
         await wait(150);
-        check(center() === files[2].path && companion.view.file === files[2], "Late request overrode latest target");
+        check(center() === files[3].path && companion.view.file === files[3], "Late request overrode latest target");
         c.rapidLatestTarget = true;
         activeSample.events = c.events.filter(/** Retain only the active controller-owned scenario events. */ (event) => event.sample === activeSample.id);
         delete activeSample.start;
         activeSample = null;
+        const originalOpen = companion.openFile;
+        let releaseOpen, enteredOpen = false, openCount = 0;
+        const heldOpen = async function(...args) {
+          openCount++;
+          if (!enteredOpen) { enteredOpen = true; await new Promise(/** Hold one genuine native open until a newer A/B/A request arrives. */ resolve => { releaseOpen = resolve; }); }
+          return originalOpen.apply(this, args);
+        };
+        companion.openFile = heldOpen;
+        try {
+          p.notifyNavigation(files[0].path);
+          await until(/** Ensure the first request has actually entered native opening before superseding it. */ () => enteredOpen, "Held Sidecar open did not start");
+          p.notifyNavigation(files[1].path); p.notifyNavigation(files[0].path);
+          releaseOpen();
+          await until(/** The newest same-file request must settle the graph and companion together. */ () => center() === files[0].path && companion.view.file === files[0], "Rapid A/B/A target lost");
+          await wait(150);
+          check(center() === files[0].path && companion.view.file === files[0] && openCount === 1,
+            "A/B/A oscillated or redundantly reopened its in-flight final file");
+          c.rapidReturnTarget = { passed: true, nativeOpens: openCount };
+        } finally { releaseOpen?.(); if (companion.openFile === heldOpen) companion.openFile = originalOpen; }
         await p.detachSidecar(host);
         check(!p.sidecarLeaves.has(host) && p.settings.documentSyncMode === "off", "Ordinary control must release sync");
         c.ordinaryGeometry = {
@@ -371,6 +391,21 @@ function start() {
         );
         await wait(400);
         await samples("ordinary-pane", files);
+        // Reopening after a move and explicit unlink must acquire usable native
+        // geometry before normal linked navigation, even with retained pixel bases.
+        await p.openSidecar(host, p.index.get(files[0].path));
+        await p.moveSidecar(host, "left", p.index.get(files[0].path));
+        await p.setDocumentSyncMode("off");
+        await p.setDocumentSyncMode("pinned", p.index.get(files[0].path));
+        await p.openSidecar(host, p.index.get(files[0].path));
+        const reopened = p.sidecarLeaves.get(host);
+        check(reopened && p.getSidecarPosition(host) === "left"
+          && reopened.view.containerEl.getBoundingClientRect().width > 8,
+        "Reopened Sidecar lost ownership or native pane allocation");
+        p.notifyNavigation(files[3].path);
+        await until(/** Native navigation must use the reopened companion. */ () =>
+          center() === files[3].path && reopened.view.file === files[3], "Reopened Sidecar did not follow latest navigation");
+        c.reopenAfterUnlink = { passed: true, position: p.getSidecarPosition(host), width: reopened.view.containerEl.getBoundingClientRect().width };
         c.done = true;
       },
     )
@@ -411,7 +446,7 @@ try {
   Object.assign(
     report,
     evalJSON(
-      "JSON.stringify({samples:window.__kplex140Latency.samples,events:window.__kplex140Latency.events,fixture:window.__kplex140Latency.fixture,ordinaryGeometry:window.__kplex140Latency.ordinaryGeometry,sidecarGeometry:window.__kplex140Latency.sidecarGeometry,rapidLatestTarget:window.__kplex140Latency.rapidLatestTarget})",
+      "JSON.stringify({samples:window.__kplex140Latency.samples,events:window.__kplex140Latency.events,fixture:window.__kplex140Latency.fixture,ordinaryGeometry:window.__kplex140Latency.ordinaryGeometry,sidecarGeometry:window.__kplex140Latency.sidecarGeometry,rapidLatestTarget:window.__kplex140Latency.rapidLatestTarget,rapidReturnTarget:window.__kplex140Latency.rapidReturnTarget,reopenAfterUnlink:window.__kplex140Latency.reopenAfterUnlink})",
     ),
   );
   report.errors = cli("dev:errors");

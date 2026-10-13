@@ -64,10 +64,10 @@ assert(appSource.includes('!plugin.index.isOnDemandMode() && ["indexing", "savin
 // It previously retained "Preparing local graph" after the host had reached "Local graph ready"
 // when a readiness event arrived before effect subscription or while native leaf geometry was hidden.
 {
-  const start = appSource.indexOf("function useIndexStatus(");
-  const end = appSource.indexOf("/** Show status on hover", start);
-  assert(start !== -1 && end > start, "Locate the mounted index-status subscription hook");
-  const hookJs = ts.transpileModule(appSource.slice(start, end), {
+  const appModule = ts.createSourceFile("App.tsx", appSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const hook = appModule.statements.find(/** Locate the real hook independently of neighboring documentation. */ node => ts.isFunctionDeclaration(node) && node.name?.text === "useIndexStatus");
+  assert(hook, "Locate the mounted index-status subscription hook");
+  const hookJs = ts.transpileModule(hook.getText(appModule), {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None },
   }).outputText;
   const pending = { coordinator: new Set(), index: new Set(), presentation: new Set(), visibility: new Set() };
@@ -447,6 +447,9 @@ for (const file of [
   "src/adapters/obsidian/ontologySourceCollector.ts",
   "src/adapters/obsidian/metadataSourceCollector.ts",
   "src/adapters/obsidian/relationshipMetadataWrite.ts",
+  "src/adapters/obsidian/settingsNavigation.ts",
+  "src/adapters/obsidian/hiddenPropertyName.ts",
+  "src/ui/HiddenFieldSetupModal.ts",
   "src/util/perf.ts",
   "src/main.ts",
   "src/index/fieldParser.ts",

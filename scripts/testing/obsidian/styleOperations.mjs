@@ -470,6 +470,15 @@ function start() {
       const before = { ...c.counts };
       c.noViewBefore = before;
       let root = await open("property");
+      root.querySelector('input[aria-label="' + p.translator("styles.propertyValue") + '"]').value = other;
+      root.querySelector('input[aria-label="' + p.translator("styles.background") + '"]').value = "#123456";
+      button(root, "common.cancel").click();
+      await until(/** A cancelled draft owns no storage or live publication. */ () => !root.isConnected, "Draft Cancel did not close");
+      closeManagers();
+      check(!p.settings.noteTypeStyles[other] && !(await stored()).noteTypeStyles[other] && c.counts.writes === before.writes,
+        "Cancelled draft changed styles or reached persistence");
+      passed("unsaved name/color draft Cancel leaves live and durable styles unchanged");
+      root = await open("property");
       root.querySelector(
         'input[aria-label="' + p.translator("styles.propertyValue") + '"]'
       ).value = key;
@@ -573,6 +582,20 @@ function start() {
       passed(
         "native RGB normalization/edit preserves imported alpha and inheritance"
       );
+
+      root = await open("property", key);
+      root.querySelector('input[aria-label="' + p.translator("styles.lucideIcon") + '"]').value = "info";
+      c.diskFailure = true;
+      button(root, "common.save").click();
+      await until(/** A rejected Save must stay editable and disclose that nothing was saved. */ () =>
+        root.querySelector('[role="status"]')?.textContent === p.translator("styles.operation.notSaved"), "Rejected Save had no feedback");
+      check(root.isConnected && p.settings.noteTypeStyles[key].icon === rgba.icon && (await stored()).noteTypeStyles[key].icon === rgba.icon,
+        "Rejected Save changed live or durable style");
+      c.diskFailure = false;
+      button(root, "common.cancel").click();
+      await until(/** Cancel after a failed write only discards the draft. */ () => !root.isConnected, "Failed Save draft could not cancel");
+      closeManagers();
+      passed("failed Save reports not saved and Cancel preserves the previous style");
 
       root = await open("tag");
       root.querySelector(
@@ -735,6 +758,22 @@ function start() {
         "active on-demand graph and tag priority retain prepared editing authority without source work",
         { indexingMode: p.settings.indexingMode }
       );
+
+      root = await open("property");
+      root.querySelector('input[aria-label="' + p.translator("styles.propertyValue") + '"]').value = key;
+      await save(root);
+      const retainedProperty = JSON.stringify(p.settings.noteTypeStyles[key]);
+      root = await open("tag", "#" + key);
+      button(root, "common.delete").click();
+      await until(/** Deleting a tag style must leave the identically named property family untouched. */ () => !root.isConnected, "Tag Delete did not close");
+      closeManagers();
+      check(!(await stored()).tagNodeStyles["#" + key] && JSON.stringify(p.settings.noteTypeStyles[key]) === retainedProperty,
+        "Tag Delete affected the property family or failed persistence");
+      passed("tag Delete persists and preserves identically named property style");
+      root = await open("tag");
+      root.querySelector('input[aria-label="' + p.translator("styles.tagPrefix") + '"]').value = key;
+      root.querySelector('input[aria-label="' + p.translator("styles.labelPrefix") + '"]').value = "Style ";
+      await save(root);
 
       c.ownsSettings = true;
       p.openSettings();

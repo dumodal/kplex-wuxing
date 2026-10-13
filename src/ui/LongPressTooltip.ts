@@ -9,6 +9,9 @@ const LONG_PRESS_MS = 450;
 const TOOLTIP_LIFETIME_MS = 1800;
 const MOVE_TOLERANCE_PX = 10;
 
+/** Dedicated callouts share the touch gesture guard without rendering a second hint. */
+export const KPLEX_CONTROL_LONG_PRESS_EVENT = "kplex-control-long-press";
+
 type DocumentState = {
   users: number;
   cleanup: () => void;
@@ -53,6 +56,7 @@ function hoverTooltipTarget(target: EventTarget | null): HTMLElement | null {
   const element = (target as Element).closest<HTMLElement>("button[aria-label], input[aria-label], [role=button][aria-label], [data-kplex-control-tooltip], [data-kplex-long-press-tooltip]");
   if (!element?.closest("[data-kplex-tooltip-scope]")) return null;
   const control = element.matches("input") ? element.closest<HTMLElement>("[data-kplex-control-tooltip]") ?? element : element;
+  if (control.dataset.kplexTooltip === "callout") return null;
   return control.matches(":disabled") || control.querySelector(":disabled") ? null : control;
 }
 
@@ -202,7 +206,14 @@ export function installKplexLongPressTooltips(doc: Document): () => void {
       // A browser-generated click normally follows pointerup immediately. Expire the guard so a
       // later, intentional tap on the same button is never swallowed if no click was synthesized.
       suppressClickTimer = view.setTimeout(clearSuppressedClick, 1_000);
-      showTooltip(activeTarget);
+      if (activeTarget.dataset.kplexTooltip === "callout") {
+        if (activeTarget.isConnected && activeTarget.ownerDocument === doc) {
+          const ControlEvent = (view as Window & { Event: typeof Event }).Event;
+          activeTarget.dispatchEvent(new ControlEvent(KPLEX_CONTROL_LONG_PRESS_EVENT));
+        }
+      } else {
+        showTooltip(activeTarget);
+      }
     }, LONG_PRESS_MS);
   };
 
