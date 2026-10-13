@@ -400,6 +400,21 @@ pointer events and desktop emulation do not prove physical Android/iOS touch,
 mobile lifecycle or actual paint latency; check sidebar reveal, central double
 taps versus pan/long-press, and the compact rails on a physical phone separately.
 
+## Style operation acceptance
+
+After exact-build staging, run `npm run verify:obsidian:style-operations` with the three explicit
+`kplex-test-small` vault variables and a fresh `KPLEX_HOST_REPORT_DIR`. Run native and browser lanes
+serially. The driver exercises the real node-style manager/editor with no graph view and an active
+on-demand graph, controlled storage and post-save refresh failures, repeated submissions, pending
+Cancel/Escape, native Settings subpages in their owning window, and durable plugin reload.
+
+Warm startup and drain retired demand before attributing work to styles. Native Markdown file-open
+reads remain in the report, separately identified by their actual caller; unknown/plugin reads stay
+strict. Settings subpages are siblings of the root tab container in the owning document. The driver
+uses the actual native modal backdrop for cleanup, rejects pre-existing style dialogs, and restores
+settings, layout, follow ownership, probes and configuration bytes. DOM activation is programmatic;
+physical touch and perceived latency remain separate. See the [style validation record](docs/validation/style-operations-2026-10-13.md).
+
 ## Sidecar navigation acceptance
 
 After exact-build staging, run `npm run verify:obsidian:sidecar-latency` with the three explicit

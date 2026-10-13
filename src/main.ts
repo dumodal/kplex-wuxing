@@ -1,6 +1,8 @@
 /**
  * Obsidian plugin lifecycle and host orchestration for indexing, navigation and vault mutations. Portable owners determine semantics; this host boundary supplies effects, cleanup and localized product feedback. Native metadata events request finite visible presentation repair independently of semantic readiness. Passive document synchronization preserves the current representation of exact matching native destinations; explicit opening and source inspection retain their separate navigation contracts. Support reporting projects retained facts without starting index work; this lifetime owns its bounded recorder and native report dialogs. Per-note Markdown zoom preferences follow Vault rename/delete events independently of index readiness.
  * Remote node image consent publishes synchronously before persistence and never requests semantics.
+ * Style-manager drafts commit on the settings disk queue before live publication; style-only
+ * completion refreshes cached presentation without clearing or reacquiring semantic scopes.
  * Surface registration releases menus in its captured rendering document before migration/close retires that realm.
  * Linked-tab follow delegates managed companions to the Sidecar request owner so parallel App observations cannot reopen one destination twice.
  * Deletion captures bounded pre-trash property/body approval, writes only confirmed fields and retains
@@ -11,10 +13,10 @@
  * Folder/tag notices supply complete literal references to the shared localization formatter.
  */
 import { FileView, MarkdownView, Menu, Notice, Platform, Plugin, TFile, TFolder, apiVersion, getLanguage, getAllTags, normalizePath, setIcon, type Editor, type HoverParent, type WorkspaceLeaf } from "obsidian";
-import { captureSettingsPolicy, classifySettingsChange, type SettingsPolicy } from "./core/graph/settingsPolicy";
+import { captureSettingsPolicy, classifySettingsChange, isStyleOnlySettingsChange, type SettingsPolicy } from "./core/graph/settingsPolicy";
 import { removeMarkdownZoomModes, renameMarkdownZoomModes } from "./core/plex/markdownZoomPreferences";
 import { GraphIndex } from "./index/GraphIndex";
-import { DEFAULT_SETTINGS, KplexSettingTab, migrateAndMergeSettings, importExcaliBrainGraphSettings, type DocumentSyncMode, type KplexSettings, type KplexLayoutProfile, type KplexViewSurface, type SidecarPosition } from "./settings";
+import { DEFAULT_SETTINGS, KplexSettingTab, migrateAndMergeSettings, importExcaliBrainGraphSettings, type DocumentSyncMode, type KplexSettings, type KplexLayoutProfile, type KplexViewSurface, type SidecarPosition, type StyleSettingsDraft, type StyleCommitResult } from "./settings";
 import { KPLEX_VIEW_TYPE, KPLEX_SIDEPANEL_VIEW_TYPE, KplexView, KplexSidepanelView } from "./ui/KplexView";
 import { RelationModal, type RelationModalOptions } from "./ui/RelationModal";
 import { NewRelatedNoteModal, type RelatedNoteInvocation } from "./ui/NewRelatedNoteModal";
@@ -1498,8 +1500,8 @@ export default class KplexPlugin extends Plugin {
   }
 
   /** Omit runtime recovery markers while retaining the actual future schema in its original field. */
-  private settingsSnapshotForPersistence(actionPreferences: unknown): Record<string, unknown> {
-    const { actionPreferencesFuture: _runtimeFuture, ...settings } = this.settings;
+  private settingsSnapshotForPersistence(actionPreferences: unknown, source: KplexSettings = this.settings): Record<string, unknown> {
+    const { actionPreferencesFuture: _runtimeFuture, ...settings } = source;
     return { ...settings, actionPreferences };
   }
 
@@ -1508,6 +1510,59 @@ export default class KplexPlugin extends Plugin {
     return this.enqueueSettingsWrite(/** Capture after earlier workflow saves have actually committed. */ () => this.saveData(
       this.settingsSnapshotForPersistence(this.settings.actionPreferencesFuture ?? this.settings.actionPreferences),
     ));
+  }
+
+  /**
+   * Commit a style-manager draft through the common disk queue before publishing its live fields.
+   * Each queued edit starts from the latest live styles at its serialized boundary; unrelated settings and action writes
+   * retain their owners. A storage rejection leaves memory unchanged. After persistence, refresh
+   * failure is a saved outcome with a recovery hint, never a destructive retry or semantic rebuild.
+   */
+  async updateStyleSettings(edit: (draft: StyleSettingsDraft) => void): Promise<StyleCommitResult> {
+    let persisted = false;
+    try { await this.enqueueSettingsWrite(/** Capture the latest live settings only when this edit owns the disk queue. */ async () => {
+      if (this.unloading) throw new Error("K-Plex is unloading");
+      const source = this.settings;
+      const before = captureSettingsPolicy(source);
+      const draft: StyleSettingsDraft = structuredClone({
+        noteTypeStyles: { ...source.noteTypeStyles }, tagNodeStyles: { ...source.tagNodeStyles },
+        tagStyleList: [...source.tagStyleList], hierarchyLinkStyles: { ...source.hierarchyLinkStyles },
+      });
+      edit(draft);
+      const next = { ...source, ...draft };
+      const policy = captureSettingsPolicy(next);
+      const effects = classifySettingsChange(before, policy);
+      await this.saveData(this.settingsSnapshotForPersistence(source.actionPreferencesFuture ?? source.actionPreferences, next));
+      persisted = true;
+      // Only this operation's style fields are published, never a stale whole-settings snapshot.
+      // Queued style editors see this commit before preparing their own drafts.
+      const current = captureSettingsPolicy(this.settings);
+      const values = { ...(this.savedSettingsPolicy ?? current).values };
+      for (const key of effects.changedKeys) {
+        // Legacy imports/controls publish live drafts before their own queued write. A later
+        // change to this field owns its next value; do not overwrite it with the older commit.
+        if (current.values[key] !== before.values[key]) continue;
+        if (key === "noteTypeStyles") this.settings.noteTypeStyles = draft.noteTypeStyles;
+        else if (key === "tagNodeStyles") this.settings.tagNodeStyles = draft.tagNodeStyles;
+        else if (key === "tagStyleList") this.settings.tagStyleList = draft.tagStyleList;
+        else if (key === "hierarchyLinkStyles") this.settings.hierarchyLinkStyles = draft.hierarchyLinkStyles;
+        values[key] = policy.values[key];
+      }
+      // Advance only the committed style projection; a concurrent semantic edit keeps its own fence.
+      this.savedSettingsPolicy = { values };
+    }); } catch (error) {
+      if (!persisted) throw error instanceof Error ? error : new Error(String(error));
+      console.error("K-Plex saved style publication failed", error);
+      return { refreshPending: true };
+    }
+    if (this.unloading) return { refreshPending: false };
+    try {
+      await this.index.refreshPresentationSettings();
+      return { refreshPending: false };
+    } catch (error) {
+      console.error("K-Plex saved style presentation refresh failed", error);
+      return { refreshPending: true };
+    }
   }
 
   /** Navigate to the declarative shortcut page, including when optional commands are unpublished. */
@@ -1712,8 +1767,9 @@ export default class KplexPlugin extends Plugin {
     await this.index.refreshPresentationSettings();
     if (effects.semanticInvalidation) await this.index.refreshSemanticSettings();
     // Device typography changes reuse the existing graph and cannot expand a requested scope.
-    // Preserve the legacy refresh for all other render changes, including mixed writes.
-    else if (effects.render && !effects.typographyOnly && !consentOnly) await this.index.refreshSemanticSettings();
+    // Style dictionaries/order also reuse semantic coverage. Preserve the legacy refresh
+    // for other render changes and mixed writes, which may change requested scopes.
+    else if (effects.render && !effects.typographyOnly && !consentOnly && !isStyleOnlySettingsChange(effects)) await this.index.refreshSemanticSettings();
     // Workflow-only callers can still request their historical view notification. Changed settings
     // use the separate presentation channel and never pretend relationship evidence changed.
     if ((!effects.render || effects.typographyOnly) && notifyIndex) this.index.notifyPresentation();
