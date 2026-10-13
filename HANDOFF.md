@@ -38,6 +38,10 @@ The exact build is installed in CLI-confirmed kplex-test-small; data.json was pr
 
 Evidence: [attachment and localization](docs/validation/sidecar-attachment-2026-10-13.md), [current artifact receipt](docs/validation/sidecar-attachment-locales-2026-10-13.json), [index callout](docs/validation/index-status-callout-2026-10-13.md), [risk regression](docs/validation/risk-based-regression-2026-10-13.md). Historical artifact identities remain unchanged in their original receipts.
 
+## PR verification follow-up
+
+PR #152 is open. Its first CI run caught a test extractor locating useIndexStatus through a neighboring comment that changed during the callout fix. The fixture now selects the actual function declaration through the TypeScript AST; notification/visibility assertions are unchanged. The complete local indexing fixture passes after correction (`node scripts/run-indexing-tests.mjs`). Production sources/artifacts are unchanged.
+
 ## Remaining separately tracked observations
 
 Risk results retain 23 passed (maintainer accepted #21), one failed (#25 earlier ResizeObserver strict error gate), one pending (#14 physical Android). The old #25 burst is unresolved despite the new native runs capturing no errors. Windows production-vault search-vocabulary failure remains undiagnosed; production vault was not probed. Physical Android/screen-reader/popout-native attachment is not claimed. All validation deployments/probes were limited to kplex-test-small; sibling repositories remain untouched.
