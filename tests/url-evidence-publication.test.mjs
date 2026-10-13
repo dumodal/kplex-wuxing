@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import { MessageChannel } from 'node:worker_threads';
 import { webcrypto } from 'node:crypto';
 import { contributorBrowserBundle } from './support/contributorBrowserFixture.mjs';
+import { probeUrlPageCopies } from './support/urlPageCopyProbe.mjs';
 
 const bundle = await contributorBrowserBundle(['src/index/GraphIndex.ts', 'src/index/GraphBuilder.ts', 'src/core/graph/evidence.ts', 'src/core/graph/relations.ts']);
 /** Keep real graph/cache/compiler owners; only native Vault facts are controlled. */
@@ -49,6 +50,47 @@ function graphValue(index) {
 /** Add a distinguishable canonical original declaration; IDs are allocated by the real owner. */
 function declare(M, store, source, target, definition = source) {
   return store.addPair(source, target, 'child', M.RelationType.INFERRED, M.LinkDirection.TO, { sourceKind: 'body-url', definition });
+}
+
+test('URL page staging borrows replace-only facets while ordinary staging retains copied arrays', /** Check array identity and private replacement through the actual staging owner. */ () => {
+  const f=fixture();
+  try {
+    const builder=new f.M.GraphBuilder(f.index.plugin,f.index.app,new Map(),f.index.metadataParser,f.index.indexedDb,/** No competing native lifetime in this synchronous fixture. */ ()=>true);
+    const page=builder.createPage({path:'https://shared.example/path',name:'First',url:'https://shared.example/path',aliases:['First'],tags:['tag'],styleTags:['style']});
+    builder.addPage(f.index.urlState,page);
+    const retained={aliases:page.aliases,tags:page.tags,styleTags:page.styleTags};
+    for(const urlOnly of [false,true]){
+      const staged=builder.createPatchState(f.index.urlState,true,urlOnly).pages.get(page.path);
+      assert.notEqual(staged.neighbours,page.neighbours,'Adjacency remains privately copied');
+      for(const key of ['aliases','tags','styleTags'])assert.equal(staged[key]===retained[key],urlOnly,key);
+      staged.aliases=['Replacement'];staged.tags=[];staged.styleTags=[];
+      assert.deepEqual(page.aliases,['First']);assert.deepEqual(page.tags,['tag']);assert.deepEqual(page.styleTags,['style']);
+    }
+  } finally {f.close();}
+});
+
+for(const size of [256,512,1024,2048,4096]){
+  test(`one URL adjacency change copies zero entries from ${size}-entry retained facets`, /** Attribute clone work without hiding graph/evidence publication. */ async()=>{
+    const f=fixture(),i=f.index,target='https://shared.example/path';let probe;
+    try{
+      const first=f.add('First.md',`[First](${target})`);await i.publishUrlOwner(first.file,first.body,0,undefined,true);
+      const page=i.urlState.pages.get(target);
+      page.aliases=Array.from({length:size},/** Ordered retained vocabulary is independent of the new relationship. */ (_,n)=>`Alias ${n}`);
+      page.tags=['tag'];page.styleTags=['style'];
+      const retained={aliases:page.aliases,tags:page.tags,styleTags:page.styleTags},value=JSON.stringify(retained);
+      i.flushUrlPublication();const displayed=i.publishedUrlState.pages.get(target),displayedAliases=displayed.aliases;
+      const builder=new f.M.GraphBuilder(i.plugin,i.app,new Map(),i.metadataParser,i.indexedDb,/** The native source remains current through this bounded test. */ ()=>true);
+      const added=f.add('Added.md',`[First](${target})`);probe=probeUrlPageCopies(builder);
+      assert(await builder.patchUrlReferences(i.urlState,added.file,added.body,/** Preserve the actual exactly-once synchronous publisher. */ (_,publish)=>publish()));
+      assert.equal(probe.counts.aliasesCopied,0);assert.equal(probe.counts.tagsCopied,0);assert.equal(probe.counts.styleTagsCopied,0);
+      assert.equal(JSON.stringify(retained),value);assert.equal(displayed.aliases,displayedAliases);assert.equal(displayedAliases.length,size);
+      assert.equal(page.aliases,retained.aliases);assert(page.neighbours.has(added.file.path));
+      assert.equal(displayed.neighbours.has(added.file.path),false,'Displayed adjacency still excludes unflushed work');
+      assert.equal(probe.counts.neighboursCopied,3,'This checkpoint leaves adjacency copying explicit');
+      const remove=await builder.removeUrlOwner(i.urlState,added.file.path,/** Remove only this owner through the real publication boundary. */ (_,publish)=>publish());
+      assert(remove);assert.equal(JSON.stringify(retained),value);assert.equal(page.aliases,retained.aliases);
+    }finally{probe?.restore();f.close();}
+  });
 }
 
 test('bounded immediate private child adoption preserves tombstone/re-add order, duplicates, IDs and indexes', () => {

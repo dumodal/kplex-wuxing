@@ -15,6 +15,7 @@
  * URL-only pruning uses canonical lazy existence; ordinary Markdown retains its ordered iterator.
  * Sources with matching fingerprints publish field/cache/mtime changes without cloning adjacency
  * or adding evidence layers. Map-depth maintenance stays independent of maintenance for new forks.
+ * URL-only staging borrows replace-only alias/tag facets; adjacency remains privately copied.
  */
 import { yieldToHostTask } from "../adapters/obsidian/yieldToHostTask";
 import { Platform, TFile, type App } from "obsidian";
@@ -212,13 +213,18 @@ function isPatchOverlayMap<K, V>(map: Map<K, V>): map is PatchOverlayMap<K, V> {
   return map instanceof PatchOverlayMap;
 }
 
-function cloneGraphPage(page: GraphPage): GraphPage {
+/**
+ * Stage scalars and a private adjacency map. Only the isolated URL lane borrows array facets:
+ * every writer in that lane replaces arrays, including later aggregate alias publication. Ordinary
+ * Markdown callers retain their existing copied facets and no array mutation capability is added.
+ */
+function cloneGraphPage(page: GraphPage, shareArrayFacets = false): GraphPage {
   return {
     ...page,
     neighbours: new Map(page.neighbours),
-    aliases: [...page.aliases],
-    tags: [...page.tags],
-    styleTags: [...page.styleTags],
+    aliases: shareArrayFacets ? page.aliases : [...page.aliases],
+    tags: shareArrayFacets ? page.tags : [...page.tags],
+    styleTags: shareArrayFacets ? page.styleTags : [...page.styleTags],
     transient: page.transient ? { ...page.transient } : undefined,
   };
 }
@@ -304,9 +310,10 @@ export class GraphBuilder {
   }
 
 
-  private createPatchState(state: GraphState, forkEvidence = true): GraphState {
+  /** Prepare private map/evidence overlays; URL-only replace-only facets may borrow their arrays. */
+  private createPatchState(state: GraphState, forkEvidence = true, shareArrayFacets = false): GraphState {
     return {
-      pages: new PatchOverlayMap(state.pages, cloneGraphPage),
+      pages: new PatchOverlayMap(state.pages, /** Clone only this lane's permitted mutable page fields. */ page => cloneGraphPage(page, shareArrayFacets)),
       lowercasePathMap: new PatchOverlayMap(state.lowercasePathMap),
       evidence: forkEvidence ? state.evidence.fork() : state.evidence,
       discoveredFields: new PatchOverlayMap(state.discoveredFields, (value) => ({ ...value })),
@@ -698,7 +705,7 @@ export class GraphBuilder {
     canAdoptEvidence?: (evidence: RelationEvidenceStore) => boolean): Promise<Set<string> | null> {
     const revision = this.captureFileRevision(file), sourcePath = revision.path;
     if (!this.isCurrent() || !(await this.compactPublishedPatchLayers(state))) return null;
-    const staged = this.createPatchState(state, true);
+    const staged = this.createPatchState(state, true, true);
     if (!staged.pages.has(sourcePath)) this.addPage(staged, this.createPage({ path: sourcePath, name: file.basename, file }));
     const source = entityFactForFile(file);
     const preparer = new NormalizedSourcePatchPreparer(nodeId(sourcePath), this.fullCompilerSettings(),
@@ -752,7 +759,7 @@ export class GraphBuilder {
   async removeUrlOwner(state: GraphState, path: string, publisher: PatchFilePublisher,
     canAdoptEvidence?: (evidence: RelationEvidenceStore) => boolean): Promise<Set<string> | null> {
     if (!(await this.compactPublishedPatchLayers(state))) return null;
-    const staged = this.createPatchState(state, true), affected = new Set<string>([path]), urls = new Set<string>();
+    const staged = this.createPatchState(state, true, true), affected = new Set<string>([path]), urls = new Set<string>();
     for (const item of staged.evidence.declarationsTouchingIterator(path)) {
       affected.add(item.declaredTargetPath);
       if (item.sourceKind !== "url-origin" && staged.pages.get(item.declaredTargetPath)?.url) urls.add(item.declaredTargetPath);
