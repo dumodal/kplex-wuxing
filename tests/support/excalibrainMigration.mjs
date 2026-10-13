@@ -24,7 +24,7 @@ export const localPreferenceKeys = [
   "embedCentralNode", "centralNodeMarkdownMode", "centralNodeMarkdownZoomModes", "centerEmbedWidth", "centerEmbedHeight",
   "startInPopout", "sidecarOpen", "sidecarPosition", "sidecarLastFilePath", "sidecarLastUrl",
   "mouseInteractionMode", "toolbarExpanded", "kplexInitialized", "startupIndexInfoBubbleSeen",
-  "deletePromptInitialized", "confirmFileDelete", "editNewNodeAfterCreate", "newNodeDefaultType",
+  "deletePromptInitialized", "confirmFileDelete", "removeOntologyLinksOnDelete", "editNewNodeAfterCreate", "newNodeDefaultType",
 ];
 
 /** Compare complete imported dictionaries and local preferences without masking changed fields. */

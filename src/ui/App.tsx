@@ -6,6 +6,7 @@
  * Cross-link visibility reads shared persisted settings rather than temporary quick-filter or Find snapshots.
  * Action-dispatched sync/Sidecar menus resolve fresh surface-local control anchors without routing DOM events through the action manager.
  * Native follow retains the latest canonical file while hidden and suppresses fallback scenes/motion during partial hydration.
+ * Directional Sidecar attachment controls project host eligibility and use the same native follow owner for inward synchronization.
  */
 import {
   useCallback,
@@ -36,6 +37,7 @@ import { WanderController } from "../application/WanderController";
 import { WanderControls } from "./features/WanderControls";
 import type { KplexDisplayModes } from "./KplexDisplayModes";
 import { physicalPositionLabel } from "./features/positionPresentation";
+import { SidecarAttachControls } from "./features/SidecarAttachControls";
 import { effectiveActionBindings } from "../core/plex/actionPreferences";
 import { formatActionBinding } from "./actionPresentation";
 import { surfaceAction } from "./surfaceActionImplementation";
@@ -56,7 +58,7 @@ import { VaultStatsModal } from "./VaultStatsModal";
 import { EMPTY_PLEX_FILTER, PlexFilter, type GraphFilterLayoutMode, type PlexFilterState, type PlexVisibilitySetting } from "./PlexFilter";
 import { compilePlexFilter } from "../lens/SimplePlexFilter";
 import { compileGraphLensDefinitions, type GraphLensDefinition } from "../lens/GraphLens";
-import { installKplexLongPressTooltips } from "./LongPressTooltip";
+import { installKplexLongPressTooltips, KPLEX_CONTROL_LONG_PRESS_EVENT } from "./LongPressTooltip";
 
 type BooleanToolbarSetting = PlexVisibilitySetting | "renderAlias" | "showCrossLinks";
 type IndexStatus = ReturnType<KplexPlugin["getIndexStatus"]>;
@@ -102,7 +104,7 @@ function useIndexStatus(plugin: KplexPlugin, hostLeaf: WorkspaceLeaf): IndexStat
   return status;
 }
 
-/** Show status on hover and open the vault summary by double-click, stationary double-tap or keyboard. */
+/** Show one status callout on hover/long press; double-tap and keyboard open the vault summary. */
 function IndexStatusIndicator({
   status,
   indicatorRef,
@@ -121,40 +123,53 @@ function IndexStatusIndicator({
   const taps = useRef(new DoubleTapGesture());
   const press = useRef<{ time: number; x: number; y: number } | null>(null);
   const lastTouch = useRef(-1000);
-  return <button
-    ref={indicatorRef}
-    type="button"
-    className={`kplex-index-status${status.upToDate ? " is-ready" : status.phase === "incomplete" ? " is-incomplete" : " is-updating"}`}
-    aria-label={status.label}
-    aria-expanded={open}
-    aria-haspopup="dialog"
-    onMouseEnter={onHoverStart}
-    onMouseLeave={onHoverEnd}
-    onFocus={onHoverStart}
-    onBlur={onHoverEnd}
-    onDoubleClick={/** Ignore the mouse double-click synthesized after a handled touch pair. */ (event) => {
-      if (event.timeStamp - lastTouch.current > 800) onToggle();
-    }}
-    onPointerDown={/** Record short stationary touch presses; long-press tooltips retain their own guard. */ (event) => {
-      if (event.pointerType === "touch") press.current = { time: event.timeStamp, x: event.clientX, y: event.clientY };
-    }}
-    onPointerCancel={() => { press.current = null; taps.current.reset(); }}
-    onPointerUp={/** Use completed tap pairs because mobile WebViews need not synthesize double-click. */ (event) => {
-      if (event.pointerType !== "touch") return;
-      lastTouch.current = event.timeStamp;
-      const start = press.current;
-      press.current = null;
-      if (!start || event.timeStamp - start.time > 400 || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 7) {
-        taps.current.reset(); return;
-      }
-      if (taps.current.complete("index-status", event.timeStamp, event.clientX, event.clientY)) onToggle();
-    }}
-    onKeyDown={/** Keep keyboard activation available without opening on a single pointer click. */ (event) => {
-      if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      onToggle();
-    }}
-  />;
+  const localRef = useRef<HTMLButtonElement>(null);
+  const controlRef = indicatorRef ?? localRef;
+  const nameId = useId();
+  useEffect(/** The shared stationary-touch owner opens this control's dedicated callout. */ () => {
+    const control = controlRef.current;
+    if (!control) return;
+    control.addEventListener(KPLEX_CONTROL_LONG_PRESS_EVENT, onHoverStart);
+    return () => control.removeEventListener(KPLEX_CONTROL_LONG_PRESS_EVENT, onHoverStart);
+  }, [controlRef, onHoverStart]);
+  return <>
+    <span id={nameId} className="kplex-accessible-name">{status.label}</span>
+    <button
+      ref={controlRef}
+      type="button"
+      className={`kplex-index-status${status.upToDate ? " is-ready" : status.phase === "incomplete" ? " is-incomplete" : " is-updating"}`}
+      aria-labelledby={nameId}
+      data-kplex-tooltip="callout"
+      aria-expanded={open}
+      aria-haspopup="dialog"
+      onMouseEnter={onHoverStart}
+      onMouseLeave={onHoverEnd}
+      onFocus={onHoverStart}
+      onBlur={onHoverEnd}
+      onDoubleClick={/** Ignore the mouse double-click synthesized after a handled touch pair. */ (event) => {
+        if (event.timeStamp - lastTouch.current > 800) onToggle();
+      }}
+      onPointerDown={/** Record short stationary taps; the shared guard owns completed long presses. */ (event) => {
+        if (event.pointerType === "touch") press.current = { time: event.timeStamp, x: event.clientX, y: event.clientY };
+      }}
+      onPointerCancel={() => { press.current = null; taps.current.reset(); }}
+      onPointerUp={/** Use completed tap pairs because mobile WebViews need not synthesize double-click. */ (event) => {
+        if (event.pointerType !== "touch") return;
+        lastTouch.current = event.timeStamp;
+        const start = press.current;
+        press.current = null;
+        if (!start || event.timeStamp - start.time > 400 || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 7) {
+          taps.current.reset(); return;
+        }
+        if (taps.current.complete("index-status", event.timeStamp, event.clientX, event.clientY)) onToggle();
+      }}
+      onKeyDown={/** Keep keyboard activation available without opening on a single pointer click. */ (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        onToggle();
+      }}
+    />
+  </>;
 }
 
 /** Render a labeled toolbar action and pass its owning-window click event to native menu callers. */
@@ -923,6 +938,16 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     "view.center-editor.toggle": uiAction(/** Existing embedded editor capability and cleanup remain graph-owned. */ () => setCentralNodeEditorEnabled(!plugin.settings.embedCentralNode)),
     "view.sync.choose": uiAction(/** Open the same keyboard-accessible native sync menu. */ () => showDocumentSyncMenu()),
     "view.sidecar.toggle": uiAction(/** Toggle only the managed companion for this owning leaf. */ () => page ? plugin.toggleSidecar(hostLeaf, page) : undefined, () => surface !== "sidepanel" && Boolean(page)),
+    "view.sidecar.attach-from-center": uiAction(/** Reuse the eligible adjacent pane and populate it from this center. */ () => plugin.attachAdjacentSidecar(hostLeaf, "to-leaf", page),
+      /** Folder/tag/ghost centers cannot populate an ordinary document pane. */ () => Boolean((page?.file || page?.url) && plugin.getAdjacentSidecarCandidate(hostLeaf))),
+    "view.sidecar.attach-from-pane": uiAction(/** Preserve the pane's content and reuse native follow's partial-index demand handover. */ async () => {
+      const target = await plugin.attachAdjacentSidecar(hostLeaf, "to-plex");
+      if (target?.file) observeDocumentFollow(target.file);
+      else if (target) {
+        const indexed = plugin.index.get(target.path);
+        if (indexed) activate(indexed, true, false);
+      }
+    }, /** An empty pane has nothing to bring into the Plex. */ () => plugin.getAdjacentSidecarTarget(hostLeaf) !== null),
     "view.sidecar.detach": uiAction(/** Detach the existing companion without selecting a different native leaf. */ () => plugin.detachSidecar(hostLeaf), () => surface !== "sidepanel" && plugin.isSidecarOpen(hostLeaf)),
     "view.sidecar.collapse-plex": uiAction(/** Reuse the existing host fold control. */ () => plugin.collapsePlexForSidecar(hostLeaf), () => surface !== "sidepanel" && plugin.isSidecarOpen(hostLeaf)),
     "view.sidecar.position": uiAction(/** Explicit choices and keyboard menu share the same host move implementation. */ context => {
@@ -959,6 +984,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
   const sidecarPosition = sidecarAvailable ? plugin.getSidecarPosition(hostLeaf) : null;
   const sidecarOpen = Boolean(sidecarPosition);
   const sidecarEdgePosition = sidecarPosition ?? plugin.settings.sidecarPosition;
+  const adjacentSidecar = sidecarAvailable && !sidecarOpen ? plugin.getAdjacentSidecarCandidate(hostLeaf) : null;
   const foldPlexIcon = sidecarEdgePosition === "left" ? "panel-right-close"
     : sidecarEdgePosition === "above" ? "panel-bottom-close"
       : sidecarEdgePosition === "below" ? "panel-top-close"
@@ -1198,6 +1224,12 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
 
       {sidecarAvailable && <div className={`kplex-sidecar-controls is-${sidecarEdgePosition}${sidecarOpen ? " is-open" : " is-closed"}`} aria-label={translate("app.sidecarControls")}>
         <button type="button" className="kplex-sidecar-primary" aria-pressed={sidecarOpen} aria-label={sidecarOpen ? translate("app.closeSidecar") : translate("app.openSidecarAt", { position: physicalPositionLabel(sidecarEdgePosition, translate) })} onClick={() => runAction("view.sidecar.toggle")}><ObsidianIcon name={sidecarOpen ? closeSidecarIcon : openSidecarIcon} size={16} /></button>
+        {adjacentSidecar && <SidecarAttachControls position={sidecarEdgePosition}
+          toLeaf={Boolean(page?.file || page?.url)} toPlex={plugin.getAdjacentSidecarTarget(hostLeaf) !== null}
+          toLeafLabel={translate("actions.view.sidecar.attach-from-center")} toPlexLabel={translate("actions.view.sidecar.attach-from-pane")}
+          icon={/** Host supplies the installed Lucide icon renderer. */ name => <ObsidianIcon name={name} size={16} />}
+          onToLeaf={/** All entry points share typed action availability and ownership. */ () => runAction("view.sidecar.attach-from-center")}
+          onToPlex={/** Reverse flow keeps the exact initiating surface. */ () => runAction("view.sidecar.attach-from-pane")} />}
         {sidecarOpen && <>
           <button aria-label={translate("app.foldForSidecar")} onClick={() => runAction("view.sidecar.collapse-plex")}><ObsidianIcon name={foldPlexIcon} size={15} /></button>
           <button ref={sidecarMoveButtonRef} type="button" aria-haspopup="menu" data-kplex-menu-trigger="sidecar-position" aria-label={translate("app.moveSidecar")} onClick={() => runAction("view.sidecar.position")}><ObsidianIcon name="move" size={15} /></button>

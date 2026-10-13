@@ -10,7 +10,7 @@ import { build } from 'esbuild';
 
 const temporary = mkdtempSync(join(tmpdir(), 'kplex-action-host-'));
 process.on('exit', () => rmSync(temporary, { recursive: true, force: true }));
-await build({ stdin: { contents: 'export * from "./src/core/plex/actionPreferences"; export * from "./src/adapters/obsidian/actionNode"; export * from "./src/application/ActionManager"; export * from "./src/adapters/obsidian/relationshipMetadataWrite"; export * from "./src/core/parser/metadata"; export * from "./src/index/ForegroundWorkScheduler";', resolveDir: fileURLToPath(new URL('..', import.meta.url)) }, outfile: join(temporary, 'contracts.mjs'), bundle: true, platform: 'node', format: 'esm' });
+await build({ stdin: { contents: 'export * from "./src/core/plex/actionPreferences"; export * from "./src/adapters/obsidian/actionNode"; export * from "./src/application/ActionManager"; export * from "./src/adapters/obsidian/relationshipMetadataWrite"; export * from "./src/core/parser/metadata"; export * from "./src/index/ForegroundWorkScheduler"; export * from "./src/adapters/obsidian/settingsNavigation";', resolveDir: fileURLToPath(new URL('..', import.meta.url)) }, outfile: join(temporary, 'contracts.mjs'), bundle: true, platform: 'node', format: 'esm' });
 const contracts = await import(pathToFileURL(join(temporary, 'contracts.mjs')));
 
 /** Extract the real callback with its sync/async contract intact, excluding native startup. */
@@ -31,6 +31,82 @@ function method(name, dependencies = {}) {
 const update = method('updateActionPreferences', { ...contracts, readObsidianPresentationEnvironment: () => ({ keyConvention: 'windows' }), window: {} });
 const enqueue = method('enqueueSettingsWrite');
 const persist = method('persistSettingsSnapshot');
+
+/** A newly opened native split must retain its ownership until geometry has settled. */
+test('Sidecar open protects its native split through pending layout and releases on failure', async () => {
+  const open = method('openSidecar'), host = {}, leaf = {}, page = {};
+  let releaseLayout, notified = false, layoutCalls = 0, repairedSize = false;
+  const owner = { sidecarMovingHosts: new Set(),
+    ensureSidecarLeaf() { assert(this.sidecarMovingHosts.has(host)); return leaf; },
+    async openPageInSidecarLeaf(actualLeaf, actualPage) { assert.equal(actualLeaf, leaf); assert.equal(actualPage, page); assert(this.sidecarMovingHosts.has(host)); },
+    waitForWorkspaceLayout() { return ++layoutCalls === 1 ? new Promise(resolve => { releaseLayout = resolve; }) : Promise.resolve(); },
+    ensureAdjacentFileLeafSize(actualHost, actualLeaf) { assert.equal(actualHost, host); assert.equal(actualLeaf, leaf); assert(this.sidecarMovingHosts.has(host)); repairedSize = true; },
+    async saveSettings() { assert(this.sidecarMovingHosts.has(host)); },
+    notifySidecar() { notified = true; }
+  };
+  const pending = open.call(owner, host, page); await Promise.resolve();
+  assert(owner.sidecarMovingHosts.has(host)); assert.equal(notified, false);
+  releaseLayout(); await pending; assert.equal(notified, true); assert.equal(repairedSize, true); assert.equal(owner.sidecarMovingHosts.has(host), false);
+  owner.openPageInSidecarLeaf = async () => { throw Error('native open failed'); };
+  await assert.rejects(open.call(owner, host, page), /native open failed/);
+  assert.equal(owner.sidecarMovingHosts.has(host), false);
+  owner.sidecarMovingHosts.add(host);
+  await assert.rejects(open.call(owner, host, page), /native open failed/);
+  assert(owner.sidecarMovingHosts.has(host), 'An enclosing move retains its existing guard');
+});
+
+/** Actual native candidate selection is spatial, visible-tab scoped and non-owning. */
+test('explicit Sidecar candidates respect all edges, ambiguity, visibility and ownership', () => {
+  const doc = {}, otherDoc = {}, host = { view: { containerEl: { ownerDocument: doc }, getViewType: () => 'kplex' } };
+  const leaf = (group, side = 'right', kind = 'markdown', visible = true) => ({ group, side, visible, kind, view: { containerEl: { ownerDocument: doc } }, getViewState() { return { type: this.kind }; } });
+  const group = {}, active = leaf(group), hidden = leaf(group, 'right', 'markdown', false);
+  const owner = { settings: { sidecarPosition: 'right' }, sidecarMovingHosts: new Set(), leaves: [active, hidden],
+    leafIsAttached: () => true, isSidecarOpen: () => false, leafGroupElement: item => item.group,
+    leafIsVisible: item => item.visible, isKplexLeaf: item => item.kind === 'kplex', isManagedSidecarLeaf: item => !!item.managed,
+    fileForLeaf: item => item.kind === 'markdown' ? { path: 'Pane.md' } : null, indexedUrlPathForLeaf: () => null,
+    adjacentPosition: (hostLeaf, item) => item.view.containerEl.ownerDocument === hostLeaf.view.containerEl.ownerDocument ? item.side : null,
+    app: { workspace: { iterateAllLeaves(callback) { owner.leaves.forEach(callback); } } }
+  };
+  const candidate = method('getAdjacentSidecarCandidate', { KPLEX_VIEW_TYPE: 'kplex', KPLEX_SIDEPANEL_VIEW_TYPE: 'sidepanel', isEmbeddedMarkdownLeaf: item => !!item.embedded });
+  for (const side of ['left', 'right', 'above', 'below']) {
+    owner.settings.sidecarPosition = side; active.side = hidden.side = side;
+    assert.equal(candidate.call(owner, host), active); assert.equal(active.managed, undefined);
+  }
+  owner.leaves.push(leaf({}, 'below', 'utility')); assert.equal(candidate.call(owner, host), null, 'A second edge group is ambiguous'); owner.leaves.pop();
+  active.managed = true; assert.equal(candidate.call(owner, host), null); active.managed = false;
+  active.embedded = true; assert.equal(candidate.call(owner, host), null); active.embedded = false;
+  active.kind = 'empty'; assert.equal(candidate.call(owner, host), active);
+  active.kind = 'utility'; assert.equal(candidate.call(owner, host), null);
+  active.kind = 'markdown'; active.view.containerEl.ownerDocument = otherDoc; assert.equal(candidate.call(owner, host), null);
+  active.view.containerEl.ownerDocument = doc; owner.sidecarMovingHosts.add(host); assert.equal(candidate.call(owner, host), null); owner.sidecarMovingHosts.clear();
+  owner.startupInitializing = true; assert.equal(candidate.call(owner, host), null); owner.startupInitializing = false;
+  host.view.getViewType = () => 'sidepanel'; assert.equal(candidate.call(owner, host), null);
+});
+
+/** Explicit attachment owns an existing leaf only after acceptance, preserves reverse content and rolls back failures. */
+test('Sidecar attachment uses both initial flows, rejects empty reverse flow and releases stale completion', async () => {
+  const host = {}, leaf = {}, file = { path: 'Pane.md' }, page = { file: { path: 'Center.md' } };
+  const attach = method('attachAdjacentSidecar', { isWebViewerAvailable: () => true });
+  const make = () => ({ settings: { sidecarPosition: 'right', documentSyncMode: 'off', sidecarOpen: false, sidecarLastFilePath: '', sidecarLastUrl: '' },
+    sidecarMovingHosts: new Set(), sidecarLeaves: new Map(), currentFile: file, openCalls: 0,
+    getAdjacentSidecarCandidate() { return this.sidecarLeaves.has(host) || this.sidecarMovingHosts.has(host) ? null : leaf; },
+    fileForLeaf() { return this.currentFile; }, indexedUrlPathForLeaf: () => null, webViewerUrlForLeaf: () => null,
+    app: { vault: { getFileByPath: () => page.file } }, leafIsAttached: () => true, adjacentPosition: () => 'right',
+    notifySidecar() {}, async saveSettings() {}, async openPageInSidecarLeaf(actual, center) { assert.equal(actual, leaf); assert.equal(center, page); this.openCalls++; this.currentFile = center.file; },
+    async releaseSidecar() { this.sidecarLeaves.delete(host); this.linkedDocumentLeaf = null; this.settings.sidecarOpen = false; }
+  });
+  let owner = make(); owner.currentFile = null;
+  assert.equal(await attach.call(owner, host, 'to-plex'), null); assert.equal(owner.sidecarLeaves.size, 0);
+  await attach.call(owner, host, 'to-leaf', page); assert.equal(owner.openCalls, 1); assert.equal(owner.sidecarLeaves.get(host), leaf); assert.equal(owner.settings.documentSyncMode, 'pinned');
+  owner = make(); assert.deepEqual(await attach.call(owner, host, 'to-plex'), {file, path:file.path}); assert.equal(owner.openCalls, 0, 'Reverse attachment cannot overwrite native content/mode');
+  owner = make(); await attach.call(owner, host, 'to-leaf', {path:'folder:/'}); assert.equal(owner.sidecarLeaves.size, 0, 'A non-document center cannot clear the pane');
+  owner = make(); owner.openPageInSidecarLeaf = async () => { throw Error('open failed'); };
+  await assert.rejects(attach.call(owner, host, 'to-leaf', page), /open failed/); assert.equal(owner.sidecarLeaves.size, 0); assert.equal(owner.settings.documentSyncMode, 'off'); assert.equal(owner.sidecarMovingHosts.size, 0);
+  owner = make(); let finish; owner.saveSettings = () => new Promise(resolve => { finish = resolve; });
+  const pending = attach.call(owner, host, 'to-plex'); assert.equal(owner.sidecarLeaves.get(host), leaf);
+  assert.equal(await attach.call(owner, host, 'to-leaf', page), null, 'A pending attachment cannot be acquired twice');
+  owner.adjacentPosition = () => 'left'; finish(); assert.equal(await pending, null); assert.equal(owner.sidecarLeaves.size, 0); assert.equal(owner.sidecarMovingHosts.size, 0);
+});
 
 /** A surface release owns only its current leaf/document menu, including a native-hide timer. */
 test('surface disposal retires its menu and listeners without closing another owner or successor', () => {
@@ -196,10 +272,23 @@ test('delete confirmation cannot authorize replacement at the same path', async 
   const original = { path: 'A.md', extension: 'md' }, target = { path: original.path, file: original };
   let native = original; const notices = [];
   const current = { app: { vault: { getFileByPath: () => native }, fileManager: { trashFile: () => assert.fail('Replacement must not be trashed') } },
-    index: { pages:new Map([[target.path,target]]), get: () => target }, translator: key => key, captureDeleteNodePreview: async () => ({sources:[],hiddenFields:[],hiddenField:""}),
+    index: { pages:new Map([[target.path,target]]), get: () => target }, translator: key => key, settings: {removeOntologyLinksOnDelete:true}, captureDeleteNodePreview: async () => ({sources:[],hiddenFields:[],hiddenField:"",removeOntologyLinksOnDelete:true}),
     confirmDeleteNode: async () => { native = { path: original.path, extension: 'md' }; target.file = native; return true; } };
   const outcome = await method('deleteNode', { ...contracts, Notice: class { constructor(value) { notices.push(value); } } }).call(current, target);
   assert.equal(outcome.status, 'unavailable'); assert.equal(notices.length, 1);
+});
+
+/** Consent captures cleanup policy; a preference flip must never authorize trash or property writes. */
+test('changing automatic cleanup while deletion consent is open cancels the captured action', async () => {
+  const file = { path: 'A.md', extension: 'md' }, target = { path: file.path, file }, notices = [];
+  const current = { settings: { removeOntologyLinksOnDelete: true }, translator: key => key,
+    app: { vault: { getFileByPath: () => file }, fileManager: { trashFile: () => assert.fail('Changed consent must not trash') } },
+    index: { pages: new Map([[target.path, target]]), get: () => target },
+    captureDeleteNodePreview: async () => ({ sources: [], removeOntologyLinksOnDelete: true }),
+    confirmDeleteNode: async () => { current.settings.removeOntologyLinksOnDelete = false; return true; } };
+  const result = await method('deleteNode', { ...contracts, Notice: class { constructor(message) { notices.push(message); } } }).call(current, target);
+  assert.equal(result.status, 'cancelled');
+  assert.deepEqual(notices, ['delete.cleanup.settingsChanged']);
 });
 
 test('action settings navigate the native declarative page without acquiring a modal session', () => {
@@ -207,15 +296,28 @@ test('action settings navigate the native declarative page without acquiring a m
   const current = { manifest: { id: 'k-plex' }, translator: key => key,
     app: { setting: { open: () => opens++, openPagePath: (id, path) => { paths.push([id, path]); return {}; } } },
     openSettings: assert.fail, settingsTab: null };
+  current.openSettingsPage = method("openSettingsPage", contracts).bind(current);
   const open = method('openActionSettings').bind(current);
   assert.equal(open(), true); assert.equal(open(), true);
   assert.deepEqual(paths, [['k-plex', ['actions.settingsTitle']], ['k-plex', ['actions.settingsTitle']]]);
   assert.equal(opens, 2);
 });
 
+/** Void completion is native success; only an explicit refusal may reopen the root through fallback. */
+test('native settings path completion returning undefined preserves the selected subpage', () => {
+  let paths = 0, roots = 0;
+  const current = { manifest: { id: 'k-plex' }, translator: key => key,
+    app: { setting: { open() {}, openPagePath: () => { paths++; } } },
+    openSettings: () => roots++, settingsTab: null };
+  current.openSettingsPage = method('openSettingsPage', contracts).bind(current);
+  assert.equal(method('openActionSettings').call(current), true);
+  assert.equal(paths, 1); assert.equal(roots, 0);
+});
+
 test('unsupported page navigation retains main settings recovery without a detached editor', () => {
   let opens = 0;
-  const current = { app: {}, openSettings: () => opens++, settingsTab: { openActionSettingsPage: () => false } };
+  const current = { app: {}, translator:key=>key, manifest:{id:"k-plex"}, openSettings: () => opens++, settingsTab: { openSettingsPage: () => false } };
+  current.openSettingsPage = method("openSettingsPage", contracts).bind(current);
   assert.equal(method('openActionSettings').call(current), false); assert.equal(opens, 1);
 });
 
@@ -402,7 +504,7 @@ for(const hazard of ['success','cancel','replacement','hidden-payload','retired-
 test('delete native trash await never dematerializes a recreated target',async()=>{
  const file={path:'B.md',extension:'md'},target={path:file.path,name:'B',file},replacement={path:file.path,file:{path:file.path,extension:'md'}};let live=file,current=target;
  const context={app:{vault:{getFileByPath:()=>live},fileManager:{trashFile:async()=>{live=replacement.file;current=replacement;}}},index:{pages:new Map([[target.path,target]]),get:()=>current,dematerializeFile:()=>assert.fail('Cannot dematerialize replacement'),removeVirtualPageIfUnreferencedFromSources:async()=>false},
- settings:{pinnedNodes:[],navigationHistory:[]},captureDeleteNodePreview:async()=>({sources:[]}),confirmDeleteNode:async()=>true,removeFromNavigationHistory(){},saveSettings:async()=>{},removePropertyReferencesToNode:async()=>({remaining:[],issues:[]})};
+ settings:{pinnedNodes:[],navigationHistory:[],removeOntologyLinksOnDelete:true},translator:key=>key,captureDeleteNodePreview:async()=>({sources:[],removeOntologyLinksOnDelete:true}),confirmDeleteNode:async()=>true,removeFromNavigationHistory(){},saveSettings:async()=>{},removePropertyReferencesToNode:async()=>({remaining:[],issues:[]})};
  const result=await method('deleteNode',{...contracts,Notice:class{}}).call(context,target);assert.equal(result.status,'committed');assert.equal(current,replacement);assert.equal(replacement.file,live);
 });
 
@@ -418,8 +520,8 @@ test("delete pending consent is plugin owned and unloading cancels before native
 /** Each awaited pre-trash boundary rejects unload, including approval after a preference save. */
 for(const phase of ["preview","confirmation"])test("delete unload during "+phase+" cannot trash native target",async()=>{
   const file={path:"B.md",extension:"md"},target={path:file.path,file};
-  const context={app:{vault:{getFileByPath:()=>file},fileManager:{trashFile:()=>assert.fail("Unloading must not trash")}},index:{pages:new Map([[target.path,target]]),get:()=>target},translator:key=>key,
-    captureDeleteNodePreview:async()=>{if(phase==="preview")context.unloading=true;return {sources:[]};},
+  const context={app:{vault:{getFileByPath:()=>file},fileManager:{trashFile:()=>assert.fail("Unloading must not trash")}},index:{pages:new Map([[target.path,target]]),get:()=>target},translator:key=>key,settings:{removeOntologyLinksOnDelete:true},
+    captureDeleteNodePreview:async()=>{if(phase==="preview")context.unloading=true;return {sources:[],removeOntologyLinksOnDelete:true};},
     confirmDeleteNode:async()=>{assert.equal(phase,"confirmation");context.unloading=true;return true;}};
   const result=await method("deleteNode",{...contracts,Notice:class{}}).call(context,target);assert.equal(result.status,"unavailable");
 });

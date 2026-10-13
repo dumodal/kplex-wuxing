@@ -11,6 +11,7 @@
  * navigation. Configuration persists before policy publication and never reassigns existing fields.
  * Surface registration releases menus in its captured rendering document before migration/close retires that realm.
  * Linked-tab follow delegates managed companions to the Sidecar request owner so parallel App observations cannot reopen one destination twice.
+ * Existing adjacent tabs enter Sidecar ownership only through explicit directional attachment; geometry offers eligibility without acquiring or resizing a pane.
  * Deletion captures bounded pre-trash property/body approval, writes only confirmed fields and retains
  * partial commits. Deletion Hidden covers captured resolved spellings and observed native unresolved
  * coordinates without guessing identities. Additive Hidden consent shares coherent source publication;
@@ -324,8 +325,10 @@ export default class KplexPlugin extends Plugin {
       // materialized. Resolution walks this history backward and inspects each leaf's current view.
       this.rememberLeafActivation(leaf);
       this.validateLinkedDocumentLeaf();
+      this.notifySidecar(); // The selected neighboring tab can change while no Sidecar is owned.
       this.onKplexVisibilityMayHaveChanged();
     }));
+    this.registerEvent(this.app.workspace.on("file-open", /** Empty/document state changes can alter attachment eligibility without changing the split. */ () => this.notifySidecar()));
     this.registerEvent(this.app.workspace.on("layout-change", () => {
       let changed = false;
       for (const [host, collapsed] of [...this.collapsedPlexHosts.entries()]) {
@@ -373,9 +376,9 @@ export default class KplexPlugin extends Plugin {
       }
       this.validateLinkedDocumentLeaf();
       if (changed) void this.saveSettings(false, false);
-      // Sidecar controls belong only to leaves K-Plex explicitly manages. A separately pinned or
-      // adjacent document tab remains ordinary Obsidian content and is never promoted to sidecar UI.
-      if (changed || this.sidecarLeaves.size > 0) this.notifySidecar();
+      // Refresh explicit attachment offers as well as owned controls when native splits change.
+      // Geometry alone never promotes an ordinary adjacent tab to managed ownership.
+      this.notifySidecar();
       this.onKplexVisibilityMayHaveChanged();
     }));
 
@@ -3060,6 +3063,103 @@ export default class KplexPlugin extends Plugin {
     return this.getSidecarPosition(hostLeaf) !== null;
   }
 
+  /**
+   * Offer the visible tab in one unambiguous group on the configured edge, without acquiring it.
+   * Hidden tabs, embedded views, other Plex surfaces and already managed companions are ineligible.
+   * Multiple groups sharing that edge remain ambiguous, including utility-only groups.
+   */
+  getAdjacentSidecarCandidate(hostLeaf: WorkspaceLeaf): WorkspaceLeaf | null {
+    if (this.unloading || this.startupInitializing || !this.leafIsAttached(hostLeaf)
+      || hostLeaf.view.getViewType() === KPLEX_SIDEPANEL_VIEW_TYPE
+      || this.isSidecarOpen(hostLeaf) || this.sidecarMovingHosts.has(hostLeaf)) return null;
+    const groups = new Map<HTMLElement, WorkspaceLeaf[]>();
+    this.app.workspace.iterateAllLeaves(/** Inspect native geometry only; no file reads or ownership changes. */ leaf => {
+      if (leaf === hostLeaf || this.adjacentPosition(hostLeaf, leaf) !== this.settings.sidecarPosition) return;
+      const group = this.leafGroupElement(leaf);
+      if (!group) return;
+      const members = groups.get(group) ?? [];
+      members.push(leaf);
+      groups.set(group, members);
+    });
+    if (groups.size !== 1) return null;
+    const visible = [...groups.values()][0].filter(/** Select the displayed native tab, never a hidden sibling. */ leaf => this.leafIsVisible(leaf));
+    if (visible.length !== 1) return null;
+    const leaf = visible[0];
+    const type = leaf.getViewState().type;
+    if (type === KPLEX_VIEW_TYPE || type === KPLEX_SIDEPANEL_VIEW_TYPE
+      || isEmbeddedMarkdownLeaf(leaf) || this.isManagedSidecarLeaf(leaf)) return null;
+    return type === "empty" || this.fileForLeaf(leaf) || this.indexedUrlPathForLeaf(leaf) ? leaf : null;
+  }
+
+  /** Read the exact displayed note/URL identity; an empty pane cannot supply a graph center. */
+  getAdjacentSidecarTarget(hostLeaf: WorkspaceLeaf): { file: TFile | null; path: string } | null {
+    const leaf = this.getAdjacentSidecarCandidate(hostLeaf);
+    if (!leaf) return null;
+    const file = this.fileForLeaf(leaf);
+    const path = file?.path ?? this.indexedUrlPathForLeaf(leaf);
+    return path ? { file, path } : null;
+  }
+
+  /**
+   * Explicitly claim the currently eligible adjacent tab, then apply the selected initial flow.
+   * No split is created/resized. Reverse flow preserves native content/mode and returns its identity
+   * to this App's existing partial-index follow owner. Failure releases ownership without closing
+   * the user's pane; overlapping attachment/move requests cannot acquire it twice.
+   */
+  async attachAdjacentSidecar(hostLeaf: WorkspaceLeaf, direction: "to-leaf" | "to-plex", page?: GraphPage): Promise<{ file: TFile | null; path: string } | null> {
+    const leaf = this.getAdjacentSidecarCandidate(hostLeaf);
+    if (!leaf) return null;
+    const file = this.fileForLeaf(leaf);
+    const path = file?.path ?? this.indexedUrlPathForLeaf(leaf);
+    if (direction === "to-plex" && !path) return null;
+    if (direction === "to-leaf" && (!page || !page.file && !page.url
+      || page.file && this.app.vault.getFileByPath(page.file.path) !== page.file
+      || page.url && !isWebViewerAvailable(this.app))) return null;
+    const previous = {
+      linked: this.linkedDocumentLeaf, last: this.lastDocumentLeaf,
+      mode: this.settings.documentSyncMode, open: this.settings.sidecarOpen,
+      file: this.settings.sidecarLastFilePath, url: this.settings.sidecarLastUrl,
+    };
+    this.sidecarMovingHosts.add(hostLeaf);
+    this.sidecarLeaves.set(hostLeaf, leaf);
+    this.linkedDocumentLeaf = leaf;
+    this.lastDocumentLeaf = leaf;
+    this.settings.documentSyncMode = "pinned";
+    this.settings.sidecarOpen = true;
+    this.notifySidecar();
+    try {
+      if (direction === "to-leaf" && page) await this.openPageInSidecarLeaf(leaf, page);
+      else {
+        this.settings.sidecarLastFilePath = file?.path ?? "";
+        this.settings.sidecarLastUrl = this.webViewerUrlForLeaf(leaf) ?? "";
+      }
+      await this.saveSettings(false, false);
+      // A moved/closed leaf or an explicit detach during persistence wins over completion.
+      if (this.unloading || this.sidecarLeaves.get(hostLeaf) !== leaf) return null;
+      if (!this.leafIsAttached(leaf) || this.adjacentPosition(hostLeaf, leaf) !== this.settings.sidecarPosition) {
+        await this.releaseSidecar(hostLeaf, true);
+        return null;
+      }
+      const currentFile = this.fileForLeaf(leaf);
+      const currentPath = currentFile?.path ?? this.indexedUrlPathForLeaf(leaf);
+      return direction === "to-plex" && currentPath ? { file: currentFile, path: currentPath } : null;
+    } catch (error) {
+      if (this.sidecarLeaves.get(hostLeaf) === leaf) {
+        this.sidecarLeaves.delete(hostLeaf);
+        this.linkedDocumentLeaf = previous.linked;
+        this.lastDocumentLeaf = previous.last;
+        this.settings.documentSyncMode = previous.mode;
+        this.settings.sidecarOpen = previous.open;
+        this.settings.sidecarLastFilePath = previous.file;
+        this.settings.sidecarLastUrl = previous.url;
+      }
+      throw error;
+    } finally {
+      this.sidecarMovingHosts.delete(hostLeaf);
+      this.notifySidecar();
+    }
+  }
+
   private createSidecarLeaf(hostLeaf: WorkspaceLeaf, position: SidecarPosition): WorkspaceLeaf {
     const direction = position === "left" || position === "right" ? "vertical" : "horizontal";
     const before = position === "left" || position === "above";
@@ -3233,8 +3333,8 @@ export default class KplexPlugin extends Plugin {
       leaf = null;
     }
 
-    // Never adopt an arbitrary adjacent or pinned note tab. Sidecar actions may detach/move the
-    // managed leaf, so ownership must start with a leaf K-Plex created specifically for that role.
+    // Normal Open never adopts an arbitrary adjacent/pinned tab. Existing tabs require the
+    // separate explicit attachment gesture before Sidecar close/move can manage them.
     if (!leaf) leaf = this.createSidecarLeaf(hostLeaf, this.settings.sidecarPosition);
     this.sidecarLeaves.set(hostLeaf, leaf);
     this.settings.sidecarOpen = true;
@@ -3333,11 +3433,24 @@ export default class KplexPlugin extends Plugin {
   }
 
   async openSidecar(hostLeaf: WorkspaceLeaf, page: GraphPage): Promise<void> {
-    const leaf = this.ensureSidecarLeaf(hostLeaf);
-    if (!leaf) return;
-    await this.openPageInSidecarLeaf(leaf, page);
-    await this.saveSettings(false, false);
-    this.notifySidecar();
+    // Opening can emit layout-change before the new split has usable geometry,
+    // just like moving an existing companion. Retain ownership through that boundary.
+    const alreadyMoving = this.sidecarMovingHosts.has(hostLeaf);
+    this.sidecarMovingHosts.add(hostLeaf);
+    try {
+      const leaf = this.ensureSidecarLeaf(hostLeaf);
+      if (!leaf) return;
+      await this.openPageInSidecarLeaf(leaf, page);
+      await this.waitForWorkspaceLayout(hostLeaf);
+      // Retained pixel bases from an earlier move can leave the new companion
+      // with no allocation. Reuse the native adjacent-pane sizing repair.
+      this.ensureAdjacentFileLeafSize(hostLeaf, leaf);
+      await this.waitForWorkspaceLayout(hostLeaf);
+      await this.saveSettings(false, false);
+      this.notifySidecar();
+    } finally {
+      if (!alreadyMoving) this.sidecarMovingHosts.delete(hostLeaf);
+    }
   }
 
   async closeSidecar(hostLeaf: WorkspaceLeaf, persist = true): Promise<void> {
@@ -4878,7 +4991,7 @@ export default class KplexPlugin extends Plugin {
       const decision = await new Promise<HiddenFieldSetupChoice>(/** Native cancellation, settings navigation and surface teardown settle once. */ resolve => {
         const modal = new HiddenFieldSetupModal(this.app, proposed, resolve);
         const cancel = (): void => modal.close();
-        const close = modal.onClose.bind(modal);
+        const close: () => void = modal.onClose.bind(modal) as () => void;
         modal.onClose = /** Release plugin and surface ownership before continuing setup or navigation. */ (): void => {
           close(); this.relationshipWriteCancels.delete(cancel); ownConfirmation?.(null);
         };
