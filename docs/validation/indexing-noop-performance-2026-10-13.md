@@ -4,7 +4,7 @@
 
 This is the first bounded implementation from [PR #153](https://github.com/zsviczian/kplex/pull/153): a targeted M work-count baseline and E1, the ordinary semantic-no-op correction. It does not implement A–D or E2/E3, certify the full measurement matrix, diagnose #93, or claim a startup/whole-engine speedup. Further packages need their own measurements and checkpoints.
 
-The checkout started clean on `main` at accepted runtime base `df5335808aacfd6a11ac7ff4ef008f9406f27893`. Work is uncommitted on `2026-10-13-indexing-performance`, whose planning head is `3dec09763968f27f12a783fdad37540a4ca8a4e7`. Related #147/#148/#149 remain open. Settings-policy ownership, release metadata, label rendering and paused C15–C26 work are outside this increment.
+The checkout started clean on `main` at accepted runtime base `df5335808aacfd6a11ac7ff4ef008f9406f27893`. Measurements were captured before committing on `2026-10-13-indexing-performance`, whose planning head was `3dec09763968f27f12a783fdad37540a4ca8a4e7`. The maintainer subsequently authorized the local checkpoint commit `1411e4b`; it has not been pushed. Related #147/#148/#149 remain open. Settings-policy ownership, release metadata, label rendering and paused C15–C26 work are outside this increment.
 
 Measurement selected a contained, reproducible cost: an ordinary no-op with existing depth-eight evidence compacted the entire evidence store and cloned the source's complete neighbor map, even though no evidence fork or relationship write was needed. Warm input already avoided body reads/parses. E1 removes that maintenance without changing source admission or semantic interpretation.
 

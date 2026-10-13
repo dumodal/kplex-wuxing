@@ -11,6 +11,8 @@
  * presentation; current complete scopes outrank them. A bounded inactive scope cover preserves
  * canonical navigation without repeating source preparation. Policy projection follows cooperative
  * and publication boundaries rather than each normalized host-link record.
+ * Snapshot record decoding uses lifetime/revision guards; settings values are revalidated after
+ * storage/task boundaries, reentrant progress notifications and before presentation publication.
  * This owner coordinates snapshot restoration/persistence, search and
  * presentation caches, atomic per-file publication and source-backed startup adoption; builders stage
  * semantics privately. URL search terms use their current labels directly, avoiding title-cache
@@ -3958,7 +3960,11 @@ export class GraphIndex {
     return true;
   }
 
-  /** Hydrate a candidate privately, adapt its facade and retain the existing reconciliation plan. */
+  /**
+   * Hydrate a candidate privately, adapt its facade and retain the existing reconciliation plan.
+   * A separate record guard avoids serializing settings in synchronous private decoding. Full
+   * value checks remain at storage/yield boundaries and publication; legacy callers default to them.
+   */
   private async restoreFullIndexedDbSnapshot(
     meta: IndexedDbSnapshotMeta,
     fresh: boolean,
@@ -3970,12 +3976,23 @@ export class GraphIndex {
     semanticCurrent: () => boolean = () => true,
     physicalCurrent: () => boolean = () => true,
     retainRestoreWork?: (priority: IndexWorkPriority) => () => void,
+    parentRecordCurrent: () => boolean = parentCurrent,
   ): Promise<{ restored: boolean; fresh: boolean; createdAt: number | null }> {
     const releaseWork = retainRestoreWork?.(INDEX_WORK_PRIORITY.background) ?? this.workScheduler.begin(INDEX_WORK_PRIORITY.background);
     try {
       let expectedPublicationRevision = this.publicationRevision;
+      /** Validate policy values and the expected public graph after asynchronous/reentrant work. */
       const isCurrent = () => run === this.snapshotHydrationRun && parentCurrent()
         && expectedPublicationRevision === this.publicationRevision;
+      /** Private records cannot escape their owning run or overwrite an intervening publication. */
+      const isRecordCurrent = () => run === this.snapshotHydrationRun && parentRecordCurrent()
+        && expectedPublicationRevision === this.publicationRevision;
+      /** Native progress listeners can reenter settings/lifecycle code at each existing 256-record notification. */
+      const recordProgress = (kind: "pages" | "relations" | "evidence"): boolean => {
+        if (!isRecordCurrent()) return false;
+        this.noteSnapshotHydrationProgress(run, kind);
+        return this.snapshotHydrationDiagnostics[kind] % 256 === 0 ? isCurrent() : isRecordCurrent();
+      };
       const next = createGraphState();
       const persistedPhysicalPaths = new Set<string>();
       const modifiedMarkdownPaths = new Set<string>(upgradePaths);
@@ -3987,9 +4004,8 @@ export class GraphIndex {
       const retainedPages: PersistedPage[] | null = !Platform.isMobile && !this.indexedDb.snapshotUsesChunks(meta) ? [] : null;
 
       this.setSnapshotHydrationPhase(run, "pages");
-      const pagesOk = await this.indexedDb.iterateSnapshotPages(meta, (page) => {
-        if (!isCurrent()) return;
-        this.noteSnapshotHydrationProgress(run, "pages");
+      const pagesOk = await this.indexedDb.iterateSnapshotPages(meta, /** Decode only into this run's private page/fingerprint state. */ (page) => {
+        if (!recordProgress("pages")) return;
         retainedPages?.push(page);
         addPersistedPageToState(next, page, this.app);
         if (page.semanticSignature) restoredFingerprints.set(page.path, page.semanticSignature);
@@ -4005,9 +4021,9 @@ export class GraphIndex {
             }
           } else missingFileBindings.add(page.path);
         }
-      }, isCurrent, (reason) => {
+      }, isCurrent, /** Record storage failure only while this generation remains valid. */ (reason) => {
         if (isCurrent()) this.recordIndexDiagnostic("restore", `${meta.key}-pages-${reason}`);
-      });
+      }, isRecordCurrent);
       if (!pagesOk || !isCurrent() || !physicalCurrent()) return { restored: false, fresh: false, createdAt: meta.createdAt };
 
       if (missingFileBindings.size) {
@@ -4077,17 +4093,16 @@ export class GraphIndex {
         let relationsComplete = true;
         if (retainedPages) {
           for (const saved of retainedPages) {
-            this.noteSnapshotHydrationProgress(run, "relations");
+            if (!recordProgress("relations")) return { restored: false, fresh: false, createdAt: meta.createdAt };
             if (!hydratePersistedPageRelations(next, saved)) relationsComplete = false;
           }
         } else {
-          const relationPassOk = await this.indexedDb.iterateSnapshotPages(meta, (saved) => {
-            if (!isCurrent()) return;
-            this.noteSnapshotHydrationProgress(run, "relations");
+          const relationPassOk = await this.indexedDb.iterateSnapshotPages(meta, /** Restore ordered adjacency without exposing partial relations. */ (saved) => {
+            if (!recordProgress("relations")) return;
             if (!hydratePersistedPageRelations(next, saved)) relationsComplete = false;
-          }, isCurrent, (reason) => {
+          }, isCurrent, /** Attribute only a current-generation relation failure. */ (reason) => {
             if (isCurrent()) this.recordIndexDiagnostic("restore", `${meta.key}-relations-${reason}`);
-          });
+          }, isRecordCurrent);
           relationsHydrated = relationPassOk && relationsComplete;
         }
         if (retainedPages) relationsHydrated = relationsComplete;
@@ -4126,13 +4141,12 @@ export class GraphIndex {
 
       this.plugin.startupDiagnostics?.mark("evidence-hydration-start");
       this.setSnapshotHydrationPhase(run, "evidence");
-      const evidenceOk = await this.indexedDb.iterateSnapshotEvidence(meta, (item) => {
-        if (!isCurrent()) return;
-        this.noteSnapshotHydrationProgress(run, "evidence");
+      const evidenceOk = await this.indexedDb.iterateSnapshotEvidence(meta, /** Keep provenance private until the final fenced promotion. */ (item) => {
+        if (!recordProgress("evidence")) return;
         addPersistedEvidenceToState(next, item);
-      }, isCurrent, (reason) => {
+      }, isCurrent, /** Attribute only a current-generation evidence failure. */ (reason) => {
         if (isCurrent()) this.recordIndexDiagnostic("restore", `${meta.key}-evidence-${reason}`);
-      });
+      }, isRecordCurrent);
       if (!evidenceOk || !isCurrent()) return { restored: false, fresh: false, createdAt: meta.createdAt };
       this.plugin.startupDiagnostics?.mark("evidence-hydration-end");
       next.discoveredFields = new Map(meta.discoveredFields);
@@ -4170,6 +4184,7 @@ export class GraphIndex {
       // coherent cached graph now; the existing alias owner repairs/stages optional vocabulary after
       // hydration releases its task, preserving the old facet marker until authenticated completion.
       this.setSnapshotHydrationPhase(run, "promote");
+      if (!isCurrent()) return { restored: false, fresh: false, createdAt: meta.createdAt };
       if (relationsHydrated) {
         if (classifySettingsChange(captureSettingsPolicy(this.presentationSettings), captureSettingsPolicy(this.plugin.settings)).render) {
           await this.refreshPresentationSettings();
@@ -4250,6 +4265,7 @@ export class GraphIndex {
     this.cancelSnapshotHydration?.();
     const run = ++this.snapshotHydrationRun;
     const semanticPolicy = computeIndexSettingsSignature(this.plugin.settings);
+    const policyRevision = this.semanticPolicyRevision;
     let cancelled = false;
     const restoreWorkReleases = new Set<() => void>();
     /** Retire priority ownership even when an external cache read cannot be aborted. */
@@ -4265,8 +4281,16 @@ export class GraphIndex {
       restoreWorkReleases.add(retire);
       return retire;
     };
-    const isCurrent = () => !cancelled && run === this.snapshotHydrationRun && !this.diagnosticsClosed &&
-      semanticPolicy === computeIndexSettingsSignature(this.plugin.settings);
+    /** Existing monotonic owners retire runs cheaply; physical/source fences remain independent. */
+    const isLifetimeCurrent = (): boolean => !cancelled && run === this.snapshotHydrationRun
+      && !this.diagnosticsClosed && !this.persistentCachePurged && policyRevision === this.semanticPolicyRevision;
+    /** Value validation catches unannounced in-place edits; an observed A→B→A cannot revive this run. */
+    const isCurrent = (): boolean => {
+      if (!isLifetimeCurrent()) return false;
+      if (semanticPolicy === computeIndexSettingsSignature(this.plugin.settings)) return true;
+      cancelRestoreWork();
+      return false;
+    };
     this.beginSnapshotHydrationDiagnostics(run);
     this.fullSnapshotHydrated = false;
     this.fullSnapshotFresh = false;
@@ -4420,15 +4444,17 @@ export class GraphIndex {
             this.plugin.startupDiagnostics?.mark("requested-semantics-refresh-ended");
             if (!isCurrent()) return { restored: false, fresh: false, createdAt };
           }
-          // Foreground mutations/host events cannot be overwritten by a captured graph generation.
-          const candidateCurrent = (): boolean => {
-            if (!isCurrent()) return false;
+          /** Foreground mutations/host events cannot be overwritten by a captured graph generation. */
+          const candidateRecordCurrent = (): boolean => {
+            if (!isLifetimeCurrent()) return false;
             if (trustedWarmSnapshot && checkedSourceRevision !== this.plugin.getIndexSourceRevision()) {
               checkedSourceRevision = this.plugin.getIndexSourceRevision();
               if (!physicalCurrent()) return false;
             }
             return physicalValid;
           };
+          /** Full policy values are checked at every suspension and public-state boundary. */
+          const candidateCurrent = (): boolean => isCurrent() && candidateRecordCurrent();
           // Physical freshness and a mutable acquisition strategy cannot certify a saved ontology.
           // Every candidate closes its captured policy and native/source observations independently.
           const candidateSemanticsCurrent = (): boolean => decision.compatible && semanticCurrent();
@@ -4438,7 +4464,7 @@ export class GraphIndex {
               reportPreview({ restored: true, fresh: semanticCurrent(), createdAt, partial: true });
               this.warmSourceRecoveryAvailable = true;
               this.enableGlobalSourceInventoryIfConfigured();
-            } : undefined, candidateSemanticsCurrent, trustedWarmSnapshot ? physicalCurrent : undefined, retainRestoreWork);
+            } : undefined, candidateSemanticsCurrent, trustedWarmSnapshot ? physicalCurrent : undefined, retainRestoreWork, candidateRecordCurrent);
           if (result.restored && decision.presentationChanged) this.recordIndexDiagnostic("restore", "presentation-settings-adapted",
             { changedKeys: [...decision.changedKeys] });
           if (result.restored) { this.warmSourceRecoveryAvailable = false; return result; }
