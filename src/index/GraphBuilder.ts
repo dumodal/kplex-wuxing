@@ -13,6 +13,8 @@
  * Only independent URL-owner staging activates canonical target/kind facts; ordinary Markdown
  * reconciliation keeps its existing iteration and never creates a whole-graph derived index.
  * URL-only pruning uses canonical lazy existence; ordinary Markdown retains its ordered iterator.
+ * Sources with matching fingerprints publish field/cache/mtime changes without cloning adjacency
+ * or adding evidence layers. Map-depth maintenance stays independent of maintenance for new forks.
  */
 import { yieldToHostTask } from "../adapters/obsidian/yieldToHostTask";
 import { Platform, TFile, type App } from "obsidian";
@@ -312,15 +314,17 @@ export class GraphBuilder {
   }
 
   /** Bound retained copy-on-write history before starting another transaction. Compaction builds
-   * complete private replacements and publishes them together only after all checkpoints pass. */
-  private async compactPublishedPatchLayers(state: GraphState): Promise<boolean> {
+   * complete private replacements and publishes them together only after all checkpoints pass.
+   * @param includeEvidence A source with a matching fingerprint adds no evidence layer, leaving it intact;
+   * independent map-depth maintenance still runs for large field-discovery publications. */
+  private async compactPublishedPatchLayers(state: GraphState, includeEvidence = true): Promise<boolean> {
     const pageOverlay = isPatchOverlayMap(state.pages) && state.pages.depth >= MAX_PATCH_OVERLAY_DEPTH
       ? state.pages : null;
     const lowercaseOverlay = isPatchOverlayMap(state.lowercasePathMap) && state.lowercasePathMap.depth >= MAX_PATCH_OVERLAY_DEPTH
       ? state.lowercasePathMap : null;
     const fieldOverlay = isPatchOverlayMap(state.discoveredFields) && state.discoveredFields.depth >= MAX_PATCH_OVERLAY_DEPTH
       ? state.discoveredFields : null;
-    const compactEvidence = state.evidence.depth >= MAX_PATCH_OVERLAY_DEPTH;
+    const compactEvidence = includeEvidence && state.evidence.depth >= MAX_PATCH_OVERLAY_DEPTH;
     if (!pageOverlay && !lowercaseOverlay && !fieldOverlay && !compactEvidence) return this.isCurrent();
 
     const pages = pageOverlay ? await pageOverlay.flattenCooperative(() => this.yieldToHost()) : state.pages;
@@ -1360,6 +1364,8 @@ export class GraphBuilder {
    * left a hot body/fingerprint cache entry behind. Structural vault changes remain the caller's
    * responsibility. Cancellation still retains previously committed sources; progress is durable
    * through neutral source heads without pausing ingestion to serialize a full graph.
+   * Matching source fingerprints retain adjacency and evidence; field discovery, mtime, hot body
+   * and fingerprint still publish together after source acquisition and exact revision/lifetime checks.
    */
   async patchMarkdownFiles(
     state: GraphState,
@@ -1475,29 +1481,28 @@ export class GraphBuilder {
       const previousSignature = discoveryMode === "rebuild" || options.forceRecompile
         ? undefined
         : this.semanticFingerprints.get(sourcePath) ?? previousEntry?.semanticSignature;
-      if (!(await this.compactPublishedPatchLayers(state)) || !this.fileRevisionMatches(file, revision)) {
+      if (!(await this.compactPublishedPatchLayers(state, previousSignature !== signature)) || !this.fileRevisionMatches(file, revision)) {
         return { ok: false, cancelled: true, rebuildRequired: false, touchedPagePaths, semanticChanges, semanticNoops };
       }
       const stagedState = this.createPatchState(state, previousSignature !== signature);
-      const stagedPage = getGraphPage(stagedState, sourcePath);
-      if (!stagedPage) return { ok: false, cancelled: true, rebuildRequired: false, touchedPagePaths, semanticChanges, semanticNoops };
 
       if (previousSignature === signature) {
-        // Even semantic no-ops stage their small metadata/cache-visible mutations. Cancellation can
-        // therefore never leave a half-updated discovered-field table or mtime behind.
+        // Only field discovery needs an overlay. The existing canonical page receives its scalar
+        // mtime at commit; reading it through the staging map would clone all of its unchanged
+        // adjacency/arrays. No shared page value is mutated during awaited source/field preparation.
         const meta = mergeFileMetadata(this.app.metadataCache.getFileCache(file), body);
         if (!(await this.applyFieldNameSourceFacts(stagedState, file, meta))) {
           return { ok: false, cancelled: true, rebuildRequired: false, touchedPagePaths, semanticChanges, semanticNoops };
         }
-        stagedPage.mtime = revision.mtime;
         if (!this.isCurrent() || !this.fileRevisionMatches(file, revision)) {
           return { ok: false, cancelled: true, rebuildRequired: false, touchedPagePaths, semanticChanges, semanticNoops };
         }
         if (!(await this.yieldToHost(true)) || !this.fileRevisionMatches(file, revision)) {
           return { ok: false, cancelled: true, rebuildRequired: false, touchedPagePaths, semanticChanges, semanticNoops };
         }
-        publishFileCommit(false, () => {
+        publishFileCommit(false, /** Publish metadata/cache together without an adjacency write. */ () => {
           this.commitPatchState(state, stagedState);
+          page.mtime = revision.mtime;
           if (retiredEndpoints) this.sourceAcquisition?.acknowledgeNodeImpacts(sourcePath, retiredEndpoints);
           this.rememberFieldCache(sourcePath, { mtime: revision.mtime, body, semanticSignature: signature });
           this.semanticFingerprints.set(sourcePath, signature);
@@ -1507,6 +1512,8 @@ export class GraphBuilder {
         continue;
       }
 
+      const stagedPage = getGraphPage(stagedState, sourcePath);
+      if (!stagedPage) return { ok: false, cancelled: true, rebuildRequired: false, touchedPagePaths, semanticChanges, semanticNoops };
       const topologyChanged = this.topologySignature(previousSignature) !== this.topologySignature(signature);
       const affected = new Set<string>();
       const oldTagPaths = new Set<string>();
