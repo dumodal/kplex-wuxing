@@ -13,8 +13,9 @@ import { obsidianCliExecutable,spawnNativeSync } from './processTools.mjs';
 import { validateTarget } from './runner.mjs';
 
 /** Run one serialized scenario. Alternate artifact roots require an explicit prior-source baseline;
- * their exact-hash/full-verification staging receipt remains separate from this functional probe. */
-export async function runControlledProbe(name,scenario,definitions='') {
+ * their exact-hash/full-verification staging receipt remains separate from this functional probe.
+ * Callers list additional runtime modules when a checkpoint introduces a new implementation owner. */
+export async function runControlledProbe(name,scenario,definitions='',extraSources=[]) {
   const root=resolve(fileURLToPath(new URL('../../..',import.meta.url))),vault=process.env.KPLEX_TEST_VAULT_NAME;
   const target=validateTarget({vaultName:vault,vaultPath:process.env.KPLEX_TEST_VAULT_PATH,configDir:process.env.KPLEX_TEST_CONFIG_DIR});
   const directory=process.env.KPLEX_HOST_REPORT_DIR;if(!directory)throw Error('Set KPLEX_HOST_REPORT_DIR');mkdirSync(directory,{recursive:true});
@@ -35,7 +36,7 @@ export async function runControlledProbe(name,scenario,definitions='') {
     for(const file of ['main.js','manifest.json','styles.css']){const value=hash(join(artifactDir,file));assert.equal(hash(join(target.pluginDir,file)),value);report.artifacts[file]=value;}
     const ref=process.env.KPLEX_PROBE_BASELINE_REF;
     if(ref){assert.match(ref,/^[a-f0-9]{7,40}$/);report.source.baselineRef=ref;}
-    for(const file of ['src/index/GraphBuilder.ts','src/index/GraphIndex.ts','src/core/graph/compiler.ts']){
+    for(const file of ['src/index/GraphBuilder.ts','src/index/GraphIndex.ts','src/core/graph/compiler.ts',...extraSources]){
       if(ref){const result=spawnNativeSync('git',['show',`${ref}:${file}`],{cwd:root,encoding:'utf8',timeout:10000});assert.equal(result.status,0,result.stderr);report.source[file]=createHash('sha256').update(result.stdout).digest('hex');}
       else report.source[file]=hash(join(root,file));
     }

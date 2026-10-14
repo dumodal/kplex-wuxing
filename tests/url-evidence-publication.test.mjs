@@ -1,35 +1,13 @@
 /** Canonical private evidence delta consumption and production URL publication/privacy regressions. */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import vm from 'node:vm';
-import { MessageChannel } from 'node:worker_threads';
-import { webcrypto } from 'node:crypto';
 import { contributorBrowserBundle } from './support/contributorBrowserFixture.mjs';
 import { probeUrlPageCopies } from './support/urlPageCopyProbe.mjs';
+import { urlPublicationFixture } from './support/urlPublicationFixture.mjs';
 
 const bundle = await contributorBrowserBundle(['src/index/GraphIndex.ts', 'src/index/GraphBuilder.ts', 'src/core/graph/evidence.ts', 'src/core/graph/relations.ts']);
-/** Keep real graph/cache/compiler owners; only native Vault facts are controlled. */
-function fixture() {
-  const w = { performance: { now: () => 0 }, MessageChannel, crypto: webcrypto, setTimeout, clearTimeout };
-  vm.runInContext(bundle, vm.createContext({ window: w, performance: w.performance, URL, Date, TextEncoder, TextDecoder, structuredClone, setTimeout, clearTimeout }));
-  const M = w.sourceModules, files = new Map(), metadata = new Map(), root = new w.ContributorFolder();
-  const events = { on: () => ({}), offref() {} };
-  const app = { saveLocalStorage() {}, vault: { ...events, getName: () => 'private-url-evidence', getFileByPath: p => files.get(p) ?? null,
-    getFiles: () => [...files.values()], getMarkdownFiles: () => [...files.values()], getRoot: () => root, getFolderByPath: p => p === '' ? root : null,
-    cachedRead: async () => '' }, metadataCache: { ...events, getFileCache: f => metadata.get(f.path) ?? null, resolvedLinks: {}, unresolvedLinks: {} } };
-  const settings = { indexingMode: 'on-demand', hierarchy: { hidden: [], parents: [], children: [], leftFriends: [], rightFriends: [], previous: [], next: [], exclusions: [] },
-    inferAllLinksAsFriends: false, inverseInfer: false, showFullTagName: true, tagStyleList: [], baseNodeStyle: { maxLabelLength: 30 }, maxItemCount: 30,
-    pinnedNodes: [], excludeFilepaths: [], nameFields: '', noteTypeField: 'Type', primaryTagField: 'Style' };
-  const index = new M.GraphIndex({ app, settings, getIndexSourceRevision: () => 0 }, app);
-  index.indexedDb.putUrlOwners = async () => true;
-  /** Actual source identities and canonical parsed body inputs feed the production publisher. */
-  const add = (path, text = '', frontmatter = {}) => {
-    const file = new w.ContributorFile(path); file.parent = root; root.children.push(file);
-    files.set(path, file); metadata.set(path, { frontmatter });
-    return { file, body: M.parseBodyMetadata(text) };
-  };
-  return { M, index, add, files, metadata, close: () => index.destroy() };
-}
+/** Reuse the exact finite native inputs shared with URL work-count measurements. */
+const fixture = () => urlPublicationFixture(bundle);
 
 /** Include declaration IDs, unsorted insertion order, multiplicity and every path index. */
 function evidenceValue(store) {

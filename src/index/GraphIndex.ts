@@ -27,7 +27,8 @@
  * URL alias cache facets replay from authenticated neutral facts without replacing cached relations.
  * Displayed URL incidence advances only at a coalesced five-second boundary, first useful demanded
  * result, foreground action or completion. The independent working/cache lane can progress without
- * leaking intermediate adjacency into unrelated renders. Local foreground scopes retain read-only
+ * leaking intermediate adjacency into unrelated renders. Stable published-only relation targets
+ * advance at that same boundary; their latest maps never retain a chain of old displayed graphs. Local foreground scopes retain read-only
  * current certificates across strategy transfer until a durable center replacement is certified.
  * Finite visible presentation demand repairs native/cache facets at P2 on actual input events;
  * pending values retain known styling and released surfaces retire callbacks without vault polling.
@@ -95,7 +96,7 @@ import {
   type Role,
 } from "../types";
 import { planRetiredExclusionReconciliation } from "./LegacySnapshotPolicy";
-import { GraphBuilder, type FieldCacheEntry, type PatchFileCommit, type PatchFilePublisher } from "./GraphBuilder";
+import { GraphBuilder, type FieldCacheEntry, type PatchFileCommit, type PatchFilePublisher, type UrlAdjacencyPrivacy } from "./GraphBuilder";
 import { iterateLinkReferencesFromValue, normalizeFieldName, type ParsedBodyMetadata } from "../core/parser/metadata";
 import { extractLinksFromValue, iterateFrontmatterAliasSteps } from "./fieldParser";
 import { MAX_CACHED_SCOPE_RETAINED_BYTES } from "./CachedSourceSemantics";
@@ -361,6 +362,10 @@ export class GraphIndex {
   private urlState = createGraphState();
   /** Displayed URL incidence is copied only at batch boundaries; working canonical pages mutate per owner. */
   private publishedUrlState = createGraphState();
+  /** Stable published-only relation targets follow display revisions, never working GraphPages. */
+  private readonly urlPublishedTargets = new Map<string, GraphPage>();
+  private urlAdjacencyPrivate = true;
+  private urlWorkingRevision = 0;
   private publishedUrlOwners = new Map<string, Readonly<{ file: TFile; mtime: number; size: number; event: number; metadata: CachedMetadata | null }>>();
   private publishedUrlComplete = false;
   private publishedUrlCachedMetadata = false;
@@ -3338,10 +3343,12 @@ export class GraphIndex {
               await this.workScheduler.checkpoint(priority);
               progress();
             });
+          const adjacencyPrivacy = this.captureUrlAdjacencyPrivacy();
           const aliases = await this.prepareUrlAliasOwners(revision.path, urls, current, priority, progress);
           if (!aliases) { if (alive()) continue; return; }
           const touched = await builder.patchUrlReferences(this.urlState, file, body, (commit, publish) => {
             publish();
+            this.urlWorkingRevision++;
             this.urlOwners.set(revision.path, { file, mtime: revision.mtime, size: revision.size, event });
             this.urlOwnerBodies.set(revision.path, body); this.urlOwnerFrontmatter.set(revision.path, frontmatter);
             this.urlMetadataCaches.set(revision.path, cache);
@@ -3349,7 +3356,7 @@ export class GraphIndex {
             this.publishUrlAliasOwners(revision.path, aliases);
             this.queueUrlPublication(commit.touchedPagePaths, revision.path, !background);
           }, frontmatter, /** Only the current unpublished URL layer is exclusively writable at commit. */
-          evidence => evidence !== this.publishedUrlState.evidence);
+          evidence => evidence !== this.publishedUrlState.evidence, adjacencyPrivacy);
           if (touched || current()) return;
           await this.workScheduler.checkpoint(priority);
         }
@@ -3389,9 +3396,18 @@ export class GraphIndex {
     }, 5000);
   }
 
+  /** Authorize only this exact working lifetime and map after all asynchronous preparation. */
+  private captureUrlAdjacencyPrivacy(): UrlAdjacencyPrivacy {
+    const revision = this.urlWorkingRevision, flushes = this.urlPresentationFlushes;
+    return /** Revalidate the captured transaction and exact current ownership at synchronous commit. */ (path, neighbours) => !this.diagnosticsClosed && !this.persistentCachePurged && this.urlAdjacencyPrivate
+      && revision === this.urlWorkingRevision && flushes === this.urlPresentationFlushes
+      && this.urlState.pages.get(path)?.neighbours === neighbours;
+  }
+
   /** Atomically publish only accumulated page adjacency plus the immutable evidence generation.
    * The builder's evidence is copy-on-write; retaining its pointer is safe across later commits.
-   * Page adjacency needs a shallow copy because the working builder preserves canonical identity.
+   * Each map and relation is detached; target identities advance only at display publication.
+   * Stable display targets reference the latest displayed maps, avoiding chains of old generations.
    * This is one copy per touched page per displayed batch, never a whole graph per owner. */
   private flushUrlPublication(forceCoverage = false): void {
     if (this.diagnosticsClosed || this.persistentCachePurged) return;
@@ -3401,10 +3417,30 @@ export class GraphIndex {
     if (this.urlFlushTimer !== null) window.clearTimeout(this.urlFlushTimer);
     this.urlFlushTimer = null;
     const touched = this.pendingUrlPaths;
+    // Preallocate every touched target before binding relations, including mutually new endpoints.
     for (const path of touched) {
       const page = this.urlState.pages.get(path);
-      if (page) this.publishedUrlState.pages.set(path, { ...page, aliases: [...page.aliases], neighbours: new Map(page.neighbours) });
-      else this.publishedUrlState.pages.delete(path);
+      if (page && !this.urlPublishedTargets.has(path)) this.urlPublishedTargets.set(path, { ...page, neighbours: new Map() });
+    }
+    for (const path of touched) {
+      const page = this.urlState.pages.get(path);
+      if (page) {
+        const neighbours = new Map<string, Relation>();
+        for (const [key, relation] of page.neighbours) {
+          const target = this.urlPublishedTargets.get(relation.target.path) ?? this.state.pages.get(relation.target.path);
+          // Unknown ownership always disables replay; never infer adjacency privacy from evidence.
+          if (!target) this.urlAdjacencyPrivate = false;
+          neighbours.set(key, { ...relation, target: target ?? relation.target });
+        }
+        const copy = { ...page, aliases: [...page.aliases], neighbours };
+        this.publishedUrlState.pages.set(path, copy);
+        Object.assign(this.urlPublishedTargets.get(path)!, copy);
+      } else {
+        this.publishedUrlState.pages.delete(path);
+        const target = this.urlPublishedTargets.get(path);
+        if (target) target.neighbours = new Map();
+        this.urlPublishedTargets.delete(path);
+      }
     }
     for (const path of this.pendingUrlOwners) {
       const owner = this.urlOwners.get(path);
@@ -3650,12 +3686,13 @@ export class GraphIndex {
       if (this.diagnosticsClosed || this.persistentCachePurged) return;
       const builder = new GraphBuilder(this.plugin, this.app, new Map(), this.metadataParser, this.indexedDb,
         () => !this.diagnosticsClosed && !this.persistentCachePurged, new Map(), undefined, () => this.workScheduler.checkpoint(INDEX_WORK_PRIORITY.visibleNeighborhood));
+      const adjacencyPrivacy = this.captureUrlAdjacencyPrivacy();
       const aliases = await this.prepareUrlAliasOwners(path, [], () => !this.diagnosticsClosed && !this.persistentCachePurged, INDEX_WORK_PRIORITY.visibleNeighborhood);
       if (!aliases) return;
       await builder.removeUrlOwner(this.urlState, path, (commit, publish) => {
-        publish(); this.urlOwnerFailures.delete(path); this.urlOwners.delete(path); this.urlOwnerBodies.delete(path); this.urlOwnerFrontmatter.delete(path); this.urlMetadataCaches.delete(path); this.urlCachedMetadataOwners.delete(path); this.publishUrlAliasOwners(path, aliases); this.queueUrlPublication(commit.touchedPagePaths, path, true);
+        publish(); this.urlWorkingRevision++; this.urlOwnerFailures.delete(path); this.urlOwners.delete(path); this.urlOwnerBodies.delete(path); this.urlOwnerFrontmatter.delete(path); this.urlMetadataCaches.delete(path); this.urlCachedMetadataOwners.delete(path); this.publishUrlAliasOwners(path, aliases); this.queueUrlPublication(commit.touchedPagePaths, path, true);
       }, /** A flush during preparation must force immutable fork/swap publication. */
-      evidence => evidence !== this.publishedUrlState.evidence);
+      evidence => evidence !== this.publishedUrlState.evidence, adjacencyPrivacy);
     })).finally(() => {
       this.urlPendingPublications--;
       if (!this.diagnosticsClosed && !this.persistentCachePurged && !this.urlDiscoveryRunning
@@ -3741,6 +3778,7 @@ export class GraphIndex {
     // Release graph/search/body ownership now instead of retaining a complete vault until that
     // unrelated host reference is collected. Published page objects themselves are not mutated.
     this.state = createGraphState();
+    this.urlWorkingRevision++; this.urlAdjacencyPrivate = false; this.urlPublishedTargets.clear();
     this.urlState = createGraphState(); this.publishedUrlState = createGraphState(); this.publishedUrlOwners.clear();
     this.urlOwners.clear(); this.urlOwnerEvents.clear(); this.urlOwnerBodies.clear(); this.urlOwnerFrontmatter.clear();
     this.urlMetadataCaches.clear(); this.urlCachedMetadataOwners.clear(); this.urlOwnerFailures.clear();

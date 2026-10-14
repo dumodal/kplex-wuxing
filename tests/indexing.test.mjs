@@ -477,6 +477,7 @@ for (const file of [
   "src/adapters/obsidian/sourceLocalContributorDiscovery.ts",
   "src/adapters/obsidian/sourceAcquisition.ts",
   "src/index/GraphBuilder.ts",
+  "src/index/UrlAdjacencyMap.ts",
   "src/index/SourceFingerprint.ts",
   "src/index/GraphIndex.ts",
   "src/index/ForegroundWorkScheduler.ts",
