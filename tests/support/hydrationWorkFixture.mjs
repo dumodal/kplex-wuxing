@@ -16,7 +16,7 @@ export { contributorBrowserInitialize };
 /** Seed genuine cached link facts, canonical pages/evidence and the actual schema-3 chunk stores. */
 export const initializeHydrationWork = String.raw`(/** Install fixture capabilities without creating storage until explicitly requested. */ () => {
   /** Capture the requested mode before constructing cache/index owners; callers must always close. */
-  window.hydrationWorkFixture=async(name,records,fields,indexingMode='eager')=>{
+  window.hydrationWorkFixture=async(name,records,fields,indexingMode='eager',genuineSnapshot=false)=>{
     const M=sourceModules,f=await fixture(name);
     f.app.vault.getName=/** Select only this fixture's disposable cache namespace. */ ()=>name;
     f.app.vault.getAbstractFileByPath=/** Rebind captured files/root; unresolved targets have no physical identity. */ path=>f.files.get(path)??(path===''||path==='/'?f.app.vault.getRoot():null);
@@ -28,8 +28,9 @@ export const initializeHydrationWork = String.raw`(/** Install fixture capabilit
       inferAllLinksAsFriends:false,inverseInfer:false,showFullTagName:true,tagStyleList:[],baseNodeStyle:{maxLabelLength:30},noteTypeField:'Type',primaryTagField:'Style',
       lastActivePath:file.path,pinnedNodes:[],excludeFilepaths:[],nameFields:'',maxItemCount:30};
     const plugin={app:f.app,settings,getIndexSourceRevision:/** Physical mutation cases deliberately rely on independent identity/membership checks. */ ()=>0};
-    const builder=new M.GraphBuilder(plugin,f.app,new Map(),{parse:/** Use the canonical parser for synchronous fixture setup. */ async text=>M.parseBodyMetadata(text)},f.cache,/** Seed state has no competing publication lifetime. */ ()=>true);
-    const state=M.createGraphState();
+    const fingerprints=new Map();
+    const builder=new M.GraphBuilder(plugin,f.app,new Map(),{parse:/** Use the canonical parser for synchronous fixture setup. */ async text=>M.parseBodyMetadata(text)},f.cache,/** Seed state has no competing publication lifetime. */ ()=>true,fingerprints);
+    let state=M.createGraphState();
     builder.addPage(state,builder.createPage({path:'folder:/',name:'/',isFolder:true}));
     const hub=builder.createPage({path:file.path,name:file.basename,file});builder.addPage(state,hub);
     for(const path of targets){
@@ -37,9 +38,10 @@ export const initializeHydrationWork = String.raw`(/** Install fixture capabilit
       state.evidence.addPair(hub.path,path,'child',M.RelationType.INFERRED,M.LinkDirection.TO,{sourceKind:'unresolved-link'});
     }
     M.resolveEvidenceStore(state.pages,state.evidence);
+    if(genuineSnapshot){state=await builder.build({acquireSources:false});ok(state,'Actual full compiler seed');}
     ok(await f.cache.writeSnapshot({createdAt:Date.now(),urlAliasVersion:M.URL_ALIAS_FACET_VERSION,
       vaultSignature:M.computeVaultSignature(f.app),settingsSignature:M.computeIndexSettingsSignature(settings),discoveredFields:[]},
-      [...state.pages.values()].map(/** Use the production serializer for all ordered pages. */ page=>M.persistedPageFromGraphPage(page)),
+      [...state.pages.values()].map(/** Preserve actual source signatures when the full compiler produced them. */ page=>M.persistedPageFromGraphPage(page,fingerprints.get(page.path))),
       [...state.evidence.declarations()].map(/** Preserve canonical declaration multiplicity/provenance. */ item=>M.persistedDeclarationFromEvidence(item)),/** Setup generation has no competing writer. */ ()=>true),'Real current graph snapshot');
     f.acquisition.close();
     const index=new M.GraphIndex(plugin,f.app);index.scheduleOrphanCleanup=/** No orphan timer outlives the owned fixture. */ ()=>{};
@@ -50,7 +52,9 @@ export const initializeHydrationWork = String.raw`(/** Install fixture capabilit
     let release;const gate=new Promise(/** Retain the release used by independent failure cleanup. */ resolve=>release=resolve);
     const originals=[];
     for(const key of ['reconcile','flush']){const original=index.sourceAcquisition[key];index.sourceAcquisition[key]=/** Hold unrelated source admission, preserving the actual continuation. */ function(...args){return gate.then(/** Forward the original receiver/arguments after release. */ ()=>original.apply(this,args))};originals.push(/** Remove only the fixture's own wrapper. */ ()=>index.sourceAcquisition[key]=original);}
-    return {f,index,plugin,settings,file,state,targets,/** Retire work, wrappers and both storage owners independently of assertions. */ close(){index.metadataParser.parse=parse;index.destroy();for(const restore of originals)restore();release();f.close();}};
+    return {f,index,plugin,settings,file,state,targets,
+      /** Coordinator cases may resume the real source owner before delivering a held graph read. */ releaseSources(){release();},
+      /** Retire work, wrappers and both storage owners independently of assertions. */ close(){index.metadataParser.parse=parse;index.destroy();for(const restore of originals)restore();release();f.close();}};
   };
   /** Compare cardinality and exact role/target/provenance order outside measurement. */
   window.hydrationWorkValue=index=>({pages:[...index.state.pages].map(/** Preserve page and neighbor insertion order while excluding host file/target object identities. */ ([path,page])=>({path,name:page.name,aliases:page.aliases,neighbours:[...page.neighbours].map(/** Compare complete semantic relation values. */ ([path,{target,...relation}])=>[path,Object.fromEntries(Object.entries(relation).sort(/** Constructor property order is not relationship order. */ ([left],[right])=>left.localeCompare(right)))])})),
