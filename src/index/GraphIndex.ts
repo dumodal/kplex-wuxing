@@ -13,6 +13,8 @@
  * and publication boundaries rather than each normalized host-link record.
  * Snapshot record decoding uses lifetime/revision guards; settings values are revalidated after
  * storage/task boundaries, reentrant progress notifications and before presentation publication.
+ * Saved previews start independently of shared URL replay; each restore retains its own watchdog
+ * and priority ownership, while public supersession never retires healthy shared URL acquisition.
  * This owner coordinates snapshot restoration/persistence, search and
  * presentation caches, atomic per-file publication and source-backed startup adoption; builders stage
  * semantics privately. URL search terms use their current labels directly, avoiding title-cache
@@ -4613,7 +4615,7 @@ export class GraphIndex {
     this.recordIndexDiagnostic("build", `${kind}:${reason}`, { modified });
   }
 
-  /** Retain only bounded sanitized decisions, including built-in changed-key names. */
+  /** Retain bounded sanitized decisions; queued persistence cannot access an unloaded/purged cache. */
   private recordIndexDiagnostic(
     stage: IndexDiagnosticEntry["stage"],
     reason: string,
@@ -4622,7 +4624,7 @@ export class GraphIndex {
     this.indexDiagnostics = sanitizeIndexDiagnostics([...this.indexDiagnostics, { at: Date.now(), stage, reason, ...counts }]);
     const entries = this.getIndexDiagnostics();
     this.diagnosticWriteTask = this.diagnosticWriteTask.then(() =>
-      this.diagnosticsClosed ? undefined : this.indexedDb.writeIndexDiagnostics(entries));
+      this.diagnosticsClosed || this.persistentCachePurged ? undefined : this.indexedDb.writeIndexDiagnostics(entries));
   }
 
   /**
@@ -5008,21 +5010,23 @@ export class GraphIndex {
   }
 
   /**
-   * Join bounded shared URL restoration before graph acceleration. Superseded public waits settle
-   * immediately without cancelling shared acquisition; unload/purge cannot enter a later catalog
-   * read. The existing graph restore owner retains its separate preview/hydration lifetime.
+   * Start shared URL replay independently of bounded saved-graph preview. A requested preview must
+   * not join the lower-priority inventory it can pause. Supersession retires only the public graph
+   * wait; URL and graph owners keep their separate watchdogs, cancellation and late-result fences.
    */
   async restorePersistedSnapshot(seedPaths: readonly string[] = []): Promise<{ restored: boolean; fresh: boolean; createdAt: number | null; partial?: boolean }> {
     this.cancelSnapshotRestoreWait?.();
     const request = ++this.snapshotRestoreRequest;
     if (this.diagnosticsClosed || this.persistentCachePurged) return { restored: false, fresh: false, createdAt: null };
     let cancel!: () => void;
-    const cancelled = new Promise<boolean>(resolve => { cancel = () => resolve(false); });
+    const unavailable = { restored: false, fresh: false, createdAt: null };
+    const cancelled = new Promise<typeof unavailable>(resolve => { cancel = () => resolve(unavailable); });
     this.cancelSnapshotRestoreWait = cancel;
-    const resumed = await Promise.race([this.restoreUrlIndex().then(() => true), cancelled]).finally(() => {
-      if (this.cancelSnapshotRestoreWait === cancel) this.cancelSnapshotRestoreWait = null;
+    // readUrlOwners handles ordinary cache failures. Retain explicit rejection handling for this
+    // detached optional owner without converting URL availability into graph/source authority.
+    void this.restoreUrlIndex().catch(() => {
+      if (!this.diagnosticsClosed && !this.persistentCachePurged) this.urlCacheAvailable = false;
     });
-    if (!resumed || this.diagnosticsClosed || this.persistentCachePurged || request !== this.snapshotRestoreRequest) return { restored: false, fresh: false, createdAt: null };
     let arbitration: typeof this.eagerPreviewArbitration = null;
     if (!this.isOnDemandMode()) {
       this.eagerPreviewArbitration?.release();
@@ -5037,13 +5041,17 @@ export class GraphIndex {
       this.eagerPreviewArbitration = arbitration;
     }
     try {
-      if (this.isOnDemandMode()) return this.restoreOnDemandPreview(seedPaths);
+      const restoring = this.isOnDemandMode() ? this.restoreOnDemandPreview(seedPaths) : this.restoreIndexedDbSnapshot(seedPaths);
       // Targeted preview/no-cache classification releases local demand independently of the full
-      // page/evidence/source task. The finally also releases failed or abandoned restorations.
-      const indexed = await this.restoreIndexedDbSnapshot(seedPaths);
-      void this.cleanupLegacySnapshotFiles();
+      // page/evidence/source task. Public cancellation never retires healthy shared URL replay.
+      const indexed = await Promise.race([restoring, cancelled]);
+      if (this.diagnosticsClosed || this.persistentCachePurged || request !== this.snapshotRestoreRequest) return unavailable;
+      if (!this.isOnDemandMode()) void this.cleanupLegacySnapshotFiles();
       return indexed;
-    } finally { arbitration?.release(); }
+    } finally {
+      if (this.cancelSnapshotRestoreWait === cancel) this.cancelSnapshotRestoreWait = null;
+      arbitration?.release();
+    }
   }
 
   /**

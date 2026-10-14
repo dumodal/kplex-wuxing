@@ -15,8 +15,8 @@ export { contributorBrowserInitialize };
 
 /** Seed genuine cached link facts, canonical pages/evidence and the actual schema-3 chunk stores. */
 export const initializeHydrationWork = String.raw`(/** Install fixture capabilities without creating storage until explicitly requested. */ () => {
-  /** Return fresh cache/index owners; callers must close the fixture even on rejected hydration. */
-  window.hydrationWorkFixture=async(name,records,fields)=>{
+  /** Capture the requested mode before constructing cache/index owners; callers must always close. */
+  window.hydrationWorkFixture=async(name,records,fields,indexingMode='eager')=>{
     const M=sourceModules,f=await fixture(name);
     f.app.vault.getName=/** Select only this fixture's disposable cache namespace. */ ()=>name;
     f.app.vault.getAbstractFileByPath=/** Rebind captured files/root; unresolved targets have no physical identity. */ path=>f.files.get(path)??(path===''||path==='/'?f.app.vault.getRoot():null);
@@ -24,7 +24,7 @@ export const initializeHydrationWork = String.raw`(/** Install fixture capabilit
     const file=f.add('Hub.md',text),body=M.parseBodyMetadata(text);
     f.app.metadataCache.unresolvedLinks[file.path]=Object.fromEntries(targets.map(/** Match the actual one-occurrence source input. */ path=>[path,1]));
     ok(await f.cache.putBody(file.path,file.stat.mtime,body),'Real hot body seed');
-    const settings={indexingMode:'eager',hierarchy:{hidden:[],parents:Array.from({length:fields},/** Increase guard input without reclassifying these body links. */ (_,n)=>'Dormant parent '+n),children:[],leftFriends:[],rightFriends:[],previous:[],next:[],exclusions:[]},
+    const settings={indexingMode,hierarchy:{hidden:[],parents:Array.from({length:fields},/** Increase guard input without reclassifying these body links. */ (_,n)=>'Dormant parent '+n),children:[],leftFriends:[],rightFriends:[],previous:[],next:[],exclusions:[]},
       inferAllLinksAsFriends:false,inverseInfer:false,showFullTagName:true,tagStyleList:[],baseNodeStyle:{maxLabelLength:30},noteTypeField:'Type',primaryTagField:'Style',
       lastActivePath:file.path,pinnedNodes:[],excludeFilepaths:[],nameFields:'',maxItemCount:30};
     const plugin={app:f.app,settings,getIndexSourceRevision:/** Physical mutation cases deliberately rely on independent identity/membership checks. */ ()=>0};
