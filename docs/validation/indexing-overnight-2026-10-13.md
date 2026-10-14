@@ -22,7 +22,8 @@ structural refactor, cache redesign, release, merge, PR-ready status authorizati
 | M native heap/flush attribution | Committed `99f12f3`; pushed | RetainedURLslice35.70to40.20MB (+4.50MB); alltrackedrootscollect. Unforcedmaxflushmedian32.3to48.6ms; general searchdominant | 3retained+3unforced matchedpairs/12replays plusdefaultCLI, exactdigests/zeroIO/strictnativecleanup; [report](indexing-native-url-memory-2026-10-14.md) |
 | B4 reuse published URL search | Committed `ba83041`; pushed |4,096-owner final flush evidence rows16,386→4,096, duplicate general URL rows4,097→0. Native E3 comparison: retained median39.43→37.91MB; largest unforced flush median49.7→35.4ms | Full495browser/822normal/10focused, five exact search/graph digests, three retained+three unforced pairs, six foreground cases, exact fixture/config/artifact/unload audit; [report](indexing-url-search-publication-2026-10-14.md) |
 | M-B5 URL container storage | Committed `3ef54e2`; pushed |Actual8,040URLpages retain8,042wrapper layers and8,042separate delta Maps while inherited native backing is empty | Exact native graph/source/zeroIO,24postGC component samples/root collections, stage/render/config/window/fixture audit; composite bytes are not a predicted replacement saving; [gate](indexing-url-storage-baseline-2026-10-14.md) |
-| B5 reuse native adjacency backing | Validated; this checkpoint |8,042separate retained Maps→0. Native graph heap median38.30→37.47MB;16,384two-entry container heap3.74→2.17MB | Full495browser/824normal/33focused, five identical work/digests, six native pairs+two component replays/48samples, six foreground cases, final artifact/fixture/config/unload audit; timing ranges overlap; [report](indexing-url-adjacency-storage-2026-10-14.md) |
+| B5 reuse native adjacency backing | Committed `cacefe5`; pushed |8,042separate retained Maps→0. Native graph heap median38.30→37.47MB;16,384two-entry container heap3.74→2.17MB | Full495browser/824normal/33focused, five identical work/digests, six native pairs+two component replays/48samples, six foreground cases, final artifact/fixture/config/unload audit; timing ranges overlap; [report](indexing-url-adjacency-storage-2026-10-14.md) |
+| M3 matched aggregate A to B5 | Validated measurement; this checkpoint | Warm replay median25.90→13.81s (~46.7% shorter), originworking31,996,000→0; retained34.20→36.85MB (+2.65MB/7.8%); largest unforcedflush32.2→35.3ms | Five retained/three unforced/three dual-lifetime replay pairs,28lifetimes/22stages, exactsource/graph/evidence/zeroIO/roots/finalaudits; aggregate tradeoff awaits maintainer decision; [report](indexing-native-url-aggregate-2026-10-14.md) |
 
 B2 is committed and pushed. Independent adjacency privacy, stable published-only targets, bounded
 replay and immutable fallback/compaction preserve retained Map and canonical target contracts.
@@ -32,8 +33,9 @@ objects. No source authority, scheduler, schema or public semantic owner changed
 
 Measurements distinguish actual removed work from inclusive duration. B1's sub-millisecond native
 baseline does not support an elapsed-speedup claim. Full M acceptance and physical iOS/Android/macOS
-remain pending. B4 addresses the measured search-flush cost and improves paired native heap and
-event-loop results; it does not establish recovery of all accumulated heap overhead or whole-startup
-performance. The existing synthetic 20,000-note fixture
+remain pending. B4/B5 remove measured search and container costs. M3 directly confirms faster warm
+reconstruction alongside residual retained-heap and per-flush costs; unconditional aggregate
+acceptance awaits the maintainer's tradeoff decision. Whole-startup, physical-device and peak-memory
+claims remain separate. The existing synthetic 20,000-note fixture
 is preserved; small-vault functional probes remain preferred. Each native driver is serialized and
 owns independent cleanup. Completed source/artifacts/tests stay frozen before the next checkpoint.
