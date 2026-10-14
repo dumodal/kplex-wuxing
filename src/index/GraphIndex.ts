@@ -19,6 +19,8 @@
  * presentation caches, atomic per-file publication and source-backed startup adoption; builders stage
  * semantics privately. URL search terms use their current labels directly, avoiding title-cache
  * allocation during dense atomic commits while retaining ordinary note display-name policy.
+ * URL display flushes reuse their just-published search catalog instead of resolving duplicate
+ * general URL entries; ordinary patches retain their canonical search update behavior.
  * With durable neutral sources, available preview scopes prepare before optional
  * full snapshot hydration. After cache loss, the same compiler restores complete node vocabulary
  * without relationships, independently of display-only controls, and finite changed-owner incidence
@@ -3451,7 +3453,7 @@ export class GraphIndex {
     this.publishedUrlComplete = this.urlDiscoveryComplete;
     this.publishedUrlCachedMetadata = Boolean(this.urlCachedMetadataOwners.size);
     this.publishUrlSearch(touched);
-    this.relationViewCache = new WeakMap(); this.patchSearchIndex(touched); this.suggestionCatalogCache = null;
+    this.relationViewCache = new WeakMap(); this.patchSearchIndex(touched, true); this.suggestionCatalogCache = null;
     this.pendingUrlPaths = new Set(); this.pendingUrlOwners.clear();
     this.urlPresentationFlushes++;
     this.emitPresentation();
@@ -5680,13 +5682,32 @@ export class GraphIndex {
     this.installSearchIndex({ entries, byPath });
   }
 
-  /** Update only entries whose source/target page may have changed during a Markdown patch. */
-  private patchSearchIndex(paths: Iterable<string>): void {
+  /** Update only entries whose source/target page may have changed during a Markdown patch.
+   * @param urlCatalogPublished Only URL flushes opt in after publishing their search catalog in
+   * this same synchronous boundary. Both effective search merges prefer those URL entries, so
+   * resolving them again would materialize unused support/evidence rows. Rebind existing rows to
+   * their canonical or current catalog page and reuse that vocabulary without scanning the general
+   * catalog. Ordinary callers and uncovered retirements still perform their usual update. */
+  private patchSearchIndex(paths: Iterable<string>, urlCatalogPublished = false): void {
     this.physicalSearchMerge = null;
     this.searchCandidateCache.clear();
     const removed = new Set<string>();
     const uniquePaths: Iterable<string> = paths instanceof Set ? paths : new Set(paths);
     for (const path of uniquePaths) {
+      const catalog = urlCatalogPublished ? this.urlSearchEntries.get(path) : undefined;
+      if (catalog) {
+        const canonical = this.state.pages.get(path);
+        if (!canonical || canonical.url) {
+          const existing = this.searchEntryByPath.get(path);
+          if (existing) {
+            existing.page = canonical ?? catalog.page;
+            existing.name = catalog.name;
+            existing.aliases = catalog.aliases;
+            existing.path = catalog.path;
+          }
+          continue;
+        }
+      }
       // Incremental commits already provide canonical graph paths. Prefer the direct lookup so a
       // URL-heavy patch does not repeat lowercase/path-resolution work for thousands of entries.
       const page = this.state.pages.get(path) ?? this.get(path);

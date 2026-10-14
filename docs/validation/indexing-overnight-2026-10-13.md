@@ -19,7 +19,8 @@ structural refactor, cache redesign, release, merge, PR-ready status authorizati
 | M-E3 dense pair appends | Committed `7d49b4a`; pushed | 4,096same-pair originals copy8,386,560prior entries; same4,096distributed originals copy0 | Actual compiler/evidence,10cells, exactlineorder/multiplicity/IDs; fixedclock noelapsedclaim; [gate](indexing-evidence-append-baseline-2026-10-14.md) |
 | E3 private compiler appends | Committed `0ad463c`; pushed | Dense4,096prefixcopies8,386,560to0; native16,384values134,225,920to0 | Full495browser,15focused/86affected,10exactdigests,3alternatingnativepairs:median1085.7to759.7ms (~30% fixture gain);6foreground; [report](indexing-private-compiler-append-2026-10-14.md) |
 | M native warm URL scale | Committed `92a70fa`; pushed | Actual20,088owners: shared-origin working visits31,996,000to0; elapsed median26.55to15.98s (~40%) | 3alternating exact pairs/12lifetimes, matching ordered digests/zero bodyIO; candidate heartbeat68-94ms vsbaseline34-60ms needs attribution; [report](indexing-native-url-scale-2026-10-14.md) |
-| M native heap/flush attribution | Validated measurement; this checkpoint | RetainedURLslice35.70to40.20MB (+4.50MB); alltrackedrootscollect. Unforcedmaxflushmedian32.3to48.6ms; general searchdominant | 3retained+3unforced matchedpairs/12replays plusdefaultCLI, exactdigests/zeroIO/strictnativecleanup; [report](indexing-native-url-memory-2026-10-14.md) |
+| M native heap/flush attribution | Committed `99f12f3`; pushed | RetainedURLslice35.70to40.20MB (+4.50MB); alltrackedrootscollect. Unforcedmaxflushmedian32.3to48.6ms; general searchdominant | 3retained+3unforced matchedpairs/12replays plusdefaultCLI, exactdigests/zeroIO/strictnativecleanup; [report](indexing-native-url-memory-2026-10-14.md) |
+| B4 reuse published URL search | Validated; this checkpoint |4,096-owner final flush evidence rows16,386→4,096, duplicate general URL rows4,097→0. Native E3 comparison: retained median39.43→37.91MB; largest unforced flush median49.7→35.4ms | Full495browser/822normal/10focused, five exact search/graph digests, three retained+three unforced pairs, six foreground cases, exact fixture/config/artifact/unload audit; [report](indexing-url-search-publication-2026-10-14.md) |
 
 B2 is committed and pushed. Independent adjacency privacy, stable published-only targets, bounded
 replay and immutable fallback/compaction preserve retained Map and canonical target contracts.
@@ -28,8 +29,9 @@ copies. This structural bound is not a retained-heap measurement; target/storage
 objects. No source authority, scheduler, schema or public semantic owner changed. D batching potential is measured at708ce32; stored-write fencing remains a separate candidate. E2 follows its ordinary-work gate.
 
 Measurements distinguish actual removed work from inclusive duration. B1's sub-millisecond native
-baseline does not support an elapsed-speedup claim. Full M retained-heap/heartbeat/native scale
-acceptance and physical iOS/Android/macOS remain pending. Native warm URL scale is now measured,
-with a foreground-stall concern assigned to the next gate; it is not full M acceptance. The existing synthetic 20,000-note fixture
+baseline does not support an elapsed-speedup claim. Full M acceptance and physical iOS/Android/macOS
+remain pending. B4 addresses the measured search-flush cost and improves paired native heap and
+event-loop results; it does not establish recovery of all accumulated heap overhead or whole-startup
+performance. The existing synthetic 20,000-note fixture
 is preserved; small-vault functional probes remain preferred. Each native driver is serialized and
 owns independent cleanup. Completed source/artifacts/tests stay frozen before the next checkpoint.

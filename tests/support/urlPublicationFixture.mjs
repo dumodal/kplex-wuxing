@@ -3,8 +3,8 @@ import vm from "node:vm";
 import { MessageChannel } from "node:worker_threads";
 import { webcrypto } from "node:crypto";
 
-/** Keep real graph/cache/compiler owners; only native Vault facts are controlled. */
-export function urlPublicationFixture(bundle, timers = { setTimeout, clearTimeout }) {
+/** Keep real graph/cache/compiler owners; callers may select explicit settings before construction. */
+export function urlPublicationFixture(bundle, timers = { setTimeout, clearTimeout }, settingsOverrides = {}) {
   const w = { performance: { now: () => 0 }, MessageChannel, crypto: webcrypto, setTimeout: timers.setTimeout, clearTimeout: timers.clearTimeout };
   vm.runInContext(bundle, vm.createContext({ window: w, performance: w.performance, URL, Date, TextEncoder, TextDecoder, structuredClone, setTimeout: timers.setTimeout, clearTimeout: timers.clearTimeout }));
   const M = w.sourceModules, files = new Map(), metadata = new Map(), root = new w.ContributorFolder();
@@ -15,6 +15,7 @@ export function urlPublicationFixture(bundle, timers = { setTimeout, clearTimeou
   const settings = { indexingMode: 'on-demand', hierarchy: { hidden: [], parents: [], children: [], leftFriends: [], rightFriends: [], previous: [], next: [], exclusions: [] },
     inferAllLinksAsFriends: false, inverseInfer: false, showFullTagName: true, tagStyleList: [], baseNodeStyle: { maxLabelLength: 30 }, maxItemCount: 30,
     pinnedNodes: [], excludeFilepaths: [], nameFields: '', noteTypeField: 'Type', primaryTagField: 'Style' };
+  Object.assign(settings, settingsOverrides);
   const index = new M.GraphIndex({ app, settings, getIndexSourceRevision: () => 0 }, app);
   index.indexedDb.putUrlOwners = async () => true;
   /** Actual source identities and canonical parsed body inputs feed the production publisher. */
