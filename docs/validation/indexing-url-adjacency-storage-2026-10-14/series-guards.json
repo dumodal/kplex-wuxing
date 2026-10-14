@@ -1,0 +1,17 @@
+[
+    {
+        "series":  "retained-pairs",
+        "outerCleanup":  "passed",
+        "stagePasses":  6
+    },
+    {
+        "series":  "unforced-pairs",
+        "outerCleanup":  "passed",
+        "stagePasses":  6
+    },
+    {
+        "series":  "storage-pair",
+        "outerCleanup":  "passed",
+        "stagePasses":  2
+    }
+]

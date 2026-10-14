@@ -3,6 +3,8 @@
  * neighbors. An authorized owner may consume a bounded immediate delta; otherwise its base is
  * frozen before fork publication. Public/displayed adjacency and ordinary graph maps stay native.
  * This container never proves privacy: GraphIndex must establish that independently at commit.
+ * Native superclass storage holds only this layer's private delta, avoiding a second Map per
+ * wrapper. Consumers use the overridden logical API; intrinsic Map calls are not a published view.
  */
 /** Preserve the caller's key/value types when narrowing ordinary Map storage. */
 export function isUrlAdjacencyMap<K, V>(map: Map<K, V>): map is UrlAdjacencyMap<K, V> {
@@ -10,7 +12,6 @@ export function isUrlAdjacencyMap<K, V>(map: Map<K, V>): map is UrlAdjacencyMap<
 }
 
 export class UrlAdjacencyMap<K, V> extends Map<K, V> {
-  private readonly local = new Map<K, V>();
   private removed: Set<K> | null = null;
   private reinserted: Set<K> | null = null;
   private cleared = false;
@@ -51,14 +52,14 @@ export class UrlAdjacencyMap<K, V> extends Map<K, V> {
   /** Count actual replay writes, including delete/reinsert and a clear's old logical entries. */
   get replayCost(): number {
     this.assertReadable();
-    return this.local.size + (this.removed?.size ?? 0) + (this.reinserted?.size ?? 0)
+    return super.size + (this.removed?.size ?? 0) + (this.reinserted?.size ?? 0)
       + (this.cleared ? this.base?.size ?? 0 : 0);
   }
 
   /** Count retained map/set entries, not bytes; dead history cannot grow with an obsolete peak degree. */
   get retainedEntries(): number {
     this.assertReadable();
-    return this.local.size + (this.removed?.size ?? 0) + (this.reinserted?.size ?? 0)
+    return super.size + (this.removed?.size ?? 0) + (this.reinserted?.size ?? 0)
       + (this.base?.retainedEntries ?? 0);
   }
 
@@ -73,13 +74,13 @@ export class UrlAdjacencyMap<K, V> extends Map<K, V> {
   /** Preserve undefined-valued membership as well as tombstone/clear shadows. */
   override has(key: K): boolean {
     this.assertReadable();
-    return this.local.has(key) || !this.cleared && !this.removed?.has(key) && Boolean(this.base?.has(key));
+    return super.has(key) || !this.cleared && !this.removed?.has(key) && Boolean(this.base?.has(key));
   }
 
   /** Resolve staged values before the immutable captured base. */
   override get(key: K): V | undefined {
     this.assertReadable();
-    if (this.local.has(key)) return this.local.get(key);
+    if (super.has(key)) return super.get(key);
     return this.cleared || this.removed?.has(key) ? undefined : this.base?.get(key);
   }
 
@@ -91,7 +92,7 @@ export class UrlAdjacencyMap<K, V> extends Map<K, V> {
       (this.reinserted ??= new Set()).add(key);
     }
     this.removed?.delete(key);
-    this.local.set(key, value);
+    super.set(key, value);
     if (!existed) this.count++;
     this.revision++;
     return this;
@@ -101,7 +102,7 @@ export class UrlAdjacencyMap<K, V> extends Map<K, V> {
   override delete(key: K): boolean {
     this.assertWritable();
     if (!this.has(key)) return false;
-    this.local.delete(key); this.reinserted?.delete(key);
+    super.delete(key); this.reinserted?.delete(key);
     if (!this.cleared && this.base?.has(key)) (this.removed ??= new Set()).add(key);
     this.count--; this.revision++;
     return true;
@@ -110,7 +111,7 @@ export class UrlAdjacencyMap<K, V> extends Map<K, V> {
   /** Shadow the entire captured base in O(1), preserving native insertion order after clear. */
   override clear(): void {
     this.assertWritable();
-    this.local.clear(); this.removed = null; this.reinserted = null;
+    super.clear(); this.removed = null; this.reinserted = null;
     this.cleared = true; this.count = 0; this.revision++;
   }
 
@@ -121,10 +122,10 @@ export class UrlAdjacencyMap<K, V> extends Map<K, V> {
       this.assertReadable();
       if (this.cleared) break;
       if (this.removed?.has(key) || this.reinserted?.has(key)) continue;
-      yield [key, this.local.has(key) ? this.local.get(key)! : value];
+      yield [key, super.has(key) ? super.get(key)! : value];
       this.assertReadable();
     }
-    for (const [key, value] of this.local) {
+    for (const [key, value] of super.entries()) {
       this.assertReadable();
       if (!this.cleared && this.base?.has(key) && !this.reinserted?.has(key)) continue;
       yield [key, value];
@@ -161,7 +162,7 @@ export class UrlAdjacencyMap<K, V> extends Map<K, V> {
     if (!this.canAdopt(child, maximum)) return false;
     if (child.cleared) this.clear();
     else for (const key of child.removed ?? []) this.delete(key);
-    for (const [key, value] of child.local) {
+    for (const [key, value] of child.localEntries()) {
       if (child.reinserted?.has(key)) this.delete(key);
       this.set(key, value);
     }
@@ -182,7 +183,7 @@ export class UrlAdjacencyMap<K, V> extends Map<K, V> {
 
   /** Cancelled/consumed private wrappers release parent/value ownership and reject every read. */
   discard(): void {
-    this.retired = true; this.base = null; this.local.clear(); this.removed = null; this.reinserted = null;
+    this.retired = true; this.base = null; super.clear(); this.removed = null; this.reinserted = null;
   }
 
   /** Compact privately with unchanged old storage on cancellation; the owner later swaps the result. */
@@ -195,6 +196,10 @@ export class UrlAdjacencyMap<K, V> extends Map<K, V> {
     }
     return await checkpoint() ? flattened : null;
   }
+
+  /** Iterate only native local writes after adoption has validated this exact child and its budget.
+   * The logical entries() view includes inherited adjacency and must never be used for replay. */
+  private localEntries(): IterableIterator<[K, V]> { return super.entries(); }
 
   /** Never silently read through a parent changed after preparation or a retired stage. */
   private assertReadable(): void {

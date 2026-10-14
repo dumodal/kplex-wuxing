@@ -2,6 +2,8 @@
  * Actual GraphIndex/GraphBuilder B2 work counts at fixed alias vocabulary. Source facts, owner
  * order and explicit 128-owner display batches match both exact revisions. Private cloning and
  * display materialization are counted independently; fake CPU/timers prohibit latency claims.
+ * An optional independent adjacency revision pins the storage owner for later representation
+ * comparisons without requiring that module in historical pre-B2 GraphBuilder baselines.
  */
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
@@ -13,6 +15,8 @@ import {spawnNativeSync} from './obsidian/processTools.mjs';
 
 const ref=process.argv.find(/** Exact committed source is the sole baseline selector. */ value=>value.startsWith('--baseline-ref='))?.split('=')[1],sources=['src/index/GraphBuilder.ts','src/index/GraphIndex.ts'],overrides={};
 if(ref){assert.match(ref,/^[a-f0-9]{7,40}$/);for(const source of sources){const r=spawnNativeSync('git',['show',`${ref}:${source}`],{cwd:process.cwd(),encoding:'utf8',timeout:10000});assert.equal(r.status,0,r.stderr);overrides[source]=r.stdout;}}
+const adjacencySource='src/index/UrlAdjacencyMap.ts',adjacencyRef=process.argv.find(/** Storage comparisons explicitly pin this additional implementation owner. */value=>value.startsWith('--adjacency-baseline-ref='))?.split('=')[1];
+if(adjacencyRef){assert.match(adjacencyRef,/^[a-f0-9]{7,40}$/);const result=spawnNativeSync('git',['show',`${adjacencyRef}:${adjacencySource}`],{cwd:process.cwd(),encoding:'utf8',timeout:10000});assert.equal(result.status,0,result.stderr);overrides[adjacencySource]=result.stdout;}
 const bundle=await contributorBrowserBundle([...sources,'src/index/UrlAdjacencyMap.ts','src/core/graph/evidence.ts','src/core/graph/relations.ts'],overrides),rows=[];
 for(const owners of [256,512,1024,2048,4096]){
   let token=0;const timers=new Map(),f=urlPublicationFixture(bundle,{setTimeout:/** Drive only declared display boundaries in this count-only experiment. */ callback=>{const key=++token;timers.set(key,callback);return key;},clearTimeout:/** Cancellation remains exact for owned timer identities. */ key=>timers.delete(key)}),i=f.index,flush=i.flushUrlPublication;
@@ -36,4 +40,4 @@ for(const owners of [256,512,1024,2048,4096]){
     rows.push({owners,...probe.counts,replayKeys,largestReplay,compactions,compactedEntries,displayEntries,flushes:i.urlPresentationFlushes,graphDigest:createHash('sha256').update(JSON.stringify(value)).digest('hex')});
   }finally{prototype.adopt=adopt;prototype.flattenCooperative=flatten;probe.restore();i.flushUrlPublication=flush;f.close();assert.equal(timers.size,0);}
 }
-console.log(JSON.stringify({node:process.version,baselineRef:ref??null,sources:Object.fromEntries(sources.map(/** Identify exact source bytes independently of working-tree status. */ source=>[source,createHash('sha256').update(overrides[source]??readFileSync(source)).digest('hex')])),rows},null,2));
+console.log(JSON.stringify({node:process.version,baselineRef:ref??null,adjacencyBaselineRef:adjacencyRef??null,sources:Object.fromEntries([...sources,adjacencySource].map(/** Identify exact source bytes independently of working-tree status. */ source=>[source,createHash('sha256').update(overrides[source]??readFileSync(source)).digest('hex')])),rows},null,2));

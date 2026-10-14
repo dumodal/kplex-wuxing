@@ -100,3 +100,21 @@ test('random mixed immutable fallback chains preserve native order and every ret
     for(const [parent,entries] of retained)assert.deepEqual([...parent],entries);
   }
 });
+
+test('bounded adoption never enumerates either complete logical adjacency',/** A tiny override/reinsert delta over a dense parent cannot become a full child-map replay. */()=>{
+  const expected=new Map(Array.from({length:5000},/** Independent native source order. */(_,n)=>[n,n])),parent=UrlAdjacencyMap.copyOf(expected),child=parent.fork();
+  child.set(0,undefined);expected.set(0,undefined);child.delete(1);expected.delete(1);child.delete(2);expected.delete(2);child.set(2,-2);expected.set(2,-2);child.set(6000,6);expected.set(6000,6);
+  const parentEntries=parent.entries,childEntries=child.entries;
+  parent.entries=child.entries=/** Replay owns only local writes, not either logical parent/child view. */()=>{throw Error('Logical adjacency scan during bounded replay');};
+  try{assert.equal(child.replayCost,5);assert.equal(parent.adopt(child,4),false);assert.equal(parent.size,5000);assert(parent.adopt(child,5));}
+  finally{parent.entries=parentEntries;child.entries=childEntries;}
+  compare(parent,expected);assert.throws(/** Consumed stages reject further logical reads. */()=>child.size,/Retired/);
+});
+
+test('retired stages release intrinsic backing without changing a retained parent',/** Native storage must not retain values after a consumed or explicitly discarded private lifetime. */()=>{
+  const parent=UrlAdjacencyMap.copyOf(new Map([['parent',{keep:true}]])),child=parent.fork();child.set('temporary',{owned:true});child.discard();
+  assert.equal(Map.prototype.entries.call(child).next().done,true);assert.equal(parent.size,1);assert.equal(parent.get('parent').keep,true);
+  assert.throws(/** Public access to discarded storage stays closed even when native backing was released. */()=>child.get('temporary'),/Retired/);
+  const adopted=parent.fork();adopted.set('published',{current:true});assert(parent.adopt(adopted,1));assert.equal(Map.prototype.entries.call(adopted).next().done,true);assert.equal(parent.get('published').current,true);
+  parent.discard();assert.equal(Map.prototype.entries.call(parent).next().done,true);
+});
