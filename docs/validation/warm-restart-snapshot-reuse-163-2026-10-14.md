@@ -13,11 +13,11 @@ The deterministic real-IndexedDB reproduction identifies `publication-superseded
 `open`, publisher `file-patch`, publication 1→2, and zero decoded records. Before correction it
 performs one inventory and one global catalog build; no note reads or parses are needed for that detour.
 
-The old candidate remains rejected. A trusted, physically current schema-3 snapshot may get **one new
+The old candidate remains rejected. A trusted, physically current complete active schema-3 snapshot may get **one new
 attempt**, after the existing P4 checkpoint, only if all intervening publications were accounted
 file commits and there were at most 256. Current semantic fingerprints for those owners must match
 the saved records before any replacement is published. Missing/mismatched proof, other publishers,
-later interruptions and all existing invalidation guards retain their fallback. The second attempt
+later interruptions, checkpoint generations and all existing invalidation guards retain their fallback. The second attempt
 captures its own publication fence; there is no retry loop or retained discarded full graph.
 
 The storage reader now identifies its existing guard boundaries. One run-scoped, path-free first
@@ -26,8 +26,8 @@ saved preview, full snapshot, checkpoint and source-vocabulary recovery. Support
 only finite enums and scalar counters; no paths, signatures, note data or exceptions are exported.
 These diagnostics never decide admission or make readiness/source-authority flags true.
 
-No schema, settings, compiler, evidence precedence, scheduler, watchdog, URL-priority or persistence
-transaction behavior changes. On-demand remains local. Existing whole-graph publication and source
+No schema, settings, compiler, evidence precedence, scheduler, watchdog-threshold, URL-priority or persistence
+transaction changes. Retry admission does not advance the progress clock. On-demand remains local. Existing whole-graph publication and source
 authority remain separate owners; partial graphs still cannot be saved as complete generations.
 
 ## Evidence and measurement limits
@@ -53,8 +53,31 @@ The existing disposable large fixture verifies byte-for-byte against
 `scripts/testing/generate-high-node-vault.mjs`: 20,000 notes, 8,831,230 Markdown bytes, 80,000 distinct
 placeholder targets, 8,000 URL targets and 259,000 source link occurrences. Input digest:
 `50b8cb12ef83c3cd62f1605390fe6ff793079a9f6e37e471e59d0060cf287cd0`.
-Published graph/evidence counts and native startup samples are pending; these input counts are not
-substitutes for a complete saved graph.
+The genuine production full compiler and completed snapshot transaction produced 108,217 graph
+nodes, 20,088 Markdown fingerprints and 197,561 declarations, including the 88 existing help notes.
+Cold setup had no complete snapshot and hit the existing source-authority watchdog before the
+ordinary coordinator completed that build/save. Its stale timeout keeps that setup session's status
+incomplete even after source closure. Setup and its stopped observational controllers are excluded
+from warm timing; no readiness flag, deadline or watchdog was changed to qualify the fixture.
+
+A subsequent native application reload of the diagnostic baseline selects that complete fresh
+snapshot, publishes its preview at 1,689.6 ms from renderer navigation, then rejects its full reader
+at `checkpoint`: `publication-superseded`, publication 1→7, latest publisher `file-patch`, source
+revision 0, policy revision 1 and zero decoded pages/relations/evidence. It selects source recovery
+and proceeds through host-metadata comparison and cached-source reconciliation with zero source
+reads/parses/repairs and zero URL-owner reads. This independently reproduces the mechanism in a real
+application lifecycle. The selected visible hub has 19,999 incoming synthetic sources; this is a
+high-fan-in scenario, not a representative timing for every vault or center.
+
+The detailed baseline spends 313.8 s in host-metadata comparison and 692.2 s in cached-source
+reconciliation. Source authority closes at 1,028.4 s from navigation. Its requested-semantics and
+subsequent adoption phases take another 62.5 s and 62.9 s; a phase label alone does not prove the
+catalog compiler ran. Hydration fails at 1,153.8 s. The normal coordinator then rebuilds/saves the
+genuine full graph, but status remains incomplete with a later `decode-budget` diagnostic. The
+observation ends at 1,384.9 s (23m04.9s), with all observed focus checks passing. This is a **failed
+baseline**, not a successful startup timing or denominator for a speedup percentage. Raw samples
+retain the failed restore and subsequent normal build/save. Matched candidate measurements remain
+pending. Source/hydration phases overlap and must not be summed across lanes.
 
 ## Reproduction and validation
 
@@ -62,21 +85,25 @@ substitutes for a complete saved graph.
   without the baseline option compare actual guard-owner sources with a genuine compiler snapshot
   and ordinary unchanged file patch. Setup is outside timing; this is a work-count test, not startup.
 - `node --test --test-concurrency=1 tests/hydration-guards-indexeddb.test.mjs tests/support-report.test.mjs tests/foreground-startup-indexeddb.test.mjs`:
-  76 focused tests passed before native acceptance. Old rejection assertions remain; added cases
-  cover changed same-stat facts, missing proof, mixed publishers, retry invalidation and privacy.
+  The expanded focused lane also includes `tests/saved-preview-url-indexeddb.test.mjs`: 110 tests
+  pass, covering changed same-stat facts, missing proof, mixed publishers, retry invalidation,
+  corrupt-active/checkpoint separation, canonical identity, real held URL work and watchdog progress.
+  Old rejection assertions remain.
 - Full `npm run verify:obsidian`, Node 22.22.2, passes against `kplex-test-small`:
   architecture 7 / core 128 / general-indexing 825 / UI 63 / portable sources 334 / real-browser
-  sources 509; no failures or skips. Official lint, installed types, actual production build,
+  sources 512; no failures or skips. Official lint, installed types, actual production build,
   exact-artifact staging and native smoke pass. Six `foreground.mjs` cases pass with configuration
   restored. The new driver's small-vault application reload also passes in on-demand mode.
-- Three baseline/coordinator trials: 514.3 / 430.5 / 394.4 ms, each one recovery inventory and one
-  global catalog; zero full-snapshot hydration. Three candidate trials: 317.5 / 305.4 / 291.4 ms,
+- Three frozen baseline/coordinator trials: 476.8 / 416.5 / 377.5 ms, each one recovery inventory and one
+  global catalog; zero full-snapshot hydration. Three candidate trials: 318.8 / 303.4 / 292.3 ms,
   each zero recovery inventories/catalogs, 514 full pages and 513 declarations, matching the saved
   canonical adjacency/provenance oracle. Both use zero note reads/parses. The median reduction is
-  29.1% in this deliberately held 512-target fixture, **not a whole-startup speedup**.
+  27.2% in this deliberately held 512-target fixture, **not a whole-startup speedup**. Earlier trial
+  sets remain in the raw archives. Final production main SHA-256:
+  `f9604ff12ee599c1fe64a6dcc68cefa4f10daee80c7167d090137a7fa7f39e85`.
 - `scripts/testing/obsidian/warmRestart.mjs` requires the three explicit disposable-vault variables,
   an external `KPLEX_HOST_REPORT_DIR` and unique receipt labels. It refuses personal vaults. Its
-  `stage`, `prepare`, `run`, `observe` and `restore-config` actions retain artifact identities,
+  `stage`, `prepare`, `wait`, `save`, `run`, `observe` and `restore-config` actions retain artifact identities,
   configuration backups and aggregate samples. `prepare` uses the real full compiler and complete
   snapshot transaction. `run` uses the host's `app:reload` command and verifies changed renderer
   time origin; it is a vault-window application reload, with Electron process retained.

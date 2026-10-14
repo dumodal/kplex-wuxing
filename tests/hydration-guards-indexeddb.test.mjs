@@ -135,7 +135,8 @@ test('hydration guards retain policy/lifetime/physical fences while removing per
           const outcome=await hydrationDeadline(index.waitForSnapshotHydration(),'Coordinator recovery');
           const diagnostic=index.getSnapshotHydrationDiagnostics();
           return {outcome,diagnostic,inventories,catalogs,publication,finalPublication:index.publicationRevision,
-            full:index.fullSnapshotHydrated,reads:f.f.reads.length,parses:f.f.parses.length};
+            full:index.fullSnapshotHydrated,reads:f.f.reads.length,parses:f.f.parses.length,
+            canonical:[...index.state.pages.values()].every(/** Every restored relation targets this published generation's canonical page. */ page=>[...page.neighbours].every(/** Do not retain targets from the retired foreground graph. */ ([path,relation])=>relation.target===index.state.pages.get(path)))};
         }finally{index.startPersistedSourceInventory=inventory;sourceModules.GraphBuilder.prototype.buildSourceNodeCatalog=catalog;hold.restore();f.close();}
       })()`);
       assert.equal(result.diagnostic.firstFailure?.reason,'publication-superseded');
@@ -145,6 +146,7 @@ test('hydration guards retain policy/lifetime/physical fences while removing per
       assert.equal(result.full,true,JSON.stringify(result));
       assert.equal(result.diagnostic.attempts,2,'Only one newly fenced attempt follows the rejected candidate');
       assert.equal(result.diagnostic.route,'full-snapshot');
+      assert.equal(result.canonical,true,'The newly published graph keeps canonical target identities');
       assert.equal(result.inventories,0,'An unchanged reusable graph does not need global source recovery');
       assert.equal(result.catalogs,0,'No unnecessary full source node catalog');
       assert.equal(result.reads,0);assert.equal(result.parses,0);
@@ -180,12 +182,38 @@ test('hydration guards retain policy/lifetime/physical fences while removing per
       });
     }
 
-    for (const mutation of ['second-file-commit','physical-replacement','stat','membership','folder','attachment','policy-ABA','unload','purge','second-restore']) {
+    await t.test('a checkpoint fallback cannot borrow retry eligibility from a corrupt fresh active snapshot',/** Keep the single new attempt restricted to the actual complete active generation. */ async()=>{
+      const result=await browser.evaluate(`(/** Corrupt an actual active chunk and interrupt the independently stored checkpoint reader. */ async()=>{
+        const f=await hydrationWorkFixture('guards-checkpoint-retry',32,0,'eager',true),i=f.index,M=sourceModules;
+        let enter,release,checkpoint=false,held=false;const entered=new Promise(/** Report the checkpoint storage boundary. */ resolve=>enter=resolve),gate=new Promise(/** Own independent late-read cleanup. */ resolve=>release=resolve);
+        const open=i.indexedDb.open,iterate=i.indexedDb.iterateSnapshotPages;
+        try{
+          const active=await f.f.cache.readSnapshotMeta(),db=await f.f.cache.open();
+          ok(await f.f.cache.writeSnapshot({createdAt:Date.now(),vaultSignature:M.computeVaultSignature(f.f.app),settingsSignature:M.computeIndexSettingsSignature(f.settings),
+            urlAliasVersion:M.URL_ALIAS_FACET_VERSION,discoveredFields:[],completedMarkdownPaths:['Hub.md']},
+            [...f.state.pages.values()].map(/** Preserve genuine checkpoint owner signatures. */ page=>M.persistedPageFromGraphPage(page,f.fingerprints.get(page.path))),
+            [...f.state.evidence.declarations()].map(/** Use actual saved provenance. */ item=>M.persistedDeclarationFromEvidence(item)),/** Setup has no competing writer. */ ()=>true,'checkpoint'),'Real checkpoint activation');
+          await edit(db,['snapshotChunks'],/** Damage only the active generation, leaving the checkpoint intact. */ tx=>tx.objectStore('snapshotChunks').delete([active.generation,'pages',0]));
+          i.indexedDb.iterateSnapshotPages=/** Identify the real candidate without substituting returned records. */ function(meta,...args){checkpoint=meta.key==='checkpoint';return iterate.call(this,meta,...args);};
+          i.indexedDb.open=/** Capture this reader before awaiting, then hold its genuine connection completion. */ async function(...args){const holding=checkpoint&&!held;if(holding)held=true;const db=await open.apply(this,args);if(holding){enter();await gate;}return db;};
+          f.releaseSources();const restore=i.restoreIndexedDbSnapshot(['Hub.md']);await hydrationDeadline(entered,'Checkpoint reader');
+          equal((await i.patchMarkdownPaths(['Hub.md'],{useDurableCache:true,forceRecompile:true})).outcome,'patched','Current foreground source');
+          release();await restore;await hydrationDeadline(i.waitForSnapshotHydration(),'Checkpoint interruption fallback');
+          return {diagnostic:i.getSnapshotHydrationDiagnostics(),full:i.fullSnapshotHydrated,windowRetired:i.snapshotForegroundWindow===null};
+        }finally{release();i.indexedDb.open=open;i.indexedDb.iterateSnapshotPages=iterate;f.close();}
+      })()`);
+      assert.equal(result.diagnostic.firstFailure?.reason,'missing-chunk');
+      assert.equal(result.diagnostic.attempts,2,'Exactly the active and checkpoint attempts; no borrowed retry');
+      assert.equal(result.full,false);
+      assert.equal(result.windowRetired,true);
+    });
+
+    for (const mutation of ['second-file-commit','physical-replacement','stat','membership','folder','attachment','policy-ABA','unload','purge','second-restore','watchdog-progress']) {
       await t.test(`a held second attempt remains fenced after ${mutation}`, /** Retire a new candidate independently of the first failure and its public wait. */ async () => {
         const result=await browser.evaluate(`(async()=>{
           const mutation='${mutation}',f=await hydrationWorkFixture('guards-retry-'+mutation,32,0,'eager',true),index=f.index;
           const hold=holdHydrationOpen(index,'pages'),open=index.indexedDb.open;
-          let enter,release,held=false;const entered=new Promise(/** Report actual second-reader entry. */ resolve=>enter=resolve),gate=new Promise(/** Independent cleanup owns release. */ resolve=>release=resolve);
+          let enter,release,held=false,quietProgress=null;const entered=new Promise(/** Report actual second-reader entry. */ resolve=>enter=resolve),gate=new Promise(/** Independent cleanup owns release. */ resolve=>release=resolve);
           index.indexedDb.open=/** Hold only the new candidate, retaining its original storage promise/result. */ async function(...args){
             const value=await open.apply(this,args);
             if(!held&&index.getSnapshotHydrationDiagnostics().attempts===2){held=true;enter();await gate;}return value;
@@ -193,7 +221,13 @@ test('hydration guards retain policy/lifetime/physical fences while removing per
           try{
             const restore=index.restoreIndexedDbSnapshot(['Hub.md']);await hydrationDeadline(hold.entered,'First candidate');f.releaseSources();
             await index.patchMarkdownPaths(['Hub.md'],{useDurableCache:true,forceRecompile:true});
+            if(mutation==='watchdog-progress'){
+              await hydrationDeadline(index.sourceAcquisition.flush(),'Real source closure');
+              quietProgress=index.getSnapshotHydrationDiagnostics().lastProgressAt;
+              await new Promise(/** Cross a real clock tick without advancing source or decoder work. */ resolve=>setTimeout(resolve,20));
+            }
             hold.release();await hydrationDeadline(entered,'Second candidate');await restore;
+            if(mutation==='watchdog-progress')equal(index.getSnapshotHydrationDiagnostics().lastProgressAt,quietProgress,'Retry admission does not credit empty progress or extend the watchdog');
             const waiting=index.waitForSnapshotHydration(),publication=index.publicationRevision;
             if(mutation==='second-file-commit') await index.patchMarkdownPaths(['Hub.md'],{useDurableCache:true,forceRecompile:true});
             if(mutation==='physical-replacement'){const file=new ContributorFile(f.file.path);file.stat={...f.file.stat};file.parent=f.file.parent;f.f.files.set(file.path,file);}
@@ -214,7 +248,7 @@ test('hydration guards retain policy/lifetime/physical fences while removing per
         })()`);
         assert.equal(result.windowRetired,true,JSON.stringify(result));
         if(mutation!=='second-restore') {
-          assert.equal(result.full,false,JSON.stringify(result));
+          assert.equal(result.full,mutation==='watchdog-progress',JSON.stringify(result));
           assert.equal(result.diagnostic.attempts,2,'Further changes never trigger a third attempt');
         }else assert.ok(result.diagnostic.run>1,'A new restore owns independent diagnostics');
       });

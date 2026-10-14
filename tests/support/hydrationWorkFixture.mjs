@@ -52,7 +52,7 @@ export const initializeHydrationWork = String.raw`(/** Install fixture capabilit
     let release;const gate=new Promise(/** Retain the release used by independent failure cleanup. */ resolve=>release=resolve);
     const originals=[];
     for(const key of ['reconcile','flush']){const original=index.sourceAcquisition[key];index.sourceAcquisition[key]=/** Hold unrelated source admission, preserving the actual continuation. */ function(...args){return gate.then(/** Forward the original receiver/arguments after release. */ ()=>original.apply(this,args))};originals.push(/** Remove only the fixture's own wrapper. */ ()=>index.sourceAcquisition[key]=original);}
-    return {f,index,plugin,settings,file,state,targets,
+    return {f,index,plugin,settings,file,state,targets,fingerprints,
       /** Coordinator cases may resume the real source owner before delivering a held graph read. */ releaseSources(){release();},
       /** Retire work, wrappers and both storage owners independently of assertions. */ close(){index.metadataParser.parse=parse;index.destroy();for(const restore of originals)restore();release();f.close();}};
   };

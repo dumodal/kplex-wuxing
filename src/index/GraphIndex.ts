@@ -4043,6 +4043,9 @@ export class GraphIndex {
    * Hydrate a candidate privately, adapt its facade and retain the existing reconciliation plan.
    * A separate record guard avoids serializing settings in synchronous private decoding. Full
    * value checks remain at storage/yield boundaries and publication; legacy callers default to them.
+   * Optional foreground proof must match saved owner fingerprints before even page-only publication.
+   * Only an actual zero-page cancellation after publication supersession is reported as retryable;
+   * the caller owns admission of a new candidate, never revival of this one or source authority.
    */
   private async restoreFullIndexedDbSnapshot(
     meta: IndexedDbSnapshotMeta,
@@ -4093,7 +4096,9 @@ export class GraphIndex {
       // so avoid retaining 100k+ duplicate serialized page objects in memory.
       const retainedPages: PersistedPage[] | null = !Platform.isMobile && !this.indexedDb.snapshotUsesChunks(meta) ? [] : null;
 
-      this.setSnapshotHydrationPhase(run, "pages");
+      // A retry remains in the same pages phase. Its admission alone is not decoded/source
+      // progress and must not reset the existing inactivity watchdog before records arrive.
+      if (!foregroundProof) this.setSnapshotHydrationPhase(run, "pages");
       const pagesOk = await this.indexedDb.iterateSnapshotPages(meta, /** Decode only into this run's private page/fingerprint state. */ (page) => {
         if (!recordProgress("pages")) return;
         retainedPages?.push(page);
@@ -4121,7 +4126,7 @@ export class GraphIndex {
       // A new candidate may replace earlier foreground commits only when their exact semantic
       // signatures match the saved generation. Missing/changed proof falls back without publishing
       // even a page-only replacement. This does not grant source or write authority.
-      if (foregroundProof && [...foregroundProof].some(([path, signature]) => restoredFingerprints.get(path) !== signature)) {
+      if (foregroundProof && [...foregroundProof].some(/** Every intervening source must equal its saved semantic value. */ ([path, signature]) => restoredFingerprints.get(path) !== signature)) {
         this.recordIndexDiagnostic("restore", "snapshot-foreground-proof-mismatch");
         return { restored: false, fresh: false, createdAt: meta.createdAt };
       }
@@ -4363,8 +4368,8 @@ export class GraphIndex {
    * Trusted active generations publish navigable pages before source certification; untrusted or
    * damaged generations retain neutral-source recovery. Only real source/compiler progress advances
    * the unchanged watchdog. Awaited phases reject supersession; previews never grant write authority.
-   * At most one early file-only interruption gets a new attempt, with current fingerprints checked
-   * against saved records before any publication. Other publications and missing proof keep fallback.
+   * At most one early file-only interruption of the complete active generation gets a new attempt,
+   * with current fingerprints checked before publication. Checkpoints and missing proof keep fallback.
    */
   private async restoreIndexedDbSnapshot(seedPaths: readonly string[] = []): Promise<{ restored: boolean; fresh: boolean; createdAt: number | null; partial?: boolean }> {
     this.cancelSnapshotHydration?.();
@@ -4455,8 +4460,8 @@ export class GraphIndex {
           const currentInventory = captureVaultInventory(this.app);
           if (currentInventory.signature !== inventory.signature && (currentInventory.filesByPath.size !== inventory.filesByPath.size
             || currentInventory.folderPaths.size !== inventory.folderPaths.size
-            || [...inventory.filesByPath.keys()].some(path => !currentInventory.filesByPath.has(path))
-            || [...inventory.folderPaths].some(path => !currentInventory.folderPaths.has(path)))) {
+            || [...inventory.filesByPath.keys()].some(/** Detect equal-sized file membership replacement. */ path => !currentInventory.filesByPath.has(path))
+            || [...inventory.folderPaths].some(/** Folder membership has its own physical validity fence. */ path => !currentInventory.folderPaths.has(path)))) {
             physicalValid = false;
             this.recordSnapshotHydrationFailure(run, "physical-membership-changed", operation);
           } else for (const [path, token] of physicalTokens) {
@@ -4593,7 +4598,8 @@ export class GraphIndex {
               this.warmSourceRecoveryAvailable = true;
               this.enableGlobalSourceInventoryIfConfigured();
             } : undefined;
-          const foregroundWindow = trustedWarmSnapshot ? { run, publication: this.publicationRevision, commits: 0, paths: new Set<string>() } : null;
+          const foregroundWindow = trustedWarmSnapshot && meta === active
+            ? { run, publication: this.publicationRevision, commits: 0, paths: new Set<string>() } : null;
           this.snapshotForegroundWindow = foregroundWindow;
           let result;
           try {
@@ -4873,6 +4879,8 @@ export class GraphIndex {
 
   /**
    * Apply one prepared file commit and refresh every repository-owned derived view synchronously.
+   * Record its source owner in an active bounded restore window after the real publication;
+   * touched endpoints do not substitute for the source's semantic fingerprint proof.
    *
    * @param commit Describes paths affected by the already-prepared source transaction.
    * @param publishPreparedState Synchronous one-shot callback that makes the staged graph/fingerprint
