@@ -14,10 +14,13 @@ The deterministic real-IndexedDB reproduction identifies `publication-superseded
 performs one inventory and one global catalog build; no note reads or parses are needed for that detour.
 
 The old candidate remains rejected. A trusted, physically current complete active schema-3 snapshot may get **one new
-attempt**, after the existing P4 checkpoint, only if all intervening publications were accounted
-file commits and there were at most 256. Current semantic fingerprints for those owners must match
+attempt**, after the existing P4 checkpoint, only if all intervening publications were accounted:
+at most one actual body-free structural/host baseline plus file commits, at most 256 total.
+Current semantic fingerprints for all committed file owners must match
 the saved records before any replacement is published. Missing/mismatched proof, other publishers,
-later interruptions, checkpoint generations and all existing invalidation guards retain their fallback. The second attempt
+later interruptions, checkpoint generations and all existing invalidation guards retain their fallback. The structural
+receipt belongs only to `initializeOnDemandBaseline`; an arbitrary snapshot publication cannot borrow it,
+and a reentrant extra publication deliberately prevents accounting. The second attempt
 captures its own publication fence; there is no retry loop or retained discarded full graph.
 
 The storage reader now identifies its existing guard boundaries. One run-scoped, path-free first
@@ -79,28 +82,49 @@ baseline**, not a successful startup timing or denominator for a speedup percent
 retain the failed restore and subsequent normal build/save. Matched candidate measurements remain
 pending. Source/hydration phases overlap and must not be summed across lanes.
 
+The first native candidate also rejects reuse: file-only accounting misses the genuine startup
+structural baseline. Its raw early stop and exact checkpoint artifacts are preserved. A new real-IDB
+regression reproduces that actual producer, alone and before unchanged/changed file commits; it is
+red before the narrowly scoped structural receipt and green afterward, including unrelated and
+reentrant publication controls. The corrected native profile now completes two attempts with
+108,217 pages, 108,217 relation rows and 197,561 declarations. Exact navigation-clock milestones are
+27.2424 s for complete cached navigation and 30.0268 s for snapshot completion. Later host observations
+retain the existing conservative cached-presentation/rebuild path (one real cached full build).
+Source authority and the detailed strict-ready milestone occur at 1,027.854 s; polling first observes
+ready at 1,027.969 s and verifies idle readiness at 1,030.171 s. All 20,088 bodies are reused, with
+zero source/URL reads, parses or repairs and all observed foreground checks passing. No
+host-observation fence was relaxed to turn that later work green. The long source-validation tail
+remains; this result does not claim a fast fully ready startup.
+
+Unforced sampled renderer heap peaks at 805,255,716 bytes in the failed baseline and 2,350,183,696
+bytes during the corrected profile's later rebuild; final samples are 413,573,096 and 442,582,068
+bytes. These different completion/coverage paths and unforced samples do not establish retained
+overhead or a true peak. Normal production repeats remain pending, and physical mobile memory
+acceptance is required; #153's accepted retained-memory tradeoff is not reused as a claim here.
+
 ## Reproduction and validation
 
 - `node scripts/testing/warm-restart-coordinator.mjs --baseline-ref=ae473fc` and the same command
   without the baseline option compare actual guard-owner sources with a genuine compiler snapshot
-  and ordinary unchanged file patch. Setup is outside timing; this is a work-count test, not startup.
+  and ordinary unchanged file patch. Add `--structural-baseline` to include the genuine startup
+  baseline producer. Setup is outside timing; this is a work-count test, not startup.
 - `node --test --test-concurrency=1 tests/hydration-guards-indexeddb.test.mjs tests/support-report.test.mjs tests/foreground-startup-indexeddb.test.mjs`:
-  The expanded focused lane also includes `tests/saved-preview-url-indexeddb.test.mjs`: 110 tests
+  The expanded focused lane also includes `tests/saved-preview-url-indexeddb.test.mjs`: 115 tests
   pass, covering changed same-stat facts, missing proof, mixed publishers, retry invalidation,
   corrupt-active/checkpoint separation, canonical identity, real held URL work and watchdog progress.
   Old rejection assertions remain.
-- Full `npm run verify:obsidian`, Node 22.22.2, passes against `kplex-test-small`:
+- Full `npm run verify:obsidian`, Node 22.22.2, passes for the structural correction against `kplex-test-small`:
   architecture 7 / core 128 / general-indexing 825 / UI 63 / portable sources 334 / real-browser
-  sources 512; no failures or skips. Official lint, installed types, actual production build,
+  sources 517; no failures or skips. Official lint, installed types, actual production build,
   exact-artifact staging and native smoke pass. Six `foreground.mjs` cases pass with configuration
   restored. The new driver's small-vault application reload also passes in on-demand mode.
-- Three frozen baseline/coordinator trials: 476.8 / 416.5 / 377.5 ms, each one recovery inventory and one
-  global catalog; zero full-snapshot hydration. Three candidate trials: 318.8 / 303.4 / 292.3 ms,
+- Three structural-plus-file baseline/coordinator trials: 490.3 / 412.5 / 398.0 ms, each one recovery
+  admission and one global catalog; zero full-snapshot hydration. Three candidate trials: 361.9 / 318.9 / 309.8 ms,
   each zero recovery inventories/catalogs, 514 full pages and 513 declarations, matching the saved
   canonical adjacency/provenance oracle. Both use zero note reads/parses. The median reduction is
-  27.2% in this deliberately held 512-target fixture, **not a whole-startup speedup**. Earlier trial
-  sets remain in the raw archives. Final production main SHA-256:
-  `f9604ff12ee599c1fe64a6dcc68cefa4f10daee80c7167d090137a7fa7f39e85`.
+  22.7% in this deliberately held 512-target fixture, **not a whole-startup speedup**. Earlier trial
+  sets remain in the raw archives. Verified production main SHA-256:
+  `e5994ecce833d5e3e17ad3615fec740ffa45aa3e87066e0c58b7f8d501440a0b`.
 - `scripts/testing/obsidian/warmRestart.mjs` requires the three explicit disposable-vault variables,
   an external `KPLEX_HOST_REPORT_DIR` and unique receipt labels. It refuses personal vaults. Its
   `stage`, `prepare`, `wait`, `save`, `run`, `observe` and `restore-config` actions retain artifact identities,

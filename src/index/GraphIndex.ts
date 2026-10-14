@@ -16,7 +16,7 @@
  * One run-scoped scalar failure explains candidate rejection independently of final readiness;
  * diagnostic publication labels never relax the underlying lifetime or source predicates.
  * A zero-page foreground interruption may admit one new candidate after P4 admission, bounded
- * file-publication accounting and saved semantic proofs; the original candidate stays rejected.
+ * structural/file publication accounting and saved semantic proofs; the old candidate stays rejected.
  * Saved previews start independently of shared URL replay; each restore retains its own watchdog
  * and priority ownership, while public supersession never retires healthy shared URL acquisition.
  * This owner coordinates snapshot restoration/persistence, search and
@@ -588,8 +588,8 @@ export class GraphIndex {
   };
   /** Only the latest real publisher is retained; no source identities or publication history. */
   private snapshotPublicationCause: SnapshotPublicationCause = "none";
-  /** One early-attempt receipt; counts every intervening file publication and retains at most 256 owners. */
-  private snapshotForegroundWindow: { run: number; publication: number; commits: number; paths: Set<string> } | null = null;
+  /** One early-attempt receipt: bounded file owners and at most one independently accounted body-free baseline. */
+  private snapshotForegroundWindow: { run: number; publication: number; commits: number; baselines: number; paths: Set<string> } | null = null;
   private navigableSnapshotSourceRevision: number | null = null;
   /** Paths whose incidence was touched after the trusted warm publication, including old targets. */
   private retiredSnapshotPaths = new Set<string>();
@@ -736,7 +736,11 @@ export class GraphIndex {
     return this.indexedDb.purgeAndClose();
   }
 
-  /** Publish the body-free physical/host graph without processing unrelated Markdown owners. */
+  /**
+   * Publish the body-free physical/host graph without processing unrelated Markdown owners.
+   * Account only this actual producer in an early restore window. Reentrant extra publications
+   * cannot borrow its receipt; all captured physical/policy and source-fingerprint checks remain.
+   */
   initializeOnDemandBaseline(seedPaths: readonly string[] = []): Promise<boolean> {
     if (this.onDemandBaselineReady) return Promise.resolve(true);
     if (this.onDemandBaselineTask) return this.onDemandBaselineTask;
@@ -765,7 +769,14 @@ export class GraphIndex {
       // A P2 bootstrap can finish after snapshot classification established a source-backed
       // strategy. Publishing this body-free baseline cannot downgrade that newer strategy.
       this.hostPreviewScopes.clear();
+      const foregroundWindow = this.snapshotForegroundWindow, publication = this.publicationRevision;
       this.publishRestoredState(next, search, false, false);
+      // The body-free producer owns exactly one publication. Any reentrant publisher makes the
+      // observed delta larger and deliberately leaves this receipt unaccounted, preserving fallback.
+      if (foregroundWindow && foregroundWindow === this.snapshotForegroundWindow
+        && foregroundWindow.run === this.snapshotHydrationRun && this.publicationRevision === publication + 1) {
+        foregroundWindow.baselines++;
+      }
       this.onDemandBaselineReady = true;
       this.plugin.startupDiagnostics?.mark("on-demand-baseline-ready");
       this.emitPresentation();
@@ -4368,8 +4379,9 @@ export class GraphIndex {
    * Trusted active generations publish navigable pages before source certification; untrusted or
    * damaged generations retain neutral-source recovery. Only real source/compiler progress advances
    * the unchanged watchdog. Awaited phases reject supersession; previews never grant write authority.
-   * At most one early file-only interruption of the complete active generation gets a new attempt,
-   * with current fingerprints checked before publication. Checkpoints and missing proof keep fallback.
+   * At most one early accounted foreground interruption of the complete active generation gets a
+   * new attempt: one body-free baseline plus bounded file commits whose fingerprints must match.
+   * Checkpoints, unaccounted publishers and missing proof keep the existing conservative fallback.
    */
   private async restoreIndexedDbSnapshot(seedPaths: readonly string[] = []): Promise<{ restored: boolean; fresh: boolean; createdAt: number | null; partial?: boolean }> {
     this.cancelSnapshotHydration?.();
@@ -4599,7 +4611,7 @@ export class GraphIndex {
               this.enableGlobalSourceInventoryIfConfigured();
             } : undefined;
           const foregroundWindow = trustedWarmSnapshot && meta === active
-            ? { run, publication: this.publicationRevision, commits: 0, paths: new Set<string>() } : null;
+            ? { run, publication: this.publicationRevision, commits: 0, baselines: 0, paths: new Set<string>() } : null;
           this.snapshotForegroundWindow = foregroundWindow;
           let result;
           try {
@@ -4609,8 +4621,10 @@ export class GraphIndex {
               // Retire the old candidate first. The existing P4 checkpoint drains higher-priority
               // work; it is not a new queue or a retry loop. All later awaits keep their own guards.
               await this.workScheduler.checkpoint(INDEX_WORK_PRIORITY.background);
-              if (candidateCurrent() && physicalCurrent() && foregroundWindow.commits > 0 && foregroundWindow.commits <= 256
-                && this.publicationRevision - foregroundWindow.publication === foregroundWindow.commits) {
+              const accountedPublications = foregroundWindow.commits + foregroundWindow.baselines;
+              if (candidateCurrent() && physicalCurrent() && foregroundWindow.baselines <= 1
+                && accountedPublications > 0 && accountedPublications <= 256
+                && this.publicationRevision - foregroundWindow.publication === accountedPublications) {
                 const proof = new Map<string, string>();
                 for (const path of foregroundWindow.paths) {
                   const signature = this.semanticFingerprints.get(path);

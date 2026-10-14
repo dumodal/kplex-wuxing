@@ -152,6 +152,44 @@ test('hydration guards retain policy/lifetime/physical fences while removing per
       assert.equal(result.reads,0);assert.equal(result.parses,0);
     });
 
+    for (const scenario of ['baseline-only','baseline-file','baseline-changed-file','baseline-mixed','baseline-reentrant']) {
+      await t.test(`a genuine startup structural publication remains safely accounted for: ${scenario}`,/** Reproduce the native baseline producer rather than changing a publication integer. */ async()=>{
+        const result=await browser.evaluate(`(/** Execute the real body-free producer while the actual full reader is held. */ async()=>{
+          const scenario='${scenario}',f=await hydrationWorkFixture('guards-structural-'+scenario,32,0,'eager',true),index=f.index;
+          const hold=holdHydrationOpen(index,'pages'),inventory=index.startPersistedSourceInventory,catalog=sourceModules.GraphBuilder.prototype.buildSourceNodeCatalog,publisher=index.publishRestoredState;
+          let inventories=0,catalogs=0;
+          index.startPersistedSourceInventory=/** Count the actual recovery owner without replacing its result. */ function(...args){inventories++;return inventory.apply(this,args);};
+          sourceModules.GraphBuilder.prototype.buildSourceNodeCatalog=/** Count actual vocabulary compilation. */ function(...args){catalogs++;return catalog.apply(this,args);};
+          try{
+            const expected=hydrationWorkValue({state:f.state}),restore=index.restoreIndexedDbSnapshot(['Hub.md']);await hydrationDeadline(hold.entered,'Full reader');
+            if(scenario==='baseline-reentrant'){
+              let reentered=false;
+              index.publishRestoredState=/** A second real publication before the producer returns must never borrow its receipt. */ function(...args){const value=publisher.apply(this,args);if(!reentered){reentered=true;publisher.call(this,this.state,null,true,false);}return value;};
+            }
+            ok(await hydrationDeadline(index.initializeOnDemandBaseline(['Hub.md']),'Real structural baseline'),'Actual baseline publication');
+            f.releaseSources();
+            if(scenario==='baseline-changed-file'){
+              const text='[[Current target]]';f.f.texts.set(f.file.path,text);f.f.app.metadataCache.unresolvedLinks[f.file.path]={'Current target':1};
+              ok(await f.f.cache.putBody(f.file.path,f.file.stat.mtime,sourceModules.parseBodyMetadata(text)),'Real same-stat changed facts');index.fieldCache.delete(f.file.path);
+            }
+            if(scenario==='baseline-mixed')index.publishRestoredState(index.state,null,true,false);
+            if(scenario!=='baseline-only')equal((await index.patchMarkdownPaths(['Hub.md'],{useDurableCache:true,forceRecompile:true})).outcome,'patched','Actual source publication');
+            hold.release();await restore;await hydrationDeadline(index.waitForSnapshotHydration(),'Coordinator outcome');
+            if(index.fullSnapshotHydrated)equal(hydrationWorkValue(index),expected,'Exact saved canonical adjacency/provenance after startup baseline');
+            return {full:index.fullSnapshotHydrated,diagnostic:index.getSnapshotHydrationDiagnostics(),inventories,catalogs,
+              reads:f.f.reads.length,parses:f.f.parses.length,current:!!index.state.pages.get('Current target'),retired:index.snapshotForegroundWindow===null};
+          }finally{index.publishRestoredState=publisher;index.startPersistedSourceInventory=inventory;sourceModules.GraphBuilder.prototype.buildSourceNodeCatalog=catalog;hold.restore();f.close();}
+        })()`);
+        const reusable=scenario==='baseline-only'||scenario==='baseline-file';
+        assert.equal(result.full,reusable,JSON.stringify(result));assert.equal(result.retired,true);
+        assert.equal(result.diagnostic.attempts,scenario==='baseline-mixed'||scenario==='baseline-reentrant'?1:2);
+        assert.equal(result.diagnostic.firstFailure?.reason,'publication-superseded');
+        if(reusable){assert.equal(result.inventories,0);assert.equal(result.catalogs,0);assert.equal(result.diagnostic.route,'full-snapshot');}
+        if(scenario==='baseline-changed-file')assert.equal(result.current,true,'Changed facts survive conservative fallback');
+        assert.equal(result.reads,0);assert.equal(result.parses,0);
+      });
+    }
+
     for (const mutation of ['changed-source','missing-saved-proof','mixed-publication']) {
       await t.test(`${mutation} cannot replace a current foreground commit with an older saved graph`, /** Reject unproved saved semantics through the actual outer coordinator. */ async () => {
         const result=await browser.evaluate(`(async()=>{

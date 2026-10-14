@@ -1,6 +1,7 @@
 /**
  * Reproduce an unchanged genuine file publication before the first saved-graph chunk in real
- * Chromium/IndexedDB. Optional committed baseline sources run the same coordinator workload.
+ * Chromium/IndexedDB. An optional real structural-baseline publication reproduces native startup
+ * ordering. Optional committed baseline sources run the same coordinator workload.
  * Setup is excluded from elapsed time; this is a work-count diagnostic, not a vault startup test.
  */
 import assert from 'node:assert/strict';
@@ -14,6 +15,7 @@ import { hydrationWorkBundle, contributorBrowserInitialize, initializeHydrationW
 
 const root=resolve(fileURLToPath(new URL('../..',import.meta.url))),overrides={};
 const ref=process.argv.find(/** Baselines are explicit immutable commits. */ arg=>arg.startsWith('--baseline-ref='))?.split('=')[1];
+const structural=process.argv.includes('--structural-baseline');
 if(ref&&!/^[a-f0-9]{7,40}$/.test(ref))throw Error('Use a commit hash for --baseline-ref');
 const paths=['src/index/GraphIndex.ts','src/index/IndexedDbCache.ts'];
 if(ref)for(const path of paths){
@@ -36,7 +38,9 @@ try{
       sourceModules.GraphBuilder.prototype.buildSourceNodeCatalog=/** Count actual global source vocabulary work. */ function(...args){catalogs++;return catalog.apply(this,args);};
       try{
         const expected=hydrationWorkValue({state:f.state}),at=performance.now(),restore=i.restoreIndexedDbSnapshot(['Hub.md']);
-        await entered;f.releaseSources();
+        await entered;
+        if(${structural})equal(await i.initializeOnDemandBaseline(['Hub.md']),true,'Genuine startup structural publication');
+        f.releaseSources();
         equal((await i.patchMarkdownPaths(['Hub.md'],{useDurableCache:true})).outcome,'patched','Ordinary genuine source publication');
         release();await restore;const outcome=await i.waitForSnapshotHydration(),elapsedMs=performance.now()-at;
         if(i.fullSnapshotHydrated)equal(hydrationWorkValue(i),expected,'Complete canonical saved adjacency/provenance is retained');
@@ -47,7 +51,7 @@ try{
     if(!ref){assert.equal(result.full,true);assert.equal(result.inventories,0);assert.equal(result.catalogs,0);}
     results.push(result);
   }
-  const json=JSON.stringify({node:process.version,baselineRef:ref??null,source,results},null,2);
+  const json=JSON.stringify({node:process.version,baselineRef:ref??null,scenario:structural?'structural-baseline-and-file':'file-only',source,results},null,2);
   if(process.env.KPLEX_BENCHMARK_REPORT)writeFileSync(process.env.KPLEX_BENCHMARK_REPORT,json+'\n');
   console.log(json);
 }finally{await browser.cleanup();}
