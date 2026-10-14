@@ -9,6 +9,9 @@
  * and exact revision fences; ordinary graph compilers allocate none of that derived metadata.
  * Boolean endpoint existence can traverse layer path keys lazily without allocating whole-degree
  * unions; ordered declaration iteration retains its existing observable behavior.
+ * Ordinary sparse positive replacements may compact bounded overrides above one unchanged root.
+ * Tombstones, activated facts and large/unknown payload retain full standalone compaction; no
+ * intermediate generation chain or unbounded shadowed payload is retained by the sparse path.
  */
 import { LinkDirection, RelationType, type Role, type SemanticRelation } from "./relations";
 
@@ -84,6 +87,21 @@ const splitPairKey = (key: string): [string, string] => {
   const splitAt = key.indexOf("\u0000");
   return [key.slice(0, splitAt), key.slice(splitAt + 1)];
 };
+
+const SPARSE_PATCH_PAIRS = 32;
+const SPARSE_PATCH_RECORDS = 256;
+const SPARSE_PATCH_STRING_BYTES = 64 * 1024;
+const SPARSE_PATCH_LAYERS = 8;
+
+/** Count flat evidence scalar strings conservatively; a future non-scalar extension keeps full compaction. */
+function evidenceStringBytes(record: RelationEvidence): number | null {
+  let bytes = 0;
+  for (const value of Object.values(record)) {
+    if (typeof value === "string") bytes += value.length * 2;
+    else if (value !== null && value !== undefined && typeof value !== "number" && typeof value !== "boolean") return null;
+  }
+  return bytes;
+}
 
 /** Compact counts retain no duplicate declarations; at most two endpoints × ten kinds per pair. */
 type PairKindSummary = ReadonlyArray<readonly [string, EvidenceSourceKind, number]>;
@@ -199,6 +217,8 @@ export class RelationEvidenceStore {
   private readonly baseMutationRevision: number;
   /** Null in ordinary compilers. Only an exclusively private preparation owner activates facts. */
   private targetIndex: DeclaredTargetIndex | null = null;
+  /** Only a completed bounded positive compaction head may be folded into the next private patch. */
+  private sparseCompactionHead = false;
 
   /** Start a standalone store or capture the exact parent generation for private fork staging. */
   constructor(base: RelationEvidenceStore | null = null) {
@@ -217,6 +237,25 @@ export class RelationEvidenceStore {
 
   /** Start an isolated local transaction. Mutating the returned store cannot mutate this store. */
   fork(): RelationEvidenceStore { return new RelationEvidenceStore(this); }
+
+  /**
+   * The host patch boundary folds a just-compacted bounded head into its first child. This keeps
+   * the same eight-patch maintenance cadence as a standalone full compaction: earlier tombstone
+   * compaction would change later delete/re-add order. Map/path copies are bounded by the sparse
+   * admission limits; immutable bucket arrays may be shared because normal writes replace them.
+   * Public fork() retains its exact-parent/adoption contract and does not perform this folding.
+   */
+  forkForPatch(): RelationEvidenceStore {
+    if (!this.sparseCompactionHead) return this.fork();
+    const fork = new RelationEvidenceStore(this.base);
+    for (const [key, records] of this.byPair) fork.byPair.set(key, records);
+    for (const [path, keys] of this.pairsByPath) fork.pairsByPath.set(path, new Set(keys));
+    fork.declarationTotal = this.declarationTotal;
+    fork.pairTotal = this.pairTotal;
+    fork.nextId = this.nextId;
+    fork.targetIndex = this.targetIndex ? createTargetIndex(this.targetIndex, this.targetIndex.members.keys()) : null;
+    return fork;
+  }
 
   /**
    * Consume one bounded immediate child's pair delta into this exclusively private working store.
@@ -285,6 +324,71 @@ export class RelationEvidenceStore {
       if ((processed & 255) === 0 && !(await checkpoint())) return null;
     }
     compacted.nextId = this.nextId;
+    return compacted;
+  }
+
+  /**
+   * Ordinary publication may retain one immutable root plus a bounded latest positive override set.
+   * Ineligible input uses the existing full standalone compaction, including all activated indexes.
+   * This is a small replacement-set optimization, not a global linear-growth representation.
+   * @returns A complete private replacement (possibly depth one), or null after cancellation/change.
+   */
+  async compactOrdinaryPatchCooperative(checkpoint: () => Promise<boolean>): Promise<RelationEvidenceStore | null> {
+    if (!this.base) return this;
+    const sparse = await this.compactSparseOverrides(checkpoint);
+    return sparse === false ? this.compactCooperative(checkpoint) : sparse;
+  }
+
+  /**
+   * Inspect at most eight layers/256 keys; never scan an unchanged anchor. Bound both new bucket
+   * entries and shadowed root records/scalar payload. Empty buckets require full compaction because
+   * retaining their anchor positions would change observable delete/re-add order. False means
+   * ineligible; null means cancelled/superseded and must never trigger a fallback publication.
+   */
+  private async compactSparseOverrides(checkpoint: () => Promise<boolean>): Promise<RelationEvidenceStore | null | false> {
+    const layers: RelationEvidenceStore[] = [this];
+    for (let parent = this.base; parent; parent = parent.base) {
+      if (layers.length > SPARSE_PATCH_LAYERS || layers[layers.length - 1].targetIndex) return false;
+      layers.push(parent);
+    }
+    const anchor = layers.pop()!;
+    if (anchor.targetIndex || anchor.byPair.size !== anchor.pairTotal) return false;
+    const revisions = [...layers, anchor].map(/** A reentrant checkpoint cannot silently change any retained parent. */
+      store => [store, store.mutationRevision] as const);
+    const nextId = this.nextId, latest = new Map<string, RelationEvidence[]>();
+    let processed = 0;
+    for (const layer of layers.reverse()) for (const [key, records] of layer.byPair) {
+      if (++processed > SPARSE_PATCH_RECORDS) return false;
+      latest.set(key, records);
+      if (latest.size > SPARSE_PATCH_PAIRS) return false;
+    }
+    // Empty synthetic history retains the existing full-maintenance path; there is no changed
+    // working set to amortize and legacy callers retain their standalone maintenance receipt.
+    if (!latest.size) return false;
+    let records = 0, stringBytes = 0;
+    for (const [key, current] of latest) {
+      if (!current.length) return false;
+      const previous = anchor.readPair(key) ?? [];
+      records += current.length + previous.length;
+      if (records > SPARSE_PATCH_RECORDS) return false;
+      for (const bucket of [current, previous]) for (const record of bucket) {
+        const bytes = evidenceStringBytes(record);
+        if (bytes === null || (stringBytes += bytes) > SPARSE_PATCH_STRING_BYTES) return false;
+      }
+    }
+    const compacted = new RelationEvidenceStore(anchor);
+    for (const [key, current] of latest) {
+      const copied: RelationEvidence[] = [];
+      for (const record of current) {
+        copied.push(record);
+        if ((++processed & 255) === 0 && !(await checkpoint())) return null;
+      }
+      compacted.writePair(key, copied, anchor.readPair(key)?.length ?? 0);
+    }
+    if (!(await checkpoint()) || this.nextId !== nextId || revisions.some(/** Derived activation also invalidates the inactive-only ownership assumption. */
+      ([store, revision]) => store.mutationRevision !== revision || store.targetIndex !== null)) return null;
+    compacted.nextId = nextId;
+    compacted.sparseCompactionHead = true;
     return compacted;
   }
 
@@ -777,6 +881,7 @@ export class RelationEvidenceStore {
   private writePair(
     key: string, next: RelationEvidence[], previousLength: number, preserveTombstone = false, summary: PairKindSummary = [],
   ): void {
+    this.sparseCompactionHead = false;
     this.mutationRevision++;
     if (this.targetIndex) this.replaceIndexedSummary(key, summary, !this.base && !next.length && !preserveTombstone);
     const [left, right] = splitPairKey(key);

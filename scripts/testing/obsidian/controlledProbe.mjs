@@ -48,7 +48,7 @@ export async function runControlledProbe(name,scenario,definitions='',extraSourc
       return JSON.stringify({started:true});
     })()`);assert(started.started);
     const end=Date.now()+180000;
-    while(Date.now()<end){await delay(1000);const state=evaluate('JSON.stringify({done:window.kplexIndexingProbe?.done,error:window.kplexIndexingProbe?.error,value:window.kplexIndexingProbe?.value})');if(!state.done)continue;if(state.error)throw Error(state.error);report.result=state.value;report.status='passed';break;}
+    while(Date.now()<end){await delay(1000);const state=evaluate('JSON.stringify({done:window.kplexIndexingProbe?.done,error:window.kplexIndexingProbe?.error,value:window.kplexIndexingProbe?.value,progress:window.kplexIndexingProbe?.progress})');if(!state.done)continue;if(state.error){report.partial=state.progress;throw Error(state.error);}report.result=state.value;report.status='passed';break;}
     assert.equal(report.status,'passed','Native experiment deadline');
   }catch(error){report.error=String(error);process.exitCode=1;}
   finally{

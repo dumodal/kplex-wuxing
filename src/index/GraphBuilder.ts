@@ -17,6 +17,9 @@
  * or adding evidence layers. Map-depth maintenance stays independent of maintenance for new forks.
  * URL-only staging borrows replace-only facets; owned adjacency forks preserve ordering and bounded
  * private delta replay. Display isolation and exact live ownership are separately certified by GraphIndex.
+ * Genuine ordinary Markdown edits may flatten bounded positive evidence overrides above one immutable
+ * root. Private patch forks preserve the full compactor's eight-patch maintenance/order cadence;
+ * tombstones, activated metadata and larger retained payload use the unchanged standalone fallback.
  */
 import { yieldToHostTask } from "../adapters/obsidian/yieldToHostTask";
 import { Platform, TFile, type App } from "obsidian";
@@ -337,7 +340,7 @@ export class GraphBuilder {
           if (isUrlAdjacencyMap(page.neighbours) && state.pages.get(page.path)?.neighbours !== page.neighbours) page.neighbours.discard();
         } : undefined),
       lowercasePathMap: new PatchOverlayMap(state.lowercasePathMap),
-      evidence: forkEvidence ? state.evidence.fork() : state.evidence,
+      evidence: forkEvidence ? state.evidence.forkForPatch() : state.evidence,
       discoveredFields: new PatchOverlayMap(state.discoveredFields, (value) => ({ ...value })),
     };
   }
@@ -345,8 +348,9 @@ export class GraphBuilder {
   /** Bound retained copy-on-write history before starting another transaction. Compaction builds
    * complete private replacements and publishes them together only after all checkpoints pass.
    * @param includeEvidence A source with a matching fingerprint adds no evidence layer, leaving it intact;
-   * independent map-depth maintenance still runs for large field-discovery publications. */
-  private async compactPublishedPatchLayers(state: GraphState, includeEvidence = true): Promise<boolean> {
+   * independent map-depth maintenance still runs for large field-discovery publications.
+   * @param sparseEvidence Only genuine ordinary Markdown edits opt into bounded positive override compaction. */
+  private async compactPublishedPatchLayers(state: GraphState, includeEvidence = true, sparseEvidence = false): Promise<boolean> {
     const pageOverlay = isPatchOverlayMap(state.pages) && state.pages.depth >= MAX_PATCH_OVERLAY_DEPTH
       ? state.pages : null;
     const lowercaseOverlay = isPatchOverlayMap(state.lowercasePathMap) && state.lowercasePathMap.depth >= MAX_PATCH_OVERLAY_DEPTH
@@ -364,8 +368,9 @@ export class GraphBuilder {
     const discoveredFields = fieldOverlay
       ? await fieldOverlay.flattenCooperative(() => this.yieldToHost()) : state.discoveredFields;
     if (!discoveredFields) return false;
-    const evidence = compactEvidence
-      ? await state.evidence.compactCooperative(() => this.yieldToHost()) : state.evidence;
+    const evidence = compactEvidence ? sparseEvidence
+      ? await state.evidence.compactOrdinaryPatchCooperative(/** Retain the ordinary caller's scheduling and lifetime fence. */ () => this.yieldToHost())
+      : await state.evidence.compactCooperative(() => this.yieldToHost()) : state.evidence;
     if (!evidence || !this.isCurrent()) return false;
 
     state.pages = pages;
@@ -1565,7 +1570,7 @@ export class GraphBuilder {
       const previousSignature = discoveryMode === "rebuild" || options.forceRecompile
         ? undefined
         : this.semanticFingerprints.get(sourcePath) ?? previousEntry?.semanticSignature;
-      if (!(await this.compactPublishedPatchLayers(state, previousSignature !== signature)) || !this.fileRevisionMatches(file, revision)) {
+      if (!(await this.compactPublishedPatchLayers(state, previousSignature !== signature, true)) || !this.fileRevisionMatches(file, revision)) {
         return { ok: false, cancelled: true, rebuildRequired: false, touchedPagePaths, semanticChanges, semanticNoops };
       }
       const stagedState = this.createPatchState(state, previousSignature !== signature);

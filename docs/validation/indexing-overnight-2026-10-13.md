@@ -14,15 +14,14 @@ structural refactor, cache redesign, release, merge, PR-ready status authorizati
 | C independent preview | Committed `4b42edb`; pushed | Controlled 200ms hold: saved preview 235-285ms to 1.0-4.5ms, matching final digests, zero reads/parses | Full verify 495 browser tests, focused 53, native and foreground pass; warm native Eager 460.5 to 43.9ms / On-demand 492.2 to 52.1ms; older-head Eager adds one validation read/parse; [report](indexing-independent-preview-2026-10-14.md) |
 | B2 private URL adjacency | Committed `c507ba1`; pushed | 4,096 owners: working neighbor copies8,394,750 to0;12,285 replay keys, largest2; display71,744 unchanged | Full verify495 browser cases, focused45, native/foreground pass; native selected copies131,327 to0; observed medians537.4 to256.7ms with overlapping trial ranges; [report](indexing-url-adjacency-2026-10-14.md) |
 | M-D URL write profile | Committed `708ce32`; pushed | 512 singleton transactions; cache-only six-row batches86, median32.2ms vs61.1ms concurrent singletons | Exact native roundtrip512, bodyreads/parses0, scoped idle758.1ms and tx164.3ms overlap; [report](indexing-url-cache-write-baseline-2026-10-14.md) |
-| M-E2 ordinary evidence | Measured; commit/push next | 64tiny edits /4,097originals copy32,776 bucket entries; growing4,096owners copy1,046,528evidence entries plus8,386,560ordinary neighbor entries | Actual patch/resolver,15 cells, inactive target metadata, reads/parses0; [gate](indexing-evidence-maintenance-baseline-2026-10-14.md) |
+| M-E2 ordinary evidence | Committed `c9703bf`; pushed | 64tiny edits /4,097originals copy32,776 bucket entries; growing4,096owners copy1,046,528evidence entries plus8,386,560ordinary neighbor entries | Actual patch/resolver,15 cells, inactive target metadata, reads/parses0; [gate](indexing-evidence-maintenance-baseline-2026-10-14.md) |
+| E2 bounded ordinary evidence | Validated; this checkpoint commit | 64role edits /4,097originals copy32,776 to8; native8forced compactions44,432 to16 | Full495 browser cases,11focused,15exactdigests,3alternatingnativepairs,6foreground cases; individual patch median7.75 to5.10ms, noisy group totals show no overall latency win; [report](indexing-sparse-evidence-2026-10-14.md) |
 
 B2 is committed and pushed. Independent adjacency privacy, stable published-only targets, bounded
 replay and immutable fallback/compaction preserve retained Map and canonical target contracts.
 Current displayed graphs retain one neighbor map per path rather than chains of prior target
 copies. This structural bound is not a retained-heap measurement; target/storage metadata adds
-objects. No source authority, scheduler, schema or public semantic owner changed. Next checkpoint
-is D measurement: singleton URL-cache transaction counts, real completion/waits, small payload
-batching potential and backpressure/fence design if the cost is material.
+objects. No source authority, scheduler, schema or public semantic owner changed. D batching potential is measured at708ce32; stored-write fencing remains a separate candidate. E2 follows its ordinary-work gate.
 
 Measurements distinguish actual removed work from inclusive duration. B1's sub-millisecond native
 baseline does not support an elapsed-speedup claim. Full M retained-heap/heartbeat/native scale
