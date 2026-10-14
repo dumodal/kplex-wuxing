@@ -17,7 +17,8 @@ structural refactor, cache redesign, release, merge, PR-ready status authorizati
 | M-E2 ordinary evidence | Committed `c9703bf`; pushed | 64tiny edits /4,097originals copy32,776 bucket entries; growing4,096owners copy1,046,528evidence entries plus8,386,560ordinary neighbor entries | Actual patch/resolver,15 cells, inactive target metadata, reads/parses0; [gate](indexing-evidence-maintenance-baseline-2026-10-14.md) |
 | E2 bounded ordinary evidence | Committed `8c4f899`; pushed | 64role edits /4,097originals copy32,776 to8; native8forced compactions44,432 to16 | Full495 browser cases,11focused,15exactdigests,3alternatingnativepairs,6foreground cases; individual patch median7.75 to5.10ms, noisy group totals show no overall latency win; [report](indexing-sparse-evidence-2026-10-14.md) |
 | M-E3 dense pair appends | Committed `7d49b4a`; pushed | 4,096same-pair originals copy8,386,560prior entries; same4,096distributed originals copy0 | Actual compiler/evidence,10cells, exactlineorder/multiplicity/IDs; fixedclock noelapsedclaim; [gate](indexing-evidence-append-baseline-2026-10-14.md) |
-| E3 private compiler appends | Validated; this checkpoint commit | Dense4,096prefixcopies8,386,560to0; native16,384values134,225,920to0 | Full495browser,15focused/86affected,10exactdigests,3alternatingnativepairs:median1085.7to759.7ms (~30% fixture gain);6foreground; [report](indexing-private-compiler-append-2026-10-14.md) |
+| E3 private compiler appends | Committed `0ad463c`; pushed | Dense4,096prefixcopies8,386,560to0; native16,384values134,225,920to0 | Full495browser,15focused/86affected,10exactdigests,3alternatingnativepairs:median1085.7to759.7ms (~30% fixture gain);6foreground; [report](indexing-private-compiler-append-2026-10-14.md) |
+| M native warm URL scale | Validated measurement; this checkpoint | Actual20,088owners: shared-origin working visits31,996,000to0; elapsed median26.55to15.98s (~40%) | 3alternating exact pairs/12lifetimes, matching ordered digests/zero bodyIO; candidate heartbeat68-94ms vsbaseline34-60ms needs attribution; [report](indexing-native-url-scale-2026-10-14.md) |
 
 B2 is committed and pushed. Independent adjacency privacy, stable published-only targets, bounded
 replay and immutable fallback/compaction preserve retained Map and canonical target contracts.
@@ -27,6 +28,7 @@ objects. No source authority, scheduler, schema or public semantic owner changed
 
 Measurements distinguish actual removed work from inclusive duration. B1's sub-millisecond native
 baseline does not support an elapsed-speedup claim. Full M retained-heap/heartbeat/native scale
-acceptance and physical iOS/Android/macOS remain pending. The existing synthetic 20,000-note fixture
+acceptance and physical iOS/Android/macOS remain pending. Native warm URL scale is now measured,
+with a foreground-stall concern assigned to the next gate; it is not full M acceptance. The existing synthetic 20,000-note fixture
 is preserved; small-vault functional probes remain preferred. Each native driver is serialized and
 owns independent cleanup. Completed source/artifacts/tests stay frozen before the next checkpoint.

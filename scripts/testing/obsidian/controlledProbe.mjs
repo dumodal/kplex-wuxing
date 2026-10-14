@@ -14,8 +14,11 @@ import { validateTarget } from './runner.mjs';
 
 /** Run one serialized scenario. Alternate artifact roots require an explicit prior-source baseline;
  * their exact-hash/full-verification staging receipt remains separate from this functional probe.
- * Callers list additional runtime modules when a checkpoint introduces a new implementation owner. */
-export async function runControlledProbe(name,scenario,definitions='',extraSources=[]) {
+ * Callers list additional runtime modules when a checkpoint introduces a new implementation owner.
+ * A new scale experiment may name a bounded test duration; existing probes retain180seconds. */
+export async function runControlledProbe(name,scenario,definitions='',extraSources=[],options={}) {
+  const maximumMs=options.maximumMs??180000;
+  assert(Number.isInteger(maximumMs)&&maximumMs>0&&maximumMs<=900000,'Bound native experiments to at most15minutes');
   const root=resolve(fileURLToPath(new URL('../../..',import.meta.url))),vault=process.env.KPLEX_TEST_VAULT_NAME;
   const target=validateTarget({vaultName:vault,vaultPath:process.env.KPLEX_TEST_VAULT_PATH,configDir:process.env.KPLEX_TEST_CONFIG_DIR});
   const directory=process.env.KPLEX_HOST_REPORT_DIR;if(!directory)throw Error('Set KPLEX_HOST_REPORT_DIR');mkdirSync(directory,{recursive:true});
@@ -28,7 +31,7 @@ export async function runControlledProbe(name,scenario,definitions='',extraSourc
   /** Polling does not alter native scheduler/throttling policy. */
   const delay=ms=>new Promise(/** Own one bounded transport wait. */ resolve=>setTimeout(resolve,ms));
   const originalData=readFileSync(join(target.pluginDir,'data.json')),originalEnabled=readFileSync(join(target.config,'community-plugins.json'));
-  const report={name,status:'failed',node:process.version,startedAt:new Date().toISOString(),artifacts:{},source:{},limitations:'Controlled native method observations, not actual paint or physical-device acceptance.'};
+  const report={name,status:'failed',node:process.version,startedAt:new Date().toISOString(),maximumMs,driver:{transport:hash(fileURLToPath(import.meta.url)),scenario:createHash('sha256').update(scenario.toString()).digest('hex'),definitions:createHash('sha256').update(definitions).digest('hex')},artifacts:{},source:{},limitations:'Controlled native method observations, not actual paint or physical-device acceptance.'};
   try{
     assert.equal(resolve(cli('vault','info=path').replace(/^path\s+/,'')),target.vault);report.obsidian=cli('version');
     const artifactDir=process.env.KPLEX_PROBE_ARTIFACT_DIR??join(root,'dist');
@@ -47,8 +50,8 @@ export async function runControlledProbe(name,scenario,definitions='',extraSourc
       c.task=(${scenario.toString()})(app,c).then(/** Complete only after scenario cleanup succeeds. */ value=>{c.value=value;c.done=true;},/** Retain all failures for the driver. */ error=>{c.error=String(error);c.done=true;});
       return JSON.stringify({started:true});
     })()`);assert(started.started);
-    const end=Date.now()+180000;
-    while(Date.now()<end){await delay(1000);const state=evaluate('JSON.stringify({done:window.kplexIndexingProbe?.done,error:window.kplexIndexingProbe?.error,value:window.kplexIndexingProbe?.value,progress:window.kplexIndexingProbe?.progress})');if(!state.done)continue;if(state.error){report.partial=state.progress;throw Error(state.error);}report.result=state.value;report.status='passed';break;}
+    const end=Date.now()+maximumMs;
+    while(Date.now()<end){await delay(1000);const state=evaluate('JSON.stringify({done:window.kplexIndexingProbe?.done,error:window.kplexIndexingProbe?.error,value:window.kplexIndexingProbe?.value,progress:window.kplexIndexingProbe?.progress})');if(!state.done){if(state.progress){report.progress=state.progress;writeFileSync(join(directory,`${name}.json`),JSON.stringify({...report,status:'running'},null,2)+'\n');}continue;}if(state.error){report.partial=state.progress;throw Error(state.error);}report.result=state.value;report.status='passed';break;}
     assert.equal(report.status,'passed','Native experiment deadline');
   }catch(error){report.error=String(error);process.exitCode=1;}
   finally{
