@@ -32,6 +32,14 @@ authority remain separate owners; partial graphs still cannot be saved as comple
 
 ## Evidence and measurement limits
 
+[Initial raw evidence and reproduction instructions](https://github.com/zsviczian/kplex/tree/3f698ada48cd5cbab0f9b1302644637b2130110e)
+are archived separately from this PR: 36 entries, 2,143,914 ZIP bytes, SHA-256
+`0d8e45a5c6d384786ab13c6db23cec778a5cc4f0021d6ed9dcb211e092585729`.
+The downloaded archive's complete entry set, CRCs, byte counts and per-file checksums pass.
+It retains initial failures/excluded fixture trials, full verification, comparative measurements,
+source/build identities and actual artifacts. Configuration backups and note/cache payloads are
+excluded. Native large-vault evidence is still in progress and is not part of this first archive.
+
 The permitted passive personal-vault observation matches the supplied historical failure: 11,825
 Markdown files, 110,358 published nodes, zero hydrated records and completion through node vocabulary.
 Its retained timestamps span 1,185,897 ms (19m45.897s); source counters report zero vault reads/parses.
