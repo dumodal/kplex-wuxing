@@ -6,6 +6,8 @@
  * its distinct result cannot authorize relationship readiness. Repeated body URLs reuse node names
  * and lazily reuse URL alias membership once a target has several distinct labels. Membership
  * belongs only to this private compiler lifetime; ordered output arrays retain their semantics.
+ * The compiler creates one explicitly private evidence store for owned-array appends. Finalization
+ * and terminal rejection seal that permission before any compilation or retained generation escapes.
  */
 import { canonicalTagParts } from "./tagPaths";
 import { selectStyleTags, tagDisplayName, unwrapNoteType } from "./presentation";
@@ -238,7 +240,7 @@ export class NormalizedGraphCompiler {
   private readonly entityFactSeen = new Set<NodeId>();
   private readonly requiredMaterializedEntityFacts = new Set<NodeId>();
   private readonly syntheticNodes = new Set<NodeId>();
-  private readonly evidence = new RelationEvidenceStore();
+  private readonly evidence = RelationEvidenceStore.createPrivateCompilation();
   private readonly discoveredFields = new Map<string, { name: string; count: number }>();
   private readonly metadata = new Map<NodeId, NodeMetadataAccumulator>();
   private readonly presentationCounts = new Map<string, PresentationCount>();
@@ -371,8 +373,10 @@ export class NormalizedGraphCompiler {
     return { kind: "node-metadata", nodes: this.nodes, discoveredFields: this.discoveredFields };
   }
 
-  /** Finalize finite metadata only after every producer and required physical entity has closed. */
+  /** Seal private evidence appends before any finalization await; finalize finite metadata only
+   * after every producer and required physical entity has closed. Cancelled output stays sealed. */
   private async finalizeNodes(): Promise<boolean> {
+    this.evidence.sealPrivateCompilation();
     this.urlAliasMembership.clear();
     if (this.finished || this.rejected || this.openReads.size || !this.runtime.isCurrent()) return false;
     this.finished = true;
@@ -385,8 +389,9 @@ export class NormalizedGraphCompiler {
     return this.runtime.isCurrent();
   }
 
-  /** Terminal rejection releases any partially assembled value payloads and temporary order keys. */
+  /** Terminal rejection seals evidence append ownership and releases pending value/order payloads. */
   private reject(): false {
+    this.evidence.sealPrivateCompilation();
     for (const read of this.openReads) read.selection.release();
     this.openReads.clear();
     this.referenceOrderByEvidenceId.clear();

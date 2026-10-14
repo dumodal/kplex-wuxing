@@ -29,6 +29,9 @@ exact original count, line order, pair count and inactive target-kind metadata. 
 have N pairs; dense stores have one. Node and resolver work differ, so this does not compare their
 total cost or establish a native latency bottleneck. Input contains no origin facts; those are a
 separate producer contract. No physical parser/source I/O or native startup is measured.
+The current Markdown parser deduplicates identical raw URL spellings. Thus this normalized-contract
+control does not prove N same-spelling URL declarations from one physical note. Native acceptance
+uses distinct physical inline ontology occurrences, which retain multiplicity on the same pair.
 
 ## Narrow candidate and acceptance gate
 

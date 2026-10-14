@@ -9,8 +9,11 @@ import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {loadPortableModules} from '../../tests/support/portableTypeScript.mjs';
 import {probeEvidenceAppends} from '../../tests/support/evidenceAppendProbe.mjs';
+import {spawnNativeSync} from './obsidian/processTools.mjs';
 
-const loaded=loadPortableModules(['src/core/graph/compiler.ts','src/core/graph/model.ts','src/core/graph/source.ts','src/core/graph/evidence.ts','src/core/graph/relations.ts']),M=loaded.exports;
+const sources=['src/core/graph/compiler.ts','src/core/graph/evidence.ts'],ref=process.argv.find(/** Baseline modules must name exact committed Git bytes. */arg=>arg.startsWith('--baseline-ref='))?.split('=')[1],overrides={},expectPrivate=process.argv.includes('--expect-private-appends');
+if(ref){assert.match(ref,/^[a-f0-9]{7,40}$/);for(const source of sources){const result=spawnNativeSync('git',['show',`${ref}:${source}`],{cwd:process.cwd(),encoding:'utf8',timeout:10000});assert.equal(result.status,0,result.stderr);overrides[source]=result.stdout;}}
+const loaded=loadPortableModules(['src/core/graph/compiler.ts','src/core/graph/model.ts','src/core/graph/source.ts','src/core/graph/evidence.ts','src/core/graph/relations.ts'],{},overrides),M=loaded.exports;
 const settings={hierarchy:{hidden:['Hidden'],parents:['Parent'],children:['Child'],leftFriends:['Friends'],rightFriends:['Opposes'],previous:['Previous'],next:['Next']},inferAllLinksAsFriends:false,inverseInfer:false,showFullTagName:true,tagStyleList:[],maxLabelLength:30};
 const rows=[];
 try{
@@ -31,10 +34,10 @@ try{
     assert.equal(body.length,declarations);assert.equal(originals.length,declarations,'This fixture supplies body occurrences only; URL-origin facts are a separate producer');
     assert.deepEqual(body.map(/** Body-URL compilation retains genuine one-based line provenance, not invented character offsets. */item=>item.line),Array.from({length:declarations},/** Expected original physical order is never sorted away. */(_,n)=>n+1));
     const store=graph.legacyEvidence();assert(store);assert.equal(store.targetIndex,null);assert.equal(store.declarationCount,declarations);assert.equal(store.pairCount,mode==='dense'?1:declarations);
-    assert.equal(probe.counts.appends,declarations);assert.equal(probe.counts.priorEntriesCopied,mode==='dense'?declarations*(declarations-1)/2:0);
+    assert.equal(probe.counts.appends,declarations);assert.equal(probe.counts.priorEntriesCopied,mode==='dense'&&!expectPrivate?declarations*(declarations-1)/2:0);
+    assert.equal(probe.counts.inPlaceAppends,mode==='dense'&&expectPrivate?declarations-1:0);
     const value={nodes:[...graph.nodes].map(/** Preserve all ordered node/alias/relation values while removing only target object cycles. */([id,node])=>{const{neighbours,...facts}=node;return[id,{...facts,neighbours:[...neighbours].map(/** Keep exact target identities as opaque IDs. */([key,{target,...relation}])=>[key,{...relation,targetId:target.id}])}];}),evidence:originals};
     rows.push({mode,declarations,physicalOccurrences:declarations,nodes:graph.nodes.size,pairs:store.pairCount,...probe.counts,graphDigest:createHash('sha256').update(JSON.stringify(value)).digest('hex')});
   }
 }finally{loaded.cleanup();}
-const sources=['src/core/graph/compiler.ts','src/core/graph/evidence.ts'];
-console.log(JSON.stringify({node:process.version,sources:Object.fromEntries(sources.map(/** Attribute canonical implementation bytes used by this baseline. */source=>[source,createHash('sha256').update(readFileSync(source)).digest('hex')])),rows,limitations:'Actual private compiler/evidence allocation proxies with genuine occurrence provenance; fixed clock gives no elapsed, native startup, source-I/O, retained-heap or physical-device acceptance.'},null,2));
+console.log(JSON.stringify({node:process.version,baselineRef:ref??null,expectPrivate,sources:Object.fromEntries(sources.map(/** Attribute canonical implementation bytes used by this comparison. */source=>[source,createHash('sha256').update(overrides[source]??readFileSync(source)).digest('hex')])),rows,limitations:'Actual private compiler/evidence allocation proxies with genuine occurrence provenance; fixed clock gives no elapsed, native startup, source-I/O, retained-heap or physical-device acceptance.'},null,2));
