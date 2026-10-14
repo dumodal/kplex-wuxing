@@ -1,144 +1,138 @@
 # Fresh snapshot reuse during startup — PR #163
 
-Implementation and acceptance in progress. Base: merged #153, `ae473fc`; integration commit: `3c10ce9`.
-This work does not extend #153's URL optimization or change its accepted memory tradeoff.
+Runtime checkpoint: `8e32857`; accepted #153 baseline: `ae473fc`, integrated through `3c10ce9`.
+The change restores full cached graph availability early. **Fully ready startup remains slow** in
+the tested large Eager scenario because cached-source validation still takes about 17–18 minutes.
+No further URL, source-throughput, memory, schema or scheduling optimization is included.
 
-## Finding and correction
+## Finding and bounded correction
 
-A real partial-Eager file publication can supersede the private full-snapshot candidate after the
-saved preview appears but before the first chunk arrives. The publication guard correctly rejects
-the candidate. The outer coordinator previously treated that interruption as a reason to start
-global persisted-source inventory and node-vocabulary recovery, even for unchanged cached facts.
-The deterministic real-IndexedDB reproduction identifies `publication-superseded`, reader boundary
-`open`, publisher `file-patch`, publication 1→2, and zero decoded records. Before correction it
-performs one inventory and one global catalog build; no note reads or parses are needed for that detour.
+A genuine application reload selects a complete fresh snapshot, then a body-free structural/host
+baseline and five file commits move publication 1→7 before the first full chunk. The existing
+`checkpoint` guard correctly rejects the private reader: zero pages/relations/evidence, source
+revision 0, policy revision 1. Previously the coordinator abandoned reusable acceleration for
+source recovery. A latest-publisher label alone cannot account for the whole publication sequence.
 
-The old candidate remains rejected. A trusted, physically current complete active schema-3 snapshot may get **one new
-attempt**, after the existing P4 checkpoint, only if all intervening publications were accounted:
-at most one actual body-free structural/host baseline plus file commits, at most 256 total.
-Current semantic fingerprints for all committed file owners must match
-the saved records before any replacement is published. Missing/mismatched proof, other publishers,
-later interruptions, checkpoint generations and all existing invalidation guards retain their fallback. The structural
-receipt belongs only to `initializeOnDemandBaseline`; an arbitrary snapshot publication cannot borrow it,
-and a reentrant extra publication deliberately prevents accounting. The second attempt
-captures its own publication fence; there is no retry loop or retained discarded full graph.
+The old candidate stays rejected. One new attempt is allowed only for the physically current
+complete active generation after existing P4 admission: at most one actual structural baseline
+plus file commits, 256 publications total. Every committed owner's current semantic fingerprint
+must match its saved record before any replacement is published. Only the real structural producer
+can supply its receipt; unknown/reentrant publishers, checkpoints, missing/changed proof, physical
+or policy changes and later interruptions retain conservative rejection. No retry loop or discarded
+full private graph is retained, and admission alone does not advance the watchdog clock.
 
-The storage reader now identifies its existing guard boundaries. One run-scoped, path-free first
-failure survives candidate cancellation. Attempt count and actual completion route distinguish
-saved preview, full snapshot, checkpoint and source-vocabulary recovery. Support projection admits
-only finite enums and scalar counters; no paths, signatures, note data or exceptions are exported.
-These diagnostics never decide admission or make readiness/source-authority flags true.
+The existing compiler, atomic publication, source/write authority, priority ordering, persistence
+guards and On-demand locality remain. Run-scoped first-failure/attempt/route diagnostics export
+only finite reason codes and scalars. They never authorize admission or make readiness true.
 
-No schema, settings, compiler, evidence precedence, scheduler, watchdog-threshold, URL-priority or persistence
-transaction changes. Retry admission does not advance the progress clock. On-demand remains local. Existing whole-graph publication and source
-authority remain separate owners; partial graphs still cannot be saved as complete generations.
+## Native measurements and limits
 
-## Evidence and measurement limits
-
-[Initial raw evidence and reproduction instructions](https://github.com/zsviczian/kplex/tree/3f698ada48cd5cbab0f9b1302644637b2130110e)
-are archived separately from this PR: 36 entries, 2,143,914 ZIP bytes, SHA-256
-`0d8e45a5c6d384786ab13c6db23cec778a5cc4f0021d6ed9dcb211e092585729`.
-The downloaded archive's complete entry set, CRCs, byte counts and per-file checksums pass.
-It retains initial failures/excluded fixture trials, full verification, comparative measurements,
-source/build identities and actual artifacts. Configuration backups and note/cache payloads are
-excluded. Native large-vault evidence is still in progress and is not part of this first archive.
-
-The permitted passive personal-vault observation matches the supplied historical failure: 11,825
-Markdown files, 110,358 published nodes, zero hydrated records and completion through node vocabulary.
-Its retained timestamps span 1,185,897 ms (19m45.897s); source counters report zero vault reads/parses.
-The window was unfocused, so this is **historical attribution, not a controlled before/after timing**.
-The old build lacks a first-failure record: its precise historical invalidation trigger cannot be
-retrospectively established from those counters alone. The reproduction proves the production
-mechanism, not that every earlier slow run had the same trigger. No personal note content was
-accessed and no personal vault/configuration/cache was changed or reloaded.
-
-The existing disposable large fixture verifies byte-for-byte against
-`scripts/testing/generate-high-node-vault.mjs`: 20,000 notes, 8,831,230 Markdown bytes, 80,000 distinct
-placeholder targets, 8,000 URL targets and 259,000 source link occurrences. Input digest:
+Windows 11 build 26200, Obsidian 1.14.4 (installer 1.14.0), Electron 43.3.0; driver Node 22.22.2.
+The existing high-node fixture verifies byte-for-byte: 20,000 generated notes, 8,831,230 Markdown
+bytes, 80,000 placeholder targets, 8,000 URLs and 259,000 source link occurrences. Digest:
 `50b8cb12ef83c3cd62f1605390fe6ff793079a9f6e37e471e59d0060cf287cd0`.
-The genuine production full compiler and completed snapshot transaction produced 108,217 graph
-nodes, 20,088 Markdown fingerprints and 197,561 declarations, including the 88 existing help notes.
-Cold setup had no complete snapshot and hit the existing source-authority watchdog before the
-ordinary coordinator completed that build/save. Its stale timeout keeps that setup session's status
-incomplete even after source closure. Setup and its stopped observational controllers are excluded
-from warm timing; no readiness flag, deadline or watchdog was changed to qualify the fixture.
+With 88 existing help notes, the genuine compiler/save produces 108,217 graph nodes, 20,088
+fingerprints and 197,561 declarations. The visible synthetic hub has 19,999 incoming owners;
+these timings are not representative of every vault or center, nor the separate large-prose fixture.
 
-A subsequent native application reload of the diagnostic baseline selects that complete fresh
-snapshot, publishes its preview at 1,689.6 ms from renderer navigation, then rejects its full reader
-at `checkpoint`: `publication-superseded`, publication 1→7, latest publisher `file-patch`, source
-revision 0, policy revision 1 and zero decoded pages/relations/evidence. It selects source recovery
-and proceeds through host-metadata comparison and cached-source reconciliation with zero source
-reads/parses/repairs and zero URL-owner reads. This independently reproduces the mechanism in a real
-application lifecycle. The selected visible hub has 19,999 incoming synthetic sources; this is a
-high-fan-in scenario, not a representative timing for every vault or center.
+| Renderer-navigation milestone | Diagnostic baseline | Corrected matched profile |
+| --- | ---: | ---: |
+| Layout ready | 1.566 s | 1.568 s |
+| Saved preview | 1.690 s | 2.054 s |
+| Complete cached navigation | Not published | 27.242 s |
+| Full saved hydration | 0 records; rejected | 30.027 s; 108,217 pages/relations and 197,561 declarations |
+| Source authority | 1,028.433 s | 1,027.854 s |
+| Product readiness | Not ready at 23m04.9s | 17m07.854s; first observed 17m07.969s |
 
-The detailed baseline spends 313.8 s in host-metadata comparison and 692.2 s in cached-source
-reconciliation. Source authority closes at 1,028.4 s from navigation. Its requested-semantics and
-subsequent adoption phases take another 62.5 s and 62.9 s; a phase label alone does not prove the
-catalog compiler ran. Hydration fails at 1,153.8 s. The normal coordinator then rebuilds/saves the
-genuine full graph, but status remains incomplete with a later `decode-budget` diagnostic. The
-observation ends at 1,384.9 s (23m04.9s), with all observed focus checks passing. This is a **failed
-baseline**, not a successful startup timing or denominator for a speedup percentage. Raw samples
-retain the failed restore and subsequent normal build/save. Matched candidate measurements remain
-pending. Source/hydration phases overlap and must not be summed across lanes.
+The baseline's hydration fails at 19m13.8s; its ordinary later compiler/save creates a full graph
+but status remains incomplete. It is a failed control, **not a denominator for a native speedup
+percentage**. The corrected run retains the existing host-observation invalidation path and one
+conservative cached full build. Cached-source host comparison (313.8 s before) and reconciliation
+(692.2 s before) dominate authority closure. Source/hydration lanes overlap; do not add them together.
 
-The first native candidate also rejects reuse: file-only accounting misses the genuine startup
-structural baseline. Its raw early stop and exact checkpoint artifacts are preserved. A new real-IDB
-regression reproduces that actual producer, alone and before unchanged/changed file commits; it is
-red before the narrowly scoped structural receipt and green afterward, including unrelated and
-reentrant publication controls. The corrected native profile now completes two attempts with
-108,217 pages, 108,217 relation rows and 197,561 declarations. Exact navigation-clock milestones are
-27.2424 s for complete cached navigation and 30.0268 s for snapshot completion. Later host observations
-retain the existing conservative cached-presentation/rebuild path (one real cached full build).
-Source authority and the detailed strict-ready milestone occur at 1,027.854 s; polling first observes
-ready at 1,027.969 s and verifies idle readiness at 1,030.171 s. All 20,088 bodies are reused, with
-zero source/URL reads, parses or repairs and all observed foreground checks passing. No
-host-observation fence was relaxed to turn that later work green. The long source-validation tail
-remains; this result does not claim a fast fully ready startup.
+Three sequential production trials (not randomized paired comparisons):
 
-Unforced sampled renderer heap peaks at 805,255,716 bytes in the failed baseline and 2,350,183,696
-bytes during the corrected profile's later rebuild; final samples are 413,573,096 and 442,582,068
-bytes. These different completion/coverage paths and unforced samples do not establish retained
-overhead or a true peak. Normal production repeats remain pending, and physical mobile memory
-acceptance is required; #153's accepted retained-memory tradeoff is not reused as a claim here.
+| Trial | Cached navigation observed | Full saved graph observed | First ready observed | Settled idle |
+| --- | ---: | ---: | ---: | ---: |
+| 1 | 28.855 s | 32.136 s | 17m52.959s | 17m55.137s |
+| 2 | 24.500 s | 27.776 s | 17m47.351s | 17m49.542s |
+| 3 | 22.418 s | 25.681 s | 17m49.746s | 17m51.939s |
+| Median | 24.500 s | 27.776 s | 17m49.746s | 17m51.939s |
 
-## Reproduction and validation
+Each production trial uses the verified main with detailed profiling disabled, the same Eager /
+background-URL / responsive settings and actual visible hub demand. A real complete save precedes
+the series. Every run restores all saved records, reaches genuine idle readiness and passes
+exact-artifact and observed foreground/throttling checks. Source counters record 20,088 / 20,092 /
+20,092 cached-body reuse operations, including repeated checks rather than unique-note counts;
+all 20,088 fingerprints remain present. Source reads/parses/repairs and URL-owner reads are zero.
+No flags, deadlines or watchdogs were changed to pass.
 
-- `node scripts/testing/warm-restart-coordinator.mjs --baseline-ref=ae473fc` and the same command
-  without the baseline option compare actual guard-owner sources with a genuine compiler snapshot
-  and ordinary unchanged file patch. Add `--structural-baseline` to include the genuine startup
-  baseline producer. Setup is outside timing; this is a work-count test, not startup.
-- `node --test --test-concurrency=1 tests/hydration-guards-indexeddb.test.mjs tests/support-report.test.mjs tests/foreground-startup-indexeddb.test.mjs`:
-  The expanded focused lane also includes `tests/saved-preview-url-indexeddb.test.mjs`: 115 tests
-  pass, covering changed same-stat facts, missing proof, mixed publishers, retry invalidation,
-  corrupt-active/checkpoint separation, canonical identity, real held URL work and watchdog progress.
-  Old rejection assertions remain.
-- Full `npm run verify:obsidian`, Node 22.22.2, passes for the structural correction against `kplex-test-small`:
-  architecture 7 / core 128 / general-indexing 825 / UI 63 / portable sources 334 / real-browser
-  sources 517; no failures or skips. Official lint, installed types, actual production build,
-  exact-artifact staging and native smoke pass. Six `foreground.mjs` cases pass with configuration
-  restored. The new driver's small-vault application reload also passes in on-demand mode.
-- Three structural-plus-file baseline/coordinator trials: 490.3 / 412.5 / 398.0 ms, each one recovery
-  admission and one global catalog; zero full-snapshot hydration. Three candidate trials: 361.9 / 318.9 / 309.8 ms,
-  each zero recovery inventories/catalogs, 514 full pages and 513 declarations, matching the saved
-  canonical adjacency/provenance oracle. Both use zero note reads/parses. The median reduction is
-  22.7% in this deliberately held 512-target fixture, **not a whole-startup speedup**. Earlier trial
-  sets remain in the raw archives. Verified production main SHA-256:
-  `e5994ecce833d5e3e17ad3615fec740ffa45aa3e87066e0c58b7f8d501440a0b`.
-- `scripts/testing/obsidian/warmRestart.mjs` requires the three explicit disposable-vault variables,
-  an external `KPLEX_HOST_REPORT_DIR` and unique receipt labels. It refuses personal vaults. Its
-  `stage`, `prepare`, `wait`, `save`, `run`, `observe` and `restore-config` actions retain artifact identities,
-  configuration backups and aggregate samples. `prepare` uses the real full compiler and complete
-  snapshot transaction. `run` uses the host's `app:reload` command and verifies changed renderer
-  time origin; it is a vault-window application reload, with Electron process retained.
+Production sampled JS-heap maxima are 2,355,792,264 / 1,047,188,720 / 1,048,000,516 bytes;
+final samples are 590,683,748 / 536,155,260 / 629,166,100 bytes. Maximum observed timer gaps are
+498.7 / 176.1 / 207.9 ms. The matched profile peaks at 2,350,183,696 bytes and ends at 442,582,068;
+the failed baseline peaks at 805,255,716 and ends at 413,573,096. Large temporary heap use also
+occurs without detailed profiling and is a material mobile acceptance concern. These different
+paths and samples do not establish retained overhead or attribute the difference solely to this fix.
 
-Native timing, archived raw receipts/checksums, final verification and remaining platform acceptance
-will be recorded here before closeout. Renderer-task gaps start at the first observation and are
-not paint measurements. Heap samples are neither forced-GC retained memory nor a proven peak.
+These are native `app:reload` **vault-window application reloads; Electron remains running**.
+Detailed milestones measure publication, not paint. Normal first-observed milestones have polling
+bounds; renderer timer gaps begin only at the first observation. Heap samples are unforced JS
+process samples, neither retained-memory measurements nor a proven peak, and completion paths differ.
+Aggregate polling and the renderer heartbeat remain in both sets of trials; their overhead is not isolated.
 
-## Deferred opportunities
+The permitted personal-vault observation corroborates the historical zero-record/source-vocabulary
+route, but its old build cannot identify the historical first trigger. Its unfocused 19m45.897s
+span is not a controlled benchmark. No personal note contents were accessed or modified; the
+personal vault/plugin was not deployed or reloaded. Only aggregate startup diagnostics and
+plugin-artifact identities were inspected.
 
-Later or larger publication waves, changed/missing semantic proof and genuine structural changes
-still use the existing conservative recovery. No general source-inventory/catalog throughput or
-persistence batching work is included. Any broader optimization needs its own measured proposal;
-C14 remains accepted and C15–C26 remain paused.
+## Verification and reproduction
+
+`npm run verify:obsidian`, Node 22.22.2: architecture 7 / core 128 / general-indexing 825 / UI 63 /
+portable sources 334 / real-browser sources 517, no failures/skips; official lint, installed types,
+real production build and exact-artifact native smoke pass. Focused 115 and six native foreground
+cases pass, with configuration restored. Old negative guards remain; genuine baseline-only,
+baseline-plus-file, changed-proof, unrelated/reentrant publication, held URL and watchdog cases
+exercise the new path. Post-run audits verify exact production artifacts, loaded/enabled plugins,
+normal throttling and no owned controller/heartbeat/staged artifact in either disposable vault.
+The large vault's original settings and enabled list match byte-for-byte; all temporary awake leases
+are released, and the generated fixture retains its exact digest. No exact workspace-restoration
+claim is made because this driver did not capture an original workspace backup. Production main SHA-256:
+`e5994ecce833d5e3e17ad3615fec740ffa45aa3e87066e0c58b7f8d501440a0b`.
+
+Run `node scripts/testing/warm-restart-coordinator.mjs --baseline-ref=ae473fc --structural-baseline`,
+then without `--baseline-ref`. Three genuine structural-plus-file trials each: 490.3/412.5/398.0 ms
+before and 361.9/318.9/309.8 ms after; median 412.5→318.9 ms (22.7%), one recovery admission/catalog
+per trial becomes zero, exact canonical adjacency/provenance retained, zero reads/parses. This
+512-target work-count fixture is **not whole startup**. File-only mode remains available.
+
+Use `scripts/testing/obsidian/warmRestart.mjs` with all three explicit disposable-vault variables,
+an external `KPLEX_HOST_REPORT_DIR` and unique receipt labels. It rejects personal vaults before
+filesystem/CLI access. `stage` copies exact main bytes; `prepare` uses the real compiler/save;
+`run` verifies changed renderer time origin and observes readiness; `restore-config` verifies
+original preference/enabled-list bytes. Cold incomplete setup and first failed candidates are
+retained separately from acceptance trials, never relabelled as successful startup.
+
+## Evidence, deferred work and acceptance
+
+[Initial public archive](https://github.com/zsviczian/kplex/tree/3f698ada48cd5cbab0f9b1302644637b2130110e):
+36 entries, 2,143,914 ZIP bytes, SHA-256
+`0d8e45a5c6d384786ab13c6db23cec778a5cc4f0021d6ed9dcb211e092585729`.
+The separate supplemental archive is verified locally: 122 entries, 5,244,249 ZIP bytes,
+SHA-256 `c934df0d327c4d1963f4a154b07a941924ef3c5566364f22c389cffe8163724b`. Its public publication awaits separate maintainer consent;
+the previously approved initial ZIP remains unchanged. Both complete entry sets, CRCs, byte counts
+and per-file SHA-256 checks pass; the initial archive also passes GitHub-download verification.
+The supplement preserves completed and failed native streams, exclusions, source snapshots,
+exact builds, fixture/reproduction references, benchmark and verification logs, plus cleanup receipts.
+Vault configuration backups and note/cache payloads are excluded; new personal audit receipts stay
+local. Raw evidence is preserved separately from the PR tree; no temporary handoff remains.
+
+Deferred opportunities: the measured source-validation tail; memory during cached-to-current full
+rebuilds; avoiding redundant bootstrap work without losing foreground availability; larger/later or
+unaccounted publication waves; and existing high-fan-in `decode-budget`/incomplete fallback behavior.
+These require separate measured proposals. C14 remains accepted; C15–C26 remain paused.
+
+Remaining acceptance: full Electron-process restart on Windows with other vaults safely closed;
+macOS restart/edit/rename/delete/popout; physical iOS/Android startup/navigation and memory headroom,
+especially large Eager graphs. Windows application reloads do not replace those checks. Keep the PR
+draft pending the applicable acceptance or an explicit maintainer waiver; no merge/release is made.
