@@ -27,12 +27,15 @@ The bounded native comparison is still in progress. Valid observations so far:
 | A / first | 337.078 | 437,355 | 1,000,806 | 1,025.877 |
 | M / first | 374.500 | 457,395 | 1,040,902 | 1,027.176 |
 | M / second | 313.750 | 452,316 | 1,012,121 | 1,006.515 |
+| A / replacement second | 321.047 | 425,738 | 948,221 | 1,067.599 |
 
-No repeatable native CPU or memory conclusion is claimed yet. All three valid observations pass
+The two comparisons have mixed CPU/drain directions; no repeatable native CPU, latency or
+attributable memory improvement is established. The replacement A uses fewer storage transactions/
+requests and source hashes than the preceding M, but slightly more CPU and drain time. All four valid observations pass
 610-second quiet windows with zero violations, reuse/check 20,088 bodies with zero fresh reads/parses,
 and complete one build/save with no catalog/checkpoint. Peak source decode reservation remains
-183,261 bytes. The middle A observation finishes but is excluded in full for 84 foreground sample
-violations. One bounded replacement A is running; the final A–M pair remains. If controls fail again,
+183,261 bytes. The middle A observation finished but is excluded in full for 84 foreground sample
+violations. The bounded replacement A passes; only the final A–M pair remains. If controls fail again,
 close out with fewer samples and qualify conclusions rather than retry indefinitely.
 
 
@@ -105,7 +108,7 @@ cannot create a receipt. The cap was not raised and no owner was omitted. For bo
 edits: creation→restart succeeds; normal patch/five-minute save retires eligibility; two more restarts
 do not restore it. No extra full build was forced to manufacture renewal.
 
-Protocol2 first creation through ordinary startup costs569.735s renderer CPU,826,340 transactions/
+On an existing graph/source cache, protocol2 first creation through ordinary startup costs569.735s renderer CPU,826,340 transactions/
 1,678,868 requests, two complete source passes and one build/save; genuine drain2,034.741s plus
 610.352s quiet. The completed warm B trial **fails strict retention** after host encounter order changes:
 820.656s CPU,826,275 transactions/1,678,730 requests,20,088 extra fresh reads/parses, two complete

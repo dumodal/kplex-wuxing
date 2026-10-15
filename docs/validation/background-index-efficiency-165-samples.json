@@ -1280,6 +1280,159 @@
         "activeTransactions": 0,
         "cleanupUnavailable": false,
         "pluginRestoreUnavailable": false
+      },
+      {
+        "group": 0,
+        "arm": "A",
+        "label": "closeout-focus-retry-v1-08-A",
+        "receiptAcceptance": "passed",
+        "hostReplayEqual": false,
+        "rawGraphEqual": false,
+        "elapsedReadyMs": 1063219,
+        "drainMs": 1067599,
+        "cpuMicroseconds": {
+          "user": 276422000,
+          "system": 43781000
+        },
+        "lifecycleCpuMicroseconds": {
+          "user": 277204000,
+          "system": 43843000
+        },
+        "work": {
+          "sourceInventoryPasses": 2,
+          "fullBuildStarts": 1,
+          "nodeCatalogStarts": 0,
+          "completeSnapshotSaves": 1,
+          "checkpointSaves": 0
+        },
+        "retainedMemory": {
+          "startedAt": 1792085747347,
+          "completedAt": 1792085748106,
+          "pid": 23216,
+          "collections": 2,
+          "method": "Selected renderer live heap after two forced collections; outside startup/quiet timing; not plugin-exclusive retained overhead",
+          "heapBytes": {
+            "usedSize": 406747652,
+            "totalSize": 419344384,
+            "embedderHeapUsedSize": 6766024,
+            "backingStorageSize": 9508480
+          },
+          "processMemoryKb": {
+            "private": 935028,
+            "shared": 9368,
+            "residentSet": 962692
+          },
+          "cpuMicroseconds": {
+            "user": 2860000,
+            "system": 141000
+          }
+        },
+        "startedAt": "2026-10-15T17:07:24.318Z",
+        "rawReceipt": "kplex-165-large-restarts/closeout-focus-retry-v1-08-A.json",
+        "rawReceiptSha256": "f0c1a993a77478b795e0911a741a8f0759b631d8f2c5c0983b23e4ea669f8f2a",
+        "sourceChunkReads": 102889,
+        "sourcePostingReads": 102889,
+        "savedPagePuts": 108217,
+        "transactions": 425738,
+        "readwriteTransactions": 176077,
+        "requests": 948221,
+        "hashing": {
+          "source": {
+            "calls": 389019,
+            "utf16Units": 654855971
+          },
+          "snapshot-pages": {
+            "calls": 0,
+            "utf16Units": 0
+          },
+          "snapshot-evidence": {
+            "calls": 0,
+            "utf16Units": 0
+          },
+          "snapshot-binding": {
+            "calls": 0,
+            "utf16Units": 0
+          },
+          "source-heads": {
+            "calls": 0,
+            "utf16Units": 0
+          },
+          "semantic-inputs": {
+            "calls": 0,
+            "utf16Units": 0
+          }
+        },
+        "source": {
+          "checked": 20088,
+          "reusedBodies": 20088,
+          "legacyBodies": 0,
+          "vaultReads": 0,
+          "parses": 0,
+          "repaired": 0,
+          "resolutionRefreshes": 0,
+          "pendingMetadata": 0,
+          "failures": 0
+        },
+        "sourceRepository": {
+          "activated": 0,
+          "unsaved": 0,
+          "empty": 0,
+          "chunksWritten": 0,
+          "bytesWritten": 0,
+          "readFailures": 0,
+          "sequenceMin": 0,
+          "sequenceMax": 0,
+          "peakDecodeBytes": 183261
+        },
+        "firstReadyMs": 1063219,
+        "quietMs": 610612,
+        "quietViolations": 0,
+        "broadWorkUnchanged": true,
+        "admissions": {
+          "inventoryRuns": 3,
+          "fullBuildCalls": 1,
+          "nodeCatalogCalls": 0,
+          "snapshotWrites": 1,
+          "checkpointWrites": 0
+        },
+        "sourceWorkGroups": {
+          "all:tx.readonly.meta": 5,
+          "all:request.readonly.meta.get": 42636,
+          "all:tx.readwrite.meta": 82807,
+          "all:request.readwrite.meta.put": 10296,
+          "all:tx.readwrite.meta,sourceHeads,sourceImpacts": 1,
+          "all:request.readwrite.meta.get": 10297,
+          "all:tx.readonly.sourceHeads": 103050,
+          "all:request.readonly.sourceHeads.get": 145515,
+          "all:tx.readonly.meta,sourceHeads,sourceLocalDependencyOwners,sourceLocalDependencyRepairs": 42625,
+          "all:tx.readwrite.meta,sourceHeads": 82801,
+          "all:request.readwrite.sourceHeads.get": 93090,
+          "all:request.readwrite.meta.add": 82801,
+          "all:tx.readonly.sourceChunks,sourcePostings": 102889,
+          "all:request.readonly.sourceChunks.get": 102889,
+          "all:request.readwrite.meta.delete": 82802,
+          "all:tx.readwrite.meta,sourceHeads,sourceLocalDependencyOwners": 10289,
+          "all:request.readonly.sourceHeads.getAll": 160,
+          "all:request.readonly.sourceHeads.getAllKeys": 160,
+          "all:tx.readonly.meta,sourceLocalDependencyRepairs": 2,
+          "all:tx.readwrite.meta,sourceLocalDependencyRepairs": 2
+        },
+        "quietCpuMicroseconds": {
+          "user": 4219000,
+          "system": 1172000
+        },
+        "allForeground": true,
+        "cpuProcessIdentityVerified": true,
+        "unforcedSampledHeapMaximumBytes": 1175045508,
+        "unforcedSampledRssMaximumBytes": 1933361152,
+        "heartbeat": {
+          "samples": 33275,
+          "maxGapMs": 386.80000001192093
+        },
+        "pending": 0,
+        "activeTransactions": 0,
+        "cleanupUnavailable": false,
+        "pluginRestoreUnavailable": false
       }
     ],
     "limitations": "Three observations per M/A arm planned, original pair order A-M/M-A/A-M; one A control interruption/replacement is recorded separately and breaks strict adjacency of the middle pair. Same fixture, config, source heads/sequence and sorted per-owner fingerprints verified; host compiler replay order/raw graph commitments may change and are explicitly retained. No statistical significance, physical allocation, disk bytes, plugin-exclusive CPU or attributable peak/retained-memory claim."
