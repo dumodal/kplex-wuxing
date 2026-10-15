@@ -12,6 +12,9 @@ export function createStartupResourceProbe({ phase, now, cpu, cpuProcess, databa
   let running = true, pending = 0, peakPending = 0, decodeCurrent = 0, decodePeak = 0;
   let heapMaximum = 0, rssMaximum = 0, activeTransactions = 0, peakTransactions = 0;
   const broad = { inventoryRuns: 0, fullBuildCalls: 0, nodeCatalogCalls: 0, snapshotWrites: 0, checkpointWrites: 0 };
+  const hashFamilies = ['source', 'snapshot-pages', 'snapshot-evidence', 'snapshot-binding', 'source-heads', 'semantic-inputs'];
+  const hashPrefixes = hashFamilies.slice(1).map(family => '[1,"' + family + '",');
+  const hashing = Object.fromEntries(hashFamilies.map(family => [family, { calls: 0, utf16Units: 0 }]));
   /** Bound arbitrary host/phase labels without retaining source identities. */
   function row(label) {
     let key = phase() + ':' + label;
@@ -85,6 +88,21 @@ export function createStartupResourceProbe({ phase, now, cpu, cpuProcess, databa
     /** Attach to the existing owners after plugin enable; early native transactions are already observed. */
     attach(index, builder) {
       const acquisition = index.sourceAcquisition, repository = acquisition.repository;
+      // Counts mode must include receipt payload hashing without encoding/copying its arguments,
+      // inspecting payloads or adding a promise observer per digest. Fixed protocol prefixes only.
+      wrap(repository.runtime, 'digest', original => function (text) {
+        if (running) {
+          let family = 'source';
+          if (typeof text === 'string' && text.startsWith('[1,"')) {
+            for (let position = 1; position < hashFamilies.length; position++) {
+              if (text.startsWith(hashPrefixes[position - 1])) { family = hashFamilies[position]; break; }
+            }
+          }
+          hashing[family].calls++;
+          if (typeof text === 'string') hashing[family].utf16Units += text.length;
+        }
+        return original.apply(this, arguments);
+      });
       operation(acquisition, 'reconcile', 'acquisition.reconcile', 'inventoryRuns');
       operation(index, 'rebuild', 'graph.rebuild', 'fullBuildCalls');
       operation(builder?.prototype, 'buildSourceNodeCatalog', 'graph.buildSourceNodeCatalog', 'nodeCatalogCalls');
@@ -124,6 +142,7 @@ export function createStartupResourceProbe({ phase, now, cpu, cpuProcess, databa
       return { elapsedMs: now() - started, detailed, running, pending, peakPending, activeTransactions, peakTransactions,
         decodeCurrent, decodePeak, heapMaximum, rssMaximum, broad: {...broad},
         cpuProcess: cpuIdentity ? { ...cpuIdentity } : null,
+        hashing: Object.fromEntries(hashFamilies.map(family => [family, { ...hashing[family] }])),
         cpuMicroseconds: currentCpu && initialCpu ? { user: currentCpu.user - initialCpu.user, system: currentCpu.system - initialCpu.system } : null,
         semantics: 'Native process CPU includes host/other activity. JSON bytes estimate request payloads, not engine disk/WAL bytes. Family records count deliveries, including repeated validation. Detailed observers add unisolated overhead.',
         groups: Object.fromEntries([...buckets].map(/** Copy only bounded scalar counters. */ ([key, value]) => [key, { ...value }])) };

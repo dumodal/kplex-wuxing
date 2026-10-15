@@ -1,9 +1,12 @@
 # Background indexing resource efficiency — PR #165
 
-The first correction halves repeated resolution-family authentication during unchanged resolver
-waves. Three counterbalanced real-IDB pairs reproduce the work reduction. Optional graph retention
-passes correctness and native functional validation; matched resource acceptance remains pending.
-This is not yet a merge recommendation.
+The duplicate-read correction halves repeated resolution-family authentication during unchanged
+resolver waves; three counterbalanced real-IDB pairs reproduce the reduction. The current receipt
+is **rejected for shipping**: one large Markdown file excludes a vault, normal edits lose eligibility,
+and native window restart order can prevent safe retention. Three additional source-provenance
+probes incorrectly accept stale host-owned frontmatter/wiki/tag facts after same-stat edits.
+Final promotion also needed a durable-source race correction. Scale resource comparisons are still in progress; no receipt
+efficiency win or merge approval is claimed. Keep the duplicate-read checkpoint independently reviewable.
 Merged #163 baseline: `8df393a`; integration checkpoint: `a86b4a0`. The shipping baseline main is
 SHA-256 `e5994ecce833d5e3e17ad3615fec740ffa45aa3e87066e0c58b7f8d501440a0b`.
 #153/#163 behavior and architecture remain; C14 is accepted and C15–C26 remain paused.
@@ -97,17 +100,17 @@ persistent-format boundary. Its separate implementation is under validation; nat
 acceptance is pending. Legacy/uncertain coverage keeps conservative fallback. The PR stays draft
 and unmerged for review of safety and resource results.
 
-The optional version-one `active.sourceReceipt` field uses the existing schema-3 graph metadata
+The optional version-two `active.sourceReceipt` field uses the existing schema-3 graph metadata
 and database version10; no store/version migration or purge occurs. It binds the exact generation,
 page/evidence record commitments and counts, source sequence and ordered exact-head commitment,
-canonical version3 input fingerprints in durable source-head key order, Markdown count, and selection/policy metadata. SHA-256
+canonical version3 input fingerprints in actual full-compiler Markdown replay order, Markdown count, and selection/policy metadata. SHA-256
 commitments use fixed32Ki-character frames and the existing streaming serializer/digest capability;
 neither a whole encoded graph nor another per-note proof map is retained. A semantic contract
 change requires a receipt-version change; missing, malformed or unknown versions keep legacy reads.
 
-| Receipt field | Version-one meaning |
+| Receipt field | Version-two meaning |
 | --- | --- |
-| `version`, `fingerprintVersion`, `generation` | Receipt protocol 1, canonical fingerprint protocol 3, exact active graph generation. |
+| `version`, `fingerprintVersion`, `generation` | Receipt protocol 2, canonical fingerprint protocol 3, exact active graph generation. Protocol1 falls back conservatively. |
 | `source.sequence`, `source.heads`, `source.inputs`, `source.markdownOwners` | Selected global revision, ordered exact-head digest/count, canonical input digest/count, and Markdown coverage. |
 | `pages`, `evidence` | Ordered persisted-record digest/count, including declaration multiplicity. |
 | `binding` | Commitment to those fields plus active key/schema/generation/time, vault/settings signatures, URL version, discovered fields and chunk counts. |
@@ -124,7 +127,7 @@ complete save. Missing first-creation stream coverage can require one additional
 that cost must be reported, not hidden in setup. The source owner first closes actual validation.
 Its sequence and exact catalog must remain unchanged around compilation; the compiler's existing
 private fingerprint map must match the authenticated stream in that pass's captured order. Final
-input commitments follow durable head keys, independently of compiler/inventory traversal. No new
+input commitments bind the compiler's actual encounter order, independently of inventory traversal. No new
 per-owner proof map, graph traversal order or compiler hook is introduced. Actual Date/Daily Notes returns are
 latched, so observed A→B→A drift refuses proof. The metadata activation transaction rechecks the
 source sequence. Checkpoints and uncertain/cancelled work never receive a receipt; an optional-proof
@@ -165,13 +168,15 @@ source-backed fallback; a later fixture save raced queued native metadata work. 
 quiet-host authority regression and both real coordinator routes now cover the correction. The
 helper waits for queued and active reconciliation and verifies current canonical scoped semantics.
 
-The real unchanged application-reload check then exposed native Markdown enumeration order as
-another false negative: source heads and all per-owner fingerprints were identical while the
-aggregate order differed. Two red real-IDB tests reproduce restart and compiler-order variation.
-Canonical source-head ordering fixes both without reordering inventory/compiler work. The corrected
-native reload retains full authority with one real source pass and zero builds/catalogs/saves.
-The corrected same-stat fallback and native foreground pause/edit/navigation/relationship checks
-also pass. These functional checks do not yet establish a resource improvement.
+The earlier native reload exposed a mismatch between source-pass and saved input enumeration.
+Checkpoint128cb28 canonicalized input commitments by source-head key and passed native functional
+checks. A subsequent real compiler oracle demonstrates that this is insufficient: reversed note
+order changes a shared URL's preferred label and ordered aliases while all per-owner tokens match.
+Protocol2 therefore binds actual compiler replay order and verifies the current host enumeration
+before accepting warm inputs. Source head identity remains independently key-ordered. Creation
+cross-checks the compiler's existing private map order; concurrent order changes reject capability.
+No compiler, inventory or alias ordering changes. The previous protocol1 safely uses ordinary
+validation; its native results remain diagnostic evidence, not acceptance of the final protocol.
 
 After hydration, an unfinished startup source pass now retains its actual existing note progress.
 Its existing source callback also refreshes subscribed status listeners through the existing 250ms
@@ -184,7 +189,123 @@ activated complete/checkpoint saves. They continue after readiness until unload,
 detailed timing opt-in. The support report exports only these allowlisted counts and retains the
 existing completion route; missing older evidence remains unknown.
 
+## Product-fit decision gates
+
+**Safety gate fails independently of performance.** After the passing40-case verification, three
+additional real-IDB probes keep host metadata cached and change actual same-stat content: YAML
+frontmatter, ordinary body wiki links, and body tags. All three incorrectly promote the old graph.
+The fresh parser intentionally skips frontmatter and supplies inline fields/URLs; the fingerprint
+still borrows frontmatter, tags and resolved-link facts from Obsidian's cache. A fresh `Vault.read`
+therefore does not authenticate every semantic source. The red cases are preserved, not suppressed
+or described as passing. A new raw hash alone also needs provenance connecting compilation's host
+metadata to the actual bytes. No second parser, cache purge or broad redesign is introduced to
+rescue this candidate. Preserve this rejected source checkpoint for evidence, and defer the receipt.
+
+Every Markdown file must have a known nonnegative byte size at most131,072bytes, and actual decoded
+text must fit262,144UTF-16bytes. This is a whole-vault restriction, including drawing Markdown; no
+owner is omitted from completeness. It additionally requires Eager mode, a complete compatible
+snapshot with current URL facets, exact source/graph/input/policy coverage, a semantic descriptor
+at most64KiB, and at most1,024 observed environment fields within64KiB. Unknown or changed coverage
+declines the optional path; it does not purge sources or the ordinary graph.
+
+| Actual-input test | Receipt eligibility |
+| --- | --- |
+| Ordinary prose exactly128KiB; other notes small | Yes |
+| Drawing-shaped Markdown48KiB; other notes small | Yes |
+| Ordinary prose160KiB | No, entire vault |
+| Drawing-shaped Markdown192KiB | No, entire vault |
+| Small notes plus both large kinds | No, entire vault |
+
+All five real-parser/IndexedDB cases pass. Native `kplex-test-small` confirms that163,840-byte
+ordinary prose plus196,813-byte Excalidraw-shaped Markdown produces a complete normal graph but no
+receipt. Owned files/folder are removed; focus/visibility/normal throttling pass. Its detailed
+diagnostic includes fixture creation/normal processing and the initial canonical build/save:
+2.031s selected-renderer CPU,1,619 transactions,4,199 requests and208 observation-digest admissions.
+This is an eligibility diagnostic, not a matched resource benefit. A first controller cleanup failure
+is preserved separately; its performance data is unavailable and excluded. Recovery removes its
+empty owned folder and reloads the test window before the successful retry.
+
+Native normal-use cases independently create a receipt, reload the plugin, edit through `Vault.modify`,
+wait for the unchanged five-minute normal save timer, then reload twice. Both prose-only and semantic
+edits pass; no full build is forced after either edit. Two corresponding real-IDB owner regressions pass.
+
+| Native stage,89 Markdown owners | Persisted receipt | Full builds / complete saves | Fresh reads / parses |
+| --- | --- | --- | --- |
+| Initial necessary compilation/save | Protocol2 | One setup compilation/save | Setup recorded separately |
+| First plugin reload | Retained/current | 0 / 0 | 89 / 89 |
+| One ordinary prose or semantic edit and natural save | Absent | 0 / 1 | 1 / 1 additional |
+| First post-edit plugin reload | Absent | 0 / 0 | 0 / 0 |
+| Second post-edit plugin reload | Absent | 0 / 0 | 0 / 0 |
+
+Eligibility does not return through quiet time or subsequent restarts. Only a later independently
+necessary canonical compilation can create a new receipt. This does not demonstrate a benefit for
+an actively edited vault. The native plugin lifecycle retains one window/its enumeration; a genuine
+vault-window reload separately fails retention because saved/current replay digests differ, while
+all88 per-owner inputs pass validation. The failed full-authority assertion remains a failure,
+even with zero builds and ready requested scopes. Raw `retained` reference presence after an edit is
+not current eligibility; the saved field is absent and its prior publication/source proof has expired.
+
+The requested final-promotion race is reproduced with a real second connection replacing a source
+after `candidate.validation.finish()` while final receipt decoding is held. The prior code incorrectly
+promotes with unchanged local host epochs. The correction selects the durable source sequence as
+the final await before synchronous promotion, through the existing source owner. No whole-vault
+pass, scheduler or transaction framework is added; all33 then-registered receipt guards pass,
+including the new red/green race. Full verification including all40 receipt cases passes.
+
+One additional complete native lifecycle per build starts CPU accounting before fixture creation
+and includes the initial canonical build/save, three plugin reloads and the ordinary prose edit.
+Order is B/A/M; each uses the same final probe and normal scheduling. This is a diagnostic with
+one observation per arm, not the planned counterbalanced scale acceptance or a timing effect size.
+
+| Whole small-vault lifecycle | M: merged main | A: duplicate-read only | B: receipt |
+| --- | ---: | ---: | ---: |
+| Selected-renderer CPU, seconds | 9.109 | 8.515 | 10.750 |
+| Source/cache drain, seconds | 44.492 | 44.414 | 349.938 |
+| Native transactions | 6,416 | 6,415 | 9,197 |
+| Of which readwrite | 1,402 | 1,400 | 2,544 |
+| Native requests | 15,509 | 15,502 | 20,341 |
+| Source body reads / parses | 2 / 2 | 2 / 2 | 91 / 91 |
+| Complete snapshot writes, including initial setup | 1 | 1 | 2 |
+| Digest calls | 5,596 | 5,593 | 8,450 |
+| UTF-16 units submitted to digests | 9,323,345 | 9,322,804 | 16,620,955 |
+
+B's89 added unchanged-reload reads use `Vault.read`; the broader source-read counter also includes
+ordinary acquisition reads. B retains full graph authority, then follows the normal five-minute
+save after the edit. M/A use the existing cached/source-backed route, update the source, and do not
+schedule a complete graph save in this case. Those authority/end-state differences remain visible;
+zero compiler calls in every post-creation phase do not establish equivalent work or a benefit.
+Initial compilation is an explicit controlled test precondition, never post-edit receipt renewal.
+
+Sampled heap/RSS maxima are297,941,180/738,086,912bytes (M),249,061,640/700,747,776 (A), and
+208,793,060/651,317,248 (B). Final two-GC main heaps are260,012,744/222,023,220/183,891,336bytes,
+respectively, after eligibility is already lost. Same-window heap rises with the B/A/M sequence;
+these values cannot establish attributable receipt savings, allocation totals or true peaks. Work
+counts/hashing volumes are allocation proxies. CPU includes host, probe and identity-check work.
+This diagnostic stops at active-task/source/cache drain; it does not include a610s quiet window.
+The scale series retains that requirement and is still pending. No improvement percentage is claimed.
+
+The smallest follow-up worth proposing, rather than implementing here, is authenticated raw-content
+fingerprints owned by existing source read/write paths: fresh bounded hashing could avoid parsing
+unchanged content, with normal patch/save renewal instead of a new full compilation. Large-file
+admission must use a demonstrated serial read/memory budget and cover every owner; `Vault.read`
+still materializes a whole string, so streaming hash frames alone do not bound read memory or avoid
+linear storage work. This needs a separate bounded proposal and resource proof. Raising128KiB,
+trusting physical statistics/host cached hashes, skipping drawing files, or adding another scheduler
+does not resolve these gates. Retain the already measured pass-local duplicate-read reuse now.
+
 ## Measurement contract
+
+The separate protocol1 first-use diagnostic (not a clean-warm comparison) passes with a newly
+minted receipt, two actual source passes, one full compilation/save and zero catalog starts.
+First readiness is1,882.617s; stable readiness1,884.794s; genuine drain1,948.818s. The following
+610s quiet observation has no broad-work violation, pending resource or active transaction.
+Onload-observer CPU is576.204s (500.188user/76.016system); the same-PID lifecycle delta is576.985s.
+It counts826,336 native transactions (341,882readwrite) and1,678,868 requests. Sampled heap/RSS
+maxima are1,933,511,164/2,568,683,520bytes. No note bodies are freshly read/parsed during this
+creation run. This material creation cost includes the additional validation pass and cannot be
+treated as a warm benefit, compared as a matched percentage with the older detailed M diagnostic,
+or used as resource acceptance for corrected protocol2. All55 request/transaction groups fit the
+observer's256-group limit. Exact raw receipts, source and artifact identities remain preserved.
 
 The existing `warmRestart.mjs` now supports a prespecified resource acceptance window. First
 readiness, real source/cache/task drain and quiescence are separate milestones. The quiet window
@@ -198,9 +319,11 @@ control A is committed duplicate-read checkpoint `d0d16fb`; B is the separately 
 implementation. Before any primary trial, add merged runtime M (`8df393a`) in the balanced triplets
 **B–A–M / A–M–B / M–B–A**. Each arm occupies each position once; the original B/A pair order stays
 unchanged. Nine counts-only trials distinguish whole-PR effects from the receipt's incremental cost.
-Graph payload/policy and exact source-head identities are checked outside timing. Identity format2
+Graph payload/policy and exact source-head identities are checked outside timing. Identity format3
 also verifies the live fingerprint map against every saved graph input and hashes those tokens in
-durable head-key order. Configuration is separate from raw discovery metadata; raw payload/order
+durable head-key order. A separate actual host-replay input digest preserves semantically relevant
+compiler encounter order and rejects a concurrent enumeration change; protocol version is recorded.
+Configuration is separate from raw discovery metadata; raw payload/order
 commitments remain preserved. The inspection rejects concurrent live publication/policy/source
 changes and incomplete head coverage. It grants no authority and performs no note reads or writes.
 Only the optional capability and generation activation metadata may differ. Legitimate receipt
@@ -271,15 +394,16 @@ the merged counts probe verifies selected-renderer CPU identity and zero pending
 
 ## Evidence and acceptance
 
-Receipt correctness checkpoint: full Node22.22.2 verification passes architecture7/core128/
-general830/UI63/portable336/browser553, lint, installed types, production build and exact-build
+Receipt product-fit checkpoint: full Node22.22.2 verification passes architecture7/core128/
+general830/UI63/portable336/browser564, lint, installed types, production build and exact-build
 Windows native smoke, no failures/skips/JS errors. Main SHA-256:
-`893cbe8642153ee602c53c4629900f2ad895d0d2da9964310f8478a3f3d2d519`;
-manifest/styles are unchanged. All29 registered receipt cases pass; a subsequently added actual
-legacy-cache/compiler-input mismatch negative passes focused (30 receipt cases covered). The
-strict native candidate assertion also passes: actual retained receipt, complete current graph,
-one source pass and no build/catalog/save. Preparation and selected-renderer retained-memory
-helpers pass native scope/lifetime checks. Matched CPU/storage/memory/total-work benefit is pending.
+`e00f5ec596365858be90f1bfe953d8808706022986d744f82b27f49cbcf80c11`;
+manifest/styles are unchanged. All40 receipt cases pass. Native plugin-reload retention, both
+ordinary edit lifecycles, mixed-file conservative fallback and owned-fixture cleanup pass. The
+protocol2 vault-window strict assertion fails and remains a failure. Preparation/retained-memory
+helpers pass scope/lifetime checks. The subsequently added three stale-host source probes fail;
+the40-case green suite does not establish full source correctness. Matched scale resource collection
+is pending and cannot turn this rejected candidate into an accepted implementation.
 
 Raw successful/failed/setup receipts, exact profile artifacts and source identities are preserved
 outside the PR tree pending final evidence packaging. Reusable benchmark/profile drivers live in

@@ -1044,7 +1044,7 @@ export class KplexIndexedDbCache {
         try {
           const pages = await pageHash.finish(), evidence = await evidenceHash.finish();
           if (pages && evidence && isCurrent() && proof.isCurrent()) {
-            const receipt = { version: 1 as const, fingerprintVersion: 3 as const, generation, source: proof.source, pages, evidence };
+            const receipt = { version: 2 as const, fingerprintVersion: 3 as const, generation, source: proof.source, pages, evidence };
             const binding = await this.snapshotReceiptBinding(active, receipt, isCurrent);
             if (binding && proof.isCurrent()) active.sourceReceipt = { ...receipt, binding };
           }

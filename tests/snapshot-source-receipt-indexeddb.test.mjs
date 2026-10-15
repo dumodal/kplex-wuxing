@@ -102,19 +102,51 @@ test("receipt keeps a quiet-host graph cached until genuine source validation",a
   }finally{await browser.cleanup();}
 });
 
-/** Native file enumeration is not a semantic revision or a stable commitment order. */
-test("receipt survives changed Markdown enumeration without changing compiler or inventory order",async()=>{
+/** Shared URL labels preserve first-encounter semantics in the established full compiler. */
+test("receipt refuses changed Markdown order when canonical shared URL labels change",async()=>{
   const browser=await chromiumHarness(bundle);
   try{
     assert.equal(await browser.evaluate(contributorBrowserInitialize),true);assert.equal(await browser.evaluate(initialize),true);
     assert.equal(await browser.evaluate(`(/** Change only the host's ordinary file-array order after a genuine save. */ async()=>{
       const t=await receiptFixture('receipt-order-restart');
       try{
-        await t.mint();const files=t.f.app.vault.getMarkdownFiles.bind(t.f.app.vault);
+        t.f.texts.set('A.md','[First label](https://example.com/shared)');
+        t.f.texts.set('B.md','[Second label](https://example.com/shared)');
+        await t.mint();
+        const original=t.index.get('https://example.com/shared');
+        equal(original.name,'First label','Original canonical encounter owns the preferred label');
+        equal(original.aliases,['First label','Second label'],'Original alias ordering is significant');
+        const files=t.f.app.vault.getMarkdownFiles.bind(t.f.app.vault);
         t.f.app.vault.getMarkdownFiles=/** Native restart may enumerate the same owners in another order. */ ()=>files().reverse();
         const index=await t.restart(false),state=index.state,revision=index.publicationRevision;
-        equal(await index.retainValidatedStartupSnapshot(),0,'Identical canonical per-owner inputs remain eligible');
-        ok(index.state===state,'Exact graph preserved');equal(index.publicationRevision,revision,'No semantic publication');return true;
+        const builder=new sourceModules.GraphBuilder(index.plugin,t.f.app,index.fieldCache,index.metadataParser,index.indexedDb,()=>true,new Map(),index.sourceAcquisition);
+        const oracle=await builder.build({acquireSources:false});ok(oracle,'Real canonical compiler oracle completes');
+        equal(oracle.pages.get('https://example.com/shared').name,'Second label','Changed encounter changes the canonical preferred label');
+        equal(oracle.pages.get('https://example.com/shared').aliases,['Second label','First label'],'Oracle preserves alias ordering');
+        equal(await index.retainValidatedStartupSnapshot(),null,'Different replay order cannot certify old semantics');
+        ok(index.state===state,'Refusal does not mutate cached graph');equal(index.publicationRevision,revision,'No semantic publication');return true;
+      }finally{t.close();}
+    })()`),true);
+  }finally{await browser.cleanup();}
+});
+
+/** Compilation and source validation may enumerate identical owners independently. */
+test("receipt refuses Markdown order changed during asynchronous input hashing",async()=>{
+  const browser=await chromiumHarness(bundle);
+  try{
+    assert.equal(await browser.evaluate(contributorBrowserInitialize),true);assert.equal(await browser.evaluate(initialize),true);
+    assert.equal(await browser.evaluate(`(/** Change host order at the real digest await, without replacing storage or compiler. */ async()=>{
+      const t=await receiptFixture('receipt-order-concurrent');
+      try{
+        await t.mint();const index=t.index,sources=index.indexedDb.sources,digest=sources.observationDigest.bind(sources);
+        const files=t.f.app.vault.getMarkdownFiles.bind(t.f.app.vault);let changed=false;
+        sources.observationDigest=/** Preserve the real digest and introduce only a host enumeration change. */ async text=>{
+          const value=await digest(text);
+          if(!changed&&text.includes('"semantic-inputs"')){changed=true;t.f.app.vault.getMarkdownFiles=()=>files().reverse();}
+          return value;
+        };
+        equal(await index.snapshotInputsBySource(index.semanticFingerprints,()=>true),null,'Mixed encounter order grants no capability');
+        ok(changed,'Order changed inside the actual commitment');return true;
       }finally{t.close();}
     })()`),true);
   }finally{await browser.cleanup();}
@@ -162,6 +194,36 @@ test("receipt creation refuses different canonical compiler inputs under unchang
 });
 
 /** Actual unobserved content changes must retire the receipt and repair the stale body input. */
+for(const kind of ['frontmatter','body-wiki','body-tag']){
+test(`receipt must reject same-stat ${kind} changes while host metadata remains cached`,async()=>{
+  const browser=await chromiumHarness(bundle);
+  try{
+    assert.equal(await browser.evaluate(contributorBrowserInitialize),true);assert.equal(await browser.evaluate(initialize),true);
+    assert.equal(await browser.evaluate(`(/** Real fresh content differs; only host-owned metadata intentionally remains stale. */ async()=>{
+      const t=await receiptFixture('receipt-stale-host-${kind}');
+      try{
+        const cache=t.f.metadata.get('A.md');let original,replacement;
+        if('${kind}'==='frontmatter'){original='---\\nType: Old\\n---\\n';replacement='---\\nType: New\\n---\\n';cache.frontmatter={Type:'Old'};}
+        if('${kind}'==='body-wiki'){
+          original='[[B]]\\n';replacement='[[C]]\\n';t.f.add('C.md','');t.settings.inferAllLinksAsFriends=true;
+          cache.links=[{link:'B',position:{start:{line:0,offset:0},end:{line:0,offset:5}}}];
+          t.f.app.metadataCache.resolvedLinks={'A.md':{'B.md':1}};
+        }
+        if('${kind}'==='body-tag'){original='#old\\n';replacement='#new\\n';cache.hostTags=['#old'];cache.tags=[{tag:'#old'}];}
+        equal(new TextEncoder().encode(original).byteLength,new TextEncoder().encode(replacement).byteLength,'Equal-byte offline semantic edit');
+        t.f.texts.set('A.md',original);await t.mint();
+        const file=t.f.files.get('A.md'),physical=JSON.stringify(file.stat);
+        t.f.texts.set('A.md',replacement);const index=await t.restart(false);
+        equal(JSON.stringify(file.stat),physical,'Physical observations unchanged');
+        equal(await index.retainValidatedStartupSnapshot(),null,'Fresh body read cannot certify stale host-owned semantics');
+        return true;
+      }finally{t.close();}
+    })()`),true);
+  }finally{await browser.cleanup();}
+});
+}
+
+/** Actual unobserved content changes must retire the receipt and repair the stale body input. */
 for(const staleCache of [false,true]){
 test(`receipt refuses offline same-stat semantic edit and repairs the actual source owner${staleCache?' with stale cachedRead':''}`, async () => {
   const browser=await chromiumHarness(bundle);
@@ -186,7 +248,7 @@ test(`receipt refuses offline same-stat semantic edit and repairs the actual sou
 }
 
 /** Optional malformed/unknown fields preserve normal snapshot readability while refusing reuse. */
-for(const mode of ['absent','unknown','wrong-generation','wrong-binding']){
+for(const mode of ['absent','unknown','unordered-v1','wrong-generation','wrong-binding']){
   test(`optional receipt ${mode} keeps conservative legacy validation`,async()=>{
     const browser=await chromiumHarness(bundle);
     try{
@@ -197,6 +259,7 @@ for(const mode of ['absent','unknown','wrong-generation','wrong-binding']){
           const meta=await t.mint(),db=await t.index.indexedDb.open();
           if('${mode}'==='absent')delete meta.sourceReceipt;
           if('${mode}'==='unknown')meta.sourceReceipt.version=999;
+          if('${mode}'==='unordered-v1')meta.sourceReceipt.version=1;
           if('${mode}'==='wrong-generation')meta.sourceReceipt.generation='unrelated-generation';
           if('${mode}'==='wrong-binding')meta.sourceReceipt.binding='0'.repeat(64);
           await edit(db,['meta'],tx=>tx.objectStore('meta').put(meta));
@@ -366,6 +429,63 @@ test("oversized receipt input keeps legacy behavior without fresh-content scan o
 });
 
 /** Optional proof cannot retain an unbounded configured semantic descriptor. */
+for(const [kind,bytes,eligible]of [['prose-boundary',128*1024,true],['prose-large',160*1024,false],['drawing-small',48*1024,true],['drawing-large',192*1024,false],['mixed',160*1024,false]]){
+  test(`receipt mixed-workload eligibility: ${kind}`,async()=>{
+    const browser=await chromiumHarness(bundle);
+    try{
+      assert.equal(await browser.evaluate(contributorBrowserInitialize),true);assert.equal(await browser.evaluate(initialize),true);
+      assert.equal(await browser.evaluate(`(/** Actual parser inputs and matching host byte sizes, not a fabricated oversized stat alone. */ async()=>{
+        const t=await receiptFixture('receipt-workload-${kind}');
+        try{
+          const drawing='---\\nexcalidraw-plugin: parsed\\n---\\n# Excalidraw Data\\n## Drawing\\n\x60\x60\x60json\\n{"type":"excalidraw","version":2,"elements":[],"files":{"synthetic":{"mimeType":"image/png","dataURL":"data:image/png;base64,';
+          const end='"}}}\\n\x60\x60\x60\\n';
+          const text='${kind}'.startsWith('drawing')?drawing+'A'.repeat(${bytes}-drawing.length-end.length)+end:'Ordinary prose without semantic references.\\n'.repeat(Math.ceil(${bytes}/43)).slice(0,${bytes});
+          t.f.add('${kind}'.startsWith('drawing')?'Drawing.excalidraw.md':'Large.md',text);
+          if('${kind}'==='mixed')t.f.add('Drawing.excalidraw.md',drawing+'A'.repeat(192*1024)+end);
+          for(const file of t.f.app.vault.getMarkdownFiles())file.stat.size=new TextEncoder().encode(t.f.texts.get(file.path)).byteLength;
+          const saved=await t.mint(${eligible});
+          equal(!!saved.sourceReceipt,${eligible},'Entire real mixed-input graph eligibility');
+          ok(t.index.isFullSnapshotHydrated(),'Ordinary canonical graph remains available');
+          if(!${eligible})equal(t.index.getSourceAcquisitionCounters().vaultReads,0,'No extra fresh-content validation for an ineligible vault');
+          return true;
+        }finally{t.close();}
+      })()`),true);
+    }finally{await browser.cleanup();}
+  });
+}
+
+/** Ordinary patch/save retires proof; neither a prose edit nor a semantic edit manufactures a build. */
+for(const semantic of [false,true]){
+  test(`receipt normal-use lifecycle after ${semantic?'semantic':'prose-only'} edit`,async()=>{
+    const browser=await chromiumHarness(bundle);
+    try{
+      assert.equal(await browser.evaluate(contributorBrowserInitialize),true);assert.equal(await browser.evaluate(initialize),true);
+      assert.equal(await browser.evaluate(`(/** Run actual source acquisition, canonical incremental publication and complete persistence. */ async()=>{
+        const t=await receiptFixture('receipt-edit-lifecycle-${semantic}');
+        try{
+          await t.mint();let index=await t.restart();equal(await index.retainValidatedStartupSnapshot(),0,'Initial unchanged restart retains receipt');
+          const file=t.f.files.get('A.md');
+          t.f.texts.set(file.path,${semantic}?'Friends:: [[B]]\\nType:: Changed':'Friends:: [[B]]\\nType:: Original\\nAn ordinary prose-only edit.');
+          file.stat.mtime++;file.stat.size=new TextEncoder().encode(t.f.texts.get(file.path)).byteLength;
+          t.f.app.vault.trigger('modify',file);
+          equal((await index.patchMarkdownPaths([file.path])).outcome,'patched','Existing normal incremental owner completes');
+          ok(await index.sourceAcquisition.flush(),'Changed source closes normally');
+          index.cancelPendingPersistence();ok(await index.persistIndexedDbSnapshot(index.snapshotPersistGeneration),'Existing complete save owner activates edited graph');
+          ok(!(await index.indexedDb.readSnapshotMeta()).sourceReceipt,'Normal edited snapshot has no eligible optional receipt');
+          for(let restart=0;restart<2;restart++){
+            index=await t.restart();equal(await index.retainValidatedStartupSnapshot(),null,'Receipt remains absent on subsequent restart');
+            ok(!(await index.indexedDb.readSnapshotMeta()).sourceReceipt,'Restart does not manufacture new receipt');
+            equal(index.getSemanticPreparationDiagnostics().fullBuilds,0,'No full build solely to restore eligibility');
+            equal(index.get('A.md').noteType,${semantic}?'Changed':'Original','Saved canonical semantics survive');
+          }
+          return true;
+        }finally{t.close();}
+      })()`),true);
+    }finally{await browser.cleanup();}
+  });
+}
+
+/** Optional proof cannot retain an unbounded configured semantic descriptor. */
 test("oversized receipt policy keeps the normal canonical snapshot without optional proof",async()=>{
   const browser=await chromiumHarness(bundle);
   try{
@@ -403,6 +523,33 @@ test("receipt activation refuses an independently changed source sequence while 
         ok(active.generation!==original.generation,'Ordinary save remains backward compatible');
         ok(!active.sourceReceipt,'Changed activation sequence cannot stamp the older graph');return true;
       }finally{if(t.index)t.index.indexedDb.backgroundCheckpoint=checkpoint;other?.close();t.close();}
+    })()`),true);
+  }finally{await browser.cleanup();}
+});
+
+/** Exact selected identities/revisions are committed even if a replacement cache reuses a sequence. */
+test("initial receipt promotion rejects a second-connection replacement during the final receipt read",async()=>{
+  const browser=await chromiumHarness(bundle);
+  try{
+    assert.equal(await browser.evaluate(contributorBrowserInitialize),true);assert.equal(await browser.evaluate(initialize),true);
+    assert.equal(await browser.evaluate(`(/** Hold the real final metadata/receipt read after completed source proof. */ async()=>{
+      const t=await receiptFixture('receipt-final-promotion-race');let other,read;
+      try{
+        await t.mint();const index=await t.restart(),candidate=index.snapshotReceiptCandidate;
+        const finish=candidate.validation.finish.bind(candidate.validation);let finished=false,replaced=false;
+        candidate.validation.finish=async()=>{const proof=await finish();ok(proof,'Real source proof completes');finished=true;return proof;};
+        other=await fixture('receipt-final-promotion-race');other.add('A.md','Friends:: [[B]]\\nType:: Replaced');other.add('B.md','');other.acquisition.start();
+        const host=index.plugin.getIndexSourceRevision(),publication=index.publicationRevision;
+        read=index.indexedDb.readSnapshotSourceReceipt;
+        index.indexedDb.readSnapshotSourceReceipt=/** Actual receipt decoding finishes while its caller remains held for the independent writer. */ async function(...args){
+          const receipt=await read.apply(this,args);ok(finished,'Validation finished before final read');
+          if(!replaced){replaced=true;other.app.vault.trigger('modify',other.files.get('A.md'));await other.acquire();ok(await other.acquisition.flush(),'Independent replacement closes');}
+          return receipt;
+        };
+        equal(await index.retainValidatedStartupSnapshot(),null,'Changed durable source cannot promote stale graph');
+        ok(replaced,'Real replacement committed while final read was held');equal(index.plugin.getIndexSourceRevision(),host,'No local host epoch notification');
+        equal(index.publicationRevision,publication,'No graph publication');ok(index.sourceBackedSemantics&&!index.fullSnapshotFresh,'Cached graph gains no full authority');return true;
+      }finally{if(t.index&&read)t.index.indexedDb.readSnapshotSourceReceipt=read;other?.close();t.close();}
     })()`),true);
   }finally{await browser.cleanup();}
 });

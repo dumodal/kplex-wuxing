@@ -10,8 +10,8 @@ export type SnapshotReceiptDigest = Readonly<{ sha256: string; records: number }
 /** Selected source catalog and canonical semantic input stream under one closed source lifetime. */
 export type SnapshotSourceValidation = Readonly<{ sequence: number; heads: SnapshotReceiptDigest;
   inputs: SnapshotReceiptDigest; markdownOwners: number }>;
-/** Optional version-one receipt; all graph payloads and selection metadata belong to this generation. */
-export type SnapshotSourceReceipt = Readonly<{ version: 1; fingerprintVersion: 3; generation: string;
+/** Optional version-two receipt also binds canonical Markdown replay order; version one falls back. */
+export type SnapshotSourceReceipt = Readonly<{ version: 2; fingerprintVersion: 3; generation: string;
   source: SnapshotSourceValidation; pages: SnapshotReceiptDigest; evidence: SnapshotReceiptDigest; binding: string }>;
 
 /** Hash one stream without retaining an encoded graph, decoded source mirror or per-owner proof map. */
@@ -74,12 +74,12 @@ export function snapshotSourceReceipt(value: unknown, generation: string): Snaps
   /** A digest binds an exact logical record count, including zero. */
   const digest = (item: unknown): item is SnapshotReceiptDigest => object(item) && typeof item.sha256 === "string"
     && /^[a-f0-9]{64}$/.test(item.sha256) && count(item.records);
-  if (!object(value) || value.version !== 1 || value.fingerprintVersion !== 3 || value.generation !== generation
+  if (!object(value) || value.version !== 2 || value.fingerprintVersion !== 3 || value.generation !== generation
     || typeof value.binding !== "string" || !/^[a-f0-9]{64}$/.test(value.binding) || !object(value.source)
     || !count(value.source.sequence) || !count(value.source.markdownOwners) || !digest(value.source.heads)
     || !digest(value.source.inputs) || value.source.inputs.records !== value.source.markdownOwners
     || !digest(value.pages) || !digest(value.evidence)) return null;
-  return { version: 1, fingerprintVersion: 3, generation,
+  return { version: 2, fingerprintVersion: 3, generation,
     source: { sequence: value.source.sequence, markdownOwners: value.source.markdownOwners,
       heads: { sha256: value.source.heads.sha256, records: value.source.heads.records },
       inputs: { sha256: value.source.inputs.sha256, records: value.source.inputs.records } },

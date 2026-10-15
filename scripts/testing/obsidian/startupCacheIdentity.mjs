@@ -4,8 +4,9 @@
  * Optional borrowed live fingerprints must match every saved input; head-key ordering separates
  * semantic input identity from native record enumeration. No identity grants host/graph authority.
  */
-export async function startupCacheIdentity(cache, createHash, fingerprints, current = /** Standalone stored-cache readers have no live graph lifetime. */ () => true) {
+export async function startupCacheIdentity(cache, createHash, fingerprints, current = /** Standalone stored-cache readers have no live graph lifetime. */ () => true, markdownPaths) {
   if(!current())throw Error('Input selection changed while hashing');
+  const replayPaths=markdownPaths?.();
   const db = await cache.open(), meta = await cache.readSnapshotMeta();
   if (!db || !meta || meta.key !== 'active' || meta.completedMarkdownPaths !== undefined) throw Error('Complete saved cache required for input identity');
   /** Read the actual global source sequence without changing leases, journals or source state. */
@@ -63,12 +64,22 @@ export async function startupCacheIdentity(cache, createHash, fingerprints, curr
   if (before !== finalSequence || JSON.stringify(meta) !== JSON.stringify(finalMeta) || !current()) throw Error('Input selection changed while hashing');
   const semanticInputs=fingerprints?inputs.finish():null;
   if(semanticInputs&&semanticInputs.records!==fingerprints.size)throw Error('Saved graph inputs lack complete source-head coverage');
+  let hostReplayInputs=null;
+  if(replayPaths){
+    const replay=stream();
+    if(!fingerprints||replayPaths.length!==fingerprints.size)throw Error('Incomplete host replay input coverage');
+    for(const path of replayPaths){if(!fingerprints.has(path))throw Error('Unknown host replay input');replay.add({path,signature:fingerprints.get(path)});}
+    const now=markdownPaths();
+    if(now.length!==replayPaths.length||now.some((path,index)=>path!==replayPaths[index])||!current())throw Error('Host replay order changed while hashing');
+    hostReplayInputs=replay.finish();
+  }
   const policy = stream();policy.add({ schema: meta.schema, vaultSignature: meta.vaultSignature,
     settingsSignature: meta.settingsSignature, urlAliasVersion: meta.urlAliasVersion, discoveredFields: meta.discoveredFields });
   const configuration=stream();configuration.add({schema:meta.schema,vaultSignature:meta.vaultSignature,
     settingsSignature:meta.settingsSignature,urlAliasVersion:meta.urlAliasVersion});
-  return { formatVersion: 2, method: 'Raw record commitments plus head-key ordered saved semantic inputs; outside startup timing; no host-authority claim',
-    activation: { createdAt: meta.createdAt, generationSha256: createHash('sha256').update(meta.generation).digest('hex'),optionalReceiptPresent:meta.sourceReceipt!==undefined },
+  return { formatVersion: 3, method: 'Raw records, head-key ordered saved inputs and optional current host replay inputs; outside startup timing; no host-authority claim',
+    activation: { createdAt: meta.createdAt, generationSha256: createHash('sha256').update(meta.generation).digest('hex'),optionalReceiptPresent:meta.sourceReceipt!==undefined,
+      receiptVersion:Number.isSafeInteger(meta.sourceReceipt?.version)?meta.sourceReceipt.version:null },
     graph: { pages: pages.finish(), evidence: evidence.finish(), policy: policy.finish() },
-    configuration:configuration.finish(),semanticInputs,sources: { sequence: before, heads: heads.finish() } };
+    configuration:configuration.finish(),semanticInputs,hostReplayInputs,sources: { sequence: before, heads: heads.finish() } };
 }

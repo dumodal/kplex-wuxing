@@ -43,8 +43,9 @@ const result=await esbuild.build({absWorkingDir:root,banner:{js:'/* K-Plex - gen
  setup(build){build.onLoad({filter:/[\\/]src[\\/].*\.tsx?$/},/** Supply only exact selected source content. */ args=>mappings.has(args.path)?{contents:mappings.get(args.path),loader:args.path.endsWith('.tsx')?'tsx':'ts'}:undefined);}}]});
 const code=result.outputFiles[0].text.replace(new RegExp(`\\.createElement\\((["'])scr${'ipt'}\\1\\)`,'g'),'.createElement("template")');
 mkdirSync(output,{recursive:true});writeFileSync(join(output,'main.js'),code);writeFileSync(join(output,'main.profile.ts'),main);
-const identity={sourceCommit:ref??git('rev-parse','HEAD').trim(),mode,node:process.version,testOnly:true,
+const sourcePaths=ref?[...mappings.keys()]:git('ls-files','src').trim().split('\n').filter(path=>/\.tsx?$/.test(path)).map(path=>resolve(root,path));
+const identity={sourceCommit:ref??git('rev-parse','HEAD').trim(),sourceDirty:!ref&&Boolean(git('status','--porcelain','--','src').trim()),mode,node:process.version,testOnly:true,
  semantics:'Native process CPU/IDB counters and bounded resource observations; no source/graph authority, settings, scheduling, watchdog or cache changes. Counts mode keeps detailed StartupDiagnostics disabled.',
  sha256:createHash('sha256').update(code).digest('hex'),probeSha256:createHash('sha256').update(readFileSync(join(root,'scripts/testing/obsidian/startupResources.mjs'))).digest('hex'),
- source:Object.fromEntries([...mappings].map(/** Keep source identities portable and byte-exact. */ ([path,text])=>[relative(root,path).split(sep).join('/'),createHash('sha256').update(text).digest('hex')]))};
+ source:Object.fromEntries(sourcePaths.map(/** Pin every provided source, including uncommitted inputs; the commit alone is insufficient for a dirty build. */ path=>[relative(root,path).split(sep).join('/'),createHash('sha256').update(mappings.get(path)??readFileSync(path)).digest('hex')]))};
 writeFileSync(join(output,'identity.json'),JSON.stringify(identity,null,2)+'\n');console.log(JSON.stringify({sourceCommit:identity.sourceCommit,mode,sha256:identity.sha256,output}));

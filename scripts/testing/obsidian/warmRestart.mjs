@@ -172,6 +172,11 @@ async function restartAndObserve(before){
   report.cpuProcessIdentityVerified=report.final.resources
     ? report.final.resources.cpuProcess?.pid===report.final.host.rendererPid&&report.final.resources.cpuProcess?.type==='renderer':null;
   if(report.final.resources&&!report.cpuProcessIdentityVerified)throw Error('Profile CPU process is not the selected renderer');
+  // Retain inclusive native totals even when the subsequent receipt-acceptance assertion fails.
+  report.lifecycleCpuMicroseconds=before.host.cpuPid===report.final.host.cpuPid
+    ? {user:report.final.nativeCpuMicroseconds.user-before.nativeCpuMicroseconds.user,
+      system:report.final.nativeCpuMicroseconds.system-before.nativeCpuMicroseconds.system}:null;
+  recordReloadOutcome(before.timeOrigin);
   if(expectReceipt){
     const work=report.final.startup?.sessionWork,graph=report.final.graph;
     if(!report.final.receipt.retained||!graph.full||!graph.fresh||graph.sourceSemantics||graph.sourceBacked
@@ -179,11 +184,6 @@ async function restartAndObserve(before){
       throw Error('Clean candidate restart did not retain exact receipt authority without a build/catalog/save');
     }
   }
-  // Native totals also cover bootstrap when the OS renderer survives. A new PID is unknown.
-  report.lifecycleCpuMicroseconds=before.host.cpuPid===report.final.host.cpuPid
-    ? {user:report.final.nativeCpuMicroseconds.user-before.nativeCpuMicroseconds.user,
-      system:report.final.nativeCpuMicroseconds.system-before.nativeCpuMicroseconds.system}:null;
-  recordReloadOutcome(before.timeOrigin);
 }
 
 try{
@@ -249,7 +249,8 @@ try{
     report.final=await drained(await settled());
     startTask(`const i=app.plugins.plugins['k-plex'].index,publication=i.publicationRevision,policy=i.semanticPolicyRevision,source=i.plugin.getIndexSourceRevision();
       return (${startupCacheIdentity.toString()})(i.indexedDb,require('node:crypto').createHash,i.semanticFingerprints,
-        /** A live publication/policy/source change cannot produce a mixed input identity. */ ()=>!i.diagnosticsClosed&&publication===i.publicationRevision&&policy===i.semanticPolicyRevision&&source===i.plugin.getIndexSourceRevision())`);
+        /** A live publication/policy/source change cannot produce a mixed input identity. */ ()=>!i.diagnosticsClosed&&publication===i.publicationRevision&&policy===i.semanticPolicyRevision&&source===i.plugin.getIndexSourceRevision(),
+        /** Actual compiler encounter order affects preferred shared-URL labels and ordered aliases. */ ()=>app.vault.getMarkdownFiles().map(file=>file.path))`);
     report.cacheIdentity=await taskDone();
   }else if(action==='verify-receipt-offline-edit'){
     // Functional correctness is separate from resource acceptance: the fixture's legitimate save

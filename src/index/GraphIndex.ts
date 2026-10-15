@@ -1305,18 +1305,36 @@ export class GraphIndex {
 } finally { releaseWork(); }
   }
 
-  /** Hash existing input tokens in durable head-key order, independent of host Markdown enumeration. */
-  private async snapshotInputsBySource(fingerprints: ReadonlyMap<string, string>, current: () => boolean): Promise<SnapshotSourceValidation | null> {
+  /** Bind exact owner coverage and canonical compiler encounter order without another per-owner map. */
+  private async snapshotInputsBySource(fingerprints: ReadonlyMap<string, string>, current: () => boolean,
+    compiled = false): Promise<SnapshotSourceValidation | null> {
+    const files = this.app.vault.getMarkdownFiles();
+    if (files.length !== fingerprints.size) return null;
+    // Full compilation inserts this existing map in actual replay order. A later host enumeration
+    // must not certify a different preferred shared-URL label or alias/evidence encounter order.
+    if (compiled) {
+      const paths = fingerprints.keys();
+      if (files.some(file => paths.next().value !== file.path)) return null;
+    }
     const hash = new SnapshotReceiptHasher("semantic-inputs", /** Reuse the existing mobile-safe digest. */ text => this.indexedDb.sources.observationDigest(text),
       /** Keep private record guards cheap; the selection checks full lifetime at bounded pages and completion. */ () => !this.diagnosticsClosed && !this.persistentCachePurged,
       /** Retain the existing background admission between fixed frames. */ () => this.workScheduler.checkpoint(INDEX_WORK_PRIORITY.background));
-    const selection = await this.indexedDb.sources.snapshotSelection(current, /** Borrow current compiled/restored tokens; tombstones grant no current owner coverage. */ async head => {
+    let covered = 0;
+    const selection = await this.indexedDb.sources.snapshotSelection(current, /** Tombstones grant no current owner coverage; every compiled owner must have an exact selected head. */ async head => {
       if (head.state !== "complete") return true;
       const signature = fingerprints.get(head.physical.path);
-      return signature === undefined || await hash.add({ path: head.physical.path, signature });
+      if (signature !== undefined) covered += 1;
+      return true;
     });
+    if (!selection || covered !== fingerprints.size || !current()) return null;
+    for (const file of files) {
+      const signature = fingerprints.get(file.path);
+      if (signature === undefined || !(await hash.add({ path: file.path, signature }))) return null;
+    }
     const inputs = await hash.finish();
-    return selection && inputs && inputs.records === fingerprints.size && current()
+    const now = this.app.vault.getMarkdownFiles();
+    return inputs && inputs.records === fingerprints.size && current()
+      && now.length === files.length && now.every((file, position) => file === files[position])
       ? { ...selection, inputs, markdownOwners: fingerprints.size } : null;
   }
 
@@ -1464,7 +1482,12 @@ export class GraphIndex {
       || !sameSnapshotReceiptDigest(proof.source.inputs, candidate.receipt.source.inputs)) return null;
     const active = await this.indexedDb.readSnapshotMeta();
     const activeReceipt = active ? await this.indexedDb.readSnapshotSourceReceipt(active, proof.isCurrent) : null;
-    if (!proof.isCurrent() || active?.generation !== candidate.meta.generation
+    // Receipt decoding can await native hashing after source proof completed. A different database
+    // connection may replace a head without changing this host's epoch; make the durable sequence
+    // selection the final await before the synchronous promotion, as on the retained-proof route.
+    const sourceSequence = activeReceipt?.binding === candidate.receipt.binding
+      ? await this.indexedDb.sources.snapshotSelectionSequence(proof.isCurrent) : null;
+    if (sourceSequence !== proof.source.sequence || !proof.isCurrent() || active?.generation !== candidate.meta.generation
       || activeReceipt?.binding !== candidate.receipt.binding
       || candidate.meta.settingsSignature !== computeIndexSettingsSignature(this.plugin.settings)
       || candidate.meta.vaultSignature !== this.restoredVaultSignature
@@ -6049,7 +6072,7 @@ export class GraphIndex {
           try {
             const matches = await sourceValidation.matchesCompiledInputs(nextFingerprints);
             const selection = matches ? await this.snapshotInputsBySource(nextFingerprints,
-              /** Bind canonical input ordering and resulting graph to the exact pre-compile selection. */ () => current() && sourceProof.isCurrent()) : null;
+              /** Bind canonical input ordering and resulting graph to the exact pre-compile selection. */ () => current() && sourceProof.isCurrent(), true) : null;
             if (selection && sourceProof.isCurrent() && selection.sequence === sourceProof.source.sequence
               && sameSnapshotReceiptDigest(selection.heads, sourceProof.source.heads)) compiledProof = { ...sourceProof, source: selection };
           } catch { /* Persist the ordinary graph without an optional proof when uncertain. */ }

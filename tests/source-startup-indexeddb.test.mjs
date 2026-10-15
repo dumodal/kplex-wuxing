@@ -82,6 +82,21 @@ test("startup resource observer is self-contained and preserves native forwardin
         probe.stop();
         ok(IDBObjectStore.prototype.get===getWitness&&f.repository.inspect===inspectWitness,'Exact wrapped methods restored');
         ok(f.app.metadataCache.getFileCache===originalCache&&f.acquisition.metadataHost.dailyNotesSettings===originalDaily,'Exact host methods restored');
+        const digest=f.repository.runtime.digest;let digestPromise,digestReceiver;
+        const digestWitness=function(...args){digestReceiver=this;digestPromise=digest.apply(this,args);return digestPromise;};
+        f.repository.runtime.digest=digestWitness;
+        try{
+          probe=window.sourceResourceFactory({phase:()=> 'counts',now:()=>performance.now(),databaseName:dbName('resource-observer-contract'),detailed:false});
+          probe.attach({sourceAcquisition:f.acquisition,indexedDb:f.cache});
+          const text='[1,"snapshot-pages","test",""]',result=f.repository.runtime.digest(text);
+          ok(result===digestPromise&&digestReceiver===f.repository.runtime,'Counts preserve original digest promise and receiver');await result;
+          await f.repository.runtime.digest('Observer-private-raw-input');
+          const counted=probe.snapshot();equal(counted.hashing['snapshot-pages'],{calls:1,utf16Units:text.length},'Receipt payload hash work is counted without encoding a copy');
+          equal(counted.hashing.source.calls,1,'Source hashes remain separately counted');
+          ok(!JSON.stringify(counted).includes('Observer-private-'),'Hash payload text is never retained or exported');
+          counted.hashing.source.calls=999;equal(probe.snapshot().hashing.source.calls,1,'Caller cannot mutate private counters');
+          probe.stop();ok(f.repository.runtime.digest===digestWitness,'Exact digest method restored');
+        }finally{probe?.stop();f.repository.runtime.digest=digest;}
         return true;
       } finally {probe?.stop();IDBObjectStore.prototype.get=nativeGet;f.repository.inspect=inspect;f.close();}
     })()`),true);

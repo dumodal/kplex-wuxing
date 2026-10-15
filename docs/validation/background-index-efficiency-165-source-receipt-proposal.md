@@ -51,5 +51,11 @@ is under evaluation. Its native reads, parsing during first creation, hashing, t
 and subsequent unchanged-validation cost must all be counted. If that cost prevents a real total-work
 improvement, do not ship the receipt merely because it avoids a compiler invocation. No dependency
 on an undocumented host hash has been introduced. The prototype reads/parses actual bounded notes
-through the existing source owner and records that cost. Version-one format and rejection rules are
+through the existing source owner and records that cost. Version-two format and rejection rules are
 documented in the living report; resource acceptance remains pending.
+
+Product-fit decision: defer this candidate. Native mixed vaults with large prose/drawing Markdown
+are excluded, normal saves retire eligibility, and three fresh-read same-stat probes still accept
+stale host-owned frontmatter/wiki/tag facts. The approved correctness requirement is not met.
+Do not broaden the parser or persistence design to rescue it here. Keep duplicate-read reuse
+independent; the living report preserves costs, red probes and the bounded future design gates.

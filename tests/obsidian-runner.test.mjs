@@ -87,6 +87,13 @@ test("startup cache identities distinguish payload changes, source ABA and inter
   const reordered=await startupCacheIdentity(cache,createHash,new Map([...fingerprints].reverse()));
   assert.deepEqual(reordered.semanticInputs,semantic.semanticInputs,'Input identity ignores live map and saved-page traversal order');
   assert.notDeepEqual(reordered.graph.pages,semantic.graph.pages,'Raw stored-record ordering remains visible');
+  const order=[...fingerprints.keys()];
+  const replay=await startupCacheIdentity(cache,createHash,fingerprints,()=>true,()=>order);
+  const reversedReplay=await startupCacheIdentity(cache,createHash,fingerprints,()=>true,()=>[...order].reverse());
+  assert.deepEqual(replay.semanticInputs,reversedReplay.semanticInputs,'Per-owner equality stays independently visible');
+  assert.notDeepEqual(replay.hostReplayInputs,reversedReplay.hostReplayInputs,'Actual compiler encounter order remains a distinct input');
+  let selections=0;
+  await assert.rejects(startupCacheIdentity(cache,createHash,fingerprints,()=>true,()=>++selections===1?order:[...order].reverse()),/Host replay order changed/);
   state.meta.discoveredFields=[['later',{name:'Later',count:1}]];
   const discovery=await startupCacheIdentity(cache,createHash,fingerprints);
   assert.deepEqual(discovery.configuration,semantic.configuration,'Derived discovery order/content stays distinct from semantic settings identity');
