@@ -75,6 +75,28 @@ test("startup cache identities distinguish payload changes, source ABA and inter
   await assert.rejects(startupCacheIdentity(cache, createHash), /Input selection changed/);
   cache.iterateSnapshotPages = pages;state.invalid = 1;
   await assert.rejects(startupCacheIdentity(cache, createHash), /Unreadable source/);
+  state.invalid=0;
+  state.pages[0].semanticSignature='canonical-original';
+  state.heads[0].state='complete';state.heads[0].physical={path:'private-test-owner.md'};
+  state.pages.push({path:'second-test-owner.md',semanticSignature:'canonical-second',relations:[]});
+  state.heads.push({sourceId:'second-test-owner.md',sourceRevision:'selected-two',sequence:3,state:'complete',physical:{path:'second-test-owner.md'}});
+  const fingerprints=new Map([['private-test-owner.md','canonical-original'],['second-test-owner.md','canonical-second']]);
+  const semantic=await startupCacheIdentity(cache,createHash,fingerprints);
+  assert.equal(semantic.semanticInputs.records,2);
+  state.pages.reverse();
+  const reordered=await startupCacheIdentity(cache,createHash,new Map([...fingerprints].reverse()));
+  assert.deepEqual(reordered.semanticInputs,semantic.semanticInputs,'Input identity ignores live map and saved-page traversal order');
+  assert.notDeepEqual(reordered.graph.pages,semantic.graph.pages,'Raw stored-record ordering remains visible');
+  state.meta.discoveredFields=[['later',{name:'Later',count:1}]];
+  const discovery=await startupCacheIdentity(cache,createHash,fingerprints);
+  assert.deepEqual(discovery.configuration,semantic.configuration,'Derived discovery order/content stays distinct from semantic settings identity');
+  assert.notDeepEqual(discovery.graph.policy,semantic.graph.policy,'Raw policy metadata changes remain preserved');
+  fingerprints.set('private-test-owner.md','different');
+  await assert.rejects(startupCacheIdentity(cache,createHash,fingerprints),/Live fingerprints do not match/);
+  fingerprints.set('private-test-owner.md','canonical-original');
+  state.heads[0].state='tombstone';
+  await assert.rejects(startupCacheIdentity(cache,createHash,fingerprints),/lack complete source-head coverage/);
+  await assert.rejects(startupCacheIdentity(cache,createHash,fingerprints,/** Represent a retired live graph inspection. */ ()=>false),/Input selection changed/);
 });
 
 test("Windows large eval preserves literal code and retires its temporary script on success/failure", () => {

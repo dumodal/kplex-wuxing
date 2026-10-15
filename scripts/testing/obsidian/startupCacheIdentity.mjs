@@ -1,9 +1,11 @@
 /**
  * Hash disposable-vault cache inputs outside timed startup. Records stream through the existing
  * bounded readers into an injected synchronous SHA-256 implementation; no payload/path is returned.
- * This test receipt identifies stored inputs, not host freshness or graph publication authority.
+ * Optional borrowed live fingerprints must match every saved input; head-key ordering separates
+ * semantic input identity from native record enumeration. No identity grants host/graph authority.
  */
-export async function startupCacheIdentity(cache, createHash) {
+export async function startupCacheIdentity(cache, createHash, fingerprints, current = /** Standalone stored-cache readers have no live graph lifetime. */ () => true) {
+  if(!current())throw Error('Input selection changed while hashing');
   const db = await cache.open(), meta = await cache.readSnapshotMeta();
   if (!db || !meta || meta.key !== 'active' || meta.completedMarkdownPaths !== undefined) throw Error('Complete saved cache required for input identity');
   /** Read the actual global source sequence without changing leases, journals or source state. */
@@ -33,24 +35,40 @@ export async function startupCacheIdentity(cache, createHash) {
       finish() { return { sha256: hash.digest('hex'), records, bytes }; },
     };
   }
-  const before = await sequence(), pages = stream(), evidence = stream(), heads = stream();
-  if (!(await cache.iterateSnapshotPages(meta, /** Hash only the selected complete generation's actual records. */ row => pages.add(row)))
-    || !(await cache.iterateSnapshotEvidence(meta, /** Preserve evidence order and declaration multiplicity. */ row => evidence.add(row)))) {
+  const before = await sequence(), pages = stream(), evidence = stream(), heads = stream(), inputs = stream();
+  let savedInputs=0,inputMismatch=false;
+  if (!(await cache.iterateSnapshotPages(meta, /** Hash exact records and prove borrowed tokens describe this saved graph. */ row => {
+    pages.add(row);
+    if(fingerprints&&typeof row.semanticSignature==='string'){
+      savedInputs++;if(fingerprints.get(row.path)!==row.semanticSignature)inputMismatch=true;
+    }
+  },current))
+    || !(await cache.iterateSnapshotEvidence(meta, /** Preserve evidence order and declaration multiplicity. */ row => evidence.add(row),current))) {
     throw Error('Unreadable graph input identity');
   }
+  if(fingerprints&&(inputMismatch||savedInputs!==fingerprints.size))throw Error('Live fingerprints do not match saved graph inputs');
   let after = null;
   do {
     const page = await cache.sources.headPage(after);
-    if (!page.available || page.invalid) throw Error('Unreadable source input identity');
-    for (const head of page.heads) heads.add(head);
+    if (!page.available || page.invalid || !current()) throw Error('Unreadable source input identity');
+    for (const head of page.heads) {
+      heads.add(head);
+      if(fingerprints&&head.state==='complete'&&fingerprints.has(head.physical.path)){
+        inputs.add({path:head.physical.path,signature:fingerprints.get(head.physical.path)});
+      }
+    }
     after = page.next;
   } while (after !== null);
   const finalSequence = await sequence(), finalMeta = await cache.readSnapshotMeta();
-  if (before !== finalSequence || JSON.stringify(meta) !== JSON.stringify(finalMeta)) throw Error('Input selection changed while hashing');
+  if (before !== finalSequence || JSON.stringify(meta) !== JSON.stringify(finalMeta) || !current()) throw Error('Input selection changed while hashing');
+  const semanticInputs=fingerprints?inputs.finish():null;
+  if(semanticInputs&&semanticInputs.records!==fingerprints.size)throw Error('Saved graph inputs lack complete source-head coverage');
   const policy = stream();policy.add({ schema: meta.schema, vaultSignature: meta.vaultSignature,
     settingsSignature: meta.settingsSignature, urlAliasVersion: meta.urlAliasVersion, discoveredFields: meta.discoveredFields });
-  return { formatVersion: 1, method: 'Ordered selected-record SHA-256; outside startup timing; no host-authority claim',
-    activation: { createdAt: meta.createdAt, generationSha256: createHash('sha256').update(meta.generation).digest('hex') },
+  const configuration=stream();configuration.add({schema:meta.schema,vaultSignature:meta.vaultSignature,
+    settingsSignature:meta.settingsSignature,urlAliasVersion:meta.urlAliasVersion});
+  return { formatVersion: 2, method: 'Raw record commitments plus head-key ordered saved semantic inputs; outside startup timing; no host-authority claim',
+    activation: { createdAt: meta.createdAt, generationSha256: createHash('sha256').update(meta.generation).digest('hex'),optionalReceiptPresent:meta.sourceReceipt!==undefined },
     graph: { pages: pages.finish(), evidence: evidence.finish(), policy: policy.finish() },
-    sources: { sequence: before, heads: heads.finish() } };
+    configuration:configuration.finish(),semanticInputs,sources: { sequence: before, heads: heads.finish() } };
 }

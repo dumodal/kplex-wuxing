@@ -247,7 +247,9 @@ try{
     report.preparationElapsedMs=Date.now()-report.preparationRequestedAt;
   }else if(action==='identity'){
     report.final=await drained(await settled());
-    startTask(`return (${startupCacheIdentity.toString()})(app.plugins.plugins['k-plex'].index.indexedDb,require('node:crypto').createHash)`);
+    startTask(`const i=app.plugins.plugins['k-plex'].index,publication=i.publicationRevision,policy=i.semanticPolicyRevision,source=i.plugin.getIndexSourceRevision();
+      return (${startupCacheIdentity.toString()})(i.indexedDb,require('node:crypto').createHash,i.semanticFingerprints,
+        /** A live publication/policy/source change cannot produce a mixed input identity. */ ()=>!i.diagnosticsClosed&&publication===i.publicationRevision&&policy===i.semanticPolicyRevision&&source===i.plugin.getIndexSourceRevision())`);
     report.cacheIdentity=await taskDone();
   }else if(action==='verify-receipt-offline-edit'){
     // Functional correctness is separate from resource acceptance: the fixture's legitimate save

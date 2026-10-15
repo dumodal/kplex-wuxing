@@ -1,8 +1,9 @@
 # Background indexing resource efficiency — PR #165
 
 The first correction halves repeated resolution-family authentication during unchanged resolver
-waves. Three counterbalanced real-IDB pairs reproduce the work reduction; native candidate resource
-acceptance and graph-retention work remain pending. This is not yet a merge recommendation.
+waves. Three counterbalanced real-IDB pairs reproduce the work reduction. Optional graph retention
+passes correctness and native functional validation; matched resource acceptance remains pending.
+This is not yet a merge recommendation.
 Merged #163 baseline: `8df393a`; integration checkpoint: `a86b4a0`. The shipping baseline main is
 SHA-256 `e5994ecce833d5e3e17ad3615fec740ffa45aa3e87066e0c58b7f8d501440a0b`.
 #153/#163 behavior and architecture remain; C14 is accepted and C15–C26 remain paused.
@@ -80,7 +81,11 @@ original help note disconnected from that generated hub. The 20,000 generated no
 8,831,230 Markdown bytes; this is a high-node/link fixture, not the separate large-prose fixture.
 Its [original generator](https://github.com/zsviczian/kplex/blob/62c728393440aa3dfb57869ece83c4060092bcba/scripts/testing/generate-high-node-vault.mjs)
 reproduces digest `50b8cb12ef83c3cd62f1605390fe6ff793079a9f6e37e471e59d0060cf287cd0`;
-the fixture plus 88 help notes is held fixed. Fixture limitations remain explicit.
+the fixture plus 88 help notes is held fixed. All88 help Markdown files match
+[`kplex-help@f5f667e`](https://github.com/zsviczian/kplex-help/tree/f5f667ee7b36fbc218d88720fdd67a07a4ad562d)
+byte for byte; a source/path/checksum manifest is preserved without note payloads. Fixture
+timestamps, generated source identities and cache history are local state, not portable content IDs.
+Fixture limitations remain explicit.
 
 ## Graph retention and reporting
 
@@ -193,7 +198,11 @@ control A is committed duplicate-read checkpoint `d0d16fb`; B is the separately 
 implementation. Before any primary trial, add merged runtime M (`8df393a`) in the balanced triplets
 **B–A–M / A–M–B / M–B–A**. Each arm occupies each position once; the original B/A pair order stays
 unchanged. Nine counts-only trials distinguish whole-PR effects from the receipt's incremental cost.
-Graph payload/policy and exact source-head identities are checked outside timing.
+Graph payload/policy and exact source-head identities are checked outside timing. Identity format2
+also verifies the live fingerprint map against every saved graph input and hashes those tokens in
+durable head-key order. Configuration is separate from raw discovery metadata; raw payload/order
+commitments remain preserved. The inspection rejects concurrent live publication/policy/source
+changes and incomplete head coverage. It grants no authority and performs no note reads or writes.
 Only the optional capability and generation activation metadata may differ. Legitimate receipt
 preparation is separate; no cache authority or metadata is stamped by the driver. Small-vault work
 must also be reported: fresh-content verification can add cost where legacy startup already avoids
@@ -255,6 +264,10 @@ The native Node CPU-module PID equals the selected renderer PID; future profiles
 the CPU closure's own identity and compare it with the [Electron renderer PID](https://www.electronjs.org/docs/latest/api/web-contents#contentsgetosprocessid).
 The installed candidate reports one actual inventory pass and zero builds/catalogs/saves in this
 small-vault plugin load. Temporary profile/controller names are absent from production source and main.
+The format2 identity helper passes18 host-runner tests, including reordered traversal/map inputs,
+changed cached fingerprints, tombstoned coverage and retired live lifetimes. A real candidate versus
+merged-main native check has identical configuration/input/head/sequence/raw graph commitments;
+the merged counts probe verifies selected-renderer CPU identity and zero pending transactions/work.
 
 ## Evidence and acceptance
 
