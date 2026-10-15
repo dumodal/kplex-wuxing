@@ -7,6 +7,9 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const dutchTranslations = {
+  "addRelated.recoverFile": "{path} is aangemaakt, maar het instellen of koppelen is mislukt. Probeer het opnieuw met dit bestand.",
+  "addRelated.failureReason": "Reden: {error}",
+  "addRelated.linkCreatedFile": "Koppelen opnieuw proberen",
   "hide.setup.title": "Verborgen verbindingen instellen",
   "hide.setup.help": "{field} aanmaken als relatie-eigenschap voor verbergen? Bestaande links blijven behouden.",
   "hide.setup.alternative": "De naam ‘hidden’ is al in gebruik. Dit alternatief laat de bestaande eigenschap ongewijzigd.",

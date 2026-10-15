@@ -7,6 +7,9 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const germanTranslations = {
+  "addRelated.recoverFile": "{path} wurde erstellt, aber die Einrichtung oder Verknüpfung ist fehlgeschlagen. Versuche es erneut mit dieser Datei.",
+  "addRelated.failureReason": "Grund: {error}",
+  "addRelated.linkCreatedFile": "Verknüpfung erneut versuchen",
   "hide.setup.title": "Verbindungen zum Ausblenden einrichten",
   "hide.setup.help": "{field} als Beziehungseigenschaft zum Ausblenden anlegen? Bestehende Links bleiben erhalten.",
   "hide.setup.alternative": "Der Name „hidden“ wird bereits verwendet. Diese Alternative lässt die vorhandene Eigenschaft unverändert.",
