@@ -1,13 +1,56 @@
-/** Production restart adoption, finite physical presentation facets and selective source repair through real browser IndexedDB. */
+/** Production restart adoption, source repair and exact resource-observer forwarding through real browser IndexedDB. */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { contributorBrowserBundle, contributorBrowserInitialize } from "./support/contributorBrowserFixture.mjs";
 import { chromiumHarness } from "./support/browserTypeScript.mjs";
 import { hostOracle, collect } from "./support/cachedSourceFixture.mjs";
 import { fullCenterIndex, currentNeighborhoodView, centerGateSettings } from "./support/requestedCenterGateFixture.mjs";
+import { createStartupResourceProbe } from "../scripts/testing/obsidian/startupResources.mjs";
 
 const bundle = await contributorBrowserBundle(["src/index/GraphIndex.ts", "src/index/GraphBuilder.ts", "src/index/IndexSnapshot.ts",
   "src/core/graph/compiler.ts", "src/adapters/obsidian/metadataSourceCollector.ts", "src/adapters/obsidian/ontologySourceCollector.ts"]);
+
+/** Measurement must not create repeated wrappers, substitute native requests/promises or export source payloads. */
+test("startup resource observer is self-contained and preserves native forwarding and cleanup", async () => {
+  const browser=await chromiumHarness(bundle);
+  try {
+    assert.equal(await browser.evaluate(contributorBrowserInitialize),true);
+    assert.equal(await browser.evaluate(`window.sourceResourceFactory=(${createStartupResourceProbe.toString()});true`),true);
+    assert.equal(await browser.evaluate(`(/** Exercise the observer against genuine source/storage operations. */ async()=>{
+      const f=await fixture('resource-observer-contract');let probe,request,promise,receiver;
+      const nativeGet=IDBObjectStore.prototype.get,inspect=f.repository.inspect;
+      /** Witness the actual native request without replacing it. */
+      const getWitness=function(...args){receiver=this;request=nativeGet.apply(this,args);return request;};
+      /** Witness the exact returned repository promise. */
+      const inspectWitness=function(...args){promise=inspect.apply(this,args);return promise;};
+      try {
+        const file=f.add('Observer-private-A.md','Friends:: [[Observer-private-B]]');
+        f.add('Observer-private-B.md','');await f.acquire();ok(await f.acquisition.reconcile(),'Seed real source authority');
+        const originalCache=f.app.metadataCache.getFileCache,originalDaily=f.acquisition.metadataHost.dailyNotesSettings;
+        IDBObjectStore.prototype.get=getWitness;f.repository.inspect=inspectWitness;
+        probe=window.sourceResourceFactory({phase:()=> 'probe',now:()=>performance.now(),databaseName:dbName('resource-observer-contract'),detailed:true});
+        probe.attach({sourceAcquisition:f.acquisition,indexedDb:f.cache});
+        f.acquisition.metadataHost.dailyNotesSettings();
+        const db=await f.cache.open(),tx=db.transaction('sourceHeads','readonly'),store=tx.objectStore('sourceHeads');
+        const completed=new Promise(/** Retain the native transaction's terminal event. */ (resolve,reject)=>{tx.oncomplete=resolve;tx.onabort=()=>reject(tx.error);});
+        const returned=store.get(file.path);ok(returned===request&&receiver===store,'Exact native request and receiver preserved');
+        await value(returned);await completed;
+        const observed=f.repository.inspect(file.path,[]);ok(observed===promise,'Exact original repository promise preserved');
+        equal((await observed).reason,'ready','Genuine selected head remains valid');
+        f.acquisition.metadataHost.dailyNotesSettings();
+        equal(probe.snapshot().groups['probe:host.dailyNotesSettings'].calls,2,'Host wrapper installed once despite multiple IDB requests');
+        ok(await f.acquisition.readBody(file),'Actual bounded family decoder remains usable');
+        const snapshot=probe.snapshot();equal(snapshot.activeTransactions,0,'Native transactions drained');equal(snapshot.pending,0,'Observed promises drained');
+        ok(snapshot.decodePeak>0&&snapshot.decodeCurrent===0,'Decode reservations released');
+        ok(!JSON.stringify(snapshot).includes('Observer-private-'),'Only aggregate diagnostics exported');
+        probe.stop();
+        ok(IDBObjectStore.prototype.get===getWitness&&f.repository.inspect===inspectWitness,'Exact wrapped methods restored');
+        ok(f.app.metadataCache.getFileCache===originalCache&&f.acquisition.metadataHost.dailyNotesSettings===originalDaily,'Exact host methods restored');
+        return true;
+      } finally {probe?.stop();IDBObjectStore.prototype.get=nativeGet;f.repository.inspect=inspect;f.close();}
+    })()`),true);
+  } finally {await browser.cleanup();}
+});
 
 /** An exception after complete navigation must retain that owner until existing neutral recovery finishes. */
 test("trusted warm evidence exception retains navigable graph for source recovery", async () => {

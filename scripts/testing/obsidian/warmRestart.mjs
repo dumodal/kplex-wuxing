@@ -23,6 +23,8 @@ if(!outputRelative||(!isAbsolute(outputRelative)&&outputRelative!=='..'&&!output
 mkdirSync(output,{recursive:true});
 const action=process.argv[2]??'observe',label=process.env.KPLEX_RESTART_LABEL??action;
 if(!/^[a-zA-Z0-9-]{1,80}$/.test(label))throw Error('Use a simple bounded receipt label');
+const quietMs=Number(process.env.KPLEX_RESTART_QUIET_MS??0);
+if(!Number.isSafeInteger(quietMs)||quietMs<0||quietMs>3600000||quietMs>0&&quietMs<610000)throw Error('Resource acceptance needs a fixed 610000–3600000 ms quiet window');
 if(existsSync(join(output,`${label}.json`)))throw Error('Receipt exists; choose a new KPLEX_RESTART_LABEL');
 const report={action,vault,startedAt:new Date().toISOString(),node:process.version,samples:[]};
 /** Hash only explicit executable/configuration artifacts; never walk note files. */
@@ -40,22 +42,23 @@ const delay=/** Preserve timer resolution explicitly in Node rather than the ren
 /** Persist only the latest summary; the append-only stream avoids rewriting a growing trace during timing. */
 function save(){writeFileSync(join(output,`${label}.json`),JSON.stringify({...report,samples:report.samples.slice(-1)},null,2)+'\n');}
 const sampleCode=String.raw`(/** Read existing aggregate diagnostics without acquiring note/source data. */ ()=>{
- const p=app.plugins.plugins['k-plex'],i=p?.index,w=require('@electron/remote').getCurrentWindow();
+ const p=app.plugins.plugins['k-plex'],i=p?.index,w=require('@electron/remote').getCurrentWindow(),memory=process.memoryUsage();
+ window.kplexStartupResources?.sample(memory);
  if(${action==='run'}&&!window.kplexRestartHeartbeat){const b=window.kplexRestartHeartbeat={last:performance.now(),maxGapMs:0,samples:0};
   b.timer=window.setInterval(/** Observe inclusive renderer-task gaps after the first CLI observation. */ ()=>{const now=performance.now();b.maxGapMs=Math.max(b.maxGapMs,now-b.last);b.last=now;b.samples++;},50);}
  const base={at:Date.now(),timeOrigin:performance.timeOrigin,now:performance.now(),layoutReady:app.workspace.layoutReady,host:{node:process.versions.node,electron:process.versions.electron,chrome:process.versions.chrome},
-  heapUsedBytes:process.memoryUsage().heapUsed,heartbeat:window.kplexRestartHeartbeat?{samples:window.kplexRestartHeartbeat.samples,maxGapMs:window.kplexRestartHeartbeat.maxGapMs}:null,
+  heapUsedBytes:memory.heapUsed,resources:window.kplexStartupResources?.snapshot()??null,heartbeat:window.kplexRestartHeartbeat?{samples:window.kplexRestartHeartbeat.samples,maxGapMs:window.kplexRestartHeartbeat.maxGapMs}:null,
   foreground:{hidden:document.hidden,documentFocused:document.hasFocus(),windowFocused:w.isFocused(),throttling:w.webContents.getBackgroundThrottling()},loaded:!!i};
  if(!i)return JSON.stringify(base);
  const status=p.getIndexStatus(),h=i.getSnapshotHydrationDiagnostics(),d=p.getStartupDiagnostics(),s=i.getSavedSnapshotSummary(),repository=i.getSourceRepositoryDiagnostics();
  return JSON.stringify({...base,status:{upToDate:status.upToDate,phase:status.phase,indexedFiles:status.indexedFiles,totalFiles:status.totalFiles},
-  initializing:p.isStartupInitializing(),building:!!i.building,inventory:!!i.sourceAcquisition.inventory,semanticDependencies:i.sourceAcquisition.hasSemanticDependencies(),
+  initializing:p.isStartupInitializing(),building:!!i.building,inventory:!!i.sourceAcquisition.inventory,pendingPersistence:i.snapshotPersistTimer!==null,semanticDependencies:i.sourceAcquisition.hasSemanticDependencies(),
   semanticActivity:{pending:i.hasPendingSemanticPreparation(),active:i.hasActiveSemanticPreparation(),failure:i.getSemanticPreparationFailure()},scheduler:i.getWorkPriorityDiagnostics(),
   visible:{surfaces:app.workspace.getLeavesOfType('k-plex-react-view').length,demands:i.semanticDemandCounts.size,
    centerKey:require('node:crypto').createHash('sha256').update(p.settings.lastActivePath??'').digest('hex'),
    expectedCenter:${JSON.stringify(process.env.KPLEX_RESTART_CENTER??null)}===null?null:p.settings.lastActivePath===${JSON.stringify(process.env.KPLEX_RESTART_CENTER??null)},
    expectedDemand:${JSON.stringify(process.env.KPLEX_RESTART_CENTER??null)}===null?null:i.semanticDemandCounts.size>0&&[...i.semanticDemandCounts.keys()].every(/** Validate actual visible demand without exporting source identities. */ path=>path===${JSON.stringify(process.env.KPLEX_RESTART_CENTER??null)})},
-  mode:{indexing:p.settings.indexingMode,urls:p.settings.urlIndexingMode,throttle:p.settings.indexingThrottle},
+  mode:{indexing:p.settings.indexingMode,urls:p.settings.urlIndexingMode,throttle:p.settings.indexingThrottle,updateIntervalMs:p.settings.indexUpdateInterval},
   graph:{nodes:i.size,fingerprints:i.indexedMarkdownFileCount(),full:i.isFullSnapshotHydrated(),navigable:!!i.warmSourceRecoveryAvailable||i.isFullSnapshotHydrated(),fresh:!!i.fullSnapshotFresh,sourceSemantics:!!i.sourceBackedSemantics,sourceBacked:!!i.sourceBackedStartup,vocabulary:!!i.sourceNodeVocabularyPublished,
    declarations:i.state.evidence.declarationCount},hydration:h,startup:d,source:i.getSourceAcquisitionCounters(),url:i.getUrlIndexProgress(),
   sourceRepository:Object.fromEntries(['activated','unsaved','empty','chunksWritten','bytesWritten','readFailures','sequenceMin','sequenceMax','peakDecodeBytes'].map(/** Export fixed aggregate fields only. */ key=>[key,Number.isFinite(repository[key])?repository[key]:null])),
@@ -75,7 +78,8 @@ function sample(){
     ['fullNavigable',s.graph?.navigable],['fullGraph',s.graph?.full],['semanticDependencies',s.semanticDependencies],['reportedReady',s.status?.upToDate]]){
     if(ready&&m[name]===undefined)m[name]=s.now;
   }
-  report.samples.push(s);if(report.samples.length>2400)report.samples.splice(1,1);save();return s;
+  // Complete evidence lives in the append-only stream; retaining it again distorts the observer's memory.
+  report.samples.push(s);if(report.samples.length>2)report.samples.splice(1,1);save();return s;
 }
 /** Wait for honest readiness or a stable idle incomplete outcome; neither path changes flags, progress or deadlines. */
 async function settled(previousOrigin){
@@ -91,6 +95,39 @@ async function settled(previousOrigin){
     if(stable===1)firstReady=s.at;
     if(stable>=3){if(previousOrigin!==undefined)report.firstReadyFromNavigationMs=firstReady-s.timeOrigin;return s;}
   }
+}
+/** Observe the prespecified maintenance window without moving later work beyond acceptance. */
+async function quiescent(first){
+  report.quietWindow={requiredMs:quietMs,startedAt:first.at,startingResources:first.resources,violations:0};save();
+  const until=first.at+quietMs;
+  let latest=first;
+  while(latest.at<until){
+    await delay(1000);
+    try{latest=sample();}catch{report.transportReconnects=(report.transportReconnects??0)+1;save();await delay(10000);continue;}
+    if(!latest.status?.upToDate||latest.initializing||latest.building||latest.inventory||latest.pendingPersistence||latest.semanticActivity.active||latest.semanticActivity.pending)report.quietWindow.violations++;
+  }
+  const resources=latest.resources;
+  report.quietWindow.endedAt=latest.at;report.quietWindow.endingResources=resources;
+  report.quietWindow.broadWorkUnchanged=Boolean(resources?.broad&&JSON.stringify(resources.broad)===JSON.stringify(first.resources?.broad));
+  if(resources?.broad&&!report.quietWindow.broadWorkUnchanged)throw Error('Unexplained inventory/build/save during the fixed quiet window');
+  if(report.quietWindow.violations||latest.scheduler.active.some(/** Require actual lane drain, not only a green status. */ count=>count>0)||latest.scheduler.waiting||resources?.pending||resources?.activeTransactions)throw Error('Post-ready work did not remain genuinely settled');
+  return latest;
+}
+/** Wait for real post-ready cache/task drain before starting the fixed quiet window. */
+async function drained(first){
+  let latest=first,stable=0;
+  while(stable<3){
+    const idle=latest.status?.upToDate&&!latest.initializing&&!latest.building&&!latest.inventory&&!latest.pendingPersistence
+      &&!latest.semanticActivity.active&&!latest.semanticActivity.pending&&latest.semanticDependencies
+      &&latest.scheduler.active.every(/** All actual scheduler leases must have ended. */ count=>count===0)&&!latest.scheduler.waiting
+      &&!(latest.resources?.pending??0)&&!(latest.resources?.activeTransactions??0);
+    stable=idle?stable+1:0;
+    if(stable>=3)break;
+    await delay(1000);
+    try{latest=sample();}catch{report.transportReconnects=(report.transportReconnects??0)+1;save();await delay(10000);}
+    if(latest.status?.phase==='incomplete'&&!latest.building&&!latest.inventory&&!latest.semanticActivity.active){report.final=latest;throw Error('Incomplete after reported readiness');}
+  }
+  report.cacheDrainFromNavigationMs=latest.at-latest.timeOrigin;return latest;
 }
 /** Preserve actual renderer/focus facts for successful and failed reload trials alike. */
 function recordReloadOutcome(previousOrigin){
@@ -109,7 +146,7 @@ function backup(){for(const [name,path] of [['data.json',join(target.pluginDir,'
 
 try{
   report.driverSha256=hash(fileURLToPath(import.meta.url));
-  report.workingTreeSource=Object.fromEntries(['src/index/GraphIndex.ts','src/index/IndexedDbCache.ts','src/application/supportReportProjection.ts'].map(/** Identify local source independently of installed baseline/candidate artifact identity. */ path=>[path,hash(join(root,path))]));
+  report.workingTreeSource=Object.fromEntries(['src/main.ts','src/adapters/obsidian/sourceAcquisition.ts','src/index/SourceRepository.ts','src/index/GraphIndex.ts','src/index/IndexedDbCache.ts','src/application/supportReportProjection.ts'].map(/** Identify local source independently of installed baseline/candidate artifact identity. */ path=>[path,hash(join(root,path))]));
   const reported=cli('vault','info=path').replace(/^path\s+/,'');
   if(realpathSync(reported)!==target.vault)throw Error('CLI selected a different vault');
   evaluate("(/** Select the named disposable window without changing background throttling. */ ()=>{const r=require('@electron/remote'),w=r.getCurrentWindow();r.app.show?.();r.app.focus({steal:true});w.restore();w.show();w.moveTop();w.focus();return JSON.stringify({focused:w.isFocused()})})()");
@@ -139,6 +176,7 @@ try{
     report.preparation=await taskDone();report.final=sample();
   }else if(action==='run'){
     const before=sample();
+    if(quietMs&&quietMs<2*Math.max(300000,before.mode.updateIntervalMs??0)+10000)throw Error('The prespecified quiet window does not cover two configured maintenance periods');
     const capable=evaluate("JSON.stringify({reload:!!app.commands.commands['app:reload']})");
     if(!capable.reload)throw Error('Host app:reload command unavailable');
     report.lifecycle='vault-window application reload; Electron process retained';
@@ -146,8 +184,9 @@ try{
     report.requestedAt=Date.now();
     evaluate("(/** Return before restarting the named vault's application renderer. */ ()=>{window.setTimeout(/** Invoke the verified native application command. */ ()=>app.commands.executeCommandById('app:reload'),100);return JSON.stringify({scheduled:true})})()");
     report.final=await settled(before.timeOrigin);
-    recordReloadOutcome(before.timeOrigin);
     report.readyFromNavigationMs=report.final.at-report.final.timeOrigin;
+    if(quietMs){report.readySample=report.final;report.final=await quiescent(await drained(report.final));}
+    recordReloadOutcome(before.timeOrigin);
   }else if(action==='restore-config'){
     startTask("await app.plugins.disablePlugin('k-plex');return {disabled:!app.plugins.plugins['k-plex']}");await taskDone();
     for(const [name,path] of [['data.json',join(target.pluginDir,'data.json')],['community-plugins.json',join(target.config,'community-plugins.json')]])copyFileSync(join(output,'original-'+name),path);
@@ -159,7 +198,7 @@ try{
   report.status='passed';
 }catch(error){if(action==='run')recordReloadOutcome(report.previousTimeOrigin);report.status='failed';report.error=error.message;process.exitCode=1;}
 finally{
-  try{evaluate("(/** Independently retire this driver's timer/controller after success or failure. */ ()=>{window.clearInterval(window.kplexRestartHeartbeat?.timer);delete window.kplexRestartHeartbeat;delete window.kplexRestartProbe;return JSON.stringify({removed:!window.kplexRestartProbe&&!window.kplexRestartHeartbeat})})()");}catch{report.cleanupUnavailable=true;}
+  try{evaluate("(/** Independently retire this driver's timer/controller and any test-only resource profile after success or failure. */ ()=>{window.clearInterval(window.kplexRestartHeartbeat?.timer);window.kplexStartupResources?.stop();delete window.kplexStartupResources;delete window.kplexRestartHeartbeat;delete window.kplexRestartProbe;return JSON.stringify({removed:!window.kplexRestartProbe&&!window.kplexRestartHeartbeat&&!window.kplexStartupResources})})()");}catch{report.cleanupUnavailable=true;}
   report.completedAt=new Date().toISOString();save();
 }
 console.log(JSON.stringify({status:report.status,error:report.error,file:join(output,`${label}.json`),full:report.final?.graph.full,route:report.final?.hydration.route,readyFromNavigationMs:report.readyFromNavigationMs}));
