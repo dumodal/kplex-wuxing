@@ -118,10 +118,13 @@ retained separately from acceptance trials, never relabelled as successful start
 [Initial public archive](https://github.com/zsviczian/kplex/tree/3f698ada48cd5cbab0f9b1302644637b2130110e):
 36 entries, 2,143,914 ZIP bytes, SHA-256
 `0d8e45a5c6d384786ab13c6db23cec778a5cc4f0021d6ed9dcb211e092585729`.
-The separate supplemental archive is verified locally: 122 entries, 5,244,249 ZIP bytes,
-SHA-256 `c934df0d327c4d1963f4a154b07a941924ef3c5566364f22c389cffe8163724b`. Its public publication awaits separate maintainer consent;
-the previously approved initial ZIP remains unchanged. Both complete entry sets, CRCs, byte counts
-and per-file SHA-256 checks pass; the initial archive also passes GitHub-download verification.
+[Supplemental public evidence and reproduction instructions](https://github.com/zsviczian/kplex/tree/0196c1eb8eab0d2bcc3ba2959646a8edb272150a):
+122 entries, 5,244,249 ZIP bytes, SHA-256
+`c934df0d327c4d1963f4a154b07a941924ef3c5566364f22c389cffe8163724b`.
+The maintainer approved this exact supplement separately; the initial ZIP remains unchanged.
+Both GitHub-downloaded archives pass complete entry-set, CRC, byte-count and per-file SHA-256
+verification. All public checksum entries pass, and the standalone supplemental manifest is
+byte-identical to its embedded copy.
 The supplement preserves completed and failed native streams, exclusions, source snapshots,
 exact builds, fixture/reproduction references, benchmark and verification logs, plus cleanup receipts.
 Vault configuration backups and note/cache payloads are excluded; new personal audit receipts stay
