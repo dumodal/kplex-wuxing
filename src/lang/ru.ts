@@ -7,6 +7,9 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const russianTranslations = {
+  "addRelated.recoverFile": "Файл {path} создан, но настройка или создание связи не удалось. Повторите попытку с этим файлом.",
+  "addRelated.failureReason": "Причина: {error}",
+  "addRelated.linkCreatedFile": "Повторить создание связи",
   "hide.setup.title": "Настроить скрытые связи",
   "hide.setup.help": "Создать {field} как свойство скрытых связей? Существующие ссылки будут сохранены.",
   "hide.setup.alternative": "Имя «hidden» уже используется. Этот вариант оставит существующее свойство без изменений.",

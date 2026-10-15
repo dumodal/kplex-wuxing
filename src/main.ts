@@ -18,6 +18,8 @@
  * originating graph/details owners retire pending dialogs while plugin lifetime owns saved work.
  * Its foreground write lease ends before lower-priority source publication can checkpoint.
  * Folder/tag notices supply complete literal references to the shared localization formatter.
+ * New-file relationship additions persist against native file identities independently of semantic
+ * indexing; current host metadata drives subsequent graph reconciliation and editor completion.
  */
 import { FileView, MarkdownView, Menu, Notice, Platform, Plugin, TFile, TFolder, apiVersion, getLanguage, getAllTags, normalizePath, setIcon, type Editor, type HoverParent, type WorkspaceLeaf } from "obsidian";
 import { captureSettingsPolicy, classifySettingsChange, isStyleOnlySettingsChange, type SettingsPolicy } from "./core/graph/settingsPolicy";
@@ -4427,23 +4429,22 @@ export default class KplexPlugin extends Plugin {
     const reference = this.referenceForPage(target, storageFile);
 
     await this.mutateRelationshipMetadata(storageFile, new Set([desiredNormalized]), (frontmatter: Record<string, unknown>) => {
-      let desiredKey = field;
-      for (const key of Object.keys(frontmatter)) {
-        if (normalizeFieldName(key) === desiredNormalized) {
-          desiredKey = key;
-          break;
-        }
-      }
-
-      const current = frontmatter[desiredKey];
-      if (current === undefined || current === null || current === "") {
-        frontmatter[desiredKey] = [reference];
-        return;
-      }
-      if (this.valueContainsTarget(current, storageFile, target)) return;
-      if (Array.isArray(current)) frontmatter[desiredKey] = [...(current as unknown[]), reference];
-      else frontmatter[desiredKey] = [current, reference];
+      this.appendRelationshipReference(frontmatter, storageFile, target, field, reference);
     }, target.path);
+  }
+
+  /** Append one requested reference without removing other properties, relationships or template metadata. */
+  private appendRelationshipReference(frontmatter: Record<string, unknown>, storageFile: TFile, target: GraphPage, field: string, reference: string): void {
+    const desiredNormalized = normalizeFieldName(field);
+    const desiredKey = Object.keys(frontmatter).find(/** Preserve the existing spelling of the requested property. */ key => normalizeFieldName(key) === desiredNormalized) ?? field;
+    const current = frontmatter[desiredKey];
+    if (current === undefined || current === null || current === "") {
+      frontmatter[desiredKey] = [reference];
+      return;
+    }
+    if (this.valueContainsTarget(current, storageFile, target)) return;
+    if (Array.isArray(current)) frontmatter[desiredKey] = [...(current as unknown[]), reference];
+    else frontmatter[desiredKey] = [current, reference];
   }
 
   private async clearFrontmatterRelationship(storageFile: TFile, target: GraphPage): Promise<void> {
@@ -5692,9 +5693,9 @@ export default class KplexPlugin extends Plugin {
   }
 
   /**
-   * Observe a newly created file's presentation metadata before exact relationship authority captures
-   * its cache identity. FileManager completion alone does not mean its changed event has arrived.
-   * The established metadata/body observer owns cancellation; no timer grants write authority.
+   * Observe a newly created file's presentation metadata before it is shown in the graph.
+   * FileManager completion alone does not mean its changed event has arrived. The established
+   * metadata/body observer owns cancellation; no timer grants write authority.
    */
   private async mutateCreatedNodeMetadata(file: TFile, fields: ReadonlySet<string>, mutate: (frontmatter: Record<string, unknown>) => void): Promise<void> {
     const path = file.path;
@@ -5801,8 +5802,12 @@ export default class KplexPlugin extends Plugin {
     });
   }
 
-  /** Bind a newly created file, then complete its relationship through current canonical pair publication. */
-  async linkNewRelatedFile(origin: GraphPage, semanticRole: RelationshipRole, file: TFile, selectedField: string, rawAlias = "", rawDisplayName = "", recoverMetadata = false): Promise<GraphPage> {
+  /**
+   * Save an additive new-file relationship independently of index readiness. Exact native identities
+   * protect the mutation; existing properties and template relationships survive. The committed
+   * file may be opened immediately while the ordinary metadata/source lane reconciles the graph.
+   */
+  async linkNewRelatedFile(origin: GraphPage, semanticRole: RelationshipRole, file: TFile, selectedField: string, rawAlias = "", rawDisplayName = "", recoverMetadata = false): Promise<{ state: "saved-pending"; page: GraphPage }> {
     return this.index.withForegroundPriority(async () => {
       if (this.app.vault.getFileByPath(file.path) !== file) throw new Error(this.translator("addRelated.endpointChanged"));
       // Recovery reuses this exact durable file, completing idempotent presentation writes that
@@ -5811,8 +5816,8 @@ export default class KplexPlugin extends Plugin {
         await this.writeCreatedNodeDisplayName(file, rawDisplayName);
         await this.writeCreatedNodeAlias(file, rawAlias);
       }
-      // Retain the existing minimal physical node insertion. Relationship authority belongs to the
-      // exact bound pair; a creation event does not require the origin's entire neighborhood again.
+      // File creation already supplies the target identity. A semantic pair proof is unnecessary
+      // for appending a property, and may be unavailable while unrelated indexing is refreshing.
       const alias = rawAlias.trim();
       const displayName = rawDisplayName.trim() ? rawDisplayName : "";
       const displayField = this.configuredDisplayNameField();
@@ -5820,20 +5825,37 @@ export default class KplexPlugin extends Plugin {
       const aliases = normalizedDisplayField === "alias" || normalizedDisplayField === "aliases"
         ? [displayName, alias].filter(Boolean)
         : alias ? [alias] : [];
-      let target = this.index.insertCreatedFile(file, aliases);
-      [origin, target] = await this.prepareRelationshipMutation(origin.path, target.path, origin.file, file);
-      if (origin.file?.extension === "md") {
-        await this.writeRelationship(origin.file, target, selectedField);
-        await this.publishSavedRelationship(origin.path, target.path);
-        return this.index.get(target.path) ?? target;
-      }
-      if (target.file?.extension === "md") {
-        const inverseField = this.inverseOntologyField(selectedField, semanticRole);
-        await this.writeRelationship(target.file, origin, inverseField);
-        await this.publishSavedRelationship(origin.path, target.path);
-        return this.index.get(target.path) ?? target;
-      }
-      throw new Error(this.translator("error.relationshipRequiresMarkdownEndpoint"));
+      const target = this.index.insertCreatedFile(file, aliases);
+      const originFile = origin.file, originPath = originFile?.path ?? origin.path, targetPath = file.path;
+      /** Refuse rename/replacement during FileManager's queued read; unrelated indexing is irrelevant. */
+      const current = (): boolean => !this.unloading && file.path === targetPath
+        && this.app.vault.getFileByPath(targetPath) === file
+        && (!originFile || originFile.path === originPath && this.app.vault.getFileByPath(originPath) === originFile);
+      if (!current()) throw new Error(this.translator("addRelated.endpointChanged"));
+      const storageFile = originFile?.extension === "md" ? originFile : file.extension === "md" ? file : null;
+      if (!storageFile) throw new Error(this.translator("error.relationshipRequiresMarkdownEndpoint"));
+      const referenced = storageFile === originFile ? target : origin;
+      const field = storageFile === originFile ? selectedField : this.inverseOntologyField(selectedField, semanticRole);
+      const reference = this.referenceForPage(referenced, storageFile);
+      this.pruneManagedMetadataWrites();
+      this.managedMetadataWrites.set(storageFile.path, Date.now() + 15000);
+      await this.app.fileManager.processFrontMatter(storageFile,
+        /** Native frontmatter is authoritative for this additive write; no index or body proof is needed. */
+        (frontmatter: Record<string, unknown>) => {
+          if (!current()) throw new Error(this.translator("addRelated.endpointChanged"));
+          this.appendRelationshipReference(frontmatter, storageFile, referenced, field, reference);
+        });
+      // A native write already committed before a rename/replacement must never invite another create.
+      if (!current()) throw new SavedRelationshipPendingError(this.translator("relation.savedUpdatePending"));
+      // Publish available host facts without joining body parsing, pair preparation or full indexing.
+      // A saved-pending result is a successful vault mutation; it must not block editor completion.
+      let page = target;
+      try {
+        this.index.refreshVisibleHostMetadataPreviews(storageFile.path);
+        const published = this.index.get(targetPath);
+        if (published?.file === file) page = published;
+      } catch (error) { console.error("K-Plex saved new-file relationship preview refresh failed", error); }
+      return { state: "saved-pending", page };
     });
   }
 
