@@ -26,6 +26,16 @@ held: navigation, relationship add/remove, note creation, visible edit and folde
 Foreground broad flush calls are zero; its controller is removed and configuration bytes restored.
 Historical receipt results below describe the preserved experiment, not shipped authority.
 
+Protocol2 first use now completes on the 20,088-owner fixture through **normal startup**, without
+a forced preparation build. It creates a version2 receipt: two source passes, one full compilation,
+one complete save and no catalog/checkpoint starts. Inclusive selected-renderer CPU is **569.735s**
+(profile interval568.500s); actual drain is **2,034.741s**, followed by610.352s quiet with zero
+violations. Counts are **826,340 transactions /1,678,868 requests**, zero fresh source reads/parses,
+and1,549,688,176 hash-argument UTF16 units. Sampled heap/RSS maxima are2,005,530,420/
+2,716,008,448bytes, not true peaks or attributable receipt overhead. This is absolute creation
+cost; warm retention and net-resource acceptance are separate. Exact frozen candidate/source and
+raw-receipt checksums are recorded in the compact samples. The first balanced warm triplet is running.
+
 ## Initial work counts
 
 `scripts/testing/source-validation-work.mjs --baseline-ref=8df393a` runs genuine acquisition,
