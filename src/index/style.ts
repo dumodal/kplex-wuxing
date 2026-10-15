@@ -5,18 +5,11 @@
 import type { KplexSettings } from "../settings";
 import type { GraphPage, LinkStyle, Neighbour, NodeStyle, Role } from "../types";
 import { RelationType } from "../types";
+import type { ColorValue } from "../core/contracts/colorValue";
+import { colorValueCss } from "../adapters/obsidian/colorPresentation";
 
-export const alphaHexToCss = (color?: string, fallback = "transparent"): string => {
-  if (!color) return fallback;
-  if (/^#[0-9a-fA-F]{8}$/.test(color)) {
-    const r = parseInt(color.slice(1, 3), 16);
-    const g = parseInt(color.slice(3, 5), 16);
-    const b = parseInt(color.slice(5, 7), 16);
-    const a = parseInt(color.slice(7, 9), 16) / 255;
-    return `rgba(${r}, ${g}, ${b}, ${a})`;
-  }
-  return color;
-};
+/** Compatibility facade for literal alpha and typed color identities after style inheritance. */
+export const alphaHexToCss = (color?: ColorValue, fallback = "transparent"): string => colorValueCss(color, fallback);
 
 
 /** Resolve imported tag-style precedence without changing the stored dictionary spelling/order. */

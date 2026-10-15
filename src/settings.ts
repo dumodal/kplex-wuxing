@@ -17,6 +17,8 @@
  * storage failure from saved changes whose presentation/manager refresh still needs recovery.
  * File-deletion cleanup is a local workflow preference with a stable native settings anchor;
  * changing it does not invalidate semantic data or change placeholder-removal policy.
+ * Typed color sources retain literal alpha and named/theme identity; local palette preferences
+ * are isolated from foreign graph imports and unsupported formats retain a persistence marker.
  */
 import {
   AbstractInputSuggest,
@@ -44,6 +46,9 @@ import { sanitizeDatePropertyRelations, type DatePropertyRelations } from "./cor
 import { effectiveTypography, sanitizeTypographyProfiles, sanitizeTypographyValue, TYPOGRAPHY_FIELDS, TYPOGRAPHY_LIMITS, type TypographyProfiles, type TypographyField } from "./core/plex/typographyPreferences";
 import type { PersistedLayoutDeviceClass } from "./core/plex/viewPresentation";
 import { sanitizeMarkdownZoomModes, type MarkdownZoomModes } from "./core/plex/markdownZoomPreferences";
+import { STYLE_SETTINGS_KEYS } from "./core/contracts/appearance";
+import { defaultColorPreferences, migrateColorPreferences, type ColorPreferencesV1 } from "./core/plex/colorPreferences";
+import { colorValuesEqual, colorIdentityText, colorRgbInput, parseLiteralColor, replaceLiteralRgb, type ColorValue } from "./core/contracts/colorValue";
 
 export const DEFAULT_LINK_STYLE: LinkStyle = {
   strokeColor: "#696969ff",
@@ -145,6 +150,10 @@ export const DEFAULT_LAYOUT_PROFILES: Record<string, KplexLayoutProfile> = {
 };
 
 export interface KplexSettings {
+  /** Local appearance identities; foreign graph imports never replace this palette or compass preference. */
+  colorPreferences: ColorPreferencesV1;
+  /** Preserve an unsupported future color container verbatim while presenting read-only fallback controls. */
+  colorPreferencesFuture?: unknown;
   /** Plex-local bindings; null disables an action without affecting Obsidian command hotkeys. */
   internalHotkeys: InternalHotkeys;
   /** Independent local bindings and desired Obsidian command publication; workflow-only state. */
@@ -174,7 +183,7 @@ export interface KplexSettings {
   /** Ordered comma-separated frontmatter fields used as display-name fallbacks. */
   nameFields: string;
   nodeTitleScript: string;
-  backgroundColor: string;
+  backgroundColor?: ColorValue;
   excludeFilepaths: string[];
   autoOpenCentralDocument: boolean;
   toggleEmbedTogglesAutoOpen: boolean;
@@ -305,6 +314,7 @@ export interface KplexSettings {
 }
 
 export const DEFAULT_SETTINGS: KplexSettings = {
+  colorPreferences: defaultColorPreferences(),
   internalHotkeys: sanitizeInternalHotkeys(undefined),
   actionPreferences: migrateActionPreferences(undefined).preferences,
   compactView: false,
@@ -481,6 +491,8 @@ export function importExcaliBrainGraphSettings(raw: unknown, current?: KplexSett
     ...current,
     ...imported,
     actionPreferences: current?.actionPreferences ?? DEFAULT_SETTINGS.actionPreferences,
+    colorPreferences: current?.colorPreferencesFuture !== undefined ? current.colorPreferencesFuture
+      : current?.colorPreferences ?? DEFAULT_SETTINGS.colorPreferences,
     horizontalCompactingFactor: imported.compactingFactor ?? current?.horizontalCompactingFactor,
     hierarchy: {
       ...current?.hierarchy,
@@ -498,8 +510,10 @@ export function migrateAndMergeSettings(raw: unknown): KplexSettings {
     excalibrainFilepath?: unknown;
   };
   // Both values belonged to retired render surfaces and carry no K-Plex state.
-  const { maxZoom: _legacyMaxZoom, excalibrainFilepath: _legacyDrawingPath, actionPreferencesFuture: _runtimeFuture, ...old } = rawSettings;
+  const { maxZoom: _legacyMaxZoom, excalibrainFilepath: _legacyDrawingPath, actionPreferencesFuture: _runtimeFuture,
+    colorPreferencesFuture: _runtimeColorFuture, ...old } = rawSettings;
   const actionPreferences = migrateActionPreferences(raw);
+  const colors = migrateColorPreferences(old.colorPreferences);
   const hierarchyRaw: Partial<Hierarchy> = old.hierarchy ?? {};
   const hierarchy: Hierarchy = {
     ...DEFAULT_HIERARCHY_DEFINITION,
@@ -570,6 +584,8 @@ export function migrateAndMergeSettings(raw: unknown): KplexSettings {
   return {
     ...DEFAULT_SETTINGS,
     ...old,
+    colorPreferences: colors.preferences,
+    ...(colors.future !== undefined ? { colorPreferencesFuture: colors.future } : {}),
     showCrossLinks: typeof old.showCrossLinks === "boolean" ? old.showCrossLinks : DEFAULT_SETTINGS.showCrossLinks,
     indexingMode: old.indexingMode === "eager" ? "eager" : "on-demand",
     urlIndexingMode: "background",
@@ -676,21 +692,17 @@ const normalizeTagStylePrefix = (value: string): string => {
   const prefix = value.trim().replace(/^#+/, "").trim();
   return prefix ? `#${prefix}` : "";
 };
-const sixHex = (value?: string, fallback = "#000000") => /^#[0-9a-f]{6}/i.test(value ?? "") ? (value as string).slice(0, 7) : fallback;
+/** Legacy RGB-only control adapter; it cannot flatten a reference or mutate the saved source. */
+const sixHex = (value?: ColorValue, fallback = "#000000"): string => {
+  return colorRgbInput(value, fallback);
+};
 const eightHex = (value: string) => `${value.slice(0, 7)}ff`;
 
 /** Native color pickers normalize RGB case and cannot edit alpha. Preserve untouched/inherited colors and the existing alpha when only RGB changes. */
-const nodeStyleColor = (value: string, previous: string | undefined, fallback: string): string | undefined => {
+const nodeStyleColor = (value: string, previous: ColorValue | undefined, fallback: string): ColorValue | undefined => {
   if (value.toLowerCase() === sixHex(previous, fallback).toLowerCase()) return previous;
-  const alpha = previous?.match(/^#[0-9a-f]{6}([0-9a-f]{2})$/i)?.[1] ?? "ff";
-  return `${value.slice(0, 7)}${alpha}`;
-};
-const canonicalHex = (value: unknown): string | null => {
-  if (typeof value !== "string") return null;
-  const lower = value.trim().toLowerCase();
-  if (/^#[0-9a-f]{6}$/.test(lower)) return `${lower}ff`;
-  if (/^#[0-9a-f]{8}$/.test(lower)) return lower;
-  return lower || null;
+  const parsed = parseLiteralColor(previous) ?? parseLiteralColor(fallback);
+  return parsed ? replaceLiteralRgb(parsed, value) ?? previous : previous;
 };
 
 function appendIcon(button: HTMLElement, name: string): void {
@@ -800,7 +812,7 @@ const hasMeaningfulLinkOverride = (style: LinkStyle | undefined, baseStyle: Link
   return LINK_STYLE_KEYS.some((key) => {
     if (style[key] === undefined) return false;
     if (key === "strokeColor" || key === "textColor") {
-      return canonicalHex(style[key]) !== canonicalHex(baseStyle[key]);
+      return !colorValuesEqual(style[key], baseStyle[key]);
     }
     return style[key] !== baseStyle[key];
   });
@@ -838,7 +850,7 @@ const describeLinkStyle = (style: LinkStyle | undefined, baseStyle: LinkStyle, t
   const parts = [
     translate(strokeKey),
     `${effective.strokeWidth ?? 1}px`,
-    sixHex(effective.strokeColor, "#696969"),
+    colorIdentityText(effective.strokeColor),
   ];
   if ((effective.startArrowHead ?? "none") !== "none" || (effective.endArrowHead ?? "none") !== "none") {
     parts.push(`${arrowheadLabel(effective.startArrowHead ?? "none", translate)} → ${arrowheadLabel(effective.endArrowHead ?? "none", translate)}`);
@@ -854,12 +866,14 @@ const describeNodeStyle = (style: NodeStyle, translate: Translator): string => {
   const parts: string[] = [];
   if (style.icon) parts.push(translate("styles.summaryIcon", { icon: style.icon }));
   if (style.fontSize) parts.push(`${style.fontSize}px`);
-  if (style.backgroundColor) parts.push(sixHex(style.backgroundColor));
+  if (style.backgroundColor) parts.push(colorIdentityText(style.backgroundColor));
   return parts.length ? parts.join(" · ") : translate("styles.inheritedNodeDefaults");
 };
 
-/** Narrow mutable draft owned exclusively by one queued style-manager operation. */
-export type StyleSettingsDraft = Pick<KplexSettings, "noteTypeStyles" | "tagNodeStyles" | "tagStyleList" | "hierarchyLinkStyles">;
+/** Appearance fields share the existing serialized style writer; semantic/workflow settings retain their owners. */
+export { STYLE_SETTINGS_KEYS } from "./core/contracts/appearance";
+/** Narrow mutable draft captured from the latest live appearance at one queued operation's boundary. */
+export type StyleSettingsDraft = Pick<KplexSettings, typeof STYLE_SETTINGS_KEYS[number]>;
 /** Persistence has succeeded; a failed refresh must never be offered as an unsaved retry. */
 export type StyleCommitResult = Readonly<{ refreshPending: boolean }>;
 
@@ -2439,7 +2453,7 @@ export class KplexSettingTab extends PluginSettingTab {
     const hierarchyKey = HIERARCHY_KEY_MAP[key];
     if (hierarchyKey) return csv(this.kplexPlugin.settings.hierarchy[hierarchyKey]);
     if (key === "excludeFilepathsCsv") return csv(this.kplexPlugin.settings.excludeFilepaths);
-    if (key === "backgroundColorHex") return this.kplexPlugin.settings.backgroundColor.slice(0, 7).toLowerCase();
+    if (key === "backgroundColorHex") return sixHex(this.kplexPlugin.settings.backgroundColor).toLowerCase();
     if (key === "baseLinkStyle.strokeColorHex") return sixHex(this.kplexPlugin.settings.baseLinkStyle.strokeColor, "#696969").toLowerCase();
     if (key === "baseLinkStyle.strokeWidth") return this.kplexPlugin.settings.baseLinkStyle.strokeWidth ?? DEFAULT_LINK_STYLE.strokeWidth ?? 1;
     if (key === "baseLinkStyle.strokeStyle") return this.kplexPlugin.settings.baseLinkStyle.strokeStyle ?? "solid";

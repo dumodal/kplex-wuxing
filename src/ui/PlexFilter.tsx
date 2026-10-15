@@ -7,6 +7,7 @@ import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 
 import type { GraphIndex } from "../index/GraphIndex";
 import type { GraphPage, Role } from "../types";
 import type { NodeSortOrder } from "../settings";
+import { colorRgbInput } from "../core/contracts/colorValue";
 import { createGraphLensId, defaultGraphLensStyle, validateGraphLensExpression, type GraphLensDefinition, type GraphLensMode, type GraphLensScope, type GraphLensStyle, type GraphLensValidationIssue } from "../lens/GraphLens";
 import {
   buildGraphLensSimpleExpression,
@@ -728,15 +729,15 @@ export function PlexFilter({
         {draft.mode === "style" && <div className="kplex-lens-style-editor">
           <div className="kplex-lens-style-heading">{translate("filter.appearance")}</div>
           {draft.scope === "node" ? <div className="kplex-lens-style-grid">
-            <label>{translate("filter.fill")} <input type="color" value={draft.style?.node?.backgroundColor ?? "#1f4f78"} onChange={(event) => updateStyle({ node: { ...(draft.style?.node ?? {}), backgroundColor: event.currentTarget.value } })} /></label>
-            <label>{translate("filter.border")} <input type="color" value={draft.style?.node?.borderColor ?? "#ffb300"} onChange={(event) => updateStyle({ node: { ...(draft.style?.node ?? {}), borderColor: event.currentTarget.value } })} /></label>
-            <label>{translate("filter.text")} <input type="color" value={draft.style?.node?.textColor ?? "#ffffff"} onChange={(event) => updateStyle({ node: { ...(draft.style?.node ?? {}), textColor: event.currentTarget.value } })} /></label>
+            <label>{translate("filter.fill")} <input type="color" value={colorRgbInput(draft.style?.node?.backgroundColor, "#1f4f78")} onChange={(event) => updateStyle({ node: { ...(draft.style?.node ?? {}), backgroundColor: event.currentTarget.value } })} /></label>
+            <label>{translate("filter.border")} <input type="color" value={colorRgbInput(draft.style?.node?.borderColor, "#ffb300")} onChange={(event) => updateStyle({ node: { ...(draft.style?.node ?? {}), borderColor: event.currentTarget.value } })} /></label>
+            <label>{translate("filter.text")} <input type="color" value={colorRgbInput(draft.style?.node?.textColor, "#ffffff")} onChange={(event) => updateStyle({ node: { ...(draft.style?.node ?? {}), textColor: event.currentTarget.value } })} /></label>
             <label>{translate("filter.borderStyle")} <select value={draft.style?.node?.strokeStyle ?? "solid"} onChange={(event) => updateStyle({ node: { ...(draft.style?.node ?? {}), strokeStyle: event.currentTarget.value as "solid" | "dashed" | "dotted" } })}><option value="solid">{translate("filter.solid")}</option><option value="dashed">{translate("filter.dashed")}</option><option value="dotted">{translate("filter.dotted")}</option></select></label>
             <label>{translate("filter.borderWidth")} <input type="number" min="0.5" max="8" step="0.5" value={draft.style?.node?.strokeWidth ?? 2} onChange={(event) => updateStyle({ node: { ...(draft.style?.node ?? {}), strokeWidth: Number(event.currentTarget.value) || 1 } })} /></label>
             <label>{translate("filter.fillStyle")} <select value={draft.style?.node?.fillStyle ?? "solid"} onChange={(event) => updateStyle({ node: { ...(draft.style?.node ?? {}), fillStyle: event.currentTarget.value as "solid" | "hachure" | "cross-hatch" } })}><option value="solid">{translate("filter.solid")}</option><option value="hachure">{translate("filter.hachure")}</option><option value="cross-hatch">{translate("filter.crossHatch")}</option></select></label>
           </div> : <div className="kplex-lens-style-grid">
-            <label>{translate("filter.line")} <input type="color" value={draft.style?.edge?.strokeColor ?? "#ffb300"} onChange={(event) => updateStyle({ edge: { ...(draft.style?.edge ?? {}), strokeColor: event.currentTarget.value } })} /></label>
-            <label>{translate("filter.label")} <input type="color" value={draft.style?.edge?.textColor ?? "#ffffff"} onChange={(event) => updateStyle({ edge: { ...(draft.style?.edge ?? {}), textColor: event.currentTarget.value } })} /></label>
+            <label>{translate("filter.line")} <input type="color" value={colorRgbInput(draft.style?.edge?.strokeColor, "#ffb300")} onChange={(event) => updateStyle({ edge: { ...(draft.style?.edge ?? {}), strokeColor: event.currentTarget.value } })} /></label>
+            <label>{translate("filter.label")} <input type="color" value={colorRgbInput(draft.style?.edge?.textColor, "#ffffff")} onChange={(event) => updateStyle({ edge: { ...(draft.style?.edge ?? {}), textColor: event.currentTarget.value } })} /></label>
             <label>{translate("filter.lineStyle")} <select value={draft.style?.edge?.strokeStyle ?? "solid"} onChange={(event) => updateStyle({ edge: { ...(draft.style?.edge ?? {}), strokeStyle: event.currentTarget.value as "solid" | "dashed" | "dotted" } })}><option value="solid">{translate("filter.solid")}</option><option value="dashed">{translate("filter.dashed")}</option><option value="dotted">{translate("filter.dotted")}</option></select></label>
             <label>{translate("filter.lineWidth")} <input type="number" min="0.5" max="8" step="0.5" value={draft.style?.edge?.strokeWidth ?? 2} onChange={(event) => updateStyle({ edge: { ...(draft.style?.edge ?? {}), strokeWidth: Number(event.currentTarget.value) || 1 } })} /></label>
             <label className="kplex-lens-style-check"><input type="checkbox" checked={draft.style?.edge?.showLabel === true} onChange={(event) => updateStyle({ edge: { ...(draft.style?.edge ?? {}), showLabel: event.currentTarget.checked } })} /> {translate("filter.showRelationshipLabel")}</label>

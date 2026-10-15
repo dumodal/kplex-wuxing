@@ -1,9 +1,11 @@
 /**
  * Legacy host composition for persisted Graph Lenses, sanitation and portable predicate compilation. Validation returns structured issues; UI consumers own names and error copy.
+ * Shared color sanitation preserves typed theme/palette references through portable lens layering.
  */
 import type { GraphPage, LinkStyle, NodeStyle, StrokeStyle, FillStyle } from "../types";
 import { createLegacyEvidenceProvider, lensCandidateFromLegacy, type LegacyEvidenceSource } from "../adapters/obsidian/predicateContracts";
 import { matchesPortableLenses, portableLensStyle } from "../core/plex/lens";
+import { sanitizeColorValue, type ColorValue } from "../core/contracts/colorValue";
 import {
   compileGraphPredicate,
   type CompiledGraphPredicate,
@@ -121,11 +123,8 @@ function graphLensSemanticError(expression: GraphPredicateExpression): GraphLens
 
 const VALID_STROKE_STYLES = new Set<StrokeStyle>(["solid", "dashed", "dotted"]);
 const VALID_FILL_STYLES = new Set<FillStyle>(["solid", "hachure", "cross-hatch"]);
-const HEX_COLOR = /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i;
-
-function sanitizeColor(value: unknown): string | undefined {
-  return typeof value === "string" && HEX_COLOR.test(value.trim()) ? value.trim() : undefined;
-}
+/** Reuse the color contract; references remain identities and never become sampled RGB values. */
+function sanitizeColor(value: unknown): ColorValue | undefined { return sanitizeColorValue(value); }
 
 function sanitizeWidth(value: unknown): number | undefined {
   if (typeof value !== "number" || !Number.isFinite(value)) return undefined;

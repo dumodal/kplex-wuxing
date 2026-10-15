@@ -1,6 +1,6 @@
 # Native styling and Idea Compass — PR #158
 
-**Implementation in progress; keep the PR draft.** Checkpoint A delivers native chrome and the preview-only theme sampler. Typed color preferences, migration/editor integration and compass sectors remain pending. No merge, release or issue closure is authorized.
+**Implementation in progress; keep the PR draft.** Checkpoints A and B deliver native chrome, the preview-only theme sampler and backward-compatible color contracts and queued persistence. Live editor integration, fresh native defaults and compass sectors remain pending. No merge, release or issue closure is authorized.
 
 ## Checkpoint A
 
@@ -48,3 +48,17 @@ Complete local evidence: `%TEMP%\kplex-158-checkpoint-A-evidence.zip` — **222,
 ### Remaining acceptance
 
 Checkpoint A is a foundation, not complete acceptance of #155/#90. Paired editors, settings concurrency, live palette repaint, migration/adoption, compass motion and their resource/lifetime tests follow. Minimum Obsidian 1.13, macOS and physical iOS/Android acceptance remain open. Desktop theme-token parity does not prove full community-theme UI contrast, native touch/picker behavior or arbitrary companion-script compatibility.
+
+## Checkpoint B
+
+Typed literal, theme-variable and named-palette identities now pass through existing node/link/lens contracts, sanitizers, summaries and persistence without flattening references to sampled RGB. Literal edits preserve exact alpha. Palette IDs are stable; undefined inheritance differs from transparent. Optional versioned preferences retain unknown future payloads verbatim and read-only. Foreign graph imports preserve local palette/semantic/compass preferences. Semantic cycles and malformed new palette writes fail before storage.
+
+The existing serialized style queue remains the only writer. Operations capture current appearance fields at their queue boundary, save before publication and retain unrelated concurrent changes. Focused regressions exercise reference/alpha round trips, import isolation, overlapping saves, future/null payloads, validation failure and retry. This checkpoint retains existing graph defaults and does not claim delivered palette UI or a paint-only render path.
+
+Node **22.22.2** full verification passes **1,910 tests** (7 architecture /128 core /846 general /70 UI-browser /334 source /525 source-browser), official lint, installed types, the real production build and exact staged Windows smoke. The native style-operation lane passes **14 cases**. The native import lane passes all **six scenarios**, including rendered style managers, unchanged alpha-preserving save, rendered node/link appearance and persistence after reload.
+
+Two initial portable failures (a touched lint type and an explicit test-module inventory) were corrected before the complete passing run. The first native import attempt revealed that its on-demand fixture had no source lease: metadata existed but the expected graph page had never been requested. A separate diagnostic confirmed that the normal existing demand lease acquires the fixture. The reusable migration driver now owns/releases that lease. The original assertions and timeout remain unchanged; no production indexing behavior or forced full build was added. Failed attempts and a failed diagnostic search control are preserved separately from passing evidence.
+
+Exact staged `main.js` SHA-256: `77acef7a4c54aae198352e1365b8cbbdfc9a25efec5decb3c0471164691a366c`; CSS and manifest match A. Original configuration/enabled-plugin bytes are restored, original effective settings compare equal (apart from the new in-memory default), all owned notes/controllers are absent and the index returns to local readiness. The temporary awake lease is released. No personal vault was accessed.
+
+Complete local B evidence: `%TEMP%\kplex-158-checkpoint-B-evidence.zip` — **665,904 bytes / 60 entries**, SHA-256 `f1ac010ef4c245dfed48f383d56df14ada229354cb77a48ba3f66d4e7b43a254`. Source snapshots, successful/failed verification and diagnostic logs, reproduction metadata, cleanup and lifetime receipts are preserved. Exact entry sets, CRCs and all per-file checksums pass. Private configuration backups, handoffs and note/cache payloads are excluded. This archive is not published. Minimum-host, macOS and physical-mobile acceptance remain pending; no CPU or memory saving is claimed.

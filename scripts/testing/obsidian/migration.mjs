@@ -1,6 +1,8 @@
 /**
  * Exercises legacy settings import through the real K-Plex UI in an explicit disposable vault.
  * Uses canonical K-Plex selectors/commands and restores test-owned settings, notes and controllers.
+ * On-demand fixtures explicitly lease their selected source before asserting its lazy style facets;
+ * global/local readiness alone does not materialize every newly created note.
  */
 import assert from "node:assert/strict";
 import { obsidianCliExecutable, runPortableVerification } from "./processTools.mjs";
@@ -207,6 +209,9 @@ try {
     (async()=>{try{
       await app.vault.create(${JSON.stringify(targetPath)},${JSON.stringify("# Migration target\n")});state.owned.push(${JSON.stringify(targetPath)});
       await app.vault.create(${JSON.stringify(sourcePath)},${JSON.stringify('---\nNote type: "#person"\ntags: [person, work]\nInspired by: "[[Kplex-Migration-Test-Target]]"\n---\n# Migration source\n')});state.owned.push(${JSON.stringify(sourcePath)});
+      // The style under test is lazy in local mode; lease this exact fixture through the same owner
+      // used by a visible Plex. Do not force an Eager/global build or weaken the facet assertion.
+      if(app.plugins.plugins["k-plex"].index.isOnDemandMode())state.releaseFixtureDemand=app.plugins.plugins["k-plex"].index.acquireSemanticDemand(${JSON.stringify(sourcePath)});
       state.done=true;
     }catch(error){state.error=String(error)}})();return JSON.stringify(true);
   })()`);
@@ -238,6 +243,7 @@ try {
   assert.equal(rendered.width,"2");
   report.scenarios.push({ id: "rendered-plex-styles", status: "passed", ...rendered });
 
+  evaluate(`(()=>{const state=window.${controller};state.releaseFixtureDemand?.();delete state.releaseFixtureDemand;return JSON.stringify(true)})()`);
   const beforeReload = evaluate('JSON.stringify(app.plugins.plugins["k-plex"].settings)');
   cli(target.vaultName,"plugin:disable","id=k-plex");cli(target.vaultName,"plugin:enable","id=k-plex");
   cli(target.vaultName,"command","id=k-plex:kplex-start");
@@ -259,6 +265,7 @@ try {
           app.setting.doc.querySelectorAll(".kplex-style-editor,.kplex-style-manager,.kplex-import-settings-modal").forEach(el=>el.closest(".modal").querySelector(".modal-close-button, .modal-header-button").click());
           app.setting.close();
           for(const path of state.owned){const file=app.vault.getFileByPath(path);if(file)await app.vault.delete(file);}
+          state.releaseFixtureDemand?.();delete state.releaseFixtureDemand;
           const p=app.plugins.plugins["k-plex"];p.settings=state.settings;await p.saveSettings(false);state.done=true;
         }catch(error){state.error=String(error)}})();return JSON.stringify(true)})()`);
       await until(`JSON.stringify(window.${controller}.error?{error:window.${controller}.error}:window.${controller}.done)`,"Cleanup failed");

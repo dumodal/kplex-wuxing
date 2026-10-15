@@ -3,6 +3,8 @@
  * Remote node image consent publishes synchronously before persistence and never requests semantics.
  * Style-manager drafts commit on the settings disk queue before live publication; style-only
  * completion refreshes cached presentation without clearing or reacquiring semantic scopes.
+ * Appearance identities use that same queue. Unsupported color containers persist verbatim and
+ * remain read-only; palette validation and semantic-cycle checks precede any durable write.
  * Unsuccessful source-backed startup adoption reports incomplete coverage rather than implying
  * that index preparation is still running; it never grants semantic write authority.
  * File deletion captures its ontology-cleanup preference before consent; settings navigation
@@ -26,6 +28,8 @@ import { captureSettingsPolicy, classifySettingsChange, isStyleOnlySettingsChang
 import { removeMarkdownZoomModes, renameMarkdownZoomModes } from "./core/plex/markdownZoomPreferences";
 import { GraphIndex } from "./index/GraphIndex";
 import { DEFAULT_SETTINGS, KplexSettingTab, migrateAndMergeSettings, importExcaliBrainGraphSettings, type DocumentSyncMode, type KplexSettings, type KplexLayoutProfile, type KplexViewSurface, type SidecarPosition, type StyleSettingsDraft, type StyleCommitResult } from "./settings";
+import { STYLE_SETTINGS_KEYS } from "./core/contracts/appearance";
+import { cyclicSemanticColorSlots, migrateColorPreferences } from "./core/plex/colorPreferences";
 import { KPLEX_VIEW_TYPE, KPLEX_SIDEPANEL_VIEW_TYPE, KplexView, KplexSidepanelView } from "./ui/KplexView";
 import { RelationModal, type RelationModalOptions } from "./ui/RelationModal";
 import { NewRelatedNoteModal, type RelatedNoteInvocation } from "./ui/NewRelatedNoteModal";
@@ -1518,8 +1522,9 @@ export default class KplexPlugin extends Plugin {
 
   /** Omit runtime recovery markers while retaining the actual future schema in its original field. */
   private settingsSnapshotForPersistence(actionPreferences: unknown, source: KplexSettings = this.settings): Record<string, unknown> {
-    const { actionPreferencesFuture: _runtimeFuture, ...settings } = source;
-    return { ...settings, actionPreferences };
+    const { actionPreferencesFuture: _runtimeFuture, colorPreferencesFuture: _runtimeColorFuture, ...settings } = source;
+    return { ...settings, actionPreferences, colorPreferences: source.colorPreferencesFuture !== undefined
+      ? source.colorPreferencesFuture : source.colorPreferences };
   }
 
   /** Persist live settings at the queued boundary, preserving an unsupported future schema verbatim. */
@@ -1541,28 +1546,29 @@ export default class KplexPlugin extends Plugin {
       if (this.unloading) throw new Error("K-Plex is unloading");
       const source = this.settings;
       const before = captureSettingsPolicy(source);
-      const draft: StyleSettingsDraft = structuredClone({
-        noteTypeStyles: { ...source.noteTypeStyles }, tagNodeStyles: { ...source.tagNodeStyles },
-        tagStyleList: [...source.tagStyleList], hierarchyLinkStyles: { ...source.hierarchyLinkStyles },
-      });
+      const draft = structuredClone(Object.fromEntries(STYLE_SETTINGS_KEYS.map(
+        /** Each operation receives only appearance-owned values from this current serialized boundary. */ key => [key, source[key]],
+      ))) as StyleSettingsDraft;
       edit(draft);
       const next = { ...source, ...draft };
       const policy = captureSettingsPolicy(next);
       const effects = classifySettingsChange(before, policy);
+      if (effects.changedKeys.includes("colorPreferences")) {
+        if (source.colorPreferencesFuture !== undefined) throw new Error("Newer color preferences are read-only");
+        if (migrateColorPreferences(draft.colorPreferences).future !== undefined || cyclicSemanticColorSlots(draft.colorPreferences).length)
+          throw new Error("Invalid color preferences");
+      }
       await this.saveData(this.settingsSnapshotForPersistence(source.actionPreferencesFuture ?? source.actionPreferences, next));
       persisted = true;
       // Only this operation's style fields are published, never a stale whole-settings snapshot.
       // Queued style editors see this commit before preparing their own drafts.
       const current = captureSettingsPolicy(this.settings);
       const values = { ...(this.savedSettingsPolicy ?? current).values };
-      for (const key of effects.changedKeys) {
+      for (const key of STYLE_SETTINGS_KEYS) {
         // Legacy imports/controls publish live drafts before their own queued write. A later
         // change to this field owns its next value; do not overwrite it with the older commit.
-        if (current.values[key] !== before.values[key]) continue;
-        if (key === "noteTypeStyles") this.settings.noteTypeStyles = draft.noteTypeStyles;
-        else if (key === "tagNodeStyles") this.settings.tagNodeStyles = draft.tagNodeStyles;
-        else if (key === "tagStyleList") this.settings.tagStyleList = draft.tagStyleList;
-        else if (key === "hierarchyLinkStyles") this.settings.hierarchyLinkStyles = draft.hierarchyLinkStyles;
+        if (!effects.changedKeys.includes(key) || current.values[key] !== before.values[key]) continue;
+        Object.assign(this.settings, { [key]: draft[key] });
         values[key] = policy.values[key];
       }
       // Advance only the committed style projection; a concurrent semantic edit keeps its own fence.

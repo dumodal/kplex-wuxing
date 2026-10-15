@@ -25,7 +25,7 @@ function styleHostSource() {
   /** Preserve actual queue/classifier/commit method bodies with their original await boundaries. */
   const visit = node => { if (ts.isMethodDeclaration(node) && names.has(node.name.getText(source))) methods.push(node.getText(source)); ts.forEachChild(node, visit); };
   visit(source); assert.equal(methods.length, names.size);
-  return 'import {captureSettingsPolicy,classifySettingsChange,isStyleOnlySettingsChange} from "./src/core/graph/settingsPolicy"; export class StyleSettingsHost {' + methods.join('\n') + '}';
+  return 'import {STYLE_SETTINGS_KEYS} from "./src/core/contracts/appearance"; import {cyclicSemanticColorSlots,migrateColorPreferences} from "./src/core/plex/colorPreferences"; import {captureSettingsPolicy,classifySettingsChange,isStyleOnlySettingsChange} from "./src/core/graph/settingsPolicy"; export class StyleSettingsHost {' + methods.join('\n') + '}';
 }
 await build({
   stdin: { contents: styleHostSource() + '\nexport * from "./src/settings"; export * from "./src/core/graph/settingsPolicy"; export * from "./src/index/style"; export * from "./src/ui/layout"; export * from "./src/ui/PurgeIndexCacheModal"; export { Modal as TestModal, Notice as TestNotice, AbstractInputSuggest as TestSuggest } from "obsidian"; export { createObsidianTranslator } from "./src/adapters/obsidian/localization";', resolveDir: root, loader: "ts" },
@@ -776,6 +776,57 @@ test("queued style editors merge latest committed families and preserve tag prio
   assert.deepEqual(settings.tagStyleList, ["legacy", "#second"]); assert.equal(settings.noteTypeStyles.legacy.icon, "info");
   assert.equal(snapshots[1].tagNodeStyles.legacy.icon, "box"); assert.equal(snapshots[1].actionPreferences.marker, "new workflow");
   assert.equal(snapshots[1].actionPreferencesFuture, undefined);
+});
+
+test("own color identities, alpha and local palette survive reload and foreign graph import", /** Foreign appearance imports cannot replace local semantic pairs or tint preferences. */ () => {
+  const colors = { version: 1, palette: [{ id: "stable-1", name: "Concept", light: "#abcdef00", dark: "rgba(3,4,5,.123456)" }],
+    semantic: { origin: { kind: "palette", id: "stable-1" } }, compass: { enabled: true, intensity: 0, fills: {} } };
+  const settings = migrateAndMergeSettings({ colorPreferences: colors, backgroundColor: { kind: "theme", variable: "--Custom-Canvas" },
+    noteTypeStyles: { Project: { backgroundColor: { kind: "palette", id: "stable-1" }, textColor: "#AABBCC80" } },
+    graphLenses: [{ id: "lens-1", name: "Test", enabled: true, scope: "node", mode: "style", expression: 'node.kind == "file"',
+      style: { node: { borderColor: { kind: "theme", variable: "--Custom-Border" } } } }] });
+  assert.deepEqual(migrateAndMergeSettings(JSON.parse(JSON.stringify(settings))), settings);
+  assert.deepEqual(settings.noteTypeStyles.Project.backgroundColor, { kind: "palette", id: "stable-1" });
+  assert.equal(settings.noteTypeStyles.Project.textColor, "#AABBCC80");
+  assert.deepEqual(settings.graphLenses[0].style.node.borderColor, { kind: "theme", variable: "--Custom-Border" });
+  const imported = importExcaliBrainGraphSettings({ colorPreferences: { version: 99 }, backgroundColor: "#11223344" }, settings);
+  assert.deepEqual(imported.colorPreferences, colors); assert.equal(imported.backgroundColor, "#11223344");
+});
+
+test("palette and canvas edits share the latest queued appearance without clobbering unrelated writes", /** Hold real storage and prove that the next operation captures the preceding committed palette. */ async () => {
+  const { plugin, settings } = styleEditorFixture(); const disk = deferred(); const snapshots = [];
+  plugin.saveData = async snapshot => { snapshots.push(structuredClone(snapshot)); if (snapshots.length === 1) await disk.promise; };
+  const first = plugin.updateStyleSettings(draft => {
+    draft.colorPreferences.palette.push({ id: "stable-1", name: "First", light: "#12345600", dark: "#abcdef80" });
+    draft.backgroundColor = { kind: "palette", id: "stable-1" };
+  });
+  const second = plugin.updateStyleSettings(draft => { draft.colorPreferences.palette[0].name = "Renamed"; draft.colorPreferences.compass.intensity = 0; });
+  await new Promise(resolve => setImmediate(resolve)); assert.equal(settings.colorPreferences.palette.length, 0);
+  settings.lastActivePath = "Unrelated.md"; disk.resolve(); await Promise.all([first, second]);
+  assert.equal(settings.colorPreferences.palette[0].name, "Renamed"); assert.equal(settings.colorPreferences.compass.intensity, 0);
+  assert.deepEqual(settings.backgroundColor, { kind: "palette", id: "stable-1" }); assert.equal(settings.lastActivePath, "Unrelated.md");
+  assert.equal(snapshots[1].lastActivePath, "Unrelated.md"); assert.equal(snapshots[1].colorPreferences.palette[0].name, "Renamed");
+});
+
+test("unsupported color data remains exact on ordinary writes and imports while palette editing is read-only", /** Test actual persistence, including a null payload and unknown future extensions. */ async () => {
+  for (const raw of [null, { version: 12, palette: [{ futurePair: true }], extension: [1, 2, 3] }]) {
+    const { plugin, settings, saves } = styleEditorFixture(migrateAndMergeSettings({ colorPreferences: raw }));
+    await plugin.updateStyleSettings(draft => { draft.noteTypeStyles.Other = { icon: "box" }; });
+    assert.deepEqual(saves[0].colorPreferences, raw); assert.equal(saves[0].colorPreferencesFuture, undefined);
+    const imported = importExcaliBrainGraphSettings({ colorPreferences: { version: 1 } }, settings);
+    assert.deepEqual(imported.colorPreferencesFuture, raw);
+    await assert.rejects(plugin.updateStyleSettings(draft => { draft.colorPreferences.compass.enabled = true; }), /read-only/);
+    assert.equal(saves.length, 1); assert.equal(settings.colorPreferences.compass.enabled, false);
+  }
+});
+
+test("invalid palette drafts and semantic cycles never reach storage or replace committed state", /** Rejected appearance operations preserve the queue for a later valid retry. */ async () => {
+  const { plugin, settings, saves } = styleEditorFixture(); const before = structuredClone(settings);
+  await assert.rejects(plugin.updateStyleSettings(draft => { draft.colorPreferences.semantic.origin = { kind: "theme", variable: "--kplex-semantic-origin" }; }), /Invalid color/);
+  await assert.rejects(plugin.updateStyleSettings(draft => { draft.colorPreferences.palette.push({ id: "bad", name: "Bad", light: "url(x)", dark: "#ffffff" }); }), /Invalid color/);
+  assert.deepEqual(settings, before); assert.equal(saves.length, 0);
+  await plugin.updateStyleSettings(draft => { draft.colorPreferences.compass.intensity = 0; });
+  assert.equal(saves.length, 1); assert.equal(settings.colorPreferences.compass.intensity, 0);
 });
 
 test("delete failure never removes live style; retry removes only its fixed family and matching slots", async () => {

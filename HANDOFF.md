@@ -20,7 +20,7 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 # PR #158 — Obsidian-native styling, semantic colors and Idea Compass sectors
 
-Prepared by **Zsolt's Codex Agent**, 2026-10-15. **State: maintainer-authorized implementation in progress on this branch. Main integration `689399d` is pushed. Checkpoint A native paint/preview validation passes all 1,902 tests, full build/lint, exact native smoke, six foreground scenarios and six Default/Minimal/Things main/popout sampling cases; checkpoint A is ready to commit/push. B–E remain pending.** This is the current consolidated assignment, not an additional session report.
+Prepared by **Zsolt's Codex Agent**, 2026-10-15. **State: maintainer-authorized implementation in progress. Main integration `689399d` and validated checkpoint A `8a33627` are pushed. Checkpoint B passes 1,910 full-verification tests, 14 exact-native style-operation cases and all six native migration scenarios. Original configuration bytes/runtime state are restored, fixtures/controllers removed, awake lease released and local evidence verified. B is ready for authorized commit/push. C–E remain pending.** This is the current consolidated assignment, not an additional session report.
 
 ## 1. Assignment, baseline and priorities
 
