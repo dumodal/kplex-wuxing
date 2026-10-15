@@ -6,9 +6,9 @@
 
 ![KPLEX Screenshot](docs/KPlex-Screenshot-3.png)
 
-**K-Plex (Knowledge Plex)** is a spatial knowledge navigator for Obsidian. It keeps one note at the center and places related notes in predictable directions, so position carries meaning instead of constantly changing like a force-directed graph.
+**K-Plex (Knowledge Plex)** is an ontology-driven knowledge navigator for Obsidian. It turns relationships already expressed in your Markdown notes, properties, and vault structure into a spatial view you can explore and edit. The meaning of a relationship helps determine *where* it appears—not just how it looks.
 
-K-Plex is inspired by the navigation model of TheBrain. It provides a relationship-oriented way to explore your knowledge, with its own interface and indexing system. **Excalidraw and Dataview are not required.**
+At its heart is the **Idea Compass**: focus on one note, then look **north** for origins and parents, **south** for children and where an idea leads, **west** for friends and supporting connections, and **east** for challengers and transformative connections. As you navigate, these directions retain their meaning, helping you reason about your knowledge in context. **Excalidraw and Dataview are not required.**
 
 [![Watch the video](https://img.youtube.com/vi/ii15UwpsvtU/maxresdefault.jpg)](https://www.youtube.com/watch?v=ii15UwpsvtU)
 
@@ -20,7 +20,7 @@ K-Plex is designed for people who want to *move through* their notes rather than
 
 ## Why K-Plex?
 
-Large graph views can quickly become dense and hard to navigate. K-Plex takes a different approach: it shows a **structured Plex around the current note** and keeps relationship directions stable.
+Large graph views can quickly become dense and hard to navigate. K-Plex uses the **Idea Compass** to show a structured neighborhood around the current note. Configured ontology and relationship evidence guide the direction of connections, rather than treating link types as styling alone. Right-click a connection and choose **Connection details…** to inspect the ontology and sources behind its placement.
 
 That makes the graph useful as a working surface:
 
