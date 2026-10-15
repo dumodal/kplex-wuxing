@@ -7,6 +7,9 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const japaneseTranslations = {
+  "addRelated.recoverFile": "{path} は作成されましたが、設定またはリンクに失敗しました。このファイルを使って再試行してください。",
+  "addRelated.failureReason": "理由: {error}",
+  "addRelated.linkCreatedFile": "リンクを再試行",
   "hide.setup.title": "非表示の接続を設定",
   "hide.setup.help": "{field} を非表示の関係用プロパティとして作成しますか？既存のリンクは保持されます。",
   "hide.setup.alternative": "「hidden」という名前はすでに使われています。この別の名前を使うと、既存のプロパティは変更されません。",
