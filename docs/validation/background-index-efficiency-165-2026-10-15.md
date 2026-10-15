@@ -34,7 +34,31 @@ violations. Counts are **826,340 transactions /1,678,868 requests**, zero fresh 
 and1,549,688,176 hash-argument UTF16 units. Sampled heap/RSS maxima are2,005,530,420/
 2,716,008,448bytes, not true peaks or attributable receipt overhead. This is absolute creation
 cost; warm retention and net-resource acceptance are separate. Exact frozen candidate/source and
-raw-receipt checksums are recorded in the compact samples. The first balanced warm triplet is running.
+raw-receipt checksums are recorded in the compact samples. The first warm B?A?M group is complete; the rejected B assertion remains a failure.
+
+## Bounded closeout scope (supersedes the historical trial plan below)
+
+The maintainer has accepted receipt deferral for correctness, whole-vault file-size exclusion and
+loss of eligibility after ordinary edits. Favorable timings cannot override that decision. The active
+M trial completed under its original conditions. No further B trials or receipt design work will run.
+Preserve all existing B successes, failures and exclusions; finish M/A as A?M / M?A / A?M, three
+observations per arm, using the unchanged frozen counts probe and 610-second quiet/drain checks.
+
+The first pair records M/A inclusive renderer CPU **374.500/337.078s**, storage transactions
+**457,395/437,355**, requests **1,040,902/1,000,806**, and actual drain **1,027.176/1,025.877s**.
+Both check/reuse20,088 source bodies with zero fresh reads/parses/repairs, one compilation/save,
+no catalog/checkpoint, no quiet-window violations and183,261-byte peak source decode reservation.
+Source hash calls are450,351/390,120 and hash-argument UTF16 units829,613,548/656,378,120.
+These are preliminary single-pair observations, not a repeatable CPU or memory conclusion. Same
+config, source identities/revisions and sorted per-owner fingerprints pass; host encounter order and
+raw saved graph commitments change across window reloads and remain explicitly recorded. A also
+includes progress/reporting, whose native cost is not separately isolated.
+
+Rejected B warm use records820.656s CPU,826,275 transactions/1,678,730 requests,2,149.901s drain,
+20,088 fresh reads/parses and two complete source passes followed by a build/save. Its strict
+retention assertion fails despite zero quiet violations. This is fallback cost, never a retention win.
+[Compact primary records](background-index-efficiency-165-samples.json) bind every raw receipt by
+SHA-256 and retain all foreground, memory, work and exclusion fields. Raw files remain untouched.
 
 ## Initial work counts
 
