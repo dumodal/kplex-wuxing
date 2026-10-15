@@ -10,6 +10,8 @@
 
 At its heart is the **Idea Compass**: focus on one note, then look **north** for origins and parents, **south** for children and where an idea leads, **west** for friends and supporting connections, and **east** for challengers and transformative connections. As you navigate, these directions retain their meaning, helping you reason about your knowledge in context.
 
+**Explore, connect, and reshape your knowledge.** Drag notes from Obsidian's file explorer into the Plex to navigate or create relationships. Drag existing related nodes between directions to reorganize your knowledge. Open notes for editing without leaving the graph, use Graph Lenses to focus on what matters, or let Wander take you through connected ideas.
+
 [![Watch the video](https://img.youtube.com/vi/ii15UwpsvtU/maxresdefault.jpg)](https://www.youtube.com/watch?v=ii15UwpsvtU)
 
 K-Plex is designed for people who want to *move through* their notes rather than stare at an entire vault at once: follow a parent, compare challengers, see siblings, open a related document beside the graph, expand a note into sections, or temporarily reshape the Plex with Graph Lenses.
