@@ -14,7 +14,7 @@ export const initializeSavedPreviewUrl=initializeHydrationWork+`;const savedPrev
     let timer;return Promise.race([promise,new Promise((_,reject)=>timer=setTimeout(()=>reject(Error(label+' remained pending')),ms))]).finally(()=>clearTimeout(timer));
   };
   /** Build actual warm graph/URL records, then stop cache replay after real acquisition. */
-  window.savedPreviewUrlFixture=async(name,mode,phase='page')=>{
+  window.savedPreviewUrlFixture=async(name,mode,phase='page',genuineFingerprints=false)=>{
     const q=await hydrationWorkFixture(name,16,0,mode),{f,index,settings}=q,M=sourceModules,target='https://cache.example/saved-preview';
     let release,entered,held=false;const gate=new Promise(resolve=>release=resolve),entry=new Promise(resolve=>entered=resolve),restores=[];
     try{
@@ -25,11 +25,12 @@ export const initializeSavedPreviewUrl=initializeHydrationWork+`;const savedPrev
       f.texts.set(q.file.path,text);q.file.stat.mtime++;q.file.stat.size=text.length;
       ok(await f.cache.putBody(q.file.path,q.file.stat.mtime,body),'Current parsed body');
       index.fieldCache.set(q.file.path,{mtime:q.file.stat.mtime,body});
-      const builder=new M.GraphBuilder(q.plugin,f.app,new Map(),index.metadataParser,f.cache,()=>true);
+      const fingerprints=new Map();
+      const builder=new M.GraphBuilder(q.plugin,f.app,new Map(),index.metadataParser,f.cache,/** Setup has no competing graph generation. */ ()=>true,fingerprints);
       const saved=await builder.build({acquireSources:false});ok(saved?.pages.has(target),'Real saved body URL');
       ok(await f.cache.writeSnapshot({createdAt:Date.now(),urlAliasVersion:M.URL_ALIAS_FACET_VERSION,
         vaultSignature:M.computeVaultSignature(f.app),settingsSignature:M.computeIndexSettingsSignature(settings),discoveredFields:[]},
-        [...saved.pages.values()].map(page=>M.persistedPageFromGraphPage(page)),[...saved.evidence.declarations()].map(item=>M.persistedDeclarationFromEvidence(item)),()=>true),'Current snapshot activation');
+        [...saved.pages.values()].map(/** Only proof-specific cases opt into genuine saved fingerprints. */ page=>M.persistedPageFromGraphPage(page,genuineFingerprints?fingerprints.get(page.path):undefined)),[...saved.evidence.declarations()].map(item=>M.persistedDeclarationFromEvidence(item)),()=>true),'Current snapshot activation');
       ok(await f.cache.putUrlOwners([{path:q.file.path,mtime:q.file.stat.mtime,size:q.file.stat.size,frontmatter:{},urls:body.urls,inlineFieldOccurrences:body.inlineFieldOccurrences}]),'Current URL owner');
       if(phase==='page'){
         const original=index.indexedDb.readUrlOwnerPage;
