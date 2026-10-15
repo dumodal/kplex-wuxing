@@ -4,8 +4,6 @@
  * publish a structure/link baseline and then reuse the same atomic per-file patch boundary to add
  * Markdown semantics progressively without exposing half-committed source state. Node-only recovery
  * streams current durable source facts through the same compiler without retaining relationships.
- * Optional snapshot validation reuses this producer's neutral fingerprints and observes actual
- * Date/environment reads. Input callbacks do not select relationships or authorize publication.
  * On-demand owners reuse this patch boundary and durable body records; independent background URL
  * discovery uses canonical source patches in an independent graph without unrelated document relationships.
  * Compiler and collector CPU slices dispatch host event tasks, then retain the existing caller-owned
@@ -292,9 +290,8 @@ export class GraphBuilder {
     private semanticFingerprints: Map<string, string> = new Map(),
     private sourceAcquisition: ObsidianSourceAcquisition | null = null,
     private readonly backgroundCheckpoint?: () => Promise<void>,
-    snapshotEnvironment?: import("../adapters/obsidian/metadataSourceCollector").MetadataEnvironmentReadObserver,
   ) {
-    this.metadataSourceHost = createObsidianMetadataSourceHost(app, snapshotEnvironment);
+    this.metadataSourceHost = createObsidianMetadataSourceHost(app);
     this.metadataSourceSettings = {
       noteTypeField: plugin.settings.noteTypeField,
       primaryTagField: plugin.settings.primaryTagField,
@@ -330,11 +327,6 @@ export class GraphBuilder {
   /** Full builds and patches hash the same neutral stream cooperatively before publication fences. */
   private async semanticSourceSignatureCooperative(file: TFile, body: ParsedBodyMetadata): Promise<string | null> {
     return sourceFingerprintCooperative(this.sourceFingerprintInputs(file, body), () => this.yieldToHost());
-  }
-
-  /** Reuse the canonical neutral input fingerprint for an optional snapshot/source comparison only. */
-  async snapshotSourceFingerprint(file: TFile, body: ParsedBodyMetadata): Promise<string | null> {
-    return this.semanticSourceSignatureCooperative(file, body);
   }
 
 
@@ -718,7 +710,6 @@ export class GraphBuilder {
    * neutral source heads after graph publication, avoiding a storage transaction per note here.
    * @returns A fully collected state only when every source family remains current through binding;
    * otherwise `null` so the coordinator can retain the previous published graph.
-   * Optional snapshot input observation shares this canonical pass; it never starts another build.
    */
   async build(options: Readonly<{ acquireSources?: boolean }> = {}): Promise<GraphState | null> {
     this.plugin.startupDiagnostics?.recordWork("fullBuildStarts");
@@ -1409,7 +1400,7 @@ export class GraphBuilder {
         const contents = await Promise.all(group.map(async (file) => ({
           file,
           revision: revisions.get(file)!,
-          content: Platform.isMobile || this.sourceAcquisition?.requiresUncachedBodyRead(file) ? await this.app.vault.read(file) : await this.app.vault.cachedRead(file),
+          content: Platform.isMobile ? await this.app.vault.read(file) : await this.app.vault.cachedRead(file),
         })));
         if (!this.isCurrent()) return false;
         // One worker services parser requests serially. Awaiting each result avoids retaining cloned
@@ -1542,7 +1533,7 @@ export class GraphBuilder {
       }
 
       if (!body) {
-        const content = Platform.isMobile || this.sourceAcquisition?.requiresUncachedBodyRead(file) ? await this.app.vault.read(file) : await this.app.vault.cachedRead(file);
+        const content = Platform.isMobile ? await this.app.vault.read(file) : await this.app.vault.cachedRead(file);
         if (!this.isCurrent() || !this.fileRevisionMatches(file, revision)) {
           return { ok: false, cancelled: true, rebuildRequired: false, touchedPagePaths, semanticChanges, semanticNoops };
         }

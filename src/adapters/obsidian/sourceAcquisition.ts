@@ -11,9 +11,6 @@
  * certificates avoid duplicate decoding and weak ownership does not retain parsed bodies at rest.
  * Uncertain resolver comparisons authenticate resolution once under their selected reader; partial
  * inspection never permits a host-current shortcut without complete family validation.
- * Optional snapshot validation borrows the existing inventory and authenticated bodies, forces
- * current resolver comparison, and owns bounded uncached content checks through this same parser.
- * Actual Date/Daily Notes read drift retires only its optional proof; no second scheduler exists.
  * Source-backed search retains only bounded changed-owner endpoint incidence until publication;
  * cached canonical compilation decides materialization and rename/delete retire that incidence safely.
  * Optional URL alias maintenance compares current primary families before durable-only replacement;
@@ -62,29 +59,21 @@ import { selectedSourceFailure, type SelectedSourceResult, type SelectedSourceRe
 import type { ParsedBodyMetadata, ParsedFileMetadata } from "../../core/parser/metadata";
 import { mergeFileMetadata } from "../../index/fieldParser";
 import type { KplexIndexedDbCache } from "../../index/IndexedDbCache";
-import { SOURCE_BODY_PARSER_VERSION, SOURCE_CHUNK_TARGET_BYTES, SOURCE_DECODE_BUDGET_BYTES, SOURCE_FAMILIES, SOURCE_MAX_BATCH_RECORDS, SourceFactError, sourceFieldNames, sourceValueSteps, type SourceFamily, type SourceFamilyManifest,
+import { SOURCE_BODY_PARSER_VERSION, SOURCE_DECODE_BUDGET_BYTES, SOURCE_FAMILIES, SOURCE_MAX_BATCH_RECORDS, SourceFactError, sourceFieldNames, sourceValueSteps, type SourceFamily, type SourceFamilyManifest,
   type SourceObservation, type SourcePhysical, type SourceReason, type StoredMetadataFact, type StoredSourceFact } from "../../index/SourceFacts";
 import type { SourceFamilyProducer, SourceInspection, SourceRepositoryDiagnostics, SourceLocalInventoryProjection } from "../../index/SourceRepository";
 import { sourceLocalDependencyKey, sourceLocalResolverDependencyKey, sourceLocalResolverPathDependencyKey } from "../../index/SourceLocalDependencies";
-import { createObsidianMetadataSourceHost, normalizedBodyUrl, ObsidianMetadataSourceCollector, type MetadataEnvironmentReadObserver, type ObsidianMetadataSourceSettings } from "./metadataSourceCollector";
+import { createObsidianMetadataSourceHost, normalizedBodyUrl, ObsidianMetadataSourceCollector, type ObsidianMetadataSourceSettings } from "./metadataSourceCollector";
 import { entityFactForFile, entityFactForFolder, ObsidianStructuralPatchSourceCollector,
   structuralMarkdownSourceOrder, tagRef } from "./structuralSourceCollector";
 import { hostLinkRecord } from "./hostLinkSourceCollector";
 import { resolveObsidianReferenceTarget } from "./ontologySourceCollector";
 
-type FileObservation = { identity: string | null; observation?: SourceObservation; validatedHostRevision?: number; revision: number; dirty: boolean; bodyDirty: boolean; uncachedBodyRepair?: boolean; resolutionDirty: boolean; path: string; oldPath?: string; created: boolean; impact: Promise<void> | null };
+type FileObservation = { identity: string | null; observation?: SourceObservation; validatedHostRevision?: number; revision: number; dirty: boolean; bodyDirty: boolean; resolutionDirty: boolean; path: string; oldPath?: string; created: boolean; impact: Promise<void> | null };
 type SourceCoordinates = Readonly<{ order: number; markdownOrder: number }>;
 type Capture = { physical: SourcePhysical; revision: number; hostRevision: number; state: FileObservation; file: TFile };
 /** Narrow parser port: acquisition does not import GraphBuilder or own a second parser. */
 export type SourceBodyParser = (content: string, backgroundCheckpoint?: () => Promise<void>) => Promise<ParsedBodyMetadata>;
-/** One optional graph consumer observes authenticated bodies inside the existing broad source pass. */
-export type SnapshotSourceObserver = Readonly<{
-  begin(files: readonly TFile[], current: () => boolean): boolean | void;
-  body(file: TFile, body: ParsedBodyMetadata, current: () => boolean): Promise<void>;
-  complete(ready: boolean): void;
-}>;
-/** Captured environment guard additionally latches actual compiler reads, including ABA observations. */
-export type SnapshotSourceValidationGuard = (() => boolean) & MetadataEnvironmentReadObserver;
 /** Exact pair lifetime rechecks finite captured host tokens; it grants no global source authority. */
 export type SourcePairPreparation = Exclude<CachedPairPreparation, { outcome: "ready" }>
   | (Extract<CachedPairPreparation, { outcome: "ready" }> & Readonly<{ isCurrent(): boolean }>);
@@ -211,8 +200,6 @@ export class ObsidianSourceAcquisition {
   /** Cheap idle preflight: field vocabulary is collected while sources are already being visited. */
   private readonly environmentFields = new Map<string, boolean>();
   private dailyNotesObservation: string | null = null;
-  private snapshotSourceObserver: SnapshotSourceObserver | null = null;
-  private snapshotEnvironmentStable = true;
   /** Prevent a changed source from replacing old durable alias/path evidence before fan-out capture. */
   private knownImpactTasks = 0;
   /** R3 owns high-degree continuation; R2 must preserve the accepted terminal backpressure behavior. */
@@ -240,97 +227,12 @@ export class ObsidianSourceAcquisition {
     private readonly runBackgroundWork?: (work: () => Promise<boolean>) => Promise<boolean>,
     private readonly onPresentationInputsAvailable?: (path: string) => void) {
     this.repository = cache.sources;
-    this.metadataHost = createObsidianMetadataSourceHost(app, this.snapshotEnvironmentObserver());
+    this.metadataHost = createObsidianMetadataSourceHost(app);
   }
   /** Keep immutable copies of aggregate counters suitable for a native read/parser reuse probe. */
   getCounters(): SourceAcquisitionCounters { return { ...this.counters }; }
   /** The repository independently sanitizes all persistent diagnostic fields. */
   getDiagnostics(): SourceRepositoryDiagnostics { return this.repository.getDiagnostics(); }
-  /** Replace one optional observer; retiring an old registration cannot clear its successor. */
-  observeSnapshotSources(observer: SnapshotSourceObserver): () => void {
-    this.snapshotSourceObserver = observer;
-    return /** Dispose only this exact registration, never a newer graph consumer. */ () => { if (this.snapshotSourceObserver === observer) this.snapshotSourceObserver = null; };
-  }
-
-  /** Latch inconsistent actual source/fingerprint reads against the existing pass environment vocabulary. */
-  snapshotEnvironmentObserver(): MetadataEnvironmentReadObserver {
-    return {
-      /** A first vocabulary observation is recorded by observeEnvironment; later differences retire proof. */
-      date: (field, value) => {
-        if (this.snapshotSourceObserver && this.environmentFields.has(field) && this.environmentFields.get(field) !== value) this.snapshotEnvironmentStable = false;
-      },
-      /** Daily Notes settings have one exact pass baseline and no note payloads. */
-      daily: value => {
-        if (this.snapshotSourceObserver && this.dailyNotesObservation !== null && this.dailyNotesObservation !== JSON.stringify(value)) this.snapshotEnvironmentStable = false;
-      },
-    };
-  }
-
-  /** Request real bounded source verification for a necessary compilation, without inventing a host event. */
-  requestSnapshotSourceValidation(): void {
-    if (this.closed) return;
-    this.restartInventoryChecked = false;
-    this.requestInventory();
-  }
-
-  /** Capture a bounded Date/Daily Notes and source lifetime; uncertainty refuses optional reuse. */
-  snapshotValidationGuard(): SnapshotSourceValidationGuard | null {
-    if (this.closed || !this.localDependencyAuthorityReady || !this.localDependenciesReady || this.environmentObservationChanged()
-      || this.uncertainResolution || this.environmentMaintenancePending || this.knownImpactTasks || this.pendingKnownFiles.size
-      || this.pendingResolutionKeys.size || this.resolutionBackpressure || !this.snapshotEnvironmentStable || this.environmentFields.size > 1024) return null;
-    const fields = [...this.environmentFields], daily = this.dailyNotesObservation;
-    if (fields.reduce(/** Bound copied environment vocabulary, not note count or note payloads. */ (size, [field]) => size + field.length * 2 + 16, (daily?.length ?? 0) * 2) > 64 * 1024) return null;
-    const expectedFields = new Map(fields);
-    let consistent = true;
-    const host = this.hostRevision, maintenance = this.maintenanceRevision, catalog = this.catalogObservation;
-    const guard = /** Any observed invalidity permanently retires this lifetime, including environment ABA. */ () => {
-      if (!consistent) return false;
-      try { consistent = !this.closed
-      && this.localDependencyAuthorityReady && this.localDependenciesReady && !this.uncertainResolution && !this.environmentMaintenancePending
-      && !this.knownImpactTasks && !this.pendingKnownFiles.size && !this.pendingResolutionKeys.size && !this.resolutionBackpressure
-      && host === this.hostRevision && maintenance === this.maintenanceRevision && catalog === this.catalogObservation
-      && daily === JSON.stringify(this.metadataHost.dailyNotesSettings())
-      && fields.every(/** Recheck the exact registry classifications observed by the canonical source owner. */ ([field, wasDate]) => this.metadataHost.isDateProperty(field) === wasDate);
-      } catch { consistent = false; }
-      return consistent;
-    };
-    return Object.assign(guard, {
-      /** Compare the value actually returned to the compiler with this immutable bounded baseline. */
-      date: (field: string, value: boolean): void => { if (!expectedFields.has(field) || expectedFields.get(field) !== value) consistent = false; },
-      /** A transient differing Daily Notes value remains rejected after it returns to the original. */
-      daily: (value: Parameters<MetadataEnvironmentReadObserver["daily"]>[0]): void => { if (daily !== JSON.stringify(value)) consistent = false; },
-    });
-  }
-
-  /**
-   * Verify actual content through the existing parser, serially inside P4. Receipt eligibility is
-   * limited to one ordinary source-chunk-sized note; larger notes keep conservative behavior.
-   * This deliberately uses read(), not a stat-keyed cachedRead(), to catch offline same-stat edits.
-   */
-  async readSnapshotValidationBody(file: TFile, current: () => boolean): Promise<ParsedBodyMetadata | null> {
-    const capture = this.capture(file);
-    const valid = /** Fence each actual read/parse against the captured native file and caller. */ (): boolean => this.current(capture, current);
-    if (!valid() || capture.physical.size === undefined || capture.physical.size > SOURCE_CHUNK_TARGET_BYTES) return null;
-    await this.backgroundCheckpoint?.();
-    if (!valid()) return null;
-    this.counters.vaultReads += 1;
-    const text = await this.app.vault.read(file);
-    if (!valid() || text.length * 2 > SOURCE_CHUNK_TARGET_BYTES) return null;
-    this.counters.parses += 1;
-    const body = await this.parse(text, this.backgroundCheckpoint);
-    return valid() ? body : null;
-  }
-
-  /** A freshly parsed mismatch repairs only that genuine owner through existing source finality. */
-  repairSnapshotBody(file: TFile): void {
-    const state = this.state(file);
-    if (this.closed || this.app.vault.getFileByPath(file.path) !== file) return;
-    const revision = state.revision;
-    state.bodyDirty = true;
-    state.uncachedBodyRepair = true;
-    this.requestReplayRepair({ outcome: "unavailable", reason: "invalid-frame", sourceId: file.path });
-    if (state.revision !== revision) this.inventoryRevision += 1;
-  }
   /** Subscribe before asynchronous acquisition; pure graph no-ops never suppress this fence. */
   start(): void {
     if (this.started || this.closed) return;
@@ -458,7 +360,6 @@ export class ObsidianSourceAcquisition {
   }
   /** Cancel every continuation and release event/timer ownership; unload does not await persistence. */
   close(): void {
-    this.snapshotSourceObserver = null;
     this.closed = true; this.inventoryRevision += 1;
     this.knownFanoutTasks.clear();
     this.nodeImpacts.clear(); this.nodeImpactBytes = 0;
@@ -935,8 +836,6 @@ export class ObsidianSourceAcquisition {
   getFileRevision(file: TFile): number { this.start(); return this.state(file).revision; }
   /** An observed content change cannot be satisfied by an equal-mtime hot, neutral or legacy body. */
   needsBodyRead(file: TFile): boolean { this.start(); return this.state(file).bodyDirty; }
-  /** Only a detected same-stat body mismatch bypasses the host's optional stat-keyed read cache. */
-  requiresUncachedBodyRead(file: TFile): boolean { return this.state(file).uncachedBodyRepair === true; }
   /** Capture mutable TFile/stat fields before any await; a TFile replacement is also a change. */
   private capture(file: TFile): Capture {
     this.start();
@@ -1502,7 +1401,7 @@ export class ObsidianSourceAcquisition {
       if (queued) { this.counters.legacyBodies += 1; return queued; }
     }
     this.counters.vaultReads += 1;
-    const text = Platform.isMobile || capture.state.uncachedBodyRepair ? await this.app.vault.read(file) : await this.app.vault.cachedRead(file);
+    const text = Platform.isMobile ? await this.app.vault.read(file) : await this.app.vault.cachedRead(file);
     if (!valid()) return null;
     this.counters.parses += 1;
     const body = await this.parse(text, background ? this.backgroundCheckpoint : undefined);
@@ -1571,7 +1470,7 @@ export class ObsidianSourceAcquisition {
    * storage failure cannot introduce a memory mask or generic pending-inventory authority.
    * A selected body may defer resolution authentication only to the ensuing exact-head comparison;
    * changed selections still validate all families and concurrent host proof cannot bypass that read. */
-  async acquire(file: TFile, body: ParsedBodyMetadata, caller: () => boolean = () => true, requireCurrentParser = false, optionalAliasesOnly = false, verifyResolution = false): Promise<SourceAcquisitionResult> {
+  async acquire(file: TFile, body: ParsedBodyMetadata, caller: () => boolean = () => true, requireCurrentParser = false, optionalAliasesOnly = false): Promise<SourceAcquisitionResult> {
     this.start();
     const state = this.state(file);
     while (this.knownFanoutTasks.get(file)) {
@@ -1597,7 +1496,7 @@ export class ObsidianSourceAcquisition {
       if (!current()) return { current: false, saved: false, reason: "cancelled" };
       const bodySelection = this.bodySelections.get(body);
       const selectedHead = bodySelection?.head;
-      const selectedHostCurrent = !verifyResolution && !capture.state.resolutionDirty && selectedHead?.observation.environment === environment
+      const selectedHostCurrent = !capture.state.resolutionDirty && selectedHead?.observation.environment === environment
         && (selectedHead.observation.epoch === this.epoch && selectedHead.observation.revision === this.hostRevision
           || capture.state.validatedHostRevision === this.hostRevision
           || this.hostRevision === 0 && !capture.state.dirty);
@@ -1634,7 +1533,7 @@ export class ObsidianSourceAcquisition {
       capture.state.identity ??= this.repository.createIdentity();
       const physical = { ...capture.physical, identity: capture.state.identity };
       const intrinsic = samePhysical && !capture.state.dirty;
-      const hostCurrent = !verifyResolution && !capture.state.resolutionDirty && head?.observation.environment === environment
+      const hostCurrent = !capture.state.resolutionDirty && head?.observation.environment === environment
         && (head.observation.epoch === this.epoch && head.observation.revision === this.hostRevision
           || capture.state.validatedHostRevision === this.hostRevision
           || this.hostRevision === 0 && !capture.state.dirty);
@@ -1731,7 +1630,6 @@ export class ObsidianSourceAcquisition {
       if ((result.outcome === "activated" || result.outcome === "unsaved") && result.live) {
         capture.state.observation = optionalAliasesOnly && head ? { ...head.observation } : { epoch: this.epoch, revision: capture.hostRevision, environment };
         capture.state.dirty = false; capture.state.bodyDirty = false; capture.state.resolutionDirty = false; capture.state.created = false;
-        if (capture.state.uncachedBodyRepair) capture.state.uncachedBodyRepair = false;
         if (intrinsic && !upgradeUrls) this.counters.resolutionRefreshes += 1; else this.counters.repaired += 1;
         if (result.outcome === "activated" && head) {
           // Only explicitly known retired revisions are considered, and the repository rechecks
@@ -1837,8 +1735,6 @@ export class ObsidianSourceAcquisition {
     /** Retain one broad task's priority without changing its existing inventory/CAS lifetime. */
     const work = async (): Promise<boolean> => {
       let complete = true;
-      let snapshotObserver: SnapshotSourceObserver | null = null;
-      let snapshotObserverCompleted = false;
       try {
         await this.backgroundCheckpoint?.();
         while (this.knownImpactTasks > 0 && current()) {
@@ -1858,10 +1754,6 @@ export class ObsidianSourceAcquisition {
         this.startupDiagnostics?.recordWork("sourceInventoryPasses");
         this.startupDiagnostics?.phase("source", "source-inventory");
         const markdown = this.app.vault.getMarkdownFiles();
-        snapshotObserver = this.snapshotSourceObserver;
-        this.snapshotEnvironmentStable = true;
-        try { if (snapshotObserver?.begin(markdown, current) === false) snapshotObserver = null; }
-        catch { snapshotObserver = null; }
         const structuralOrder = structuralMarkdownSourceOrder(this.app.vault);
         if (structuralOrder.size !== markdown.length) return false;
         this.sourceCoordinates.clear();
@@ -1916,7 +1808,7 @@ export class ObsidianSourceAcquisition {
               || capture.state.validatedHostRevision === this.hostRevision
               || this.hostRevision === 0 && !capture.state.dirty);
           this.startupDiagnostics?.count("source", "physicalRevisionComparisons");
-          if ((!snapshotObserver || snapshotObserver !== this.snapshotSourceObserver) && inspection.saved && head?.state === "complete" && !capture.state.dirty && !capture.state.resolutionDirty && !capture.state.created
+          if (inspection.saved && head?.state === "complete" && !capture.state.dirty && !capture.state.resolutionDirty && !capture.state.created
             && physicalMatches(head.physical, capture.physical) && hostCurrent) {
             // A clean restart may reuse the exact durable source head without rewriting its host
             // observation. Live host events still require this session's current epoch/revision.
@@ -1932,7 +1824,7 @@ export class ObsidianSourceAcquisition {
           }
           const body = await this.loadBody(file, current, false, true);
           if (!body || !current()) return false;
-          const acquired = await this.acquire(file, body, current, false, false, !!snapshotObserver && snapshotObserver === this.snapshotSourceObserver);
+          const acquired = await this.acquire(file, body, current);
           if (!acquired.current) return false;
           complete &&= acquired.saved;
           if (acquired.saved) {
@@ -1944,11 +1836,6 @@ export class ObsidianSourceAcquisition {
               await this.repository.tombstone(oldPath, () => current() && !this.app.vault.getFileByPath(oldPath));
               state.oldPath = undefined;
             }
-          }
-          if (acquired.saved && snapshotObserver && snapshotObserver === this.snapshotSourceObserver) {
-            try { await snapshotObserver.body(file, body, current); }
-            catch { try { snapshotObserver.complete(false); } catch { /* Optional proof only. */ } snapshotObserver = null; }
-            if (!current()) return false;
           }
           this.startupDiagnostics?.processed("source", file.path);
           if (current()) this.inventoryProgress?.();
@@ -1992,10 +1879,6 @@ export class ObsidianSourceAcquisition {
         this.localDependencyAuthorityReady = ready;
         this.urlAliasInventoryComplete = ready;
         this.localInventoryCompletionPending = false;
-        if (snapshotObserver && snapshotObserver === this.snapshotSourceObserver) {
-          snapshotObserverCompleted = true;
-          try { snapshotObserver.complete(ready && this.snapshotEnvironmentStable); } catch { /* Optional proof cannot change source closure. */ }
-        }
         if (ready) {
           this.pendingKnownFiles.clear();
           this.startupDiagnostics?.phase("source", "complete");
@@ -2004,11 +1887,6 @@ export class ObsidianSourceAcquisition {
         }
         return ready;
       } catch { this.counters.failures += 1; return false; }
-      finally {
-        if (snapshotObserver && !snapshotObserverCompleted) {
-          try { snapshotObserver.complete(false); } catch { /* Retire an interrupted optional proof. */ }
-        }
-      }
     };
     this.inventory = this.runBackgroundWork ? this.runBackgroundWork(work) : work();
     try { return await this.inventory; }

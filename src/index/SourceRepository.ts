@@ -5,9 +5,7 @@
  * leases, conservative cleanup, bounded unsaved facts/backoff and aggregate-only diagnostics. Owned
  * cancellation/domain rollback rejects without poisoning healthy storage; genuine faults retain
  * the shared cache owner’s existing failure/backoff policy. This repository
- * also supplies bounded key-ordered catalog commitments under a monotonic source fence. Those
- * head-only commitments require the caller's independently closed authenticated source lifetime.
- * This repository never reads a Vault, selects a relationship policy, or serializes a graph. An optional aggregate
+ * never reads a Vault, selects a relationship policy, or serializes a graph. An optional aggregate
  * completed-work observer reports bounded validated/staged progress without changing source
  * authority, scheduling or transaction boundaries; cancellation/close and observer errors are isolated.
  * The additive SI4b1 catalog uses this same transaction owner. v7 retains its original summary/root proof in a durable
@@ -31,7 +29,6 @@
  * speculative decode supplies no authority and retains all digest, frame, selection and lease fences.
  */
 import { yieldToHostTask } from "../adapters/obsidian/yieldToHostTask";
-import { SnapshotReceiptHasher, type SnapshotReceiptDigest } from "./SnapshotReceiptHasher";
 import { estimateReferenceRecordBytes } from "../core/graph/source";
 import type { ParsedBodyMetadata } from "../core/parser/metadata";
 import {
@@ -2363,41 +2360,6 @@ export class NeutralSourceRepository {
     void task.finally(() => { if (this.deleteTask === task) this.deleteTask = null; this.scheduleRetry(); });
     return task;
   }
-  /** Read the monotonic durable selection fence without accepting memory masks or pending writers. */
-  async snapshotSelectionSequence(current: () => boolean): Promise<number | null> {
-    if (this.closed || !current() || this.unsaved.size || this.lanes.size || this.pendingDeletes.size) return null;
-    const db = await this.open();
-    if (!db || this.closed || !current()) return null;
-    try {
-      const sequence = await this.transaction(db, [META_STORE], "readonly", "", /** Select one exact scalar in its short native transaction. */ async (transaction) => {
-        const raw = await unknownValue(transaction.objectStore(META_STORE).get(SOURCE_SEQUENCE_KEY));
-        return raw === undefined ? 0 : sourceObject(raw) && raw.key === SOURCE_SEQUENCE_KEY && sourceCount(raw.value) ? raw.value : null;
-      });
-      return !this.closed && current() && !this.unsaved.size && !this.lanes.size && !this.pendingDeletes.size ? sequence : null;
-    } catch { return null; }
-  }
-
-  /** Commit exact heads in bounded key order; optional input observation runs outside native transactions. */
-  async snapshotSelection(current: () => boolean, onHead?: (head: SourceHead) => Promise<boolean>): Promise<Readonly<{ sequence: number; heads: SnapshotReceiptDigest }> | null> {
-    const sequence = await this.snapshotSelectionSequence(current);
-    if (sequence === null) return null;
-    const hash = new SnapshotReceiptHasher("source-heads", /** Reuse the repository's mobile-safe digest owner. */ text => this.runtime.digest(text),
-      /** Catalog data stays private until full caller checks at each bounded page and final fence. */ () => !this.closed,
-      /** Preserve existing cooperative source admission and CPU slices. */ () => this.runtime.yield());
-    let after: string | null = null;
-    do {
-      const page = await this.headPage(after);
-      if (!current() || this.closed || !page.available || page.invalid) return null;
-      for (const head of page.heads) {
-        if (!(await hash.add(head)) || onHead && !(await onHead(head))) return null;
-      }
-      after = page.next;
-      await this.runtime.yield();
-    } while (after !== null && current());
-    const heads = await hash.finish();
-    return heads && sequence === await this.snapshotSelectionSequence(current) ? { sequence, heads } : null;
-  }
-
   /** Read a bounded catalog page for inventory reconciliation; no whole-vault manifest is rewritten. */
   async headPage(after: string | null = null, limit = SOURCE_MAX_BATCH_RECORDS): Promise<Readonly<{ available: boolean; heads: SourceHead[]; invalid: number; next: string | null }>> {
     const db = await this.open();

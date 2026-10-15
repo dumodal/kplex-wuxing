@@ -11,6 +11,21 @@ Merged #163 baseline: `8df393a`; integration checkpoint: `a86b4a0`. The shipping
 SHA-256 `e5994ecce833d5e3e17ad3615fec740ffa45aa3e87066e0c58b7f8d501440a0b`.
 #153/#163 behavior and architecture remain; C14 is accepted and C15–C26 remain paused.
 
+The rejected prototype and its three failing provenance probes are preserved together at
+[`9124f5b`](https://github.com/zsviczian/kplex/commit/9124f5b4a523932ea468e9d73ffdbda2fddbeedd).
+The active production source and package/test registration are restored to independently validated
+duplicate-read/progress checkpoint `d0d16fb`. Full receipt-free Node22.22.2 verification passes
+architecture7/core128/general829/UI63/portable334/browser524, official lint, installed types,
+production build and exact-artifact Windows native smoke, without failures/skips/JS errors.
+The shipping main is again `4813b60d280cf3dc7cb2ab1eaeea6769df6218b73183357e32f4bef00a5805e0`;
+manifest/styles remain unchanged. Two incomplete rollback attempts failed on candidate-only test
+dependencies; their logs are preserved, those tests remain with the rejected implementation, and
+no assertion or deadline was relaxed. Reusable observer and cache-identity contracts remain active.
+The exact receipt-free build also passes all six native foreground scenarios with source inventory
+held: navigation, relationship add/remove, note creation, visible edit and folder/gate presentation.
+Foreground broad flush calls are zero; its controller is removed and configuration bytes restored.
+Historical receipt results below describe the preserved experiment, not shipped authority.
+
 ## Initial work counts
 
 `scripts/testing/source-validation-work.mjs --baseline-ref=8df393a` runs genuine acquisition,

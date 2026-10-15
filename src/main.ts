@@ -1049,35 +1049,20 @@ export default class KplexPlugin extends Plugin {
   /** Complete the initial source owner; an unsuccessful adoption reports incomplete coverage until a later attempt succeeds. */
   private async adoptInitialSourceIndex(): Promise<void> {
     this.initialSourceIndexIncomplete = false;
-    // Complete cached graphs can earn exact receipt authority before source-backed fallback.
-    // Missing or mismatched proof keeps the existing source adoption and requested-scope owners.
-    const coveredRevision = this.index.isFullSnapshotHydrated()
-      ? await this.index.retainValidatedStartupSnapshot(
-        /** Capture only the actual source-closed backlog. */ () => this.indexDirtyRevision) : null;
-    if (this.unloading) return;
-    const adopted = coveredRevision !== null || await this.index.adoptStartupSources();
+    const adopted = await this.index.adoptStartupSources();
     if (this.unloading) return;
     this.initialSourceIndexIncomplete = !adopted;
     this.initialIndexComplete = adopted;
-    if (coveredRevision !== null) this.acknowledgeRetainedSnapshot(coveredRevision);
-    else if (adopted) {
+    if (adopted) {
       for (const reason of ["startup:no-snapshot", "startup:stale-snapshot", "startup:partial-restore-incomplete"]) {
         this.indexBacklogReasons.delete(reason);
       }
       if (!this.preRestoreUncoveredChanges && this.indexBacklogReasons.size === 0 && this.dirtyMarkdownPaths.size === 0) {
         this.indexDirty = false;
       }
+      if (this.indexDirty && this.hasVisibleKplexSurface()) this.scheduleRebuild("startup:post-initial-backlog");
     }
-    if (adopted && this.indexDirty && this.hasVisibleKplexSurface()) this.scheduleRebuild("startup:post-initial-backlog");
     this.notifyIndexStatus();
-  }
-
-  /** A validated unchanged snapshot settles only the backlog revision captured under its source proof. */
-  private acknowledgeRetainedSnapshot(coveredRevision: number): void {
-    if (this.indexDirtyRevision !== coveredRevision) return;
-    this.indexDirty = false;
-    this.indexBacklogReasons.clear();
-    this.dirtyMarkdownPaths.clear();
   }
 
   private async ensureInitialIndex(): Promise<void> {
@@ -1278,16 +1263,6 @@ export default class KplexPlugin extends Plugin {
     const startRevision = this.indexDirtyRevision;
 
     const task = (async () => {
-      if (!force && !showNotice && this.index.isFullSnapshotHydrated()) {
-        const coveredRevision = await this.index.retainValidatedStartupSnapshot(
-          /** Capture only the backlog revision covered after genuine source closure. */ () => this.indexDirtyRevision);
-        if (this.unloading) return;
-        if (coveredRevision !== null) {
-          this.acknowledgeRetainedSnapshot(coveredRevision);
-          this.notifyIndexStatus();
-          return;
-        }
-      }
       // Ordinary edits are file-owned evidence changes. Patch those files directly rather than
       // rebuilding the vault. A path may disappear after its metadata notification was queued;
       // prune such paths before deciding whether an incremental patch must escalate.
@@ -1381,7 +1356,7 @@ export default class KplexPlugin extends Plugin {
           // neighborhood has been published so first paint is no longer blocked by vault prewarm.
           prewarmBodyCache: Platform.isIosApp && this.app.vault.getMarkdownFiles().length > 5000,
         })
-        : await this.index.rebuild({ validateSnapshotSources: !force && !showNotice });
+        : await this.index.rebuild();
       if (this.unloading) return;
       if (!published) {
         this.indexDirty = true;

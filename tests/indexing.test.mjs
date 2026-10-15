@@ -460,7 +460,6 @@ for (const file of [
   "src/index/remapGraphEndpoint.ts",
   "src/index/IndexSnapshot.ts",
   "src/index/IndexedDbCache.ts",
-  "src/index/SnapshotReceiptHasher.ts",
   "src/index/SourceFacts.ts",
   "src/index/SourceLocalDependencies.ts",
   "src/index/SourceRepository.ts",
@@ -1480,7 +1479,6 @@ for (const { inventoryRevision, fresh, remainsDirty } of [
     hasPendingSnapshotHydration: () => false,
     size: 1,
     isFullSnapshotHydrated: () => true, hasPhysicalBaseline: () => true, hasSourceBackedStartup: () => false,
-    retainValidatedStartupSnapshot: /** These legacy coordinator cases have no optional receipt. */ async () => null,
     hasIncrementalRestorePatch: () => true,
     reconcileRestoredSnapshot: async () => ({ reconciled: true, patched: 0 }),
     bootstrapSemanticDependencies: async () => true,
@@ -3934,55 +3932,6 @@ try {
   app.vault.cachedRead = originalCachedReadForRevisionRace;
   index.cancelPendingPersistence();
 
-  // The real coordinator settles only the revision covered by a validated unchanged graph.
-  for (const route of ["rebuild", "initial-adoption"]) for (const newerEvent of [false, true]) {
-    const receiptCoordinator = new KplexPlugin();
-    let scheduled = 0;
-    receiptCoordinator.initialIndexComplete = true;
-    receiptCoordinator.indexDirty = true;
-    receiptCoordinator.indexDirtyRevision = 1;
-    receiptCoordinator.indexBacklogReasons.add("startup:stale-snapshot");
-    receiptCoordinator.dirtyMarkdownPaths.add("Old.md");
-    receiptCoordinator.hasVisibleKplexSurface = /** This fixture represents an open requesting Plex. */ () => true;
-    receiptCoordinator.notifyIndexStatus = /** UI delivery is separate from backlog authority. */ () => {};
-    receiptCoordinator.rebuildIndex = /** Retain scheduling ownership without running a later task in this short assertion. */ async () => {};
-    receiptCoordinator.scheduleRebuild = /** A newer covered-source event must retain its normal follow-up request. */ reason => {
-      assert.equal(reason,"startup:post-initial-backlog");scheduled++;
-    };
-    receiptCoordinator.index = {
-      hasPendingStructuralMaintenance: /** No unrelated structural task blocks the receipt. */ () => false,
-      hasPendingSnapshotHydration: /** The graph has genuinely reached the consumer's full-hydration boundary. */ () => false,
-      isFullSnapshotHydrated: /** This is the existing complete-graph branch. */ () => true,
-      size: 2,
-      retainValidatedStartupSnapshot: /** Model the typed validation result; real proof is tested in Chromium. */ async capture => {
-        receiptCoordinator.indexDirtyRevision += 1;
-        const covered = capture();
-        if (newerEvent) {
-          receiptCoordinator.indexDirtyRevision += 1;
-          receiptCoordinator.indexBacklogReasons.add("metadata:changed");
-          receiptCoordinator.dirtyMarkdownPaths.add("New.md");
-        }
-        return covered;
-      },
-      rebuild: /** Any compiler invocation would violate validated unchanged retention. */ async () => assert.fail("Receipt must avoid full compilation"),
-      patchMarkdownPaths: /** No persisted graph input changed under this exact result. */ async () => assert.fail("Receipt must avoid equivalent patch/save"),
-      adoptStartupSources: /** Exact complete receipt authority precedes source-backed fallback. */ async () => assert.fail("Receipt must avoid unnecessary source adoption"),
-    };
-    try {
-      if(route==="rebuild")await receiptCoordinator.performRebuild(false, false, "startup:stale-snapshot", false);
-      else await receiptCoordinator.adoptInitialSourceIndex();
-      assert.equal(receiptCoordinator.indexDirty, newerEvent);
-      assert.equal(receiptCoordinator.dirtyMarkdownPaths.has("New.md"), newerEvent);
-      assert.equal(scheduled,Number(route==="initial-adoption"&&newerEvent));
-      if (!newerEvent) {
-        assert.equal(receiptCoordinator.indexBacklogReasons.size, 0);
-        assert.equal(receiptCoordinator.dirtyMarkdownPaths.size, 0);
-      }
-    } finally {
-      if (receiptCoordinator.rebuildTimer !== null) window.clearTimeout(receiptCoordinator.rebuildTimer);
-    }
-  }
-
   // Native Obsidian folder + Markdown creation must stay on the local folder/file lanes. The old
   // `vault:create` backlog reason made the two Markdown patches fall through to `full-rebuild`.
   const nativeCreationCoordinator = new KplexPlugin();
@@ -4021,7 +3970,6 @@ try {
     cancelRebuild: () => {},
     size: 4,
     isFullSnapshotHydrated: () => true, hasPhysicalBaseline: () => true, hasSourceBackedStartup: () => false,
-    retainValidatedStartupSnapshot: /** These legacy coordinator cases have no optional receipt. */ async () => null,
     get: (path) => nativeMaterializedFiles.includes(path) ? { file: nativeFiles.get(path) } : undefined,
     insertCreatedFolder: (folder) => { nativeFolders.push(folder.path); return { path: `folder:${folder.path}` }; },
     insertCreatedFile: (file) => { nativeMaterializedFiles.push(file.path); return { path: file.path, file }; },
@@ -4266,7 +4214,6 @@ try {
     size: 1,
     noteBuildDecision: () => {},
     isFullSnapshotHydrated: () => true, hasPhysicalBaseline: () => true, hasSourceBackedStartup: () => false,
-    retainValidatedStartupSnapshot: /** These legacy coordinator cases have no optional receipt. */ async () => null,
     get: () => materialized ? { file: createdDuringPatch } : undefined,
     insertCreatedFile: () => { materialized = true; },
     patchMarkdownPaths: async (paths) => { creationPatchCalls.push([...paths]); return { outcome: "patched", count: paths.length }; },

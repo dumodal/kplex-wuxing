@@ -73,13 +73,8 @@
  * obsolete materialized coordinates while source repair closes.
  * Node imagery remains lazy presentation data. Live consent and a visual epoch fence cache reads,
  * pending durable-body results and mounted consumers without changing graph semantics or sources.
- * Optional snapshot/source receipts bind canonical compilation, exact persisted payloads and
- * authenticated current source/content inputs. Successful reuse promotes authority synchronously
- * without replacing graph identity, replaying vocabulary or scheduling equivalent persistence.
  */
 import { canonicalWebUrl } from "../adapters/obsidian/urlIdentity";
-import { SnapshotReceiptHasher, sameSnapshotReceiptDigest, type SnapshotSourceValidation, type SnapshotSourceReceipt } from "./SnapshotReceiptHasher";
-import { SOURCE_CHUNK_TARGET_BYTES } from "./SourceFacts";
 import { remapGraphEndpoint } from "./remapGraphEndpoint";
 import { isRemoteNodeImageSource } from "../core/plex/nodeImagePolicy";
 import { yieldToHostTask } from "../adapters/obsidian/yieldToHostTask";
@@ -319,12 +314,6 @@ type SnapshotHydrationPhase =
 
 /** Actual publication owners; a diagnostic label never grants permission to reuse a candidate. */
 type SnapshotPublicationCause = "none" | "snapshot" | "file-patch" | "progressive-build" | "full-build" | "rename";
-/** One closed source lifetime; it retains bounded scalar commitments and an environment guard only. */
-type SnapshotSourceProof = Readonly<{ source: SnapshotSourceValidation; isCurrent(): boolean;
-  environment: import("../adapters/obsidian/metadataSourceCollector").MetadataEnvironmentReadObserver }>;
-/** A single optional inventory consumer; disposal never changes source or graph authority. */
-type SnapshotSourceValidationHandle = Readonly<{ finish(): Promise<SnapshotSourceProof | null>;
-  matchesCompiledInputs(fingerprints: ReadonlyMap<string, string>): Promise<boolean>; started(): boolean; dispose(): void }>;
 /** One bounded path-free explanation, retained by the outer run after the private candidate retires. */
 export type SnapshotHydrationFailure = {
   reason: "publication-superseded" | "physical-membership-changed" | "physical-identity-changed" |
@@ -548,10 +537,6 @@ export class GraphIndex {
   private fieldCache = new Map<string, FieldCacheEntry>();
   /** Compact semantic fingerprints survive hot-body LRU eviction so prose-only edits stay cheap. */
   private semanticFingerprints = new Map<string, string>();
-  private compiledSnapshotSourceProof: { publication: number; proof: SnapshotSourceProof } | null = null;
-  private snapshotReceiptCandidate: { meta: Pick<IndexedDbSnapshotMeta, "generation" | "settingsSignature" | "vaultSignature">; receipt: SnapshotSourceReceipt;
-    validation: SnapshotSourceValidationHandle; run: number; publication: number } | null = null;
-  private retainedSnapshotSourceProof: { publication: number; proof: SnapshotSourceProof } | null = null;
   private generation = 0;
   private building = false;
   private checkpointSaving = false;
@@ -1303,217 +1288,6 @@ export class GraphIndex {
       return false;
 
 } finally { releaseWork(); }
-  }
-
-  /** Bind exact owner coverage and canonical compiler encounter order without another per-owner map. */
-  private async snapshotInputsBySource(fingerprints: ReadonlyMap<string, string>, current: () => boolean,
-    compiled = false): Promise<SnapshotSourceValidation | null> {
-    const files = this.app.vault.getMarkdownFiles();
-    if (files.length !== fingerprints.size) return null;
-    // Full compilation inserts this existing map in actual replay order. A later host enumeration
-    // must not certify a different preferred shared-URL label or alias/evidence encounter order.
-    if (compiled) {
-      const paths = fingerprints.keys();
-      if (files.some(file => paths.next().value !== file.path)) return null;
-    }
-    const hash = new SnapshotReceiptHasher("semantic-inputs", /** Reuse the existing mobile-safe digest. */ text => this.indexedDb.sources.observationDigest(text),
-      /** Keep private record guards cheap; the selection checks full lifetime at bounded pages and completion. */ () => !this.diagnosticsClosed && !this.persistentCachePurged,
-      /** Retain the existing background admission between fixed frames. */ () => this.workScheduler.checkpoint(INDEX_WORK_PRIORITY.background));
-    let covered = 0;
-    const selection = await this.indexedDb.sources.snapshotSelection(current, /** Tombstones grant no current owner coverage; every compiled owner must have an exact selected head. */ async head => {
-      if (head.state !== "complete") return true;
-      const signature = fingerprints.get(head.physical.path);
-      if (signature !== undefined) covered += 1;
-      return true;
-    });
-    if (!selection || covered !== fingerprints.size || !current()) return null;
-    for (const file of files) {
-      const signature = fingerprints.get(file.path);
-      if (signature === undefined || !(await hash.add({ path: file.path, signature }))) return null;
-    }
-    const inputs = await hash.finish();
-    const now = this.app.vault.getMarkdownFiles();
-    return inputs && inputs.records === fingerprints.size && current()
-      && now.length === files.length && now.every((file, position) => file === files[position])
-      ? { ...selection, inputs, markdownOwners: fingerprints.size } : null;
-  }
-
-  /**
-   * Observe one real source pass with the canonical fingerprint producer. Warm receipt checks read
-   * and parse actual bounded note content; first-creation checks reuse authenticated pass bodies.
-   * No additional per-owner map survives: saved fingerprints and one bounded digest are sufficient.
-   */
-  private observeSnapshotSourceValidation(expected?: ReadonlyMap<string, string>): SnapshotSourceValidationHandle {
-    let hash: SnapshotReceiptHasher | null = null, builder: GraphBuilder | null = null;
-    let total = 0, processed = 0, complete = false, disposed = false;
-    let passFiles: readonly TFile[] | null = null;
-    let started = false;
-    let source = -1, policy = -1, settings = "";
-    let selectionStart: Promise<number | null> = Promise.resolve(null);
-    let passCurrent: () => boolean = /** No inventory has supplied a valid lifetime yet. */ () => false;
-    let finished: Promise<SnapshotSourceProof | null> | null = null;
-    /** Policy/source ABA and unload retire every optional consumer, without renewing the source pass. */
-    const valuesCurrent = (): boolean => !disposed && !this.diagnosticsClosed && !this.persistentCachePurged
-      && policy === this.semanticPolicyRevision && source === this.plugin.getIndexSourceRevision()
-      && settings === computeIndexSettingsSignature(this.plugin.settings);
-    const release = this.sourceAcquisition.observeSnapshotSources({
-      /** A new genuine pass resets only its own transient commitment. */
-      begin: (files, current) => {
-        started = true; total = files.length; processed = 0; passFiles = files; complete = false; finished = null;
-        // Borrow the existing pass inventory. Oversized/uncertain notes keep the ordinary route
-        // before any optional body decoding, native reads or additional proof work is started.
-        if (files.some(/** This eligibility ceiling is stricter than the existing source-chunk budget. */ file => !Number.isSafeInteger(file.stat.size)
-          || file.stat.size < 0 || file.stat.size * 2 > SOURCE_CHUNK_TARGET_BYTES)) {
-          hash = null; builder = null; return false;
-        }
-        source = this.plugin.getIndexSourceRevision(); policy = this.semanticPolicyRevision;
-        settings = computeIndexSettingsSignature(this.plugin.settings);
-        if (settings.length * 2 > 64 * 1024) { hash = null; builder = null; return false; }
-        passCurrent = /** Keep record guards scalar; settings values are checked at owner/final boundaries. */ () => current() && !disposed && !this.diagnosticsClosed && !this.persistentCachePurged
-          && policy === this.semanticPolicyRevision && source === this.plugin.getIndexSourceRevision();
-        selectionStart = this.indexedDb.sources.snapshotSelectionSequence(passCurrent);
-        hash = new SnapshotReceiptHasher("semantic-inputs", /** Hash existing canonical input tokens, not a new classifier. */ text => this.indexedDb.sources.observationDigest(text),
-          passCurrent, /** Continue at the existing P4 admission boundary. */ () => this.workScheduler.checkpoint(INDEX_WORK_PRIORITY.background));
-        builder = new GraphBuilder(this.plugin, this.app, this.fieldCache, this.metadataParser, this.indexedDb,
-          passCurrent, new Map(), this.sourceAcquisition, /** Use the existing broad-work lane. */ () => this.workScheduler.checkpoint(INDEX_WORK_PRIORITY.background), this.sourceAcquisition.snapshotEnvironmentObserver());
-        return true;
-      },
-      /** Current raw inputs must match saved canonical semantics, including same-stat offline edits. */
-      body: async (file, body) => {
-        const selected = hash, producer = builder;
-        if (!selected || !producer || !passCurrent() || !valuesCurrent()) return;
-        const actual = expected ? await this.sourceAcquisition.readSnapshotValidationBody(file, passCurrent) : body;
-        if (!actual || !passCurrent()) { hash = null; return; }
-        const signature = await producer.snapshotSourceFingerprint(file, actual);
-        if (!signature || !passCurrent()) { hash = null; return; }
-        if (expected && signature !== expected.get(file.path)) {
-          const cached = await producer.snapshotSourceFingerprint(file, body);
-          if (!passCurrent()) { hash = null; return; }
-          if (cached !== signature) {
-            // The actual content exposes a stale cache input; source repair owns its body read and CAS.
-            this.sourceAcquisition.repairSnapshotBody(file);
-          }
-          hash = null;
-          return;
-        }
-        if (!expected && !(await selected.add({ path: file.path, signature }))) { hash = null; return; }
-        processed += 1;
-      },
-      /** Only actual durable source closure can complete an optional input commitment. */
-      complete: ready => { complete = ready && passCurrent(); },
-    });
-    return {
-      /** Distinguish a missing pass from deliberately refused or failed optional coverage. */
-      started: () => started,
-      /** Finish closed validation; creation's pass-order tokens are cross-checked before canonical persisted ordering. */
-      finish: () => finished ??= (async () => {
-        const selected = hash;
-        if (!complete || !selected || processed !== total || !valuesCurrent() || !passCurrent()) return null;
-        const guard = this.sourceAcquisition.snapshotValidationGuard();
-        if (!guard) return null;
-        const before = await selectionStart;
-        if (expected) {
-          const selection = await this.snapshotInputsBySource(expected, /** Exact expected tokens were verified against every actual current body. */ () => valuesCurrent() && guard());
-          if (!selection || selection.markdownOwners !== total || before !== selection.sequence || selected !== hash) return null;
-          return this.completeSnapshotSourceProof(selection, guard, source, policy, settings);
-        }
-        const inputs = await selected.finish();
-        if (!inputs || inputs.records !== total || !valuesCurrent() || !guard() || selected !== hash) return null;
-        const heads = await this.indexedDb.sources.snapshotSelection(/** Keep catalog hashing inside this exact completed validation lifetime. */ () => valuesCurrent() && guard());
-        if (!heads || before !== heads.sequence || !valuesCurrent() || !guard() || selected !== hash) return null;
-        return this.completeSnapshotSourceProof({ ...heads, inputs, markdownOwners: total }, guard, source, policy, settings);
-      })().catch(/** Optional digest/storage uncertainty returns to the existing conservative route. */ () => null),
-      /** Compare the compiler's existing private map in the captured pass order without another per-owner map or changing compiler order. */
-      matchesCompiledInputs: async fingerprints => {
-        const proof = await finished, files = passFiles;
-        if (!proof || !files || disposed || fingerprints.size !== total || !proof.isCurrent()) return false;
-        const compiled = new SnapshotReceiptHasher("semantic-inputs", /** Reuse the same input-token protocol. */ text => this.indexedDb.sources.observationDigest(text),
-          /** Full environment checks remain at the original pass and final boundary. */ () => !disposed && !this.diagnosticsClosed
-            && source === this.plugin.getIndexSourceRevision() && policy === this.semanticPolicyRevision,
-          /** Keep fingerprint comparison cooperatively admitted. */ () => this.workScheduler.checkpoint(INDEX_WORK_PRIORITY.background));
-        for (const file of files) {
-          const signature = fingerprints.get(file.path);
-          if (signature === undefined || !(await compiled.add({ path: file.path, signature }))) return false;
-        }
-        return sameSnapshotReceiptDigest(await compiled.finish(), proof.source.inputs) && proof.isCurrent();
-      },
-      /** Release the observer and parser producer; no decoded body or old graph remains retained. */
-      dispose: () => { disposed = true; release(); hash = null; builder = null; passFiles = null; },
-    };
-  }
-
-  /**
-   * Isolate the completed capability from the inventory closure. It must not retain that observer,
-   * its saved fingerprint map, parser producer or metadata arrays after a later publication.
-   */
-  private completeSnapshotSourceProof(source: SnapshotSourceValidation,
-    guard: import("../adapters/obsidian/sourceAcquisition").SnapshotSourceValidationGuard,
-    sourceRevision: number, policy: number, settings: string): SnapshotSourceProof {
-    return { source, environment: guard,
-      /** Only bounded environment state and captured scalar epochs survive source validation. */
-      isCurrent: () => !this.diagnosticsClosed && !this.persistentCachePurged && guard()
-        && sourceRevision === this.plugin.getIndexSourceRevision() && policy === this.semanticPolicyRevision
-        && settings === computeIndexSettingsSignature(this.plugin.settings) };
-  }
-
-  /**
-   * Retain a fully hydrated unchanged graph only after exact source, current raw-input and payload
-   * proof. The caller captures backlog coverage after real source closure; later work stays pending.
-   * This method never builds, publishes a graph revision, replays vocabulary or schedules a save.
-   */
-  async retainValidatedStartupSnapshot(captureCoverage: () => number = /** Direct consumers have no coordinator backlog revision. */ () => 0): Promise<number | null> {
-    if (this.isOnDemandMode() || this.diagnosticsClosed || this.persistentCachePurged || !this.fullSnapshotHydrated
-      || this.pendingUrlAliasUpgrade || this.hasPendingSnapshotHydration()) return null;
-    const retained = this.retainedSnapshotSourceProof;
-    if (retained?.publication === this.publicationRevision && retained.proof.isCurrent()) {
-      const coverage = captureCoverage();
-      return await this.indexedDb.sources.snapshotSelectionSequence(retained.proof.isCurrent) === retained.proof.source.sequence
-        && retained.proof.isCurrent() && retained.publication === this.publicationRevision ? coverage : null;
-    }
-    const candidate = this.snapshotReceiptCandidate;
-    if (!candidate || candidate.publication !== this.publicationRevision || candidate.run !== this.snapshotHydrationRun) return null;
-    if (!(await this.sourceAcquisition.flush())) return null;
-    const coverage = captureCoverage();
-    const proof = await candidate.validation.finish();
-    if (!proof || !proof.isCurrent() || this.snapshotReceiptCandidate !== candidate || candidate.publication !== this.publicationRevision
-      || candidate.run !== this.snapshotHydrationRun || proof.source.sequence !== candidate.receipt.source.sequence
-      || proof.source.markdownOwners !== candidate.receipt.source.markdownOwners
-      || !sameSnapshotReceiptDigest(proof.source.heads, candidate.receipt.source.heads)
-      || !sameSnapshotReceiptDigest(proof.source.inputs, candidate.receipt.source.inputs)) return null;
-    const active = await this.indexedDb.readSnapshotMeta();
-    const activeReceipt = active ? await this.indexedDb.readSnapshotSourceReceipt(active, proof.isCurrent) : null;
-    // Receipt decoding can await native hashing after source proof completed. A different database
-    // connection may replace a head without changing this host's epoch; make the durable sequence
-    // selection the final await before the synchronous promotion, as on the retained-proof route.
-    const sourceSequence = activeReceipt?.binding === candidate.receipt.binding
-      ? await this.indexedDb.sources.snapshotSelectionSequence(proof.isCurrent) : null;
-    if (sourceSequence !== proof.source.sequence || !proof.isCurrent() || active?.generation !== candidate.meta.generation
-      || activeReceipt?.binding !== candidate.receipt.binding
-      || candidate.meta.settingsSignature !== computeIndexSettingsSignature(this.plugin.settings)
-      || candidate.meta.vaultSignature !== this.restoredVaultSignature
-      || candidate.publication !== this.publicationRevision || this.snapshotReceiptCandidate !== candidate) return null;
-    // One synchronous authority promotion covers the exact validated graph; data and view identity stay intact.
-    this.fullSemanticSettings = graphCompilerSettingsFromLegacy(this.plugin.settings);
-    this.fullSemanticPolicyRevision = this.semanticPolicyRevision;
-    this.fullSemanticMaintenanceRevision = this.sourceAcquisition.getMaintenanceRevision();
-    this.fullSemanticSourceRevision = this.plugin.getIndexSourceRevision();
-    this.fullSnapshotFresh = true; this.sourceBackedStartup = false; this.sourceBackedSemantics = false;
-    this.onDemandPartialState = false; this.cachedSnapshotPages = new WeakSet();
-    this.navigableSnapshotSourceRevision = this.plugin.getIndexSourceRevision();
-    this.semanticScopes.clear(); this.releasedSemanticScopePaths.clear(); this.hostPreviewScopes.clear();
-    this.retiredSnapshotPaths.clear();
-    this.localHandoverCompletions += this.retainedLocalScopes.size;
-    this.retainedLocalScopes.clear(); this.onDemandHostScopes.clear(); this.onDemandCachedScopes.clear();
-    this.relationViewCache = new WeakMap();
-    this.sourceAcquisition.resetNodeImpacts();
-    // Keep this one bounded observer for a genuinely later unscoped host wave. Quiet polls never
-    // start a pass; a new graph/policy publication retires the registration below.
-    this.retainedSnapshotSourceProof = { publication: this.publicationRevision, proof };
-    this.compiledSnapshotSourceProof = this.retainedSnapshotSourceProof;
-    this.recordIndexDiagnostic("restore", "snapshot-source-receipt-retained");
-    this.emitPresentation();
-    this.plugin.notifyStartupProgress?.();
-    return proof.isCurrent() && candidate.publication === this.publicationRevision ? coverage : null;
   }
 
   /** Keep a complete physically-current cached graph as explicitly cached presentation during resolver startup. */
@@ -2727,12 +2501,6 @@ export class GraphIndex {
 
   /** Advance the evidence revision only for repository semantic/workflow notifications. */
   private emit(): void {
-    if (this.compiledSnapshotSourceProof && this.compiledSnapshotSourceProof.publication !== this.publicationRevision) this.compiledSnapshotSourceProof = null;
-    if (this.retainedSnapshotSourceProof && this.retainedSnapshotSourceProof.publication !== this.publicationRevision) this.retainedSnapshotSourceProof = null;
-    if (this.snapshotReceiptCandidate && this.snapshotReceiptCandidate.publication !== this.publicationRevision) {
-      this.snapshotReceiptCandidate.validation.dispose(); this.snapshotReceiptCandidate = null;
-      this.retainedSnapshotSourceProof = null;
-    }
     this.semanticRevision += 1;
     for (const listener of this.listeners) listener();
   }
@@ -3231,8 +2999,6 @@ export class GraphIndex {
 
   /** Invalidate in-flight semantic work and advance the demanded policy without scheduling a rebuild. */
   invalidateSemanticPolicy(): void {
-    this.snapshotReceiptCandidate?.validation.dispose(); this.snapshotReceiptCandidate = null;
-    this.retainedSnapshotSourceProof = null; this.compiledSnapshotSourceProof = null;
     this.semanticPolicyRevision += 1;
     this.onDemandIndexed.clear();
     this.onDemandHostScopes.clear(); this.retainedLocalScopes.clear();
@@ -4009,8 +3775,6 @@ export class GraphIndex {
    * Published snapshots remain untouched; late cancelled continuations cannot republish their data.
    */
   destroy(): void {
-    this.snapshotReceiptCandidate?.validation.dispose(); this.snapshotReceiptCandidate = null;
-    this.compiledSnapshotSourceProof = null; this.retainedSnapshotSourceProof = null;
     this.snapshotRestoreRequest++;
     this.cancelSnapshotRestoreWait?.();
     this.cancelUrlRestore?.();
@@ -4309,10 +4073,7 @@ export class GraphIndex {
     foregroundProof?: ReadonlyMap<string, string>,
   ): Promise<{ restored: boolean; fresh: boolean; createdAt: number | null; interruptedBeforePages?: boolean }> {
     const releaseWork = retainRestoreWork?.(INDEX_WORK_PRIORITY.background) ?? this.workScheduler.begin(INDEX_WORK_PRIORITY.background);
-    let sourceValidation: SnapshotSourceValidationHandle | null = null;
-    let retainedValidation = false;
     try {
-      this.snapshotReceiptCandidate?.validation.dispose(); this.snapshotReceiptCandidate = null;
       if (this.isSnapshotHydrationRunning(run)) this.snapshotHydrationDiagnostics.attempts++;
       let expectedPublicationRevision = this.publicationRevision;
       let publicationSuperseded = false;
@@ -4330,15 +4091,6 @@ export class GraphIndex {
       /** Private records cannot escape their owning run or overwrite an intervening publication. */
       const isRecordCurrent = (operation: SnapshotReadOperation = "guard") => run === this.snapshotHydrationRun && parentRecordCurrent(operation)
         && currentPublication(operation);
-      const receipt = meta.sourceReceipt === undefined ? null : await this.indexedDb.readSnapshotSourceReceipt(meta, isCurrent);
-      if (!isCurrent()) return { restored: false, fresh: false, createdAt: meta.createdAt };
-      /** Authenticate streamed payloads in the existing hydration pass, outside native transactions. */
-      const proofCheckpoint = async (): Promise<void> => {
-        this.touchSnapshotHydrationProgress(run);
-        await this.workScheduler.checkpoint(INDEX_WORK_PRIORITY.background);
-      };
-      const pageHash = receipt ? new SnapshotReceiptHasher("snapshot-pages", /** Reuse the storage digest capability. */ text => this.indexedDb.sources.observationDigest(text), isCurrent, proofCheckpoint) : null;
-      const evidenceHash = receipt ? new SnapshotReceiptHasher("snapshot-evidence", /** Preserve exact declaration order/multiplicity. */ text => this.indexedDb.sources.observationDigest(text), isCurrent, proofCheckpoint) : null;
       /** Native progress listeners can reenter settings/lifecycle code at each existing 256-record notification. */
       const recordProgress = (kind: "pages" | "relations" | "evidence"): boolean => {
         if (!isRecordCurrent()) return false;
@@ -4379,16 +4131,9 @@ export class GraphIndex {
         pageFailure = reason;
         this.recordSnapshotHydrationFailure(run, reason, "chunk", expectedPublicationRevision);
         if (isCurrent()) this.recordIndexDiagnostic("restore", `${meta.key}-pages-${reason}`);
-      }, isRecordCurrent, pageHash ? /** Hash each decoded chunk before any of its private rows are consumed. */ async values => {
-        for (const value of values) if (!(await pageHash.add(value))) return false;
-        return true;
-      } : undefined);
+      }, isRecordCurrent);
       if (!pagesOk || !isCurrent() || !physicalCurrent()) return { restored: false, fresh: false, createdAt: meta.createdAt,
         interruptedBeforePages: !pagesOk && pageFailure === "cancelled" && publicationSuperseded && next.pages.size === 0 };
-      if (receipt && pageHash && !sameSnapshotReceiptDigest(await pageHash.finish(), receipt.pages)) {
-        this.recordIndexDiagnostic("restore", "snapshot-source-receipt-pages-invalid");
-        return { restored: false, fresh: false, createdAt: meta.createdAt };
-      }
       // A new candidate may replace earlier foreground commits only when their exact semantic
       // signatures match the saved generation. Missing/changed proof falls back without publishing
       // even a page-only replacement. This does not grant source or write authority.
@@ -4508,10 +4253,6 @@ export class GraphIndex {
           this.hostPreviewScopes.clear();
         }
         expectedPublicationRevision = this.publicationRevision;
-        if (receipt && meta.vaultSignature === inventory.signature && modifiedMarkdownPaths.size === 0 && !structuralMismatch && missingFileBindings.size === 0
-          && meta.settingsSignature === computeIndexSettingsSignature(this.plugin.settings) && !this.isOnDemandMode()) {
-          sourceValidation = this.observeSnapshotSourceValidation(restoredFingerprints);
-        }
         onNavigable?.();
       }
 
@@ -4523,15 +4264,8 @@ export class GraphIndex {
       }, isCurrent, /** Attribute only a current-generation evidence failure. */ (reason) => {
         this.recordSnapshotHydrationFailure(run, reason, "chunk", expectedPublicationRevision);
         if (isCurrent()) this.recordIndexDiagnostic("restore", `${meta.key}-evidence-${reason}`);
-      }, isRecordCurrent, evidenceHash ? /** Hash actual evidence before private hydration; no second storage pass. */ async values => {
-        for (const value of values) if (!(await evidenceHash.add(value))) return false;
-        return true;
-      } : undefined);
+      }, isRecordCurrent);
       if (!evidenceOk || !isCurrent()) return { restored: false, fresh: false, createdAt: meta.createdAt };
-      if (receipt && evidenceHash && !sameSnapshotReceiptDigest(await evidenceHash.finish(), receipt.evidence)) {
-        this.recordIndexDiagnostic("restore", "snapshot-source-receipt-evidence-invalid");
-        return { restored: false, fresh: false, createdAt: meta.createdAt };
-      }
       this.plugin.startupDiagnostics?.mark("evidence-hydration-end");
       next.discoveredFields = new Map(meta.discoveredFields);
 
@@ -4558,10 +4292,7 @@ export class GraphIndex {
         for (const path of removedPaths) restoredFingerprints.delete(path);
       }
       if (!physicalCurrent()) return { restored: false, fresh: false, createdAt: meta.createdAt };
-      // A recognized receipt requires current raw-input proof even without a host event. Physical
-      // equality alone could otherwise finish startup before a same-stat source repair is adopted.
-      // The existing stale-snapshot backlog owns either unchanged retention or conservative rebuild.
-      const currentSemantics = semanticCurrent() && sourceValidation === null;
+      const currentSemantics = semanticCurrent();
       if (!currentSemantics) this.retainCachedStartupPresentation(next);
       const authoritativeFresh = currentSemantics && fresh && !structuralMismatch && missingFileBindings.size === 0;
       // The earlier page-only publication contains the same immutable page records. Evidence hydration does
@@ -4620,11 +4351,6 @@ export class GraphIndex {
       this.restoredStructuralMismatch = false;
       this.restoredPatchPlanAvailable = currentSemantics && !isCheckpoint && !this.restoredStructuralMismatch;
       this.restoredVaultSignature = inventory.signature;
-      if (sourceValidation && receipt && !isCheckpoint) {
-        this.snapshotReceiptCandidate = { meta: { generation: meta.generation, settingsSignature: meta.settingsSignature, vaultSignature: inventory.signature },
-          receipt, validation: sourceValidation, run, publication: this.publicationRevision };
-        retainedValidation = true;
-      }
       this.resumableCheckpointPaths = isCheckpoint ? new Set(meta.completedMarkdownPaths?.filter((path) =>
         inventory.filesByPath.has(path) && !modifiedMarkdownPaths.has(path))) : null;
       this.recordIndexDiagnostic("restore", !currentSemantics ? "startup-host-wave-cached-presentation" : isCheckpoint ? "checkpoint-restored" :
@@ -4645,7 +4371,7 @@ export class GraphIndex {
 
       return { restored: true, fresh: authoritativeFresh, createdAt: meta.createdAt };
 
-} finally { if (!retainedValidation) sourceValidation?.dispose(); releaseWork(); }
+} finally { releaseWork(); }
   }
 
   /**
@@ -5688,8 +5414,6 @@ export class GraphIndex {
       const snapshotCreatedAt = Date.now();
       const completedPaths = completedMarkdownPaths ? [...completedMarkdownPaths] : null;
       const completedMarkdownFiles = completedPaths?.length;
-      const compiledSource = !checkpoint && this.compiledSnapshotSourceProof?.publication === this.publicationRevision
-        ? this.compiledSnapshotSourceProof : null;
       let failureReason: SnapshotWriteFailureReason | null = null;
       const persisted = await this.indexedDb.writeSnapshot({
         createdAt: snapshotCreatedAt,
@@ -5699,12 +5423,7 @@ export class GraphIndex {
         discoveredFields: [...this.state.discoveredFields.entries()],
         ...(completedPaths ? { completedMarkdownPaths: completedPaths } : {}),
       }, pages, evidence, () => run === this.snapshotPersistGeneration && isCurrent(), checkpoint ? "checkpoint" : "active",
-      (reason) => { failureReason = reason; }, compiledSource?.proof.isCurrent() ? {
-        source: compiledSource.proof.source,
-        /** A real later graph/source/policy publication drops the optional field, never renews it. */
-        isCurrent: () => this.compiledSnapshotSourceProof === compiledSource && compiledSource.publication === this.publicationRevision
-          && run === this.snapshotPersistGeneration && compiledSource.proof.isCurrent(),
-      } : undefined);
+      (reason) => { failureReason = reason; });
 
       if (!persisted || run !== this.snapshotPersistGeneration) {
         this.recordIndexDiagnostic("persist", run !== this.snapshotPersistGeneration || failureReason === "cancelled" ?
@@ -6006,14 +5725,9 @@ export class GraphIndex {
   }
 
   /** Build a complete graph privately, then atomically publish it with its captured source epoch.
-   * Later host events retain provisional read cover until the coordinator drains their patch backlog.
-   * Automatic startup may request optional receipt preparation through the existing P4 source owner;
-   * such callers must not retain a higher-priority lease while joining source closure. Forced and
-   * ordinary callers keep their established behavior unless this narrow option is supplied. */
-  async rebuild(options: Readonly<{ validateSnapshotSources?: boolean }> = {}): Promise<boolean> {
+   * Later host events retain provisional read cover until the coordinator drains their patch backlog. */
+  async rebuild(): Promise<boolean> {
     const releaseWork = this.workScheduler.begin(INDEX_WORK_PRIORITY.background);
-    let sourceValidation: SnapshotSourceValidationHandle | null = null;
-    let ownsBuild = false;
     try {
       if (this.building) {
         // Main.ts coalesces dirty events and will request one follow-up rebuild after this one.
@@ -6023,30 +5737,12 @@ export class GraphIndex {
         return false;
       }
       this.building = true;
-      ownsBuild = true;
       this.semanticPreparationDiagnostics = { ...this.semanticPreparationDiagnostics,
         fullBuilds: this.semanticPreparationDiagnostics.fullBuilds + 1 };
       const run = ++this.generation;
       const semanticPolicy = computeIndexSettingsSignature(this.plugin.settings);
-      let sourceRevision = this.plugin.getIndexSourceRevision();
+      const sourceRevision = this.plugin.getIndexSourceRevision();
       const current = (): boolean => run === this.generation && !this.diagnosticsClosed;
-      let sourceProof: SnapshotSourceProof | null = null;
-      if (options.validateSnapshotSources && !this.isOnDemandMode()) {
-        // This compilation is already necessary. Join actual closure before pausing its owner;
-        // only missing first-creation coverage requests one additional real validation pass.
-        this.snapshotReceiptCandidate?.validation.dispose(); this.snapshotReceiptCandidate = null;
-        try {
-          sourceValidation = this.observeSnapshotSourceValidation();
-          if (await this.sourceAcquisition.flush()) sourceProof = await sourceValidation.finish();
-          if (current() && !sourceProof && !sourceValidation.started() && this.sourceAcquisition.hasSemanticDependencies()) {
-            this.sourceAcquisition.requestSnapshotSourceValidation();
-            if (await this.sourceAcquisition.flush()) sourceProof = await sourceValidation.finish();
-          }
-        } catch { sourceProof = null; /* Optional proof cannot block the ordinary full compiler. */ }
-        if (!current()) return false;
-        if (!sourceProof) { sourceValidation?.dispose(); sourceValidation = null; }
-        sourceRevision = this.plugin.getIndexSourceRevision();
-      }
       const resumeInventory = this.sourceAcquisition.pauseInventory();
       try {
         const nextFingerprints = new Map<string, string>();
@@ -6061,21 +5757,10 @@ export class GraphIndex {
           nextFingerprints,
           this.sourceAcquisition,
           () => this.workScheduler.checkpoint(INDEX_WORK_PRIORITY.background),
-          sourceProof?.environment,
         );
         const next = await builder.build({ acquireSources: false });
         if (!next || !current()) {
           return false;
-        }
-        let compiledProof: SnapshotSourceProof | null = null;
-        if (sourceProof && sourceValidation && sourceProof.isCurrent()) {
-          try {
-            const matches = await sourceValidation.matchesCompiledInputs(nextFingerprints);
-            const selection = matches ? await this.snapshotInputsBySource(nextFingerprints,
-              /** Bind canonical input ordering and resulting graph to the exact pre-compile selection. */ () => current() && sourceProof.isCurrent(), true) : null;
-            if (selection && sourceProof.isCurrent() && selection.sequence === sourceProof.source.sequence
-              && sameSnapshotReceiptDigest(selection.heads, sourceProof.source.heads)) compiledProof = { ...sourceProof, source: selection };
-          } catch { /* Persist the ordinary graph without an optional proof when uncertain. */ }
         }
 
         const prepared = await this.preparePresentationPublication(next, current, undefined, false, false, true);
@@ -6088,8 +5773,6 @@ export class GraphIndex {
         this.state = next;
         this.synchronizePublishedUrlFacets();
         this.publicationRevision += 1;
-        this.compiledSnapshotSourceProof = compiledProof ? { publication: this.publicationRevision, proof: compiledProof } : null;
-        this.retainedSnapshotSourceProof = null;
         this.snapshotPublicationCause = "full-build";
         this.fullSemanticSettings = graphCompilerSettingsFromLegacy(this.plugin.settings);
         this.sourceBackedSemantics = false;
@@ -6128,7 +5811,7 @@ export class GraphIndex {
         this.rebuildQueued = false;
       }
 
-} finally { sourceValidation?.dispose(); if (ownsBuild) { this.building = false; this.rebuildQueued = false; } releaseWork(); }
+} finally { releaseWork(); }
   }
 
   /**
