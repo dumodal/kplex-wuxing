@@ -20,7 +20,7 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 # PR #158 — Obsidian-native styling, semantic colors and Idea Compass sectors
 
-Prepared by **Zsolt's Codex Agent**, 2026-10-15. **State: prepared implementation assignment, from research/review to the development agent. No runtime feature is implemented or accepted by this documentation update.** This is the current consolidated assignment, not an additional session report.
+Prepared by **Zsolt's Codex Agent**, 2026-10-15. **State: maintainer-authorized implementation in progress on this branch. Main integration `689399d` is pushed. Checkpoint A native paint/preview validation passes all 1,902 tests, full build/lint, exact native smoke, six foreground scenarios and six Default/Minimal/Things main/popout sampling cases; checkpoint A is ready to commit/push. B–E remain pending.** This is the current consolidated assignment, not an additional session report.
 
 ## 1. Assignment, baseline and priorities
 
@@ -28,7 +28,7 @@ Continue [draft PR #158](https://github.com/zsviczian/kplex/pull/158) on `2026-1
 
 - Original accepted base / current merge base: `df5335808aacfd6a11ac7ff4ef008f9406f27893`.
 - Draft head reviewed: `345f47a9c83ab134e23726e5dff0d57d10bb0cfb`; its changes are documentation only. Runtime-source links below refer to this actual revision.
-- Main reviewed: `b29833c6d2e79c173cc658b8e00e9aceef413e27`. At review, main has 32 commits beyond the merge base; the draft has three documentation commits. Main includes #168's new-drawing relationship fix and additional modal CSS, as well as the indexing/test advances. Preserve these changes when integrating.
+- Main integrated for implementation: `867ef55a280c730a6b0374338433fea3ab06b9de` at `689399d`. Historical preparation reviewed `b29833c6d2e79c173cc658b8e00e9aceef413e27`. At review, main has 32 commits beyond the merge base; the draft has three documentation commits. Main includes #168's new-drawing relationship fix and additional modal CSS, as well as the indexing/test advances. Preserve these changes when integrating.
 - Before implementation, integrate current main through the maintainer's normal workflow and record the resulting base/head. Main removed the old completed root handoff: resolve the modify/delete conflict by retaining this active assignment, not restoring the old scanner-validation return. This preparation does not merge/rebase anything.
 - Related PRs #154 (reciprocal ontology/link-style lookup), #147 (settings/input persistence), #149 (label sharpness), and #165 (indexing work/progress) are open at review. Recheck status and ownership before implementation; do not assume they merged or duplicate their changes.
 - The reviewed manifest requires **Obsidian 1.13.0** and supports mobile. Validate against actual installed dependencies/types and the minimum supported host, not just a newer desktop browser.
