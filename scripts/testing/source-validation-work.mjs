@@ -18,7 +18,7 @@ const ref=process.argv.find(/** Select an immutable committed source baseline. *
 const sizes=(process.argv.find(/** Keep scale explicit and bounded. */ arg=>arg.startsWith('--sizes='))?.split('=')[1]??'32,64,128').split(',').map(Number);
 if(ref&&!/^[a-f0-9]{7,40}$/.test(ref))throw Error('Use an immutable commit hash');
 if(!sizes.length||sizes.length>8||sizes.some(/** Refuse accidental huge fixture setup. */ size=>!Number.isSafeInteger(size)||size<2||size>4096))throw Error('Use 2–4096 owners per fixture');
-const paths=['src/adapters/obsidian/sourceAcquisition.ts','src/index/SourceRepository.ts'];
+const paths=['src/adapters/obsidian/sourceAcquisition.ts','src/index/SourceRepository.ts','src/adapters/obsidian/startupDiagnostics.ts'];
 if(ref)for(const path of paths){const r=spawnNativeSync('git',['show',`${ref}:${path}`],{cwd:root,encoding:'utf8',timeout:10000});if(r.error||r.status!==0)throw Error('Baseline unavailable');overrides[path]=r.stdout;}
 const source=Object.fromEntries(paths.map(/** Pin exactly the sources supplied to the browser bundle. */ path=>[path,createHash('sha256').update(overrides[path]??readFileSync(join(root,path))).digest('hex')]));
 const browser=await chromiumHarness(await contributorBrowserBundle(['src/adapters/obsidian/startupDiagnostics.ts'],overrides)),results=[];
@@ -59,6 +59,7 @@ try{
   })()`);
   assert.equal(result.ready,true);assert.equal(result.reads,0);assert.equal(result.parses,0);
   assert.equal(result.resources.activeTransactions,0);assert.equal(result.resources.pending,0);
+  if(result.diagnostics.sessionWork)assert.deepEqual(result.diagnostics.sessionWork,{sourceInventoryPasses:1,fullBuildStarts:0,nodeCatalogStarts:0,completeSnapshotSaves:0,checkpointSaves:0});
   results.push(result);
  }
  const browserVersion=await browser.command('Browser.getVersion');

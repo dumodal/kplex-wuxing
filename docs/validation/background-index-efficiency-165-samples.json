@@ -116,5 +116,149 @@
       }
     ]
   },
-  "status": "Measurement checkpoint; no candidate/resource improvement claimed. Native matched scale and low-instrumentation comparisons pending."
+  "nativeDiagnosticBaseline": {
+    "runtimeRef": "8df393a44272e4d6a5d2b403447ef0f3c81ae527",
+    "testMainSha256": "55cc3055c8da2bea67205e69c5da764c6205760db0f093cfc498dd3b38179a56",
+    "driverSha256": "b83d1f8d9846730ba42d63c45d5488b8c78633c8a83b31978831a8a2aa23590e",
+    "evidenceEntry": "kplex-165-large-restarts/baseline-profile-help-1.json",
+    "reportSha256": "13f2991f696523f6483cd4238caceb64323be3d6acbf0aad0b8d7ac427c60b0e",
+    "status": "passed",
+    "firstReadyMs": 1047093.6999511719,
+    "settledReadyMs": 1049299.6999511719,
+    "cacheDrainMs": 1051499.6999511719,
+    "quietMs": 610709,
+    "quietViolations": 0,
+    "cpuUserUs": 294578000,
+    "cpuSystemUs": 43328000,
+    "quietCpuUs": 5672000,
+    "transactions": 455929,
+    "actualSourcePasses": 2,
+    "inventoryMethodAdmissions": 3,
+    "actualFullBuilds": 1,
+    "successfulCompleteSaves": 1,
+    "resolutionFamilyVisits": 40176,
+    "pageChunkPutJsonBytes": 279044330,
+    "localDependencyOwnerPuts": 20076,
+    "peakDecodeBytes": 183261,
+    "sampledHeapMaximumBytes": 2148379820,
+    "sampledRssMaximumBytes": 2865561600,
+    "bodyReads": 0,
+    "parses": 0,
+    "repairs": 0,
+    "allObservedForeground": true,
+    "limitations": "Detailed diagnostic, not matched performance result; CPU begins at observer installation. No initial graph equivalence checksum or controlled retained heap. Stored input identities and explicit CPU process-PID verification added for subsequent trials."
+  },
+  "status": "Duplicate-resolution proof reduction measured; native matched resource comparisons and graph-retention acceptance remain pending.",
+  "proofReduction": {
+    "method": "Three counterbalanced synthetic source-only pairs in real Chromium/IndexedDB; AB BA AB. Work counts are deterministic; elapsed is not native CPU/startup/battery evidence.",
+    "tools": {
+      "driverSha256": "ab79309e656573474cbd7a1aff7408c399ce574be5d50553d5d6104cca068f03",
+      "probeSha256": "72f5851d3f39f4ba44fe1c1ae0e9f1568c5828a8d0a0cf6ce4f5f8adb36f8e16",
+      "node": "v22.22.2",
+      "browser": {
+        "product": "Chrome/155.0.8059.79",
+        "jsVersion": "15.5.35.23"
+      }
+    },
+    "source": {
+      "baseline": {
+        "src/adapters/obsidian/sourceAcquisition.ts": "ae74132f407c10815d26b1d9c23ed4df0bb5a83eecfb19bdeff8c8e8220c7a8b",
+        "src/index/SourceRepository.ts": "39190bdcef7720d38afd7b4a32c718945164f94d4492adc9c3630c71ac64ae2b",
+        "src/adapters/obsidian/startupDiagnostics.ts": "2d448138de3f169eb57238b3f6d4059aeecd3fccd038d59e60945164b49abbab"
+      },
+      "candidate": {
+        "src/adapters/obsidian/sourceAcquisition.ts": "9d3c31ac6c997b2eec1e91db4bd50e2e4854d6e6148f04a586f3ce814ee015c3",
+        "src/index/SourceRepository.ts": "39190bdcef7720d38afd7b4a32c718945164f94d4492adc9c3630c71ac64ae2b",
+        "src/adapters/obsidian/startupDiagnostics.ts": "c56e74719f68905d40f73044c51da220409007c10fa6aef22c15daeb0974cb6b"
+      }
+    },
+    "trials": [
+      {
+        "trial": 1,
+        "kind": "baseline",
+        "evidenceEntry": "kplex-165-proof-work-1-baseline.json",
+        "sha256": "91e7adcd477e3d6f6716f6bb44a38b47f8709db4e03da8591fa1bd90bfee8e88"
+      },
+      {
+        "trial": 2,
+        "kind": "candidate",
+        "evidenceEntry": "kplex-165-proof-work-2-candidate.json",
+        "sha256": "65219a3dc16724723f28cfb824c30d66c22460ffbdd6741de663ddf744e71507"
+      },
+      {
+        "trial": 3,
+        "kind": "candidate",
+        "evidenceEntry": "kplex-165-proof-work-3-candidate.json",
+        "sha256": "86a21f25ba2493756aa0799007c349d028fa0f7026bdf9cfdd4c58cf3440f4e3"
+      },
+      {
+        "trial": 4,
+        "kind": "baseline",
+        "evidenceEntry": "kplex-165-proof-work-4-baseline.json",
+        "sha256": "48fd19e253517e93a16a047bce023d9129348086d98120f16adb688f7843a3a2"
+      },
+      {
+        "trial": 5,
+        "kind": "baseline",
+        "evidenceEntry": "kplex-165-proof-work-5-baseline.json",
+        "sha256": "afdc5836d34d9664535700a8c59aa07c6bcc4bd050bec267e9e12d30f1690185"
+      },
+      {
+        "trial": 6,
+        "kind": "candidate",
+        "evidenceEntry": "kplex-165-proof-work-6-candidate.json",
+        "sha256": "994e403e3dd6361167d5f796f03b7f607267ed1228601c37d80a530b46d849bd"
+      }
+    ],
+    "columns": [
+      "trial",
+      "owners",
+      "resolvedWave",
+      "transactions",
+      "resolutionFamilyVisits",
+      "digestCalls",
+      "elapsedMs",
+      "peakDecodeBytes",
+      "bodyReads",
+      "parses"
+    ],
+    "rows": [
+      [1,32,false,233,0,128,58.8,1655,0,0],
+      [1,32,true,682,64,704,193.9,5197,0,0],
+      [1,64,false,457,0,256,111.2,1655,0,0],
+      [1,64,true,1354,128,1408,379.6,5197,0,0],
+      [1,128,false,905,0,512,224.4,1665,0,0],
+      [1,128,true,2698,256,2816,814.8,5277,0,0],
+      [2,32,false,233,0,128,61.3,1655,0,0],
+      [2,32,true,650,32,608,204,5197,0,0],
+      [2,64,false,457,0,256,115.6,1655,0,0],
+      [2,64,true,1290,64,1216,350,5197,0,0],
+      [2,128,false,905,0,512,228.1,1665,0,0],
+      [2,128,true,2570,128,2432,734.3,5277,0,0],
+      [3,32,false,233,0,128,57.1,1655,0,0],
+      [3,32,true,650,32,608,197.9,5197,0,0],
+      [3,64,false,457,0,256,123.9,1655,0,0],
+      [3,64,true,1290,64,1216,349.2,5197,0,0],
+      [3,128,false,905,0,512,222.5,1665,0,0],
+      [3,128,true,2570,128,2432,723.7,5277,0,0],
+      [4,32,false,233,0,128,62.9,1655,0,0],
+      [4,32,true,682,64,704,207.5,5197,0,0],
+      [4,64,false,457,0,256,112.4,1655,0,0],
+      [4,64,true,1354,128,1408,379,5197,0,0],
+      [4,128,false,905,0,512,229.4,1665,0,0],
+      [4,128,true,2698,256,2816,830.3,5277,0,0],
+      [5,32,false,233,0,128,59.6,1655,0,0],
+      [5,32,true,682,64,704,215,5197,0,0],
+      [5,64,false,457,0,256,111.9,1655,0,0],
+      [5,64,true,1354,128,1408,381.8,5197,0,0],
+      [5,128,false,905,0,512,223.3,1665,0,0],
+      [5,128,true,2698,256,2816,817.3,5277,0,0],
+      [6,32,false,233,0,128,61.4,1655,0,0],
+      [6,32,true,650,32,608,188.8,5197,0,0],
+      [6,64,false,457,0,256,111.9,1655,0,0],
+      [6,64,true,1290,64,1216,352.5,5197,0,0],
+      [6,128,false,905,0,512,231.6,1665,0,0],
+      [6,128,true,2570,128,2432,724.5,5277,0,0]
+    ]
+  }
 }

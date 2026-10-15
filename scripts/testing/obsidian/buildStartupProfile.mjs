@@ -28,7 +28,8 @@ const install=`${begin.replace('=== true','=== true || '+(mode==='detailed'))}
     window.kplexStartupResources?.stop();
     window.kplexStartupResources = createStartupResourceProbe({
       phase: /** Low-instrumentation runs avoid per-request diagnostic projection; detailed runs reuse existing phases. */ () => { if(${mode!=='detailed'})return 'all';const s=this.startupDiagnostics.progress('source'),h=this.startupDiagnostics.progress('hydration'); return s&&s.phase!=='complete'?'source-'+s.phase:'hydration-'+(h?.phase??'initialization'); },
-      now: /** Retain the existing renderer clock. */ () => performance.now(), cpu: /** Read native process CPU, not await duration. */ () => require('process').cpuUsage(), detailed: ${mode==='detailed'},
+      now: /** Retain the existing renderer clock. */ () => performance.now(), cpu: /** Read native process CPU, not await duration. */ () => require('process').cpuUsage(),
+      cpuProcess: {pid: require('process').pid, type: require('process').type}, detailed: ${mode==='detailed'},
       databaseName: 'k-plex-index-v1-'+[...new TextEncoder().encode(this.app.vault.getName())].map(/** Match the existing cache name without exposing it in reports. */ n=>n.toString(16).padStart(2,'0')).join('').slice(0,96),
     });
     const startupResourceProbe=window.kplexStartupResources;

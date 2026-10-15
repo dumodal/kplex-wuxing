@@ -4,9 +4,11 @@
  * and never substitutes native requests, promises, results or authority. Detailed byte accounting
  * uses JSON payload estimates, not physical disk/WAL bytes; measure its overhead separately.
  */
-export function createStartupResourceProbe({ phase, now, cpu, databaseName, detailed = true }) {
+export function createStartupResourceProbe({ phase, now, cpu, cpuProcess, databaseName, detailed = true }) {
   const originals = [], buckets = new Map(), limit = 256;
   const started = now(), initialCpu = cpu?.();
+  const cpuIdentity = cpuProcess && Number.isSafeInteger(cpuProcess.pid) && cpuProcess.pid > 0
+    ? { pid: cpuProcess.pid, type: ['browser', 'renderer'].includes(cpuProcess.type) ? cpuProcess.type : 'unknown' } : null;
   let running = true, pending = 0, peakPending = 0, decodeCurrent = 0, decodePeak = 0;
   let heapMaximum = 0, rssMaximum = 0, activeTransactions = 0, peakTransactions = 0;
   const broad = { inventoryRuns: 0, fullBuildCalls: 0, nodeCatalogCalls: 0, snapshotWrites: 0, checkpointWrites: 0 };
@@ -121,6 +123,7 @@ export function createStartupResourceProbe({ phase, now, cpu, databaseName, deta
       const currentCpu = cpu?.();
       return { elapsedMs: now() - started, detailed, running, pending, peakPending, activeTransactions, peakTransactions,
         decodeCurrent, decodePeak, heapMaximum, rssMaximum, broad: {...broad},
+        cpuProcess: cpuIdentity ? { ...cpuIdentity } : null,
         cpuMicroseconds: currentCpu && initialCpu ? { user: currentCpu.user - initialCpu.user, system: currentCpu.system - initialCpu.system } : null,
         semantics: 'Native process CPU includes host/other activity. JSON bytes estimate request payloads, not engine disk/WAL bytes. Family records count deliveries, including repeated validation. Detailed observers add unisolated overhead.',
         groups: Object.fromEntries([...buckets].map(/** Copy only bounded scalar counters. */ ([key, value]) => [key, { ...value }])) };

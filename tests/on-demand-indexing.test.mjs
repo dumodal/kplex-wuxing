@@ -28,7 +28,7 @@ const initialize = `(() => {
       hierarchy:{hidden:['Hidden'],parents:['Parent'],children:['Child'],leftFriends:['Friend'],rightFriends:['Right'],previous:['Previous'],next:['Next']},
       inferAllLinksAsFriends:false,inverseInfer:false,showFullTagName:true,tagStyleList:[],indexingMode:'on-demand',urlIndexingMode:'on-demand',lastActivePath:'A.md',pinnedNodes:[],...overrides};
     let revision=0;const marks=[];
-    const index=new sourceModules.GraphIndex({app:f.app,settings,getIndexSourceRevision:()=>revision,startupDiagnostics:{mark:key=>marks.push(key),count:()=>{},phase:()=>{}}},f.app);
+    const index=new sourceModules.GraphIndex({app:f.app,settings,getIndexSourceRevision:()=>revision,startupDiagnostics:{mark:key=>marks.push(key),count:()=>{},phase:()=>{},recordWork:/** Local-mode fixture discards aggregate work receipts. */()=>{}}},f.app);
     index.scheduleOrphanCleanup=()=>{};
     const parse=index.metadataParser.parse.bind(index.metadataParser);
     const parses=[];index.metadataParser.parse=async(...args)=>{parses.push(args[0]);return parse(...args);};
@@ -1149,7 +1149,7 @@ test('partial source-backed Eager certifies only native folder top and bottom co
     ok(await index.rebuild(),'Real complete old-policy graph prepared');
     index.cancelPendingPersistence();ok(await index.persistIndexedDbSnapshot(index.snapshotPersistGeneration),'Real optional graph persisted');
     const settings={...o.settings,hierarchy:{...o.settings.hierarchy,rightFriends:['NewPolicy']},lastActivePath:'folder:Parent'};
-    index.destroy();index=new sourceModules.GraphIndex({app:f.app,settings,getIndexSourceRevision:()=>0,startupDiagnostics:{mark:()=>{},count:()=>{},phase:()=>{},processed:()=>{}}},f.app);
+    index.destroy();index=new sourceModules.GraphIndex({app:f.app,settings,getIndexSourceRevision:()=>0,startupDiagnostics:{mark:()=>{},count:()=>{},phase:()=>{},processed:()=>{},recordWork:/** Restart fixture retains the passive diagnostics interface. */()=>{}}},f.app);
     index.scheduleOrphanCleanup=()=>{};
     const hold=new Promise(r=>unblock=r);let entered;const reached=new Promise(r=>entered=r),checkpoint=index.sourceAcquisition.backgroundCheckpoint;
     index.sourceAcquisition.backgroundCheckpoint=async()=>{entered();await hold;await checkpoint?.();};

@@ -331,7 +331,7 @@ test('hydration guards retain policy/lifetime/physical fences while removing per
         assert.equal(await browser.evaluate(`(async()=>{
           const f=await hydrationWorkFixture('guards-progress-${phase}',1024,128),index=f.index;let changed=false,visible,revision,notificationPhase;
           // The phase owner receives the new phase before the index's passive diagnostic mirror.
-          f.plugin.startupDiagnostics={phase:(_,phase)=>notificationPhase=phase,count(){},processed(){},mark(){}};
+          f.plugin.startupDiagnostics={phase:(_,phase)=>notificationPhase=phase,count(){},processed(){},mark(){},/** Preserve the passive work-counter contract during reentry. */recordWork(){}};
           f.plugin.notifyStartupProgress=()=>{
             const d=index.getSnapshotHydrationDiagnostics();
             if(!changed && notificationPhase==='${phase}' && ('${phase}'==='promote' || d['${phase}']>=256)){

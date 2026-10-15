@@ -13,6 +13,55 @@ import { createWaitTimingProbe } from "../scripts/testing/obsidian/waitTiming.mj
 import { npmInvocation, obsidianCliExecutable, spawnNativeSync } from "../scripts/testing/obsidian/processTools.mjs";
 import { browserExecutable } from "./support/browserExecutable.mjs";
 import { createRequire } from "node:module";
+import { createHash } from "node:crypto";
+import { startupCacheIdentity } from "../scripts/testing/obsidian/startupCacheIdentity.mjs";
+
+test("startup cache identities distinguish payload changes, source ABA and interrupted selections", /** Test receipt semantics; native IDB behavior is exercised by disposable-vault identity trials. */ async () => {
+  const state = { sequence: 3, meta: { key: "active", schema: 3, generation: "first", createdAt: 1,
+    vaultSignature: "physical", settingsSignature: "policy", discoveredFields: [] },
+    pages: [{ path: "private-test-owner.md", relations: [{ targetPath: "other.md" }] }],
+    evidence: [{ sourcePath: "private-test-owner.md", targetPath: "other.md", direction: "positive" }],
+    heads: [{ sourceId: "private-test-owner.md", sourceRevision: "selected-one", sequence: 3 }], invalid: 0 };
+  const cache = {
+    /** Deliver readonly transaction completion after its original request success. */
+    async open() { return { transaction() {
+      const tx = new EventTarget();tx.objectStore = /** Model only this observation's native sequence request. */ () => ({ get() {
+        const request = new EventTarget();
+        queueMicrotask(/** Complete one scalar transaction without retaining source payloads. */ () => {
+          request.result = { key: "source-sequence", value: state.sequence };
+          request.dispatchEvent(new Event("success"));tx.dispatchEvent(new Event("complete"));
+        });return request;
+      } });return tx;
+    } }; },
+    /** Return independent pointer metadata, like the real cache boundary. */
+    async readSnapshotMeta() { return structuredClone(state.meta); },
+    /** Forward ordered graph records without materializing a second graph. */
+    async iterateSnapshotPages(_meta, visit) { for (const row of state.pages) visit(row);return true; },
+    /** Preserve negative evidence and duplicate declaration contributions. */
+    async iterateSnapshotEvidence(_meta, visit) { for (const row of state.evidence) visit(row);return true; },
+    sources: { /** Finish one selected-head page followed by its real end marker. */
+      async headPage(after) { return { available: true, heads: after === null ? state.heads : [], invalid: state.invalid,
+        next: after === null ? "end" : null }; } },
+  };
+  const first = await startupCacheIdentity(cache, createHash);
+  assert(!JSON.stringify(first).includes("private-test-owner.md"));
+  state.meta.generation = "second";state.meta.createdAt = 2;
+  const second = await startupCacheIdentity(cache, createHash);
+  assert.deepEqual(second.graph, first.graph, "Activation metadata cannot manufacture a graph difference");
+  assert.notDeepEqual(second.activation, first.activation);
+  state.evidence.push({ ...state.evidence[0], direction: "negative" });
+  const changed = await startupCacheIdentity(cache, createHash);
+  assert.notEqual(changed.graph.evidence.sha256, first.graph.evidence.sha256);
+  assert.equal(changed.graph.evidence.records, 2, "Multiplicity is retained");
+  state.heads[0].sourceRevision = "different-incarnation";
+  assert.notEqual((await startupCacheIdentity(cache, createHash)).sources.heads.sha256, first.sources.heads.sha256,
+    "A reused sequence cannot conceal a different source incarnation");
+  const pages = cache.iterateSnapshotPages;
+  cache.iterateSnapshotPages = /** Simulate a real writer crossing an asynchronous cache read. */ async (...args) => { state.sequence++;return pages(...args); };
+  await assert.rejects(startupCacheIdentity(cache, createHash), /Input selection changed/);
+  cache.iterateSnapshotPages = pages;state.invalid = 1;
+  await assert.rejects(startupCacheIdentity(cache, createHash), /Unreadable source/);
+});
 
 test("Windows large eval preserves literal code and retires its temporary script on success/failure", () => {
   const code = 'JSON.stringify({quoted:"literal \\\"quotes\\\"",path:"C:\\\\fixture",lines:"a\\nb"})' + " ".repeat(40_000);

@@ -36,7 +36,7 @@ async function scenario(code, origin = 'http://127.0.0.1:9') {
       const local=f.add('Picture.png');
       f.app.vault.getResourcePath=()=> 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGNwONAARAwQCgApDgYBWgscUQAAAABJRU5ErkJggg==';
       const settings={...(${centerGateSettings.toString()})(),hierarchy:{hidden:[],parents:[],children:[],leftFriends:[],rightFriends:[],previous:[],next:[],exclusions:[]},inferAllLinksAsFriends:false,inverseInfer:false,tagStyleList:[],thumbnailProperty:'thumbnail',nodeImageProperty:'node-image',attachmentImageDisplay:'thumbnail-label',indexingMode:'on-demand'};
-      const plugin=new ImageSaveOwner();Object.assign(plugin,{settings,getIndexSourceRevision:()=>0,app:f.app,startupDiagnostics:{mark(){},count(){},phase(){}}});
+      const plugin=new ImageSaveOwner();Object.assign(plugin,{settings,getIndexSourceRevision:()=>0,app:f.app,startupDiagnostics:{mark(){},count(){},phase(){},/** Image fixture discards aggregate work receipts. */recordWork(){}}});
       const index=new M.GraphIndex(plugin,f.app);plugin.index=index;plugin.savedSettingsPolicy=M.captureSettingsPolicy(settings);
       let persists=0,semanticRefreshes=0;plugin.persistSettingsSnapshot=async()=>{persists++};index.refreshSemanticSettings=async()=>{semanticRefreshes++};
       window.o={M,f,index,settings,plugin,local,origin:${JSON.stringify(origin)},counts:()=>({persists,semanticRefreshes,reads:f.reads.length,parses:f.parses.length}),close(){index.destroy();f.close()}};

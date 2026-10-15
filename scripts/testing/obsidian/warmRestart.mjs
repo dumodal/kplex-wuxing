@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { Script } from 'node:vm';
 import { obsidianCliExecutable, spawnNativeSync } from './processTools.mjs';
 import { validateTarget } from './runner.mjs';
+import { startupCacheIdentity } from './startupCacheIdentity.mjs';
 
 const root=resolve(fileURLToPath(new URL('../../..',import.meta.url))),vault=process.env.KPLEX_TEST_VAULT_NAME;
 if(!['kplex-test','kplex-test-small'].includes(vault)) throw Error('Only the two explicitly authorized disposable vaults are accepted');
@@ -46,7 +47,8 @@ const sampleCode=String.raw`(/** Read existing aggregate diagnostics without acq
  window.kplexStartupResources?.sample(memory);
  if(${action==='run'}&&!window.kplexRestartHeartbeat){const b=window.kplexRestartHeartbeat={last:performance.now(),maxGapMs:0,samples:0};
   b.timer=window.setInterval(/** Observe inclusive renderer-task gaps after the first CLI observation. */ ()=>{const now=performance.now();b.maxGapMs=Math.max(b.maxGapMs,now-b.last);b.last=now;b.samples++;},50);}
- const base={at:Date.now(),timeOrigin:performance.timeOrigin,now:performance.now(),layoutReady:app.workspace.layoutReady,host:{node:process.versions.node,electron:process.versions.electron,chrome:process.versions.chrome},
+ const base={at:Date.now(),timeOrigin:performance.timeOrigin,now:performance.now(),layoutReady:app.workspace.layoutReady,host:{node:process.versions.node,electron:process.versions.electron,chrome:process.versions.chrome,
+  cpuPid:require('process').pid,rendererPid:w.webContents.getOSProcessId(),processType:require('process').type},
   heapUsedBytes:memory.heapUsed,resources:window.kplexStartupResources?.snapshot()??null,heartbeat:window.kplexRestartHeartbeat?{samples:window.kplexRestartHeartbeat.samples,maxGapMs:window.kplexRestartHeartbeat.maxGapMs}:null,
   foreground:{hidden:document.hidden,documentFocused:document.hasFocus(),windowFocused:w.isFocused(),throttling:w.webContents.getBackgroundThrottling()},loaded:!!i};
  if(!i)return JSON.stringify(base);
@@ -171,11 +173,16 @@ try{
     if(!report.final.graph.full)throw Error('Preparation did not produce a complete graph');
   }else if(action==='wait'){
     report.final=await settled();
+  }else if(action==='identity'){
+    report.final=await drained(await settled());
+    startTask(`return (${startupCacheIdentity.toString()})(app.plugins.plugins['k-plex'].index.indexedDb,require('node:crypto').createHash)`);
+    report.cacheIdentity=await taskDone();
   }else if(action==='save'){
     startTask("const p=app.plugins.plugins['k-plex'],i=p.index;if(!p.getIndexStatus().upToDate||i.sourceAcquisition.inventory||!i.isFullSnapshotHydrated()||i.sourceBackedSemantics)throw Error('Current complete compiled graph required');i.cancelPendingPersistence();const saved=await i.persistIndexedDbSnapshot(i.snapshotPersistGeneration);if(!saved)throw Error('Complete save rejected');return {saved}");
     report.preparation=await taskDone();report.final=sample();
   }else if(action==='run'){
     const before=sample();
+    if(before.host.cpuPid!==before.host.rendererPid)throw Error('CPU process is not the selected renderer');
     if(quietMs&&quietMs<2*Math.max(300000,before.mode.updateIntervalMs??0)+10000)throw Error('The prespecified quiet window does not cover two configured maintenance periods');
     const capable=evaluate("JSON.stringify({reload:!!app.commands.commands['app:reload']})");
     if(!capable.reload)throw Error('Host app:reload command unavailable');
@@ -186,6 +193,9 @@ try{
     report.final=await settled(before.timeOrigin);
     report.readyFromNavigationMs=report.final.at-report.final.timeOrigin;
     if(quietMs){report.readySample=report.final;report.final=await quiescent(await drained(report.final));}
+    report.cpuProcessIdentityVerified=report.final.resources
+      ? report.final.resources.cpuProcess?.pid===report.final.host.rendererPid&&report.final.resources.cpuProcess?.type==='renderer' : null;
+    if(report.final.resources&&!report.cpuProcessIdentityVerified)throw Error('Profile CPU process is not the selected renderer');
     recordReloadOutcome(before.timeOrigin);
   }else if(action==='restore-config'){
     startTask("await app.plugins.disablePlugin('k-plex');return {disabled:!app.plugins.plugins['k-plex']}");await taskDone();

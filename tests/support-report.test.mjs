@@ -35,6 +35,23 @@ function inputFixture() {
     session: { eventsCaptureStatus: "active", events: [{ code: "plugin-start", atMs: 0 }, { code: "index-phase-change", atMs: 350, phase: "indexing" }], droppedEvents: 0, retainedBytes: 109 } };
 }
 
+test("session work counts survive disabled detailed timings without exporting arbitrary fields", /** Only finite nonnegative counts enter the public report. */ () => {
+  const input = inputFixture();
+  input.startup.sessionWork = { sourceInventoryPasses: 2, fullBuildStarts: 1, nodeCatalogStarts: 0,
+    completeSnapshotSaves: 1, checkpointSaves: 0, owner: "private-owner-receipt.md" };
+  const report = payload(createSupportReport(input));
+  assert.equal(report.startup.detailedTelemetry, "disabled");
+  assert.deepEqual(report.startup.sessionWork, { sourceInventoryPasses: 2, fullBuildStarts: 1, nodeCatalogStarts: 0,
+    completeSnapshotSaves: 1, checkpointSaves: 0 });
+  assert(!createSupportReport(input).includes("private-owner-receipt.md"));
+  input.startup.sessionWork.fullBuildStarts = -1;input.startup.sessionWork.completeSnapshotSaves = Infinity;
+  assert.equal(payload(createSupportReport(input)).startup.sessionWork.fullBuildStarts, null);
+  assert.equal(payload(createSupportReport(input)).startup.sessionWork.completeSnapshotSaves, null);
+  delete input.startup.sessionWork;
+  assert.equal(payload(createSupportReport(input)).startup.sessionWork.sourceInventoryPasses, null,
+    "Older/missing evidence is unknown, never a fabricated zero");
+});
+
 test('snapshot attempt attribution survives only through finite allowlisted scalar fields', /** Hostile diagnostic extras and enum values never become shareable vault data. */ () => {
   const input=inputFixture(),h=input.indexReport.hydration;
   Object.assign(h,{attempts:2,route:'full-snapshot',firstFailure:{reason:'publication-superseded',phase:'pages',operation:'checkpoint',
