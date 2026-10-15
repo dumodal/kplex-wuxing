@@ -85,8 +85,28 @@ and its scoped patch reproduce that fully validated tree. Both fixtures were res
 on-demand settings/enablement with uninstrumented main4813b60d and no owned controllers/probes.
 Workspace-byte restoration is not proven. Final small-driver functional reload passes; awake released.
 
-Main advanced to `b29833c` (merged #168) after measurement/while verification ran. This archive and
-resource conclusions describe the exact tested #163 baseline/correction, not a newly benchmarked
-combined tree. Upstream integration is pending clarification: automatic approval review rejected the
-proposed main-into-draft-branch update under the maintainer's explicit no-merge instruction. No PR
-merge or release was attempted; the PR remains draft and combined-tree validation is not claimed.
+Main advanced to `b29833c` (merged #168) after measurement/while verification ran. The maintainer
+explicitly approved integrating it into the draft branch; `9af675e` records that clean integration.
+The immutable archive and resource conclusions remain bound to the frozen #163 baseline/correction.
+Combined-tree functional verification is separate; it is not a new performance comparison.
+No PR merge into main or release is authorized or performed.
+
+## Approved integration supplement
+
+`kplex-165-integrated-closeout-evidence.zip` remains local under `%TEMP%`, unpublished:
+3,537,489 bytes, 30 files / 31 ZIP entries.
+SHA-256: `d370d964ee86fcfdcf6b0c4f0e9ba24bb0586d54b55e88a291f83db70432d0f1`.
+All entries pass CRC, size and per-file SHA-256 verification; the complete original archive above is
+byte-identical. The supplement preserves full13 logs/report, all six repeated exact-build foreground
+cases, fixture restoration/cleanup and awake release, CI failure/retry records, integrated source tar,
+source-scope proof and exact uninstrumented artifacts. Its README gives reproduction commands and
+links the original fixture/evidence instructions. No new benchmark, note/cache payload, configuration
+backup or handoff is included. No archive was published; all raw originals remain.
+
+Combined-tree verification uses pushed `9af675e`; only final documentation/measurement summaries
+change afterward. Counts: architecture7/core128/general838/UI63/portable334/browser525; zero failures/skips/captured native JS errors.
+The PR-specific runtime patch matches `d0d16fb` after ignoring upstream line shifts/blob hashes.
+Both fixtures have original configuration/enablement bytes and all three combined-build artifacts;
+main `4cb08ded50af580470c6049b3e10a88d9f0d356399368442379e0515fa8f2711`, styles `9d244b30cab5cbda418e7a3e51d2ddd38a59808bd0f72f713dc4b28595155082`,
+manifest `19d9ecce5557733e0ff0f2e27155e635c30158c3cfa6fbca0f11c16e4dedfd2c`. Workspace-byte restoration remains unproven.
+CI failure logs identify browser-startup failure before assertions; no test or deadline was weakened.

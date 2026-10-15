@@ -14,12 +14,12 @@ outcome independently of timings. Keep this PR draft for maintainer review; do n
   work and local readiness keep their established precedence. Five fixed-size aggregate counters
   distinguish inventory/build/catalog starts from successfully activated saves through unload.
 
-The correction is independently reviewable at `d0d16fb`; active production source is identical to that
-checkpoint. M is merged main `8df393a` (#163); A contains the correction plus progress/reporting.
-Native measurements do not isolate reporting's CPU cost from the duplicate-read correction.
-Main later advanced to `b29833c` (#168); it is not integrated into this tested head. The final source/
-resource evidence remains bound to the stated #163 baseline and correction. Combined-tree validation
-is a separate pending acceptance step; no new performance comparison is claimed.
+The correction is independently reviewable at `d0d16fb`. M is merged main `8df393a` (#163);
+measured A contains the correction plus progress/reporting. Native measurements do not isolate
+reporting's CPU cost from the duplicate-read correction. With explicit maintainer approval,
+`9af675e` subsequently integrates main `b29833c` (#168) into this draft branch. The PR-specific
+runtime changes remain limited to the same six files; upstream drawing behavior is preserved.
+Measurements remain bound to the frozen #163 M/A builds, not the later combined tree.
 
 ## Resource results
 
@@ -151,16 +151,21 @@ and one extra complete save (CPU 10.750s,9,197 transactions). No further B trial
 
 ## Validation, evidence and follow-up
 
-Final post-cleanup verification passes on **Node 22.22.2**: architecture7/core128/general829/UI63/
-portable334/browser524, official lint, installed types, real production build and exact-artifact
-Windows native smoke, with **zero failures/skips/captured JavaScript errors**. Main SHA-256:
-`4813b60d280cf3dc7cb2ab1eaeea6769df6218b73183357e32f4bef00a5805e0`; manifest/styles unchanged.
-All six earlier foreground scenarios use that same shipping hash and pass with inventory held,
-zero broad flush calls, controller removal and configuration-byte restoration. The cleaned standalone
-restart driver also passes a final small-vault functional reload; this is not another benchmark.
-Both test vaults end loaded with the exact uninstrumented PR artifacts, original on-demand settings
-and enablement bytes restored, expected 20,088/88 Markdown files and no owned controllers/probes.
-Workspace byte restoration is **not** proven. The reversible awake lease is released.
+Final combined-tree verification passes on **Node 22.22.2** at `9af675e` (approved integration of
+main `b29833c`): architecture7/core128/general838/UI63/portable334/browser525, official lint, installed types,
+real production build and exact-artifact Windows native smoke, **zero failures/skips/captured JS errors**.
+Main SHA-256: `4cb08ded50af580470c6049b3e10a88d9f0d356399368442379e0515fa8f2711`.
+Six repeated exact-combined-build foreground scenarios pass with inventory held, zero broad flushes,
+controller removal and configuration-byte restoration. The cleaned restart driver also passes a
+small-vault functional reload; none of these is a new benchmark. Both authorized vaults end loaded
+with all three verified uninstrumented artifacts, original on-demand settings and enablement bytes,
+expected 20,088/88 Markdown files and no owned controllers/probes. Workspace-byte restoration is
+**not** proven. The reversible awake lease is released.
+
+Integrated-head CI attempt1 failed in Chromium startup before the existing hotkey-search assertions;
+its log and the previous cleanup-head failure/retry are preserved separately. Local combined-tree
+checks pass without changing assertions/deadlines. Current GitHub CI remains a separate acceptance
+requirement; a prior-head success is not substituted for a final-head pass.
 
 [Compact measurements](background-index-efficiency-165-samples.json) retain all arm results,
 raw-report checksums, source/artifact/probe identities and limitations. [Evidence and reproduction
