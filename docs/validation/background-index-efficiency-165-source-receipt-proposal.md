@@ -1,7 +1,8 @@
 # Proposed snapshot/source validation receipt for #165
 
-Status: maintainer approved this scope on 2026-10-15; implementation is a separate checkpoint
-from duplicate-read reduction. No persistent-format change has been implemented yet.
+Status: maintainer approved this scope on 2026-10-15. The separate implementation checkpoint is
+has passed full correctness/native validation; resource acceptance is pending and it is not accepted for merge. Duplicate-read checkpoint
+`d0d16fb` is already committed and pushed. The prototype adds no database version/store change.
 
 The merged baseline stores complete graph generations and authenticated source heads separately.
 A complete graph's saved semantic fingerprints are not a certificate for all current resolver and
@@ -49,4 +50,6 @@ Bounded current-content verification, integrated with the existing source/compil
 is under evaluation. Its native reads, parsing during first creation, hashing, transient memory
 and subsequent unchanged-validation cost must all be counted. If that cost prevents a real total-work
 improvement, do not ship the receipt merely because it avoids a compiler invocation. No dependency
-on an undocumented host hash or persistent-format implementation has been introduced.
+on an undocumented host hash has been introduced. The prototype reads/parses actual bounded notes
+through the existing source owner and records that cost. Version-one format and rejection rules are
+documented in the living report; resource acceptance remains pending.

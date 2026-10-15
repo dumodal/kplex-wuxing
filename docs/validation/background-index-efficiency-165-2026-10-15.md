@@ -88,8 +88,85 @@ The existing graph fingerprint is not a complete certificate relating a saved gr
 generation and resolver/Date environment. Zero activated heads or matching mtimes cannot replace
 that proof. The [optional source-receipt proposal](background-index-efficiency-165-source-receipt-proposal.md)
 was approved by the maintainer as a separately measurable/revertible checkpoint under the PR's
-persistent-format boundary; no format change has been implemented yet. Legacy/uncertain coverage
-keeps conservative fallback. The PR stays draft and unmerged for review of safety and resource results.
+persistent-format boundary. Its separate implementation is under validation; native resource
+acceptance is pending. Legacy/uncertain coverage keeps conservative fallback. The PR stays draft
+and unmerged for review of safety and resource results.
+
+The optional version-one `active.sourceReceipt` field uses the existing schema-3 graph metadata
+and database version10; no store/version migration or purge occurs. It binds the exact generation,
+page/evidence record commitments and counts, source sequence and ordered exact-head commitment,
+canonical version3 input fingerprints in durable source-head key order, Markdown count, and selection/policy metadata. SHA-256
+commitments use fixed32Ki-character frames and the existing streaming serializer/digest capability;
+neither a whole encoded graph nor another per-note proof map is retained. A semantic contract
+change requires a receipt-version change; missing, malformed or unknown versions keep legacy reads.
+
+| Receipt field | Version-one meaning |
+| --- | --- |
+| `version`, `fingerprintVersion`, `generation` | Receipt protocol 1, canonical fingerprint protocol 3, exact active graph generation. |
+| `source.sequence`, `source.heads`, `source.inputs`, `source.markdownOwners` | Selected global revision, ordered exact-head digest/count, canonical input digest/count, and Markdown coverage. |
+| `pages`, `evidence` | Ordered persisted-record digest/count, including declaration multiplicity. |
+| `binding` | Commitment to those fields plus active key/schema/generation/time, vault/settings signatures, URL version, discovered fields and chunk counts. |
+
+Each stream digest contains `sha256` and `records`; malformed counts or a mismatched input/owner
+count refuse the optional capability. These are local equality/integrity checks, not an adversarial
+security certificate. Receipt absence never forces migration or rewriting by itself. Normal saves
+replace generations; old readers ignore the optional field, and old writers naturally omit it.
+Cancellation preserves the previously active generation. Purge/unload and source, policy, graph or
+host-lifetime invalidation retire proof; unsupported uncertainty keeps existing validation.
+
+Receipt creation accompanies only an already necessary canonical full compilation and legitimate
+complete save. Missing first-creation stream coverage can require one additional real source pass;
+that cost must be reported, not hidden in setup. The source owner first closes actual validation.
+Its sequence and exact catalog must remain unchanged around compilation; the compiler's existing
+private fingerprint map must match the authenticated stream in that pass's captured order. Final
+input commitments follow durable head keys, independently of compiler/inventory traversal. No new
+per-owner proof map, graph traversal order or compiler hook is introduced. Actual Date/Daily Notes returns are
+latched, so observed A→B→A drift refuses proof. The metadata activation transaction rechecks the
+source sequence. Checkpoints and uncertain/cancelled work never receive a receipt; an optional-proof
+failure still permits the normal legacy-readable graph save.
+
+On reuse, payload integrity is checked in the existing hydration streams. The existing inventory
+authenticates current resolution and reads/parses actual notes through `Vault.read`, comparing
+their canonical inputs with the saved graph. This catches offline same-stat semantic edits without
+trusting a cached host hash. A mismatch repairs that real source owner and rejects older coverage.
+**Those extra native reads/parses are real work and must be included in the resource comparison.**
+Eligibility currently requires every Markdown file's reported bytes ×2 to fit the existing256KiB
+source-chunk target, and actual decoded text must also fit that bound. A larger/uncertain note
+declines the optional path before a fresh-content scan; the ordinary pipeline remains available.
+The large high-node fixture's largest note is37,623bytes, so this is not large-prose acceptance.
+Text/hash ceilings are not a bound on total parser DTOs, worker copies or the whole UI graph;
+dense single-note and physical-mobile memory acceptance remain separate.
+
+A matching current proof promotes the complete graph without replacing its identity, a compiler,
+global catalog replay or save. The coordinator clears only covered backlog; later changes remain.
+Both existing initial-source adoption and subsequent rebuild coordination attempt this proof.
+Even a quiet-host graph with matching physical statistics remains cached presentation until current
+receipt validation completes. This prevents early legacy freshness from bypassing same-stat repair.
+One bounded observer can revalidate a later genuine unscoped wave; quiet polling starts no new
+pass. A graph/policy publication, purge or unload retires it. Unsupported finite differences keep
+existing patch/fallback paths. Per-file publications currently retire eligibility: refreshing a
+receipt across independently patched generations is deferred, not implied by matching mtimes.
+An ordinary saved edit can therefore lose eligibility until the next legitimate full compilation;
+no broad build is scheduled solely to regenerate the receipt.
+
+The actual Windows plugin-disabled same-stat regression passes with unchanged mtime/size/ctime:
+the source body is repaired, the old receipt grants no authority, and an actual requested scope
+produces the new canonical note type. The ordinary source-backed fallback can retain cached global
+fingerprints; it need not compile the whole graph solely to update a diagnostic map. The owned note
+is removed and the plugin stays loaded. This is not a full-process offline or resource benchmark.
+Earlier failures remain preserved: the initial helper checked green status prematurely; a stricter
+run exposed quiet-host authority routing; another asserted global fingerprints during legitimate
+source-backed fallback; a later fixture save raced queued native metadata work. A red real-IDB
+quiet-host authority regression and both real coordinator routes now cover the correction. The
+helper waits for queued and active reconciliation and verifies current canonical scoped semantics.
+
+The real unchanged application-reload check then exposed native Markdown enumeration order as
+another false negative: source heads and all per-owner fingerprints were identical while the
+aggregate order differed. Two red real-IDB tests reproduce restart and compiler-order variation.
+Canonical source-head ordering fixes both without reordering inventory/compiler work. The corrected
+native reload retains full authority with one real source pass and zero builds/catalogs/saves.
+The corrected same-stat fallback and native foreground pause/edit/navigation/relationship checks
+also pass. These functional checks do not yet establish a resource improvement.
 
 After hydration, an unfinished startup source pass now retains its actual existing note progress.
 Its existing source callback also refreshes subscribed status listeners through the existing 250ms
@@ -111,12 +188,32 @@ well as the 30-second source poll. No deadline, pacing, concurrency or throttlin
 An unexplained inventory, full build, node-catalog replay or complete save during that window
 fails acceptance. Ordinary bounded maintenance is counted and must drain by completion.
 
+The receipt comparison is prespecified as three counterbalanced pairs **B–A / A–B / B–A**:
+control A is committed duplicate-read checkpoint `d0d16fb`; B is the separately committed receipt
+implementation. Before any primary trial, add merged runtime M (`8df393a`) in the balanced triplets
+**B–A–M / A–M–B / M–B–A**. Each arm occupies each position once; the original B/A pair order stays
+unchanged. Nine counts-only trials distinguish whole-PR effects from the receipt's incremental cost.
+Graph payload/policy and exact source-head identities are checked outside timing.
+Only the optional capability and generation activation metadata may differ. Legitimate receipt
+preparation is separate; no cache authority or metadata is stamped by the driver. Small-vault work
+must also be reported: fresh-content verification can add cost where legacy startup already avoids
+compilation. Failed controls and unfavorable outcomes remain in the complete evidence.
+
 `buildStartupProfile.mjs` builds test-only variants in memory from exact committed sources;
 shipping source and `dist` remain unchanged. Profiles refuse any vault other than `kplex-test`
 and `kplex-test-small`. The resource observer forwards original receivers, native requests and
 promises, restores its own methods and is retired on unload/driver cleanup. Bounded aggregate
 groups retain no owner paths or payloads. Counts mode disables detailed startup timing and skips
 family/digest/byte observers; matched low-instrumentation comparisons remain required.
+
+`prepare-legacy` and `prepare-receipt` separately observe explicit test-only canonical compilation
+and saving, with detailed transaction/request/payload attribution. These preparation costs are not
+included in primary warm timings and are reported separately. The driver also samples native CPU
+totals before reload and after observation; it subtracts only when the selected OS renderer PID is
+unchanged, otherwise reporting that whole-navigation interval as unknown. The profile's own CPU
+interval remains separately identified. A controlled `memory` action verifies the selected native
+renderer and collects twice outside primary timing; it exports numeric live-heap/process fields and
+detaches its owned debugger. Main-realm heap is not every worker isolate or plugin-exclusive memory.
 
 Native CPU uses [`process.cpuUsage()`](https://nodejs.org/api/process.html#processcpuusagepreviousvalue)
 user/system deltas in microseconds for the selected renderer process. This includes host and
@@ -160,6 +257,16 @@ The installed candidate reports one actual inventory pass and zero builds/catalo
 small-vault plugin load. Temporary profile/controller names are absent from production source and main.
 
 ## Evidence and acceptance
+
+Receipt correctness checkpoint: full Node22.22.2 verification passes architecture7/core128/
+general830/UI63/portable336/browser553, lint, installed types, production build and exact-build
+Windows native smoke, no failures/skips/JS errors. Main SHA-256:
+`893cbe8642153ee602c53c4629900f2ad895d0d2da9964310f8478a3f3d2d519`;
+manifest/styles are unchanged. All29 registered receipt cases pass; a subsequently added actual
+legacy-cache/compiler-input mismatch negative passes focused (30 receipt cases covered). The
+strict native candidate assertion also passes: actual retained receipt, complete current graph,
+one source pass and no build/catalog/save. Preparation and selected-renderer retained-memory
+helpers pass native scope/lifetime checks. Matched CPU/storage/memory/total-work benefit is pending.
 
 Raw successful/failed/setup receipts, exact profile artifacts and source identities are preserved
 outside the PR tree pending final evidence packaging. Reusable benchmark/profile drivers live in

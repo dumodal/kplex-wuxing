@@ -22,8 +22,12 @@
  * while foreground point reads never borrow the lower-priority maintenance checkpoint. URL-page
  * progress is reported only after acquisition; the GraphIndex caller owns its bounded wait and
  * may retire unabortable storage work without allowing a late consumer publication.
+ * Optional source receipts commit exact streamed graph records and generation/policy metadata.
+ * They share the existing activation transaction and source-sequence check, without a database
+ * upgrade or cache purge. Unknown/missing optional data retains legacy snapshot readability.
  */
 import { yieldToHostTask } from "../adapters/obsidian/yieldToHostTask";
+import { SnapshotReceiptHasher, snapshotSourceReceipt, type SnapshotSourceReceipt, type SnapshotSourceValidation } from "./SnapshotReceiptHasher";
 import { sanitizeChangedSettingKeys, type SettingDiagnosticKey } from "../core/graph/settingsPolicy";
 import { Platform } from "obsidian";
 import { NeutralSourceRepository, SOURCE_HEAD_STORE, SOURCE_CHUNK_STORE, SOURCE_POSTING_STORE,
@@ -67,6 +71,8 @@ export type IndexedDbSnapshotMeta = {
   evidenceChunkCount?: number;
   /** A checkpoint contains the full structural baseline but only these completed Markdown sources. */
   completedMarkdownPaths?: string[];
+  /** Optional disposable validation capability; unknown versions never invalidate legacy readability. */
+  sourceReceipt?: unknown;
 };
 
 /** Local, bounded decision history. Contains counts and reason codes, never vault paths/content. */
@@ -720,6 +726,30 @@ export class KplexIndexedDbCache {
     return meta.schema >= 3 && Number.isInteger(meta.pageChunkCount) && Number.isInteger(meta.evidenceChunkCount);
   }
 
+  /** Bind optional proof to exact selection/policy metadata without retaining its encoded descriptor. */
+  private async snapshotReceiptBinding(meta: IndexedDbSnapshotMeta, receipt: Omit<SnapshotSourceReceipt, "binding">,
+    current: () => boolean): Promise<string | null> {
+    const hash = new SnapshotReceiptHasher("snapshot-binding", /** Reuse source storage's mobile-safe digest. */ text => this.sources.observationDigest(text), current, this.backgroundCheckpoint);
+    if (!(await hash.add({ key: meta.key, schema: meta.schema, generation: meta.generation, createdAt: meta.createdAt,
+      vaultSignature: meta.vaultSignature, settingsSignature: meta.settingsSignature, urlAliasVersion: meta.urlAliasVersion,
+      discoveredFields: meta.discoveredFields, pageChunkCount: meta.pageChunkCount, evidenceChunkCount: meta.evidenceChunkCount,
+      receipt: { version: receipt.version, fingerprintVersion: receipt.fingerprintVersion, generation: receipt.generation,
+        source: { sequence: receipt.source.sequence, heads: receipt.source.heads, inputs: receipt.source.inputs, markdownOwners: receipt.source.markdownOwners },
+        pages: receipt.pages, evidence: receipt.evidence } }))) return null;
+    return (await hash.finish())?.sha256 ?? null;
+  }
+
+  /** Unknown, malformed or changed optional metadata refuses receipt reuse, preserving legacy reads. */
+  async readSnapshotSourceReceipt(meta: IndexedDbSnapshotMeta, current: () => boolean): Promise<SnapshotSourceReceipt | null> {
+    const receipt = snapshotSourceReceipt(meta.sourceReceipt, meta.generation);
+    if (!receipt || meta.key !== "active" || !this.snapshotUsesChunks(meta) || meta.completedMarkdownPaths !== undefined
+      || meta.settingsSignature.length * 2 > 64 * 1024) return null;
+    try {
+      const { binding, ...proof } = receipt;
+      return binding === await this.snapshotReceiptBinding(meta, proof, current) && current() ? receipt : null;
+    } catch { return null; }
+  }
+
   /** Stream pages with full boundary checks; a separate record guard is for private synchronous decoding only. */
   async iterateSnapshotPages(
     meta: IndexedDbSnapshotMeta,
@@ -727,9 +757,10 @@ export class KplexIndexedDbCache {
     isCurrent: (operation?: SnapshotReadOperation) => boolean = () => true,
     onFailure?: (reason: SnapshotReadFailureReason) => void,
     isRecordCurrent: (operation?: SnapshotReadOperation) => boolean = isCurrent,
+    onChunk?: (values: readonly (PersistedPage | PersistedEvidenceDeclaration)[]) => Promise<boolean>,
   ): Promise<boolean> {
     if (meta.schema >= 3 && Number.isInteger(meta.pageChunkCount)) {
-      return this.iterateChunks(meta.generation, "pages", meta.pageChunkCount ?? 0, (value) => onPage(value as PersistedPage), isCurrent, onFailure, isRecordCurrent);
+      return this.iterateChunks(meta.generation, "pages", meta.pageChunkCount ?? 0, (value) => onPage(value as PersistedPage), isCurrent, onFailure, isRecordCurrent, onChunk);
     }
     return this.iteratePages(meta.generation, onPage, isCurrent, onFailure);
   }
@@ -741,9 +772,10 @@ export class KplexIndexedDbCache {
     isCurrent: (operation?: SnapshotReadOperation) => boolean = () => true,
     onFailure?: (reason: SnapshotReadFailureReason) => void,
     isRecordCurrent: (operation?: SnapshotReadOperation) => boolean = isCurrent,
+    onChunk?: (values: readonly (PersistedPage | PersistedEvidenceDeclaration)[]) => Promise<boolean>,
   ): Promise<boolean> {
     if (meta.schema >= 3 && Number.isInteger(meta.evidenceChunkCount)) {
-      return this.iterateChunks(meta.generation, "evidence", meta.evidenceChunkCount ?? 0, (value) => onEvidence(value as PersistedEvidenceDeclaration), isCurrent, onFailure, isRecordCurrent);
+      return this.iterateChunks(meta.generation, "evidence", meta.evidenceChunkCount ?? 0, (value) => onEvidence(value as PersistedEvidenceDeclaration), isCurrent, onFailure, isRecordCurrent, onChunk);
     }
     return this.iterateEvidence(meta.generation, onEvidence, isCurrent, onFailure);
   }
@@ -761,6 +793,7 @@ export class KplexIndexedDbCache {
     isCurrent: (operation?: SnapshotReadOperation) => boolean,
     onFailure?: (reason: SnapshotReadFailureReason) => void,
     isRecordCurrent: (operation?: SnapshotReadOperation) => boolean = isCurrent,
+    onChunk?: (values: readonly (PersistedPage | PersistedEvidenceDeclaration)[]) => Promise<boolean>,
   ): Promise<boolean> {
     const db = await this.open();
     if (!isCurrent("open")) { onFailure?.("cancelled"); return false; }
@@ -790,6 +823,10 @@ export class KplexIndexedDbCache {
           if (chunk.generation !== generation || chunk.kind !== kind || !Array.isArray(chunk.values)) {
             onFailure?.("invalid-chunk");
             return false;
+          }
+          if (onChunk) {
+            if (!(await onChunk(chunk.values))) { onFailure?.("invalid-chunk"); return false; }
+            if (!isCurrent("task")) { onFailure?.("cancelled"); return false; }
           }
           let processed = 0;
           for (const value of chunk.values) {
@@ -864,16 +901,26 @@ export class KplexIndexedDbCache {
    * Cancellation leaves unreachable chunks for later orphan cleanup and preserves prior metadata.
    * The optional failure callback reports a fixed, path-free code for support diagnostics. */
   async writeSnapshot(
-    meta: Omit<IndexedDbSnapshotMeta, "key" | "schema" | "generation" | "pageChunkCount" | "evidenceChunkCount">,
+    meta: Omit<IndexedDbSnapshotMeta, "key" | "schema" | "generation" | "pageChunkCount" | "evidenceChunkCount" | "sourceReceipt">,
     pages: Iterable<PersistedPage>,
     evidence: Iterable<PersistedEvidenceDeclaration>,
     isCurrent: () => boolean = () => true,
     key: "active" | "checkpoint" = "active",
     onFailure?: (reason: SnapshotWriteFailureReason) => void,
+    sourceValidation?: Readonly<{ source: SnapshotSourceValidation; isCurrent(): boolean }>,
   ): Promise<boolean> {
     const db = await this.open();
     if (!db) { onFailure?.("storage-unavailable"); return false; }
     const generation = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    let proof = key === "active" && meta.completedMarkdownPaths === undefined ? sourceValidation : undefined;
+    const pageHash = proof ? new SnapshotReceiptHasher("snapshot-pages", /** Hash through existing storage capabilities. */ text => this.sources.observationDigest(text), isCurrent, this.backgroundCheckpoint) : null;
+    const evidenceHash = proof ? new SnapshotReceiptHasher("snapshot-evidence", /** Preserve order and negative declaration multiplicity. */ text => this.sources.observationDigest(text), isCurrent, this.backgroundCheckpoint) : null;
+    /** Optional proof failure skips the field; it never makes normal snapshot persistence mandatory. */
+    const addProof = async (hash: SnapshotReceiptHasher | null, record: object): Promise<void> => {
+      if (!proof || !hash) return;
+      try { if (!(await hash.add(record))) proof = undefined; }
+      catch { proof = undefined; }
+    };
     const batchSize = Platform.isIosApp ? 120 : Platform.isMobile ? 240 : 700;
     const pageChunkSize = Platform.isIosApp ? 256 : Platform.isMobile ? 384 : 512;
     const evidenceChunkSize = Platform.isIosApp ? 512 : Platform.isMobile ? 768 : 1024;
@@ -930,6 +977,7 @@ export class KplexIndexedDbCache {
         return isCurrent();
       };
       for (const page of pages) {
+        if (proof) await addProof(pageHash, page);
         const estimatedBytes = estimatedPageBytes(page);
         pageBatch.push({ generation, path: page.path, value: page });
         pageBatchBytes += estimatedBytes;
@@ -967,6 +1015,7 @@ export class KplexIndexedDbCache {
         return isCurrent();
       };
       for (const declaration of evidence) {
+        if (proof) await addProof(evidenceHash, declaration);
         const estimatedBytes = estimatedEvidenceBytes(declaration);
         evidenceChunkValues.push(declaration);
         evidenceChunkBytes += estimatedBytes;
@@ -989,7 +1038,25 @@ export class KplexIndexedDbCache {
         evidenceChunkCount,
         ...meta,
       };
+      // Callers cannot carry an old optional receipt into a different activation by spreading metadata.
+      delete active.sourceReceipt;
+      if (proof && pageHash && evidenceHash && proof.isCurrent()) {
+        try {
+          const pages = await pageHash.finish(), evidence = await evidenceHash.finish();
+          if (pages && evidence && isCurrent() && proof.isCurrent()) {
+            const receipt = { version: 1 as const, fingerprintVersion: 3 as const, generation, source: proof.source, pages, evidence };
+            const binding = await this.snapshotReceiptBinding(active, receipt, isCurrent);
+            if (binding && proof.isCurrent()) active.sourceReceipt = { ...receipt, binding };
+          }
+        } catch { /* A legacy-readable graph is preferable to failing an optional receipt. */ }
+      }
+      if (!isCurrent()) return await cancelAndCleanup();
       const tx = this.openTransaction(db, META_STORE, "readwrite");
+      if (active.sourceReceipt && proof) {
+        const sequence = await requestUnknownResult(tx.objectStore(META_STORE).get("source-sequence"));
+        if (!isUnknownRecord(sequence) || sequence.value !== proof.source.sequence || !proof.isCurrent()) delete active.sourceReceipt;
+        if (!isCurrent()) { tx.abort(); return await cancelAndCleanup(); }
+      }
       tx.objectStore(META_STORE).put(active);
       await transactionDone(tx);
       // Once the metadata transaction commits, the generation is activated. A later cancellation

@@ -310,6 +310,7 @@ test("reactive startup backlog cannot rebuild a partial cache preview before hyd
       size: 3, hasPendingStructuralMaintenance: () => false, hasPendingSnapshotHydration: () => hydrating,
       waitForSnapshotHydration: async () => { events.push("wait"); await closed; hydrating = false; return { restored: true, fresh: false }; },
       hasSourceBackedStartup: () => false, isFullSnapshotHydrated: () => !hydrating, hasIncrementalRestorePatch: () => true,
+      retainValidatedStartupSnapshot: /** This legacy coordinator fixture has no optional receipt. */ async () => null,
       reconcileRestoredSnapshot: async () => { assert.equal(hydrating, false); events.push("patch-real-delta"); return { reconciled: true, patched: 1 }; },
       rebuild: () => assert.fail("A valid warm delta must not start from zero"),
     },
@@ -342,6 +343,7 @@ for (const outcome of ["fresh", "stale", "failed", "sources", "sources-pending"]
         isOnDemandMode: () => false,
         size: 0, hasPendingStructuralMaintenance: () => false, hasPendingSnapshotHydration: () => hydrating,
         hasSourceBackedStartup: () => sourceBacked, isFullSnapshotHydrated: () => hydrated,
+        retainValidatedStartupSnapshot: /** Preserve this legacy stale-restore branch's full-build expectation. */ async () => null,
         hasPhysicalBaseline: () => hydrated || sourceBacked, hasRestoredCheckpoint: () => false,
         hasIncrementalRestorePatch: () => false,
         waitForSnapshotHydration: async () => {

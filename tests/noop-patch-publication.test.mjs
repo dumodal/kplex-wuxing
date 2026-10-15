@@ -59,6 +59,7 @@ test('a prose edit still reads, parses, acquires and atomically publishes its ne
   f.host.texts.set(f.file.path, 'Changed prose'); f.file.stat.mtime++;
   let acquired = 0, publications = 0;
   f.builder.sourceAcquisition = { needsBodyRead: /** Force observed content acquisition despite hot input. */ () => true,
+    requiresUncachedBodyRead: /** Ordinary changed-mtime input keeps its established host cache behavior. */ () => false,
     getFileRevision: /** Keep this source current throughout its successful publication. */ () => 1,
     acquire: async /** Observe current neutral-source acquisition before fingerprint admission. */ () => { acquired++; return { current: true }; } };
   const result = await f.builder.patchMarkdownFiles(f.state, [f.file], {
@@ -74,12 +75,31 @@ test('a prose edit still reads, parses, acquires and atomically publishes its ne
   assertRetained(f, before);
 });
 
+test('detected same-stat body repair bypasses cachedRead during a canonical foreground patch', async /** A real host read-cache mismatch keeps its narrow native-read requirement through handover. */ () => {
+  const f = portableNoopFixture(bundle, 256), before = retainedValue(f);
+  f.host.texts.set(f.file.path, 'Changed prose');
+  f.host.app.vault.cachedRead = async /** This stat-keyed host cache must not be used for detected repair. */ () => assert.fail('Stale cachedRead used');
+  let acquired = 0;
+  f.builder.sourceAcquisition = {
+    needsBodyRead: /** The native revision is unchanged but its old body input is known stale. */ () => true,
+    requiresUncachedBodyRead: /** Only this actual mismatch requests an uncached read. */ () => true,
+    getFileRevision: /** Keep the genuine repair's current caller epoch stable. */ () => 1,
+    acquire: async /** Confirm canonical source acquisition still precedes publication. */ () => { acquired++; return { current: true }; },
+  };
+  const result = await f.builder.patchMarkdownFiles(f.state, [f.file], {
+    publishFileCommit: /** Preserve the same synchronous no-op publication boundary. */ (_commit, publish) => publish(),
+  });
+  assert(result.ok); assert.equal(acquired, 1); assert.equal(f.host.reads.length, 1); assert.equal(f.host.parses.length, 1);
+  assertRetained(f, before);
+});
+
 test('retirement, rename, delete and equal-stat replacement during no-op preparation publish nothing', async /** Awaited metadata work remains private. */ () => {
   for (const boundary of ['retire', 'rename', 'delete', 'replace', 'event']) {
     const f = portableNoopFixture(bundle, 256), before = retainedValue(f), hot = f.hot.get(f.file.path);
     const original = f.builder.applyFieldNameSourceFacts;
     let epoch = 1;
     f.builder.sourceAcquisition = { needsBodyRead: /** Isolate post-acquisition metadata fencing. */ () => false,
+      requiresUncachedBodyRead: /** This case has no detected stale host body cache. */ () => false,
       getFileRevision: /** Same-stat host events still retire the captured revision. */ () => epoch,
       acquire: async /** A valid acquisition cannot override later event/identity retirement. */ () => ({ current: true }) };
     f.builder.applyFieldNameSourceFacts = async /** Change captured lifetime only after real field staging. */ function (...args) {

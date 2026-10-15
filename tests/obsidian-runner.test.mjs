@@ -15,6 +15,20 @@ import { browserExecutable } from "./support/browserExecutable.mjs";
 import { createRequire } from "node:module";
 import { createHash } from "node:crypto";
 import { startupCacheIdentity } from "../scripts/testing/obsidian/startupCacheIdentity.mjs";
+import { receiptOfflineEdit } from "../scripts/testing/obsidian/receiptOfflineEdit.mjs";
+import { startupRetainedMemory } from "../scripts/testing/obsidian/startupRetainedMemory.mjs";
+
+test("startup receipt and retained-memory probes reject unapproved targets before native access", /** Keep diagnostic helpers inside their explicit disposable-vault scope. */ async () => {
+  const app={vault:{getName:/** Refuse this synthetic unapproved target. */ ()=>"unapproved"}};
+  await assert.rejects(startupRetainedMemory(app,"unapproved"),/Explicit disposable vault/);
+  let filesystemCalls=0;
+  const native=/** Any filesystem access would violate the rejected-target boundary. */ ()=>({realpathSync(){filesystemCalls++;throw Error("Unexpected filesystem access");}});
+  await assert.rejects(runInNewContext(`(${receiptOfflineEdit.toString()})(app,"C:/unused")`,{app,require:native}),/Exact disposable small vault/);
+  assert.equal(filesystemCalls,0);
+  app.vault.getName=/** A large disposable vault is still ineligible for note-editing probes. */ ()=>"kplex-test";
+  await assert.rejects(runInNewContext(`(${receiptOfflineEdit.toString()})(app,"C:/unused")`,{app,require:native}),/Exact disposable small vault/);
+  assert.equal(filesystemCalls,0);
+});
 
 test("startup cache identities distinguish payload changes, source ABA and interrupted selections", /** Test receipt semantics; native IDB behavior is exercised by disposable-vault identity trials. */ async () => {
   const state = { sequence: 3, meta: { key: "active", schema: 3, generation: "first", createdAt: 1,

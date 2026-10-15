@@ -3,6 +3,8 @@
  * acquisition belongs to the neutral reference collector; this owner never selects image fields.
  * GraphBuilder owns parser/cache acquisition and publication; reads retain per-source revision fences.
  * Live and durable raw body facts share canonical web identities without changing lexical provenance.
+ * Optional snapshot guards observe actual Date/Daily Notes returns, including transient changes;
+ * the adapter still supplies the original values and never grants graph/source publication authority.
  */
 import { TFile, type App } from "obsidian";
 import { canonicalWebUrl, webUrlOrigin } from "./urlIdentity";
@@ -45,6 +47,12 @@ export type ObsidianMetadataSourceSettings = Readonly<{
 export type DailyNotesSourceSettings = Readonly<{
   folder: string;
   format: string;
+}>;
+
+/** Optional receipt guard observes actual canonical host returns; it never substitutes semantic values. */
+export type MetadataEnvironmentReadObserver = Readonly<{
+  date(field: string, value: boolean): void;
+  daily(value: DailyNotesSourceSettings | null): void;
 }>;
 
 export type ObsidianMetadataSourceHost = Readonly<{
@@ -95,8 +103,10 @@ function normalizePath(path: string): string {
 /**
  * Explicit Obsidian-only runtime service used by C12c. Private property-registry/Daily Notes
  * compatibility reads and host Moment stay here; normalized records never retain the App/window.
+ * Optional snapshot observers receive the actual semantic return values so transient drift can
+ * retire their proof; they never replace those values or add a second classification policy.
  */
-export function createObsidianMetadataSourceHost(app: App): ObsidianMetadataSourceHost {
+export function createObsidianMetadataSourceHost(app: App, observer?: MetadataEnvironmentReadObserver): ObsidianMetadataSourceHost {
   return {
     getFileByPath: (path) => app.vault.getFileByPath(path),
     resolveLinkpath: (linkpath, sourcePath) => app.metadataCache.getFirstLinkpathDest(linkpath, sourcePath),
@@ -105,19 +115,23 @@ export function createObsidianMetadataSourceHost(app: App): ObsidianMetadataSour
       const manager = (app as AppWithMetadataTypes).metadataTypeManager;
       const info = manager?.getPropertyInfo?.(fieldName);
       const widget = info?.widget ?? manager?.getAssignedWidget?.(fieldName);
-      return widget === "date";
+      const result = widget === "date";
+      observer?.date(fieldName, result);
+      return result;
     },
     dailyNotesSettings: () => {
       const registry = (app as AppWithInternalPlugins).internalPlugins;
       const candidate = registry?.getPluginById?.("daily-notes") ?? registry?.plugins?.["daily-notes"];
-      if (!candidate || typeof candidate !== "object") return null;
+      if (!candidate || typeof candidate !== "object") { observer?.daily(null); return null; }
       const record = candidate as Record<string, unknown>;
-      if (record.enabled === false) return null;
+      if (record.enabled === false) { observer?.daily(null); return null; }
       const instance = record.instance && typeof record.instance === "object" ? record.instance as Record<string, unknown> : record;
       const options = instance.options && typeof instance.options === "object" ? instance.options as Record<string, unknown> : instance;
       const folder = typeof options.folder === "string" ? options.folder : "";
       const format = typeof options.format === "string" && options.format.trim() ? options.format : "YYYY-MM-DD";
-      return { folder: normalizePath(folder), format };
+      const result = { folder: normalizePath(folder), format };
+      observer?.daily(result);
+      return result;
     },
     formatDailyDate: (isoDate, format) => {
       const obsidianMoment = (window as unknown as { moment: ObsidianMomentFactory }).moment;

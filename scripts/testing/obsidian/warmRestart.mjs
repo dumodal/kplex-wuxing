@@ -2,17 +2,21 @@
  * Disposable-vault startup acceptance: exact main.js staging, genuine complete-graph preparation,
  * vault-window application reloads and aggregate observation. Never accepts a personal vault.
  * Existing CLI process deadlines and renderer throttling remain unchanged. Settings are backed
- * up before preparation and restored explicitly. Production indexing may read disposable notes;
- * the driver never edits notes and cannot target a personal vault.
+ * up before preparation and restored explicitly. The optional same-stat regression owns and
+ * removes one synthetic note in the small vault; no operation can target a personal vault.
  */
 import { createHash } from 'node:crypto';
-import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
+import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Script } from 'node:vm';
+import { arch, cpus, release, totalmem } from 'node:os';
 import { obsidianCliExecutable, spawnNativeSync } from './processTools.mjs';
 import { validateTarget } from './runner.mjs';
 import { startupCacheIdentity } from './startupCacheIdentity.mjs';
+import { receiptOfflineEdit } from './receiptOfflineEdit.mjs';
+import { startupRetainedMemory } from './startupRetainedMemory.mjs';
+import { createStartupResourceProbe } from './startupResources.mjs';
 
 const root=resolve(fileURLToPath(new URL('../../..',import.meta.url))),vault=process.env.KPLEX_TEST_VAULT_NAME;
 if(!['kplex-test','kplex-test-small'].includes(vault)) throw Error('Only the two explicitly authorized disposable vaults are accepted');
@@ -23,11 +27,18 @@ const outputRelative=relative(target.vault,resolve(output));
 if(!outputRelative||(!isAbsolute(outputRelative)&&outputRelative!=='..'&&!outputRelative.startsWith('..'+sep)))throw Error('Reports must be outside the vault');
 mkdirSync(output,{recursive:true});
 const action=process.argv[2]??'observe',label=process.env.KPLEX_RESTART_LABEL??action;
+const reloading=action==='run'||action==='stage-and-run';
+if(![undefined,'true','false'].includes(process.env.KPLEX_RESTART_EXPECT_RECEIPT))throw Error('Receipt expectation must be true or false');
+const expectReceipt=process.env.KPLEX_RESTART_EXPECT_RECEIPT==='true';
 if(!/^[a-zA-Z0-9-]{1,80}$/.test(label))throw Error('Use a simple bounded receipt label');
 const quietMs=Number(process.env.KPLEX_RESTART_QUIET_MS??0);
 if(!Number.isSafeInteger(quietMs)||quietMs<0||quietMs>3600000||quietMs>0&&quietMs<610000)throw Error('Resource acceptance needs a fixed 610000–3600000 ms quiet window');
 if(existsSync(join(output,`${label}.json`)))throw Error('Receipt exists; choose a new KPLEX_RESTART_LABEL');
-const report={action,vault,startedAt:new Date().toISOString(),node:process.version,samples:[]};
+const processors=cpus();
+const report={action,vault,startedAt:new Date().toISOString(),node:process.version,expectReceipt,
+  hardware:{platform:process.platform,osRelease:release(),architecture:arch(),cpuModel:processors[0]?.model??null,
+    logicalProcessors:processors.length,totalMemoryBytes:totalmem()},samples:[]};
+let stagedUnloaded=false,ownedStagePath=null;
 /** Hash only explicit executable/configuration artifacts; never walk note files. */
 function hash(path){return createHash('sha256').update(readFileSync(path)).digest('hex');}
 /** Keep every CLI operation bounded; raw transport output is not copied into reports. */
@@ -43,13 +54,13 @@ const delay=/** Preserve timer resolution explicitly in Node rather than the ren
 /** Persist only the latest summary; the append-only stream avoids rewriting a growing trace during timing. */
 function save(){writeFileSync(join(output,`${label}.json`),JSON.stringify({...report,samples:report.samples.slice(-1)},null,2)+'\n');}
 const sampleCode=String.raw`(/** Read existing aggregate diagnostics without acquiring note/source data. */ ()=>{
- const p=app.plugins.plugins['k-plex'],i=p?.index,w=require('@electron/remote').getCurrentWindow(),memory=process.memoryUsage();
+ const p=app.plugins.plugins['k-plex'],i=p?.index,w=require('@electron/remote').getCurrentWindow(),memory=require('process').memoryUsage();
  window.kplexStartupResources?.sample(memory);
- if(${action==='run'}&&!window.kplexRestartHeartbeat){const b=window.kplexRestartHeartbeat={last:performance.now(),maxGapMs:0,samples:0};
+ if(${reloading}&&!window.kplexRestartHeartbeat){const b=window.kplexRestartHeartbeat={last:performance.now(),maxGapMs:0,samples:0};
   b.timer=window.setInterval(/** Observe inclusive renderer-task gaps after the first CLI observation. */ ()=>{const now=performance.now();b.maxGapMs=Math.max(b.maxGapMs,now-b.last);b.last=now;b.samples++;},50);}
  const base={at:Date.now(),timeOrigin:performance.timeOrigin,now:performance.now(),layoutReady:app.workspace.layoutReady,host:{node:process.versions.node,electron:process.versions.electron,chrome:process.versions.chrome,
   cpuPid:require('process').pid,rendererPid:w.webContents.getOSProcessId(),processType:require('process').type},
-  heapUsedBytes:memory.heapUsed,resources:window.kplexStartupResources?.snapshot()??null,heartbeat:window.kplexRestartHeartbeat?{samples:window.kplexRestartHeartbeat.samples,maxGapMs:window.kplexRestartHeartbeat.maxGapMs}:null,
+  heapUsedBytes:memory.heapUsed,nativeCpuMicroseconds:require('process').cpuUsage(),resources:window.kplexStartupResources?.snapshot()??null,heartbeat:window.kplexRestartHeartbeat?{samples:window.kplexRestartHeartbeat.samples,maxGapMs:window.kplexRestartHeartbeat.maxGapMs}:null,
   foreground:{hidden:document.hidden,documentFocused:document.hasFocus(),windowFocused:w.isFocused(),throttling:w.webContents.getBackgroundThrottling()},loaded:!!i};
  if(!i)return JSON.stringify(base);
  const status=p.getIndexStatus(),h=i.getSnapshotHydrationDiagnostics(),d=p.getStartupDiagnostics(),s=i.getSavedSnapshotSummary(),repository=i.getSourceRepositoryDiagnostics();
@@ -65,6 +76,7 @@ const sampleCode=String.raw`(/** Read existing aggregate diagnostics without acq
    declarations:i.state.evidence.declarationCount},hydration:h,startup:d,source:i.getSourceAcquisitionCounters(),url:i.getUrlIndexProgress(),
   sourceRepository:Object.fromEntries(['activated','unsaved','empty','chunksWritten','bytesWritten','readFailures','sequenceMin','sequenceMax','peakDecodeBytes'].map(/** Export fixed aggregate fields only. */ key=>[key,Number.isFinite(repository[key])?repository[key]:null])),
   saved:{active:s.active?{createdAt:s.active.createdAt,schema:s.active.schema}:null,checkpoint:!!s.checkpoint,invalid:!!s.invalidActive},
+  receipt:{candidate:!!i.snapshotReceiptCandidate,retained:!!i.retainedSnapshotSourceProof&&i.retainedSnapshotSourceProof.publication===i.publicationRevision},
   revisions:{publication:i.publicationRevision,source:p.getIndexSourceRevision(),policy:i.semanticPolicyRevision},
   decisions:i.getIndexDiagnostics().slice(-16).map(/** Omit arbitrary fields and source identities. */ row=>({at:row.at,stage:row.stage,reason:row.reason,durationMs:row.durationMs}))});
 })()`;
@@ -146,6 +158,34 @@ async function taskDone(){while(true){await delay(1000);sample();const s=evaluat
 /** Back up configuration once per experiment; never replace an earlier original with test settings. */
 function backup(){for(const [name,path] of [['data.json',join(target.pluginDir,'data.json')],['community-plugins.json',join(target.config,'community-plugins.json')]]){const destination=join(output,'original-'+name);if(!existsSync(destination))copyFileSync(path,destination);}}
 
+/** Observe the existing native reload once; staged variants do no initialization before this boundary. */
+async function restartAndObserve(before){
+  if(before.host.cpuPid!==before.host.rendererPid)throw Error('CPU process is not the selected renderer');
+  if(quietMs&&quietMs<2*Math.max(300000,before.mode.updateIntervalMs??0)+10000)throw Error('The prespecified quiet window does not cover two configured maintenance periods');
+  const capable=evaluate("JSON.stringify({reload:!!app.commands.commands['app:reload']})");
+  if(!capable.reload)throw Error('Host app:reload command unavailable');
+  report.lifecycle='vault-window application reload; Electron process retained';
+  report.previousTimeOrigin=before.timeOrigin;report.requestedAt=Date.now();
+  evaluate("(/** Return before restarting the named vault's application renderer. */ ()=>{window.setTimeout(/** Invoke the verified native application command. */ ()=>app.commands.executeCommandById('app:reload'),100);return JSON.stringify({scheduled:true})})()");
+  report.final=await settled(before.timeOrigin);report.readyFromNavigationMs=report.final.at-report.final.timeOrigin;
+  if(quietMs){report.readySample=report.final;report.final=await quiescent(await drained(report.final));}
+  report.cpuProcessIdentityVerified=report.final.resources
+    ? report.final.resources.cpuProcess?.pid===report.final.host.rendererPid&&report.final.resources.cpuProcess?.type==='renderer':null;
+  if(report.final.resources&&!report.cpuProcessIdentityVerified)throw Error('Profile CPU process is not the selected renderer');
+  if(expectReceipt){
+    const work=report.final.startup?.sessionWork,graph=report.final.graph;
+    if(!report.final.receipt.retained||!graph.full||!graph.fresh||graph.sourceSemantics||graph.sourceBacked
+      ||!work||work.fullBuildStarts!==0||work.nodeCatalogStarts!==0||work.completeSnapshotSaves!==0||work.checkpointSaves!==0){
+      throw Error('Clean candidate restart did not retain exact receipt authority without a build/catalog/save');
+    }
+  }
+  // Native totals also cover bootstrap when the OS renderer survives. A new PID is unknown.
+  report.lifecycleCpuMicroseconds=before.host.cpuPid===report.final.host.cpuPid
+    ? {user:report.final.nativeCpuMicroseconds.user-before.nativeCpuMicroseconds.user,
+      system:report.final.nativeCpuMicroseconds.system-before.nativeCpuMicroseconds.system}:null;
+  recordReloadOutcome(before.timeOrigin);
+}
+
 try{
   report.driverSha256=hash(fileURLToPath(import.meta.url));
   report.workingTreeSource=Object.fromEntries(['src/main.ts','src/adapters/obsidian/sourceAcquisition.ts','src/index/SourceRepository.ts','src/index/GraphIndex.ts','src/index/IndexedDbCache.ts','src/application/supportReportProjection.ts'].map(/** Identify local source independently of installed baseline/candidate artifact identity. */ path=>[path,hash(join(root,path))]));
@@ -154,13 +194,27 @@ try{
   evaluate("(/** Select the named disposable window without changing background throttling. */ ()=>{const r=require('@electron/remote'),w=r.getCurrentWindow();r.app.show?.();r.app.focus({steal:true});w.restore();w.show();w.moveTop();w.focus();return JSON.stringify({focused:w.isFocused()})})()");
   report.artifacts=Object.fromEntries(['main.js','manifest.json','styles.css'].map(/** Retain exact installed identity before any operation. */ name=>[name,hash(join(target.pluginDir,name))]));
   if(action==='observe'){sample();}
-  else if(action==='stage'){
+  else if(action==='stage'||action==='stage-and-run'){
     backup();
+    const before=action==='stage-and-run'?await drained(await settled()):null;
+    if(before){
+      const configured=JSON.parse(readFileSync(join(target.config,'community-plugins.json'),'utf8'));
+      if(!Array.isArray(configured)||!configured.includes('k-plex'))throw Error('Stage-and-run requires existing configured enablement');
+    }
     const source=resolve(process.env.KPLEX_RESTART_MAIN??join(root,'dist','main.js')),destination=join(target.pluginDir,'main.js'),staged=destination+'.restart-staged';
-    copyFileSync(source,staged);if(hash(staged)!==hash(source))throw Error('Staged artifact mismatch');
-    evaluate("(/** Finish unloading before atomically replacing executable bytes. */ async()=>{await app.plugins.disablePlugin('k-plex');return JSON.stringify({disabled:!app.plugins.plugins['k-plex']})})()");
-    renameSync(staged,destination);report.installedMain=hash(destination);
-    startTask("await app.plugins.enablePlugin('k-plex');return {enabled:!!app.plugins.plugins['k-plex']}");await taskDone();
+    if(existsSync(staged))throw Error('Staging destination already exists');
+    copyFileSync(source,staged);ownedStagePath=staged;if(hash(staged)!==hash(source))throw Error('Staged artifact mismatch');
+    stagedUnloaded=true;
+    const disabled=evaluate("(/** Finish unloading before atomically replacing executable bytes. */ async()=>{await app.plugins.disablePlugin('k-plex');return JSON.stringify({disabled:!app.plugins.plugins['k-plex']})})()");
+    if(!disabled.disabled)throw Error('Selected test plugin did not unload');
+    report.stagingDisableVerified=true;
+    renameSync(staged,destination);ownedStagePath=null;report.installedMain=hash(destination);
+    if(before){
+      report.previousMain=report.artifacts['main.js'];report.artifacts['main.js']=report.installedMain;
+      report.staging='Atomic replacement while unloaded; selected variant first initializes during the measured native reload';
+      await restartAndObserve(before);
+    }else{startTask("await app.plugins.enablePlugin('k-plex');return {enabled:!!app.plugins.plugins['k-plex']}");await taskDone();}
+    stagedUnloaded=false;
   }else if(action==='prepare'){
     backup();
     evaluate("(/** Retire live preferences before the owned disposable configuration change. */ async()=>{await app.plugins.disablePlugin('k-plex');return JSON.stringify({disabled:!app.plugins.plugins['k-plex']})})()");
@@ -173,30 +227,44 @@ try{
     if(!report.final.graph.full)throw Error('Preparation did not produce a complete graph');
   }else if(action==='wait'){
     report.final=await settled();
+  }else if(action==='prepare-receipt'||action==='prepare-legacy'){
+    report.preparationBefore=await drained(await settled());
+    report.preparationProbeSha256=hash(fileURLToPath(new URL('./startupResources.mjs',import.meta.url)));
+    report.preparationMethod='Explicit test-only canonical build/source-proof/save preparation; separate from primary restart timing';
+    report.preparationRequestedAt=Date.now();
+    startTask(`const p=app.plugins.plugins['k-plex'],i=p.index;if(i.isOnDemandMode())throw Error('Receipt preparation requires the existing Eager test configuration');
+      const db=await i.indexedDb.open();if(!db)throw Error('Native preparation database unavailable');
+      window.kplexStartupResources?.stop();
+      window.kplexStartupResources=(${createStartupResourceProbe.toString()})({phase:/** Keep the untimed setup interval distinct from restart groups. */ ()=>'creation',
+        now:/** Use the owning renderer clock. */ ()=>performance.now(),cpu:/** Count actual selected-process CPU. */ ()=>require('process').cpuUsage(),
+        cpuProcess:{pid:require('process').pid,type:require('process').type},databaseName:db.name,detailed:true});
+      window.kplexStartupResources.attach(i);
+      const built=await i.rebuild({validateSnapshotSources:${action==='prepare-receipt'}});if(!built)throw Error('Canonical receipt preparation build rejected');
+      i.cancelPendingPersistence();const saved=await i.persistIndexedDbSnapshot(i.snapshotPersistGeneration);if(!saved)throw Error('Receipt preparation save rejected');
+      const meta=await i.indexedDb.readSnapshotMeta();
+      ${action==='prepare-receipt' ? "const receipt=await i.indexedDb.readSnapshotSourceReceipt(meta,()=>true);if(!receipt)throw Error('Necessary canonical build/save produced no current receipt');return {built,saved,receiptVersion:receipt.version,sourceSequence:receipt.source.sequence,sourceHeads:receipt.source.heads.records,sourceInputs:receipt.source.inputs.records}" : "if(meta?.sourceReceipt!==undefined)throw Error('Legacy preparation unexpectedly produced a receipt');return {built,saved,receipt:false}"}`);
+    report.preparation=await taskDone();report.final=await drained(await settled());
+    report.preparationElapsedMs=Date.now()-report.preparationRequestedAt;
   }else if(action==='identity'){
     report.final=await drained(await settled());
     startTask(`return (${startupCacheIdentity.toString()})(app.plugins.plugins['k-plex'].index.indexedDb,require('node:crypto').createHash)`);
     report.cacheIdentity=await taskDone();
+  }else if(action==='verify-receipt-offline-edit'){
+    // Functional correctness is separate from resource acceptance: the fixture's legitimate save
+    // owns its preparation, and deleting its note may leave the normal delayed persistence timer.
+    report.before=await settled();
+    startTask(`return (${receiptOfflineEdit.toString()})(app,${JSON.stringify(target.vault)})`);
+    report.offlineEdit=await taskDone();report.final=await settled();
+    if(report.offlineEdit.failure)throw Error('Native receipt regression: '+report.offlineEdit.failure.stage+': '+report.offlineEdit.failure.reason);
+  }else if(action==='memory'){
+    report.before=await drained(await settled());
+    startTask(`return (${startupRetainedMemory.toString()})(app,${JSON.stringify(vault)})`);
+    report.retainedMemory=await taskDone();report.final=sample();
   }else if(action==='save'){
     startTask("const p=app.plugins.plugins['k-plex'],i=p.index;if(!p.getIndexStatus().upToDate||i.sourceAcquisition.inventory||!i.isFullSnapshotHydrated()||i.sourceBackedSemantics)throw Error('Current complete compiled graph required');i.cancelPendingPersistence();const saved=await i.persistIndexedDbSnapshot(i.snapshotPersistGeneration);if(!saved)throw Error('Complete save rejected');return {saved}");
     report.preparation=await taskDone();report.final=sample();
   }else if(action==='run'){
-    const before=sample();
-    if(before.host.cpuPid!==before.host.rendererPid)throw Error('CPU process is not the selected renderer');
-    if(quietMs&&quietMs<2*Math.max(300000,before.mode.updateIntervalMs??0)+10000)throw Error('The prespecified quiet window does not cover two configured maintenance periods');
-    const capable=evaluate("JSON.stringify({reload:!!app.commands.commands['app:reload']})");
-    if(!capable.reload)throw Error('Host app:reload command unavailable');
-    report.lifecycle='vault-window application reload; Electron process retained';
-    report.previousTimeOrigin=before.timeOrigin;
-    report.requestedAt=Date.now();
-    evaluate("(/** Return before restarting the named vault's application renderer. */ ()=>{window.setTimeout(/** Invoke the verified native application command. */ ()=>app.commands.executeCommandById('app:reload'),100);return JSON.stringify({scheduled:true})})()");
-    report.final=await settled(before.timeOrigin);
-    report.readyFromNavigationMs=report.final.at-report.final.timeOrigin;
-    if(quietMs){report.readySample=report.final;report.final=await quiescent(await drained(report.final));}
-    report.cpuProcessIdentityVerified=report.final.resources
-      ? report.final.resources.cpuProcess?.pid===report.final.host.rendererPid&&report.final.resources.cpuProcess?.type==='renderer' : null;
-    if(report.final.resources&&!report.cpuProcessIdentityVerified)throw Error('Profile CPU process is not the selected renderer');
-    recordReloadOutcome(before.timeOrigin);
+    await restartAndObserve(sample());
   }else if(action==='restore-config'){
     startTask("await app.plugins.disablePlugin('k-plex');return {disabled:!app.plugins.plugins['k-plex']}");await taskDone();
     for(const [name,path] of [['data.json',join(target.pluginDir,'data.json')],['community-plugins.json',join(target.config,'community-plugins.json')]])copyFileSync(join(output,'original-'+name),path);
@@ -206,8 +274,15 @@ try{
     if(!report.configurationRestored)throw Error('Original configuration bytes were not restored');
   }else throw Error('Unknown action');
   report.status='passed';
-}catch(error){if(action==='run')recordReloadOutcome(report.previousTimeOrigin);report.status='failed';report.error=error.message;process.exitCode=1;}
+}catch(error){if(reloading)recordReloadOutcome(report.previousTimeOrigin);report.status='failed';report.error=error.message;process.exitCode=1;}
 finally{
+  if(stagedUnloaded){
+    try{
+      const restored=evaluate("(/** A failed staging observation must leave the selected test plugin loaded where possible. */ async()=>{if(!app.plugins.plugins['k-plex'])await app.plugins.enablePlugin('k-plex');return JSON.stringify({loaded:!!app.plugins.plugins['k-plex']})})()");
+      if(!restored.loaded)throw Error('Selected test plugin unavailable');
+    }catch{report.pluginRestoreUnavailable=true;report.status='failed';process.exitCode=1;}
+  }
+  if(ownedStagePath){try{unlinkSync(ownedStagePath);}catch{report.stagedCleanupUnavailable=true;report.status='failed';process.exitCode=1;}}
   try{evaluate("(/** Independently retire this driver's timer/controller and any test-only resource profile after success or failure. */ ()=>{window.clearInterval(window.kplexRestartHeartbeat?.timer);window.kplexStartupResources?.stop();delete window.kplexStartupResources;delete window.kplexRestartHeartbeat;delete window.kplexRestartProbe;return JSON.stringify({removed:!window.kplexRestartProbe&&!window.kplexRestartHeartbeat&&!window.kplexStartupResources})})()");}catch{report.cleanupUnavailable=true;}
   report.completedAt=new Date().toISOString();save();
 }
