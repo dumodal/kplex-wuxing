@@ -20,23 +20,52 @@ Native measurements do not isolate reporting's CPU cost from the duplicate-read 
 
 ## Resource results
 
-The bounded native comparison is still in progress. Valid observations so far:
+Three valid observations per arm, through genuine drain **plus 610 seconds quiet**:
 
-| Arm / observation | Renderer CPU s | Transactions | Requests | Genuine drain s |
+| Observation | Renderer CPU s | Transactions | Requests | Observed drain s |
 | --- | ---: | ---: | ---: | ---: |
-| A / first | 337.078 | 437,355 | 1,000,806 | 1,025.877 |
-| M / first | 374.500 | 457,395 | 1,040,902 | 1,027.176 |
-| M / second | 313.750 | 452,316 | 1,012,121 | 1,006.515 |
-| A / replacement second | 321.047 | 425,738 | 948,221 | 1,067.599 |
+| A1 | 337.078 | 437,355 | 1,000,806 | 1025.877 |
+| M1 | 374.500 | 457,395 | 1,040,902 | 1027.176 |
+| M2 | 313.750 | 452,316 | 1,012,121 | 1006.515 |
+| A2 (replacement) | 321.047 | 425,738 | 948,221 | 1067.599 |
+| A3 | 315.734 | 437,882 | 1,001,890 | 1068.155 |
+| M3 | 316.015 | 456,319 | 1,038,747 | 1083.841 |
 
-The two comparisons have mixed CPU/drain directions; no repeatable native CPU, latency or
-attributable memory improvement is established. The replacement A uses fewer storage transactions/
-requests and source hashes than the preceding M, but slightly more CPU and drain time. All four valid observations pass
-610-second quiet windows with zero violations, reuse/check 20,088 bodies with zero fresh reads/parses,
-and complete one build/save with no catalog/checkpoint. Peak source decode reservation remains
-183,261 bytes. The middle A observation finished but is excluded in full for 84 foreground sample
-violations. The bounded replacement A passes; only the final A–M pair remains. If controls fail again,
-close out with fewer samples and qualify conclusions rather than retry indefinitely.
+| Median resource/work | M | A | Observed change |
+| --- | ---: | ---: | ---: |
+| IDB transactions | 456,319 | 437,355 | -4.2% |
+| IDB requests | 1,038,747 | 1,000,806 | -3.7% |
+| Read-write transactions | 186,147 | 186,594 | +0.2% |
+| Source chunk reads | 123,333 | 103,256 | -16.3% |
+| Source digest calls | 450,351 | 390,120 | -13.4% |
+| Source hash-input UTF16 units | 829,613,548 | 656,378,120 | -20.9% |
+| Inclusive renderer CPU s | 316.015 | 321.047 | +1.6% |
+| Observed drain s | 1,027.176 | 1,067.599 | +3.9% |
+
+This proves **less read/authentication/hash work**, not a native CPU/startup speedup. CPU median is
+1.6% higher and drain 3.9% longer; pair directions differ and ranges overlap (CPU M313.750–374.500s,
+A315.734–337.078s; drain M1,006.515–1,083.841s, A1,025.877–1,068.155s). Three observations,
+nonadjacent replacement, host-order variation and unisolated reporting/probe cost limit attribution.
+Read-write transactions do not decrease (+0.24% observed median), and every arm still performs one
+full compilation/save with no catalog/checkpoint. All reuse/check20,088 bodies with **zero fresh
+Vault.read calls, parses or source repairs**. Source posting reads fall with chunk reads (16.3%).
+Controlled fixtures below independently prove the removed duplicate resolution decoding; native
+counts mode does not measure decoded-record totals or physical disk bytes. Snapshot/binding/source-
+receipt hashing is absent from shipping A; the existing vault rolling signature is not separately counted.
+
+| Memory observation, decimal MB | M median (range) | A median (range) |
+| --- | ---: | ---: |
+| Sampled heap maximum | 2081.4 (1638.9–2312.9) | 1661.5 (1175.0–1922.2) |
+| Sampled process RSS maximum | 3037.7 (2653.8–3207.2) | 2410.0 (1933.4–2865.5) |
+| Main-realm live heap after two GC collections | 405.5 (405.4–406.7) | 406.7 (406.1–406.7) |
+
+Sampled heap/RSS maxima are lower at their medians, with overlapping ranges; these are not true
+peaks or attributable allocation savings. Retained main heap is effectively unchanged (A median
+1.21MB higher); it excludes other worker isolates. Peak source decode reservation is **183,261bytes
+in every run**. No retained-memory improvement is established. All raw-stream controls pass:
+foreground/throttling/PID, fixed visible center/demand, common driver/probe, static inputs, zero quiet
+violations/overflow/pending work and successful cleanup. Observed heartbeat maxima M402.8–485.6ms /
+A386.8–414.3ms are task gaps after the first CLI sample, not trusted input or paint latency.
 
 
 Real Chromium/IndexedDB AB/BA/AB fixtures independently reproduce the algorithmic reduction at
@@ -52,7 +81,7 @@ This single ordered observation does not establish a small-vault CPU or memory b
 
 ## Conditions and interpretation
 
-The native comparison targets three observations per M/A arm in order **A–M / M–A / A–M**. Frozen test-only builds share
+The native comparison completes three observations per M/A arm in order **A–M / M–A / A–M**. Frozen test-only builds share
 the same counts probe (`cfad37cb…`) and actual production build options. The first B–A–M group was
 already running when the maintainer superseded the nine-trial receipt plan. It finished unchanged;
 only the remaining M/A pairs followed. One middle A observation lost focus, finished unchanged and
@@ -73,6 +102,7 @@ center, remote images off. No personal vault was accessed. Hardware: i9-12900,24
 68,448,301,056bytes RAM, Windows build10.0.26200x64; Node22.22.2 driver; Obsidian1.14.4,
 Electron43.3.0/Node24.18.1/Chrome150.0.7871.212 host. This is not a lower-powered/mobile result.
 
+Ready/drain are observed polling milestones (about1s CLI cadence), not exact paint/phase timestamps.
 CPU is cumulative user+system for the verified selected renderer, including its worker threads,
 host and observer work, from before reload through **genuine drain plus610s quiet**. Profile-only CPU
 is also retained. Other Electron processes, energy and plugin-exclusive CPU are not measured. Source,
@@ -118,28 +148,26 @@ and one extra complete save (CPU10.750s,9,197transactions). No further B trial/d
 
 ## Validation, evidence and follow-up
 
-Receipt-free full verification11 passes on Node22.22.2: architecture7/core128/general829/UI63/
-portable334/browser524, official lint, actual installed types, production build and exact-build
-Windows native smoke, without failures/skips/JS errors. Main SHA-256:
-`4813b60d280cf3dc7cb2ab1eaeea6769df6218b73183357e32f4bef00a5805e0`; manifest/styles unchanged.
-Six exact-build foreground cases pass with zero broad flush calls, controller removal and settings-byte
-restoration. Final full verification after all cleanup remains pending.
+Final post-cleanup full verification12 is running on Node22.22.2. The prior receipt-free full11
+passes architecture7/core128/general829/UI63/portable334/browser524, official lint, installed types,
+production build and exact-build Windows native smoke, with no failures/skips/JS errors. Main
+SHA-256 `4813b60d280cf3dc7cb2ab1eaeea6769df6218b73183357e32f4bef00a5805e0`; manifest/styles unchanged.
+Six exact-shipping-build foreground cases pass with zero broad flush calls, controller removal and
+settings-byte restoration. Receipt-only tooling is now removed; final native restoration/archive remain pending.
 
 [Compact measurements](background-index-efficiency-165-samples.json) retain all arm results,
 raw-report checksums, source/artifact/probe identities and limitations. [Evidence and reproduction
 index](background-index-efficiency-165-evidence.md) identifies the verified raw archive, rejected tests,
 fixture sources/checksums and reproducible procedures. Failed setup, controls and exploratory builds
-remain evidence, outside accepted denominators. No raw evidence was deleted or published without
-approval. The temporary planning marker is removed. Receipt-only tooling remains only until the running
-measurements finish and will then be removed before final verification; reusable work-count, profile,
+remain evidence, outside accepted denominators. No raw evidence was deleted or published. Temporary planning and receipt-only tooling are removed; reusable work-count, profile,
 identity, restart/drain and retained-memory tools remain.
 
-**Highest-value follow-up (not implemented):** measure repeated source-reader pin/unpin and head-selection transactions during the existing
-unchanged-source validation pass. In the first A observation, the two pin/release store groups still
-account for about 166,000 of 437,355 transactions (38%). Source reconciliation continues roughly
-11 minutes after compilation/save. Group counts identify work volume, not exclusive wait/CPU cost;
-isolate that cost before proposing a bounded correction through the existing source owner. No
-implementation or new authority/scheduler/receipt design is included here.
+**Highest-value follow-up (not implemented):** measure repeated source-reader lease/head-selection transaction work inside the existing source
+validation owner. A still has about166,342 median pin/release-store transactions—38% of437,355 total—
+plus103k source-chunk reads. Source reconciliation occupies roughly11minutes after compilation/save.
+These counts identify substantial remaining storage work; they are not exclusive wait/CPU attribution.
+Isolate that cost before proposing bounded reader reuse. No implementation or new scheduler,
+provenance/receipt architecture is included here.
 
 Remaining acceptance: (1) lower-powered desktop/full-process restart resource and responsiveness;
 (2) physical iOS/Android startup/navigation/suspend-resume and memory headroom; (3) macOS changed-
