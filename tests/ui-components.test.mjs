@@ -1154,6 +1154,42 @@ ${production}
   flushSync(() => host.querySelector(".kplex-add-related-link-button").click());
   await new Promise((resolve) => setTimeout(resolve, 0));
   check(intents.length === 1 && intents[0][1] === "right" && intents[0][2].file === target.file && commits === 1 && closes === 1, "history fixed target did not commit through the shared Link action");
+  // Hold an actual drawing submission after durability: ordinary progress must never offer recovery.
+  const style = document.createElement("style"); style.textContent = ${JSON.stringify(readFileSync(join(root, "styles.css"), "utf8"))}; document.head.append(style);
+  const created = { path: "Projects/" + "Long-folder-name/".repeat(8) + "Drawing.md", file: { path: "", extension: "md" } }; created.file.path = created.path;
+  const originalLookup = plugin.app.vault.getFileByPath;
+  plugin.app.vault.getFileByPath = path => path === created.path ? created.file : originalLookup(path);
+  plugin.isExcalidrawAvailable = () => true;
+  plugin.translator = (key, params) => params?.error ? "Reason: " + params.error : params?.path ? "Created " + params.path + "; setup or linking failed. Retry using this file." : key;
+  let creations = 0, links = 0, rejectLink;
+  plugin.createNewRelatedFileForOrigin = async (_origin, _query, kind) => { check(kind === "excalidraw", "wrong drawing kind"); creations++; return created.file; };
+  plugin.rememberNewNodeDefaultType = async () => {};
+  plugin.linkNewRelatedFile = async (_origin, _role, file) => { check(file === created.file, "recovery changed physical file identity"); links++; if (links === 1) await new Promise((_resolve, reject) => { rejectLink = reject; }); return { state: "saved-pending", page: created }; };
+  plugin.openInDocumentLeaf = async file => check(file === created.file, "open changed physical file identity");
+  flushSync(() => root.render(createElement(RelatedNoteComposer, { key: "drawing-recovery", plugin, origin, session, initialRole: "child" })));
+  flushSync(() => type(host.querySelector(".kplex-add-related-note-search input"), "Drawing"));
+  flushSync(() => host.querySelector('[aria-label="addRelated.createExcalidrawLink"]').click());
+  await new Promise(resolve => setTimeout(resolve, 0)); flushSync(() => {});
+  check(creations === 1 && links === 1 && rejectLink, "drawing did not reach held relationship step");
+  check(!host.querySelector(".kplex-add-related-recovery"), "normal in-progress creation falsely offered recovery");
+  rejectLink(new Error("Owned relationship failure")); await new Promise(resolve => setTimeout(resolve, 0)); flushSync(() => {});
+  const panel = host.querySelector(".kplex-add-related-recovery");
+  check(panel?.getAttribute("role") === "alert" && panel.textContent.includes(created.path), "actual failure lost its durable file path");
+  check(panel.querySelector(".kplex-add-related-recovery-reason")?.textContent.includes("Owned relationship failure"), "failure reason disappeared with the notice");
+  check(!host.querySelector(".kplex-add-related-create-hint"), "failure retained contradictory create instructions");
+  check([...host.querySelectorAll(".kplex-add-related-type-button")].every(button => button.disabled), "partial file allowed fresh drawing/Markdown/placeholder creation");
+  for (const width of [680, 260]) {
+    host.style.width = width + "px";
+    const actions = panel.querySelector(".kplex-add-related-recovery-actions"), buttons = [...actions.querySelectorAll("button")];
+    const [a, b] = buttons.map(button => button.getBoundingClientRect());
+    check(getComputedStyle(actions).display === "flex" && getComputedStyle(actions).flexWrap === "wrap", "recovery actions do not wrap");
+    check(a.right + 7 <= b.left || a.bottom + 7 <= b.top, "recovery actions touch or overlap at width " + width);
+    check(panel.scrollWidth <= panel.clientWidth, "long path overflowed recovery panel at width " + width);
+    check(actions.getBoundingClientRect().top >= panel.querySelector(".kplex-add-related-recovery-reason").getBoundingClientRect().bottom, "actions overlap failure text");
+  }
+  flushSync(() => panel.querySelector("button").click()); await new Promise(resolve => setTimeout(resolve, 0));
+  check(creations === 1 && links === 2, "retry created another file or failed to link the retained file");
+  style.remove();
   flushSync(() => root.unmount());
   check(!document.body.querySelector(".kplex-fuzzy-floating-results"), "composer list survived unmount");
   result.dataset.status = "passed"; result.textContent = "Related composer browser behavior passed";

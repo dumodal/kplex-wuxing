@@ -622,6 +622,7 @@ function createdMetadataFixture({ extension = "md", displayField = "aliases", in
   const context = { app: { vault, metadataCache, fileManager: {
     getNewFileParent: () => ({ path: "/" }),
     processFrontMatter: async (selected, mutate) => {
+      if (selected === origin.file) { const next = { Keep: "Existing property" }; mutate(next); assert.equal(next.Keep, "Existing property"); events.push("native-relation-write"); return; }
       assert.equal(selected, file); const next = structuredClone(frontmatter); mutate(next); frontmatter = next;
       const nextBody = Object.keys(next).length ? JSON.stringify(next) : "";
       if (nextBody !== body) { file.stat.mtime++; file.stat.size = nextBody.length; body = nextBody; }
@@ -631,7 +632,9 @@ function createdMetadataFixture({ extension = "md", displayField = "aliases", in
     pruneManagedMetadataWrites: () => {}, configuredDisplayNameField: () => displayField,
     translator: key => key, validateRelatedNoteName: () => ({ valid: true, existing: null, stem: "Created" }),
     createNewFileInFolder: async () => file,
-    index: { withForegroundPriority: async work => work(), insertCreatedFile: () => target, get: path => path === target.path ? target : origin },
+    index: { withForegroundPriority: async work => work(), insertCreatedFile: () => target, get: path => path === target.path ? target : origin,
+      refreshVisibleHostMetadataPreviews: () => events.push("refresh-host") },
+    referenceForPage: target => `[[${target.path}]]`, valueContainsTarget: () => false,
     prepareRelationshipMutation: async () => {
       assert(cache && JSON.stringify(cache.frontmatter) === JSON.stringify(frontmatter), "Exact pair cannot capture a cache preceding creation writes");
       pairCaptured = true; events.push("capture-pair"); return [origin, target];
@@ -639,7 +642,7 @@ function createdMetadataFixture({ extension = "md", displayField = "aliases", in
     writeRelationship: async () => { assert(pairCaptured); events.push("write-relation"); },
     publishSavedRelationship: async () => events.push("publish-relation"),
   };
-  for (const method of ["mutateCreatedNodeMetadata", "writeCreatedNodeDisplayName", "writeCreatedNodeAlias", "createNewRelatedFileForOrigin", "linkNewRelatedFile"])
+  for (const method of ["mutateCreatedNodeMetadata", "writeCreatedNodeDisplayName", "writeCreatedNodeAlias", "createNewRelatedFileForOrigin", "linkNewRelatedFile", "appendRelationshipReference"])
     context[method] = productionFunction("src/main.ts", method, { writeRelationshipMetadata, normalizeFieldName: actualNormalizeFieldName,
       Notice: class { constructor(message) { notices.push(message); } } }).bind(context);
   return { context, file, origin, writes, events, notices, metadataCache, vault,
@@ -652,7 +655,7 @@ function createdMetadataFixture({ extension = "md", displayField = "aliases", in
 /** Advance only explicit promises; no elapsed-time or quiet-window authority enters these tests. */
 const nextCreatedStep = () => new Promise(resolve => setImmediate(resolve));
 
-for (const kind of ["markdown", "excalidraw"]) test(`${kind} gate creation waits for display and alias cache/body observations before exact linking`, async () => {
+for (const kind of ["markdown", "excalidraw"]) test(`${kind} gate creation waits for display and alias cache/body observations before independent linking`, async () => {
   const f = createdMetadataFixture({ displayField: kind === "markdown" ? "aliases" : "Title" });
   const previousWindow = globalThis.window; globalThis.window = { setTimeout, clearTimeout };
   let operation;
@@ -664,8 +667,9 @@ for (const kind of ["markdown", "excalidraw"]) test(`${kind} gate creation waits
     assert.equal(f.writes.length, 2); assert.equal(finished, false, "A second alias write must receive its own final cache/body observation");
     f.observe(); const file = await operation;
     assert.equal(file, f.file); f.clean();
-    await f.context.linkNewRelatedFile(f.origin, "child", file, "Children", "User alias", "Display title");
-    assert.deepEqual(f.events, ["native-write", "cache-body-observed", "native-write", "cache-body-observed", "capture-pair", "write-relation", "publish-relation"]);
+    const result = await f.context.linkNewRelatedFile(f.origin, "child", file, "Children", "User alias", "Display title");
+    assert.equal(result.state, "saved-pending"); assert.equal(result.page.file, file);
+    assert.deepEqual(f.events, ["native-write", "cache-body-observed", "native-write", "cache-body-observed", "native-relation-write", "refresh-host"]);
   } finally { f.cancel(); await operation?.catch(() => {}); globalThis.window = previousWindow; f.clean(); }
 });
 
@@ -719,3 +723,37 @@ for (const consumer of ["folder", "ghost"]) test(`${consumer} creation also awai
     else assert.deepEqual(f.events, ["native-write", "cache-body-observed", ["default", "markdown"], ["rename", "Ghost", f.file.path], ["open", f.file.path]]);
   } finally { f.cancel(); await operation?.catch(() => {}); globalThis.window = previousWindow; f.clean(); }
 });
+
+/** Native creation writes need file identities and current frontmatter, never graph/index readiness or drawing-body reads. */
+for (const mode of ["refreshing", "preview-failed", "source-replaced", "target-renamed", "unloaded", "rename-after-save"]) {
+  test(`drawing-to-drawing creation ${mode} uses native identities independently of index state`, async () => {
+    const origin = page("Parent.md"), target = page("Child.md"), files = new Map([[origin.path, origin.file], [target.path, target.file]]);
+    origin.file.stat = { size: 20 * 1024 * 1024, mtime: 1 };
+    let persisted = { "excalidraw-plugin": "parsed", Child: ["[[Existing.md]]"], Parents: ["[[Keep.md]]"], Title: "Keep title" }, writes = 0, previews = 0;
+    const context = { unloading: false, app: { vault: { getFileByPath: path => files.get(path), cachedRead: assert.fail },
+      metadataCache: { getFileCache: assert.fail }, fileManager: { processFrontMatter: async (file, mutate) => {
+        assert.equal(file, origin.file);
+        if (mode === "source-replaced") files.set(origin.path, { path: origin.path });
+        if (mode === "target-renamed") { files.delete(target.path); target.file.path = "Renamed.md"; files.set(target.file.path, target.file); }
+        if (mode === "unloaded") context.unloading = true;
+        const next = structuredClone(persisted); mutate(next); persisted = next; writes++;
+        if (mode === "rename-after-save") { files.delete(target.path); target.file.path = "Renamed.md"; files.set(target.file.path, target.file); }
+      } } }, index: { withForegroundPriority: async work => work(), insertCreatedFile: () => target, get: () => target,
+        isSemanticWriteReady: assert.fail, prepareRelationshipPair: assert.fail,
+        refreshVisibleHostMetadataPreviews: () => { previews++; if (mode === "preview-failed") throw new Error("Preview failed after saving"); } }, configuredDisplayNameField: () => null,
+      prepareRelationshipMutation: assert.fail, publishSavedRelationship: assert.fail, translator: key => key,
+      referenceForPage: page => `[[${page.path}]]`, valueContainsTarget: (values, _file, page) => values.includes(`[[${page.path}]]`),
+      pruneManagedMetadataWrites() {}, managedMetadataWrites: new Map() };
+    context.appendRelationshipReference = productionFunction("src/main.ts", "appendRelationshipReference", { normalizeFieldName: actualNormalizeFieldName });
+    const link = productionFunction("src/main.ts", "linkNewRelatedFile", { normalizeFieldName: actualNormalizeFieldName, SavedRelationshipPendingError: ActualSavedPendingError, console: { error() {} } }).bind(context);
+    if (mode === "refreshing" || mode === "preview-failed") {
+      const result = await link(origin, "child", target.file, "child");
+      assert.equal(result.state, "saved-pending"); assert.equal(result.page, target); assert.equal(writes, 1); assert.equal(previews, 1);
+      assert.deepEqual(persisted, { "excalidraw-plugin": "parsed", Child: ["[[Existing.md]]", "[[Child.md]]"], Parents: ["[[Keep.md]]"], Title: "Keep title" });
+      await link(origin, "child", target.file, "child"); assert.equal(persisted.Child.length, 2, "Retry is idempotent");
+    } else {
+      await assert.rejects(link(origin, "child", target.file, "child"), mode === "rename-after-save" ? ActualSavedPendingError : /endpointChanged/);
+      assert.equal(writes, mode === "rename-after-save" ? 1 : 0); assert.equal(previews, 0);
+    }
+  });
+}

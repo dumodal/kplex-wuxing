@@ -7,6 +7,9 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const frenchTranslations = {
+  "addRelated.recoverFile": "{path} a été créé, mais sa configuration ou la création du lien a échoué. Réessayez avec ce fichier.",
+  "addRelated.failureReason": "Motif : {error}",
+  "addRelated.linkCreatedFile": "Réessayer de créer le lien",
   "hide.setup.title": "Configurer les connexions masquées",
   "hide.setup.help": "Créer {field} comme propriété de relation masquée ? Les liens existants seront conservés.",
   "hide.setup.alternative": "Le nom « hidden » est déjà utilisé. Cette alternative laisse la propriété existante inchangée.",

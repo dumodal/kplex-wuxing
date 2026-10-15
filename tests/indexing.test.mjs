@@ -477,6 +477,7 @@ for (const file of [
   "src/adapters/obsidian/sourceLocalContributorDiscovery.ts",
   "src/adapters/obsidian/sourceAcquisition.ts",
   "src/index/GraphBuilder.ts",
+  "src/index/UrlAdjacencyMap.ts",
   "src/index/SourceFingerprint.ts",
   "src/index/GraphIndex.ts",
   "src/index/ForegroundWorkScheduler.ts",
@@ -894,6 +895,29 @@ const indexingStatusContext = {
   diagnostics.phase("hydration", "evidence");diagnostics.processed("hydration");
   context.index.getSnapshotHydrationDiagnostics = () => ({ phase: "evidence" });
   assert.equal(KplexPlugin.prototype.getIndexStatus.call(context).label, "Loading relationship evidence — 1 records loaded");
+  // Complete hydration must not hide the still-running source pass behind a generic label.
+  context.index.hasPendingSnapshotHydration = /** The cached graph has finished loading. */ () => false;
+  context.rebuildTask = null;
+  assert.equal(KplexPlugin.prototype.getIndexStatus.call(context).phase, "preparing");
+  assert.equal(KplexPlugin.prototype.getIndexStatus.call(context).label, "Processing pending changes — 1 / 5 notes (20%)");
+  context.rebuildTask = Promise.resolve();
+  assert.equal(KplexPlugin.prototype.getIndexStatus.call(context).label, "index.statusIndexingProgress",
+    "An active graph compilation owns the label rather than a paused source pass");
+  context.rebuildTask = null;
+  context.index.isCheckpointSaving = /** A real save takes presentation priority. */ () => true;
+  assert.equal(KplexPlugin.prototype.getIndexStatus.call(context).label, "index.statusSavingCache");
+  context.index.isCheckpointSaving = /** The save has finished. */ () => false;
+  context.index.getUrlIndexProgress = /** Optional URL work keeps its existing label. */ () => ({ active: true, failed: false, processed: 2, total: 5 });
+  assert.equal(KplexPlugin.prototype.getIndexStatus.call(context).label, "indexing.urlsProgress");
+  context.index.getUrlIndexProgress = indexingStatusContext.index.getUrlIndexProgress;
+  context.index.isOnDemandMode = /** Local readiness never adopts global source progress. */ () => true;
+  assert.equal(KplexPlugin.prototype.getIndexStatus.call(context).label, "indexing.localPreparing");
+  context.index.isOnDemandMode = indexingStatusContext.index.isOnDemandMode;
+  diagnostics.phase("source", "complete");
+  assert.equal(KplexPlugin.prototype.getIndexStatus.call(context).label, "index.statusPreparing",
+    "A completed source pass cannot claim ongoing validation");
+  context.initialIndexComplete = true;context.indexDirty = false;
+  assert.equal(KplexPlugin.prototype.getIndexStatus.call(context).label, "index.statusReady");
   context.computeIndexStatusFacts = KplexPlugin.prototype.computeIndexStatusFacts;
   context.index.getSourceAcquisitionCounters = () => ({ vaultReads: 0, parses: 0 });
   context.index.getSemanticPreparationDiagnostics = () => ({ fullBuilds: 0 });

@@ -7,6 +7,9 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const traditionalChineseTranslations = {
+  "addRelated.recoverFile": "已建立 {path}，但設定或連結失敗。請使用此檔案重試。",
+  "addRelated.failureReason": "原因：{error}",
+  "addRelated.linkCreatedFile": "重試連結",
   "hide.setup.title": "設定隱藏連線",
   "hide.setup.help": "要建立 {field} 作為隱藏關係屬性嗎？現有連結會保留。",
   "hide.setup.alternative": "「hidden」這個名稱已被使用。使用此替代名稱可讓現有屬性保持不變。",

@@ -14,14 +14,14 @@ const require = createRequire(import.meta.url);
 const ts = require("typescript");
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
-/** Bundle actual emitted runtime imports (not type-only imports), without substituting production modules. */
-export async function browserBundle(entries, stubs = {}) {
+/** Bundle actual runtime imports; optional committed source inputs let benchmarks compare exact prior revisions. */
+export async function browserBundle(entries, stubs = {}, sourceOverrides = {}) {
   const modules = new Map();
   async function visit(file) {
     const key = relative(root, file).replaceAll("\\", "/");
     if (modules.has(key)) return key;
     modules.set(key, "");
-    const source = await readFile(file, "utf8");
+    const source = sourceOverrides[key] ?? await readFile(file, "utf8");
     const output = ts.transpileModule(source, { fileName: file, reportDiagnostics: true,
       compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS, esModuleInterop: true } });
     const errors = (output.diagnostics ?? []).filter(d => d.category === ts.DiagnosticCategory.Error);

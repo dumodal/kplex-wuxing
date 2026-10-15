@@ -524,6 +524,8 @@ Verify:
 - folder/tag targets are disabled
 - Markdown origin writes YAML on origin
 - non-Markdown origin requires Markdown target and writes inverse relation on target
+- creating a physical child saves its additive property even while structural/index refresh makes semantic pair readiness unavailable; test drawing-to-drawing creation with **Open for editing** enabled
+- preserve existing properties and template metadata, make retry idempotent, and reject native file replacement/rename before mutation; a saved property may await graph reconciliation without blocking creation completion
 - confirm/cancel icons use `getIcon()`
 
 ### Relink an existing direct neighbor

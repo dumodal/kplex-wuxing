@@ -2034,6 +2034,34 @@ button.kplex-sidecar-unfold-plex,
 .kplex-add-related-link-button:not(:disabled):hover {
   background: var(--interactive-accent-hover);
 }
+/* Recovery is a separate message and action row; paths and translated buttons wrap safely. */
+.kplex-add-related-recovery {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--input-radius, 5px);
+  background: var(--background-secondary);
+  font-size: var(--font-ui-small);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.kplex-add-related-recovery-reason {
+  color: var(--text-muted);
+}
+.kplex-add-related-recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.kplex-add-related-recovery-actions button {
+  max-width: 100%;
+  height: auto;
+  min-height: var(--input-height);
+  white-space: normal;
+}
 .kplex-add-related-create-hint.is-error {
   color: var(--text-error);
 }
