@@ -176,6 +176,8 @@ export function projectSupportStartup(input: unknown) {
   const source = supportField(input, "source"), semantic = supportField(input, "semantic");
   return { availability: input !== null && typeof input === "object" ? "available" : "unavailable",
     detailedTelemetry: enabled === true ? "enabled" : enabled === false ? "disabled" : "unavailable", frozen: supportBoolean(supportField(input, "frozen")),
+    sessionWork: supportCounters(supportField(input, "sessionWork"),
+      ["sourceInventoryPasses", "fullBuildStarts", "nodeCatalogStarts", "completeSnapshotSaves", "checkpointSaves"]),
     progress: { source: supportField(progress, "source") == null ? null : supportStartupPhase(supportField(progress, "source"), false, "source"),
       hydration: supportField(progress, "hydration") == null ? null : supportStartupPhase(supportField(progress, "hydration"), false, "hydration") },
     milestones, phases, overlaps, phasesOmitted: enabled === true ? Math.max(0, supportRowCount(supportField(input, "phases")) - 32) : 0,

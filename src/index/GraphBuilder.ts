@@ -712,6 +712,7 @@ export class GraphBuilder {
    * otherwise `null` so the coordinator can retain the previous published graph.
    */
   async build(options: Readonly<{ acquireSources?: boolean }> = {}): Promise<GraphState | null> {
+    this.plugin.startupDiagnostics?.recordWork("fullBuildStarts");
     const compiler = this.createFullCompiler();
     const structuralRead = await this.collectStructuralSources(compiler);
     if (!structuralRead) return null;
@@ -898,6 +899,7 @@ export class GraphBuilder {
    * Final physical/host/source fences discard all private nodes on interruption.
    */
   async buildSourceNodeCatalog(onProgress?: () => void): Promise<GraphState | null> {
+    this.plugin.startupDiagnostics?.recordWork("nodeCatalogStarts");
     const acquisition = this.sourceAcquisition;
     if (!acquisition?.hasSemanticDependencies()) return null;
     const maintenance = acquisition.getMaintenanceRevision();

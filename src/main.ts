@@ -2863,6 +2863,8 @@ export default class KplexPlugin extends Plugin {
    * Report graph/search readiness and actual optional URL progress without scheduling work.
    * A zero URL total is unknown during preparation: report restored note counts when available
    * rather than implying a completed empty scan. Discovery totals apply once the inventory is known.
+   * After graph hydration, an unfinished startup source pass keeps its existing measured progress;
+   * compilation, saving, URL work, local mode and settled outcomes retain their own labels.
    */
   getIndexStatus(): {
     upToDate: boolean;
@@ -2915,8 +2917,11 @@ export default class KplexPlugin extends Plugin {
                 ? this.translator("index.statusSavingCache")
               : this.translator("index.statusUpdating");
     const hydration = this.index.getSnapshotHydrationDiagnostics?.();
+    const sourceProgress = phase === "preparing" && !this.index.isOnDemandMode() && !urlProgress.active && !urlProgress.failed
+      ? this.startupDiagnostics?.progress("source") : null;
     const progress = phase === "loading-cache" && hydration?.phase === "source-authority"
-      ? this.startupDiagnostics?.progress("source") : phase === "loading-cache" ? this.startupDiagnostics?.progress("hydration") : null;
+      ? this.startupDiagnostics?.progress("source") : phase === "loading-cache" ? this.startupDiagnostics?.progress("hydration")
+        : sourceProgress?.phase !== "complete" ? sourceProgress : null;
     const activityKeys = {
       "metadata": "index.startupMetadata", "preview": "index.startupPreview", "source-authority": "index.startupSourceAuthority",
       "source-inventory": "index.startupInventory", "source-coordinates": "index.startupInventory", "dependency-upgrade-validation": "index.startupDependencies",

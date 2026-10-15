@@ -646,12 +646,12 @@ export class GraphIndex {
         this.retrySourceNodeImpacts();
         this.retryUrlAliasUpgrade();
       },
-      /** Completed inventory work advances the existing stall watchdog, never acquisition behavior. */
+      /** Refresh subscribed source progress; only the source-authority phase advances its watchdog. */
       () => {
         if (this.snapshotHydrationDiagnostics.phase === "source-authority") {
           this.touchSnapshotHydrationProgress(this.snapshotHydrationRun);
-          this.plugin.notifyStartupProgress?.();
         }
+        this.plugin.notifyStartupProgress?.();
       }, plugin.startupDiagnostics, () => this.workScheduler.checkpoint(INDEX_WORK_PRIORITY.background),
       work => this.workScheduler.run(INDEX_WORK_PRIORITY.background, work),
       path => { void this.refreshVisiblePresentation(path); });
@@ -5440,6 +5440,7 @@ export class GraphIndex {
       };
       this.recordIndexDiagnostic("persist", checkpoint ? "checkpoint-saved" : "complete-saved",
         { completedMarkdownFiles, durationMs: Math.max(0, Date.now() - snapshotCreatedAt) });
+      this.plugin.startupDiagnostics?.recordWork(checkpoint ? "checkpointSaves" : "completeSnapshotSaves");
       if (checkpoint) return true;
       await this.indexedDb.clearCheckpoint();
       this.savedSnapshotSummary.checkpoint = null;

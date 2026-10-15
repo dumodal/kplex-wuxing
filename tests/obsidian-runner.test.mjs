@@ -13,6 +13,91 @@ import { createWaitTimingProbe } from "../scripts/testing/obsidian/waitTiming.mj
 import { npmInvocation, obsidianCliExecutable, spawnNativeSync } from "../scripts/testing/obsidian/processTools.mjs";
 import { browserExecutable } from "./support/browserExecutable.mjs";
 import { createRequire } from "node:module";
+import { createHash } from "node:crypto";
+import { startupCacheIdentity } from "../scripts/testing/obsidian/startupCacheIdentity.mjs";
+import { startupRetainedMemory } from "../scripts/testing/obsidian/startupRetainedMemory.mjs";
+
+test("retained-memory probe rejects unapproved targets before native access", /** Keep observations inside explicit disposable-vault scope. */ async () => {
+  const app={vault:{getName:/** Refuse this synthetic unapproved target. */ ()=>"unapproved"}};
+  await assert.rejects(startupRetainedMemory(app,"unapproved"),/Explicit disposable vault/);
+  await assert.rejects(startupRetainedMemory(app,"kplex-test-small"),/Explicit disposable vault/);
+});
+
+test("startup cache identities distinguish payload changes, source ABA and interrupted selections", /** Test observation identities; native IDB behavior is exercised by disposable-vault identity trials. */ async () => {
+  const state = { sequence: 3, meta: { key: "active", schema: 3, generation: "first", createdAt: 1,
+    vaultSignature: "physical", settingsSignature: "policy", discoveredFields: [] },
+    pages: [{ path: "private-test-owner.md", relations: [{ targetPath: "other.md" }] }],
+    evidence: [{ sourcePath: "private-test-owner.md", targetPath: "other.md", direction: "positive" }],
+    heads: [{ sourceId: "private-test-owner.md", sourceRevision: "selected-one", sequence: 3 }], invalid: 0 };
+  const cache = {
+    /** Deliver readonly transaction completion after its original request success. */
+    async open() { return { transaction() {
+      const tx = new EventTarget();tx.objectStore = /** Model only this observation's native sequence request. */ () => ({ get() {
+        const request = new EventTarget();
+        queueMicrotask(/** Complete one scalar transaction without retaining source payloads. */ () => {
+          request.result = { key: "source-sequence", value: state.sequence };
+          request.dispatchEvent(new Event("success"));tx.dispatchEvent(new Event("complete"));
+        });return request;
+      } });return tx;
+    } }; },
+    /** Return independent pointer metadata, like the real cache boundary. */
+    async readSnapshotMeta() { return structuredClone(state.meta); },
+    /** Forward ordered graph records without materializing a second graph. */
+    async iterateSnapshotPages(_meta, visit) { for (const row of state.pages) visit(row);return true; },
+    /** Preserve negative evidence and duplicate declaration contributions. */
+    async iterateSnapshotEvidence(_meta, visit) { for (const row of state.evidence) visit(row);return true; },
+    sources: { /** Finish one selected-head page followed by its real end marker. */
+      async headPage(after) { return { available: true, heads: after === null ? state.heads : [], invalid: state.invalid,
+        next: after === null ? "end" : null }; } },
+  };
+  const first = await startupCacheIdentity(cache, createHash);
+  assert(!JSON.stringify(first).includes("private-test-owner.md"));
+  state.meta.generation = "second";state.meta.createdAt = 2;
+  const second = await startupCacheIdentity(cache, createHash);
+  assert.deepEqual(second.graph, first.graph, "Activation metadata cannot manufacture a graph difference");
+  assert.notDeepEqual(second.activation, first.activation);
+  state.evidence.push({ ...state.evidence[0], direction: "negative" });
+  const changed = await startupCacheIdentity(cache, createHash);
+  assert.notEqual(changed.graph.evidence.sha256, first.graph.evidence.sha256);
+  assert.equal(changed.graph.evidence.records, 2, "Multiplicity is retained");
+  state.heads[0].sourceRevision = "different-incarnation";
+  assert.notEqual((await startupCacheIdentity(cache, createHash)).sources.heads.sha256, first.sources.heads.sha256,
+    "A reused sequence cannot conceal a different source incarnation");
+  const pages = cache.iterateSnapshotPages;
+  cache.iterateSnapshotPages = /** Simulate a real writer crossing an asynchronous cache read. */ async (...args) => { state.sequence++;return pages(...args); };
+  await assert.rejects(startupCacheIdentity(cache, createHash), /Input selection changed/);
+  cache.iterateSnapshotPages = pages;state.invalid = 1;
+  await assert.rejects(startupCacheIdentity(cache, createHash), /Unreadable source/);
+  state.invalid=0;
+  state.pages[0].semanticSignature='canonical-original';
+  state.heads[0].state='complete';state.heads[0].physical={path:'private-test-owner.md'};
+  state.pages.push({path:'second-test-owner.md',semanticSignature:'canonical-second',relations:[]});
+  state.heads.push({sourceId:'second-test-owner.md',sourceRevision:'selected-two',sequence:3,state:'complete',physical:{path:'second-test-owner.md'}});
+  const fingerprints=new Map([['private-test-owner.md','canonical-original'],['second-test-owner.md','canonical-second']]);
+  const semantic=await startupCacheIdentity(cache,createHash,fingerprints);
+  assert.equal(semantic.semanticInputs.records,2);
+  state.pages.reverse();
+  const reordered=await startupCacheIdentity(cache,createHash,new Map([...fingerprints].reverse()));
+  assert.deepEqual(reordered.semanticInputs,semantic.semanticInputs,'Input identity ignores live map and saved-page traversal order');
+  assert.notDeepEqual(reordered.graph.pages,semantic.graph.pages,'Raw stored-record ordering remains visible');
+  const order=[...fingerprints.keys()];
+  const replay=await startupCacheIdentity(cache,createHash,fingerprints,()=>true,()=>order);
+  const reversedReplay=await startupCacheIdentity(cache,createHash,fingerprints,()=>true,()=>[...order].reverse());
+  assert.deepEqual(replay.semanticInputs,reversedReplay.semanticInputs,'Per-owner equality stays independently visible');
+  assert.notDeepEqual(replay.hostReplayInputs,reversedReplay.hostReplayInputs,'Actual compiler encounter order remains a distinct input');
+  let selections=0;
+  await assert.rejects(startupCacheIdentity(cache,createHash,fingerprints,()=>true,()=>++selections===1?order:[...order].reverse()),/Host replay order changed/);
+  state.meta.discoveredFields=[['later',{name:'Later',count:1}]];
+  const discovery=await startupCacheIdentity(cache,createHash,fingerprints);
+  assert.deepEqual(discovery.configuration,semantic.configuration,'Derived discovery order/content stays distinct from semantic settings identity');
+  assert.notDeepEqual(discovery.graph.policy,semantic.graph.policy,'Raw policy metadata changes remain preserved');
+  fingerprints.set('private-test-owner.md','different');
+  await assert.rejects(startupCacheIdentity(cache,createHash,fingerprints),/Live fingerprints do not match/);
+  fingerprints.set('private-test-owner.md','canonical-original');
+  state.heads[0].state='tombstone';
+  await assert.rejects(startupCacheIdentity(cache,createHash,fingerprints),/lack complete source-head coverage/);
+  await assert.rejects(startupCacheIdentity(cache,createHash,fingerprints,/** Represent a retired live graph inspection. */ ()=>false),/Input selection changed/);
+});
 
 test("Windows large eval preserves literal code and retires its temporary script on success/failure", () => {
   const code = 'JSON.stringify({quoted:"literal \\\"quotes\\\"",path:"C:\\\\fixture",lines:"a\\nb"})' + " ".repeat(40_000);

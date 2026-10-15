@@ -18,7 +18,7 @@ const initialize = `(() => {
       inferAllLinksAsFriends:false,inverseInfer:false,showFullTagName:true,tagStyleList:['#card','#drawing'],
       indexingMode:'on-demand',urlIndexingMode:'background',lastActivePath:file.path,pinnedNodes:[]};
     let revision=0;const index=new sourceModules.GraphIndex({app:f.app,settings,getIndexSourceRevision:()=>revision,
-      startupDiagnostics:{mark:()=>{},count:()=>{},phase:()=>{}}},f.app);
+      startupDiagnostics:{mark:()=>{},count:()=>{},phase:()=>{},recordWork:/** Presentation fixture discards aggregate work receipts. */()=>{}}},f.app);
     index.scheduleOrphanCleanup=()=>{};
     ok(await index.initializeOnDemandBaseline(),'Production structural baseline');
     const page=index.state.pages.get(file.path),clone={...page,tags:[],styleTags:[...page.styleTags]};
