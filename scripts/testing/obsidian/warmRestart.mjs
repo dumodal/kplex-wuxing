@@ -2,8 +2,7 @@
  * Disposable-vault startup acceptance: exact main.js staging, genuine complete-graph preparation,
  * vault-window application reloads and aggregate observation. Never accepts a personal vault.
  * Existing CLI process deadlines and renderer throttling remain unchanged. Settings are backed
- * up before preparation and restored explicitly. The optional same-stat regression owns and
- * removes one synthetic note in the small vault; no operation can target a personal vault.
+ * up before preparation and restored explicitly; no operation can target a personal vault.
  */
 import { createHash } from 'node:crypto';
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
@@ -14,7 +13,6 @@ import { arch, cpus, release, totalmem } from 'node:os';
 import { obsidianCliExecutable, spawnNativeSync } from './processTools.mjs';
 import { validateTarget } from './runner.mjs';
 import { startupCacheIdentity } from './startupCacheIdentity.mjs';
-import { receiptOfflineEdit } from './receiptOfflineEdit.mjs';
 import { startupRetainedMemory } from './startupRetainedMemory.mjs';
 import { createStartupResourceProbe } from './startupResources.mjs';
 
@@ -28,14 +26,12 @@ if(!outputRelative||(!isAbsolute(outputRelative)&&outputRelative!=='..'&&!output
 mkdirSync(output,{recursive:true});
 const action=process.argv[2]??'observe',label=process.env.KPLEX_RESTART_LABEL??action;
 const reloading=action==='run'||action==='stage-and-run';
-if(![undefined,'true','false'].includes(process.env.KPLEX_RESTART_EXPECT_RECEIPT))throw Error('Receipt expectation must be true or false');
-const expectReceipt=process.env.KPLEX_RESTART_EXPECT_RECEIPT==='true';
-if(!/^[a-zA-Z0-9-]{1,80}$/.test(label))throw Error('Use a simple bounded receipt label');
+if(!/^[a-zA-Z0-9-]{1,80}$/.test(label))throw Error('Use a simple bounded report label');
 const quietMs=Number(process.env.KPLEX_RESTART_QUIET_MS??0);
 if(!Number.isSafeInteger(quietMs)||quietMs<0||quietMs>3600000||quietMs>0&&quietMs<610000)throw Error('Resource acceptance needs a fixed 610000–3600000 ms quiet window');
-if(existsSync(join(output,`${label}.json`)))throw Error('Receipt exists; choose a new KPLEX_RESTART_LABEL');
+if(existsSync(join(output,`${label}.json`)))throw Error('Report exists; choose a new KPLEX_RESTART_LABEL');
 const processors=cpus();
-const report={action,vault,startedAt:new Date().toISOString(),node:process.version,expectReceipt,
+const report={action,vault,startedAt:new Date().toISOString(),node:process.version,
   hardware:{platform:process.platform,osRelease:release(),architecture:arch(),cpuModel:processors[0]?.model??null,
     logicalProcessors:processors.length,totalMemoryBytes:totalmem()},samples:[]};
 let stagedUnloaded=false,ownedStagePath=null;
@@ -76,7 +72,6 @@ const sampleCode=String.raw`(/** Read existing aggregate diagnostics without acq
    declarations:i.state.evidence.declarationCount},hydration:h,startup:d,source:i.getSourceAcquisitionCounters(),url:i.getUrlIndexProgress(),
   sourceRepository:Object.fromEntries(['activated','unsaved','empty','chunksWritten','bytesWritten','readFailures','sequenceMin','sequenceMax','peakDecodeBytes'].map(/** Export fixed aggregate fields only. */ key=>[key,Number.isFinite(repository[key])?repository[key]:null])),
   saved:{active:s.active?{createdAt:s.active.createdAt,schema:s.active.schema}:null,checkpoint:!!s.checkpoint,invalid:!!s.invalidActive},
-  receipt:{candidate:!!i.snapshotReceiptCandidate,retained:!!i.retainedSnapshotSourceProof&&i.retainedSnapshotSourceProof.publication===i.publicationRevision},
   revisions:{publication:i.publicationRevision,source:p.getIndexSourceRevision(),policy:i.semanticPolicyRevision},
   decisions:i.getIndexDiagnostics().slice(-16).map(/** Omit arbitrary fields and source identities. */ row=>({at:row.at,stage:row.stage,reason:row.reason,durationMs:row.durationMs}))});
 })()`;
@@ -172,18 +167,13 @@ async function restartAndObserve(before){
   report.cpuProcessIdentityVerified=report.final.resources
     ? report.final.resources.cpuProcess?.pid===report.final.host.rendererPid&&report.final.resources.cpuProcess?.type==='renderer':null;
   if(report.final.resources&&!report.cpuProcessIdentityVerified)throw Error('Profile CPU process is not the selected renderer');
-  // Retain inclusive native totals even when the subsequent receipt-acceptance assertion fails.
+  // Record inclusive native totals separately from the profile's shorter interval.
   report.lifecycleCpuMicroseconds=before.host.cpuPid===report.final.host.cpuPid
     ? {user:report.final.nativeCpuMicroseconds.user-before.nativeCpuMicroseconds.user,
       system:report.final.nativeCpuMicroseconds.system-before.nativeCpuMicroseconds.system}:null;
   recordReloadOutcome(before.timeOrigin);
-  if(expectReceipt){
-    const work=report.final.startup?.sessionWork,graph=report.final.graph;
-    if(!report.final.receipt.retained||!graph.full||!graph.fresh||graph.sourceSemantics||graph.sourceBacked
-      ||!work||work.fullBuildStarts!==0||work.nodeCatalogStarts!==0||work.completeSnapshotSaves!==0||work.checkpointSaves!==0){
-      throw Error('Clean candidate restart did not retain exact receipt authority without a build/catalog/save');
-    }
-  }
+  if(!report.allForeground)throw Error('Restart lost sampled foreground control');
+
 }
 
 try{
@@ -227,22 +217,21 @@ try{
     if(!report.final.graph.full)throw Error('Preparation did not produce a complete graph');
   }else if(action==='wait'){
     report.final=await settled();
-  }else if(action==='prepare-receipt'||action==='prepare-legacy'){
+  }else if(action==='prepare-legacy'){
     report.preparationBefore=await drained(await settled());
     report.preparationProbeSha256=hash(fileURLToPath(new URL('./startupResources.mjs',import.meta.url)));
-    report.preparationMethod='Explicit test-only canonical build/source-proof/save preparation; separate from primary restart timing';
+    report.preparationMethod='Explicit test-only canonical build/save preparation; separate from primary restart timing';
     report.preparationRequestedAt=Date.now();
-    startTask(`const p=app.plugins.plugins['k-plex'],i=p.index;if(i.isOnDemandMode())throw Error('Receipt preparation requires the existing Eager test configuration');
+    startTask(`const p=app.plugins.plugins['k-plex'],i=p.index;if(i.isOnDemandMode())throw Error('Measured preparation requires the existing Eager test configuration');
       const db=await i.indexedDb.open();if(!db)throw Error('Native preparation database unavailable');
       window.kplexStartupResources?.stop();
       window.kplexStartupResources=(${createStartupResourceProbe.toString()})({phase:/** Keep the untimed setup interval distinct from restart groups. */ ()=>'creation',
         now:/** Use the owning renderer clock. */ ()=>performance.now(),cpu:/** Count actual selected-process CPU. */ ()=>require('process').cpuUsage(),
         cpuProcess:{pid:require('process').pid,type:require('process').type},databaseName:db.name,detailed:true});
       window.kplexStartupResources.attach(i);
-      const built=await i.rebuild({validateSnapshotSources:${action==='prepare-receipt'}});if(!built)throw Error('Canonical receipt preparation build rejected');
-      i.cancelPendingPersistence();const saved=await i.persistIndexedDbSnapshot(i.snapshotPersistGeneration);if(!saved)throw Error('Receipt preparation save rejected');
-      const meta=await i.indexedDb.readSnapshotMeta();
-      ${action==='prepare-receipt' ? "const receipt=await i.indexedDb.readSnapshotSourceReceipt(meta,()=>true);if(!receipt)throw Error('Necessary canonical build/save produced no current receipt');return {built,saved,receiptVersion:receipt.version,sourceSequence:receipt.source.sequence,sourceHeads:receipt.source.heads.records,sourceInputs:receipt.source.inputs.records}" : "if(meta?.sourceReceipt!==undefined)throw Error('Legacy preparation unexpectedly produced a receipt');return {built,saved,receipt:false}"}`);
+      const built=await i.rebuild();if(!built)throw Error('Canonical preparation build rejected');
+      i.cancelPendingPersistence();const saved=await i.persistIndexedDbSnapshot(i.snapshotPersistGeneration);if(!saved)throw Error('Measured preparation save rejected');
+      return {built,saved}`);
     report.preparation=await taskDone();report.final=await drained(await settled());
     report.preparationElapsedMs=Date.now()-report.preparationRequestedAt;
   }else if(action==='identity'){
@@ -252,13 +241,6 @@ try{
         /** A live publication/policy/source change cannot produce a mixed input identity. */ ()=>!i.diagnosticsClosed&&publication===i.publicationRevision&&policy===i.semanticPolicyRevision&&source===i.plugin.getIndexSourceRevision(),
         /** Actual compiler encounter order affects preferred shared-URL labels and ordered aliases. */ ()=>app.vault.getMarkdownFiles().map(file=>file.path))`);
     report.cacheIdentity=await taskDone();
-  }else if(action==='verify-receipt-offline-edit'){
-    // Functional correctness is separate from resource acceptance: the fixture's legitimate save
-    // owns its preparation, and deleting its note may leave the normal delayed persistence timer.
-    report.before=await settled();
-    startTask(`return (${receiptOfflineEdit.toString()})(app,${JSON.stringify(target.vault)})`);
-    report.offlineEdit=await taskDone();report.final=await settled();
-    if(report.offlineEdit.failure)throw Error('Native receipt regression: '+report.offlineEdit.failure.stage+': '+report.offlineEdit.failure.reason);
   }else if(action==='memory'){
     report.before=await drained(await settled());
     startTask(`return (${startupRetainedMemory.toString()})(app,${JSON.stringify(vault)})`);

@@ -1,11 +1,10 @@
 # PR #165 evidence and reproduction index
 
-Verified **pre-cleanup** archive: `kplex-165-evidence-pre-cleanup.zip` (26,484,785 bytes,
-756 files / 757 ZIP entries). SHA-256:
-`7459f2f3a5a0b16e1279b75d9a8d31713c100f11f05abf4e1445656d6899779f`.
-It remains on the measurement host under `%TEMP%`, unpublished. The final archive will additionally
-capture the remaining native observations and post-cleanup verification; it must be verified separately.
-No public archive URL is claimed or authorized.
+Verified complete measurement/cleanup archive: `kplex-165-evidence-final.zip`
+(28,363,759 bytes; 836 verified files / 837 ZIP entries).
+SHA-256: `6bc315739247b71a8f864edcaa9a492408da305960dc0711e4cd6ce7b57800ca`.
+All entries pass CRC, size and per-file SHA-256 checks. It remains local under `%TEMP%`, unpublished;
+all raw originals and the earlier pre-cleanup ZIP remain intact. No public archive URL is claimed.
 
 The archive contains raw summaries and append-only sample streams, successful/failed/excluded
 trials, verification logs, frozen measured artifacts and source/build inputs. Every entry's size and
@@ -79,3 +78,15 @@ retain foreground/throttling and610s quiet after genuine drain. Preserve raw hos
 commitments. CPU excludes other Electron processes; IDB/hash counters are not disk bytes or allocation
 totals. Two-GC heap observations happen outside primary CPU timing. See the archive README for exact
 commands, checksums, cleanup and all exclusions; this index makes no additional acceptance claims.
+
+Full verification12 started from2fec9b1 plus scoped uncommitted cleanup; f9704a3 changes only docs/
+measurements, with source/tool/test scopes verified identical. Archive source/final-verification-tree.json
+and its scoped patch reproduce that fully validated tree. Both fixtures were restored to original
+on-demand settings/enablement with uninstrumented main4813b60d and no owned controllers/probes.
+Workspace-byte restoration is not proven. Final small-driver functional reload passes; awake released.
+
+Main advanced to `b29833c` (merged #168) after measurement/while verification ran. This archive and
+resource conclusions describe the exact tested #163 baseline/correction, not a newly benchmarked
+combined tree. Upstream integration is pending clarification: automatic approval review rejected the
+proposed main-into-draft-branch update under the maintainer's explicit no-merge instruction. No PR
+merge or release was attempted; the PR remains draft and combined-tree validation is not claimed.

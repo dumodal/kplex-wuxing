@@ -17,6 +17,9 @@ outcome independently of timings. Keep this PR draft for maintainer review; do n
 The correction is independently reviewable at `d0d16fb`; active production source is identical to that
 checkpoint. M is merged main `8df393a` (#163); A contains the correction plus progress/reporting.
 Native measurements do not isolate reporting's CPU cost from the duplicate-read correction.
+Main later advanced to `b29833c` (#168); it is not integrated into this tested head. The final source/
+resource evidence remains bound to the stated #163 baseline and correction. Combined-tree validation
+is a separate pending acceptance step; no new performance comparison is claimed.
 
 ## Resource results
 
@@ -43,11 +46,11 @@ Three valid observations per arm, through genuine drain **plus 610 seconds quiet
 | Observed drain s | 1,027.176 | 1,067.599 | +3.9% |
 
 This proves **less read/authentication/hash work**, not a native CPU/startup speedup. CPU median is
-1.6% higher and drain 3.9% longer; pair directions differ and ranges overlap (CPU M313.750–374.500s,
-A315.734–337.078s; drain M1,006.515–1,083.841s, A1,025.877–1,068.155s). Three observations,
+1.6% higher and drain 3.9% longer; pair directions differ and ranges overlap (CPU M 313.750–374.500s,
+A 315.734–337.078s; drain M 1,006.515–1,083.841s, A 1,025.877–1,068.155s). Three observations,
 nonadjacent replacement, host-order variation and unisolated reporting/probe cost limit attribution.
 Read-write transactions do not decrease (+0.24% observed median), and every arm still performs one
-full compilation/save with no catalog/checkpoint. All reuse/check20,088 bodies with **zero fresh
+full compilation/save with no catalog/checkpoint. All reuse/check 20,088 bodies with **zero fresh
 Vault.read calls, parses or source repairs**. Source posting reads fall with chunk reads (16.3%).
 Controlled fixtures below independently prove the removed duplicate resolution decoding; native
 counts mode does not measure decoded-record totals or physical disk bytes. Snapshot/binding/source-
@@ -61,22 +64,22 @@ receipt hashing is absent from shipping A; the existing vault rolling signature 
 
 Sampled heap/RSS maxima are lower at their medians, with overlapping ranges; these are not true
 peaks or attributable allocation savings. Retained main heap is effectively unchanged (A median
-1.21MB higher); it excludes other worker isolates. Peak source decode reservation is **183,261bytes
+1.21 MB higher); it excludes other worker isolates. Peak source decode reservation is **183,261 bytes
 in every run**. No retained-memory improvement is established. All raw-stream controls pass:
 foreground/throttling/PID, fixed visible center/demand, common driver/probe, static inputs, zero quiet
-violations/overflow/pending work and successful cleanup. Observed heartbeat maxima M402.8–485.6ms /
-A386.8–414.3ms are task gaps after the first CLI sample, not trusted input or paint latency.
+violations/overflow/pending work and successful cleanup. Observed heartbeat maxima M 402.8–485.6ms /
+A 386.8–414.3ms are task gaps after the first CLI sample, not trusted input or paint latency.
 
 
 Real Chromium/IndexedDB AB/BA/AB fixtures independently reproduce the algorithmic reduction at
 32/64/128 owners. At 128 owners: resolver-wave transactions **2,698→2,570 (4.7% fewer)**,
 resolution authentications **256→128 (50% fewer)** and digest calls **2,816→2,432 (13.6% fewer)**.
-Clean-restart transactions905 and peak decode reservation5,277bytes are unchanged; zero fresh body
+Clean-restart transactions 905 and peak decode reservation 5,277 bytes are unchanged; zero fresh body
 reads, parsing or source repairs are introduced. No additional inventory/build/catalog/save is scheduled
 by the correction. These are operation counts, not CPU or energy.
 
-One small 89-owner creation/restart/prose-edit/two-restart lifecycle records M/A CPU9.109/8.515s,
-transactions6,416/6,415, body reads/parses2/2 and complete writes1/1 including initial creation.
+One small 89-owner creation/restart/prose-edit/two-restart lifecycle records M/A CPU 9.109/8.515s,
+transactions 6,416/6,415, body reads/parses 2/2 and complete writes 1/1 including initial creation.
 This single ordered observation does not establish a small-vault CPU or memory benefit.
 
 ## Conditions and interpretation
@@ -84,7 +87,7 @@ This single ordered observation does not establish a small-vault CPU or memory b
 The native comparison completes three observations per M/A arm in order **A–M / M–A / A–M**. Frozen test-only builds share
 the same counts probe (`cfad37cb…`) and actual production build options. The first B–A–M group was
 already running when the maintainer superseded the nine-trial receipt plan. It finished unchanged;
-only the remaining M/A pairs followed. One middle A observation lost focus, finished unchanged and
+only the remaining M/A pairs followed. One middle A observation lost focus, finished and
 was excluded in full; one bounded replacement A followed. This breaks strict adjacency of that pair.
 All B outcomes and exclusions are preserved separately.
 
@@ -102,9 +105,9 @@ center, remote images off. No personal vault was accessed. Hardware: i9-12900,24
 68,448,301,056bytes RAM, Windows build10.0.26200x64; Node22.22.2 driver; Obsidian1.14.4,
 Electron43.3.0/Node24.18.1/Chrome150.0.7871.212 host. This is not a lower-powered/mobile result.
 
-Ready/drain are observed polling milestones (about1s CLI cadence), not exact paint/phase timestamps.
+Ready/drain are observed polling milestones (about 1s CLI cadence), not exact paint/phase timestamps.
 CPU is cumulative user+system for the verified selected renderer, including its worker threads,
-host and observer work, from before reload through **genuine drain plus610s quiet**. Profile-only CPU
+host and observer work, from before reload through **genuine drain plus 610s quiet**. Profile-only CPU
 is also retained. Other Electron processes, energy and plugin-exclusive CPU are not measured. Source,
 semantic work, scheduled persistence and observed transactions/promises must drain; no unexplained
 inventory/build/catalog/save may occur in the quiet window. No deadlines, pacing or throttling change.
@@ -132,28 +135,32 @@ against stale host-owned metadata despite fresh body reads. A real second-connec
 replacement held across final promotion also reproduced stale proof; a final scalar sequence fence
 fixed that separate race in the preserved prototype without another whole-vault pass.
 
-Eligibility requires every Markdown file≤128KiB and bounded decoded content. A disposable mixed
-vault with163,840-byte prose and196,813-byte Excalidraw-shaped Markdown compiles normally but
+Eligibility requires every Markdown file ≤128KiB and bounded decoded content. A disposable mixed
+vault with 163,840-byte prose and196,813-byte Excalidraw-shaped Markdown compiles normally but
 cannot create a receipt. The cap was not raised and no owner was omitted. For both prose and semantic
 edits: creation→restart succeeds; normal patch/five-minute save retires eligibility; two more restarts
 do not restore it. No extra full build was forced to manufacture renewal.
 
-On an existing graph/source cache, protocol2 first creation through ordinary startup costs569.735s renderer CPU,826,340 transactions/
-1,678,868 requests, two complete source passes and one build/save; genuine drain2,034.741s plus
+On an existing graph/source cache, protocol2 first creation through ordinary startup costs 569.735s renderer CPU,826,340 transactions/
+1,678,868 requests, two complete source passes and one build/save; genuine drain 2,034.741s plus
 610.352s quiet. The completed warm B trial **fails strict retention** after host encounter order changes:
 820.656s CPU,826,275 transactions/1,678,730 requests,20,088 extra fresh reads/parses, two complete
-source passes and a build/save; drain2,149.901s plus610.989s quiet. This is observed fallback cost,
-not successful retention or a paired receipt speedup. Small lifecycle B similarly adds89 fresh reads
-and one extra complete save (CPU10.750s,9,197transactions). No further B trial/design work is required.
+source passes and a build/save; drain 2,149.901s plus 610.989s quiet. This is observed fallback cost,
+not successful retention or a paired receipt speedup. Small lifecycle B similarly adds 89 fresh reads
+and one extra complete save (CPU 10.750s,9,197 transactions). No further B trial/design work is required.
 
 ## Validation, evidence and follow-up
 
-Final post-cleanup full verification12 is running on Node22.22.2. The prior receipt-free full11
-passes architecture7/core128/general829/UI63/portable334/browser524, official lint, installed types,
-production build and exact-build Windows native smoke, with no failures/skips/JS errors. Main
-SHA-256 `4813b60d280cf3dc7cb2ab1eaeea6769df6218b73183357e32f4bef00a5805e0`; manifest/styles unchanged.
-Six exact-shipping-build foreground cases pass with zero broad flush calls, controller removal and
-settings-byte restoration. Receipt-only tooling is now removed; final native restoration/archive remain pending.
+Final post-cleanup verification passes on **Node 22.22.2**: architecture7/core128/general829/UI63/
+portable334/browser524, official lint, installed types, real production build and exact-artifact
+Windows native smoke, with **zero failures/skips/captured JavaScript errors**. Main SHA-256:
+`4813b60d280cf3dc7cb2ab1eaeea6769df6218b73183357e32f4bef00a5805e0`; manifest/styles unchanged.
+All six earlier foreground scenarios use that same shipping hash and pass with inventory held,
+zero broad flush calls, controller removal and configuration-byte restoration. The cleaned standalone
+restart driver also passes a final small-vault functional reload; this is not another benchmark.
+Both test vaults end loaded with the exact uninstrumented PR artifacts, original on-demand settings
+and enablement bytes restored, expected 20,088/88 Markdown files and no owned controllers/probes.
+Workspace byte restoration is **not** proven. The reversible awake lease is released.
 
 [Compact measurements](background-index-efficiency-165-samples.json) retain all arm results,
 raw-report checksums, source/artifact/probe identities and limitations. [Evidence and reproduction
@@ -163,8 +170,8 @@ remain evidence, outside accepted denominators. No raw evidence was deleted or p
 identity, restart/drain and retained-memory tools remain.
 
 **Highest-value follow-up (not implemented):** measure repeated source-reader lease/head-selection transaction work inside the existing source
-validation owner. A still has about166,342 median pin/release-store transactions—38% of437,355 total—
-plus103k source-chunk reads. Source reconciliation occupies roughly11minutes after compilation/save.
+validation owner. A still has about 166,342 median pin/release-store transactions—38% of 437,355 total—
+plus 103k source-chunk reads. The body-reconciliation phase itself lasts roughly 11 minutes and follows existing metadata/build work.
 These counts identify substantial remaining storage work; they are not exclusive wait/CPU attribution.
 Isolate that cost before proposing bounded reader reuse. No implementation or new scheduler,
 provenance/receipt architecture is included here.
