@@ -7,6 +7,15 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const spanishTranslations = {
+  "colors.recommend": "Recomendar contraparte",
+  "colors.recommendHelp": "Refleja la luminosidad conservando tono, saturación y opacidad. Solo cambia el otro borrador; ajústalo antes de guardar.",
+  "colors.suggestDark": "Sugerir oscuro desde claro",
+  "colors.suggestLight": "Sugerir claro desde oscuro",
+  "colors.usagePreview": "Vista previa de uso",
+  "colors.pairPreviewHelp": "Tus variantes clara y oscura en el fondo de una nota de ejemplo. Guardar crea el color con nombre; selecciónalo en un estilo para usarlo.",
+  "colors.alreadyNative": "Los estilos estándar ya usan colores del tema. No hay colores estándar personalizados que borrar.",
+  "colors.afterAdoption": "Tras aplicar colores del tema",
+  "colors.sameVariant": "Este color del tema usa el mismo valor en ambos modos.",
 
   "compass.title": "Tinte direccional del fondo",
   "compass.help": "Mostrar una guía de orientación detrás del Plex. El tinte indica la dirección, no la pertenencia exacta a una relación.",
@@ -59,7 +68,7 @@ const spanishTranslations = {
   "colors.standard.inferredLinkStyle": "Enlace inferido",
   "colors.standard.folderLinkStyle": "Enlace de carpeta",
   "colors.standard.tagLinkStyle": "Enlace de etiqueta",
-  "colors.estimatedHelp": "Cambia la apariencia de Obsidian para comprobar este modo. Parte del contexto del tema no está disponible.",
+  "colors.estimatedHelp": "Esta vista usa los estilos cargados del tema. Los scripts del tema pueden cambiar el resultado.",
   "colors.source": "Origen del color",
   "colors.inherit": "Predeterminado",
   "colors.fixed": "Color fijo",

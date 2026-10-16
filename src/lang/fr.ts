@@ -7,6 +7,15 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const frenchTranslations = {
+  "colors.recommend": "Suggérer la couleur associée",
+  "colors.recommendHelp": "Inverse la luminosité en conservant teinte, saturation et opacité. Modifie uniquement l’autre brouillon ; ajustez-le avant d’enregistrer.",
+  "colors.suggestDark": "Suggérer sombre depuis clair",
+  "colors.suggestLight": "Suggérer clair depuis sombre",
+  "colors.usagePreview": "Aperçu d’utilisation",
+  "colors.pairPreviewHelp": "Vos variantes claire et sombre sur le fond d’une note exemple. Enregistrer crée la couleur nommée ; sélectionnez-la ensuite dans un style.",
+  "colors.alreadyNative": "Les styles standard utilisent déjà les couleurs du thème. Aucune couleur personnalisée standard à effacer.",
+  "colors.afterAdoption": "Après application des couleurs du thème",
+  "colors.sameVariant": "Cette couleur de thème utilise la même valeur dans les deux modes.",
 
   "compass.title": "Teinte directionnelle du fond",
   "compass.help": "Afficher un repère derrière le Plex. La teinte indique une direction, pas une appartenance exacte aux relations.",
@@ -59,7 +68,7 @@ const frenchTranslations = {
   "colors.standard.inferredLinkStyle": "Lien déduit",
   "colors.standard.folderLinkStyle": "Lien dossier",
   "colors.standard.tagLinkStyle": "Lien étiquette",
-  "colors.estimatedHelp": "Changez l’apparence d’Obsidian pour vérifier ce mode. Une partie du contexte du thème est indisponible.",
+  "colors.estimatedHelp": "Cet aperçu utilise les styles chargés du thème. Les scripts du thème peuvent modifier le résultat.",
   "colors.source": "Source de couleur",
   "colors.inherit": "Par défaut",
   "colors.fixed": "Couleur fixe",

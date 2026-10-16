@@ -46,7 +46,7 @@ export class ColorLiteralEditor {
       });
     const textLabel = row.createEl("label", { text: options.labels.value });
     this.text = textLabel.createEl("input", { attr: { type: "text", spellcheck: "false", autocomplete: "off", "aria-describedby": id + "-error" } });
-    this.text.value = this.value;
+    this.text.value = this.displayValue();
     this.text.addEventListener("compositionstart", /** Retain the last valid preview throughout composition. */ () => { if (this.editable()) { this.composing = true; this.notify(); } });
     this.text.addEventListener("compositionend", /** Validate once after the native IME commits, without rewriting its text/caret. */ () => { if (this.editable()) { this.composing = false; this.readText(true); } });
     this.text.addEventListener("input", /** Partial text stays in the native field; only valid complete values repaint the draft. */ () => { if (this.editable() && !this.composing) this.readText(false); });
@@ -75,7 +75,7 @@ export class ColorLiteralEditor {
   reset(): void {
     if (!this.editable()) return;
     this.value = this.options.initial; this.parsed = parseLiteralColor(this.value); this.textValid = true; this.opacityValid = true; this.composing = false;
-    this.text.value = this.value; this.sync("reset"); this.showError(); this.notify();
+    this.text.value = this.displayValue(); this.sync("reset"); this.showError(); this.notify();
   }
 
   /** Expose the last valid draft; callers still check validity before submitting. */
@@ -110,9 +110,21 @@ export class ColorLiteralEditor {
     if (!this.parsed) return;
     this.rgb.setValue(literalRgbHex(this.parsed));
     this.swatch.setCssProps({ "--kplex-color-swatch": formatLiteralColor(this.parsed) });
-    if (origin !== "text") this.text.value = this.value;
-    if (origin !== "percentage" && this.opacityValid) this.percentage.value = String(this.parsed.alpha * 100);
+    if (origin !== "text") this.text.value = this.displayValue();
+    if (origin !== "percentage" && this.opacityValid) this.percentage.value = String(Number((this.parsed.alpha * 100).toFixed(2)));
     if (origin !== "slider") this.slider.value = String(this.parsed.alpha * 100);
+  }
+  /** Display two alpha decimals without changing the exact saved draft or rewriting active text. */
+  private displayValue(): string {
+    return this.parsed && /^rgba?\(/i.test(this.value.trim())
+      ? formatLiteralColor({...this.parsed, alpha: Number(this.parsed.alpha.toFixed(2))}) : this.value;
+  }
+  /** Install an explicitly recommended variant; the containing dialog still owns Save and Cancel. */
+  setValue(value: string): void {
+    if (!this.editable()) return;
+    const parsed = parseLiteralColor(value); if (!parsed) return;
+    this.value = value; this.parsed = parsed; this.textValid = true; this.opacityValid = true; this.composing = false;
+    this.sync("recommendation"); this.showError(); this.notify();
   }
   /** Error text and accessible invalid state describe validation without altering the draft. */
   private showError(): void {

@@ -9,6 +9,15 @@
  * parameters remain unquoted regardless of their names. Locale catalogs inherit this classification.
  */
 export const englishCatalog = {
+  "colors.recommend": {"message": "Recommend counterpart", "context": "Shared color editor: explicit local counterpart recommendations, usage previews and safe theme adoption.", "params": []},
+  "colors.recommendHelp": {"message": "Mirror lightness, keeping hue, saturation and opacity. This changes only the opposite draft; adjust it before saving.", "context": "Shared color editor: explicit local counterpart recommendations, usage previews and safe theme adoption.", "params": []},
+  "colors.suggestDark": {"message": "Suggest dark from light", "context": "Shared color editor: explicit local counterpart recommendations, usage previews and safe theme adoption.", "params": []},
+  "colors.suggestLight": {"message": "Suggest light from dark", "context": "Shared color editor: explicit local counterpart recommendations, usage previews and safe theme adoption.", "params": []},
+  "colors.usagePreview": {"message": "Usage preview", "context": "Shared color editor: explicit local counterpart recommendations, usage previews and safe theme adoption.", "params": []},
+  "colors.pairPreviewHelp": {"message": "Your light and dark variants applied to an example note background. Saving creates the named color; choose it in a style to use it.", "context": "Shared color editor: explicit local counterpart recommendations, usage previews and safe theme adoption.", "params": []},
+  "colors.alreadyNative": {"message": "Standard styles already use theme colors. There are no standard color overrides to clear.", "context": "Shared color editor: explicit local counterpart recommendations, usage previews and safe theme adoption.", "params": []},
+  "colors.afterAdoption": {"message": "After applying theme colors", "context": "Shared color editor: explicit local counterpart recommendations, usage previews and safe theme adoption.", "params": []},
+  "colors.sameVariant": {"message": "This theme color uses the same value in both modes.", "context": "Shared color editor: explicit local counterpart recommendations, usage previews and safe theme adoption.", "params": []},
 
   "compass.title": {"message": "Directional background tint", "context": "Optional viewport Compass decoration and local native editor.", "params": []},
   "compass.help": {"message": "Show an orientation cue behind the Plex. Tint indicates direction, not exact relationship membership.", "context": "Optional viewport Compass decoration and local native editor.", "params": []},
@@ -61,7 +70,7 @@ export const englishCatalog = {
   "colors.standard.inferredLinkStyle": {"message": "Inferred link", "context": "Native palette, semantic/standard colors and explicit adoption. Names and IDs are user data.", "params": []},
   "colors.standard.folderLinkStyle": {"message": "Folder link", "context": "Native palette, semantic/standard colors and explicit adoption. Names and IDs are user data.", "params": []},
   "colors.standard.tagLinkStyle": {"message": "Tag link", "context": "Native palette, semantic/standard colors and explicit adoption. Names and IDs are user data.", "params": []},
-  "colors.estimatedHelp": {"message": "Switch Obsidian’s appearance to check this mode. Some theme context is unavailable.", "context": "Explanation below an estimated opposite-mode or refreshing color preview. Saved color identity is unchanged.", "params": []},
+  "colors.estimatedHelp": {"message": "This preview uses the loaded theme styles. Theme scripts may change the result.", "context": "Shared color editor: explicit local counterpart recommendations, usage previews and safe theme adoption.", "params": []},
   "colors.source": {"message": "Color source", "context": "Color-source editor and paired real-use preview. User color names and IDs remain literal.", "params": []},
   "colors.inherit": {"message": "Default", "context": "Color-source editor and paired real-use preview. User color names and IDs remain literal.", "params": []},
   "colors.fixed": {"message": "Fixed color", "context": "Color-source editor and paired real-use preview. User color names and IDs remain literal.", "params": []},

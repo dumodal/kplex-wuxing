@@ -5,7 +5,7 @@
  * only for completed theme names/context changes; local picker paint coalesces to one owner frame.
  * Compass examples reuse the viewport clipper and composite source alpha with mode/theme intensity.
  */
-import { NODE_COLOR_FIELDS, LINK_COLOR_FIELDS, isThemeColorName, parseLiteralColor, type ColorValue } from "../core/contracts/colorValue";
+import { NODE_COLOR_FIELDS, LINK_COLOR_FIELDS, isThemeColorName, parseLiteralColor, formatLiteralColor, type ColorValue } from "../core/contracts/colorValue";
 import {compassPolygons} from "../core/plex/compassBackground";
 import {COMPASS_DIRECTIONS, COMPASS_COLOR_VARIABLES, COMPASS_SEMANTIC_SLOTS, type CompassDirection} from "../core/plex/colorPreferences";
 import { SEMANTIC_COLOR_DEFAULTS, semanticSlotForVariable, type ColorPreferencesV1, type SemanticColorSlot, type SemanticColorPair } from "../core/plex/colorPreferences";
@@ -142,7 +142,7 @@ export class ColorPreview {
     if (value.kind === "palette") return (this.options.pairDraft?.().id === value.id ? this.options.pairDraft() : preferences.palette.find(pair => pair.id === value.id))?.[mode] ?? fallback;
     if (value.kind !== "theme") return fallback;
     const slot = semanticSlotForVariable(value.variable);
-    if (!slot) return samples[value.variable] || fallback;
+    if (!slot) return samples[value.variable] || this.samples?.[this.samples.activeMode].colors[value.variable] || fallback;
     if (seen.has(slot)) return samples[value.variable] || samples[SEMANTIC_COLOR_DEFAULTS[slot]] || fallback;
     const inherited = samples[value.variable] || samples[SEMANTIC_COLOR_DEFAULTS[slot]] || fallback;
     const configured = preferences.semantic[slot]; if (configured === undefined) return inherited;
@@ -154,7 +154,11 @@ export class ColorPreview {
     const card = this.cards[mode], samples = this.samples?.[mode], t = this.options.translate;
     const matched = !this.contextStale && samples?.confidence === "matched";
     card.status.setText(matched ? "" : t("colors.estimated"));
-    card.help.setText(matched ? "" : t("colors.estimatedHelp"));
+    card.help.setText("");
+    if (this.value && typeof this.value !== "string" && this.value.kind === "theme" && this.samples) {
+      const variable = this.value.variable, light = this.samples.light.colors[variable], dark = this.samples.dark.colors[variable];
+      if ((light || dark) && (!light || !dark || light === dark)) card.help.setText(t("colors.sameVariant"));
+    }
     if (!samples?.colors["--background-primary"]) { card.canvas.toggle(false); card.contrast.setText(t("colors.previewUnavailable")); return; }
     card.canvas.toggle(true);
     const fallback = Object.fromEntries(Object.keys(NATIVE_NODE_PAINT).map(key => [key, samples.colors[`--kplex-preview-${key}`] || "transparent"])) as NodePaintFallbacks;
@@ -171,11 +175,19 @@ export class ColorPreview {
     const canvasColor = this.resolve(canvas, mode, samples.colors["--kplex-preview-canvas"]), labelFill = samples.colors["--kplex-preview-label-fill"];
     const stroke = this.resolve(link.strokeColor, mode, samples.colors["--kplex-preview-link"]);
     const labelText = this.resolve(link.textColor, mode, samples.colors["--kplex-preview-label-text"]);
-    card.canvas.setCssProps({ "--_kplex-preview-canvas": alphaHexToCss(canvasColor), "--_kplex-preview-node-fill": paint.background,
+    const panelColor = samples.colors["--kplex-panel"] || samples.colors["--background-primary"];
+    const panel = this.reader.read(card.canvas, panelColor), primary = this.reader.read(card.canvas, samples.colors["--background-primary"]);
+    const uncertainSurface = !panel || panel.alpha < 1;
+    const base = panel?.alpha === 1 ? panel : panel && primary ? compositeColor(panel, primary) : null;
+    // Each alternate card owns its backdrop. A transparent sample must not reveal the current
+    // native modal, and a translucent panel has an unmodelled ancestor surface rather than proof.
+    const previewBase = panel?.alpha === 1 ? panelColor : base ? formatLiteralColor(base) : samples.colors["--background-primary"];
+    if (uncertainSurface) { card.status.setText(t("colors.estimated")); card.help.setText(t("colors.estimatedHelp")); }
+    card.canvas.setCssProps({ "--_kplex-preview-base": previewBase, "--_kplex-preview-canvas": alphaHexToCss(canvasColor), "--_kplex-preview-node-fill": paint.background,
       "--_kplex-preview-node-text": paint.foreground, "--_kplex-preview-node-border": paint.border, "--_kplex-preview-gate-stroke": paint.gateStroke,
       "--_kplex-preview-gate-fill": paint.gateFill, "--_kplex-preview-link": alphaHexToCss(stroke), "--_kplex-preview-label-fill": labelFill,
       "--_kplex-preview-label-text": alphaHexToCss(labelText) });
-    const base = this.reader.read(card.canvas, samples.colors["--background-primary"]), canvasSample = this.reader.read(card.canvas, canvasColor);
+    const canvasSample = this.reader.read(card.canvas, canvasColor);
     const fill = this.reader.read(card.canvas, typeof node.backgroundColor === "string" ? node.backgroundColor : fallback.fill), text = this.reader.read(card.canvas, paint.foreground), line = this.reader.read(card.canvas, stroke);
     if (!base || !canvasSample || !fill || !text || !line) { card.contrast.setText(t("colors.contrastUnavailable")); return; }
     const surface = compositeColor(canvasSample, base), nodeSurface = compositeColor(fill, surface);
@@ -214,7 +226,7 @@ export class ColorPreview {
       ratio = ratios.length === 4 && ratios.every(/** Unknown alpha composition cannot certify a contrast number. */ value => value !== null) ? Math.min(...ratios) : null;
     }
     // Hatch examples have a varying surface; a scalar ratio cannot certify every stripe.
-    if (this.contextStale || opaqueLiteral || ratio === null || node.fillStyle === "hachure" || node.fillStyle === "cross-hatch") card.contrast.setText(t("colors.contrastUnavailable"));
+    if (this.contextStale || opaqueLiteral || uncertainSurface || ratio === null || node.fillStyle === "hachure" || node.fillStyle === "cross-hatch") card.contrast.setText(t("colors.contrastUnavailable"));
     else if (target.kind === "canvas" || target.kind === "compass") {
       const ratios = compassSurfaces.map(/** Essential connector contrast uses the least favorable tinted surface. */ background => colorContrastRatio(line, background));
       const connectorRatio = ratios.every(/** Unknown alpha composition cannot certify a contrast number. */ value => value !== null) ? Math.min(...ratios) : null;

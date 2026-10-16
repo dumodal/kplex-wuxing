@@ -1,4 +1,5 @@
 /** Native detached named-pair editor; both literal controls and previews share the existing color owners. */
+import {recommendColorCounterpart} from "../core/plex/colorCounterpart";
 import {Setting, type App, type ButtonComponent} from "obsidian";
 import {StyleEditorModal, type StyleCommitResult} from "./StyleEditorModal";
 import {ColorLiteralEditor, type LiteralColorLabels} from "./ColorLiteralEditor";
@@ -41,6 +42,11 @@ export class ColorPairModal extends StyleEditorModal {
       label: t(`colors.${mode}`), initial: this.options.initial[mode], labels,
       onChange: value => { if (!this.canEdit()) return; this.draft[mode] = value; this.preview?.update({kind: "palette", id: this.draft.id}); this.refreshSave(); },
     }));
+    new Setting(this.contentEl).setName(t("colors.recommend")).setDesc(t("colors.recommendHelp"))
+      .addButton(button => button.setButtonText(t("colors.suggestDark")).onClick(() => this.recommend("light")))
+      .addButton(button => button.setButtonText(t("colors.suggestLight")).onClick(() => this.recommend("dark")));
+    this.contentEl.createEl("h3", {text: t("colors.usagePreview")});
+    this.contentEl.createDiv({text: t("colors.pairPreviewHelp"), cls: "setting-item-description"});
     this.preview = new ColorPreview(this.contentEl, {...this.options, target: {kind: "node", field: "backgroundColor"}, pairDraft: () => this.draft}, {kind: "palette", id: this.draft.id});
     new Setting(this.contentEl).setName(t("colors.resetPair")).setDesc(t("colors.resetPairHelp"))
       .addButton(button => button.setButtonText(t("colors.resetPair")).onClick(() => { if (this.canEdit()) for (const literal of this.literals) literal.reset(); }));
@@ -49,6 +55,15 @@ export class ColorPairModal extends StyleEditorModal {
     this.releaseCss = this.options.subscribeCss?.(() => this.preview?.invalidate()) ?? null;
     this.releaseColors = this.options.subscribeColors?.(() => this.preview?.refreshSources()) ?? null;
     this.refreshSave();
+  }
+
+  /** An explicit direction replaces only the opposite local draft; reset and Cancel remain available. */
+  private recommend(from: "light" | "dark"): void {
+    if (!this.canEdit()) return;
+    const index = from === "light" ? 0 : 1, source = this.literals[index];
+    if (!source?.isValid()) return;
+    const recommended = recommendColorCounterpart(source.getValue());
+    if (recommended !== null) this.literals[1 - index]?.setValue(recommended);
   }
 
   /** A failed durable write retains both complete/partial drafts for repair or retry. */

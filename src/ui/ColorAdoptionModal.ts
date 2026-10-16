@@ -20,15 +20,17 @@ export class ColorAdoptionModal extends StyleEditorModal {
     this.beginEditor(this.context.sourceScope); this.modalEl.addClass("kplex-color-modal");
     const t = this.context.translate; this.titleEl.setText(t("colors.adopt"));
     this.contentEl.createDiv({text: t("colors.adoptHelp"), cls: "setting-item-description"});
+    if (!this.slots.length) this.contentEl.createDiv({text: t("colors.alreadyNative"), cls: "setting-item-description"});
     const details = this.contentEl.createEl("details");
     details.createEl("summary", {text: t("colors.affected", {count: this.slots.length})});
     const list = details.createEl("ul"); for (const slot of this.slots) list.createEl("li", {text: slot});
+    this.contentEl.createEl("h3", {text: t("colors.afterAdoption")});
     this.preview = new ColorPreview(this.contentEl, {...this.context, target: {kind: "canvas"},
       nodeStyle: () => withoutStyleColorOverrides(this.context.nodeStyle(), NODE_COLOR_FIELDS),
       linkStyle: () => withoutStyleColorOverrides(this.context.linkStyle(), LINK_COLOR_FIELDS), background: () => undefined}, undefined);
     this.release = this.context.subscribeCss?.(() => this.preview?.invalidate()) ?? null;
     new Setting(this.contentEl).addButton(button => button.setButtonText(t("common.cancel")).onClick(() => this.close()))
-      .addButton(button => button.setButtonText(t("colors.adoptConfirm")).setDestructive().onClick(() => this.runOperation(this.save)));
+      .addButton(button => button.setButtonText(t("colors.adoptConfirm")).setDestructive().setDisabled(!this.slots.length).onClick(() => {if (this.slots.length) this.runOperation(this.save);}));
   }
 
   /** Retire isolated sampling and subscriptions before releasing native controls. */

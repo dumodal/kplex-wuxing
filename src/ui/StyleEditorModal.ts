@@ -108,6 +108,15 @@ export abstract class StyleEditorModal extends Modal {
   /** Re-evaluate current draft validity after a rejected write restores native controls. */
   protected onOperationRejected(): void {}
 
+  /** Focus a native control after attachment, using its exact window and existing modal retirement owner. */
+  protected focusAfterAttachment(element: HTMLElement): void {
+    const owner = element.ownerDocument, view = owner.defaultView; if (!view) return;
+    const timer = view.setTimeout(/** A closed, pending or migrated form cannot steal focus from its replacement. */ () => {
+      if (this.canEdit() && element.isConnected && element.ownerDocument === owner && !view.closed) element.focus();
+    }, 0);
+    this.contextReleases.push(/** Closing/reopening/migration cancels the original window's pending focus. */ () => view.clearTimeout(timer));
+  }
+
   /** Permit local validation feedback to exclude Save during an existing durable operation. */
   protected canEdit(): boolean { return this.editorOpen && !this.operationPending && !this.operationCommitted; }
 

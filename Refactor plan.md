@@ -4040,3 +4040,7 @@ Four bounded viewport polygons reuse the camera RAF and exact center-motion pose
 ### 2026-10-16 — PR #158 E1: real Settings page ownership
 
 Reproduced detached declarative tab root causing inert canvas/tint actions and missing paired contexts. Existing tab now reacquires its visible native subpage in the same document; bounded preview owner and lazy lifetime fences remain. All22 color-editor browser tests, lint/types/real build and17 exact native color/Compass cases pass; original disposable configuration restored. No graph/source/scheduler/schema change; C14 accepted, C15–C26 paused. See styling report. Remaining Settings presentation/recommendation work is pending. Manual priorities: custom-theme Settings readability, macOS picker/window lifecycle, physical mobile touch.
+
+### 2026-10-16 — PR #158 E2: explicit counterpart and readable previews
+
+Shared controls add reversible HSL-lightness suggestions, display-only alpha rounding, broader complete theme choices, meaningful pair/adoption copy and correct transparent-card composition. Existing source identity, disk-first queue and native lifetime remain.49 browser/localization checks, lint/types/real build and18 exact native cases pass with restored disposable state. Raw before-control preserved; see styling report. No graph/schema/scheduler/refactor expansion. C14 accepted; C15–C26 paused. Settings strips/navigation remain active. Manual priorities: subjective community-theme readability, macOS picker/window behavior, physical mobile touch.

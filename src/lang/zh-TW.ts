@@ -7,6 +7,15 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const traditionalChineseTranslations = {
+  "colors.recommend": "建議對應色",
+  "colors.recommendHelp": "反轉明度並保留色相、飽和度和不透明度。只變更另一側的草稿；儲存前可再調整。",
+  "colors.suggestDark": "由淺色建議深色",
+  "colors.suggestLight": "由深色建議淺色",
+  "colors.usagePreview": "使用預覽",
+  "colors.pairPreviewHelp": "將淺色和深色版本套用至範例筆記背景。儲存會建立命名顏色；請在樣式中選取以使用。",
+  "colors.alreadyNative": "標準樣式已使用主題顏色，沒有需要清除的標準顏色覆寫。",
+  "colors.afterAdoption": "套用主題顏色後",
+  "colors.sameVariant": "此主題顏色在兩種模式使用相同值。",
 
   "compass.title": "背景方向色調",
   "compass.help": "在 Plex 後方顯示方向提示。色調代表方向，不代表關係的精確歸屬。",
@@ -59,7 +68,7 @@ const traditionalChineseTranslations = {
   "colors.standard.inferredLinkStyle": "推斷連結",
   "colors.standard.folderLinkStyle": "資料夾連結",
   "colors.standard.tagLinkStyle": "標籤連結",
-  "colors.estimatedHelp": "請切換 Obsidian 的外觀以確認此模式。部分佈景主題情境無法取得。",
+  "colors.estimatedHelp": "此預覽使用已載入的主題樣式；主題指令碼可能影響結果。",
   "colors.source": "色彩來源",
   "colors.inherit": "預設",
   "colors.fixed": "固定色彩",

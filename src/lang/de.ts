@@ -7,6 +7,15 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const germanTranslations = {
+  "colors.recommend": "Gegenfarbe vorschlagen",
+  "colors.recommendHelp": "Helligkeit spiegeln; Farbton, Sättigung und Deckkraft bleiben erhalten. Nur der andere Entwurf wird geändert. Vor dem Speichern anpassen.",
+  "colors.suggestDark": "Dunkel aus Hell vorschlagen",
+  "colors.suggestLight": "Hell aus Dunkel vorschlagen",
+  "colors.usagePreview": "Verwendungsvorschau",
+  "colors.pairPreviewHelp": "Die helle und dunkle Variante als Hintergrund einer Beispielnotiz. Speichern erstellt die benannte Farbe; diese anschließend in einem Stil auswählen.",
+  "colors.alreadyNative": "Standardstile verwenden bereits Theme-Farben. Es gibt keine Standard-Farbüberschreibungen zu löschen.",
+  "colors.afterAdoption": "Nach dem Anwenden der Theme-Farben",
+  "colors.sameVariant": "Diese Theme-Farbe verwendet in beiden Modi denselben Wert.",
 
   "compass.title": "Richtungsabhängige Hintergrundtönung",
   "compass.help": "Eine Orientierungshilfe hinter dem Plex anzeigen. Die Tönung zeigt die Richtung, nicht die genaue Beziehungszugehörigkeit.",
@@ -59,7 +68,7 @@ const germanTranslations = {
   "colors.standard.inferredLinkStyle": "Abgeleitete Verbindung",
   "colors.standard.folderLinkStyle": "Ordnerverbindung",
   "colors.standard.tagLinkStyle": "Tag-Verbindung",
-  "colors.estimatedHelp": "Wechsle die Darstellung von Obsidian, um diesen Modus zu prüfen. Ein Teil des Designkontexts ist nicht verfügbar.",
+  "colors.estimatedHelp": "Diese Vorschau verwendet geladene Theme-Stile. Theme-Skripte können das Ergebnis ändern.",
   "colors.source": "Farbquelle",
   "colors.inherit": "Standard",
   "colors.fixed": "Feste Farbe",

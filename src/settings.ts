@@ -1,6 +1,3 @@
-import { StyleSwatchScope } from "./ui/StyleSwatchScope";
-import {colorValueCss} from "./adapters/obsidian/colorPresentation";
-import { subscribeAppearanceSources } from "./adapters/obsidian/colorChanges";
 /**
  * Obsidian settings persistence, bounded legacy graph import, declarative controls and style/ontology
  * managers. Foreign imports cannot change plugin workflow preferences; own persisted K-Plex keys
@@ -23,6 +20,10 @@ import { subscribeAppearanceSources } from "./adapters/obsidian/colorChanges";
  * Typed color sources retain literal alpha and named/theme identity; local palette preferences
  * are isolated from foreign graph imports and unsupported formats retain a persistence marker.
  */
+import { StyleSwatchScope } from "./ui/StyleSwatchScope";
+import {colorValueCss} from "./adapters/obsidian/colorPresentation";
+import { subscribeAppearanceSources } from "./adapters/obsidian/colorChanges";
+
 import { StyleEditorModal, appendIcon, type StyleCommitResult } from "./ui/StyleEditorModal";
 import { NATIVE_NODE_PAINT, NATIVE_LINK_STROKE, nodePaintFallbacks } from "./index/style";
 import { ColorAdoptionModal } from "./ui/ColorAdoptionModal";
@@ -1056,7 +1057,7 @@ class NodeStyleModal extends StyleEditorModal {
       };
       this.runOperation(/** Submit the validated appearance draft within this exact modal lifetime. */ isCurrent => this.onSave(name, style, this.initialName, kind, isCurrent));
     });
-    (nameInput.ownerDocument.defaultView ?? window).setTimeout(/** Focus only this still-mounted form after native attachment. */ () => { if (nameInput.isConnected) nameInput.focus(); }, 0);
+    this.focusAfterAttachment(nameInput);
   }
 
   /** Close form-owned suggestion popovers before dropping the native modal's form elements. */
@@ -1259,7 +1260,7 @@ class OntologyLinkStylesManagerModal extends StyleEditorModal {
     this.statusEl = this.contentEl.createDiv({ cls: "kplex-style-manager-status" });
     this.listEl = this.contentEl.createDiv({ cls: "kplex-style-manager-list" });
     this.renderList();
-    window.setTimeout(() => search.focus(), 0);
+    this.focusAfterAttachment(search);
   }
 
   /** Rebuild the searchable ontology-link style manager entries with localized status/actions while preserving actual field and style values. */
@@ -1392,7 +1393,7 @@ class NoteTypeStylesManagerModal extends StyleEditorModal {
     this.statusEl = this.contentEl.createDiv({ cls: "kplex-style-manager-status" });
     this.listEl = this.contentEl.createDiv({ cls: "kplex-style-manager-list" });
     this.renderList();
-    window.setTimeout(() => search.focus(), 0);
+    this.focusAfterAttachment(search);
   }
 
   /** Rebuild the searchable note-type style manager entries with localized status/actions while preserving actual field and style values. */

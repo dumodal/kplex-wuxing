@@ -7,6 +7,15 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const japaneseTranslations = {
+  "colors.recommend": "対応色を提案",
+  "colors.recommendHelp": "色相・彩度・不透明度を保って明度を反転します。反対側の下書きだけが変わります。保存前に調整してください。",
+  "colors.suggestDark": "ライトからダークを提案",
+  "colors.suggestLight": "ダークからライトを提案",
+  "colors.usagePreview": "使用例プレビュー",
+  "colors.pairPreviewHelp": "ライト・ダークの色をノートの背景例に適用します。保存後、スタイルでこの名前付きの色を選ぶと使用できます。",
+  "colors.alreadyNative": "標準スタイルはすでにテーマの色を使用しています。解除する標準色の上書きはありません。",
+  "colors.afterAdoption": "テーマの色を適用した後",
+  "colors.sameVariant": "このテーマの色は両モードで同じ値を使用します。",
 
   "compass.title": "背景の方向別の色付け",
   "compass.help": "Plex の背後に方向の目印を表示します。色は方向を示し、関係の厳密な所属を示すものではありません。",
@@ -59,7 +68,7 @@ const japaneseTranslations = {
   "colors.standard.inferredLinkStyle": "推論リンク",
   "colors.standard.folderLinkStyle": "フォルダーリンク",
   "colors.standard.tagLinkStyle": "タグリンク",
-  "colors.estimatedHelp": "このモードを確認するにはObsidianの外観を切り替えてください。テーマ情報の一部を取得できません。",
+  "colors.estimatedHelp": "読み込まれたテーマスタイルで表示します。テーマのスクリプトにより結果が変わる場合があります。",
   "colors.source": "色の指定元",
   "colors.inherit": "既定",
   "colors.fixed": "固定色",

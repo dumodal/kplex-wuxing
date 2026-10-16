@@ -79,6 +79,11 @@ function start(){
    tab.openColorPalette();await until(()=>[...tab.colorDialogs].some(d=>d.modalEl.classList.contains('kplex-palette-modal')),'Palette manager missing');
    const manager=[...tab.colorDialogs].find(d=>d.modalEl.classList.contains('kplex-palette-modal'));c.dialogs.push(manager);
    button(manager.contentEl,'colors.add').click();const pair=[...manager.children].at(-1);check(pair,'Native pair editor missing');c.dialogs.push(pair);
+   const pairOpening=JSON.stringify(pair.draft),pairWrites=c.counts.writes;
+   button(pair.contentEl,'colors.suggestDark').click();button(pair.contentEl,'colors.suggestLight').click();
+   check(c.counts.writes===pairWrites,'Counterpart recommendation wrote before Save');
+   button(pair.contentEl,'colors.resetPair').click();check(JSON.stringify(pair.draft)===pairOpening,'Counterpart reset lost opening pair');
+   passed('native two-way counterpart recommendations are local and resettable');
    input(pair.contentEl.querySelector('input[type=text]'),'Native acceptance pair');const variants=pair.contentEl.querySelectorAll('fieldset input[type=text]');
    input(variants[0],'rgba(12,34,56,.123456789)');input(variants[1],'#abcdef00');button(pair.contentEl,'common.save').click();await until(()=>!pair.modalEl.isConnected,'Pair Save did not close');
    const added=p.settings.colorPreferences.palette.find(item=>item.name==='Native acceptance pair');check(added&&added.light==='rgba(12,34,56,.123456789)'&&added.dark==='#abcdef00','Native pair changed variants or alpha');passed('native named-pair editor saves independent exact variants');

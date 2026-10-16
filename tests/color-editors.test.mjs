@@ -1,10 +1,11 @@
 /** Actual source/literal controls and private CSS bindings in real Chromium; no vault or graph fixture. */
 import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
 import test from "node:test";
 import {build} from "esbuild";
 import {chromiumHarness} from "./support/browserTypeScript.mjs";
 import {nativeColorControls,initializeColorDom} from "./support/nativeColorControls.mjs";
-const compiled=await build({stdin:{resolveDir:process.cwd(),contents:`export * from './src/adapters/obsidian/colorChanges';export * from './src/adapters/obsidian/themePreview';export * as React from 'react';export {createRoot} from 'react-dom/client';export {flushSync} from 'react-dom';export * from './src/ui/PlexFilter';export * from './src/settings';export * from './src/ui/ColorPaletteModal';export * from './src/ui/ColorPairModal';export * from './src/ui/CompassSettingsModal';export * from './src/core/plex/colorEditing';export {Modal as TestModal} from 'obsidian';export * from './src/ui/ColorLiteralEditor';export * from './src/ui/ColorSourceModal';export * from './src/adapters/obsidian/colorScope';export * from './src/adapters/obsidian/colorSample';export * from './src/adapters/obsidian/colorPresentation';export * from './src/core/plex/colorPreferences';export * from './src/core/contracts/colorValue';export * from './src/lang';`},bundle:true,write:false,format:"iife",globalName:"sourceModules",platform:"browser",plugins:[{name:"native-controls",setup(builder){builder.onResolve({filter:/^obsidian$/},()=>({path:"obsidian",namespace:"native"}));builder.onLoad({filter:/.*/,namespace:"native"},()=>({contents:nativeColorControls}));}}]});
+const compiled=await build({stdin:{resolveDir:process.cwd(),contents:`export * from './src/core/plex/colorCounterpart';export * from './src/ui/ColorAdoptionModal';export * from './src/adapters/obsidian/colorChanges';export * from './src/adapters/obsidian/themePreview';export * as React from 'react';export {createRoot} from 'react-dom/client';export {flushSync} from 'react-dom';export * from './src/ui/PlexFilter';export * from './src/settings';export * from './src/ui/ColorPaletteModal';export * from './src/ui/ColorPairModal';export * from './src/ui/CompassSettingsModal';export * from './src/core/plex/colorEditing';export {Modal as TestModal} from 'obsidian';export * from './src/ui/ColorLiteralEditor';export * from './src/ui/ColorSourceModal';export * from './src/adapters/obsidian/colorScope';export * from './src/adapters/obsidian/colorSample';export * from './src/adapters/obsidian/colorPresentation';export * from './src/core/plex/colorPreferences';export * from './src/core/contracts/colorValue';export * from './src/lang';`},bundle:true,write:false,format:"iife",globalName:"sourceModules",platform:"browser",plugins:[{name:"native-controls",setup(builder){builder.onResolve({filter:/^obsidian$/},()=>({path:"obsidian",namespace:"native"}));builder.onLoad({filter:/.*/,namespace:"native"},()=>({contents:nativeColorControls}));}}]});
 /** Run one isolated document and always release its actual browser process/profile. */
 async function scenario(code){const host=await chromiumHarness(compiled.outputFiles[0].text);try{assert.equal(await host.evaluate(initializeColorDom),true);return await host.evaluate(code)}finally{await host.cleanup()}}
 
@@ -105,15 +106,15 @@ test("paired editor preserves the other mode, exact alpha, partial drafts, expli
    onSave:async pair=>{writes++;if(fail)throw Error('disk rejected');saved=pair;return{refreshPending:false}}});dialog.open();
   const controls=[...dialog.contentEl.querySelectorAll('fieldset')],light=controls[0],dark=controls[1];
   input(light.querySelector('input[type=color]'),'#112233');if(sourceModules.parseLiteralColor(dark.querySelector('input[type=text]').value).alpha!==128/255)throw Error('Opposite mode overwritten');
-  const alpha=sourceModules.parseLiteralColor(light.querySelector('input[type=text]').value).alpha;if(alpha!==.123456789||writes)throw Error('Alpha/open write');
+  const alpha=sourceModules.parseLiteralColor(light.querySelector('input[type=text]').value).alpha;if(alpha!==.12||sourceModules.parseLiteralColor(dialog.draft.light).alpha!==.123456789||writes)throw Error('Display/model alpha or open write');
   input(light.querySelector('input[type=text]'),'#12');const save=[...dialog.contentEl.querySelectorAll('button')].find(b=>b.textContent==='Save');if(!save.disabled)throw Error('Partial draft admitted');
-  light.querySelector('button').click();if(light.querySelector('input[type=text]').value!==initial.light)throw Error('Variant reset failed');
-  input(dark.querySelector('input[type=number]'),'0');if(light.querySelector('input[type=text]').value!==initial.light)throw Error('Opacity edited opposite mode');
+  light.querySelector('button').click();if(light.querySelector('input[type=text]').value!=='rgba(1, 2, 3, 0.12)'||dialog.draft.light!==initial.light)throw Error('Variant reset failed');
+  input(dark.querySelector('input[type=number]'),'0');if(light.querySelector('input[type=text]').value!=='rgba(1, 2, 3, 0.12)'||dialog.draft.light!==initial.light)throw Error('Opacity edited opposite mode');
   save.click();await waitFor(()=>writes===1&&dialog.modalEl.getAttribute('aria-busy')==='false');if(!dialog.modalEl.isConnected||dark.querySelector('input[type=number]').value!=='0')throw Error('Failure lost draft');
   fail=false;save.click();await waitFor(()=>!dialog.modalEl.isConnected);if(writes!==2||sourceModules.parseLiteralColor(saved.dark).alpha!==0||saved.light!==initial.light)throw Error('Retry changed pair');
   const reset=new sourceModules.ColorPairModal({}, {title:'Reset',initial,sourceScope:scope,translate:t,preferences:()=>preferences,nodeStyle:()=>({}),linkStyle:()=>({}),background:()=>undefined,onSave:async()=>{throw Error('Unexpected write')}});reset.open();
   for(const el of reset.contentEl.querySelectorAll('input[type=color]'))input(el,'#ffffff');[...reset.contentEl.querySelectorAll('button')].find(b=>b.textContent==='Reset both variants').click();
-  const values=[...reset.contentEl.querySelectorAll('fieldset input[type=text]')].map(el=>el.value);if(JSON.stringify(values)!==JSON.stringify([initial.light,initial.dark]))throw Error('Pair reset lost opening values');reset.retire();
+  const values=[...reset.contentEl.querySelectorAll('fieldset input[type=text]')].map(el=>el.value);if(JSON.stringify(values)!==JSON.stringify(['rgba(1, 2, 3, 0.12)',initial.dark]))throw Error('Pair reset lost opening values');reset.retire();
   if(document.querySelector('iframe[sandbox]')||window.migrationListeners)throw Error('Pair lifetime leaked');return true;
  })()`),true);
 });
@@ -371,5 +372,76 @@ test("declarative Settings subpages replace the root but retain live color conte
   await waitFor(()=>modal.contentEl.querySelectorAll('.kplex-color-preview-canvas').length===2&&[...modal.contentEl.querySelectorAll('.kplex-color-preview-canvas')].every(el=>el.style.display!=='none'&&!!el.style.getPropertyValue('--_kplex-preview-canvas')));
   if(modal.contentEl.textContent.includes('Theme preview unavailable'))throw Error('Both contexts missing');
   modal.close();tab.disposeActionSettings();page.remove();return true;
+ })()`),true);
+});
+
+test("paired transparent canvases paint and measure their actual sampled panel in both modes",async()=>{
+ assert.equal(await scenario(`(async()=>{
+  const css=new CSSStyleSheet();css.replaceSync(${JSON.stringify(readFileSync('styles.css','utf8'))});const panel=new CSSStyleSheet();panel.replaceSync('body.theme-light .kplex-app{--kplex-panel:#ffffff}body.theme-dark .kplex-app{--kplex-panel:#000000}');document.adoptedStyleSheets=[...document.adoptedStyleSheets,css,panel];document.body.style.background='black';
+  const t=sourceModules.createTranslator('en'),options={title:'Transparent canvas',sourceScope:scope,translate:t,target:{kind:'canvas'},initial:'transparent',preferences:()=>preferences,nodeStyle:()=>({backgroundColor:'transparent',textColor:'#000000'}),linkStyle:()=>({strokeColor:'#000000'}),background:()=>undefined,onSave:async()=>{throw Error('Unexpected write')}};
+  const modal=new sourceModules.ColorSourceModal({},options);modal.open();await waitFor(()=>modal.contentEl.querySelector('.kplex-color-preview-canvas')?.style.getPropertyValue('--_kplex-preview-canvas'));
+  const canvases=[...modal.contentEl.querySelectorAll('.kplex-color-preview-canvas')],cards=[...modal.contentEl.querySelectorAll('.kplex-color-preview')];
+  if(getComputedStyle(canvases[0]).backgroundColor!=='rgb(255, 255, 255)'||getComputedStyle(canvases[1]).backgroundColor!=='rgb(0, 0, 0)')throw Error('Transparent counterpart inherited active modal instead of sampled panel');
+  if(!cards[0].querySelector('.kplex-color-preview-contrast').textContent.includes('21.0')||!cards[1].querySelector('.kplex-color-preview-contrast').textContent.includes('1.0'))throw Error('Transparent contrast used another panel');
+  input(modal.contentEl.querySelector('.kplex-literal-editor input[type=text]'),'rgba(255,0,0,.25)');
+  await waitFor(()=>getComputedStyle(canvases[0],'::before').backgroundColor==='rgba(255, 0, 0, 0.25)');
+  if(!cards[0].querySelector('.kplex-color-preview-contrast').textContent.includes('13.5')||!cards[1].querySelector('.kplex-color-preview-contrast').textContent.includes('1.2'))throw Error('Alpha compositing used another panel');
+  scope.style.setProperty('--kplex-panel','rgba(20,40,60,.5)');await waitFor(()=>cards.every(card=>card.querySelector('.kplex-color-preview-contrast').textContent===t('colors.contrastUnavailable')));if(!cards.every(card=>card.textContent.includes(t('colors.estimated'))))throw Error('Unknown underlying panel was certified');
+  modal.retire();return true;
+ })()`),true);
+});
+
+/** The existing native shell must release focus callbacks from the control's actual window. */
+
+test("counterpart recommendations reflect HSL lightness, preserve alpha and remain local in both directions",async()=>{
+ assert.equal(await scenario(`(async()=>{
+  const t=sourceModules.createTranslator('en'),writes=[],initial={id:'pair',name:'Pair',light:'rgba(160,180,200,.123456789)',dark:'#11223380'};
+  const options={title:'Pair',initial,sourceScope:scope,translate:t,preferences:()=>preferences,nodeStyle:()=>({}),linkStyle:()=>({}),background:()=>undefined,onSave:async pair=>{writes.push(pair);return{refreshPending:false}}};
+  const modal=new sourceModules.ColorPairModal({},options);modal.open();
+  const buttons=()=>[...modal.contentEl.querySelectorAll('button')],click=key=>buttons().find(el=>el.textContent===t(key)).click();
+  click('colors.suggestDark');let fields=modal.contentEl.querySelectorAll('fieldset input[type=text]');
+  if(modal.draft.light!==initial.light||sourceModules.parseLiteralColor(modal.draft.dark).alpha!==.123456789||writes.length)throw Error('Suggestion lost source/alpha or wrote');
+  const dark=sourceModules.parseLiteralColor(modal.draft.dark);if(dark.red!==55||dark.green!==75||dark.blue!==95)throw Error('Wrong reflected lightness');
+  if(fields[1].value.includes('123456789'))throw Error('Alpha display noise');
+  click('colors.suggestLight');if(!sourceModules.colorValuesEqual(modal.draft.light,initial.light))throw Error('Reverse suggestion not reversible');
+  click('colors.resetPair');if(modal.draft.light!==initial.light||modal.draft.dark!==initial.dark)throw Error('Reset lost originals');
+  click('common.cancel');if(writes.length)throw Error('Cancel wrote');
+  for(const value of ['#00000000','#ffffff80','#ff0000','rgba(10,90,210,.719)']){
+   const a=sourceModules.parseLiteralColor(value),other=sourceModules.recommendColorCounterpart(value),b=sourceModules.parseLiteralColor(other),back=sourceModules.parseLiteralColor(sourceModules.recommendColorCounterpart(other));
+   if(a.alpha!==b.alpha||a.red!==back.red||a.green!==back.green||a.blue!==back.blue)throw Error('Suggestion channels/alpha drift');
+  }
+  if(sourceModules.recommendColorCounterpart('var(--unknown)')!==null)throw Error('Opaque legacy converted');return true;
+ })()`),true);
+});
+
+test("alpha formatting stays readable without changing untouched literal intent or active text",async()=>{
+ assert.equal(await scenario(`(()=>{
+  const editor=new sourceModules.ColorLiteralEditor(scope,{label:'Fixed',initial:'rgba(176,48,48,0.7190000000000001)',labels:{rgb:'RGB',value:'Value',opacity:'Opacity',reset:'Reset',invalid:'Invalid',legacy:'Legacy'},onChange:()=>{}});
+  const text=scope.querySelector('input[type=text]');if(text.value!=='rgba(176, 48, 48, 0.72)'||editor.getValue()!=='rgba(176,48,48,0.7190000000000001)')throw Error('Display mutated saved intent');
+  input(text,'rgba(1,2,3,.123456789)');if(text.value!=='rgba(1,2,3,.123456789)')throw Error('Active draft rewritten');
+  input(scope.querySelector('input[type=range]'),'71.9');if(text.value!=='rgba(1, 2, 3, 0.72)'||scope.querySelector('input[type=number]').value!=='71.9')throw Error('Generated text noisy');
+  editor.dispose();return true;
+ })()`),true);
+});
+
+test("theme choices include complete Obsidian colors and empty adoption cannot write",async()=>{
+ assert.equal(await scenario(`(async()=>{
+  const t=sourceModules.createTranslator('en'),options={title:'Color',initial:'#123456',sourceScope:scope,translate:t,target:{kind:'canvas'},preferences:()=>preferences,nodeStyle:()=>({}),linkStyle:()=>({}),background:()=>undefined,onSave:async()=>({refreshPending:false})};
+  const modal=new sourceModules.ColorSourceModal({},options);modal.open();const values=[...modal.contentEl.querySelectorAll('select')[1].options].map(o=>o.value);
+  for(const key of ['--color-red','--color-blue','--color-yellow','--color-pink','--h1-color','--tag-background','--code-normal','--graph-node'])if(!values.includes(key))throw Error('Missing theme choice '+key);
+  if(values.some(key=>key.endsWith('-rgb')))throw Error('Raw channel tuple offered');modal.close();
+  let writes=0;const adoption=new sourceModules.ColorAdoptionModal({},options,[],async()=>{writes++;return{refreshPending:false}},()=>{});adoption.open();
+  const save=[...adoption.contentEl.querySelectorAll('button')].find(el=>el.textContent===t('colors.adoptConfirm'));if(!save.disabled||!adoption.contentEl.textContent.includes(t('colors.alreadyNative')))throw Error('Empty adoption unclear');save.click();if(writes)throw Error('Empty adoption wrote');adoption.close();return true;
+ })()`),true);
+});
+
+test("native style focus uses the control owner and retires before a closed or migrated form can focus",async()=>{
+ assert.equal(await scenario(`(async()=>{
+  const t=sourceModules.createTranslator('en'),modal=new sourceModules.ColorSourceModal({}, {title:'Focus',sourceScope:scope,translate:t,target:{kind:'canvas'},initial:'transparent',preferences:()=>preferences,nodeStyle:()=>({}),linkStyle:()=>({}),background:()=>undefined,onSave:async()=>({refreshPending:false})});modal.open();
+  const frame=document.createElement('iframe');document.body.append(frame);const doc=frame.contentDocument,view=frame.contentWindow,field=doc.createElement('input');doc.body.append(field);let focused=0;field.focus=()=>focused++;
+  const timers=new Map(),callbacks=[];let seq=0;const original=view.setTimeout,clear=view.clearTimeout;view.setTimeout=callback=>{callbacks.push(callback);timers.set(++seq,callback);return seq};view.clearTimeout=id=>timers.delete(id);
+  try{modal.focusAfterAttachment(field);if(timers.size!==1)throw Error('Focus scheduled on another window');const replacement=document.implementation.createHTMLDocument();replacement.body.append(field);timers.delete(1);callbacks[0]();if(focused)throw Error('Migrated control stole focus');doc.body.append(field);modal.focusAfterAttachment(field);modal.retire();if(timers.size)throw Error('Closed modal retained focus timer');callbacks[1]();if(focused)throw Error('Retired callback stole focus');}
+  finally{view.setTimeout=original;view.clearTimeout=clear;frame.remove();modal.retire()}
+  if(document.querySelector('iframe[sandbox]'))throw Error('Focus case retained preview');return true;
  })()`),true);
 });

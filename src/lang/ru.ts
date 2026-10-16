@@ -7,6 +7,15 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const russianTranslations = {
+  "colors.recommend": "Предложить парный цвет",
+  "colors.recommendHelp": "Отражает светлоту, сохраняя тон, насыщенность и непрозрачность. Меняет только противоположный черновик; настройте его перед сохранением.",
+  "colors.suggestDark": "Тёмный из светлого",
+  "colors.suggestLight": "Светлый из тёмного",
+  "colors.usagePreview": "Пример использования",
+  "colors.pairPreviewHelp": "Светлый и тёмный варианты на фоне примера заметки. Сохранение создаёт именованный цвет; выберите его в стиле для использования.",
+  "colors.alreadyNative": "Стандартные стили уже используют цвета темы. Переопределений стандартных цветов для сброса нет.",
+  "colors.afterAdoption": "После применения цветов темы",
+  "colors.sameVariant": "Этот цвет темы одинаков в обоих режимах.",
 
   "compass.title": "Направленный оттенок фона",
   "compass.help": "Показать ориентир за Plex. Оттенок обозначает направление, а не точную принадлежность связей.",
@@ -59,7 +68,7 @@ const russianTranslations = {
   "colors.standard.inferredLinkStyle": "Выведенная связь",
   "colors.standard.folderLinkStyle": "Связь папки",
   "colors.standard.tagLinkStyle": "Связь тега",
-  "colors.estimatedHelp": "Переключите оформление Obsidian, чтобы проверить этот режим. Часть контекста темы недоступна.",
+  "colors.estimatedHelp": "Предпросмотр использует загруженные стили темы. Скрипты темы могут изменить результат.",
   "colors.source": "Источник цвета",
   "colors.inherit": "По умолчанию",
   "colors.fixed": "Фиксированный цвет",

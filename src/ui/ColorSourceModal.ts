@@ -72,9 +72,13 @@ export class ColorSourceModal extends StyleEditorModal {
     this.reader = new ColorSampleReader(this.options.sourceScope.ownerDocument);
     this.editor = new ColorSourceEditor(controls, {
       initial: this.options.initial, sourceScope: this.options.sourceScope, translate: t, preferences: this.options.preferences,
-      themeTokens: ["--text-normal", "--text-muted", "--interactive-accent", "--background-primary", "--background-secondary",
-        "--color-purple", "--color-green", "--color-cyan", "--color-orange", "--kplex-semantic-origin", "--kplex-semantic-development",
-        "--kplex-semantic-support", "--kplex-semantic-challenge"].map(variable => ({variable, label: variable})),
+      themeTokens: ["--text-normal", "--text-muted", "--text-faint", "--text-accent", "--text-accent-hover", "--text-on-accent", "--text-error", "--text-warning", "--text-success", "--text-selection", "--text-highlight-bg",
+        "--interactive-normal", "--interactive-hover", "--interactive-accent", "--interactive-accent-hover",
+        "--background-primary", "--background-primary-alt", "--background-secondary", "--background-secondary-alt", "--background-modifier-border", "--background-modifier-border-hover", "--background-modifier-border-focus", "--background-modifier-hover", "--background-modifier-error", "--background-modifier-success",
+        "--color-red", "--color-orange", "--color-yellow", "--color-green", "--color-cyan", "--color-blue", "--color-purple", "--color-pink",
+        "--h1-color", "--h2-color", "--h3-color", "--h4-color", "--h5-color", "--h6-color", "--bold-color", "--italic-color", "--link-color", "--link-color-hover", "--link-external-color", "--tag-color", "--tag-background", "--tag-color-hover", "--tag-background-hover",
+        "--checkbox-color", "--checkbox-color-hover", "--checkbox-border-color", "--checklist-done-color", "--table-border-color", "--table-header-background", "--table-row-background-hover", "--code-normal", "--code-background", "--code-comment", "--code-function", "--code-keyword", "--code-string", "--code-tag", "--code-value", "--graph-line", "--graph-node", "--graph-node-tag", "--graph-node-attachment", "--graph-node-unresolved", "--graph-node-focused", "--graph-node-highlight", "--graph-line-highlight",
+        "--kplex-semantic-origin", "--kplex-semantic-development", "--kplex-semantic-support", "--kplex-semantic-challenge"].map(variable => ({variable, label: variable})),
       chooseNamed: chosen => { const chooser = new NamedColorSuggest(this.app, () => this.options.preferences().palette, chosen); chooser.setPlaceholder(t("colors.searchColors")); chooser.open(); return () => chooser.close(); },
       fixedSeed: source => {
         source ??= this.options.inherit?.();

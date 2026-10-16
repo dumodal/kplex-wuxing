@@ -7,6 +7,15 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const dutchTranslations = {
+  "colors.recommend": "Tegenhanger voorstellen",
+  "colors.recommendHelp": "Spiegel de lichtheid met behoud van tint, verzadiging en dekking. Alleen het andere concept verandert; pas het aan voordat je opslaat.",
+  "colors.suggestDark": "Donker uit licht voorstellen",
+  "colors.suggestLight": "Licht uit donker voorstellen",
+  "colors.usagePreview": "Gebruiksvoorbeeld",
+  "colors.pairPreviewHelp": "Je lichte en donkere variant op een voorbeeldnotitie. Opslaan maakt de benoemde kleur; kies deze daarna in een stijl.",
+  "colors.alreadyNative": "Standaardstijlen gebruiken al themakleuren. Er zijn geen standaardkleuren om te wissen.",
+  "colors.afterAdoption": "Na toepassen van themakleuren",
+  "colors.sameVariant": "Deze themakleur gebruikt in beide modi dezelfde waarde.",
 
   "compass.title": "Richtinggebonden achtergrondtint",
   "compass.help": "Toon een oriëntatiehulp achter de Plex. De tint geeft richting aan, geen exacte indeling van relaties.",
@@ -59,7 +68,7 @@ const dutchTranslations = {
   "colors.standard.inferredLinkStyle": "Afgeleide verbinding",
   "colors.standard.folderLinkStyle": "Mapverbinding",
   "colors.standard.tagLinkStyle": "Tagverbinding",
-  "colors.estimatedHelp": "Wijzig de weergave van Obsidian om deze modus te controleren. Een deel van de themacontext is niet beschikbaar.",
+  "colors.estimatedHelp": "Dit voorbeeld gebruikt de geladen themastijlen. Themascripts kunnen het resultaat wijzigen.",
   "colors.source": "Kleurbron",
   "colors.inherit": "Standaard",
   "colors.fixed": "Vaste kleur",
