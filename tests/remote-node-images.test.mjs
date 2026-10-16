@@ -14,7 +14,7 @@ import { chromiumHarness } from './support/browserTypeScript.mjs';
 import { contributorBrowserBundle, contributorBrowserInitialize } from './support/contributorBrowserFixture.mjs';
 import { centerGateSettings } from './support/requestedCenterGateFixture.mjs';
 
-const indexBundle = await contributorBrowserBundle(['src/index/GraphIndex.ts', 'src/index/GraphPresentation.ts', 'src/core/graph/settingsPolicy.ts']);
+const indexBundle = await contributorBrowserBundle(['src/index/GraphIndex.ts', 'src/index/GraphPresentation.ts', 'src/core/graph/settingsPolicy.ts', 'src/core/contracts/appearance.ts']);
 const ui = await build({ stdin: { resolveDir: process.cwd(), contents: `export {ThoughtNode} from './src/ui/ThoughtNode'; export {createElement} from 'react'; export {createRoot} from 'react-dom/client'; export {flushSync} from 'react-dom';` }, bundle: true, write: false, platform: 'browser', format: 'iife', globalName: 'nodeUI', plugins: [{ name: 'native-icon-boundary', setup(builder) {
   builder.onResolve({filter:/^obsidian$/}, /** Keep only the native icon API doubled. */ () => ({path:'obsidian',namespace:'native'}));
   builder.onLoad({filter:/.*/,namespace:'native'}, /** The fixture uses no icons or native shell components. */ () => ({contents:'export const getIcon=()=>null;'}));
@@ -23,7 +23,7 @@ const main = ts.createSourceFile('main.ts', readFileSync('src/main.ts','utf8'), 
 const owner = main.statements.find(node => ts.isClassDeclaration(node) && node.name?.text === 'KplexPlugin');
 const save = owner.members.find(node => node.name?.getText(main) === 'saveSettings');
 assert(save, 'Compile the actual saveSettings method, never a policy reimplementation');
-const saveBundle = ts.transpileModule(`const {captureSettingsPolicy,classifySettingsChange,isStyleOnlySettingsChange}=window.sourceModules; window.ImageSaveOwner=class {${save.getText(main)}};`, {compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.None}}).outputText;
+const saveBundle = ts.transpileModule(`const {captureSettingsPolicy,classifySettingsChange,isStyleOnlySettingsChange,STYLE_SETTINGS_KEYS}=window.sourceModules; window.ImageSaveOwner=class {${save.getText(main)}};`, {compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.None}}).outputText;
 const bundle = indexBundle + '\n' + ui.outputFiles[0].text + '\n' + saveBundle;
 
 /** Own one real browser, real cache and finite image-bearing inventory per scenario. */

@@ -1253,7 +1253,7 @@ function attachmentRenameBrowserEntry() {
 import React, { useMemo } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
-import { alphaHexToCss, resolveNodeStyle } from ${JSON.stringify(join(root, "src/index/style.ts"))};
+import { alphaHexToCss, resolveNodeStyle, currentNodeColorStyle, nodePaint, nodePaintFallbacks } from ${JSON.stringify(join(root, "src/index/style.ts"))};
 import { effectiveLabelLimit, nodeLabelFontSize, gateDiameter, projectNodeCounts, expandedMiniLayout, siblingScale } from ${JSON.stringify(join(root, "src/ui/layout.ts"))};
 import { physicalPositionLabel } from ${JSON.stringify(join(root, "src/ui/features/positionPresentation.ts"))};
 
@@ -1270,7 +1270,9 @@ const translate = (key) => key;
 const interaction = { gates: new Set(), nodePaths: new Set() }, connectDrag = null, nodeDrag = null;
 // The production unfiltered projection is absent; rename reconciliation must not invent a filtered read.
 const globalFiltering = false, filteredGateCounts = null, nodeVisuals = new Map();
-const predicate = null, lenses = { lenses: [] }, predicateEngine = {}, predicateRevision = 0, layoutRevision = 0;
+const predicate = null, lenses = { lenses: [] }, paintLenses = lenses, predicateEngine = {}, predicateRevision = 0, layoutRevision = 0;
+let styleReads=0;const measuredStyle=()=>new Proxy({textColor:"#abcdef"},{ownKeys(target){styleReads++;return Reflect.ownKeys(target)}});
+settings.baseNodeStyle=measuredStyle();let paintSettings=settings;
 const graphLensNodeStyle = () => ({});
 const centralEditorCapable = true, finding = false, hover = null, activeNodeFlair = null, findNodePaths = new Set(), keyboardSelection = null;
 const connectionStateFor = () => "normal", onCentralNodeEditorChange = () => {}, gateKey = (path, gate) => path + ":" + gate;
@@ -1286,12 +1288,12 @@ const index = { gateStats: () => gates, neighbours: () => [{ page: miniPage, rol
 const node = (page, role, x, y, height = 26) => ({ page, role, x, y, width: 180, height, style: { fontSize: 18 }, label: page.name, neighbourCount: 0, gateStats: gates });
 /** Render actual base nodes with separate zone-local/count-hydrated display copies. */
 function Scene({ scene: sourceScene, expanded }) {
-  const scene = { ...sourceScene, zoneViewports: {}, zoneAreas: {} };
+  const scene = useMemo(() => ({ ...sourceScene, zoneViewports: {}, zoneAreas: {} }), [sourceScene]);
   const centralEditorPage = expanded ? centerPage : null;
-  const sectionExpansion = null, expandedScrollTop = {};
+  const sectionExpansion = null, expandedScrollTop = useMemo(() => ({}), []);
   const visibleNodePaths = useMemo(() => new Set(scene.nodes.map((item) => item.page.path)), [scene.nodes]);
   const renderedNodeMap = useMemo(() => new Map(scene.nodes.map((item) => [item.page.path, { ...item }])), [scene.nodes]);
-  ${uiDefinitions("src/ui/PlexGraph.tsx", ["sceneNodeKeys", "expandedClusters", "renderNode", "renderExpandedCluster", "zoneForRole"])}
+  ${uiDefinitions("src/ui/PlexGraph.tsx", ["paintedNodeStyles", "sceneNodeKeys", "expandedClusters", "renderNode", "renderExpandedCluster", "zoneForRole"])}
   const miniKeys = expandedClusters.flatMap((cluster) => cluster.children.map((child) => child.key));
   check(new Set(miniKeys).size === miniKeys.length, "expanded connector keys collide during rename");
   return <><div className="kplex-nodes">{scene.nodes.map((item) => renderNode(item, { ...item }))}</div><div>{expandedClusters.map(renderExpandedCluster)}</div></>;
@@ -1307,6 +1309,11 @@ try {
   const attachments = () => [...container.querySelectorAll(".kplex-thought")].filter((element) => element.dataset.kplexPath === "After.png");
   const clusters = () => container.querySelectorAll(".kplex-expanded-cluster").length;
   render(initial, true);
+  const firstStyleReads=styleReads;render(initial,true);render(initial,true);
+  check(styleReads===firstStyleReads,"Stable scene rerenders repeated style-dictionary work");
+  paintSettings={...settings,baseNodeStyle:measuredStyle()};render(initial,true);
+  check(styleReads>firstStyleReads,"New paint settings failed to re-resolve colors");
+  const recoloredReads=styleReads;render(initial,true);check(styleReads===recoloredReads,"New paint cache did not settle");
   check(container.querySelectorAll(".kplex-thought").length === 4, "initial real endpoint and unresolved placeholder were not distinct");
   check(clusters() === 3, "fixture did not render expanded strips through the production owner");
   // GraphIndex.renameTreeEndpoint intentionally retains canonical page identity and mutates its
@@ -1953,7 +1960,7 @@ function typographyLabelsBrowserEntry() {
 import React from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
-import { alphaHexToCss } from ${JSON.stringify(join(root, "src/index/style.ts"))};
+import { alphaHexToCss, nodePaint, nodePaintFallbacks } from ${JSON.stringify(join(root, "src/index/style.ts"))};
 import { effectiveLabelLimit, nodeLabelFontSize, gateDiameter } from ${JSON.stringify(join(root, "src/ui/layout.ts"))};
 ${uiDefinitions("src/ui/layout.ts", ["clamp", "nodeSize"])}
 import { physicalPositionLabel } from ${JSON.stringify(join(root, "src/ui/features/positionPresentation.ts"))};
@@ -2019,3 +2026,41 @@ try{
 test("long node titles and aliases retain exact rendered truncation and measured width across all density values", () => {
   runBrowserDom(typographyLabelsBrowserEntry(), "Density-independent rendered typography passed");
 });
+
+/** Execute the production App/scene memo owners and layout with real React reconciliation. */
+function colorPaintBrowserEntry() {
+ return `
+import React, {useMemo,useEffect,useState} from 'react';
+import {flushSync} from 'react-dom';import {createRoot} from 'react-dom/client';
+import {buildScene as realBuildScene} from ${JSON.stringify(join(root,'src/ui/layout.ts'))};
+import {currentNodeColorStyle,nodePaint,nodePaintFallbacks} from ${JSON.stringify(join(root,'src/index/style.ts'))};
+const result=document.querySelector('#result'),check=(condition,message)=>{if(!condition)throw Error(message)};
+const counters={layout:0,images:0,mounts:0};const buildScene=(...args)=>{counters.layout++;return realBuildScene(...args)};
+const page=path=>({path,name:path,file:{extension:'md'},aliases:[],tags:[],styleTags:[],neighbours:new Map()});
+const index={titleFor:p=>p.name,neighbourCount:()=>0,gateStats:()=>({}),neighbours:()=>[],visibleRelationshipsWithin:()=>[]};
+const layoutNeighborhood={center:page('Center.md'),parents:[],children:[{page:page('Child.md'),relationType:1}],leftFriends:[],rightFriends:[],siblings:[]};
+const layoutSectionExpansion=null,expandedSectionIds=new Set(),layoutRevision=0,showCrossLinks=false,globalFiltering=false,centralEditorSize=undefined;
+const profileSurface='tab',compiledGraphLenses={lenses:[],errors:[],usesFrontmatter:false};
+const plugin={settings:{baseNodeStyle:{fontSize:18,textColor:'#abcdef'},centralNodeStyle:{fontSize:30},baseLinkStyle:{},noteTypeStyles:{},tagNodeStyles:{},tagStyleList:[],hierarchyLinkStyles:{},graphLenses:[],
+ compactingFactor:2,horizontalCompactingFactor:2,graphDepth:1,baseFontSize:12.4,compactView:false,maxItemCount:100,parentColumns:2,childColumns:5,parentMaxHeight:300,childMaxHeight:400,friendMaxHeight:350,siblingMaxHeight:250,siblingRelativeSize:50,minLinkLength:18,wrapNodeLabels:false},getViewSettings(){return {...this.settings}}};
+let sceneBefore,nodeBefore,inputBefore,cameraBefore;
+function NativeEditor(){useEffect(()=>{counters.mounts++},[]);return <input defaultValue='unsaved text'/>}
+function Scene({settings,paintSettings}){
+ ${uiDefinitions('src/ui/PlexGraph.tsx',['scene'])}
+ const visualPages=useMemo(()=>scene.nodes.map(node=>node.page),[scene.nodes]);useEffect(()=>{counters.images++},[visualPages]);
+ return <div className='camera' style={{transform:'translate(17px, 23px) scale(1.25)'}}>{scene.nodes.map(node=>{const paint=nodePaint(currentNodeColorStyle(node,paintSettings),nodePaintFallbacks(node));return <div key={node.page.path} data-path={node.page.path} style={{color:paint.foreground,left:node.x,top:node.y}}>{node.role==='center'?<NativeEditor/>:node.label}</div>})}</div>;
+}
+function App({paintRevision,renderRevision}){
+ ${uiDefinitions('src/ui/App.tsx',['viewSettings','paintSettings','paintLenses'])}
+ return <Scene settings={viewSettings} paintSettings={paintSettings}/>;
+}
+try{const container=document.createElement('div');document.body.append(container);const root=createRoot(container);flushSync(()=>root.render(<App paintRevision={0} renderRevision={0}/>));
+ const prior={...counters};nodeBefore=container.querySelector('[data-path="Center.md"]');inputBefore=container.querySelector('input');cameraBefore=container.querySelector('.camera');inputBefore.value='still typing';inputBefore.focus();inputBefore.setSelectionRange(2,5);
+ plugin.settings.baseNodeStyle={...plugin.settings.baseNodeStyle,textColor:'#12345680'};flushSync(()=>root.render(<App paintRevision={1} renderRevision={0}/>));
+ check(counters.layout===prior.layout,'Color edit rebuilt whole scene');check(counters.images===prior.images,'Color edit reacquired imagery');check(counters.mounts===prior.mounts,'Color edit remounted native editor');
+ check(container.querySelector('[data-path="Center.md"]')===nodeBefore&&container.querySelector('input')===inputBefore,'Color edit replaced DOM');check(inputBefore.value==='still typing'&&document.activeElement===inputBefore&&inputBefore.selectionStart===2,'Draft/focus/caret lost');check(container.querySelector('.camera')===cameraBefore&&cameraBefore.style.transform==='translate(17px, 23px) scale(1.25)','Camera reset');check(/^rgba\\(18, 52, 86, 0\\.50?2?\\)$/.test(getComputedStyle(nodeBefore).color),'Current winning source did not repaint');
+ plugin.settings.baseNodeStyle={...plugin.settings.baseNodeStyle,fontSize:21};flushSync(()=>root.render(<App paintRevision={1} renderRevision={1}/>));check(counters.layout===prior.layout+1,'Geometry edit skipped layout');flushSync(()=>root.unmount());result.dataset.status='passed';result.textContent='Color paint preserves layout and editor passed';
+}catch(error){result.dataset.status='failed';result.textContent=String(error.stack||error)}
+`;
+}
+test('color publication reuses actual scene layout, images, native editor, focus and camera',()=>runBrowserDom(colorPaintBrowserEntry(),'Color paint preserves layout and editor passed'));

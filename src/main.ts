@@ -3,6 +3,8 @@
  * Remote node image consent publishes synchronously before persistence and never requests semantics.
  * Style-manager drafts commit on the settings disk queue before live publication; style-only
  * completion refreshes cached presentation without clearing or reacquiring semantic scopes.
+ * Appearance identities use that same queue. Unsupported color containers persist verbatim and
+ * remain read-only; palette validation and semantic-cycle checks precede any durable write.
  * Unsuccessful source-backed startup adoption reports incomplete coverage rather than implying
  * that index preparation is still running; it never grants semantic write authority.
  * File deletion captures its ontology-cleanup preference before consent; settings navigation
@@ -21,11 +23,19 @@
  * New-file relationship additions persist against native file identities independently of semantic
  * indexing; current host metadata drives subsequent graph reconciliation and editor completion.
  */
+import { mergeGraphLensDefinitions } from "./lens/GraphLens";
+import { appearanceColorReferences } from "./core/contracts/appearance";
+import { requireNamedColor } from "./core/plex/colorEditing";
+import * as appearanceThemes from "./core/plex/appearanceThemes";
+import type {StyleEditorModal} from "./ui/StyleEditorModal";
+
 import { FileView, MarkdownView, Menu, Notice, Platform, Plugin, TFile, TFolder, apiVersion, getLanguage, getAllTags, normalizePath, setIcon, type Editor, type HoverParent, type WorkspaceLeaf } from "obsidian";
 import { captureSettingsPolicy, classifySettingsChange, isStyleOnlySettingsChange, type SettingsPolicy } from "./core/graph/settingsPolicy";
 import { removeMarkdownZoomModes, renameMarkdownZoomModes } from "./core/plex/markdownZoomPreferences";
 import { GraphIndex } from "./index/GraphIndex";
 import { DEFAULT_SETTINGS, KplexSettingTab, migrateAndMergeSettings, importExcaliBrainGraphSettings, type DocumentSyncMode, type KplexSettings, type KplexLayoutProfile, type KplexViewSurface, type SidecarPosition, type StyleSettingsDraft, type StyleCommitResult } from "./settings";
+import { STYLE_SETTINGS_KEYS } from "./core/contracts/appearance";
+import { cyclicSemanticColorSlots, migrateColorPreferences } from "./core/plex/colorPreferences";
 import { KPLEX_VIEW_TYPE, KPLEX_SIDEPANEL_VIEW_TYPE, KplexView, KplexSidepanelView } from "./ui/KplexView";
 import { RelationModal, type RelationModalOptions } from "./ui/RelationModal";
 import { NewRelatedNoteModal, type RelatedNoteInvocation } from "./ui/NewRelatedNoteModal";
@@ -117,6 +127,11 @@ type RecentIndexedNavigationTarget = {
   file: TFile | null;
 };
 
+/** Finite appearance intents cross the same settings queue; initialization/import never add another writer. */
+type StyleCommitOptions = Readonly<{themeAction?: appearanceThemes.AppearanceThemeAction; legacyImport?: unknown; initializeThemes?: {existing: boolean};
+  /** Imperative compatibility callers may replace a coherent root/library pair that still differs from disk. */
+  persistExistingChanges?: boolean}>;
+
 export default class KplexPlugin extends Plugin {
   settings: KplexSettings = DEFAULT_SETTINGS;
   index!: GraphIndex;
@@ -134,6 +149,8 @@ export default class KplexPlugin extends Plugin {
   private settingsTab: KplexSettingTab | null = null;
   private actionPreferenceQueue: Promise<void> = Promise.resolve();
   private settingsWriteQueue: Promise<void> = Promise.resolve();
+  private appearanceThemeActivation = 0;
+  private appearanceThemeListeners = new Set<() => void>();
   /** A future version remains intact on disk; editing its conservative fallback is disabled. */
   actionPreferenceUnsupportedVersion: number | undefined;
   actionPreferenceMigrationSkipped: readonly ActionId[] = [];
@@ -270,15 +287,10 @@ export default class KplexPlugin extends Plugin {
     this.startupDiagnostics.begin((window as Window & { kplexStartupDiagnosticsEnabled?: boolean }).kplexStartupDiagnosticsEnabled === true);
     this.translator = createObsidianTranslator();
     const ownData: unknown = await this.loadData();
+    const hasOwnData = ownData !== null && ownData !== undefined;
     const ownRecord = ownData && typeof ownData === "object" ? ownData as Record<string, unknown> : null;
-    const alreadyKplex = Boolean(
-      ownRecord?.kplexInitialized ||
-      ownRecord?.connectorStyle ||
-      ownRecord?.graphDepth ||
-      ownRecord?.parentColumns ||
-      ownRecord?.childColumns ||
-      ownRecord?.noteTypeField
-    );
+    // A persisted record is an existing installation even when newer fields/old flags are absent.
+    const alreadyKplex = hasOwnData;
     this.settings = migrateAndMergeSettings(ownData);
     const actionMigration = migrateActionPreferences(ownData, readObsidianPresentationEnvironment().keyConvention);
     this.settings.actionPreferences = actionMigration.preferences;
@@ -290,7 +302,7 @@ export default class KplexPlugin extends Plugin {
     if (initializedChanged) {
       this.settings.kplexInitialized = true;
     }
-    if (initializedChanged || actionMigration.migrated) {
+    if (hasOwnData && (initializedChanged || actionMigration.migrated)) {
       await this.persistSettingsSnapshot();
     }
 
@@ -399,15 +411,14 @@ export default class KplexPlugin extends Plugin {
       void (async () => {
         if (this.unloading) return;
         this.installPreRestoreChangeFence();
-        if (!alreadyKplex) {
-          const legacySettings = this.runningKplexSettings();
-          if (legacySettings) {
-            this.settings = importExcaliBrainGraphSettings(legacySettings, this.settings);
-            new Notice(this.translator("notice.excaliBrainSettingsImported"), 2600);
-          }
-          this.settings.kplexInitialized = true;
-          await this.saveSettings();
-        }
+        const legacySettings = !alreadyKplex ? this.runningKplexSettings() : null;
+        // First-use migration follows the actual loaded-data/import state. Never persist pristine
+        // factory presets before a running ExcaliBrain appearance has had its existing import path.
+        await this.updateStyleSettings(/** Initialization captures effective migrated appearance without editing it. */ () => {}, this.captureAppearanceOwner(), {
+          initializeThemes: {existing: hasOwnData || legacySettings !== null},
+          ...(legacySettings === null ? {} : {legacyImport: legacySettings}),
+        });
+        if (legacySettings !== null) new Notice(this.translator("notice.excaliBrainSettingsImported"), 2600);
 
         if (this.unloading) return;
         this.layoutReady = true;
@@ -565,6 +576,7 @@ export default class KplexPlugin extends Plugin {
     this.kplexVisibilityListeners.clear();
     this.visibleKplexLeaves.clear();
     this.graphLensListeners.clear();
+    this.appearanceThemeListeners.clear();
     this.linkedDocumentLeaf = null;
     if (this.visibleMetadataTimer !== null) window.clearTimeout(this.visibleMetadataTimer);
     this.visibleMetadataPaths.clear();
@@ -1518,8 +1530,9 @@ export default class KplexPlugin extends Plugin {
 
   /** Omit runtime recovery markers while retaining the actual future schema in its original field. */
   private settingsSnapshotForPersistence(actionPreferences: unknown, source: KplexSettings = this.settings): Record<string, unknown> {
-    const { actionPreferencesFuture: _runtimeFuture, ...settings } = source;
-    return { ...settings, actionPreferences };
+    const { actionPreferencesFuture: _runtimeFuture, colorPreferencesFuture: _runtimeColorFuture, graphLensesColorFuture: _runtimeLensColorFuture, appearanceThemesFuture: _runtimeThemesFuture, ...settings } = source;
+    return { ...settings, actionPreferences, ...(source.appearanceThemesFuture !== undefined ? {appearanceThemes: source.appearanceThemesFuture} : {}), ...(source.graphLensesColorFuture !== undefined ? {graphLenses: source.graphLensesColorFuture} : {}), colorPreferences: source.colorPreferencesFuture !== undefined
+      ? source.colorPreferencesFuture : source.colorPreferences };
   }
 
   /** Persist live settings at the queued boundary, preserving an unsupported future schema verbatim. */
@@ -1529,57 +1542,152 @@ export default class KplexPlugin extends Plugin {
     ));
   }
 
+  /** Capture the selected identity plus activation epoch; A→B→A never revives an old draft. */
+  captureAppearanceOwner(): appearanceThemes.AppearanceOwner {
+    return {themeId: this.settings.appearanceThemes?.selectedId, activation: this.appearanceThemeActivation ?? 0};
+  }
+
+  /** Submission and queue entry both require the exact opening activation; accepted disk writes complete normally. */
+  isAppearanceOwnerCurrent(owner: appearanceThemes.AppearanceOwner): boolean {
+    return !this.unloading && owner.themeId === this.settings.appearanceThemes?.selectedId && owner.activation === (this.appearanceThemeActivation ?? 0);
+  }
+
+  /** Theme metadata has its own existing-lifetime notification, without pretending graph data changed. */
+  subscribeAppearanceThemes(listener: () => void): () => void {
+    (this.appearanceThemeListeners ??= new Set()).add(listener);
+    return /** Release only this native/React lifetime's subscription. */ () => {this.appearanceThemeListeners.delete(listener);};
+  }
+
+  /** Native shells retain their opening theme draft and expose explicit discard after another activation. */
+  bindAppearanceEditor(editor: StyleEditorModal, owner: appearanceThemes.AppearanceOwner): void {
+    const name = this.settings.appearanceThemes?.themes.find(/** Resolve only the opening identity's display name. */ theme => theme.id === owner.themeId)?.name ?? this.appearanceThemeNames().user;
+    editor.bindThemeOwner(/** A selected-ID match alone cannot revive A→B→A. */ () => this.isAppearanceOwnerCurrent(owner),
+      /** The editor releases this subscription with its existing native lifetime. */ changed => this.subscribeAppearanceThemes(changed), name,
+      this.settings.appearanceThemesFuture !== undefined ? this.translator("themes.unavailable") : undefined);
+  }
+
+  /** Supply localized initial preset/copy names; stored display names remain user data after creation. */
+  private appearanceThemeNames(): appearanceThemes.ThemeNames {
+    return {default: this.translator("themes.defaultName"), user: this.translator("themes.userName"),
+      nativeBase: this.translator("themes.nativeBaseName"), custom: this.translator("themes.customName")};
+  }
+
+  /** Explicit selection/metadata intents reuse the same appearance writer and opening-owner fence. */
+  updateAppearanceThemes(action: appearanceThemes.AppearanceThemeAction, owner = this.captureAppearanceOwner()): Promise<StyleCommitResult> {
+    return this.updateStyleSettings(/** Library metadata/activation is prepared by its finite intent, not a second draft writer. */ () => {}, owner, {themeAction: action});
+  }
+
+  /** A fresh stable identity and detached current/factory copy become active only after durable success. */
+  createAppearanceTheme(name: string, fromDefaults: boolean, owner = this.captureAppearanceOwner()): Promise<StyleCommitResult> {
+    return this.updateAppearanceThemes({kind: "create", id: window.crypto.randomUUID(), name, fromDefaults}, owner);
+  }
+
+  /** Reset only the selected editable theme's sources; factory edits otherwise use normal copy-on-write. */
+  resetAppearanceThemeColors(scope: appearanceThemes.ColorResetScope, owner = this.captureAppearanceOwner()): Promise<StyleCommitResult> {
+    return this.updateStyleSettings(/** Preserve all non-color records and palette definitions at the serialized boundary. */ draft => {
+      if (this.settings.appearanceThemes?.selectedId === appearanceThemes.DEFAULT_THEME_ID) throw new Error("Default theme cannot be reset");
+      appearanceThemes.resetAppearanceColors(draft, scope);
+    }, owner);
+  }
+
+  /** Legacy appearance and ontology are imported over latest settings and synchronized with the selected theme atomically. */
+  importLegacyAppearance(raw: unknown, owner = this.captureAppearanceOwner()): Promise<StyleCommitResult> {
+    return this.updateStyleSettings(/** The allowlisted importer supplies this operation's appearance. */ () => {}, owner, {legacyImport: raw});
+  }
+
   /**
-   * Commit a style-manager draft through the common disk queue before publishing its live fields.
-   * Each queued edit starts from the latest live styles at its serialized boundary; unrelated settings and action writes
-   * retain their owners. A storage rejection leaves memory unchanged. After persistence, refresh
-   * failure is a saved outcome with a recovery hint, never a destructive retry or semantic rebuild.
+   * Commit appearance/library and their effective root projection through the existing disk queue.
+   * Every edit starts from latest fields and its opening activation. Metadata-only operations never
+   * refresh the graph. A successful factory change creates one private custom theme; failed writes
+   * publish neither colors nor library. Accepted writes survive UI retirement and refresh failure.
    */
-  async updateStyleSettings(edit: (draft: StyleSettingsDraft) => void): Promise<StyleCommitResult> {
-    let persisted = false;
-    try { await this.enqueueSettingsWrite(/** Capture the latest live settings only when this edit owns the disk queue. */ async () => {
-      if (this.unloading) throw new Error("K-Plex is unloading");
+  async updateStyleSettings(edit: (draft: StyleSettingsDraft) => void, owner = this.captureAppearanceOwner(), options: StyleCommitOptions = {}): Promise<StyleCommitResult> {
+    if (!this.isAppearanceOwnerCurrent(owner)) throw new Error("Appearance editor belongs to an earlier theme activation");
+    let persisted = false, refresh = false, semantic = false, refreshPending = false;
+    try { await this.enqueueSettingsWrite(/** Prepare only when this operation owns the existing settings disk queue. */ async () => {
+      if (!this.isAppearanceOwnerCurrent(owner)) throw new Error("Appearance editor belongs to an earlier theme activation");
       const source = this.settings;
+      if (source.appearanceThemesFuture !== undefined && !options.initializeThemes) throw new Error("Newer appearance themes are read-only");
+      const importing = "legacyImport" in options;
+      const working = importing ? importExcaliBrainGraphSettings(options.legacyImport, source) : source;
       const before = captureSettingsPolicy(source);
-      const draft: StyleSettingsDraft = structuredClone({
-        noteTypeStyles: { ...source.noteTypeStyles }, tagNodeStyles: { ...source.tagNodeStyles },
-        tagStyleList: [...source.tagStyleList], hierarchyLinkStyles: { ...source.hierarchyLinkStyles },
-      });
+      const draft = structuredClone(Object.fromEntries(STYLE_SETTINGS_KEYS.map(
+        /** Preserve the full finite appearance inventory, including optional root absence. */ key => [key, working[key]],
+      ))) as StyleSettingsDraft;
       edit(draft);
-      const next = { ...source, ...draft };
-      const policy = captureSettingsPolicy(next);
-      const effects = classifySettingsChange(before, policy);
+      let library = source.appearanceThemes;
+      if (options.initializeThemes && !library && source.appearanceThemesFuture === undefined && source.colorPreferencesFuture === undefined && source.graphLensesColorFuture === undefined
+        && appearanceThemes.canCaptureThemeAppearance(draft)) {
+        const changedBeforeInitialization = !appearanceThemes.themeValuesEqual(appearanceThemes.captureThemeAppearance(draft), appearanceThemes.captureThemeAppearance(DEFAULT_SETTINGS));
+        library = appearanceThemes.createAppearanceThemes(draft, DEFAULT_SETTINGS, options.initializeThemes.existing || changedBeforeInitialization, this.appearanceThemeNames());
+      }
+      if (options.themeAction) {
+        if (!library) throw new Error("Appearance themes are unavailable");
+        library = appearanceThemes.editAppearanceThemeLibrary(library, options.themeAction);
+        if (library.selectedId !== source.appearanceThemes?.selectedId) {
+          const selected = library.themes.find(/** Apply only this explicit activation's stable identity. */ theme => theme.id === library?.selectedId);
+          if (!selected) throw new Error("Selected theme no longer exists");
+          appearanceThemes.applyThemeAppearance(draft, selected.appearance);
+        }
+      } else if (library && !options.initializeThemes) {
+        if (!appearanceThemes.canCaptureThemeAppearance(draft)) throw new Error("Unsupported appearance cannot be stored as a theme");
+        library = appearanceThemes.recordThemeAppearance(library, appearanceThemes.captureThemeAppearance(draft),
+          library.selectedId === appearanceThemes.DEFAULT_THEME_ID ? window.crypto.randomUUID() : "", this.appearanceThemeNames().custom);
+      }
+      const next = {...working};
+      for (const key of STYLE_SETTINGS_KEYS) Object.assign(next, {[key]: draft[key]});
+      if (library) next.appearanceThemes = library;
+      if (options.initializeThemes) next.kplexInitialized = true;
+      const policy = captureSettingsPolicy(next), effects = classifySettingsChange(before, policy);
+      const libraryChanged = !appearanceThemes.themeValuesEqual(source.appearanceThemes, library);
+      if (effects.changedKeys.includes("graphLenses") && source.graphLensesColorFuture !== undefined) throw new Error("Newer lens colors are read-only");
+      if (effects.changedKeys.includes("colorPreferences")) {
+        if (source.colorPreferencesFuture !== undefined) throw new Error("Newer color preferences are read-only");
+        if (migrateColorPreferences(draft.colorPreferences).future !== undefined || cyclicSemanticColorSlots(draft.colorPreferences).length) throw new Error("Invalid color preferences");
+      }
+      // Only legacy import can own non-appearance fields here. Capture their individual before
+      // values so another live workflow control cannot be overwritten after storage awaits.
+      const importedFields = importing ? Object.keys(working).filter(/** The importer retains local library/workflow data; only actual changed roots need publication. */ key =>
+        !STYLE_SETTINGS_KEYS.some(/** Appearance roots are published by their existing field-level fence. */ field => field === key)
+        && key !== "appearanceThemes" && key !== "appearanceThemesFuture" && !appearanceThemes.themeValuesEqual(Reflect.get(source, key), Reflect.get(working, key)))
+        .map(/** Detach only a changed imported root's comparison token. */ key => ({key, before: appearanceThemes.copyThemeValue(Reflect.get(source, key) as unknown), after: Reflect.get(working, key) as unknown})) : [];
+      if (!options.persistExistingChanges && (library || options.initializeThemes) && !effects.changedKeys.length && !libraryChanged && !importedFields.length && next.kplexInitialized === source.kplexInitialized) return;
       await this.saveData(this.settingsSnapshotForPersistence(source.actionPreferencesFuture ?? source.actionPreferences, next));
       persisted = true;
-      // Only this operation's style fields are published, never a stale whole-settings snapshot.
-      // Queued style editors see this commit before preparing their own drafts.
-      const current = captureSettingsPolicy(this.settings);
-      const values = { ...(this.savedSettingsPolicy ?? current).values };
-      for (const key of effects.changedKeys) {
-        // Legacy imports/controls publish live drafts before their own queued write. A later
-        // change to this field owns its next value; do not overwrite it with the older commit.
-        if (current.values[key] !== before.values[key]) continue;
-        if (key === "noteTypeStyles") this.settings.noteTypeStyles = draft.noteTypeStyles;
-        else if (key === "tagNodeStyles") this.settings.tagNodeStyles = draft.tagNodeStyles;
-        else if (key === "tagStyleList") this.settings.tagStyleList = draft.tagStyleList;
-        else if (key === "hierarchyLinkStyles") this.settings.hierarchyLinkStyles = draft.hierarchyLinkStyles;
-        values[key] = policy.values[key];
+      const current = captureSettingsPolicy(this.settings), values = {...(this.savedSettingsPolicy ?? current).values};
+      for (const key of STYLE_SETTINGS_KEYS) {
+        if (!effects.changedKeys.includes(key) || current.values[key] !== before.values[key]) continue;
+        Object.assign(this.settings, {[key]: draft[key]});
       }
-      // Advance only the committed style projection; a concurrent semantic edit keeps its own fence.
-      this.savedSettingsPolicy = { values };
+      for (const field of importedFields) if (appearanceThemes.themeValuesEqual(Reflect.get(this.settings, field.key), field.before)) Object.assign(this.settings, {[field.key]: field.after});
+      for (const key of effects.changedKeys) if (current.values[key] === before.values[key]) values[key] = policy.values[key];
+      // Compatibility callers already published their live fields. Record the exact queued disk
+      // snapshot only after storage succeeds; a failed write must remain dirty for any next save.
+      this.savedSettingsPolicy = options.persistExistingChanges ? policy : {values};
+      if (options.initializeThemes) this.settings.kplexInitialized = true;
+      if (libraryChanged && library) {
+        const previous = source.appearanceThemes?.selectedId;
+        this.settings.appearanceThemes = library;
+        if (previous !== library.selectedId) this.appearanceThemeActivation = (this.appearanceThemeActivation ?? 0) + 1;
+        // Snapshot listeners: native page replacement may synchronously release/re-register rows.
+        for (const listener of [...(this.appearanceThemeListeners ?? [])]) try {listener();} catch (error) {console.error("K-Plex saved theme notification failed", error); refreshPending = true;}
+        if (previous === appearanceThemes.DEFAULT_THEME_ID && library.selectedId !== previous && !options.themeAction) {
+          const selected = library.themes.find(/** Name the new committed custom theme, never a stale editor label. */ theme => theme.id === library.selectedId);
+          try {new Notice(this.translator("themes.customSaved", {name: selected?.name ?? this.appearanceThemeNames().custom}));}
+          catch (error) {console.error("K-Plex custom theme notice failed", error); refreshPending = true;}
+        }
+      }
+      if (effects.changedKeys.includes("graphLenses")) for (const listener of [...(this.graphLensListeners ?? [])]) try {listener(this.settings.graphLenses);} catch (error) {console.error("K-Plex saved lens notification failed", error); refreshPending = true;}
+      semantic = effects.semanticInvalidation;
+      if (semantic) this.index.invalidateSemanticPolicy();
+      refresh = effects.changedKeys.length > 0 && !options.initializeThemes;
     }); } catch (error) {
       if (!persisted) throw error instanceof Error ? error : new Error(String(error));
-      console.error("K-Plex saved style publication failed", error);
-      return { refreshPending: true };
+      console.error("K-Plex saved style publication failed", error); return {refreshPending: true};
     }
-    if (this.unloading) return { refreshPending: false };
-    try {
-      await this.index.refreshPresentationSettings();
-      return { refreshPending: false };
-    } catch (error) {
-      console.error("K-Plex saved style presentation refresh failed", error);
-      return { refreshPending: true };
-    }
+    if (this.unloading || !refresh) return {refreshPending};
+    try {await this.index.refreshPresentationSettings(); if (semantic) await this.index.refreshSemanticSettings(); return {refreshPending};}
+    catch (error) {console.error("K-Plex saved style presentation refresh failed", error); return {refreshPending: true};}
   }
 
   /** Navigate to the declarative shortcut page, including when optional commands are unpublished. */
@@ -1779,22 +1887,30 @@ export default class KplexPlugin extends Plugin {
   async saveSettings(_reindex = false, notifyIndex = true): Promise<void> {
     this.settings.primaryTagFieldLowerCase = this.settings.primaryTagField.toLowerCase().replaceAll(" ", "-");
     const next = captureSettingsPolicy(this.settings);
-    const effects = classifySettingsChange(this.savedSettingsPolicy ?? next, next);
+    const previousPolicy = this.savedSettingsPolicy;
+    const effects = classifySettingsChange(previousPolicy ?? next, next);
     const consentOnly = effects.changedKeys.length === 1 && effects.changedKeys[0] === "allowRemoteNodeImages";
-    this.savedSettingsPolicy = next;
+    const appearanceChanged = effects.changedKeys.some(/** Legacy imperative saves delegate appearance synchronization to the one queued owner. */ key => STYLE_SETTINGS_KEYS.some(/** This is the appearance-write inventory, not the theme schema. */ field => field === key));
+    const queuedAppearance = appearanceChanged && (this.settings.appearanceThemes || this.settings.appearanceThemesFuture !== undefined);
+    // The appearance queue owns its durable policy baseline. Advancing it here would make a
+    // retry or overlapping workflow save miss an appearance whose first disk write rejected.
+    if (!queuedAppearance) this.savedSettingsPolicy = next;
     if (effects.changedKeys.includes("allowRemoteNodeImages")) {
       this.index.invalidateNodeVisuals();
       this.index.notifyPresentation();
     }
     if (effects.semanticInvalidation) this.index.invalidateSemanticPolicy();
-    await this.persistSettingsSnapshot();
+    if (queuedAppearance)
+      await this.updateStyleSettings(/** Existing callers already published their imperative fields; persist their coherent snapshot even if its library matches. */ () => {},
+        this.captureAppearanceOwner(), {persistExistingChanges: true});
+    else await this.persistSettingsSnapshot();
     if (this.unloading) return;
     await this.index.refreshPresentationSettings();
     if (effects.semanticInvalidation) await this.index.refreshSemanticSettings();
     // Device typography changes reuse the existing graph and cannot expand a requested scope.
     // Style dictionaries/order also reuse semantic coverage. Preserve the legacy refresh
     // for other render changes and mixed writes, which may change requested scopes.
-    else if (effects.render && !effects.typographyOnly && !consentOnly && !isStyleOnlySettingsChange(effects)) await this.index.refreshSemanticSettings();
+    else if (effects.render && !effects.typographyOnly && !effects.paintOnly && !consentOnly && !isStyleOnlySettingsChange(effects) && !effects.changedKeys.every(/** Non-color theme geometry uses presentation/layout only. */ key => STYLE_SETTINGS_KEYS.some(/** Lens behavior keeps its existing separate settings owner. */ field => field === key))) await this.index.refreshSemanticSettings();
     // Workflow-only callers can still request their historical view notification. Changed settings
     // use the separate presentation channel and never pretend relationship evidence changed.
     if ((!effects.render || effects.typographyOnly) && notifyIndex) this.index.notifyPresentation();
@@ -2994,10 +3110,17 @@ export default class KplexPlugin extends Plugin {
     return () => this.graphLensListeners.delete(listener);
   }
 
-  async setGraphLenses(lenses: KplexSettings["graphLenses"]): Promise<void> {
-    this.settings.graphLenses = lenses;
-    await this.saveSettings(false, false);
-    for (const listener of this.graphLensListeners) listener(lenses);
+  /** Lens edits share the durable appearance queue and merge against their captured editor baseline. */
+  async setGraphLenses(lenses: KplexSettings["graphLenses"], baseline = this.settings.graphLenses, owner = this.captureAppearanceOwner()): Promise<StyleCommitResult> {
+    const opening = structuredClone(baseline), edited = structuredClone(lenses);
+    const result = await this.updateStyleSettings(draft => {
+      if (this.settings.graphLensesColorFuture !== undefined) throw new Error("Newer lens colors are read-only");
+      const merged = mergeGraphLensDefinitions(opening, edited, draft.graphLenses);
+      const known = new Set(appearanceColorReferences({graphLenses: draft.graphLenses}).map(value => JSON.stringify(value)));
+      for (const value of appearanceColorReferences({graphLenses: merged})) if (!known.has(JSON.stringify(value))) requireNamedColor(value, draft.colorPreferences);
+      draft.graphLenses = merged;
+    }, owner);
+    return result;
   }
 
   subscribeNodeFlair(listener: (path: string) => void): () => void {
