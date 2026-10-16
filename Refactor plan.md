@@ -4130,10 +4130,18 @@ Final report consolidates architecture, scope, versioned model/lifecycle, full/n
 
 | Checkpoint | Status / evidence |
 | --- | --- |
-| H1 — Shared modifier-gated hover | Implemented on main after merged PR #158; production build, focused36 and migration/hover70 pass. Full retry/native acceptance pending. |
+| H1 — Shared modifier-gated hover | `a16719e`: full2,003/lint/types/build/exact smoke and CI pass; default delay preserved, eight locales, no semantic/theme policy change. |
+| H2 — Native hover validation and closeout | Seven actual Settings/main/popout cases plus cleanup pass,0 observed source/semantic/search calls; original106-file fixture and four config bytes restored. Broader touch/gate lanes remain unaccepted; keep PR #170 draft. |
 
 ### 2026-10-16 — H1: optional modifier hover
 
 PR #158 merged at b9d3527 with explicit maintainer authorization; fetched/updated main before creating 2026-10-16-alt-hover-highlight. Scoped new global Boolean defaults off, strict migration and foreign-import isolation. Shared surface-owned HoverHighlight replaces only the existing delayed hover owner for nodes/gates/connectors, with immediate modifier entry/stationary key transitions and cancellation on leave, blur, navigation, policy changes and teardown. Preserve direct drag/touch ownership, existing evidence tooltips and all theme styling. No semantic policy or theme schema changes; workflow save/presentation path only. Eight locales use environment-aware modifier names.
 
 Actual build and focused checks pass on Node22.22.2. First full run failed an unchanged menu browser-startup/loading assertion; focused retry passes. Full retry and exact native Settings/main/popout/touch/gate lanes pending, not yet acceptance. C14 accepted; later refactoring remains paused. Highest remaining risk: actual modifier delivery/focus across Settings and popouts. macOS Option/menu and physical mobile/hardware-keyboard behavior require separate coverage.
+
+
+### 2026-10-16 — H2: exact-build hover acceptance and bounded closeout
+
+Runtime remains a16719e; full2,003 and CI pass. Exact d5958787 build passes7 actual Settings/trusted hover cases in main/popout and complete cleanup. Corrected native probe only: preserve current focus during keys, choose visible fixture gate, await existing popout readiness, release listeners before closing their document and rebind original workspace owners. No production change after full verification.0 body reads/parses/acquisitions/semantic/search in measured intervals; no CPU/memory claim. Final restoration matches original settings keys/four exact config files/106 files/no owned fixtures or controllers; validated build retained.
+
+Failed controls preserved, including first full Chromium startup failure, native probe focus/gate/readiness/closed-window cleanup failures and rejected capture prototype. Broader touch lane fails plugin readiness across emulation before cases; explicit same-build enable and final restoration recover desktop. Both broader gate runs cancel their setup patch without observed source/policy/metadata change, before gate assertions; fixture cleanup passes. Causes remain unproven; no assertion weakening, semantic fix or further architecture work. See docs/validation/alt-hover-highlight-2026-10-16.md and local58-file evidence manifest/source receipt. Keep #170 draft; no merge/release. Highest remaining risks: unresolved broader native harness acceptance, macOS Option/menu/popout and physical mobile touch/external-keyboard behavior.
