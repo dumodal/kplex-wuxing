@@ -1222,15 +1222,50 @@ test("standard adoption and named deletion durably clear an existing canvas thro
 });
 
 
-test("hover modifier preference defaults off, survives restart/import and never invalidates graph policy", () => {
-  assert.equal(defaults.hoverHighlightRequiresAlt, false);
-  const saved = migrateAndMergeSettings({kplexInitialized: true, hoverHighlightRequiresAlt: true});
-  assert.equal(migrateAndMergeSettings(JSON.parse(JSON.stringify(saved))).hoverHighlightRequiresAlt, true);
-  assert.equal(migrateAndMergeSettings({hoverHighlightRequiresAlt: "true"}).hoverHighlightRequiresAlt, false);
-  assert.equal(importExcaliBrainGraphSettings(fixture, saved).hoverHighlightRequiresAlt, true);
-  assert.deepEqual(classifySettingsChange(captureSettingsPolicy(defaults), captureSettingsPolicy({...defaults, hoverHighlightRequiresAlt: true})), {
+test("hover modifier preferences default on while explicit false survives migration, restart and foreign import", () => {
+  for (const key of ["hoverHighlightRequiresAlt", "areaOutlineRequiresAlt"]) {
+    assert.equal(defaults[key], true, key);
+    for (const malformed of [undefined, null, "true", "false", 0, 1, [], {}])
+      assert.equal(migrateAndMergeSettings({kplexInitialized: true, [key]: malformed})[key], true, `${key}: ${JSON.stringify(malformed)}`);
+    for (const enabled of [true, false]) {
+      const saved = migrateAndMergeSettings({kplexInitialized: true, [key]: enabled});
+      assert.equal(saved[key], enabled, key);
+      assert.equal(migrateAndMergeSettings(JSON.parse(JSON.stringify(saved)))[key], enabled, key);
+      assert.equal(importExcaliBrainGraphSettings({...fixture, [key]: !enabled}, saved)[key], enabled, key);
+    }
+  }
+});
+
+test("hover modifier preferences remain independent of theme application and all graph work policies", () => {
+  const changed = {...defaults, hoverHighlightRequiresAlt: false, areaOutlineRequiresAlt: false};
+  assert.deepEqual(classifySettingsChange(captureSettingsPolicy(defaults), captureSettingsPolicy(changed)), {
     semanticInvalidation: false, presentationFacets: false, searchTerms: false, nodeVisuals: false,
     render: false, typographyOnly: false, paintOnly: false, changedKeys: [],
   });
-  assert.equal(encodeIndexSettingsSignature(saved), encodeIndexSettingsSignature({...saved,hoverHighlightRequiresAlt: false}));
+  assert.equal(encodeIndexSettingsSignature(defaults), encodeIndexSettingsSignature(changed));
+  const appearance = themeModel.captureThemeAppearance(defaults);
+  assert.deepEqual(themeModel.captureThemeAppearance(changed), appearance);
+  themeModel.applyThemeAppearance(changed, appearance);
+  assert.equal(changed.hoverHighlightRequiresAlt, false);
+  assert.equal(changed.areaOutlineRequiresAlt, false);
+});
+
+test("native declarative hover controls expose both local preferences and persist explicit opt-outs", async () => {
+  const saves = [];
+  const plugin = {manifest: {id: "k-plex"}, settings: structuredClone(defaults),
+    saveSettings: async (...args) => { saves.push(args); },
+    index: {unassignedOntologyFields: () => [], allPages: () => []}};
+  plugin.translator = createObsidianTranslator();
+  const tab = new KplexSettingTab({}, plugin);
+  const behavior = tab.getSettingDefinitions().find(item => item.name === "Plex behavior");
+  const navigation = behavior.items.find(item => item.heading === "Navigation & interaction");
+  for (const key of ["hoverHighlightRequiresAlt", "areaOutlineRequiresAlt"]) {
+    const row = navigation.items.find(item => item.control?.key === key);
+    assert.equal(row?.control?.type, "toggle", key);
+    assert.equal(typeof row?.desc, "string", key);
+    assert(!row.desc.includes("{key}"), "the owner environment formats the modifier name");
+    await tab.setControlValue(key, false);
+    assert.equal(plugin.settings[key], false, key);
+  }
+  assert.deepEqual(saves, [[], []], "workflow controls use the existing settings writer");
 });

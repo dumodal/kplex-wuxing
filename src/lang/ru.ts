@@ -7,6 +7,8 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const russianTranslations = {
+  "settings.areaOutline.name": "Показывать контуры областей только с клавишей",
+  "settings.areaOutline.help": "Удерживайте {key} при наведении на область, чтобы показать её контур и границу изменения размера. В настройках областей контуры видны всегда.",
   "settings.hoverHighlight.name": "Подсвечивать при наведении только с клавишей",
   "settings.hoverHighlight.help": "Удерживайте {key} при наведении на узел, порт или линию, чтобы сразу подсветить связанные соединения. Если выключено, достаточно навести указатель и немного подождать.",
   "settings.hoverHighlight.modifier": "альтернативную клавишу-модификатор",

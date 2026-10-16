@@ -4155,3 +4155,53 @@ Revalidated exact d5958787 build against dist and106-file Small. Original gate s
 Original touch retry reaches debugger-owner guard: idle CLI debugger attached, no DevTools/live test. Public installed dev:debug off releases that owner; unchanged driver passes8 trusted range cases, reload, geometry and all cleanup/restoration. Earlier reload-readiness issue not reproduced, cause still unproven. Both corrected gate runs pass5 visual cases but fail no-source-work on clear: +1 acquisition.checked/+1 semantic revision, stable source revision,0 fresh reads/parses/rebuild/body-read/requested-neighborhood-degree-pair calls. Do not infer a full rebuild or wrong gate display; source of validation/publication remains unproven. Leave PR #170 draft; do not implement a broader semantic/performance change as part of retesting.
 
 Original settings/layout/bounds/four config bytes/CLI debugger state/106 files restore; no owned notes/controllers, same artifacts. Local29-file retest manifest/source receipt and old evidence retained, unpublished; private backups separate. Updated validation report and CONTRIBUTING make current acceptance and debugger prerequisite explicit. macOS and physical-mobile acceptance remain separate.
+
+
+## Plex interaction fixes and features (2026-10-16)
+
+| Checkpoint | Status |
+| --- | --- |
+| I0: authorized #170 merge and main update | Complete: CI retry passed, #170 merged at `3294bea`; fetched/fast-forwarded main and created `2026-10-16-plex-interaction-updates`. |
+| I1: interaction and central-file implementation | Complete: final full 2,044 tests/lint/types/build/exact smoke, 14 native interaction cases and 7 main/popout hover cases pass. All seven requests implemented; native-observed admission-key and stale readable-identity fixes included. |
+| I2: evidence and draft PR closeout | Pending final exact-build checks, restoration, source receipts and authorized commits/pushes. No follow-up merge/release. |
+
+### 2026-10-16: I0, authorized hover PR merge
+
+The maintainer explicitly requested creating/merging the hover PR before starting the interaction
+batch. PR #170's existing head was already published; its complete CI retry passes at
+https://github.com/zsviczian/kplex/actions/runs/38929685957/job/117113490279 . Main merged #170,
+fetched and fast-forwarded local main to `3294bea18093b33791830fb55d97d53c6e3c980a`, then created
+the new feature branch. The earlier H3 draft status is historical; its known Quick lens resource
+limitation remains recorded. C14 stays accepted; no structural refactoring resumed.
+
+
+### 2026-10-16: I1, validated Plex interaction implementation
+
+Main independently reviewed the scoped materialization, modifier/localization and Properties
+returns, fixed bounded defects and ran final verification against the actual installed host/types.
+Transparent scroll surfaces, displayed-gate geometry, separate modifier policies, additive sibling
+drops, resolved Bases navigation/linking, immediate placeholder reconciliation and central-file
+Properties integration extend existing owners. No new graph classifier, scheduler, storage format,
+source acquisition path, dependency or release version. Four sibling writes preserve their shared
+parent; native held-build conversion removes the old rendered ghost and retains exactly one real
+node. Properties tracks both file and editable metadata identities across held native loads,
+pinning, unsupported files and popouts without changing focus/history or emitting file-open.
+
+Native repetition exposed an obsolete settled gate task: cleanup used a mutable page path rather
+than its admission key. Capturing the coordinate fixes proof/retirement and preserves zero-read
+count behavior across both rename and materialization. A real separately published host-preview
+regression also establishes and rejects stale placeholder intent. Final 2,044 tests, official lint,
+installed types, real build/exact smoke, 14 interaction cases and 7 hover cases pass; no failure,
+skip or cancellation in the final verification groups. Exact runtime is `852d2c8e`.
+
+Touch passes 8 trusted gestures/reload/geometry; a second exact native interaction run passes all
+14 cases and cleanup. Final restoration matches original 107 files/settings/layout/bounds/four
+configuration files/debugger state, with no active/pending work. Broader gate/filter resource
+acceptance fails in both normal and isolated runs before the complete matrix: recorded oracle-to-
+failure +9 checks/+9 semantic publications, source revision unchanged and zero fresh reads/parses/
+builds. This is not a per-toggle measurement and does not establish a CPU cost or cause. The
+assertion remains unchanged; keep the PR draft and defer separate readmission investigation.
+Remaining closeout: verified local evidence, source receipts and draft PR. Highest-priority platform checks are actual macOS Option/menu/popout
+behavior and physical mobile touch/external-keyboard/Properties behavior. Desktop emulation is
+not device acceptance. The existing Quick lens resource gate remains independent; no optimization
+or structural C15+ work is authorized by this checkpoint.

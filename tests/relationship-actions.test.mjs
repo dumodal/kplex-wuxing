@@ -713,7 +713,9 @@ for (const consumer of ["folder", "ghost"]) test(`${consumer} creation also awai
       operation = create.call(f.context, { isFolder: true, path: "folder:Owned" }, "Folder display", "markdown").then(value => { finished = true; return value; });
     } else {
       f.context.rememberNewNodeDefaultType = async kind => f.events.push(["default", kind]);
-      f.context.index.renameFile = (oldPath, file) => { f.events.push(["rename", oldPath, file.path]); return true; };
+      f.context.settings = { lastActivePath: "Other.md" };
+      f.context.remapNavigationPaths = (oldPath, newPath) => { f.events.push(["remap", oldPath, newPath]); return false; };
+      f.context.index.materializeFile = (oldPath, file) => { f.events.push(["materialize", oldPath, file.path]); return true; };
       f.context.openInDocumentLeaf = async file => f.events.push(["open", file.path]);
       const materialize = productionFunction("src/main.ts", "materializeGhostPage", {});
       operation = materialize.call(f.context, { path: "Ghost", name: "Ghost display" }, "Created", "markdown", "").then(value => { finished = true; return value; });
@@ -721,7 +723,29 @@ for (const consumer of ["folder", "ghost"]) test(`${consumer} creation also awai
     await nextCreatedStep(); assert.equal(finished, false); assert.deepEqual(f.events, ["native-write"]);
     f.observe(); const result = await operation; assert(result); f.clean();
     if (consumer === "folder") assert.deepEqual(f.events, ["native-write", "cache-body-observed", ["insert", f.file.path, ["Folder display"]]]);
-    else assert.deepEqual(f.events, ["native-write", "cache-body-observed", ["default", "markdown"], ["rename", "Ghost", f.file.path], ["open", f.file.path]]);
+    else assert.deepEqual(f.events, ["native-write", "cache-body-observed", ["default", "markdown"], ["materialize", "Ghost", f.file.path], ["remap", "Ghost", f.file.path], ["open", f.file.path]]);
+  } finally { f.cancel(); await operation?.catch(() => {}); globalThis.window = previousWindow; f.clean(); }
+});
+
+for (const central of [true, false]) test(`ghost promotion remaps saved navigation and ${central ? "follows the promoted center" : "preserves another center"}`, async () => {
+  const previousWindow = globalThis.window; globalThis.window = { setTimeout, clearTimeout };
+  const f = createdMetadataFixture(), ghost = { path: "Ghost", name: "Ghost display" }; let operation;
+  try {
+    f.context.settings = { lastActivePath: central ? "Ghost" : "Other.md" };
+    f.context.rememberNewNodeDefaultType = async () => {};
+    f.context.index.materializeFile = (oldPath, file) => { assert.equal(oldPath, "Ghost"); ghost.path = file.path; f.events.push("materialized"); return true; };
+    f.context.remapNavigationPaths = (oldPath, path) => {
+      assert.equal(oldPath, "Ghost", "Captured identity survives synchronous page promotion");
+      if (f.context.settings.lastActivePath === oldPath) f.context.settings.lastActivePath = path;
+      f.events.push("remapped"); return true;
+    };
+    f.context.notifyNavigation = path => { assert.equal(path, f.file.path); assert.equal(f.context.settings.lastActivePath, path); f.events.push("navigated"); };
+    f.context.saveSettings = async (...args) => { assert.deepEqual(args, [false, false]); f.events.push("saved"); };
+    f.context.openInDocumentLeaf = async file => { assert.equal(file, f.file); f.events.push("opened"); };
+    operation = productionFunction("src/main.ts", "materializeGhostPage", {}).call(f.context, ghost, "Created", "markdown", "");
+    await nextCreatedStep(); f.observe(); assert.equal(await operation, true);
+    assert.deepEqual(f.events, ["native-write", "cache-body-observed", "materialized", "remapped", ...(central ? ["navigated"] : []), "saved", "opened"]);
+    assert.equal(f.context.settings.lastActivePath, central ? f.file.path : "Other.md");
   } finally { f.cancel(); await operation?.catch(() => {}); globalThis.window = previousWindow; f.clean(); }
 });
 

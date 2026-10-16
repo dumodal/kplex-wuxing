@@ -1416,7 +1416,7 @@ try{
  const touchDoubleTap={current:{reset(){}}},areaSettingsDismissPointer={current:null},areaResizeDrag={current:null},pendingGateLongPress={current:null},panDrag={current:null};
  let relocatedRow=null;
  const touchLongPress={current:null},setNodeDrag=value=>{nodeDrag=value;if(value?.path&&relocatedRow)relocatedRow.remove()};let resizeFinishes=0,areaClears=0;
- const viewport={current:null},neighborhood={center:origin},renderedNodeMap=new Map(),toWorld=(x,y)=>({x,y});
+ const viewport={current:null},neighborhood={center:origin},renderedNodeMap=new Map(),toWorld=(x,y)=>({x,y}),areaOutline={current:null};
  const finishAreaResize=()=>{resizeFinishes++;return true},setAreaHoverIfChanged=()=>areaClears++;
  const setConnectDrag=value=>{connectDrag=value},clearHoverIntent=()=>{};
  ${history}
@@ -1474,7 +1474,7 @@ try{
 function externalAndPinnedDropBrowserEntry() {
   const callbacks = uiDefinitions("src/ui/PlexGraph.tsx", ["normalizedRole", "semanticRoleForGate", "toWorld", "isAreaControlTarget", "isEmptyAreaTarget", "areaHoverAt",
     "relationshipDropRoles", "historyRelationshipTarget", "clearHistoryDragHover", "updateHistoryDragHover", "openHistoryRelationshipMenu",
-    "externalFileDropTarget", "dragExternalFileOver", "leaveExternalFile", "dropExternalFile", "semanticRoleForPosition", "relationshipDropArea", "up"]);
+    "externalFileDropTarget", "dragExternalFileOver", "leaveExternalFile", "dropExternalFile", "semanticRoleForPosition", "nodeDropRole", "relationshipDropArea", "up"]);
   return `
 import {getDraggedFile} from ${JSON.stringify(join(root,"src/adapters/obsidian/fileExplorerDrag.ts"))};
 import {captureSurfaceContinuation} from ${JSON.stringify(join(root,"src/ui/surfaceContinuation.ts"))};
@@ -1494,6 +1494,8 @@ try {
  const viewport={current:surface},camera={current:{x:0,y:0,scale:1}},neighborhood={center:origin},historyDragHover={current:null};
  let connectDrag=null,nodeDrag=null,externalDropZone=null;const setExternalDropZone=value=>{externalDropZone=value};const areaResizeDrag={current:null},pendingGateLongPress={current:null},touchLongPress={current:null},suppressActivateUntil={current:0};
  const finishAreaSettingsDismiss=()=>{},setConnectDrag=value=>{connectDrag=value},setNodeDrag=value=>{nodeDrag=value},renderedNodeMap=new Map();
+ const optimisticCommitToken={current:0};let optimistic=null,updating=false;
+ const setOptimisticRelink=value=>{optimistic=value},setRelationshipUpdating=value=>{updating=value};
  const scene={zoneAreas:{parent:{left:300,top:60,width:110,height:100,resizeEdge:"top"},child:{left:450,top:60,width:110,height:100,resizeEdge:"bottom"},left:{left:300,top:230,width:110,height:100,resizeEdge:"top"},right:{left:450,top:230,width:110,height:100,resizeEdge:"top"}}};
  const ZONES=["parent","child","left","right","sibling"],AREA_RESIZE_EDGE_PX=10;
  ${callbacks}
@@ -1554,9 +1556,26 @@ try {
  connectDrag.current={x:40,y:365};check(relationshipDropArea()===null,"pinned target retained area preview");
  connectDrag.current={x:1000,y:700};check(relationshipDropArea()===null,"outside pointer retained gate preview");
  other.style.setProperty("left","320px");other.style.setProperty("top","100px");other.dataset.kplexPath=target.path;other.dataset.kplexGate="left";
- connectDrag.current={x:330,y:110};check(relationshipDropArea()==="right","hovered gate inverse role missing");
+ connectDrag.current={x:330,y:110};check(relationshipDropArea()===null,"node-to-node gate target must not highlight a center relation area");
  target.isFolder=true;check(relationshipDropArea()===null,"structural endpoint highlighted");delete target.isFolder;
+ connectDrag={originPath:target.path,gate:"left",current:{x:700,y:300},moved:true};
+ check(relationshipDropArea()===null,"noncentral gate origin highlighted a center relation area");
  connectDrag=null;check(relationshipDropArea()===null,"cancel retained area preview");
+
+ // The same real area geometry owns sibling preview and submitted composer intent. Only the
+ // center/sibling pair is handed to the additive create flow; shared-parent evidence stays intact.
+ const sibling={page:target,role:"sibling",linkDirection:"shared-parent"};scene.nodes=[sibling];
+ for(const [role,x,y]of [["parent",350,80],["child",510,80],["left",350,280],["right",510,280]]){
+  nodeDrag={path:target.path,pointerId:31,x,y,offsetX:0,offsetY:0,startClientX:800,startClientY:550,moved:true};
+  renderedNodeMap.set(target.path,{...sibling,x,y});
+  check(relationshipDropArea()===role,"sibling did not preview exact area: "+role);
+  const before=calls.length;up({...event(x,y),pointerId:31,pointerType:"mouse"});
+  const opened=calls.at(-1);check(calls.length===before+1&&opened.mode==="create"&&opened.origin===origin&&opened.fixedTarget===target&&opened.semanticRole===role,"sibling drop did not add the center relation: "+role);
+  check(opened.existingDirection===undefined&&sibling.linkDirection==="shared-parent","sibling shared-parent relation was treated as a moved direct relation");
+  check(nodeDrag===null,"sibling drag did not retire");
+ }
+ nodeDrag={path:target.path,pointerId:32,x:700,y:500,offsetX:0,offsetY:0,startClientX:800,startClientY:550,moved:true};
+ check(relationshipDropArea()===null,"sibling accepted empty canvas outside real areas");nodeDrag=null;
  pages.delete(target.path);e=event(90,90);dragExternalFileOver(e);check(externalDropZone==="center","unindexed center did not preview queued navigation");e=event(90,90);dropExternalFile(e);check(!e.stopped,"unindexed center drop lost App readiness fallback");
  result.dataset.status="passed";result.textContent="External and pinned drop behavior passed";
 }catch(error){result.dataset.status="failed";result.textContent=String(error.stack||error)}
@@ -1567,6 +1586,43 @@ test("External file areas and pinned relationship targets use shared production 
   const app=readFileSync(join(root,"src/ui/App.tsx"),"utf8");
   assert.match(app, /className="kplex-pinned-open" data-kplex-pinned-path=\{pinned.path\}/);
   runBrowserDom(externalAndPinnedDropBrowserEntry(),"External and pinned drop behavior passed");
+});
+
+/** Verify painted gate coordinates and approach directions through real zoomed, scrolled DOM. */
+function draftConnectorBrowserEntry() {
+  const callbacks = uiDefinitions("src/ui/PlexGraph.tsx", ["gateVector", "cubicPoint", "edgeGeometry", "oppositeGate", "toWorld", "connectionDragPath"]);
+  return `
+const result=document.querySelector("#result"),check=(ok,message)=>{if(!ok)throw Error(message)};
+try{
+ const surface=document.body.appendChild(document.createElement("div"));surface.style.cssText="position:absolute;left:10px;top:20px;width:900px;height:700px";
+ const camera={current:{x:40,y:40,scale:1.25}},viewport={current:surface},settings={connectorStyle:"bezier"};
+ const layer=surface.appendChild(document.createElement("div"));layer.style.cssText="position:absolute;left:0;top:0;transform-origin:0 0;transform:translate(40px,40px) scale(1.25)";
+ const scroll=layer.appendChild(document.createElement("div"));scroll.style.cssText="position:absolute;left:20px;top:30px;width:600px;height:260px;overflow:auto";
+ const content=scroll.appendChild(document.createElement("div"));content.style.cssText="position:relative;height:800px";
+ const make=(path,left,top)=>{const node=content.appendChild(document.createElement("div"));node.dataset.kplexPath=path;node.style.cssText="position:absolute;width:44px;height:28px;left:"+left+"px;top:"+top+"px";const gate=node.appendChild(document.createElement("span"));gate.dataset.kplexGate="left";gate.style.cssText="position:absolute;left:-14px;top:7px;width:14px;height:14px";return gate};
+ const source=make("Source.md",36,200),target=make("Target.md",330,240),page={path:"Target.md"};
+ const index={get:path=>path===page.path?page:null},connectBlockedPaths=new Set();
+ let connectDrag={originPath:"Source.md",sourceGateElement:source,gate:"left",current:{x:0,y:0}};
+ ${callbacks}
+ for(const top of [90,160])for(const side of ["left","right","top","bottom"]){
+  scroll.scrollTop=top;target.dataset.kplexGate=side;
+  const a=source.getBoundingClientRect(),b=target.getBoundingClientRect();
+  // Deliberately hover away from the port center; snapping must select its actual painted center.
+  connectDrag.current=toWorld(b.left+2,b.top+2);
+  check(surface.ownerDocument.elementFromPoint(b.left+2,b.top+2)===target,"Fixture target is clipped/covered");
+  const values=connectionDragPath().match(/-?\\d+(?:\\.\\d+)?/g).map(Number),start=toWorld(a.left+a.width/2,a.top+a.height/2),end=toWorld(b.left+b.width/2,b.top+b.height/2);
+  check(Math.abs(values[0]-start.x)<0.001&&Math.abs(values[1]-start.y)<0.001,"draft origin escaped the visible scrolled gate");
+  check(Math.abs(values[6]-end.x)<0.001&&Math.abs(values[7]-end.y)<0.001,"draft failed to snap to target gate center");
+  const vector=gateVector(side);check((values[4]-end.x)*vector.x+(values[5]-end.y)*vector.y>0,"target gate approach is reversed: "+side);
+ }
+ source.remove();check(connectionDragPath()===null,"detached gate retained a draft connector");
+ result.dataset.status="passed";result.textContent="Draft connector gate geometry passed";
+}catch(error){result.dataset.status="failed";result.textContent=String(error.stack||error)}
+`;
+}
+
+test("draft connectors follow actual scrolled gates and the destination gate direction",()=>{
+  runBrowserDom(draftConnectorBrowserEntry(),"Draft connector gate geometry passed");
 });
 
 /** Exercise the production glow and shared CSS across covered/clipped areas and both host themes. */

@@ -22,16 +22,37 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR #170 — Small-vault retest complete; resource assertion remains open
+# Plex interaction updates: final validation
 
-Branch2026-10-16-alt-hover-highlight. Runtime remains a16719e, unchanged from full2,003/lint/types/build/exact smoke and green CI. User explicitly requested rerunning touch and gate tests in kplex-test-small. No merge/release approval for #170; keep draft. C14 accepted; later refactoring paused.
+Main validation agent owns branch `2026-10-16-plex-interaction-updates`, base
+`3294bea18093b33791830fb55d97d53c6e3c980a` (authorized merge of #170 after complete CI retry).
+The scoped offline owners have returned their changes; main reviewed/fixed the combined tree.
+C14 is accepted and later structural refactoring remains paused.
 
-Exact d59587875f14614c4d579e49033743d6f2a4f251acae1b1d7a14281d4931b200 artifact retained. Original gate setup fails again. Trace and canonical fixture receipts establish3 readable foreground pages absent from canonical GraphState. Fixed test setup only: unconditional existing idempotent insertCreatedFile plus exact TFile identity check. Regression executes actual native binding block; Node22.22.2 native-runner20 tests and both driver syntax checks pass. No production change or relaxed assertion.
+The seven requested fixes/features are implemented. See
+[the validation report](docs/validation/plex-interactions-2026-10-16.md) for behavior, ownership,
+actual results and retained controls. All eight locales, native Settings and established writers
+are preserved. Materialization rejects stale physical identities, remaps retained reads and cancels
+older private graph builds. A native-observed gate task now retains its original admission path
+for proof and cleanup; a settled task cannot survive rename/materialization under an obsolete key.
+Properties checks both the native file and editable metadata identity, with per-pane accepted-load
+serialization, ownership fences and failed-read suppression.
 
-Unchanged touch driver passes8 trusted gestures, saved-value reload, pane geometry and all cleanup/restoration after releasing idle CLI debugger using public dev:debug off. No DevTools/competing controller existed. Earlier plugin-readiness failure did not recur; do not claim its historical cause is proven. Original CLI debugger state is restored afterward.
+Final strict verification passes 2,044 tests/lint/installed types/production build/exact smoke.
+The final exact build passes 14 native interaction cases plus one fixture observation and seven
+actual Settings/main/popout hover cases. Owned count tasks fully retire, and the live index has
+no active/pending preparation after fixture cleanup. Runtime SHA-256 is
+852d2c8ef8bd1f3949396a06f7eec70ed2b2607cdb9d4fc66c5700d140c66700.
+Touch passes 8 gestures/reload/geometry, and a second native interaction run passes all 14 cases.
+Final restoration matches original 107 files/settings/layout/bounds/four configuration files and
+debugger state; no active/pending work remains. Broader gate/filter resource acceptance fails
+in two runs before the complete matrix (+9 checks/publications over the recorded oracle-to-failure
+interval, no fresh reads/parses/builds). Preserve that assertion and failure; no optimization here.
+Verified evidence/source receipts and draft PR closeout remain in progress.
+The validated implementation checkpoint may now be committed/pushed under maintainer authorization.
 
-Gate corrected-setup runs both pass5 visual assertions (Keep/Reflow × cross-links and filter clear), then fail strict no-source-work on clear: +1 acquisition.checked and semantic revision, source revision fixed,0 fresh reads/parses/rebuild/body-read/requested-neighborhood/degree/pair calls. Additional validation/publication is proven; whether necessary readmission or redundant remains unproven. No broad semantic/performance implementation is authorized by this retest; report gap and keep draft.
-
-Final restore passes exact runtime settings/layout/window bounds/four config bytes/original CLI debugger state/106 files/no owned notes/controllers, artifacts unchanged. Only authorized Small used; no personal/testvault/Large access. No active native test. TEMP/kplex-170-retest/restoration.json; private fresh baseline private-* there. Never publish these backups or raw touch baseline without review.
-
-Updated docs/validation/alt-hover-highlight-2026-10-16.md and ledger record H3; CONTRIBUTING documents exclusive CDP ownership. LOCALAPPDATA/kplex-validation/pr-170/retest-2026-10-16 contains29 verified files plus manifest, source receipt f8f7af6b46e763ba5c21abacb40bdbdbb6cce5f8d30bc41aa4a87f7e4db314fc; all earlier evidence retained unchanged, unpublished. Native source trace is temporary and never ships. Delivery: this retest checkpoint accompanies the final branch head; PR #170 records the current acceptance and remaining resource assertion. macOS/physical mobile remain separate acceptance.
+Use only the authorized disposable Small vault, originally 107 files. Original private backups
+remain in TEMP/kplex-interactions-2026-10-16/private-*. Raw failures and probes are retained;
+HANDOFF must never be archived. Do not access personal vaults or publish a new evidence archive.
+After final checks, commit and push the validated checkpoint and open the follow-up PR as draft.
+No merge or release. macOS and physical mobile remain separate acceptance.

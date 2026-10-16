@@ -7,6 +7,8 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const frenchTranslations = {
+  "settings.areaOutline.name": "Exiger une touche pour les contours des zones",
+  "settings.areaOutline.help": "Maintenez {key} en survolant une zone pour afficher son contour et sa bordure de redimensionnement. Les réglages des zones affichent toujours les contours.",
   "settings.hoverHighlight.name": "Exiger une touche pour la surbrillance au survol",
   "settings.hoverHighlight.help": "Maintenez {key} en survolant un nœud, une porte ou un connecteur pour surligner immédiatement les connexions liées. Si désactivé, le survol seul déclenche la surbrillance après un bref délai.",
   "settings.hoverHighlight.modifier": "la touche de modification alternative",

@@ -298,7 +298,7 @@ assert(!createGhostSource.includes("rebuildIndex("), "Materializing a ghost node
 assert(mainSource.includes("this.index.semanticParentPages(page)"), "Ghost destination resolution must consider every semantic parent");
 assert(mainSource.includes("getNewFileParent(sourcePath, proposedName)"), "Ghost/create-child locations must honor Obsidian's configured new-note folder logic");
 assert(mainSource.includes("new MaterializeGhostModal("), "Ambiguous destinations or Excalidraw choices must use the materialization dialog");
-assert(mainSource.includes("this.index.renameFile(page.path, file)"), "Materializing a ghost in another folder must remap the live virtual page instead of rebuilding the vault");
+assert(mainSource.includes("this.index.materializeFile(oldPath, file)"), "Materializing a ghost must explicitly promote retained incidence instead of treating it as a native rename");
 assert(mainSource.includes("this.index?.dematerializeFile(deleted.path)"), "Deleting an active Markdown file must dematerialize the existing GraphPage instead of rebuilding/falling back to root");
 assert(mainSource.includes('this.app.vault.getFileByPath(file.path) !== file'), "Metadata events for already-deleted TFiles must be ignored instead of resurrecting a stale patch/rebuild");
 assert(mainSource.includes("this.settlePatchOnlyBacklogIfIdle()"), "Deleting a note must clear metadata-only rebuild work once no dirty Markdown paths remain");

@@ -72,10 +72,12 @@ On phones, K-Plex opens naturally in the side panel. Tablets can use either a no
 - Double-clicking a URL opens it in the browser.
 - Double-clicking an unresolved link can create the missing Markdown note. Placeholders carry only the unresolved note name; their real folder/path is assigned when the file is created.
 - Folder and tag nodes can also become the center.
+- An open, unpinned **File properties** pane follows the central file while K-Plex is active. Pinned or grouped Properties panes keep their own file; non-file centers clear the unpinned pane.
 - Drag empty graph space to pan and use the mouse wheel or pinch gesture to zoom.
 - Long-press on touch devices opens the same context menus available with right-click on desktop.
 - Clicking or touching empty graph space clears temporary node, gate and connector highlights.
-- To highlight connections only on demand, enable **Require modifier for hover highlighting** under **Settings → K-Plex → Plex behavior → Navigation & interaction**. Hold **Alt** (**Option** on macOS) while hovering over a node, gate or connector. Releasing the key clears the highlight; with the setting off, hovering uses the usual short delay.
+- Related connections require **Alt** (**Option** on macOS) while hovering over a node, gate or connector by default. Releasing the key clears the highlight. Turn off **Require modifier for hover highlighting** under **Settings → K-Plex → Plex behavior → Navigation & interaction** to use the short hover delay instead.
+- Dotted relation-area outlines and resize edges also require **Alt/Option** by default. **Require modifier for area outlines** controls this separately; explicit **Area settings** always shows the editable areas. Existing saved choices are preserved.
 - Right-click empty Plex space for **K-Plex settings**, **Zen mode**, **Full-screen mode**, **Set background color…**, **Wander**, and **Report a bug**. The background picker saves only when you select **Save**.
 - Use **Fit graph** whenever you want to bring the visible Plex back into view.
 
@@ -171,9 +173,11 @@ Saved notes and relationships update the Plex without waiting for a full indexin
 
 When folder nodes are visible, drag outward from a folder's **Child gate** to create a new Markdown note (or Excalidraw drawing when available) directly in that folder. The folder location itself supplies the file-tree relationship, so K-Plex does not create a separate note-to-note link. Ctrl/Cmd+Enter uses the same remembered Markdown/Excalidraw default as the normal create-child workflow, and folder creation never offers a placeholder because an unresolved placeholder has no physical folder yet. Dropping a regular note gate onto a folder remains available as a secondary file-only shortcut.
 
-Drag a file from Obsidian onto the central node to navigate to it. Drop it into a Parent, Friend, Challenger or Child area to open the linking dialog with that relationship type. The area for a valid relationship drop lights up while you drag.
+Drag a file from Obsidian Files, or a resolved note link from Bases, onto the central node to navigate to it. Drop it into a Parent, Friend, Challenger or Child area to open the linking dialog with that relationship type. The area for a valid relationship drop lights up while you drag.
 
-You can also drag an existing related node to another relationship area to reclassify it. K-Plex updates the graph immediately while the underlying note change is written. When K-Plex needs to create a new YAML/document property for a relationship, it adds that property at the bottom of the property list.
+Drag a sibling into a Parent, Friend, Challenger or Child area to add a direct relationship to the center. Its other relationships, including the shared parent, remain intact.
+
+You can also drag an existing direct neighbor to another relationship area to reclassify it. K-Plex updates the graph immediately while the underlying note change is written. When K-Plex needs to create a new YAML/document property for a relationship, it adds that property at the bottom of the property list.
 
 ### Connection details and unlinking
 
