@@ -30,7 +30,7 @@ export class CompassSettingsModal extends StyleEditorModal {
 
   /** Render native settings and two actual compositing examples; typing never writes storage. */
   onOpen(): void {
-    this.beginEditor(this.context.sourceScope); this.modalEl.addClass("kplex-color-modal"); this.modalEl.addClass("kplex-compass-modal");
+    this.beginEditor(this.context.sourceScope, this.context.bindEditor); this.modalEl.addClass("kplex-color-modal"); this.modalEl.addClass("kplex-compass-modal");
     const t = this.context.translate; this.titleEl.setText(t("compass.title"));
     const body = this.contentEl.createDiv({cls: "kplex-compass-body"});
     const context: StyleColorContext = {...this.context, preferences: /** Read current palette/semantics while retaining only the detached Compass draft. */ () => ({...this.context.preferences(), compass: this.draft})};

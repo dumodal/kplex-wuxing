@@ -16,10 +16,13 @@ import { ColorSampleReader } from "../adapters/obsidian/colorSample";
 import { alphaHexToCss, nodePaint, nodeColorFallback, NATIVE_NODE_PAINT, NATIVE_CANVAS_FILL, NATIVE_LINK_STROKE, NATIVE_LINK_TEXT, NATIVE_LINK_LABEL_FILL, type NodePaintFallbacks } from "../index/style";
 import type { NodeStyle, LinkStyle } from "../types";
 import type { Translator } from "../lang";
+import type {StyleEditorModal} from "./StyleEditorModal";
 
 export type ColorPreviewTarget = Readonly<{ kind: "node"; field: typeof NODE_COLOR_FIELDS[number] }>
   | Readonly<{ kind: "link"; field: typeof LINK_COLOR_FIELDS[number] }> | Readonly<{ kind: "canvas" }> | Readonly<{kind: "compass"; direction?: CompassDirection}>;
 export type ColorPreviewOptions = Readonly<{
+  /** Optional native host ownership; reusable previews themselves acquire no plugin or theme library. */
+  bindEditor?: (editor: StyleEditorModal) => void;
   onContextChange?: () => void;
   sourceScope: HTMLElement; translate: Translator; target: ColorPreviewTarget;
   fallbacks?: NodePaintFallbacks;

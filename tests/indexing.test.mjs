@@ -425,6 +425,7 @@ for (const file of [
   "src/core/plex/colorPreferences.ts",
   "src/core/plex/compassBackground.ts",
   "src/core/plex/colorEditing.ts",
+  "src/core/plex/appearanceThemes.ts",
   "src/adapters/obsidian/colorPresentation.ts",
   "src/core/graph/presentation.ts",
   "src/index/GraphPresentation.ts",

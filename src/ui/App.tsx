@@ -1,4 +1,5 @@
 import { subscribeAppearanceSources } from "../adapters/obsidian/colorChanges";
+import type {AppearanceOwner} from "../core/plex/appearanceThemes";
 import { ColorSourceModal } from "./ColorSourceModal";
 import type { LensColorRequest, LensColorDialog } from "./PlexFilter";
 /**
@@ -654,19 +655,30 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     return plugin.openPage(target, hostLeaf.view.containerEl.ownerDocument);
   }, [plugin, hostLeaf]);
 
-  const updateGraphLenses = useCallback((next: GraphLensDefinition[], baseline?: GraphLensDefinition[]) => plugin.setGraphLenses(next, baseline), [plugin]);
+  const updateGraphLenses = useCallback((next: GraphLensDefinition[], baseline?: GraphLensDefinition[], owner?: AppearanceOwner) => plugin.setGraphLenses(next, baseline, owner), [plugin]);
+
+  const lensAppearance = useMemo(/** Only the lens control subscribes; inactive metadata cannot rebuild the parent scene. */ () => ({
+    capture: /** Capture at editor/action opening, not when Save eventually runs. */ () => plugin.captureAppearanceOwner(),
+    isCurrent: /** Reject old activation epochs, including A→B→A. */ (owner: AppearanceOwner) => plugin.isAppearanceOwnerCurrent(owner),
+    subscribe: /** The control releases its selected-theme observation on unmount. */ (changed: () => void) => plugin.subscribeAppearanceThemes(changed),
+    name: /** Display data is read only on opening; render/paint never scans saved themes. */ () => plugin.settings.appearanceThemes?.themes.find(theme => theme.id === plugin.settings.appearanceThemes?.selectedId)?.name ?? translate("themes.userName"),
+  }), [plugin, translate]);
 
   /** The native shell previews current paint; the detached React lens still owns its local draft. */
   const editLensColor = useCallback((request: LensColorRequest): LensColorDialog => {
-    const target = request.target;
-    const dialog = new ColorSourceModal(plugin.app, {sourceScope: rootRef.current?.querySelector<HTMLElement>(".kplex-plex") ?? rootRef.current ?? request.sourceScope, translate, title: request.title, target, initial: request.initial,
-      help: translate("colors.parentHelp"), actionLabel: translate("colors.useColor"), preferences: () => plugin.settings.colorPreferences,
-      nodeStyle: () => ({...plugin.settings.baseNodeStyle, ...request.nodeStyle()}), linkStyle: () => ({...plugin.settings.baseLinkStyle, ...request.linkStyle()}),
-      background: () => plugin.settings.backgroundColor, inherit: () => target.kind === "canvas" ? plugin.settings.backgroundColor
-        : target.kind === "node" ? plugin.settings.baseNodeStyle[target.field] : plugin.settings.baseLinkStyle[target.field],
+    const target = request.target, owner = request.owner ?? plugin.captureAppearanceOwner();
+    const opening = structuredClone({colorPreferences: plugin.settings.colorPreferences, baseNodeStyle: plugin.settings.baseNodeStyle,
+      baseLinkStyle: plugin.settings.baseLinkStyle, backgroundColor: plugin.settings.backgroundColor});
+    /** A retired draft keeps its own palette/base while the document’s native CSS may still change. */
+    const current = (): Pick<typeof plugin.settings, "colorPreferences" | "baseNodeStyle" | "baseLinkStyle" | "backgroundColor"> => plugin.isAppearanceOwnerCurrent(owner) ? plugin.settings : opening;
+    const dialog = new ColorSourceModal(plugin.app, {sourceScope: rootRef.current?.querySelector<HTMLElement>(".kplex-plex") ?? rootRef.current ?? request.sourceScope, translate, bindEditor: editor => plugin.bindAppearanceEditor(editor, owner), title: request.title, target, initial: request.initial,
+      help: translate("colors.parentHelp"), actionLabel: translate("colors.useColor"), preferences: () => current().colorPreferences,
+      nodeStyle: () => ({...current().baseNodeStyle, ...request.nodeStyle()}), linkStyle: () => ({...current().baseLinkStyle, ...request.linkStyle()}),
+      background: () => current().backgroundColor, inherit: () => target.kind === "canvas" ? current().backgroundColor
+        : target.kind === "node" ? current().baseNodeStyle[target.field] : current().baseLinkStyle[target.field],
       subscribeCss: changed => {const ref = plugin.app.workspace.on("css-change", changed); return () => plugin.app.workspace.offref(ref);},
       subscribeColors: changed => subscribeAppearanceSources(listener => plugin.index.subscribePresentation(listener), () => plugin.settings, changed),
-      onSave: async source => {if (!request.apply(source)) throw new Error("Lens editor retired"); return {refreshPending: false};},
+      onSave: async source => {if (!plugin.isAppearanceOwnerCurrent(owner) || !request.apply(source)) throw new Error("Lens editor retired"); return {refreshPending: false};},
     }); dialog.open(); return {element: dialog.containerEl, retire: () => dialog.retire()};
   }, [plugin, translate]);
 
@@ -1174,7 +1186,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
               setFindFilterOwner(null); setPlexFilter(next);
             }}
             lenses={plugin.settings.graphLenses} colorPalette={plugin.settings.colorPreferences.palette}
-            onLensesChange={updateGraphLenses} onEditColor={editLensColor} lensesReadOnly={plugin.settings.graphLensesColorFuture !== undefined}
+            onLensesChange={updateGraphLenses} onEditColor={editLensColor} appearance={lensAppearance} lensesReadOnly={plugin.settings.graphLensesColorFuture !== undefined || plugin.settings.appearanceThemesFuture !== undefined}
             layoutMode={filterLayoutMode}
             onLayoutModeChange={/** An explicit layout choice belongs to the filter panel. */ (mode) => {
               setFindFilterOwner(null); setFilterLayoutMode(mode);

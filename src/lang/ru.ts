@@ -7,6 +7,15 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const russianTranslations = {
+  "themes.defaultName": "Тема по умолчанию",
+  "themes.userName": "Пользовательская тема",
+  "themes.nativeBaseName": "Стандартная основа + мои смысловые цвета",
+  "themes.customName": "Своя тема",
+  "themes.customSaved": "Изменения сохраняются в {name}.",
+  "themes.staleDraft": "Этот несохранённый черновик относится к {name}. Выбрана другая тема. Отмените черновик и откройте редактор заново.",
+  "themes.discardDraft": "Отменить черновик",
+  "themes.unavailable": "Этот внешний вид использует новый или неподдерживаемый формат. Изменение тем недоступно.",
+  "themes.migrationMessage": "Прежний внешний вид сохранён как «Пользовательская тема». Выберите «Стандартная основа + мои смысловые цвета», чтобы использовать цвета Obsidian, сохранив свои стили.",
   "colors.colorsPage": "Цвета",
   "colors.labelsPage": "Подписи",
   "colors.palettePreview": "Светлая и тёмная палитры",

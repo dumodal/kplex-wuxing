@@ -7,6 +7,15 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const traditionalChineseTranslations = {
+  "themes.defaultName": "預設主題",
+  "themes.userName": "使用者主題",
+  "themes.nativeBaseName": "預設基本樣式＋我的語意色彩",
+  "themes.customName": "自訂主題",
+  "themes.customSaved": "您的變更會儲存至 {name}。",
+  "themes.staleDraft": "這份尚未儲存的草稿屬於 {name}。已選取其他主題。請捨棄草稿並重新開啟編輯器。",
+  "themes.discardDraft": "捨棄草稿",
+  "themes.unavailable": "此外觀使用較新或不支援的格式，無法變更主題。",
+  "themes.migrationMessage": "先前的外觀已儲存為「使用者主題」。選取「預設基本樣式＋我的語意色彩」，即可使用 Obsidian 的色彩，同時保留自訂樣式。",
   "colors.colorsPage": "顏色",
   "colors.labelsPage": "標籤文字",
   "colors.palettePreview": "淺色與深色調色盤",

@@ -4,10 +4,12 @@ import {readFileSync} from "node:fs";
 import test from "node:test";
 import {build} from "esbuild";
 import {chromiumHarness} from "./support/browserTypeScript.mjs";
+import {styleSettingsHostSource} from "./support/styleSettingsHost.mjs";
+import {pathToFileURL} from "node:url";
 import {nativeColorControls,initializeColorDom} from "./support/nativeColorControls.mjs";
-const compiled=await build({stdin:{resolveDir:process.cwd(),contents:`export * from './src/ui/StyleColorControls';export * from './src/ui/ColorSwatchList';export * from './src/core/plex/colorCounterpart';export * from './src/ui/ColorAdoptionModal';export * from './src/adapters/obsidian/colorChanges';export * from './src/adapters/obsidian/themePreview';export * as React from 'react';export {createRoot} from 'react-dom/client';export {flushSync} from 'react-dom';export * from './src/ui/PlexFilter';export * from './src/settings';export * from './src/ui/ColorPaletteModal';export * from './src/ui/ColorPairModal';export * from './src/ui/CompassSettingsModal';export * from './src/core/plex/colorEditing';export {Modal as TestModal} from 'obsidian';export * from './src/ui/ColorLiteralEditor';export * from './src/ui/ColorSourceModal';export * from './src/adapters/obsidian/colorScope';export * from './src/adapters/obsidian/colorSample';export * from './src/adapters/obsidian/colorPresentation';export * from './src/core/plex/colorPreferences';export * from './src/core/contracts/colorValue';export * from './src/lang';`},bundle:true,write:false,format:"iife",globalName:"sourceModules",platform:"browser",plugins:[{name:"native-controls",setup(builder){builder.onResolve({filter:/^obsidian$/},()=>({path:"obsidian",namespace:"native"}));builder.onLoad({filter:/.*/,namespace:"native"},()=>({contents:nativeColorControls}));}}]});
+const compiled=await build({stdin:{loader:"ts",resolveDir:process.cwd(),contents:styleSettingsHostSource(pathToFileURL(process.cwd()+"/"))+`export * from './src/core/plex/appearanceThemes';export * from './src/core/graph/settingsPolicy';export * from './src/ui/StyleColorControls';export * from './src/ui/ColorSwatchList';export * from './src/core/plex/colorCounterpart';export * from './src/ui/ColorAdoptionModal';export * from './src/adapters/obsidian/colorChanges';export * from './src/adapters/obsidian/themePreview';export * as React from 'react';export {createRoot} from 'react-dom/client';export {flushSync} from 'react-dom';export * from './src/ui/PlexFilter';export * from './src/settings';export * from './src/ui/ColorPaletteModal';export * from './src/ui/ColorPairModal';export * from './src/ui/CompassSettingsModal';export * from './src/core/plex/colorEditing';export {Modal as TestModal,Setting} from 'obsidian';export * from './src/ui/ColorLiteralEditor';export * from './src/ui/ColorSourceModal';export * from './src/adapters/obsidian/colorScope';export * from './src/adapters/obsidian/colorSample';export * from './src/adapters/obsidian/colorPresentation';export * from './src/core/plex/colorPreferences';export * from './src/core/contracts/colorValue';export * from './src/lang';`},bundle:true,write:false,format:"iife",globalName:"sourceModules",platform:"browser",plugins:[{name:"native-controls",setup(builder){builder.onResolve({filter:/^obsidian$/},()=>({path:"obsidian",namespace:"native"}));builder.onLoad({filter:/.*/,namespace:"native"},()=>({contents:nativeColorControls}));}}]});
 /** Run one isolated document and always release its actual browser process/profile. */
-async function scenario(code){const host=await chromiumHarness(compiled.outputFiles[0].text);try{assert.equal(await host.evaluate(initializeColorDom),true);return await host.evaluate(code)}finally{await host.cleanup()}}
+async function scenario(code){const host=await chromiumHarness(compiled.outputFiles[0].text);try{assert.equal(await host.evaluate(initializeColorDom),true);await host.evaluate(`window.attachThemeOwners=p=>{for(const name of ['captureAppearanceOwner','isAppearanceOwnerCurrent','subscribeAppearanceThemes','bindAppearanceEditor','appearanceThemeNames'])p[name]=sourceModules.StyleSettingsHost.prototype[name];return p};window.createAppearanceHost=async(raw,existing=true)=>{const listeners=new Set();const p=Object.assign(new sourceModules.StyleSettingsHost(),{settings:sourceModules.migrateAndMergeSettings(raw),translator:sourceModules.createTranslator('en'),settingsWriteQueue:Promise.resolve(),writes:[],index:{subscribePresentation:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},allPages:()=>[],unassignedOntologyFields:()=>[],refreshPresentationSettings:async()=>{for(const listener of listeners)listener()},refreshSemanticSettings:async()=>{throw Error('Theme requested semantics')},invalidateSemanticPolicy:()=>{throw Error('Theme invalidated semantics')}}});p.savedSettingsPolicy=sourceModules.captureSettingsPolicy(p.settings);p.saveData=async data=>{p.writes.push(structuredClone(data))};await p.updateStyleSettings(()=>{},p.captureAppearanceOwner(),{initializeThemes:{existing}});return p}`);return await host.evaluate(code)}finally{await host.cleanup()}}
 
 test("literal controls preserve exact alpha, partial text/caret, IME, reset and retired callbacks",async()=>{
  const result=await scenario(`(async()=>{
@@ -154,7 +156,7 @@ test("actual custom node source action preserves alpha through type switches and
  assert.equal(await scenario(`(async()=>{
   const t=sourceModules.createTranslator('en');let settings=structuredClone(sourceModules.DEFAULT_SETTINGS),writes=0;
   const app={workspace:{on:()=>({}),offref:()=>{}}},plugin={settings,translator:t,index:{subscribePresentation:()=>()=>{},allPages:()=>[],unassignedOntologyFields:()=>[]},updateStyleSettings:async edit=>{const next=structuredClone(settings);edit(next);settings=next;plugin.settings=next;writes++;return{refreshPending:false}}};
-  const tab=new sourceModules.KplexSettingTab(app,plugin);tab.update=()=>{};tab.openNodeStyleEditor('property',null);const parent=sourceModules.TestModal.instances.at(-1);
+  const tab=new sourceModules.KplexSettingTab(app,attachThemeOwners(plugin));tab.update=()=>{};tab.openNodeStyleEditor('property',null);const parent=sourceModules.TestModal.instances.at(-1);
   input(parent.contentEl.querySelector('input[aria-label="Note type"]'),'Project');parent.contentEl.querySelector('button[aria-label="Background"]').click();const source=sourceModules.TestModal.instances.at(-1);
   input(source.contentEl.querySelector('.kplex-color-source-editor select'),'fixed','change');input(source.contentEl.querySelector('fieldset input[type=text]'),'rgba(12,34,56,.123456789)');
   [...source.contentEl.querySelectorAll('button')].find(b=>b.textContent==='Use color').click();await waitFor(()=>!source.modalEl.isConnected);if(writes)throw Error('Child wrote settings');
@@ -196,7 +198,7 @@ test("semantic Default previews public inheritance safely and standard role prev
  assert.equal(await scenario(`(async()=>{
   const t=sourceModules.createTranslator('en'),settings=structuredClone(sourceModules.DEFAULT_SETTINGS);settings.colorPreferences.semantic.origin='#123456';
   const app={workspace:{on:()=>({}),offref:()=>{}}},plugin={settings,translator:t,index:{subscribePresentation:()=>()=>{},allPages:()=>[],unassignedOntologyFields:()=>[]}};
-  const tab=new sourceModules.KplexSettingTab(app,plugin);tab.containerEl.style.setProperty('--kplex-semantic-origin','12px');tab.containerEl.style.setProperty('--kplex-tag-text','#56789a');
+  const tab=new sourceModules.KplexSettingTab(app,attachThemeOwners(plugin));tab.containerEl.style.setProperty('--kplex-semantic-origin','12px');tab.containerEl.style.setProperty('--kplex-tag-text','#56789a');
   tab.openSemanticColor('origin');const semantic=sourceModules.TestModal.instances.at(-1);input(semantic.contentEl.querySelector('.kplex-color-source-editor select'),'inherit','change');
   await waitFor(()=>semantic.contentEl.querySelector('.kplex-color-preview-canvas')?.style.getPropertyValue('--_kplex-preview-node-border'));
   const previewSeed=sourceModules.parseLiteralColor(semantic.contentEl.querySelector('.kplex-color-preview-canvas').style.getPropertyValue('--_kplex-preview-node-border'));
@@ -235,7 +237,7 @@ test("nested native source editors retain origin-only CSS and live palette previ
   const t=sourceModules.createTranslator('en'),settings=structuredClone(sourceModules.DEFAULT_SETTINGS),listeners=new Set();let writes=0,samples=0;
   settings.colorPreferences.palette=[{id:'pair',name:'Opening name',light:'#123456',dark:'#334455'}];settings.noteTypeStyles.Type={backgroundColor:{kind:'palette',id:'pair'}};
   const app={workspace:{on:()=>({}),offref:()=>{}}},plugin={settings,translator:t,index:{subscribePresentation:callback=>{listeners.add(callback);return()=>listeners.delete(callback)},allPages:()=>[],unassignedOntologyFields:()=>[]},updateStyleSettings:async()=>{writes++;throw Error('Unexpected write')}};
-  const tab=new sourceModules.KplexSettingTab(app,plugin);tab.containerEl.style.setProperty('--Local-only','#789abc');tab.openNodeStyleEditor('property','Type');const parent=sourceModules.TestModal.instances.at(-1);
+  const tab=new sourceModules.KplexSettingTab(app,attachThemeOwners(plugin));tab.containerEl.style.setProperty('--Local-only','#789abc');tab.openNodeStyleEditor('property','Type');const parent=sourceModules.TestModal.instances.at(-1);
   parent.contentEl.querySelector('button[aria-label="Background"]').click();let child=sourceModules.TestModal.instances.at(-1);
   input(child.contentEl.querySelector('.kplex-color-source-editor select'),'theme','change');input(child.contentEl.querySelectorAll('select')[1],'custom','change');const variable=[...child.contentEl.querySelectorAll('label')].find(label=>label.textContent.includes('CSS variable name')).querySelector('input');input(variable,'--Local-only');variable.dispatchEvent(new Event('blur'));
   if([...child.contentEl.querySelectorAll('button')].find(b=>b.textContent==='Use color').disabled)throw Error('Origin-only CSS lost through native modal');child.retire();
@@ -254,7 +256,7 @@ test("actual style-manager swatches preserve alpha and named/theme identity in t
   const t=sourceModules.createTranslator('en'),settings=structuredClone(sourceModules.DEFAULT_SETTINGS),listeners=new Set();
   settings.colorPreferences.palette=[{id:'pair',name:'Visible name',light:'#12345600',dark:'#44556680'}];settings.noteTypeStyles.Type={backgroundColor:{kind:'palette',id:'pair'},borderColor:{kind:'theme',variable:'--text-normal'}};
   const app={workspace:{on:()=>({}),offref:()=>{}}},plugin={settings,translator:t,index:{subscribePresentation:callback=>{listeners.add(callback);return()=>listeners.delete(callback)},allPages:()=>[],unassignedOntologyFields:()=>[]}};
-  const tab=new sourceModules.KplexSettingTab(app,plugin);tab.openNoteTypeStylesManager();const manager=sourceModules.TestModal.instances.at(-1),reader=new sourceModules.ColorSampleReader(document);
+  const tab=new sourceModules.KplexSettingTab(app,attachThemeOwners(plugin));tab.openNoteTypeStylesManager();const manager=sourceModules.TestModal.instances.at(-1),reader=new sourceModules.ColorSampleReader(document);
   const read=()=>{const swatch=manager.contentEl.querySelector('.kplex-style-manager-node-swatch');return reader.read(swatch,getComputedStyle(swatch).getPropertyValue('--kplex-style-node-bg'))};
   if(!manager.contentEl.textContent.includes('Visible name')||Math.abs(read().alpha-.5)>.003)throw Error('Named swatch became opaque fallback');
   document.body.className='theme-light';await waitFor(()=>read()?.alpha===0);if(settings.noteTypeStyles.Type.backgroundColor.id!=='pair')throw Error('Mode flattened saved reference');
@@ -348,7 +350,7 @@ test("Compass Settings merges only edited fields and rejects deleted named sourc
   prefs.palette=[{id:'a',name:'Old',light:'#123456',dark:'#abcdef'},{id:'b',name:'Latest',light:'#223344',dark:'#aabbcc'}];prefs.compass.fills.north={kind:'palette',id:'a'};
   const p={settings:{colorPreferences:prefs,baseNodeStyle:{},baseLinkStyle:{}},translator:t,index:{subscribePresentation:()=>()=>{}}};let writes=0;
   p.updateStyleSettings=async edit=>{const draft=structuredClone(p.settings);edit(draft);p.settings=draft;writes++;return{refreshPending:false}};
-  const tab=new sourceModules.KplexSettingTab(app,p);await tab.openCompassSettings();let modal=sourceModules.TestModal.instances.at(-1);modal.draft.intensity=8;
+  const tab=new sourceModules.KplexSettingTab(app,attachThemeOwners(p));await tab.openCompassSettings();let modal=sourceModules.TestModal.instances.at(-1);modal.draft.intensity=8;
   p.settings.colorPreferences.compass.fills.north={kind:'palette',id:'b'};p.settings.colorPreferences.compass.extension='latest';p.settings.colorPreferences.palette=prefs.palette.filter(pair=>pair.id!=='a');p.settings.colorPreferences.semantic.support='#44556680';
   [...modal.contentEl.querySelectorAll('button')].find(button=>button.textContent===t('common.save')).click();await waitFor(()=>!modal.modalEl.isConnected);
   if(writes!==1||p.settings.colorPreferences.compass.intensity!==8||p.settings.colorPreferences.compass.fills.north.id!=='b'||p.settings.colorPreferences.compass.extension!=='latest'||p.settings.colorPreferences.palette.length!==1||p.settings.colorPreferences.semantic.support!=='#44556680')throw Error('Compass save restored unedited stale fields');
@@ -364,7 +366,7 @@ test("declarative Settings subpages replace the root but retain live color conte
  assert.equal(await scenario(`(async()=>{
   const t=sourceModules.createTranslator('en'),plugin={translator:t,settings:{...sourceModules.DEFAULT_SETTINGS,colorPreferences:preferences},index:{subscribePresentation:()=>()=>{}}};
   const app={workspace:{on:()=>({}),offref:()=>{}}};
-  const tab=new sourceModules.KplexSettingTab(app,plugin);tab.containerEl.remove();
+  const tab=new sourceModules.KplexSettingTab(app,attachThemeOwners(plugin));tab.containerEl.remove();
   const page=document.body.createDiv({cls:'setting-page-content'});page.createSpan({text:'Native subpage'});
   if(tab.styleColorContext().sourceScope!==document.body)throw Error('Transient or detached Settings page retained');
   tab.openCanvasColorEditor();const modal=sourceModules.TestModal.instances.at(-1);
@@ -491,5 +493,74 @@ test("Compass settings and source controls share four real directional fallbacks
   modal=open();await waitFor(()=>{const pair=colors(modal.contentEl.querySelector('.kplex-style-row'));return pair.length===2&&sourceModules.parseLiteralColor(pair[0])?.red===255&&sourceModules.parseLiteralColor(pair[1])?.blue===255});
   await waitFor(()=>modal.contentEl.textContent.includes('7%'));if(modal.contentEl.textContent.includes('7.0000'))throw Error('Intensity float noise');
   modal.close();list.dispose();if(document.querySelector('iframe[sandbox]'))throw Error('Preview leaked');return true;
+ })()`),true);
+});
+
+test("theme switches retain dirty native drafts read-only through A→B→A, and every source/pair/Compass editor releases its owner", async () => {
+ assert.equal(await scenario(`(async()=>{
+  const p=await createAppearanceHost({backgroundColor:'#12345680',noteTypeStyles:{Project:{fontSize:23}},hierarchyLinkStyles:{parent:{strokeWidth:2}},
+   colorPreferences:{version:1,palette:[{id:'pair',name:'Pair',light:'#112233',dark:'#aabbcc'}],semantic:{},compass:{enabled:false,fills:{}}}});
+  const app={workspace:{on:()=>({}),offref:()=>{}}},tab=new sourceModules.KplexSettingTab(app,p),t=p.translator;
+  tab.openCanvasColorEditor();let modal=sourceModules.TestModal.instances.at(-1);input(modal.contentEl.querySelector('input[type=text]'),'#abcdef80');
+  const before=p.writes.length;await p.updateAppearanceThemes({kind:'select',id:'native-base'});
+  const save=[...modal.contentEl.querySelectorAll('button')].find(el=>el.textContent===t('common.save'));
+  if(!save.disabled||modal.contentEl.querySelector('input[type=text]').value!=='#abcdef80'||!modal.contentEl.textContent.includes('User theme'))throw Error('Dirty draft was lost or retargeted');
+  save.dispatchEvent(new Event('click',{bubbles:true}));await new Promise(r=>setTimeout(r,10));if(p.writes.length!==before+1||p.settings.backgroundColor!==undefined)throw Error('Stale editor wrote B');
+  await p.updateAppearanceThemes({kind:'select',id:'user'});if(!save.disabled)throw Error('A→B→A revived editor');
+  [...modal.contentEl.querySelectorAll('button')].find(el=>el.textContent===t('themes.discardDraft')).click();
+  if(modal.modalEl.isConnected||p.appearanceThemeListeners.size)throw Error('Discard leaked owner');
+  const openers=[()=>tab.openNodeStyleEditor('property','Project'),()=>tab.openOntologyLinkStyleEditor('Parent'),()=>tab.openStandardColor('baseNodeStyle','textColor'),
+   ()=>tab.openSemanticColor('origin'),()=>tab.openCompassSettings(),()=>{tab.openColorPalette();sourceModules.TestModal.instances.at(-1).editPair(p.settings.colorPreferences.palette[0])}];
+  for(const open of openers){await open();modal=sourceModules.TestModal.instances.at(-1);if(!modal.modalEl.isConnected)throw Error('Editor missing');
+   await p.updateAppearanceThemes({kind:'select',id:'native-base'});
+   const discard=[...modal.contentEl.querySelectorAll('button')].find(el=>el.textContent===t('themes.discardDraft'));
+   if(!discard||discard.disabled||[...modal.contentEl.querySelectorAll('input,select')].some(el=>!el.disabled))throw Error('Editor failed ownership freeze '+modal.titleEl.textContent);
+   discard.click();tab.disposeActionSettings();await p.updateAppearanceThemes({kind:'select',id:'user'});
+   if(p.appearanceThemeListeners.size)throw Error('Editor owner subscription survived close');
+  }
+  await new Promise(r=>setTimeout(r,20));if(document.querySelector('iframe[sandbox]')||window.migrationListeners)throw Error('Stale editor resource leaked');return true;
+ })()`),true);
+});
+
+test("native scalar mounts fence retired events and lens drafts require explicit discard across theme switches", async () => {
+ assert.equal(await scenario(`(async()=>{
+  const p=await createAppearanceHost({baseLinkStyle:{strokeWidth:3}}),app={workspace:{on:()=>({}),offref:()=>{}}},tab=new sourceModules.KplexSettingTab(app,p),t=p.translator;
+  const {Setting}=await Promise.resolve(sourceModules),row=new Setting(scope).setName('Width');
+  const definition=tab.bindThemeScalar({name:'Width',control:{type:'slider',key:'baseLinkStyle.strokeWidth',min:.5,max:8,step:.5}}),release=definition.render(row);
+  const old=row.controlEl.querySelector('input');if(old.value!=='3')throw Error('Native scalar seed lost');
+  await p.updateAppearanceThemes({kind:'select',id:'default'});const count=p.writes.length;
+  input(old,'5');await new Promise(r=>setTimeout(r,10));if(p.writes.length!==count||old.isConnected||!old.disabled)throw Error('Detached scalar saved to replacement');
+  await p.updateAppearanceThemes({kind:'select',id:'user'});input(old,'4');await new Promise(r=>setTimeout(r,10));if(p.settings.baseLinkStyle.strokeWidth!==3)throw Error('A-B-A revived scalar');
+  input(row.controlEl.querySelector('input'),'4');await waitFor(()=>p.settings.baseLinkStyle.strokeWidth===4);release();if(p.appearanceThemeListeners.size)throw Error('Scalar leaked');
+  const R=sourceModules.React,{flushSync}=sourceModules;let colorRequest,writes=0;
+  const lens={id:'lens',name:'Lens',enabled:false,scope:'node',mode:'style',expression:'node.kind == "note"',style:{node:{textColor:'#112233'}}};
+  const index={suggestionCatalog:()=>({tags:[],noteTypes:[],folders:[],properties:[],paths:[]})};
+  const appearance={capture:()=>p.captureAppearanceOwner(),isCurrent:owner=>p.isAppearanceOwnerCurrent(owner),subscribe:fn=>p.subscribeAppearanceThemes(fn),name:()=>p.settings.appearanceThemes.themes.find(x=>x.id===p.settings.appearanceThemes.selectedId).name};
+  const props={index,revision:0,value:sourceModules.EMPTY_PLEX_FILTER,onChange:()=>{},lenses:[lens],appearance,onLensesChange:async()=>{writes++;return{refreshPending:false}},onEditColor:request=>{colorRequest=request;return{retire:()=>{}}},layoutMode:'keep',onLayoutModeChange:()=>{},showSiblings:false,onShowSiblingsChange:()=>{},visibility:{},onVisibilityChange:()=>{},sortOrder:'name',onSortOrderChange:()=>{},translate:t};
+  const container=scope.createDiv(),root=sourceModules.createRoot(container);flushSync(()=>root.render(R.createElement(sourceModules.PlexFilter,props)));flushSync(()=>container.querySelector('button').click());await waitFor(()=>document.querySelector('.kplex-lens-main'));flushSync(()=>document.querySelector('.kplex-lens-main').click());
+  flushSync(()=>document.querySelector('.kplex-lens-style-grid button').click());if(!colorRequest?.owner)throw Error('Lens child lost opening owner');
+  await p.updateAppearanceThemes({kind:'select',id:'default'});await waitFor(()=>document.querySelector('.kplex-lens-editor .kplex-lens-fields')?.disabled);
+  if(colorRequest.apply('#abcdef'))throw Error('Stale child accepted local paint');
+  await p.updateAppearanceThemes({kind:'select',id:'user'});await new Promise(r=>setTimeout(r,10));if(!document.querySelector('.kplex-lens-editor .kplex-lens-fields').disabled)throw Error('Lens A-B-A revived draft');
+  const buttons=[...document.querySelectorAll('.kplex-lens-editor-actions button')];if(!buttons[1].disabled||buttons[0].textContent!==t('themes.discardDraft'))throw Error('Stale lens Save still active');
+  flushSync(()=>buttons[0].click());if(document.querySelector('.kplex-lens-editor')||writes)throw Error('Discard wrote lens');flushSync(()=>root.unmount());tab.disposeActionSettings();if(p.appearanceThemeListeners.size)throw Error('Lens leaked owner');return true;
+ })()`),true);
+});
+
+test("unchanged factory source creates nothing; an accepted Save completes durably before a queued theme switch and closes truthfully", async () => {
+ assert.equal(await scenario(`(async()=>{
+  const p=await createAppearanceHost(null,false),app={workspace:{on:()=>({}),offref:()=>{}}},tab=new sourceModules.KplexSettingTab(app,p),t=p.translator;
+  const button=(modal,key)=>[...modal.contentEl.querySelectorAll('button')].find(el=>el.textContent===t(key));
+  tab.openCanvasColorEditor();let modal=sourceModules.TestModal.instances.at(-1),count=p.writes.length;button(modal,'common.save').click();
+  if(p.writes.length!==count||p.settings.appearanceThemes.themes.length!==1||modal.modalEl.isConnected)throw Error('Unchanged factory save created a theme');
+  tab.openCanvasColorEditor();modal=sourceModules.TestModal.instances.at(-1);input(modal.contentEl.querySelector('select'),'fixed','change');input(modal.contentEl.querySelector('input[type=text]'),'#abcdef80');button(modal,'common.save').click();
+  await waitFor(()=>!modal.modalEl.isConnected);if(p.settings.appearanceThemes.themes.length!==2||p.settings.appearanceThemes.selectedId==='default'||!window.notices.some(text=>text.includes('Custom theme')))throw Error('Factory change failed atomic private copy');
+  const selected=p.settings.appearanceThemes.selectedId,owner=p.captureAppearanceOwner(),write=p.saveData;let release,first=true;
+  p.saveData=async data=>{if(first){first=false;await new Promise(resolve=>release=resolve)}await write(data)};
+  tab.openCanvasColorEditor();modal=sourceModules.TestModal.instances.at(-1);input(modal.contentEl.querySelector('input[type=text]'),'#44556680');button(modal,'common.save').click();
+  await waitFor(()=>release);const selection=p.updateAppearanceThemes({kind:'select',id:'default'},owner);button(modal,'common.cancel').click();if(!modal.modalEl.isConnected)throw Error('Accepted Save was falsely cancelled');
+  release();await selection;await waitFor(()=>!modal.modalEl.isConnected);
+  if(p.settings.appearanceThemes.selectedId!=='default'||p.settings.backgroundColor!==undefined||p.settings.appearanceThemes.themes.find(theme=>theme.id===selected).appearance.base.backgroundColor!=='#44556680')throw Error('Accepted save/switch lost ownership');
+  if(window.notices.some(text=>text.includes('not saved')))throw Error('Durable success reported unsaved');tab.disposeActionSettings();return true;
  })()`),true);
 });

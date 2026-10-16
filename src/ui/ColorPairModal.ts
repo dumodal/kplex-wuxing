@@ -30,7 +30,7 @@ export class ColorPairModal extends StyleEditorModal {
 
   /** Mount two explicit RGB/alpha controls and one paired real-use preview, with no initialization writes. */
   onOpen(): void {
-    this.opened = true; this.beginEditor(this.options.sourceScope); this.modalEl.addClass("kplex-color-modal"); this.titleEl.setText(this.options.title);
+    this.opened = true; this.beginEditor(this.options.sourceScope, this.options.bindEditor); this.modalEl.addClass("kplex-color-modal"); this.titleEl.setText(this.options.title);
     const t = this.options.translate;
     new Setting(this.contentEl).setName(t("colors.name")).addText(text => {
       text.setValue(this.draft.name); text.inputEl.maxLength = 100; text.inputEl.setAttribute("aria-label", t("colors.name"));

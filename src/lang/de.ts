@@ -7,6 +7,15 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const germanTranslations = {
+  "themes.defaultName": "Standardthema",
+  "themes.userName": "Benutzerthema",
+  "themes.nativeBaseName": "Standardbasis + meine semantischen Farben",
+  "themes.customName": "Eigenes Thema",
+  "themes.customSaved": "Deine Änderungen werden in {name} gespeichert.",
+  "themes.staleDraft": "Dieser ungespeicherte Entwurf gehört zu {name}. Ein anderes Thema wurde ausgewählt. Verwirf den Entwurf und öffne den Editor erneut.",
+  "themes.discardDraft": "Entwurf verwerfen",
+  "themes.unavailable": "Dieses Erscheinungsbild verwendet ein neueres oder nicht unterstütztes Format. Themenänderungen sind nicht verfügbar.",
+  "themes.migrationMessage": "Dein bisheriges Erscheinungsbild ist als „Benutzerthema“ gespeichert. Wähle „Standardbasis + meine semantischen Farben“, um Obsidians Farben zu verwenden und deine eigenen Stile zu behalten.",
   "colors.colorsPage": "Farben",
   "colors.labelsPage": "Beschriftungen",
   "colors.palettePreview": "Helle und dunkle Paletten",

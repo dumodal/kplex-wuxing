@@ -7,6 +7,15 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const japaneseTranslations = {
+  "themes.defaultName": "既定のテーマ",
+  "themes.userName": "ユーザーテーマ",
+  "themes.nativeBaseName": "既定の基本色＋自分の意味別の色",
+  "themes.customName": "カスタムテーマ",
+  "themes.customSaved": "変更は {name} に保存されます。",
+  "themes.staleDraft": "この未保存の下書きは {name} のものです。別のテーマが選択されました。下書きを破棄して編集画面を開き直してください。",
+  "themes.discardDraft": "下書きを破棄",
+  "themes.unavailable": "この外観は新しい形式または未対応の形式です。テーマは変更できません。",
+  "themes.migrationMessage": "以前の外観は「ユーザーテーマ」として保存されています。「既定の基本色＋自分の意味別の色」を選択すると、独自のスタイルを残したまま Obsidian の色を使用できます。",
   "colors.colorsPage": "色",
   "colors.labelsPage": "ラベル",
   "colors.palettePreview": "ライトとダークのパレット",

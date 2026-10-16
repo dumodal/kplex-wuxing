@@ -20,9 +20,11 @@ export class ColorComponent {
  setDisabled(disabled){this.input.disabled=disabled;return this}
 }
 export class Setting {
- constructor(container){this.el=container.createDiv();}
- setName(value){this.el.createDiv({text:value});return this} setDesc(value){this.el.createDiv({text:value});return this}
- addToggle(create){const input=this.el.createEl("input",{attr:{type:"checkbox"}});const api={setValue(value){input.checked=value;return api},onChange(run){input.addEventListener("change",()=>run(input.checked));return api}};create(api);return this}
+ constructor(container){this.el=this.settingEl=container.createDiv();this.nameEl=this.el.createDiv();this.descEl=this.el.createDiv();this.controlEl=this.el.createDiv();}
+ setName(value){this.nameEl.textContent=value;return this} setDesc(value){this.descEl.textContent=value;return this}
+ addToggle(create){const input=this.controlEl.createEl("input",{attr:{type:"checkbox"}});const api={toggleEl:input,setValue(value){input.checked=value;return api},setDisabled(value){input.disabled=value;return api},onChange(run){input.addEventListener("change",()=>run(input.checked));return api}};create(api);return this}
+ addSlider(create){const input=this.controlEl.createEl("input",{attr:{type:"range"}});const api={sliderEl:input,setLimits(min,max,step){input.min=min;input.max=max;input.step=step;return api},setValue(value){input.value=value;return api},setDisabled(value){input.disabled=value;return api},setDynamicTooltip(){return api},onChange(run){input.addEventListener("input",()=>run(Number(input.value)));return api}};create(api);return this}
+ addDropdown(create){const input=this.controlEl.createEl("select");const api={selectEl:input,addOptions(options){for(const [value,text] of Object.entries(options))input.createEl("option",{value,text});return api},setValue(value){input.value=value;return api},setDisabled(value){input.disabled=value;return api},onChange(run){input.addEventListener("change",()=>run(input.value));return api}};create(api);return this}
  addText(create){const input=this.el.createEl("input",{attr:{type:"text"}});const api={inputEl:input,setValue(value){input.value=value;return api},onChange(run){input.addEventListener("input",()=>run(input.value));return api}};create(api);return this}
  addButton(create){const input=this.el.createEl("button",{attr:{type:"button"}});const api={setButtonText(value){input.textContent=value;return api},setCta(){return api},setDestructive(){return api},setDisabled(value){input.disabled=value;return api},onClick(run){input.addEventListener("click",run);return api}};create(api);return this}
 }

@@ -7,6 +7,15 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const frenchTranslations = {
+  "themes.defaultName": "Thème par défaut",
+  "themes.userName": "Thème utilisateur",
+  "themes.nativeBaseName": "Base par défaut + mes couleurs sémantiques",
+  "themes.customName": "Thème personnalisé",
+  "themes.customSaved": "Vos modifications sont enregistrées dans {name}.",
+  "themes.staleDraft": "Ce brouillon non enregistré appartient à {name}. Un autre thème a été sélectionné. Abandonnez ce brouillon et rouvrez l’éditeur.",
+  "themes.discardDraft": "Abandonner le brouillon",
+  "themes.unavailable": "Cette apparence utilise un format plus récent ou non pris en charge. Les thèmes ne peuvent pas être modifiés.",
+  "themes.migrationMessage": "Votre apparence précédente est enregistrée sous « Thème utilisateur ». Choisissez « Base par défaut + mes couleurs sémantiques » pour utiliser les couleurs d’Obsidian en conservant vos styles personnalisés.",
   "colors.colorsPage": "Couleurs",
   "colors.labelsPage": "Libellés",
   "colors.palettePreview": "Palettes claire et sombre",

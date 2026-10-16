@@ -60,6 +60,7 @@ import { effectiveTypography, sanitizeTypographyProfiles, sanitizeTypographyValu
 import type { PersistedLayoutDeviceClass } from "./core/plex/viewPresentation";
 import { sanitizeMarkdownZoomModes, type MarkdownZoomModes } from "./core/plex/markdownZoomPreferences";
 import { STYLE_SETTINGS_KEYS, appearanceColorReferences, appearanceHasUnsupportedColors } from "./core/contracts/appearance";
+import {applyThemeAppearance, captureThemeAppearance, readAppearanceThemes, DEFAULT_THEME_ID, type AppearanceThemeLibrary, type AppearanceOwner} from "./core/plex/appearanceThemes";
 import { defaultColorPreferences, migrateColorPreferences, SEMANTIC_COLOR_SLOTS, type SemanticColorSlot, type SemanticColorPair, type ColorPreferencesV1 } from "./core/plex/colorPreferences";
 import { NODE_COLOR_FIELDS, LINK_COLOR_FIELDS, colorValuesEqual, colorIdentityText, colorRgbInput, type ColorValue } from "./core/contracts/colorValue";
 
@@ -171,6 +172,10 @@ export interface KplexSettings {
   colorPreferences: ColorPreferencesV1;
   /** Preserve an unsupported future color container verbatim while presenting read-only fallback controls. */
   colorPreferencesFuture?: unknown;
+  /** Versioned private appearance library; effective root fields contain only its selected theme. */
+  appearanceThemes?: AppearanceThemeLibrary;
+  /** Preserve unsupported library data verbatim; appearance edits remain read-only. */
+  appearanceThemesFuture?: unknown;
   /** Plex-local bindings; null disables an action without affecting Obsidian command hotkeys. */
   internalHotkeys: InternalHotkeys;
   /** Independent local bindings and desired Obsidian command publication; workflow-only state. */
@@ -517,9 +522,12 @@ export function importExcaliBrainGraphSettings(raw: unknown, current?: KplexSett
   const hierarchy = isSettingsRecord(imported.hierarchy) ? imported.hierarchy : {};
   // A legacy friends-only field must replace the local leftFriends default, not be masked by it.
   const leftFriends = hierarchy.leftFriends ?? hierarchy.friends ?? current?.hierarchy.leftFriends;
-  return migrateAndMergeSettings({
+  const settings = migrateAndMergeSettings({
     ...current,
     ...imported,
+    // Foreign appearance must be normalized before the selected local theme is synchronized by
+    // the existing writer. Applying that old theme here would silently undo the imported paint.
+    appearanceThemes: undefined,
     standardStyleDefaults: current?.standardStyleDefaults ?? "legacy",
     ...(current?.graphLensesColorFuture !== undefined ? {graphLenses: current.graphLensesColorFuture} : {}),
     actionPreferences: current?.actionPreferences ?? DEFAULT_SETTINGS.actionPreferences,
@@ -532,6 +540,10 @@ export function importExcaliBrainGraphSettings(raw: unknown, current?: KplexSett
       ...(leftFriends === undefined ? {} : { leftFriends }),
     },
   });
+  delete settings.appearanceThemes;
+  if (current?.appearanceThemes) settings.appearanceThemes = structuredClone(current.appearanceThemes);
+  if (current?.appearanceThemesFuture !== undefined) settings.appearanceThemesFuture = structuredClone(current.appearanceThemesFuture);
+  return settings;
 }
 
 /** Normalize this plugin's persisted settings, preserving K-Plex preferences across reloads. */
@@ -543,7 +555,8 @@ export function migrateAndMergeSettings(raw: unknown): KplexSettings {
   };
   // Both values belonged to retired render surfaces and carry no K-Plex state.
   const { maxZoom: _legacyMaxZoom, excalibrainFilepath: _legacyDrawingPath, actionPreferencesFuture: _runtimeFuture,
-    colorPreferencesFuture: _runtimeColorFuture, graphLensesColorFuture: _runtimeLensColorFuture, ...old } = rawSettings;
+    colorPreferencesFuture: _runtimeColorFuture, graphLensesColorFuture: _runtimeLensColorFuture,
+    appearanceThemesFuture: _runtimeThemesFuture, ...old } = rawSettings;
   const actionPreferences = migrateActionPreferences(raw);
   const colors = migrateColorPreferences(old.colorPreferences);
   const defaults = old.standardStyleDefaults === "native" || Object.keys(old).length === 0 ? DEFAULT_SETTINGS : LEGACY_DEFAULT_SETTINGS;
@@ -615,7 +628,7 @@ export function migrateAndMergeSettings(raw: unknown): KplexSettings {
     : oldSyncMode === "kplex-to-leaf" || oldSyncMode === "leaf-to-kplex" || oldSyncMode === "two-way" || Boolean(old.autoOpenCentralDocument) || Boolean(old.followActiveFile)
       ? "recent" : "off";
 
-  return {
+  const settings: KplexSettings = {
     ...defaults,
     standardStyleDefaults: defaults.standardStyleDefaults,
     ...(futureLensColors ? {graphLensesColorFuture: structuredClone(old.graphLenses)} : {}),
@@ -716,6 +729,21 @@ export function migrateAndMergeSettings(raw: unknown): KplexSettings {
     autoOpenCentralDocument: documentSyncMode !== "off",
     followActiveFile: documentSyncMode !== "off",
   };
+  if (old.appearanceThemes !== undefined) {
+    const library = readAppearanceThemes(old.appearanceThemes);
+    if (library && colors.future === undefined && !futureLensColors && !appearanceHasUnsupportedColors(old)) {
+      // Factory appearance always follows current native defaults, never a persisted RGB capture.
+      const factory = library.themes.find(/** Stable identity alone identifies the immutable factory entry. */ theme => theme.id === DEFAULT_THEME_ID);
+      if (factory) factory.appearance = captureThemeAppearance(DEFAULT_SETTINGS);
+      settings.appearanceThemes = library;
+      const selected = library.themes.find(/** Apply only the explicitly selected private appearance. */ theme => theme.id === library.selectedId);
+      if (selected) applyThemeAppearance(settings, selected.appearance);
+    } else {
+      delete settings.appearanceThemes;
+      settings.appearanceThemesFuture = structuredClone(old.appearanceThemes);
+    }
+  }
+  return settings;
 }
 
 const csv = (value: string[]) => value.join(", ");
@@ -932,7 +960,7 @@ class NodeStyleModal extends StyleEditorModal {
 
   /** Render both matching modes in one form so switching a new style preserves its appearance draft. */
   onOpen(): void {
-    this.beginEditor();
+    this.beginEditor(this.colorContext?.sourceScope, this.colorContext?.bindEditor);
     this.titleEl.setText(this.translate(this.initialName ? "styles.editNode" : "styles.addNode"));
     this.modalEl.addClass("kplex-style-editor-modal");
     this.contentEl.addClass("kplex-style-editor");
@@ -1091,7 +1119,7 @@ class OntologyLinkStyleModal extends StyleEditorModal {
 
   /** Render the ontology-link style controls with localized captions and feedback; the native Modal owns its open/close shell. */
   onOpen(): void {
-    this.beginEditor();
+    this.beginEditor(this.colorContext?.sourceScope, this.colorContext?.bindEditor);
     this.titleEl.setText(this.translate("styles.linkEditorTitle", { field: this.fieldName }));
     this.modalEl.addClass("kplex-style-editor-modal");
     this.contentEl.addClass("kplex-style-editor");
@@ -1216,7 +1244,7 @@ class OntologyLinkStylesManagerModal extends StyleEditorModal {
 
   /** Render the searchable ontology-link style manager with localized captions and feedback; the native Modal owns its open/close shell. */
   onOpen(): void {
-    this.beginEditor(this.colorContext?.sourceScope);
+    this.beginEditor(this.colorContext?.sourceScope, this.colorContext?.bindEditor);
     this.swatches = new StyleSwatchScope(this.contentEl, this.colorContext ?? {preferences: defaultColorPreferences});
     this.releaseColors = this.colorContext?.subscribeColors?.(() => this.renderList()) ?? null;
     this.titleEl.setText(this.translate("styles.relationshipTitle"));
@@ -1368,7 +1396,7 @@ class NoteTypeStylesManagerModal extends StyleEditorModal {
 
   /** Render the searchable note-type style manager with localized captions and feedback; the native Modal owns its open/close shell. */
   onOpen(): void {
-    this.beginEditor(this.colorContext?.sourceScope);
+    this.beginEditor(this.colorContext?.sourceScope, this.colorContext?.bindEditor);
     this.swatches = new StyleSwatchScope(this.contentEl, this.colorContext ?? {preferences: defaultColorPreferences});
     this.releaseColors = this.colorContext?.subscribeColors?.(() => this.renderList()) ?? null;
     this.titleEl.setText(this.translate("styles.nodeTitle"));
@@ -1576,77 +1604,56 @@ class UnassignedOntologyManagerModal extends Modal {
   }
 }
 
-class LegacySettingsImportModal extends Modal {
+/** Existing foreign-appearance chooser participates in the same durable shell and opening-theme fence. */
+class LegacySettingsImportModal extends StyleEditorModal {
   private rawText = "";
-  private readonly translate = createObsidianTranslator();
+  private readGeneration = 0;
+  private readonly openingOwner: AppearanceOwner;
 
-  constructor(app: App, private plugin: KplexPlugin, private onImported: () => void) {
-    super(app);
+  /** Capture the opening theme before file reads; imports cannot target a later selection. */
+  constructor(app: App, private plugin: KplexPlugin, private onImported: () => void, private onClosed?: () => void) {
+    super(app); this.openingOwner = plugin.captureAppearanceOwner();
   }
 
-  /** Render the legacy settings import chooser with localized captions and feedback; the native Modal owns its open/close shell. */
+  /** Choose a local legacy settings file without publishing any settings before explicit import. */
   onOpen(): void {
-    this.titleEl.setText(this.translate("settings.importTitle"));
-    this.contentEl.addClass("kplex-import-settings-modal");
-
-    this.contentEl.createEl("p", {
-      text: this.translate("settings.importHelp")
-    });
-
-    const fileRow = this.contentEl.createDiv({ cls: "kplex-import-file-row" });
-    const fileInput = fileRow.createEl("input", { attr: { type: "file", accept: "application/json,.json" } });
-    const status = this.contentEl.createDiv({ cls: "kplex-import-status", text: this.translate("settings.noFileSelected") });
-
-    fileInput.addEventListener("change", () => {
-      const file = fileInput.files?.[0];
-      if (!file) {
-        this.rawText = "";
-        status.setText(this.translate("settings.noFileSelected"));
-        return;
-      }
-      void file.text().then((text) => {
-        this.rawText = text;
-        status.setText(file.name);
-      }).catch((error: unknown) => {
-        this.rawText = "";
-        status.setText(this.translate("settings.fileReadFailed", { error: String(error) }));
+    this.beginEditor(undefined, /** The base shell retains stale drafts read-only until discard. */ editor => this.plugin.bindAppearanceEditor(editor, this.openingOwner));
+    this.titleEl.setText(this.translate("settings.importTitle")); this.contentEl.addClass("kplex-import-settings-modal");
+    this.contentEl.createEl("p", {text: this.translate("settings.importHelp")});
+    const fileRow = this.contentEl.createDiv({cls: "kplex-import-file-row"});
+    const fileInput = fileRow.createEl("input", {attr: {type: "file", accept: "application/json,.json"}});
+    const status = this.contentEl.createDiv({cls: "kplex-import-status", text: this.translate("settings.noFileSelected")});
+    fileInput.addEventListener("change", /** Read only the explicitly chosen local JSON, fencing close/reselection/theme changes. */ () => {
+      if (!this.canEdit()) return;
+      const file = fileInput.files?.[0], generation = ++this.readGeneration; this.rawText = "";
+      if (!file) {status.setText(this.translate("settings.noFileSelected")); return;}
+      void file.text().then(/** An old File promise cannot replace a newer selection or retired draft. */ text => {
+        if (!this.canEdit() || generation !== this.readGeneration) return;
+        this.rawText = text; status.setText(file.name);
+      }).catch(/** Failure belongs only to the still-open chosen file. */ (error: unknown) => {
+        if (this.canEdit() && generation === this.readGeneration) status.setText(this.translate("settings.fileReadFailed", {error: String(error)}));
       });
     });
-
-    const actions = this.contentEl.createDiv({ cls: "kplex-style-actions" });
-    const cancel = actions.createEl("button", { text: this.translate("common.cancel") });
-    appendIcon(cancel, "x");
-    cancel.addEventListener("click", () => this.close());
-
-    const importButton = actions.createEl("button", { cls: "mod-cta", text: this.translate("settings.importButton") });
-    appendIcon(importButton, "download");
-    importButton.addEventListener("click", () => {
-      if (!this.rawText) {
-        status.setText(this.translate("settings.chooseFileFirst"));
-        return;
-      }
-      try {
-        const parsed = JSON.parse(this.rawText) as unknown;
-        this.plugin.settings = importExcaliBrainGraphSettings(parsed, this.plugin.settings);
-      } catch (error) {
-        status.setText(this.translate("settings.invalidJson", { error: String(error) }));
-        return;
-      }
-      importButton.disabled = true;
-      void this.plugin.saveSettings(true).then(() => {
-        new Notice(this.translate("settings.importedNotice"), 2600);
-        this.onImported();
-        this.close();
-      }).catch((error: unknown) => {
-        importButton.disabled = false;
-        status.setText(this.translate("settings.importFailed", { error: String(error) }));
+    const actions = this.contentEl.createDiv({cls: "kplex-style-actions"});
+    const cancel = actions.createEl("button", {text: this.translate("common.cancel")}); appendIcon(cancel, "x");
+    cancel.addEventListener("click", /** Cancellation never mutates or persists a candidate import. */ () => this.close());
+    const button = actions.createEl("button", {cls: "mod-cta", text: this.translate("settings.importButton")}); appendIcon(button, "download");
+    button.addEventListener("click", /** Capture one valid import before the queue freezes this form. */ () => {
+      if (!this.canEdit()) return;
+      if (!this.rawText) {status.setText(this.translate("settings.chooseFileFirst")); return;}
+      let parsed: unknown;
+      try {parsed = JSON.parse(this.rawText);} catch (error) {status.setText(this.translate("settings.invalidJson", {error: String(error)})); return;}
+      this.runOperation(/** Legacy appearance, active stored theme and ontology share one durable operation. */ async current => {
+        const result = await this.plugin.importLegacyAppearance(parsed, this.openingOwner);
+        if (!current()) return result;
+        try {new Notice(this.translate("settings.importedNotice"), 2600); this.onImported(); return result;}
+        catch (error) {console.error("K-Plex saved legacy import refresh failed", error); return {refreshPending: true};}
       });
     });
   }
 
-  onClose(): void {
-    this.contentEl.empty();
-  }
+  /** Retire outstanding File callbacks and native/theme registrations before removing controls. */
+  onClose(): void {super.onClose(); this.readGeneration++; this.contentEl.empty(); this.onClosed?.();}
 }
 
 type DeclarativeSettingKey =
@@ -1764,6 +1771,7 @@ export class KplexSettingTab extends PluginSettingTab {
 
   /** Open a new style with a selectable family, or edit a style without changing its family. */
   private openNodeStyleEditor(kind: NodeStyleKind, name: string | null, afterChange?: () => void): void {
+    const owner = this.kplexPlugin.captureAppearanceOwner();
     const settings = this.kplexPlugin.settings;
     const styles = kind === "tag" ? settings.tagNodeStyles : settings.noteTypeStyles;
     const openingExists = name !== null && Object.prototype.hasOwnProperty.call(styles, name) === true;
@@ -1788,14 +1796,14 @@ export class KplexSettingTab extends PluginSettingTab {
           currentSettings.tagStyleList = currentSettings.tagStyleList.map(/** Preserve each existing priority slot. */ (key) => key === previousName ? normalizedNext : key);
           if (!currentSettings.tagStyleList.includes(normalizedNext)) currentSettings.tagStyleList.push(normalizedNext);
         }
-      }, isCurrent, afterChange),
+      }, isCurrent, owner, afterChange),
       /** Delete from the fixed edited family without affecting an equally named other-family style. */
       async (removeName, isCurrent) => this.commitStyleChange(/** Delete within the latest queued family without restoring unrelated preferences. */ currentSettings => {
         const target = kind === "tag" ? currentSettings.tagNodeStyles : currentSettings.noteTypeStyles;
         delete target[removeName];
         if (kind === "tag") currentSettings.tagStyleList = currentSettings.tagStyleList.filter(/** Remove only the deleted prefix's matching slots. */ (key) => key !== removeName);
-      }, isCurrent, afterChange),
-      kind, this.styleColorContext(), () => this.colorDialogs.delete(dialog),
+      }, isCurrent, owner, afterChange),
+      kind, this.styleColorContext(owner), () => this.colorDialogs.delete(dialog),
     );
     this.colorDialogs.add(dialog); dialog.open();
   }
@@ -1823,22 +1831,28 @@ export class KplexSettingTab extends PluginSettingTab {
   }
 
   /** Native color surfaces share current preview facts and one CSS subscription contract. */
-  private styleColorContext(): StyleColorContext {
+  private styleColorContext(owner?: AppearanceOwner): StyleColorContext {
     const plugin = this.kplexPlugin;
+    const opening = owner ? structuredClone({colorPreferences: plugin.settings.colorPreferences, baseNodeStyle: plugin.settings.baseNodeStyle,
+      baseLinkStyle: plugin.settings.baseLinkStyle, backgroundColor: plugin.settings.backgroundColor}) : null;
+    /** An old draft keeps its own appearance while CSS remains live in its owning document. */
+    const current = (): Pick<KplexSettings, "colorPreferences" | "baseNodeStyle" | "baseLinkStyle" | "backgroundColor"> => owner && opening && !plugin.isAppearanceOwnerCurrent(owner) ? opening : plugin.settings;
     return {sourceScope: this.colorSourceScope(), translate: plugin.translator,
-      subscribeColors: changed => subscribeAppearanceSources(listener => plugin.index.subscribePresentation(listener), () => plugin.settings, changed),
-      preferences: () => plugin.settings.colorPreferences, nodeStyle: () => plugin.settings.baseNodeStyle,
-      linkStyle: () => plugin.settings.baseLinkStyle, background: () => plugin.settings.backgroundColor,
+      ...(owner ? {bindEditor: /** Every nested source/pair editor shares this exact parent activation. */ (editor: StyleEditorModal) => plugin.bindAppearanceEditor(editor, owner)} : {}),
+      subscribeColors: changed => subscribeAppearanceSources(listener => plugin.index.subscribePresentation(listener), current, changed),
+      preferences: () => current().colorPreferences, nodeStyle: () => current().baseNodeStyle,
+      linkStyle: () => current().baseLinkStyle, background: () => current().backgroundColor,
       subscribeCss: changed => {const ref = this.app.workspace.on("css-change", changed); return () => this.app.workspace.offref(ref);}};
   }
 
   /** Lazily open a native Compass draft; teardown/migration supersedes loading, and only edited fields enter the existing queue. */
   private async openCompassSettings(): Promise<void> {
-    const generation = ++this.colorDialogGeneration, actionPage = this.colorActionPage(), sourceScope = this.colorSourceScope(), owner = sourceScope.ownerDocument;
+    const owner = this.kplexPlugin.captureAppearanceOwner();
+    const generation = ++this.colorDialogGeneration, actionPage = this.colorActionPage(), sourceScope = this.colorSourceScope(), sourceDocument = sourceScope.ownerDocument;
     const plugin = this.kplexPlugin; if (plugin.settings.colorPreferencesFuture !== undefined) return;
     const {CompassSettingsModal} = await import("./ui/CompassSettingsModal");
-    if (generation !== this.colorDialogGeneration || !actionPage.isConnected || !sourceScope.isConnected || sourceScope.ownerDocument !== owner || plugin.settings.colorPreferencesFuture !== undefined) return;
-    const dialog = new CompassSettingsModal(this.app, this.styleColorContext(), /** Merge against the latest durable owner without restoring stale palette or unedited fills. */ (initial, edited, current) => this.commitStyleChange(/** Each explicit Compass field has independent last-edit ownership. */ draft => {
+    if (!plugin.isAppearanceOwnerCurrent(owner) || generation !== this.colorDialogGeneration || !actionPage.isConnected || !sourceScope.isConnected || sourceScope.ownerDocument !== sourceDocument || plugin.settings.colorPreferencesFuture !== undefined) return;
+    const dialog = new CompassSettingsModal(this.app, this.styleColorContext(owner), /** Merge against the latest durable owner without restoring stale palette or unedited fills. */ (initial, edited, current) => this.commitStyleChange(/** Each explicit Compass field has independent last-edit ownership. */ draft => {
       const latest = draft.colorPreferences.compass;
       if (initial.enabled !== edited.enabled) latest.enabled = edited.enabled;
       if (initial.intensity !== edited.intensity) {if (edited.intensity === undefined) delete latest.intensity; else latest.intensity = edited.intensity;}
@@ -1846,35 +1860,38 @@ export class KplexSettingTab extends PluginSettingTab {
         const value = edited.fills[direction]; requireNamedColor(value, draft.colorPreferences);
         if (value === undefined) delete latest.fills[direction]; else latest.fills[direction] = value;
       }
-    }, current), /** Release exactly this native editor after close or migration. */ () => this.colorDialogs.delete(dialog));
+    }, current, owner), /** Release exactly this native editor after close or migration. */ () => this.colorDialogs.delete(dialog));
     this.colorDialogs.add(dialog); dialog.open();
   }
 
   /** A searchable palette manager owns all pair and replacement dialogs until native tab teardown. */
   private openColorPalette(): void {
+    const owner = this.kplexPlugin.captureAppearanceOwner();
     const plugin = this.kplexPlugin;
-    const dialog = new ColorPaletteModal(this.app, {...this.styleColorContext(), read: () => plugin.settings,
-      readOnly: () => plugin.settings.colorPreferencesFuture !== undefined,
+    const dialog = new ColorPaletteModal(this.app, {...this.styleColorContext(owner), read: () => plugin.settings,
+      readOnly: () => plugin.settings.colorPreferencesFuture !== undefined || plugin.settings.appearanceThemesFuture !== undefined || !plugin.isAppearanceOwnerCurrent(owner),
       canDelete: () => plugin.settings.graphLensesColorFuture === undefined && !appearanceHasUnsupportedColors(plugin.settings),
-      write: edit => plugin.updateStyleSettings(edit), subscribe: changed => subscribeAppearanceSources(listener => plugin.index.subscribePresentation(listener), () => plugin.settings, changed),
+      write: edit => plugin.updateStyleSettings(edit, owner), subscribe: changed => subscribeAppearanceSources(listener => plugin.index.subscribePresentation(listener), () => plugin.settings, changed),
       onClosed: () => this.colorDialogs.delete(dialog)});
     this.colorDialogs.add(dialog); dialog.open();
   }
 
   /** Each semantic slot validates its local candidate, including self/indirect cycles, before explicit Save. */
   private openSemanticColor(slot: SemanticColorSlot): void {
+    const owner = this.kplexPlugin.captureAppearanceOwner();
     const plugin = this.kplexPlugin; if (plugin.settings.colorPreferencesFuture !== undefined) return;
-    const dialog = new ColorSourceModal(this.app, {...this.styleColorContext(), title: plugin.translator(`colors.semantic.${slot}`),
+    const context = this.styleColorContext(owner);
+    const dialog = new ColorSourceModal(this.app, {...context, title: plugin.translator(`colors.semantic.${slot}`),
       initial: plugin.settings.colorPreferences.semantic[slot], target: {kind: "node", field: "borderColor"},
       inherit: () => ({kind: "theme", variable: `--kplex-semantic-${slot}`}), preferences: candidate => {
-        const prefs = plugin.settings.colorPreferences, semantic = {...prefs.semantic};
+        const prefs = context.preferences(), semantic = {...prefs.semantic};
         if (candidate === undefined) delete semantic[slot]; else semantic[slot] = candidate;
         return {...prefs, semantic};
       },
       onSave: (color, current) => this.commitStyleChange(draft => {
         requireNamedColor(color, draft.colorPreferences);
         if (color === undefined) delete draft.colorPreferences.semantic[slot]; else draft.colorPreferences.semantic[slot] = color;
-      }, current), onClosed: () => this.colorDialogs.delete(dialog)});
+      }, current, owner), onClosed: () => this.colorDialogs.delete(dialog)});
     this.colorDialogs.add(dialog); dialog.open();
   }
 
@@ -1894,7 +1911,7 @@ export class KplexSettingTab extends PluginSettingTab {
     return {name, desc, render: /** Native cleanup owns the paired preview registration. */ setting => {
       const release = this.mountColorSwatches(setting.controlEl.createDiv(), read);
       setting.addButton(/** Associate repeated Edit actions with their specific color property for keyboard/screen-reader users. */ button => {
-        button.setButtonText(this.kplexPlugin.translator("colors.edit")).setDisabled(this.kplexPlugin.settings.colorPreferencesFuture !== undefined).onClick(action);
+        button.setButtonText(this.kplexPlugin.translator("colors.edit")).setDisabled(this.kplexPlugin.settings.colorPreferencesFuture !== undefined || this.kplexPlugin.settings.appearanceThemesFuture !== undefined).onClick(action);
         button.buttonEl.setAttribute("aria-label", `${this.kplexPlugin.translator("colors.edit")}: ${name}`);
       });
       return release;
@@ -1943,26 +1960,31 @@ export class KplexSettingTab extends PluginSettingTab {
 
   /** Clearing one standard field changes only its absence policy; every other legacy literal remains explicit. */
   private openStandardColor(key: typeof STANDARD_NODE_COLOR_STYLES[number] | typeof STANDARD_LINK_COLOR_STYLES[number], field: typeof NODE_COLOR_FIELDS[number] | typeof LINK_COLOR_FIELDS[number]): void {
-    const plugin = this.kplexPlugin, context = this.styleColorContext(), isNode = key.endsWith("NodeStyle");
+    const owner = this.kplexPlugin.captureAppearanceOwner();
+    const plugin = this.kplexPlugin, context = this.styleColorContext(owner), isNode = key.endsWith("NodeStyle");
+    const openingStyle = structuredClone(plugin.settings[key]);
+    /** A stale draft never borrows the newly selected theme’s effective standard style. */
+    const currentStyle = (): NodeStyle | LinkStyle => plugin.isAppearanceOwnerCurrent(owner) ? plugin.settings[key] : openingStyle;
     const initial = Reflect.get(plugin.settings[key], field) as ColorValue | undefined;
     const lower = (): ColorValue | undefined => key === "baseNodeStyle" || key === "baseLinkStyle" ? undefined
-      : Reflect.get(isNode ? plugin.settings.baseNodeStyle : plugin.settings.baseLinkStyle, field) as ColorValue | undefined;
+      : Reflect.get(isNode ? context.nodeStyle() : context.linkStyle(), field) as ColorValue | undefined;
     const dialog = new ColorSourceModal(this.app, {...context, title: plugin.translator(`colors.standard.${key}`), initial,
       target: isNode ? {kind: "node", field: field as typeof NODE_COLOR_FIELDS[number]} : {kind: "link", field: field as typeof LINK_COLOR_FIELDS[number]},
       fallbacks: nodePaintFallbacks({page: {isFolder: key === "folderNodeStyle", isTag: key === "tagNodeStyle", url: key === "urlNodeStyle" ? "url" : null, file: key === "virtualNodeStyle" ? null : true},
         role: key === "centralNodeStyle" ? "center" : key === "siblingNodeStyle" ? "sibling" : "child", relationType: key === "inferredNodeStyle" ? RelationType.INFERRED : undefined}),
-      inherit: lower, nodeStyle: () => isNode ? {...plugin.settings.baseNodeStyle, ...plugin.settings[key]} : context.nodeStyle(),
-      linkStyle: () => isNode ? context.linkStyle() : {...plugin.settings.baseLinkStyle, ...plugin.settings[key]},
+      inherit: lower, nodeStyle: () => isNode ? {...context.nodeStyle(), ...currentStyle()} : context.nodeStyle(),
+      linkStyle: () => isNode ? context.linkStyle() : {...context.linkStyle(), ...currentStyle()},
       onSave: (color, current) => this.commitStyleChange(draft => {
         requireNamedColor(color, draft.colorPreferences); const next = {...draft[key]};
         if (color === undefined) Reflect.deleteProperty(next, field); else Object.assign(next, {[field]: color});
         Object.assign(draft, {[key]: next}); draft.standardStyleDefaults = "native";
-      }, current), onClosed: () => this.colorDialogs.delete(dialog)});
+      }, current, owner), onClosed: () => this.colorDialogs.delete(dialog)});
     this.colorDialogs.add(dialog); dialog.open();
   }
 
   /** Preview and confirm the exact finite standard-slot inventory before clearing only those overrides. */
   private openColorAdoption(): void {
+    const owner = this.kplexPlugin.captureAppearanceOwner();
     const plugin = this.kplexPlugin, slots = standardColorSlots(plugin.settings), t = plugin.translator;
     const labels = slots.map(slot => {
       if (slot === "backgroundColor") return t("settings.ui.plex.background");
@@ -1970,37 +1992,34 @@ export class KplexSettingTab extends PluginSettingTab {
       const title = t(`colors.standard.${key as typeof STANDARD_NODE_COLOR_STYLES[number] | typeof STANDARD_LINK_COLOR_STYLES[number]}`);
       return title + " · " + t(key.endsWith("NodeStyle") ? nodeColorLabel(field as typeof NODE_COLOR_FIELDS[number]) : linkColorLabel(field as typeof LINK_COLOR_FIELDS[number]));
     });
-    const dialog = new ColorAdoptionModal(this.app, this.styleColorContext(), labels, current => this.commitStyleChange(draft => {
+    const dialog = new ColorAdoptionModal(this.app, this.styleColorContext(owner), labels, current => this.commitStyleChange(draft => {
       if (JSON.stringify(standardColorSlots(draft)) !== JSON.stringify(slots)) throw new Error("Affected colors changed; reopen adoption preview");
       adoptStandardThemeColors(draft);
-    }, current), () => this.colorDialogs.delete(dialog));
+    }, current, owner), () => this.colorDialogs.delete(dialog));
     this.colorDialogs.add(dialog); dialog.open();
   }
 
   /** Settings and canvas reuse one detached source shell and the existing queued writer. */
   private openCanvasColorEditor(): void {
+    const owner = this.kplexPlugin.captureAppearanceOwner();
     const sourceScope = this.colorSourceScope(); if (!sourceScope.isConnected) return;
     const plugin = this.kplexPlugin;
-    const dialog = new ColorSourceModal(this.app, {
+    const dialog = new ColorSourceModal(this.app, {...this.styleColorContext(owner),
       title: plugin.translator("settings.ui.plex.background"), initial: plugin.settings.backgroundColor,
       sourceScope, translate: plugin.translator, target: {kind: "canvas"},
-      preferences: () => plugin.settings.colorPreferences, nodeStyle: () => plugin.settings.baseNodeStyle,
-      linkStyle: () => plugin.settings.baseLinkStyle, background: () => plugin.settings.backgroundColor,
-      subscribeCss: changed => { const ref = this.app.workspace.on("css-change", changed); return () => this.app.workspace.offref(ref); },
-      subscribeColors: changed => subscribeAppearanceSources(listener => plugin.index.subscribePresentation(listener), () => plugin.settings, changed),
       onSave: (color, current) => this.commitStyleChange(draft => {
         if (color && typeof color !== "string" && color.kind === "palette" && !draft.colorPreferences.palette.some(pair => pair.id === color.id)) throw new Error("Named color no longer exists");
         draft.backgroundColor = color;
         draft.standardStyleDefaults = "native";
-      }, current),
+      }, current, owner),
       onClosed: () => this.colorDialogs.delete(dialog),
     });
     this.colorDialogs.add(dialog); dialog.open();
   }
 
   /** Durable completion is authoritative; manager/settings failures become saved recovery hints and retired dialogs cannot refresh UI. */
-  private async commitStyleChange(edit: (draft: StyleSettingsDraft) => void, isCurrent: () => boolean, afterChange?: () => void): Promise<StyleCommitResult> {
-    const result = await this.kplexPlugin.updateStyleSettings(edit);
+  private async commitStyleChange(edit: (draft: StyleSettingsDraft) => void, isCurrent: () => boolean, owner: AppearanceOwner, afterChange?: () => void): Promise<StyleCommitResult> {
+    const result = await this.kplexPlugin.updateStyleSettings(edit, owner);
     if (!isCurrent()) return result;
     let refreshPending = result.refreshPending;
     for (const refresh of [afterChange, /** Refresh only this still-mounted native Settings page. */ () => { if (this.containerEl.isConnected) this.update(); }]) {
@@ -2050,6 +2069,7 @@ export class KplexSettingTab extends PluginSettingTab {
 
   /** Manage both style families through one searchable list and the explicit-family editor. */
   private openNoteTypeStylesManager(): void {
+    const owner = this.kplexPlugin.captureAppearanceOwner();
     const dialog = new NoteTypeStylesManagerModal(
       this.app,
       this.kplexPlugin.settings.noteTypeField,
@@ -2058,7 +2078,7 @@ export class KplexSettingTab extends PluginSettingTab {
       (entry) => (entry.kind === "tag" ? this.kplexPlugin.settings.tagNodeStyles : this.kplexPlugin.settings.noteTypeStyles)[entry.name] ?? {},
       /** Existing entries retain their family; Add starts in property mode with a visible choice. */
       (entry, afterChange) => this.openNodeStyleEditor(entry?.kind ?? "property", entry?.name ?? null, afterChange),
-      this.styleColorContext(), () => this.colorDialogs.delete(dialog),
+      this.styleColorContext(owner), () => this.colorDialogs.delete(dialog),
     );
     this.colorDialogs.add(dialog); dialog.open();
   }
@@ -2102,6 +2122,7 @@ export class KplexSettingTab extends PluginSettingTab {
 
   /** Edit/reset an ontology appearance override through the same durable owner as node styles. */
   private openOntologyLinkStyleEditor(fieldName: string, afterChange?: () => void): void {
+    const owner = this.kplexPlugin.captureAppearanceOwner();
     const key = normalizeOntologyStyleKey(fieldName);
     const openingExists = this.ontologyLinkStyle(fieldName) !== undefined;
     const style = structuredClone(this.ontologyLinkStyle(fieldName) ?? {});
@@ -2120,24 +2141,25 @@ export class KplexSettingTab extends PluginSettingTab {
         for (const field of LINK_COLOR_FIELDS) if (!colorValuesEqual(style[field], merged[field])) requireNamedColor(merged[field], draft.colorPreferences);
         delete draft.hierarchyLinkStyles[fieldName];
         draft.hierarchyLinkStyles[key] = merged;
-      }, isCurrent, afterChange),
+      }, isCurrent, owner, afterChange),
       async isCurrent => this.commitStyleChange(/** Remove only this field's two compatible spellings. */ draft => {
         delete draft.hierarchyLinkStyles[fieldName];
         delete draft.hierarchyLinkStyles[key];
-      }, isCurrent, afterChange),
-      this.styleColorContext(), () => this.colorDialogs.delete(dialog),
+      }, isCurrent, owner, afterChange),
+      this.styleColorContext(owner), () => this.colorDialogs.delete(dialog),
     );
     this.colorDialogs.add(dialog); dialog.open();
   }
 
   private openOntologyLinkStylesManager(): void {
+    const owner = this.kplexPlugin.captureAppearanceOwner();
     const dialog = new OntologyLinkStylesManagerModal(
       this.app,
       this.ontologyStyleFields(),
       (fieldName) => this.ontologyLinkStyle(fieldName),
       this.kplexPlugin.settings.baseLinkStyle,
       (fieldName, afterChange) => this.openOntologyLinkStyleEditor(fieldName, afterChange),
-      this.styleColorContext(), () => this.colorDialogs.delete(dialog),
+      this.styleColorContext(owner), () => this.colorDialogs.delete(dialog),
     );
     this.colorDialogs.add(dialog); dialog.open();
   }
@@ -2154,7 +2176,8 @@ export class KplexSettingTab extends PluginSettingTab {
   }
 
   private openLegacySettingsImporter(): void {
-    new LegacySettingsImportModal(this.app, this.kplexPlugin, () => this.update()).open();
+    const dialog = new LegacySettingsImportModal(this.app, this.kplexPlugin, /** Refresh the same native Settings owner after a durable import. */ () => this.update(), /** Release exactly this lifetime on close. */ () => this.colorDialogs.delete(dialog));
+    this.colorDialogs.add(dialog); dialog.open();
   }
 
   /** Format the logical cache payload estimate without implying exact IndexedDB disk usage. */
@@ -2176,7 +2199,7 @@ export class KplexSettingTab extends PluginSettingTab {
     const customOntologyStyleCount = ontologyStyleFields.filter((field) =>
       hasMeaningfulLinkOverride(this.ontologyLinkStyle(field.name), this.kplexPlugin.settings.baseLinkStyle)
     ).length;
-    return [
+    return this.bindThemeControls([
       {
         type: "group",
         heading: "",
@@ -2576,7 +2599,64 @@ export class KplexSettingTab extends PluginSettingTab {
           },
         ],
       },
-    ];
+    ]);
+  }
+
+  /** Mount only appearance scalars with an activation-bound callback, including global-search rows. */
+  private bindThemeControls(items: SettingDefinitionItem<DeclarativeSettingKey>[]): SettingDefinitionItem<DeclarativeSettingKey>[] {
+    return items.map(/** Global workflow controls retain their existing native declarative behavior. */ item => {
+      if ("type" in item && item.type === "page") return {...item, items: item.items && this.bindThemeControls(item.items)};
+      if ("type" in item) return {...item, items: item.items?.map(/** Groups contain only settings and pages, preserving native search typing. */ child =>
+        "type" in child ? {...child, items: child.items && this.bindThemeControls(child.items)} : this.bindThemeScalar(child))};
+      return this.bindThemeScalar(item);
+    });
+  }
+
+  /** Bind the finite theme-owned native scalar types without changing global control ownership. */
+  private bindThemeScalar(item: SettingDefinition<DeclarativeSettingKey>): SettingDefinition<DeclarativeSettingKey> {
+      if (!("control" in item) || !item.control) return item;
+      const control = item.control;
+      if (!/^(baseNodeStyle\.|centralNodeStyle\.|baseLinkStyle\.|backgroundColorHex$)/.test(control.key)
+        || (control.type !== "slider" && control.type !== "toggle" && control.type !== "dropdown")) return item;
+      return {name: item.name, desc: item.desc, searchable: item.searchable, visible: item.visible, render: /** Recreate a scalar on activation; retired handlers cannot save into its replacement. */ (setting: Setting) => {
+        let active = true, owner = this.kplexPlugin.captureAppearanceOwner();
+        /** The scalar has no unsubmitted draft: a switch replaces its native control with the new effective value. */
+        const mount = (): void => {
+          for (const input of Array.from(setting.controlEl.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input,select"))) input.disabled = true;
+          setting.controlEl.empty(); owner = this.kplexPlugin.captureAppearanceOwner();
+          const opening = owner;
+          const disabled = !!this.kplexPlugin.settings.appearanceThemesFuture || !!this.kplexPlugin.settings.colorPreferencesFuture
+            || (typeof control.disabled === "function" ? control.disabled() : !!control.disabled);
+          /** Capture at mount, never infer ownership from the selected theme when a delayed native event arrives. */
+          const change = async (value: string | number | boolean): Promise<void> => {
+            if (!active || disabled || !this.kplexPlugin.isAppearanceOwnerCurrent(opening)) return;
+            try {await this.setControlValue(control.key, value, opening);}
+            catch (error) {console.error("K-Plex appearance control was not saved", error); new Notice(this.kplexPlugin.translator("styles.operation.notSaved"));}
+          };
+          const value = this.getControlValue(control.key) ?? control.defaultValue;
+          if (control.type === "slider") setting.addSlider(/** Retain native bounds, tooltip and keyboard gestures. */ slider => {
+            slider.setLimits(control.min, control.max, control.step).setValue(Number(value)).setDynamicTooltip().setDisabled(disabled).onChange(change);
+            slider.sliderEl.setAttribute("aria-label", item.name);
+          });
+          else if (control.type === "toggle") setting.addToggle(/** Initial seeding never submits a save. */ toggle => {
+            toggle.setValue(Boolean(value)).setDisabled(disabled).onChange(change); toggle.toggleEl.setAttribute("aria-label", item.name);
+          });
+          else setting.addDropdown(/** Reuse the original finite choices and native select. */ dropdown => {
+            dropdown.addOptions(control.options).setValue(typeof value === "string" ? value : "").setDisabled(disabled).onChange(change); dropdown.selectEl.setAttribute("aria-label", item.name);
+          });
+        };
+        mount();
+        const release = this.kplexPlugin.subscribeAppearanceThemes(/** Only activation replacement retires this scalar's handler. */ () => {
+          if (active && setting.settingEl.isConnected && !this.kplexPlugin.isAppearanceOwnerCurrent(owner)) mount();
+        });
+        return /** Native page replacement owns the subscription and stale-event fence. */ () => {active = false; release();};
+      }};
+  }
+
+  /** Share the durable appearance writer and truthful refresh recovery for native scalar controls. */
+  private async commitAppearanceControl(edit: (draft: StyleSettingsDraft) => void, owner?: AppearanceOwner): Promise<void> {
+    const result = await this.kplexPlugin.updateStyleSettings(edit, owner ?? this.kplexPlugin.captureAppearanceOwner());
+    if (result.refreshPending) new Notice(this.kplexPlugin.translator("styles.operation.savedRefreshPending"));
   }
 
   /** Parse permanently scope-qualified device control keys; global-search rows never depend on a selected editor scope. */
@@ -2667,7 +2747,7 @@ export class KplexSettingTab extends PluginSettingTab {
   }
 
   /** Apply every declarative control through the plugin's shared settings-impact classifier. */
-  async setControlValue(key: string, value: unknown): Promise<void> {
+  async setControlValue(key: string, value: unknown, owner?: AppearanceOwner): Promise<void> {
     const typography = this.typographyKey(key);
     if (typography) {
       const scalar = sanitizeTypographyValue(typography.field, value);
@@ -2709,60 +2789,49 @@ export class KplexSettingTab extends PluginSettingTab {
 
     if (key === "backgroundColorHex") {
       const hex = String(value).slice(0, 7).toLowerCase();
-      this.kplexPlugin.settings.backgroundColor = `${hex}ff`;
-      await this.kplexPlugin.saveSettings(false);
+      await this.commitAppearanceControl(/** Commit this captured control’s finite scalar through the theme owner. */ draft => {draft.backgroundColor = `${hex}ff`;}, owner);
       return;
     }
 
     if (key === "baseLinkStyle.strokeColorHex") {
-      this.kplexPlugin.settings.baseLinkStyle.strokeColor = eightHex(String(value));
-      await this.kplexPlugin.saveSettings(false);
+      await this.commitAppearanceControl(/** Commit this captured control’s finite scalar through the theme owner. */ draft => {draft.baseLinkStyle.strokeColor = eightHex(String(value));}, owner);
       return;
     }
     if (key === "baseLinkStyle.strokeWidth") {
-      this.kplexPlugin.settings.baseLinkStyle.strokeWidth = Math.max(0.5, Math.min(8, Number(value) || 1));
-      await this.kplexPlugin.saveSettings(false);
+      await this.commitAppearanceControl(/** Commit this captured control’s finite scalar through the theme owner. */ draft => {draft.baseLinkStyle.strokeWidth = Math.max(0.5, Math.min(8, Number(value) || 1));}, owner);
       return;
     }
     if (key === "baseLinkStyle.strokeStyle") {
       const next = String(value);
-      this.kplexPlugin.settings.baseLinkStyle.strokeStyle = next === "dashed" || next === "dotted" ? next : "solid";
-      await this.kplexPlugin.saveSettings(false);
+      await this.commitAppearanceControl(/** Commit this captured control’s finite scalar through the theme owner. */ draft => {draft.baseLinkStyle.strokeStyle = next === "dashed" || next === "dotted" ? next : "solid";}, owner);
       return;
     }
     if (key === "baseLinkStyle.startArrowHead") {
-      this.kplexPlugin.settings.baseLinkStyle.startArrowHead = String(value) as Arrowhead;
-      await this.kplexPlugin.saveSettings(false);
+      await this.commitAppearanceControl(/** Commit this captured control’s finite scalar through the theme owner. */ draft => {draft.baseLinkStyle.startArrowHead = String(value) as Arrowhead;}, owner);
       return;
     }
     if (key === "baseLinkStyle.endArrowHead") {
-      this.kplexPlugin.settings.baseLinkStyle.endArrowHead = String(value) as Arrowhead;
-      await this.kplexPlugin.saveSettings(false);
+      await this.commitAppearanceControl(/** Commit this captured control’s finite scalar through the theme owner. */ draft => {draft.baseLinkStyle.endArrowHead = String(value) as Arrowhead;}, owner);
       return;
     }
     if (key === "baseLinkStyle.showLabel") {
-      this.kplexPlugin.settings.baseLinkStyle.showLabel = Boolean(value);
-      await this.kplexPlugin.saveSettings(false);
+      await this.commitAppearanceControl(/** Commit this captured control’s finite scalar through the theme owner. */ draft => {draft.baseLinkStyle.showLabel = Boolean(value);}, owner);
       return;
     }
     if (key === "baseLinkStyle.textColorHex") {
-      this.kplexPlugin.settings.baseLinkStyle.textColor = eightHex(String(value));
-      await this.kplexPlugin.saveSettings(false);
+      await this.commitAppearanceControl(/** Commit this captured control’s finite scalar through the theme owner. */ draft => {draft.baseLinkStyle.textColor = eightHex(String(value));}, owner);
       return;
     }
     if (key === "baseLinkStyle.fontSize") {
-      this.kplexPlugin.settings.baseLinkStyle.fontSize = Math.max(7, Math.min(24, Number(value) || 10));
-      await this.kplexPlugin.saveSettings(false);
+      await this.commitAppearanceControl(/** Commit this captured control’s finite scalar through the theme owner. */ draft => {draft.baseLinkStyle.fontSize = Math.max(7, Math.min(24, Number(value) || 10));}, owner);
       return;
     }
     if (key === "baseNodeStyle.gateRadius") {
-      this.kplexPlugin.settings.baseNodeStyle.gateRadius = Number(value);
-      await this.kplexPlugin.saveSettings(false);
+      await this.commitAppearanceControl(/** Commit this captured control’s finite scalar through the theme owner. */ draft => {draft.baseNodeStyle.gateRadius = Number(value);}, owner);
       return;
     }
     if (key === "baseNodeStyle.maxLabelLength") {
-      this.kplexPlugin.settings.baseNodeStyle.maxLabelLength = Math.max(8, Math.min(120, Math.round(Number(value) || 30)));
-      await this.kplexPlugin.saveSettings(false);
+      await this.commitAppearanceControl(/** Commit this captured control’s finite scalar through the theme owner. */ draft => {draft.baseNodeStyle.maxLabelLength = Math.max(8, Math.min(120, Math.round(Number(value) || 30)));}, owner);
       return;
     }
     if (key === "baseFontSize") {
@@ -2771,16 +2840,18 @@ export class KplexSettingTab extends PluginSettingTab {
       return;
     }
     if (key === "baseNodeStyle.maxWidth") {
-      this.kplexPlugin.settings.baseNodeStyle.maxWidth = Math.max(160, Math.min(800, Math.round(Number(value) || 286)));
-      await this.kplexPlugin.saveSettings(false);
+      await this.commitAppearanceControl(/** Commit this captured control’s finite scalar through the theme owner. */ draft => {draft.baseNodeStyle.maxWidth = Math.max(160, Math.min(800, Math.round(Number(value) || 286)));}, owner);
       return;
     }
     if (key === "centralNodeStyle.maxWidth") {
-      this.kplexPlugin.settings.centralNodeStyle.maxWidth = Math.max(180, Math.min(1000, Math.round(Number(value) || 370)));
-      await this.kplexPlugin.saveSettings(false);
+      await this.commitAppearanceControl(/** Commit this captured control’s finite scalar through the theme owner. */ draft => {draft.centralNodeStyle.maxWidth = Math.max(180, Math.min(1000, Math.round(Number(value) || 370)));}, owner);
       return;
     }
 
+    if (STYLE_SETTINGS_KEYS.some(/** Generic appearance controls still use the same finite queue and owner fence. */ field => field === key)) {
+      await this.commitAppearanceControl(/** Never assign an appearance root before its durable commit. */ draft => {Object.assign(draft, {[key]: structuredClone(value)});}, owner);
+      return;
+    }
     const settingKey = key as keyof KplexSettings;
     (this.kplexPlugin.settings as unknown as Record<string, unknown>)[settingKey] = value;
     await this.kplexPlugin.saveSettings();

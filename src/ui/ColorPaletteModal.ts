@@ -36,7 +36,7 @@ export class ColorPaletteModal extends StyleEditorModal {
 
   /** Mount a searchable manager without expanding every configured pair in the settings page. */
   onOpen(): void {
-    this.opened = true; this.beginEditor(this.options.sourceScope); this.modalEl.addClass("kplex-palette-modal");
+    this.opened = true; this.beginEditor(this.options.sourceScope, this.options.bindEditor); this.modalEl.addClass("kplex-palette-modal");
     const t = this.options.translate; this.titleEl.setText(t("colors.namedColors"));
     this.summary = this.contentEl.createDiv({cls: "setting-item-description"});
     const controls = this.contentEl.createDiv({cls: "kplex-palette-controls"});

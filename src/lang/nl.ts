@@ -7,6 +7,15 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const dutchTranslations = {
+  "themes.defaultName": "Standaardthema",
+  "themes.userName": "Gebruikersthema",
+  "themes.nativeBaseName": "Standaardbasis + mijn semantische kleuren",
+  "themes.customName": "Aangepast thema",
+  "themes.customSaved": "Je wijzigingen worden opgeslagen in {name}.",
+  "themes.staleDraft": "Dit niet-opgeslagen concept hoort bij {name}. Er is een ander thema geselecteerd. Verwerp dit concept en open de editor opnieuw.",
+  "themes.discardDraft": "Concept verwerpen",
+  "themes.unavailable": "Deze weergave gebruikt een nieuwer of niet-ondersteund formaat. Themawijzigingen zijn niet beschikbaar.",
+  "themes.migrationMessage": "Je vorige weergave is opgeslagen als ‘Gebruikersthema’. Kies ‘Standaardbasis + mijn semantische kleuren’ om de kleuren van Obsidian te gebruiken en je eigen stijlen te behouden.",
   "colors.colorsPage": "Kleuren",
   "colors.labelsPage": "Labels",
   "colors.palettePreview": "Lichte en donkere paletten",

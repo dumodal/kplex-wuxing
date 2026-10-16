@@ -63,7 +63,7 @@ export class ColorSourceModal extends StyleEditorModal {
 
   /** Render detached source controls and real-use paired previews without persisting their sampled RGB. */
   onOpen(): void {
-    this.opened = true; this.modalEl.addClass("kplex-color-modal"); this.titleEl.setText(this.options.title); this.beginEditor(this.options.sourceScope);
+    this.opened = true; this.modalEl.addClass("kplex-color-modal"); this.titleEl.setText(this.options.title); this.beginEditor(this.options.sourceScope, this.options.bindEditor);
     const t = this.options.translate;
     if (this.options.confirmation) this.contentEl.createDiv({text: this.options.confirmation.description, cls: "setting-item-description"});
     if (this.options.help) this.contentEl.createDiv({text: this.options.help, cls: "setting-item-description"});

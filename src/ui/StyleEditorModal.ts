@@ -27,9 +27,11 @@ export abstract class StyleEditorModal extends Modal {
   private editorOpen = false;
   private feedback: HTMLElement | null = null;
   private contextReleases: Array<() => void> = [];
+  private themeCurrent: (() => boolean) | null = null;
+  private openingThemeName = "";
 
   /** Start a fresh editor lifetime; retired asynchronous completions cannot close its replacement. */
-  protected beginEditor(sourceScope?: HTMLElement): void {
+  protected beginEditor(sourceScope?: HTMLElement, bindEditor?: (editor: StyleEditorModal) => void): void {
     this.releaseEditorContext();
     this.lifetime += 1;
     this.externallyRetired = false;
@@ -50,10 +52,35 @@ export abstract class StyleEditorModal extends Modal {
       view.addEventListener("pagehide", closed, {once: true});
       this.contextReleases.push(/** Release from the exact window that acquired this listener. */ () => view.removeEventListener("pagehide", closed));
     }
+    bindEditor?.(this);
+  }
+
+  /** Bind the opening activation; stale unsubmitted drafts stay visible until explicit discard. */
+  bindThemeOwner(isCurrent: () => boolean, subscribe: (changed: () => void) => () => void, name: string): void {
+    this.themeCurrent = isCurrent; this.openingThemeName = name;
+    const lifetime = this.lifetime;
+    /** Metadata changes may be harmless; only an actual activation mismatch freezes this draft. */
+    const check = (): void => {if (this.editorOpen && this.lifetime === lifetime && !isCurrent()) this.showStaleThemeDraft();};
+    this.contextReleases.push(subscribe(check));
+    // beginEditor precedes control construction. Finish attachment before disabling a stale form;
+    // canEdit/runOperation fence callbacks even before this one microtask runs.
+    this.modalEl.ownerDocument.defaultView?.queueMicrotask?.(check);
+  }
+
+  /** Preserve unsaved values, explain their owner and leave only explicit dismissal available. */
+  private showStaleThemeDraft(): void {
+    if (!this.editorOpen || this.operationPending || this.operationCommitted) return;
+    this.feedback?.setText(this.translate("themes.staleDraft", {name: this.openingThemeName}));
+    const cancel = this.translate("common.cancel"), discard = this.translate("themes.discardDraft");
+    for (const control of Array.from(this.contentEl.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>("input, select, button"))) {
+      const dismiss = control.tagName === "BUTTON" && (control.textContent === cancel || control.textContent === discard);
+      control.disabled = !dismiss; if (dismiss) control.setText(discard);
+    }
   }
 
   /** Submit once, freeze the captured draft and block Cancel/Escape until its durable outcome is known. */
   protected runOperation(operation: (isCurrent: () => boolean) => Promise<StyleCommitResult>): void {
+    if (this.themeCurrent?.() === false) {this.showStaleThemeDraft(); return;}
     if (this.operationPending || this.operationCommitted || !this.editorOpen) return;
     const lifetime = this.lifetime;
     /** External teardown retires UI callbacks but never pretends an already submitted disk write was canceled. */
@@ -75,6 +102,7 @@ export abstract class StyleEditorModal extends Modal {
         if (!isCurrent()) return;
         this.operationPending = false;
         this.modalEl.setAttribute("aria-busy", "false");
+        if (this.themeCurrent?.() === false) {this.showStaleThemeDraft(); return;}
         controls.forEach(/** Only restore this still-live form after persistence rejected. */ (control, index) => { control.disabled = disabled[index]; });
         this.feedback?.setText(this.translate("styles.operation.notSaved"));
         this.onOperationRejected();
@@ -118,7 +146,7 @@ export abstract class StyleEditorModal extends Modal {
   }
 
   /** Permit local validation feedback to exclude Save during an existing durable operation. */
-  protected canEdit(): boolean { return this.editorOpen && !this.operationPending && !this.operationCommitted; }
+  protected canEdit(): boolean { return this.editorOpen && !this.operationPending && !this.operationCommitted && this.themeCurrent?.() !== false; }
 
   /** External teardown retires UI even if storage is already submitted; durable work is not falsely canceled. */
   retire(): void {
@@ -144,6 +172,7 @@ export abstract class StyleEditorModal extends Modal {
   /** Closing, migration and reuse release native context registrations exactly once. */
   private releaseEditorContext(): void {
     for (const release of this.contextReleases.splice(0)) release();
+    this.themeCurrent = null; this.openingThemeName = "";
   }
 
 }

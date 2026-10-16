@@ -10,25 +10,15 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import test from "node:test";
-import ts from "typescript";
+import {styleSettingsHostSource} from "./support/styleSettingsHost.mjs";
 import { assertMigratedExcaliBrainSettings, localPreferenceKeys } from "./support/excalibrainMigration.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const fixture = JSON.parse(readFileSync(join(root, "tests/fixtures/excalibrain-migration/data.json"), "utf8"));
 const temp = mkdtempSync(join(tmpdir(), "kplex-migration-"));
 process.on("exit", () => rmSync(temp, { recursive: true, force: true }));
-/** Extract the production durable owner rather than substituting a successful style save. */
-function styleHostSource() {
-  const source = ts.createSourceFile("main.ts", readFileSync(join(root, "src/main.ts"), "utf8"), ts.ScriptTarget.Latest, true);
-  const names = new Set(["updateStyleSettings", "saveSettings", "enqueueSettingsWrite", "settingsSnapshotForPersistence", "persistSettingsSnapshot", "setGraphLenses"]);
-  const methods = [];
-  /** Preserve actual queue/classifier/commit method bodies with their original await boundaries. */
-  const visit = node => { if (ts.isMethodDeclaration(node) && names.has(node.name.getText(source))) methods.push(node.getText(source)); ts.forEachChild(node, visit); };
-  visit(source); assert.equal(methods.length, names.size);
-  return 'import {mergeGraphLensDefinitions} from "./src/lens/GraphLens"; import {requireNamedColor} from "./src/core/plex/colorEditing"; import {appearanceColorReferences} from "./src/core/contracts/appearance"; import {STYLE_SETTINGS_KEYS} from "./src/core/contracts/appearance"; import {cyclicSemanticColorSlots,migrateColorPreferences} from "./src/core/plex/colorPreferences"; import {captureSettingsPolicy,classifySettingsChange,isStyleOnlySettingsChange} from "./src/core/graph/settingsPolicy"; export class StyleSettingsHost {' + methods.join('\n') + '}';
-}
 await build({
-  stdin: { contents: styleHostSource() + '\nexport * from "./src/settings"; export {adoptStandardThemeColors,deleteNamedColor} from "./src/core/plex/colorEditing"; export * from "./src/core/graph/settingsPolicy"; export * from "./src/index/style"; export * from "./src/ui/layout"; export * from "./src/ui/PurgeIndexCacheModal"; export { Modal as TestModal, Notice as TestNotice, AbstractInputSuggest as TestSuggest } from "obsidian"; export { createObsidianTranslator } from "./src/adapters/obsidian/localization";', resolveDir: root, loader: "ts" },
+  stdin: { contents: styleSettingsHostSource(pathToFileURL(root+"/")) + '\nexport * from "./src/settings"; export * as themeModel from "./src/core/plex/appearanceThemes"; export {adoptStandardThemeColors,deleteNamedColor} from "./src/core/plex/colorEditing"; export * from "./src/core/graph/settingsPolicy"; export * from "./src/index/style"; export * from "./src/ui/layout"; export * from "./src/ui/PurgeIndexCacheModal"; export { Modal as TestModal, Notice as TestNotice, AbstractInputSuggest as TestSuggest } from "obsidian"; export { createObsidianTranslator } from "./src/adapters/obsidian/localization";', resolveDir: root, loader: "ts" },
   outfile: join(temp, "migration.mjs"), bundle: true, platform: "node", format: "esm",
   plugins: [{ name: "obsidian-boundary-double", setup(builder) {
     // This finite non-browser form fixture has no CSS document or workspace event bus. Keep the
@@ -95,15 +85,159 @@ await build({
         close() { this.closed = true; }
       }
       export class SearchComponent {} export const setIcon = () => {}; export const setTooltip = () => {};
-      export class PluginSettingTab { constructor(app) { this.app = app; this.containerEl = { addClass() {}, isConnected: true }; } }
+      export class PluginSettingTab { constructor(app) { this.app = app; this.containerEl = new FormElement(); } }
       export const getIcon = () => null; export const getIconIds = () => []; export const getLanguage = () => "en";
     `, loader: "js" }));
   } }],
 });
 const { migrateAndMergeSettings, importExcaliBrainGraphSettings, KplexSettingTab, resolveNodeStyle, resolveLinkStyle, buildScene, PurgeIndexCacheModal,
-  captureSettingsPolicy, classifySettingsChange, encodeIndexSettingsSignature, TestModal, TestNotice, TestSuggest, createObsidianTranslator, StyleSettingsHost } = await import(pathToFileURL(join(temp, "migration.mjs")));
+  captureSettingsPolicy, classifySettingsChange, encodeIndexSettingsSignature, TestModal, TestNotice, TestSuggest, createObsidianTranslator, StyleSettingsHost, themeModel } = await import(pathToFileURL(join(temp, "migration.mjs")));
 const defaults = migrateAndMergeSettings(undefined);
 const migrated = importExcaliBrainGraphSettings(fixture);
+
+/** Keep theme identities native-shaped while preserving the real queue and all source/color policy. */
+async function withThemeWindow(run) {
+  const previous = globalThis.window; globalThis.window = {crypto: globalThis.crypto};
+  try {return await run();} finally {globalThis.window = previous;}
+}
+
+/** Initialize through the actual production writer, retaining finite counters for forbidden graph work. */
+async function themeFixture(raw = {backgroundColor: "#12345680"}, existing = true, legacyImport) {
+  const result = styleEditorFixture(migrateAndMergeSettings(raw)), calls = {presentation: 0, semantic: 0, invalidation: 0};
+  result.plugin.index.refreshPresentationSettings = async () => {calls.presentation++;};
+  result.plugin.index.refreshSemanticSettings = async () => {calls.semantic++;};
+  result.plugin.index.invalidateSemanticPolicy = () => {calls.invalidation++;};
+  await result.plugin.updateStyleSettings(() => {}, result.plugin.captureAppearanceOwner(), {initializeThemes: {existing}, ...(legacyImport === undefined ? {} : {legacyImport})});
+  return {...result, calls};
+}
+
+test("appearance initialization preserves migrated legacy omissions, persists three choices once and retries failed storage without a false backup", async () => withThemeWindow(async () => {
+  const original = migrateAndMergeSettings({baseNodeStyle: {fontSize: 29}, tagNodeStyles: {legacy: {icon: "star"}}, tagStyleList: ["legacy"]});
+  const {plugin, settings, saves} = styleEditorFixture(original), before = structuredClone(settings);
+  plugin.saveData = async () => {throw Error("Expected migration storage failure");};
+  await assert.rejects(plugin.updateStyleSettings(() => {}, plugin.captureAppearanceOwner(), {initializeThemes: {existing: true}}), /migration storage/);
+  assert.deepEqual(settings, before); assert.equal(settings.appearanceThemes, undefined);
+  plugin.saveData = async snapshot => {saves.push(structuredClone(snapshot));};
+  await plugin.updateStyleSettings(() => {}, plugin.captureAppearanceOwner(), {initializeThemes: {existing: true}});
+  assert.equal(settings.appearanceThemes.selectedId, "user"); assert.equal(settings.appearanceThemes.migrationNotice, true);
+  assert.deepEqual(settings.appearanceThemes.themes[0].appearance, themeModel.captureThemeAppearance(before));
+  assert.equal(settings.appearanceThemes.themes[0].appearance.base.baseNodeStyle.textColor, "#ffffffff", "Historically omitted colors retain their prior effective legacy baseline");
+  assert.equal(settings.appearanceThemes.themes[1].appearance.base.baseNodeStyle.textColor, undefined);
+  assert.equal(settings.appearanceThemes.themes[1].appearance.base.baseNodeStyle.fontSize, 29);
+  const reloaded = migrateAndMergeSettings(JSON.parse(JSON.stringify(saves[0]))), second = styleEditorFixture(reloaded);
+  await second.plugin.updateStyleSettings(() => {}, second.plugin.captureAppearanceOwner(), {initializeThemes: {existing: true}});
+  assert.equal(second.saves.length, 0); assert.deepEqual(second.settings.appearanceThemes, settings.appearanceThemes);
+}));
+
+test("fresh/no-import starts with immutable factory only; actual first-run ExcaliBrain import retains selected User theme", async () => withThemeWindow(async () => {
+  const fresh = await themeFixture(null, false);
+  assert.deepEqual(fresh.settings.appearanceThemes.themes.map(theme => theme.id), ["default"]);
+  assert.equal(fresh.settings.appearanceThemes.selectedId, "default"); assert.equal(fresh.settings.appearanceThemes.migrationNotice, false);
+  const imported = await themeFixture(null, true, fixture);
+  const expected = importExcaliBrainGraphSettings(fixture, migrateAndMergeSettings(undefined));
+  assert.equal(imported.settings.appearanceThemes.selectedId, "user"); assert.equal(imported.settings.appearanceThemes.themes.length, 3);
+  assert.deepEqual(imported.settings.appearanceThemes.themes[0].appearance, themeModel.captureThemeAppearance(expected));
+  assert.deepEqual(imported.settings.hierarchy, expected.hierarchy);
+  assert.equal(imported.calls.presentation, 0); assert.equal(imported.calls.semantic, 0, "First publication stays with normal startup demand");
+}));
+
+test("factory copy-on-write is atomic, genuinely changed only, uniquely named and failed saves leave factory exact", async () => withThemeWindow(async () => {
+  const {plugin, settings, saves} = await themeFixture(null, false), factory = structuredClone(settings.appearanceThemes.themes[0]);
+  const before = saves.length, owner = plugin.captureAppearanceOwner();
+  await plugin.updateStyleSettings(() => {}, owner); assert.equal(saves.length, before); assert.equal(settings.appearanceThemes.themes.length, 1);
+  const write = plugin.saveData; plugin.saveData = async () => {throw Error("Expected factory save failure");};
+  await assert.rejects(plugin.updateStyleSettings(draft => {draft.backgroundColor = "#abcdef80";}, owner), /factory save failure/);
+  assert.equal(settings.appearanceThemes.selectedId, "default"); assert.equal(settings.backgroundColor, undefined); assert.deepEqual(settings.appearanceThemes.themes[0], factory);
+  plugin.saveData = write; await plugin.updateStyleSettings(draft => {draft.backgroundColor = "#abcdef80";}, owner);
+  assert.equal(settings.appearanceThemes.themes.length, 2); assert.equal(settings.appearanceThemes.themes[1].name, "Custom theme");
+  assert.deepEqual(settings.appearanceThemes.themes[0], factory); assert.equal(plugin.isAppearanceOwnerCurrent(owner), false);
+  assert.deepEqual(themeModel.captureThemeAppearance(settings), settings.appearanceThemes.themes[1].appearance);
+  await plugin.updateAppearanceThemes({kind: "select", id: "default"});
+  await plugin.updateStyleSettings(draft => {draft.baseNodeStyle.fontSize = 25;});
+  assert.equal(settings.appearanceThemes.themes[2].name, "Custom theme 2"); assert.deepEqual(settings.appearanceThemes.themes[0], factory);
+}));
+
+test("metadata-only theme operations cause zero graph refresh; active deletion and fallback share one durable snapshot", async () => withThemeWindow(async () => {
+  const {plugin, settings, saves, calls} = await themeFixture(), before = structuredClone(settings.appearanceThemes);
+  let notifications = 0; plugin.subscribeAppearanceThemes(() => notifications++);
+  await plugin.updateAppearanceThemes({kind: "rename", id: "native-base", name: "Renamed"});
+  await plugin.updateAppearanceThemes({kind: "delete", id: "native-base"});
+  assert.deepEqual(calls, {presentation: 0, semantic: 0, invalidation: 0}); assert.equal(notifications, 2);
+  assert.equal(settings.appearanceThemes.selectedId, "user"); assert.deepEqual(settings.appearanceThemes.themes[0], before.themes[0]);
+  const write = plugin.saveData, exact = structuredClone(settings); plugin.saveData = async () => {throw Error("Expected deletion storage failure");};
+  await assert.rejects(plugin.updateAppearanceThemes({kind: "delete", id: "user"}), /deletion storage/); assert.deepEqual(settings, exact);
+  plugin.saveData = write; const count = saves.length; await plugin.updateAppearanceThemes({kind: "delete", id: "user"});
+  assert.equal(saves.length, count + 1); assert.equal(saves.at(-1).appearanceThemes.selectedId, "default"); assert.equal(saves.at(-1).backgroundColor, undefined);
+  assert.equal(settings.appearanceThemes.selectedId, "default"); assert.equal(settings.backgroundColor, undefined);
+  await assert.rejects(plugin.updateAppearanceThemes({kind: "delete", id: "default"}));
+  await assert.rejects(plugin.updateAppearanceThemes({kind: "rename", id: "default", name: "Overwrite"}));
+  await assert.rejects(plugin.resetAppearanceThemeColors("all")); assert.equal(calls.semantic, 0);
+}));
+
+test("A→B→A never revives old drafts; accepted queued writes finish before selection and behind-switch stale writes reject", async () => withThemeWindow(async () => {
+  const {plugin, settings, saves} = await themeFixture(), old = plugin.captureAppearanceOwner();
+  await plugin.updateAppearanceThemes({kind: "select", id: "native-base"}); await plugin.updateAppearanceThemes({kind: "select", id: "user"});
+  const count = saves.length; await assert.rejects(plugin.updateStyleSettings(draft => {draft.backgroundColor = "#ff0000";}, old), /earlier theme activation/); assert.equal(saves.length, count);
+  const disk = deferred(), write = plugin.saveData; let first = true;
+  plugin.saveData = async snapshot => {if (first) {first = false; await disk.promise;} await write(snapshot);};
+  const owner = plugin.captureAppearanceOwner();
+  const accepted = plugin.updateStyleSettings(draft => {draft.backgroundColor = "#11223380";}, owner);
+  const selection = plugin.updateAppearanceThemes({kind: "select", id: "native-base"}, owner);
+  const behind = plugin.updateStyleSettings(draft => {draft.backgroundColor = "#445566";}, owner);
+  const rejected = assert.rejects(behind, /earlier theme activation/); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(settings.appearanceThemes.selectedId, "user"); disk.resolve(); await Promise.all([accepted, selection, rejected]);
+  assert.equal(settings.appearanceThemes.selectedId, "native-base"); assert.equal(settings.backgroundColor, undefined);
+  assert.equal(settings.appearanceThemes.themes.find(theme => theme.id === "user").appearance.base.backgroundColor, "#11223380");
+}));
+
+test("theme-owned concurrent edits merge fields and lens colors never carry lens behavior or recreate a deleted lens", async () => withThemeWindow(async () => {
+  const {plugin, settings, saves, calls} = await themeFixture({graphLenses: [{id: "lens", name: "Global", enabled: false, expression: 'node.kind == "file"', scope: "node", mode: "style", style: {node: {textColor: "#ff0000", strokeWidth: 3}}}]});
+  const owner = plugin.captureAppearanceOwner(); await Promise.all([
+    plugin.updateStyleSettings(draft => {draft.noteTypeStyles.Project = {fontSize: 23};}, owner),
+    plugin.updateStyleSettings(draft => {draft.baseNodeStyle.textColor = "#abcdef80";}, owner),
+  ]);
+  assert.equal(settings.noteTypeStyles.Project.fontSize, 23); assert.equal(settings.baseNodeStyle.textColor, "#abcdef80");
+  assert.deepEqual(settings.appearanceThemes.themes[0].appearance, themeModel.captureThemeAppearance(settings));
+  const behavior = structuredClone(settings.graphLenses[0]); await plugin.createAppearanceTheme("Factory copy", true);
+  assert.equal(settings.graphLenses[0].expression, behavior.expression); assert.equal(settings.graphLenses[0].enabled, false); assert.equal(settings.graphLenses[0].style.node.strokeWidth, 3);
+  assert.equal(settings.graphLenses[0].style.node.textColor, undefined);
+  await plugin.setGraphLenses([]); await plugin.updateAppearanceThemes({kind: "select", id: "user"}); assert.deepEqual(settings.graphLenses, []);
+  assert.equal(calls.semantic, 0); assert.equal(calls.invalidation, 0);
+  assert.deepEqual(saves.at(-1).graphLenses, []);
+}));
+
+test("scoped theme resets persist inheritance with shared palette references intact, and compatibility saves synchronize their selected theme", async () => withThemeWindow(async () => {
+ for (const scope of ['base','semantic','all']) {
+  const raw={standardStyleDefaults:'native',backgroundColor:{kind:'palette',id:'shared'},baseNodeStyle:{textColor:{kind:'theme',variable:'--kplex-semantic-origin'},fontSize:25},
+   noteTypeStyles:{Project:{textColor:{kind:'palette',id:'shared'},icon:'star',fontSize:23}},tagNodeStyles:{'#z':{backgroundColor:'#112233',shape:'diamond'}},tagStyleList:['#z'],hierarchyLinkStyles:{Parent:{strokeColor:'#123456',strokeWidth:3}},
+   colorPreferences:{version:1,palette:[{id:'shared',name:'Shared',light:'#11223380',dark:'#abcdef40'}],semantic:{origin:{kind:'palette',id:'shared'}},compass:{enabled:true,intensity:11,fills:{north:{kind:'palette',id:'shared'}}}},
+   graphLenses:[{id:'lens',name:'Global',enabled:false,expression:'node.kind == "note"',scope:'node',mode:'style',style:{node:{textColor:{kind:'palette',id:'shared'},strokeWidth:3}}}]};
+  const {plugin,settings,saves,calls}=await themeFixture(raw),other=structuredClone(settings.appearanceThemes.themes[1]);
+  await plugin.resetAppearanceThemeColors(scope);assert.deepEqual(settings.appearanceThemes.themes[1],other);assert.equal(settings.colorPreferences.palette.length,1);
+  assert.equal(settings.baseNodeStyle.fontSize,25);assert.equal(settings.noteTypeStyles.Project.icon,'star');assert.equal(settings.hierarchyLinkStyles.Parent.strokeWidth,3);assert.deepEqual(settings.tagStyleList,['#z']);assert.equal(settings.colorPreferences.compass.intensity,11);assert.equal(settings.colorPreferences.compass.enabled,true);
+  assert.equal(settings.graphLenses[0].enabled,false);assert.equal(settings.graphLenses[0].style.node.strokeWidth,3);
+  if(scope==='semantic'){assert.deepEqual(settings.baseNodeStyle.textColor,{kind:'theme',variable:'--kplex-semantic-origin'});assert.deepEqual(settings.backgroundColor,{kind:'palette',id:'shared'})}else assert.equal(settings.backgroundColor,undefined);
+  if(scope==='base'){assert.deepEqual(settings.noteTypeStyles.Project.textColor,{kind:'palette',id:'shared'});assert(settings.colorPreferences.compass.fills.north)}else{assert.equal(settings.noteTypeStyles.Project.textColor,undefined);assert.deepEqual(settings.colorPreferences.semantic,{});assert.deepEqual(settings.colorPreferences.compass.fills,{})}
+  assert.deepEqual(themeModel.captureThemeAppearance(migrateAndMergeSettings(saves.at(-1))),themeModel.captureThemeAppearance(settings));assert.equal(calls.semantic,0);
+  settings.baseNodeStyle.fontSize=27;await plugin.saveSettings();assert.equal(settings.appearanceThemes.themes[0].appearance.base.baseNodeStyle.fontSize,27);assert.equal(saves.at(-1).appearanceThemes.themes[0].appearance.base.baseNodeStyle.fontSize,27);assert.equal(calls.semantic,0);
+ }
+}));
+
+test("future colors/libraries remain raw and never become authentic migration backups; legacy imports synchronize active appearance", async () => withThemeWindow(async () => {
+  for (const raw of [{colorPreferences: {version: 99, payload: "future"}}, {appearanceThemes: {version: 99, payload: "future-library"}}]) {
+    const {plugin, settings, saves} = await themeFixture(raw);
+    assert.equal(settings.appearanceThemes, undefined); assert.equal(saves[0].appearanceThemesFuture, undefined);
+    if (raw.colorPreferences) assert.deepEqual(saves[0].colorPreferences, raw.colorPreferences);
+    else {assert.deepEqual(saves[0].appearanceThemes, raw.appearanceThemes); await assert.rejects(plugin.updateStyleSettings(draft => {draft.backgroundColor = "#123456";}), /read-only/);}
+  }
+  const {plugin, settings, saves} = await themeFixture(), before = structuredClone(settings.appearanceThemes);
+  const write = plugin.saveData; plugin.saveData = async () => {throw Error("Expected import storage failure");}; const exact = structuredClone(settings);
+  await assert.rejects(plugin.importLegacyAppearance(fixture), /import storage/); assert.deepEqual(settings, exact);
+  plugin.saveData = write; await plugin.importLegacyAppearance(fixture);
+  assert.equal(settings.appearanceThemes.selectedId, "user"); assert.deepEqual(settings.appearanceThemes.themes[0].appearance, themeModel.captureThemeAppearance(settings));
+  assert.deepEqual(settings.appearanceThemes.themes.slice(1), before.themes.slice(1));
+  assert.deepEqual(migrateAndMergeSettings(JSON.parse(JSON.stringify(saves.at(-1)))).appearanceThemes, settings.appearanceThemes);
+}));
 
 test("real ExcaliBrain fixture imports complete ontology and graph styles without changing plugin preferences", () => {
   const before = JSON.stringify(fixture);
@@ -353,8 +487,9 @@ test("manual friends-only imports replace the local left-friend default", () => 
 test("both first-run and file imports use the bounded graph-import path", () => {
   const main = readFileSync(join(root, "src/main.ts"), "utf8");
   const settings = readFileSync(join(root, "src/settings.ts"), "utf8");
-  assert(main.includes("importExcaliBrainGraphSettings(legacySettings, this.settings)"));
-  assert(settings.includes("importExcaliBrainGraphSettings(parsed, this.plugin.settings)"));
+  assert(main.includes("importExcaliBrainGraphSettings(options.legacyImport, source)"));
+  assert(main.includes("{legacyImport: legacySettings}"), "First-run import uses that same queued allowlist");
+  assert(settings.includes("this.plugin.importLegacyAppearance(parsed, this.openingOwner)"), "File import keeps its opening theme and delegates the same queued allowlist");
   assert(main.includes("migrateAndMergeSettings(ownData)"), "Own K-Plex settings must not be filtered as foreign data");
 });
 

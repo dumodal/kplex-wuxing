@@ -4092,17 +4092,22 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
         openSettings: /** Preserve the guarded native settings bridge. */ () => plugin.openSettings(),
         chooseBackground: /** The view owns this picker and closes it on migration/unmount. */ () => {
           const sourceScope = viewport.current; if (!sourceScope?.isConnected) return;
+          const owner = plugin.captureAppearanceOwner();
+          const opening = structuredClone({colorPreferences: plugin.settings.colorPreferences, baseNodeStyle: plugin.settings.baseNodeStyle,
+            baseLinkStyle: plugin.settings.baseLinkStyle, backgroundColor: plugin.settings.backgroundColor});
+          /** Stale source previews retain the opening theme without borrowing a later selection. */
+          const current = (): Pick<typeof plugin.settings, "colorPreferences" | "baseNodeStyle" | "baseLinkStyle" | "backgroundColor"> => plugin.isAppearanceOwnerCurrent(owner) ? plugin.settings : opening;
           const dialog = new ColorSourceModal(plugin.app, {
             title: translate("actions.canvasBackground"), initial: plugin.settings.backgroundColor,
-            sourceScope, translate, target: {kind: "canvas"},
-            preferences: () => plugin.settings.colorPreferences, nodeStyle: () => plugin.settings.baseNodeStyle,
-            linkStyle: () => plugin.settings.baseLinkStyle, background: () => plugin.settings.backgroundColor,
+            sourceScope, translate, bindEditor: editor => plugin.bindAppearanceEditor(editor, owner), target: {kind: "canvas"},
+            preferences: () => current().colorPreferences, nodeStyle: () => current().baseNodeStyle,
+            linkStyle: () => current().baseLinkStyle, background: () => current().backgroundColor,
             subscribeCss: changed => { const ref = plugin.app.workspace.on("css-change", changed); return () => plugin.app.workspace.offref(ref); },
             subscribeColors: changed => subscribeAppearanceSources(listener => plugin.index.subscribePresentation(listener), () => plugin.settings, changed),
             onSave: async color => plugin.updateStyleSettings(draft => {
               if (color && typeof color !== "string" && color.kind === "palette" && !draft.colorPreferences.palette.some(pair => pair.id === color.id)) throw new Error("Named color no longer exists");
               draft.backgroundColor = color; draft.standardStyleDefaults = "native";
-            }),
+            }, owner),
             onClosed: () => { graphDialogs.current.delete(dialog); },
           });
           graphDialogs.current.add(dialog); dialog.open();

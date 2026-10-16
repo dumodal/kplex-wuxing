@@ -17,7 +17,7 @@ export class ColorAdoptionModal extends StyleEditorModal {
 
   /** Show the post-adoption paint and every affected slot before the destructive color-only confirmation. */
   onOpen(): void {
-    this.beginEditor(this.context.sourceScope); this.modalEl.addClass("kplex-color-modal");
+    this.beginEditor(this.context.sourceScope, this.context.bindEditor); this.modalEl.addClass("kplex-color-modal");
     const t = this.context.translate; this.titleEl.setText(t("colors.adopt"));
     this.contentEl.createDiv({text: t("colors.adoptHelp"), cls: "setting-item-description"});
     if (!this.slots.length) this.contentEl.createDiv({text: t("colors.alreadyNative"), cls: "setting-item-description"});

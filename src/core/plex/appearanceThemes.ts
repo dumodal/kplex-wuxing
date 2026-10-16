@@ -9,6 +9,7 @@ import {adoptStandardThemeColors, STANDARD_NODE_COLOR_STYLES, STANDARD_LINK_COLO
 import {migrateColorPreferences, cyclicSemanticColorSlots, type ColorPreferencesV1} from "./colorPreferences";
 
 export const DEFAULT_THEME_ID = "default";
+export const MAX_APPEARANCE_THEMES = 5000;
 export const BASE_THEME_STYLE_KEYS = [...STANDARD_NODE_COLOR_STYLES, ...STANDARD_LINK_COLOR_STYLES] as const;
 type StyleRecord = Record<string, unknown>;
 type LensColors = {node?: Partial<Record<typeof NODE_COLOR_FIELDS[number], ColorValue>>; edge?: Partial<Record<typeof LINK_COLOR_FIELDS[number], ColorValue>>};
@@ -22,6 +23,8 @@ export type ThemeAppearanceInput = ThemeBase & Omit<ThemeSemantic, "lensColors">
 export type ThemeNames = {default: string; user: string; nativeBase: string; custom: string};
 export type ColorResetScope = "base" | "semantic" | "all";
 export type AppearanceOwner = Readonly<{themeId: string | undefined; activation: number}>;
+export type AppearanceThemeAction = {kind: "select" | "delete"; id: string} | {kind: "rename"; id: string; name: string}
+  | {kind: "create"; id: string; name: string; fromDefaults: boolean} | {kind: "dismiss-migration"};
 
 /** Copy supported persisted JSON without requiring browser/Node globals in portable core. */
 export function copyThemeValue<T>(value: T): T {
@@ -92,7 +95,7 @@ export function createAppearanceThemes(current: ThemeAppearanceInput, factory: T
 /** Reject lossy/future containers as a whole; the host preserves the untouched raw field read-only. */
 export function readAppearanceThemes(raw: unknown): AppearanceThemeLibrary | undefined {
   if (!record(raw) || raw.version !== 1 || raw.migrationComplete !== true || !Array.isArray(raw.themes) || !raw.themes.length
-    || raw.themes.length > 5000 || typeof raw.selectedId !== "string" || typeof raw.migrationNotice !== "boolean") return undefined;
+    || raw.themes.length > MAX_APPEARANCE_THEMES || typeof raw.selectedId !== "string" || typeof raw.migrationNotice !== "boolean") return undefined;
   const ids = new Set<string>(), names = new Set<string>();
   for (const entry of raw.themes) {
     if (!record(entry) || typeof entry.id !== "string" || !entry.id || entry.id.length > 100 || ids.has(entry.id)
@@ -135,12 +138,15 @@ export function validThemeName(library: AppearanceThemeLibrary, name: string, ex
 
 /** Find a unique localized copy-on-write name without changing any prior theme's identity or content. */
 export function uniqueThemeName(library: AppearanceThemeLibrary, base: string): string {
-  let name = base, suffix = 2; while (!validThemeName(library, name)) name = `${base} ${suffix++}`; return name;
+  if (!base.trim()) throw new Error("Invalid automatic theme name");
+  const stem = base.trim().slice(0, 100); let name = stem, suffix = 2;
+  while (!validThemeName(library, name)) {const tail = ` ${suffix++}`; name = stem.slice(0, 100 - tail.length) + tail;}
+  return name;
 }
 
 /** Create an independently owned appearance copy; the host publishes selection only after storage succeeds. */
 export function addAppearanceTheme(library: AppearanceThemeLibrary, id: string, name: string, fromDefaults: boolean): AppearanceThemeLibrary {
-  if (!validThemeName(library, name) || !id || library.themes.some(/** Compare stable identities or display-name ownership without activating anything. */ theme => theme.id === id) || library.themes.length >= 5000) throw new Error("Invalid new theme");
+  if (!validThemeName(library, name) || !id || library.themes.some(/** Compare stable identities or display-name ownership without activating anything. */ theme => theme.id === id) || library.themes.length >= MAX_APPEARANCE_THEMES) throw new Error("Invalid new theme");
   const source = library.themes.find(/** Locate the explicit stable theme identity. */ theme => theme.id === (fromDefaults ? DEFAULT_THEME_ID : library.selectedId));
   if (!source) throw new Error("Source theme no longer exists");
   const next = copyThemeValue(library); next.themes.push({id, name: name.trim(), appearance: copyThemeValue(source.appearance)}); next.selectedId = id; return next;
@@ -166,6 +172,17 @@ export function selectAppearanceTheme(library: AppearanceThemeLibrary, id: strin
   return library.selectedId === id ? library : {...library, selectedId: id};
 }
 
+/** Execute a finite library intent inside the existing host queue; no effect occurs before publication. */
+export function editAppearanceThemeLibrary(library: AppearanceThemeLibrary, action: AppearanceThemeAction): AppearanceThemeLibrary {
+  switch (action.kind) {
+    case "select": return selectAppearanceTheme(library, action.id);
+    case "delete": return deleteAppearanceTheme(library, action.id);
+    case "rename": return renameAppearanceTheme(library, action.id, action.name);
+    case "create": return addAppearanceTheme(library, action.id, action.name, action.fromDefaults);
+    case "dismiss-migration": return library.migrationNotice ? {...library, migrationNotice: false} : library;
+  }
+}
+
 /** Unknown or damaged sources cannot be turned into an apparently authentic editable backup. */
 export function canCaptureThemeAppearance(source: ThemeAppearanceInput): boolean { return validAppearance(captureThemeAppearance(source)); }
 
@@ -176,6 +193,7 @@ export function recordThemeAppearance(library: AppearanceThemeLibrary, appearanc
   if (themeValuesEqual(selected.appearance, appearance)) return library;
   const next = copyThemeValue(library);
   if (selected.id === DEFAULT_THEME_ID) {
+    if (next.themes.length >= MAX_APPEARANCE_THEMES) throw new Error("Theme limit reached");
     if (next.themes.some(/** Compare stable identities or display-name ownership without activating anything. */ theme => theme.id === id)) throw new Error("Theme identity collision");
     next.themes.push({id, name: uniqueThemeName(next, customName), appearance: copyThemeValue(appearance)}); next.selectedId = id;
   } else next.themes.find(/** Locate the explicit stable theme identity. */ theme => theme.id === selected.id)!.appearance = copyThemeValue(appearance);

@@ -4,6 +4,15 @@ import test from "node:test";
 import {loadPortableModules} from "./support/portableTypeScript.mjs";
 const {exports: m} = loadPortableModules(["src/core/plex/appearanceThemes.ts", "src/core/plex/colorPreferences.ts", "src/core/plex/colorEditing.ts"]);
 const names = {default: "Default theme", user: "User theme", nativeBase: "Default base + my semantic colors", custom: "Custom theme"};
+
+test("automatic theme names stay unique within the serialized limit and library capacity cannot create an unreadable restart", () => {
+ const f=fixture(),library=m.createAppearanceThemes(f,f,true,names),name='x'.repeat(100);
+ library.themes[0].name=name;assert.equal(m.uniqueThemeName(library,name).length,100);assert(m.uniqueThemeName(library,name).endsWith(' 2'));
+ assert.throws(()=>m.uniqueThemeName(library,'   '),/Invalid/);
+ const full={...library,themes:Array.from({length:m.MAX_APPEARANCE_THEMES},(_,i)=>({...library.themes[0],id:i?'id-'+i:'default',name:'Name '+i})),selectedId:'default'};
+ assert.throws(()=>m.addAppearanceTheme(full,'extra','Extra',false),/Invalid/);
+ const changed=m.captureThemeAppearance(f);changed.base.backgroundColor='#ffffff';assert.throws(()=>m.recordThemeAppearance(full,changed,'extra','Custom'),/limit/);
+});
 /** Include references shared by all consumers, global lens behavior, geometry and unrelated workflow. */
 function fixture() {
   const source = {standardStyleDefaults: "native", colorPreferences: m.defaultColorPreferences(), tagStyleList: ["z", "a"],

@@ -9,6 +9,15 @@
  * parameters remain unquoted regardless of their names. Locale catalogs inherit this classification.
  */
 export const englishCatalog = {
+  "themes.defaultName": {"message": "Default theme", "context": "Named K-Plex appearance theme: migration, automatic private copy and stale editor ownership.", "params": [], "referenceParams": []},
+  "themes.userName": {"message": "User theme", "context": "Named K-Plex appearance theme: migration, automatic private copy and stale editor ownership.", "params": [], "referenceParams": []},
+  "themes.nativeBaseName": {"message": "Default base + my semantic colors", "context": "Named K-Plex appearance theme: migration, automatic private copy and stale editor ownership.", "params": [], "referenceParams": []},
+  "themes.customName": {"message": "Custom theme", "context": "Named K-Plex appearance theme: migration, automatic private copy and stale editor ownership.", "params": [], "referenceParams": []},
+  "themes.customSaved": {"message": "Your changes are saved to {name}.", "context": "Named K-Plex appearance theme: migration, automatic private copy and stale editor ownership.", "params": ["name"], "referenceParams": ["name"]},
+  "themes.staleDraft": {"message": "This unsaved draft belongs to {name}. A different theme was selected. Discard this draft and reopen the editor.", "context": "Named K-Plex appearance theme: migration, automatic private copy and stale editor ownership.", "params": ["name"], "referenceParams": ["name"]},
+  "themes.discardDraft": {"message": "Discard draft", "context": "Named K-Plex appearance theme: migration, automatic private copy and stale editor ownership.", "params": [], "referenceParams": []},
+  "themes.unavailable": {"message": "This appearance uses a newer or unsupported format. Theme changes are unavailable.", "context": "Named K-Plex appearance theme: migration, automatic private copy and stale editor ownership.", "params": [], "referenceParams": []},
+  "themes.migrationMessage": {"message": "Your previous appearance is saved as ‘User theme’. Choose ‘Default base + my semantic colors’ to use Obsidian’s colors while keeping your custom styles.", "context": "Named K-Plex appearance theme: migration, automatic private copy and stale editor ownership.", "params": [], "referenceParams": []},
   "colors.colorsPage": {"message": "Colors", "context": "Paired color settings and relationship direction labels. Stable semantic IDs are unchanged.", "params": []},
   "colors.labelsPage": {"message": "Labels", "context": "Paired color settings and relationship direction labels. Stable semantic IDs are unchanged.", "params": []},
   "colors.palettePreview": {"message": "Light and dark palettes", "context": "Paired color settings and relationship direction labels. Stable semantic IDs are unchanged.", "params": []},

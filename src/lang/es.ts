@@ -7,6 +7,15 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const spanishTranslations = {
+  "themes.defaultName": "Tema predeterminado",
+  "themes.userName": "Tema del usuario",
+  "themes.nativeBaseName": "Base predeterminada + mis colores semánticos",
+  "themes.customName": "Tema personalizado",
+  "themes.customSaved": "Tus cambios se guardan en {name}.",
+  "themes.staleDraft": "Este borrador sin guardar pertenece a {name}. Se seleccionó otro tema. Descarta el borrador y vuelve a abrir el editor.",
+  "themes.discardDraft": "Descartar borrador",
+  "themes.unavailable": "Esta apariencia usa un formato más reciente o no compatible. No se pueden cambiar los temas.",
+  "themes.migrationMessage": "Tu apariencia anterior se guardó como «Tema del usuario». Elige «Base predeterminada + mis colores semánticos» para usar los colores de Obsidian y conservar tus estilos personalizados.",
   "colors.colorsPage": "Colores",
   "colors.labelsPage": "Etiquetas",
   "colors.palettePreview": "Paletas clara y oscura",
