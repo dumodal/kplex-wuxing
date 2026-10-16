@@ -1802,14 +1802,24 @@ export class KplexSettingTab extends PluginSettingTab {
 
   /**
    * Native declarative subpages replace (and detach) the tab root. Reacquire the visible page in
-   * that exact Settings document; never sample the retired root or a different application window.
-   * The host's connected page owns preview and lazy-dialog lifetime until navigation/teardown.
+   * that exact Settings document; never navigate another application window. The connected page
+   * guards delayed action opening, independently of the stable document used for theme previews.
    */
-  private colorSourceScope(): HTMLElement {
+  private colorActionPage(): HTMLElement {
     if (this.containerEl.isConnected) return this.containerEl;
     const doc = this.containerEl.ownerDocument;
     return Array.from(doc.querySelectorAll<HTMLElement>(".setting-page-content"))
       .find(/** Only the currently displayed native page may supply a detached tab's context. */ page => page.isConnected && page.getClientRects().length > 0) ?? this.containerEl;
+  }
+
+  /**
+   * A native subpage is replaced on css-change, even while its modal draft remains open. Sample
+   * the stable owning Settings body in that case; it carries the host theme and inherited public
+   * tokens. A still-attached root keeps its explicit scope, including local custom variables.
+   */
+  private colorSourceScope(): HTMLElement {
+    const page = this.colorActionPage();
+    return page !== this.containerEl ? page.ownerDocument.body : page;
   }
 
   /** Native color surfaces share current preview facts and one CSS subscription contract. */
@@ -1824,10 +1834,10 @@ export class KplexSettingTab extends PluginSettingTab {
 
   /** Lazily open a native Compass draft; teardown/migration supersedes loading, and only edited fields enter the existing queue. */
   private async openCompassSettings(): Promise<void> {
-    const generation = ++this.colorDialogGeneration, sourceScope = this.colorSourceScope(), owner = sourceScope.ownerDocument;
+    const generation = ++this.colorDialogGeneration, actionPage = this.colorActionPage(), sourceScope = this.colorSourceScope(), owner = sourceScope.ownerDocument;
     const plugin = this.kplexPlugin; if (plugin.settings.colorPreferencesFuture !== undefined) return;
     const {CompassSettingsModal} = await import("./ui/CompassSettingsModal");
-    if (generation !== this.colorDialogGeneration || !sourceScope.isConnected || sourceScope.ownerDocument !== owner || plugin.settings.colorPreferencesFuture !== undefined) return;
+    if (generation !== this.colorDialogGeneration || !actionPage.isConnected || !sourceScope.isConnected || sourceScope.ownerDocument !== owner || plugin.settings.colorPreferencesFuture !== undefined) return;
     const dialog = new CompassSettingsModal(this.app, this.styleColorContext(), /** Merge against the latest durable owner without restoring stale palette or unedited fills. */ (initial, edited, current) => this.commitStyleChange(/** Each explicit Compass field has independent last-edit ownership. */ draft => {
       const latest = draft.colorPreferences.compass;
       if (initial.enabled !== edited.enabled) latest.enabled = edited.enabled;

@@ -366,11 +366,12 @@ test("declarative Settings subpages replace the root but retain live color conte
   const app={workspace:{on:()=>({}),offref:()=>{}}};
   const tab=new sourceModules.KplexSettingTab(app,plugin);tab.containerEl.remove();
   const page=document.body.createDiv({cls:'setting-page-content'});page.createSpan({text:'Native subpage'});
-  if(tab.styleColorContext().sourceScope!==page)throw Error('Detached root retained');
+  if(tab.styleColorContext().sourceScope!==document.body)throw Error('Transient or detached Settings page retained');
   tab.openCanvasColorEditor();const modal=sourceModules.TestModal.instances.at(-1);
   if(!modal?.modalEl.isConnected)throw Error('Canvas action inert');
   await waitFor(()=>modal.contentEl.querySelectorAll('.kplex-color-preview-canvas').length===2&&[...modal.contentEl.querySelectorAll('.kplex-color-preview-canvas')].every(el=>el.style.display!=='none'&&!!el.style.getPropertyValue('--_kplex-preview-canvas')));
   if(modal.contentEl.textContent.includes('Theme preview unavailable'))throw Error('Both contexts missing');
+  page.remove();modal.preview.invalidate();await waitFor(()=>modal.preview.samples?.light.colors['--background-primary']);if(!modal.modalEl.isConnected||modal.options.sourceScope!==document.body)throw Error('CSS page replacement retired the open draft');
   modal.close();tab.disposeActionSettings();page.remove();return true;
  })()`),true);
 });
