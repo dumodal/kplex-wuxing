@@ -1,4 +1,4 @@
-# Standing instructions — preserve this header
+# Standing instructions â€” preserve this header
 
 This is a temporary handoff document between agents. The development of the solution involves agents with access to Obsidian CLI and a full development environment with all node packages installed, but also agents with more limited access. Development is done in "ping-pong" between these two types of agents. Agents should use this document to pass instructions and status from one another, such as instructions for testing/validation, or instructions for development work that can only be done in a full environment.
 
@@ -16,21 +16,22 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR #169: main-reviewed measurement checkpoint
+# PR #169: bounded Gate M closeout
 
-Branch 2026-10-15-source-reader-efficiency, integrated accepted main at 69fa58a.
-Offline measurement return reviewed; two observer contracts, 18 small shape/wave cases and six
-single-chunk doubling cases independently passed. Production source-reader code is unchanged.
-See docs/validation/source-reader-efficiency-169-2026-10-16.md for scope and limitations.
-Main now owns the isolated native Gate M pilot, Git and PR updates. No concurrent browser/native
-work. Metadata/resolution reader sharing remains a hypothesis, not an approved implementation.
-Offline source analyst may prepare the narrow safety/API analysis without edits or native access.
-Preserve all current-head, inter-family, post-release, physical/host/policy and parser safeguards.
-No receipt, schema, scheduler, reclamation policy or C15+ architecture work. Stop at one measured
-correction or a documented negative result. Commit and push validated checkpoints; keep PR draft.
+Main integrated accepted #171 into the existing branch (69fa58a) and committed/pushed reviewed
+measurement tooling (0333fc4). Gate M did not establish a material net-resource benefit for
+metadata/resolution reader sharing. Production implementation is deferred, not claimed falsified.
+No runtime source changes or candidate acceptance series. No receipt, schema, scheduler, lease
+reclamation or C15+ changes. Preserve current source-reader correctness and runtime behavior.
 
-Only authorized disposable fixtures have been accessed. Personal-vault permission is strictly
-indexing diagnostics/main.js deployment and sanitized aggregate evidence; no note/path/payload
-inspection or configuration/cache/note mutation. Offline agents have no personal-vault authority.
-Raw evidence and byte-verified original configuration backups remain private under
-TEMP/kplex-169-2026-10-16. Do not publish archives without applicable approval.
+The native control reconciled all 20,088 sources, zero fresh Vault reads/parses/repairs, with
+82,770/82,770 leases created/retired and genuine drain. Its 610.633-second quiet window passed with no new transactions, digests, builds or saves.
+Full verification passed 2,046 tests plus lint/types/build and exact native smoke. See docs/validation/source-reader-efficiency-169-2026-10-16.md for actual
+counts, timings, attribution caveats and the separate compilation/snapshot-write follow-up.
+Both fixtures are restored; verified local evidence archive and source references are recorded in
+the validation report. Main owns the final documentation commit/push and draft PR outcome update.
+No more production optimization or offline work. Keep PR draft; no merge/release.
+
+Only disposable fixtures were accessed; personal-vault permission remains unused. Original private
+configuration backups remain separate. Do not publish a raw archive without applicable approval.
+No offline agent work remains pending; returned analysis and tooling were independently reviewed.

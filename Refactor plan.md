@@ -4274,3 +4274,22 @@ Small original107files/build/configuration restored with no owned probe/CPU stat
 pending; no resource benefit or shipping verdict yet. New personal-vault grant is indexing-only,
 main.js deployment and sanitized aggregates; it has not been used. See the single evolving
 validation report `docs/validation/source-reader-efficiency-169-2026-10-16.md`.
+
+### 2026-10-17: PR #169 R2, defer production reader sharing at Gate M
+
+The current-main diagnostic control reconciled 20,088 cached sources with zero fresh Vault reads,
+parses or repairs. Genuine drain occurred at 1,089.981 seconds; observer-interval renderer CPU
+was 327.187 seconds. Source-family leases created/retired 82,770/82,770, peak live one; no unknown
+retirements, overflow or decode reservations remained. Quiet-window/final verification pending.
+
+The proposed shared reader removes one net transaction per eligible owner: theoretical 20,088
+of 435,325 overall (4.61%). Entire metadata inspections occupied 34.643 seconds of inclusive
+awaited time and must still authenticate metadata in the candidate. Two short CPU windows show
+only four lifetime-bookkeeping leaf samples each; native asynchronous storage cost remains
+unisolated. No affirmative material net-resource benefit is established. Defer production changes
+and the expensive candidate acceptance series; this is inconclusive benefit, not proof of no cost.
+Keep reusable measurement protection. No production reader/finality, schema, scheduler or receipt
+change. The separate highest-value storage investigation is the observed full compile/snapshot
+rewrite (one each; about 279 MB encoded page/chunk payload), without assuming it unnecessary.
+No new optimization is authorized by this finding. Only disposable vaults used; no personal access.
+See the concise PR #169 validation report for reproduction, failures and platform limitations.
