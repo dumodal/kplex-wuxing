@@ -4293,3 +4293,29 @@ change. The separate highest-value storage investigation is the observed full co
 rewrite (one each; about 279 MB encoded page/chunk payload), without assuming it unnecessary.
 No new optimization is authorized by this finding. Only disposable vaults used; no personal access.
 See the concise PR #169 validation report for reproduction, failures and platform limitations.
+
+### 2026-10-17: PR #169 R3, validated measurement closeout
+
+Full Node 22.22.2 verification passed 2,046 tests (7/128/906/128/334/543), zero failures/skips,
+Obsidian lint/types/build and exact native smoke; shipping main remains fbe9eaa3, unchanged
+from accepted main. No source/runtime diff. The 610.633-second quiet window added zero IDB
+transactions/digests/builds/saves; all readers/leases/decode drained, foreground samples valid.
+Inclusive native renderer CPU was 327.968 seconds to drain and 333.968 through quiet; shorter
+probe-interval CPU 327.187 seconds is not substituted for the lifecycle. No resource saving claimed.
+
+Pinned generator verifies all 20,000 generated notes byte for byte; 88 public help checksums saved.
+Both disposable fixtures have original artifacts/configuration and inventories; large runtime
+settings/layout/bounds and small pre-smoke workspace bytes restored. Owned probes/debugger cleaned.
+Personal-vault authorization unused. Local ignored evidence ZIP: 83 files/84 entries, 22,719,434
+bytes; CRC/size/per-file SHA-256 pass, archive SHA-256
+4f0739d70445593203f3377811737c636dcff1c53a14f05c1e093f77300243f5. Raw originals remain.
+No archive publication or backup/payload/handoff inclusion. Temporary planning marker removed.
+
+Defer production reader sharing at Gate M: small operation opportunity, no established material
+net-resource win. No candidate acceptance series or manual production-change test required; actual
+macOS/mobile/lower-powered and mixed-size resource acceptance remain unavailable, not passed.
+CI passed code checkpoint 0333fc4 (38971221162); final documentation-head CI tracked separately.
+A Windows default-codepage failure interrupted the first ledger update after writing the report;
+the standing handoff header is restored byte-for-byte from 0333fc4 with explicit UTF-8, and this
+entry completes that update. Production/test/tool scopes remain unchanged after verification.
+Keep #169 draft; no merge/release, next optimization or C15+ work authorized by this closeout.
