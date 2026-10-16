@@ -6122,6 +6122,7 @@ export default class KplexPlugin extends Plugin {
     }));
   }
 
+  /** Promote the selected placeholder and its navigation coordinates before opening its created file. */
   private async materializeGhostPage(
     page: GraphPage,
     stem: string,
@@ -6129,13 +6130,17 @@ export default class KplexPlugin extends Plugin {
     folderPath: string,
     rawDisplayName = page.name,
   ): Promise<boolean> {
+    const oldPath = page.path;
     const file = await this.createNewFileInFolder(stem, kind, folderPath);
     if (!file) return false;
 
     await this.writeCreatedNodeDisplayName(file, rawDisplayName);
     await this.rememberNewNodeDefaultType(kind);
-    if (page.path === file.path) this.index.insertCreatedFile(file);
-    else if (!this.index.renameFile(page.path, file)) this.index.insertCreatedFile(file);
+    const wasCenter = this.settings.lastActivePath === oldPath;
+    if (!this.index.materializeFile(oldPath, file)) return false;
+    const navigationChanged = this.remapNavigationPaths(oldPath, file.path);
+    if (wasCenter) this.notifyNavigation(file.path);
+    if (navigationChanged) await this.saveSettings(false, false);
     await this.openInDocumentLeaf(file);
     return true;
   }

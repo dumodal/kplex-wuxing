@@ -9,6 +9,8 @@
  * parameters remain unquoted regardless of their names. Locale catalogs inherit this classification.
  */
 export const englishCatalog = {
+  "settings.areaOutline.name": {"message": "Require modifier for area outlines", "context": "Global area hover preference, independent of saved appearance themes. The key parameter is the localized host modifier name; explicit area settings keep frames visible.", "params": [], "referenceParams": []},
+  "settings.areaOutline.help": {"message": "Hold {key} while hovering over an area to show its outline and resize edge. Area settings always show the outlines.", "context": "Global area hover preference, independent of saved appearance themes. The key parameter is the localized host modifier name; explicit area settings keep frames visible.", "params": ["key"], "referenceParams": []},
   "settings.hoverHighlight.name": {"message": "Require modifier for hover highlighting", "context": "Global Plex pointer highlighting preference. The key parameter is the localized host modifier name.", "params": [], "referenceParams": []},
   "settings.hoverHighlight.help": {"message": "Hold {key} while hovering over a node, gate or connector to highlight related connections immediately. When disabled, hovering alone highlights after a short delay.", "context": "Global Plex pointer highlighting preference. The key parameter is the localized host modifier name.", "params": ["key"], "referenceParams": []},
   "settings.hoverHighlight.modifier": {"message": "the alternate modifier", "context": "Global Plex pointer highlighting preference. The key parameter is the localized host modifier name.", "params": [], "referenceParams": []},

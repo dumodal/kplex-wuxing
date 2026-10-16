@@ -22,16 +22,23 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR #170 — Small-vault retest complete; resource assertion remains open
+# Node tooltip follow-up: returned for review, inactive
 
-Branch2026-10-16-alt-hover-highlight. Runtime remains a16719e, unchanged from full2,003/lint/types/build/exact smoke and green CI. User explicitly requested rerunning touch and gate tests in kplex-test-small. No merge/release approval for #170; keep draft. C14 accepted; later refactoring paused.
+Draft PR171 on `2026-10-16-plex-interaction-updates`, parent08f620f. Scoped offline agent returned
+ThoughtNode and regressions; main independently reviewed, ran actual native verification and
+manages the authorized checkpoint/push. No further work is assigned by this inactive handoff.
 
-Exact d59587875f14614c4d579e49033743d6f2a4f251acae1b1d7a14281d4931b200 artifact retained. Original gate setup fails again. Trace and canonical fixture receipts establish3 readable foreground pages absent from canonical GraphState. Fixed test setup only: unconditional existing idempotent insertCreatedFile plus exact TFile identity check. Regression executes actual native binding block; Node22.22.2 native-runner20 tests and both driver syntax checks pass. No production change or relaxed assertion.
+Compact browser title retained, duplicate host hint removed using existing aria-labelledby/name
+pattern. Exact localized accessibility, gates, image titles and explicit previews are preserved.
+Runtime source SHA-2565a976f6698628eee6c3411c2898159e4a6b37b12e76f292bd9af1511a28cbffc;
+artifact fbe9eaa3ba01e0b9c9634ddb5b82fc62503fb3d90da27be025547560182c1c85.
+Full strict2,045/focused9/native node5/interaction14/hover7 pass. Old-runtime native rejection
+retained; complete-control lane passes12 then hits obsolete background-modal selector, so only
+explicit node scope accepted here. No assertion weakened or unrelated production fix attempted.
+See durable validation report and Refactor plan I3 for source/evidence references and limits.
 
-Unchanged touch driver passes8 trusted gestures, saved-value reload, pane geometry and all cleanup/restoration after releasing idle CLI debugger using public dev:debug off. No DevTools/competing controller existed. Earlier plugin-readiness failure did not recur; do not claim its historical cause is proven. Original CLI debugger state is restored afterward.
-
-Gate corrected-setup runs both pass5 visual assertions (Keep/Reflow × cross-links and filter clear), then fail strict no-source-work on clear: +1 acquisition.checked and semantic revision, source revision fixed,0 fresh reads/parses/rebuild/body-read/requested-neighborhood/degree/pair calls. Additional validation/publication is proven; whether necessary readmission or redundant remains unproven. No broad semantic/performance implementation is authorized by this retest; report gap and keep draft.
-
-Final restore passes exact runtime settings/layout/window bounds/four config bytes/original CLI debugger state/106 files/no owned notes/controllers, artifacts unchanged. Only authorized Small used; no personal/testvault/Large access. No active native test. TEMP/kplex-170-retest/restoration.json; private fresh baseline private-* there. Never publish these backups or raw touch baseline without review.
-
-Updated docs/validation/alt-hover-highlight-2026-10-16.md and ledger record H3; CONTRIBUTING documents exclusive CDP ownership. LOCALAPPDATA/kplex-validation/pr-170/retest-2026-10-16 contains29 verified files plus manifest, source receipt f8f7af6b46e763ba5c21abacb40bdbdbb6cce5f8d30bc41aa4a87f7e4db314fc; all earlier evidence retained unchanged, unpublished. Native source trace is temporary and never ships. Delivery: this retest checkpoint accompanies the final branch head; PR #170 records the current acceptance and remaining resource assertion. macOS/physical mobile remain separate acceptance.
+Original107 files/settings/layout/bounds/four configuration bytes/debugger restore, no active or
+pending work/controllers. Original110-file evidence remains unchanged; new supplement local
+only, no archive publication. Earlier checkpoint CI passes; new checkpoint CI must be checked.
+macOS/physical-device and existing gate/filter resource acceptance remain pending. PR stays draft;
+no merge/release, personal-vault access, optimization or structural refactoring authorized.

@@ -1,4 +1,3 @@
-import { subscribeAppearanceSources } from "../adapters/obsidian/colorChanges";
 /**
  * Host-bound Plex scene composition, shared captured center-arrival motion and finite Wander navigation ports, layout and relationship interactions. Semantic resolution stays index/core-owned; UI labels and on-demand evidence hints use the injected translator. Navigation fits keep the central node centered and follow late geometry until manual camera input; publication and ordinary pane resizing preserve manual intent. View-owned display transitions retain camera coordinates and scene settings. Device typography stages scalar live preferences and persists after input settles; unmount flushes storage without replaying stale overrides. Area-height gestures own viewport pointer capture and persist existing presentation settings on completion or interruption. History and pinned drag targets share composer eligibility; external file drops follow the rendered area's semantic role. Theme-native area previews follow the existing drop action without intercepting capture or moving the dragged thought. Visible rows retain finite cache-only presentation demand; hidden surfaces and effect teardown release it. Geometry defers gate/count queries until a row intersects the displayed viewport, including partially clipped rows. Ordinary unfiltered scenes project cross-links for clipped visible rows; filtered and section scenes retain their established edge/count policy. Scene-local React keys capture paths before canonical pages can mutate during rename; semantic pages and actions retain their live identity. Normal-mode keyboard and exact-phrase typing selection are view-local; the displayed occurrence projection supplies all candidates and the shared selection owner reveals them without changing the center, filters or native search. Host methods own activation/rename/creation. Filtered badge numerators use revision-scoped semantic endpoint membership independently of connector routing and viewport clipping. Pane-fit native layout controls own local touch containment and bounded scrolling without changing preferences or browser range behavior. Accessible layout-wrapper hints use the shell's shared tooltip owner; inputs retain concise accessible names.
  * Visual resolution and metadata refreshes retain the index consent epoch; teardown and revocation
@@ -9,7 +8,10 @@ import { subscribeAppearanceSources } from "../adapters/obsidian/colorChanges";
  * Evidence hints distinguish literal property references from descriptive source-kind labels;
  * shared localization metadata owns reference quoting. Optional Compass paint shares the camera frame
  * and exact center-animation lifetime, owns no input target, and never rebuilds graph geometry.
+ * Draft connectors measure their captured visible gate occurrence, including overflow transforms;
+ * sibling body drops add a center relation without rewriting their shared-parent evidence.
  */
+import { subscribeAppearanceSources } from "../adapters/obsidian/colorChanges";
 import {HoverHighlight, bindHoverHighlight} from "./components/hoverHighlight";
 import {compassPolygons} from "../core/plex/compassBackground";
 import {COMPASS_DIRECTIONS, COMPASS_COLOR_VARIABLES, COMPASS_SEMANTIC_SLOTS, compassIntensity} from "../core/plex/colorPreferences";
@@ -86,6 +88,7 @@ type EdgeHoverTooltip = {
 type EdgeGates = { source: GateSide; target: GateSide };
 type ConnectDrag = {
   originPath: string;
+  sourceGateElement: HTMLSpanElement;
   gate: GateSide;
   pointerId: number;
   current: Point;
@@ -267,8 +270,9 @@ function gatesForEdge(edge: PositionedEdge): EdgeGates {
 }
 
 
+/** Project a pending direct relation locally; semantic writes remain owned by the composer. */
 function applyOptimisticRelink(base: Neighborhood, targetPath: string, role: GateRole): Neighborhood {
-  const all = [...base.parents, ...base.children, ...base.leftFriends, ...base.rightFriends];
+  const all = [...base.parents, ...base.children, ...base.leftFriends, ...base.rightFriends, ...base.siblings];
   const found = all.find((item) => item.page.path === targetPath);
   if (!found) return base;
   const next: Neighborhood = {
@@ -277,7 +281,7 @@ function applyOptimisticRelink(base: Neighborhood, targetPath: string, role: Gat
     children: base.children.filter((item) => item.page.path !== targetPath),
     leftFriends: base.leftFriends.filter((item) => item.page.path !== targetPath),
     rightFriends: base.rightFriends.filter((item) => item.page.path !== targetPath),
-    siblings: [...base.siblings],
+    siblings: base.siblings.filter((item) => item.page.path !== targetPath),
   };
   const moved: Neighbour = { ...found, role };
   if (role === "parent") next.parents.push(moved);
@@ -1020,6 +1024,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   const [connectDrag, setConnectDrag] = useState<ConnectDrag | null>(null);
   const [nodeDrag, setNodeDrag] = useState<NodeDrag | null>(null);
   const [areaHover, setAreaHover] = useState<AreaHoverState>(null);
+  const areaOutline = useRef<HoverHighlight<Exclude<AreaHoverState, null>> | null>(null);
   const [externalDropZone, setExternalDropZone] = useState<GateRole | "center" | null>(null);
   const [resizingArea, setResizingArea] = useState<ScrollZone | null>(null);
   const areaResizeDrag = useRef<AreaResizeDrag | null>(null);
@@ -1607,6 +1612,25 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   /** Avoid re-rendering the scene for pointer motion that stays on the same affordance. */
   const setAreaHoverIfChanged = (next: AreaHoverState): void => {
     setAreaHover((current) => current?.zone === next?.zone && current?.edgeActive === next?.edgeActive ? current : next);
+  };
+
+  useEffect(/** Area outlines share the hover modifier lifetime, with immediate eligible feedback. */ () => {
+    const element = viewport.current;
+    if (!element) return;
+    const intent = new HoverHighlight<Exclude<AreaHoverState, null>>(element.ownerDocument.defaultView!,
+      viewSettings.areaOutlineRequiresAlt && !areaSettingsMode, setAreaHoverIfChanged, 0);
+    areaOutline.current = intent;
+    const release = bindHoverHighlight(element, intent);
+    return /** Layout/navigation retirement must not revive an old area on a later key press. */ () => {
+      release();
+      if (areaOutline.current === intent) areaOutline.current = null;
+    };
+  }, [viewSettings.areaOutlineRequiresAlt, areaSettingsMode, activePath, sceneLayoutKey]);
+
+  /** Retain a geometric candidate for stationary modifier changes without taking touch ownership. */
+  const updateAreaHover = (next: AreaHoverState, event: {altKey: boolean; pointerType: string}): void => {
+    if (next && event.pointerType !== "touch") areaOutline.current?.enter(next, event);
+    else areaOutline.current?.clear();
   };
 
   /** Clamp and update an existing presentation setting while retaining the current camera; persistence happens at gesture end. */
@@ -2396,6 +2420,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   const startGateDrag = (node: PositionedNode, gate: GateSide, event: PointerEvent<HTMLSpanElement>) => {
     const folderChildCreation = node.page.isFolder && gate === "bottom";
     if (event.button !== 0 || node.page.isTag || node.page.transient || (node.page.isFolder && !folderChildCreation)) return;
+    areaOutline.current?.clear();
 
     if (event.pointerType === "touch") {
       touchDoubleTap.current.reset();
@@ -2417,6 +2442,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
         setHover({ kind: "gate", path: pending.nodePath, gate: pending.gate });
         setConnectDrag({
           originPath: pending.nodePath,
+          sourceGateElement: pending.element,
           gate: pending.gate,
           pointerId,
           current: toWorld(startX, startY),
@@ -2436,6 +2462,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     setHover({ kind: "gate", path: node.page.path, gate });
     setConnectDrag({
       originPath: node.page.path,
+      sourceGateElement: event.currentTarget,
       gate,
       pointerId: event.pointerId,
       current: toWorld(event.clientX, event.clientY),
@@ -2446,14 +2473,15 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
-  /** Prepare relinking/taps with stable viewport capture across a node's move into the drag layer. */
+  /** Capture direct-neighbor moves or additive sibling drops in the stable viewport drag layer. */
   const startNodeDrag = (node: PositionedNode, event: PointerEvent<HTMLDivElement>) => {
     if (event.pointerType !== "touch") touchDoubleTap.current.reset();
     const target = event.target as Element;
     if (target.closest("[data-kplex-gate], button")) return;
-    if (event.button !== 0 || !normalizedRole(node.role) || node.page.isFolder || node.page.isTag || node.page.transient || neighborhood?.center.isFolder || neighborhood?.center.isTag) return;
+    if (event.button !== 0 || (!normalizedRole(node.role) && node.role !== "sibling") || node.page.isFolder || node.page.isTag || node.page.transient || neighborhood?.center.isFolder || neighborhood?.center.isTag) return;
     const captureElement = viewport.current;
     if (!captureElement) return;
+    areaOutline.current?.clear();
     clearHoverIntent(true);
     event.preventDefault();
     event.stopPropagation();
@@ -2542,7 +2570,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     if (connectDrag || nodeDrag || panDrag.current || touchPointers.current.size) return;
     const target = e.target as Element;
     if ((e.pointerType === "touch" || e.button === 0) && (e.pointerType !== "touch" || areaSettingsMode)) {
-      const areaHit = areaHoverAt(
+      const areaHit = e.pointerType !== "touch" && !areaSettingsMode && viewSettings.areaOutlineRequiresAlt && !e.altKey ? null : areaHoverAt(
         e.clientX,
         e.clientY,
         target,
@@ -2671,6 +2699,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       if (rect.right - e.clientX <= 12) return; // leave the native scrollbar draggable
     }
     e.preventDefault();
+    areaOutline.current?.clear();
     setAreaHoverIfChanged(null);
     panDrag.current = { pointerId: e.pointerId, button: e.button, pointerType: e.pointerType, x: e.clientX, y: e.clientY, cx: camera.current.x, cy: camera.current.y, moved: false };
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -2755,7 +2784,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     const drag = panDrag.current;
     if (!drag || e.pointerId !== drag.pointerId) {
       if (e.pointerType !== "touch") {
-        setAreaHoverIfChanged(areaHoverAt(e.clientX, e.clientY, e.target as Element, AREA_RESIZE_EDGE_PX, areaSettingsMode));
+        updateAreaHover(areaHoverAt(e.clientX, e.clientY, e.target as Element, AREA_RESIZE_EDGE_PX, areaSettingsMode), e);
       }
       return;
     }
@@ -2946,6 +2975,15 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       onCommitted: /** Publication remains durable while old view feedback is fenced. */ () => { if (current()) clearHoverIntent(true); } });
   };
 
+  /** Siblings add a direct relation only inside a real relation area; existing neighbors retain move hysteresis. */
+  const nodeDropRole = (node: PositionedNode, position: Point, clientX: number, clientY: number, hit: Element | null): GateRole | null => {
+    const currentRole = normalizedRole(node.role);
+    if (currentRole) return semanticRoleForPosition(position, currentRole, NODE_RELINK_HYSTERESIS_PX / Math.max(0.3, camera.current.scale));
+    if (node.role !== "sibling") return null;
+    const area = externalFileDropTarget(clientX, clientY, hit);
+    return area && area !== "center" && area !== "blocked" ? area : null;
+  };
+
   /** Finish resize, drag, pan or touch activation with one owner; movement cannot complete a tap pair. */
   const up = (e: PointerEvent<HTMLDivElement>) => {
     clearHistoryDragHover();
@@ -2957,7 +2995,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       const ownerDocument = e.currentTarget.ownerDocument;
       const hitTarget = ownerDocument.elementFromPoint(e.clientX, e.clientY);
       finishAreaResize(e.pointerId);
-      setAreaHoverIfChanged(e.pointerType === "touch" ? null : areaHoverAt(e.clientX, e.clientY, hitTarget, AREA_RESIZE_EDGE_PX, areaSettingsMode));
+      updateAreaHover(areaHoverAt(e.clientX, e.clientY, hitTarget, AREA_RESIZE_EDGE_PX, areaSettingsMode), e);
       return;
     }
     finishAreaSettingsDismiss(e);
@@ -3035,22 +3073,19 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
           }
           return;
         }
-        if (dragDistance >= NODE_RELINK_MIN_DRAG_PX && draggedNode && original && center && currentRole) {
-          const nextRole = semanticRoleForPosition(
-            { x: draggedNode.x, y: draggedNode.y },
-            currentRole,
-            NODE_RELINK_HYSTERESIS_PX / Math.max(0.3, camera.current.scale),
-          );
-          if (nextRole !== currentRole) {
+        if (dragDistance >= NODE_RELINK_MIN_DRAG_PX && draggedNode && original && center) {
+          const hit = e.currentTarget.ownerDocument.elementFromPoint(e.clientX, e.clientY);
+          const nextRole = nodeDropRole(original, draggedNode, e.clientX, e.clientY, hit);
+          if (nextRole && nextRole !== currentRole) {
             const current = captureSurfaceContinuation(() => viewport.current, () => plugin.actionManager.readSnapshot(actionSurfaceId));
             const commitRoot = viewport.current, commitDocument = commitRoot?.ownerDocument;
             const token = ++optimisticCommitToken.current;
             plugin.openRelationModal({
               hostLeaf,
-              mode: "relink",
+              mode: currentRole ? "relink" : "create",
               origin: center,
               fixedTarget: original.page,
-              existingDirection: original.linkDirection,
+              existingDirection: currentRole ? original.linkDirection : undefined,
               semanticRole: nextRole,
               onCommitStart: /** Only the still-current captured gesture can install optimistic presentation. */ (role) => {
                 if (!current()) return;
@@ -3139,6 +3174,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
 
   /** Release cancelled pointer ownership, persist area changes and discard pending touch taps. */
   const cancel = (e: PointerEvent<HTMLDivElement>) => {
+    areaOutline.current?.clear();
     clearHistoryDragHover();
     touchDoubleTap.current.reset();
     if (areaSettingsDismissPointer.current?.pointerId === e.pointerId) areaSettingsDismissPointer.current = null;
@@ -3833,10 +3869,37 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     return !zone || !scene.zoneViewports[zone];
   });
   const draggedBaseNode = nodeDrag ? scene.nodes.find((node) => node.page.path === nodeDrag.path) ?? null : null;
-  const dragOrigin = connectDrag ? renderedNodeMap.get(connectDrag.originPath) : null;
-  const dragPath = dragOrigin && connectDrag
-    ? edgeGeometry(gatePoint(dragOrigin, connectDrag.gate), connectDrag.current, connectDrag.gate, oppositeGate(connectDrag.gate), settings.connectorStyle).d
-    : null;
+  /**
+   * Use the actual captured gate occurrence rather than a path-keyed layout copy. Overflow rows,
+   * borders and custom gate sizes can change its painted position. Pointer capture leaves event
+   * targets on the source, so only an owning-document hit test can choose the destination gate.
+   */
+  const connectionDragPath = (): string | null => {
+    const drag = connectDrag, root = viewport.current;
+    if (!drag || !root || !drag.sourceGateElement.isConnected || !root.contains(drag.sourceGateElement)) return null;
+    const source = drag.sourceGateElement.getBoundingClientRect();
+    const start = toWorld(source.left + source.width / 2, source.top + source.height / 2);
+    const bounds = root.getBoundingClientRect();
+    const clientX = bounds.left + camera.current.x + drag.current.x * camera.current.scale;
+    const clientY = bounds.top + camera.current.y + drag.current.y * camera.current.scale;
+    const hit = root.ownerDocument.elementFromPoint(clientX, clientY);
+    const target = hit?.closest<HTMLElement>("[data-kplex-path]");
+    const gateElement = hit?.closest<HTMLElement>("[data-kplex-gate]");
+    const path = target?.dataset.kplexPath;
+    const page = path ? index.get(path) : null;
+    let end = drag.current, targetGate = oppositeGate(drag.gate);
+    if (gateElement && root.contains(gateElement) && page && !page.isFolder && !page.isTag
+      && page.path !== drag.originPath && !connectBlockedPaths.has(page.path)) {
+      const gate = gateElement.dataset.kplexGate;
+      if (gate === "top" || gate === "bottom" || gate === "left" || gate === "right") {
+        const rect = gateElement.getBoundingClientRect();
+        end = toWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        targetGate = gate;
+      }
+    }
+    return edgeGeometry(start, end, drag.gate, targetGate, settings.connectorStyle).d;
+  };
+  const dragPath = connectionDragPath();
 
   /** Compose the shared region affordance with localized names and the existing height-setting policy. */
   const renderAreaFrame = (zone: ScrollZone, area: ZoneAreaBounds) => {
@@ -4046,17 +4109,16 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       if (Math.hypot(clientX - nodeDrag.startClientX, clientY - nodeDrag.startClientY) < NODE_RELINK_MIN_DRAG_PX) return null;
       const original = scene.nodes.find((node) => node.page.path === nodeDrag.path);
       const currentRole = original ? normalizedRole(original.role) : null;
-      if (!currentRole) return null;
-      const nextRole = semanticRoleForPosition(nodeDrag, currentRole, NODE_RELINK_HYSTERESIS_PX / Math.max(0.3, camera.current.scale));
+      if (!original) return null;
+      const nextRole = nodeDropRole(original, nodeDrag, clientX, clientY, hit);
       return nextRole !== currentRole ? nextRole : null;
     }
     const origin = connectDrag ? index.get(connectDrag.originPath) : undefined;
-    if (!connectDrag || !origin || origin.isFolder || origin.isTag) return null;
+    if (!connectDrag || !origin || origin.isFolder || origin.isTag || origin.path !== neighborhood?.center.path) return null;
     const target = hit.closest<HTMLElement>("[data-kplex-path]");
-    const page = target?.dataset.kplexPath ? index.get(target.dataset.kplexPath) : undefined;
-    if (page?.isFolder || page?.isTag) return null;
-    const gate = hit.closest<HTMLElement>("[data-kplex-gate]")?.dataset.kplexGate as GateSide | undefined;
-    return gate ? plugin.inverseGateRole(semanticRoleForGate(gate)) : semanticRoleForGate(connectDrag.gate);
+    // The center's areas describe center relations, never a connection between two other nodes.
+    if (target || hit.closest("[data-kplex-gate]")) return null;
+    return semanticRoleForGate(connectDrag.gate);
   };
   const dropAreaZone = relationshipDropArea();
   const visibleAreaZone = resizingArea ?? areaHover?.zone ?? null;
@@ -4089,7 +4151,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     onPointerCancel={cancel}
     onLostPointerCapture={lostPointerCapture}
     onPointerLeave={(event: PointerEvent<HTMLDivElement>) => {
-      if (!areaResizeDrag.current && event.pointerType !== "touch") setAreaHoverIfChanged(null);
+      if (!areaResizeDrag.current && event.pointerType !== "touch") areaOutline.current?.clear();
     }}
     onContextMenu={/** Bare Plex context uses the existing native menu owner; node/edge menus stop propagation themselves. */ (event: MouseEvent<HTMLDivElement>) => {
       event.preventDefault();

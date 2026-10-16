@@ -70,7 +70,8 @@
  * Filtered scene gate reads reuse cached visible all-role incidence under its captured policy;
  * synchronous read epochs retire detached numerators without acquiring count proof or sources.
  * Native renames remap every retained read owner synchronously; old coherent scopes never retain
- * obsolete materialized coordinates while source repair closes.
+ * obsolete materialized coordinates while source repair closes. Explicit placeholder promotion
+ * shares that boundary, revokes retained proof and cancels older full-build generations.
  * Node imagery remains lazy presentation data. Live consent and a visual epoch fence cache reads,
  * pending durable-body results and mounted consumers without changing graph semantics or sources.
  */
@@ -228,6 +229,11 @@ type PreparedRelationshipPair = Readonly<{
 
 /** Collision-free unordered physical/semantic coordinates; opaque node IDs remain adapter-owned. */
 function relationshipPairKey(a: string, b: string): string { return JSON.stringify(a < b ? [a, b] : [b, a]); }
+
+/** Only an ordinary unresolved endpoint may be explicitly promoted to a newly created native file. */
+function isMaterializablePage(page: GraphPage | undefined): page is GraphPage {
+  return Boolean(page && !page.file && !page.url && !page.isFolder && !page.isTag && !page.transient);
+}
 
 /** Aggregate-only SI4 diagnostics; no source contents or user values are retained here. */
 export type SemanticPreparationDiagnostics = Readonly<{
@@ -937,13 +943,16 @@ export class GraphIndex {
   /** Supplement one actually displayed endpoint's host-known counts without acquiring its body.
    * Current native folder membership separately certifies its top/bottom numerical totals; other
    * semantic gates retain their existing partial coverage. The discarded private graph never grants
-   * write authority, and every proof still closes the owning source/host/policy/demand lifetime. */
+   * write authority, and every proof still closes the owning source/host/policy/demand lifetime.
+   * Capture admission coordinates: canonical pages survive rename/materialization with mutable paths,
+   * but their count tasks must retire under the original key and cannot follow changed coordinates. */
   private ensureOnDemandGateCounts(page: GraphPage): void {
-    if (this.onDemandGateTasks.has(page.path) || this.persistentCachePurged || this.diagnosticsClosed
+    const pagePath = page.path;
+    if (this.onDemandGateTasks.has(pagePath) || this.persistentCachePurged || this.diagnosticsClosed
       || page.url || page.isTag) return;
     const source = this.plugin.getIndexSourceRevision(), policy = this.semanticPolicyRevision;
     const hostRevision = this.hostPreview.observationRevision();
-    const revision = this.onDemandGateRevisions.get(page.path) ?? 0, pairRevision = this.relationshipPairRevision;
+    const revision = this.onDemandGateRevisions.get(pagePath) ?? 0, pairRevision = this.relationshipPairRevision;
     const signature = this.semanticCoverageSignature();
     const demands = [...this.semanticDemandCounts.keys()].map(path => ({
       path, revision: this.semanticDemandRevision.get(path) ?? 0,
@@ -955,11 +964,11 @@ export class GraphIndex {
         && demand.revision === (this.semanticDemandRevision.get(demand.path) ?? 0)))
       && source === this.plugin.getIndexSourceRevision() && policy === this.semanticPolicyRevision
       && hostRevision === this.hostPreview.observationRevision()
-      && revision === (this.onDemandGateRevisions.get(page.path) ?? 0) && pairRevision === this.relationshipPairRevision
-      && signature === this.semanticCoverageSignature() && this.state.pages.get(page.path) === page;
+      && revision === (this.onDemandGateRevisions.get(pagePath) ?? 0) && pairRevision === this.relationshipPairRevision
+      && signature === this.semanticCoverageSignature() && page.path === pagePath && this.state.pages.get(pagePath) === page;
     const task = this.onDemandGateLane.catch(() => {}).then(() => this.withForegroundPriority(async () => {
       if (!current()) return;
-      const scope = await this.hostPreview.build(page.path, { completeHostCover: true,
+      const scope = await this.hostPreview.build(pagePath, { completeHostCover: true,
         entityForPath: path => this.onDemandEntityFact(path),
         additionalPaths: page.neighbours.keys(), isCurrent: current,
         checkpoint: () => this.workScheduler.checkpoint(2),
@@ -972,25 +981,25 @@ export class GraphIndex {
           && owner.event === (this.urlOwnerEvents.get(path) ?? 0) ? this.urlOwnerBodies.get(path) : undefined;
         },
       });
-      const center = scope?.state.pages.get(page.path);
+      const center = scope?.state.pages.get(pagePath);
       if (!current()) return;
       if (!scope || !center) {
-        this.onDemandUnavailableCounts.set(page.path, { sourceRevision: source, hostRevision, signature, revision });
+        this.onDemandUnavailableCounts.set(pagePath, { sourceRevision: source, hostRevision, signature, revision });
         this.emitPresentation();
         return;
       }
       const gates = this.relationView(center, { page: this.composeRelationshipPairs(this.mergeOnDemandCachedPage(center)), settings: scope.settings }).gateStats;
-      for (const [side, proof] of Object.entries(scope.structuralGates?.get(page.path) ?? {})) {
+      for (const [side, proof] of Object.entries(scope.structuralGates?.get(pagePath) ?? {})) {
         if (proof && (side === "top" || side === "bottom")) Object.assign(gates[side], proof, { complete: true });
       }
       this.onDemandGateCounts.set(page, { gates, sourceRevision: source, hostRevision, signature, revision, pairRevision });
-      this.onDemandUnavailableCounts.delete(page.path);
+      this.onDemandUnavailableCounts.delete(pagePath);
       this.emitPresentation();
     }, 2)).finally(() => {
-      if (this.onDemandGateTasks.get(page.path) === task) this.onDemandGateTasks.delete(page.path);
+      if (this.onDemandGateTasks.get(pagePath) === task) this.onDemandGateTasks.delete(pagePath);
       this.emitPresentation();
     });
-    this.onDemandGateTasks.set(page.path, task);
+    this.onDemandGateTasks.set(pagePath, task);
     this.onDemandGateLane = task;
   }
 
@@ -6232,6 +6241,29 @@ export class GraphIndex {
     return this.renameTreeEndpoint(oldPath, file);
   }
 
+  /**
+   * Promote an explicitly selected placeholder after native creation, including separately
+   * published foreground incidence. Native rename keeps its stricter exact-file guards. A
+   * pre-creation full build cannot replace this endpoint; the managed-create coordinator already
+   * retains its ordinary catch-up backlog. A newer readable native identity rejects stale placeholder
+   * intent even when canonical coverage is absent. Remapped read scopes never inherit source authority.
+   */
+  materializeFile(oldPath: string, file: TFile): boolean {
+    if (this.app.vault.getFileByPath(file.path) !== file) return false;
+    const existing = this.state.pages.get(oldPath);
+    if (existing && existing.file !== file && !isMaterializablePage(existing)) return false;
+    const readable = this.get(oldPath);
+    if (readable && readable.file !== file && !isMaterializablePage(readable)) return false;
+    if (this.building) this.cancelRebuild();
+    if (oldPath !== file.path) return this.renameTreeEndpoint(oldPath, file, true);
+    this.retireHostEndpoint(oldPath, file, { notify: false, retainMovedReads: true, materialize: true });
+    this.remapPublishedFileReads(oldPath, file, true);
+    this.publicationRevision += 1;
+    this.snapshotPublicationCause = "rename";
+    this.insertCreatedFile(file, [], true);
+    return true;
+  }
+
   /** Reflect one startup file event in temporary Find/preview owners without changing canonical evidence. */
   updateHostFileAvailability(previousPath: string, replacement?: TFile): void {
     this.retireHostEndpoint(previousPath, replacement);
@@ -6256,7 +6288,7 @@ export class GraphIndex {
   /** Retire provisional endpoint owners without source certification; rename callers defer notification
    * until their retained graph coordinates are coherent, while ordinary availability calls notify now. */
   private retireHostEndpoint(path: string, replacement?: TFile,
-    options: Readonly<{ notify?: boolean; retainMovedReads?: boolean }> = {}): boolean {
+    options: Readonly<{ notify?: boolean; retainMovedReads?: boolean; materialize?: boolean }> = {}): boolean {
     const affected = new Set<string>([path, ...this.hostPreview.removeSource(path)]);
     if (replacement) {
       affected.add(replacement.path);
@@ -6268,7 +6300,8 @@ export class GraphIndex {
       this.hostPreviewRequests.set(center, (this.hostPreviewRequests.get(center) ?? 0) + 1);
       // A newer native preview can be the only readable incidence during canonical source repair.
       // Rename remaps this exact file below; the request token still rejects late old-path builds.
-      if (options.retainMovedReads && replacement && scope.pages.get(path)?.file === replacement) continue;
+      if (options.retainMovedReads && replacement && (scope.pages.get(path)?.file === replacement
+        || options.materialize && isMaterializablePage(scope.pages.get(path)))) continue;
       this.hostPreviewScopes.delete(center);
       changed = true;
     }
@@ -6314,14 +6347,17 @@ export class GraphIndex {
    * or stale-label presentation. Preserve coherent incidence until ordinary source repair replaces
    * it, but invalidate captured source/count identity rather than certifying the remapped scope.
    */
-  private remapPublishedFileReads(oldPath: string, file: TFile): boolean {
+  private remapPublishedFileReads(oldPath: string, file: TFile, materialize = false): boolean {
     let changed = false;
     const seen = new Map<Map<string, GraphPage>, boolean>();
     /** Use the same owner-local coordinate/evidence boundary as the canonical graph. */
     const remap = (state: GraphState): boolean => {
       if (seen.has(state.pages)) return seen.get(state.pages)!;
       const page = state.pages.get(oldPath), collision = state.pages.get(file.path);
-      if (page?.file !== file || collision?.file && collision.file !== file) { seen.set(state.pages, false); return false; }
+      if (!(page?.file === file || materialize && isMaterializablePage(page))
+        || collision && collision !== page && (collision.file && collision.file !== file || collision.isFolder || collision.isTag || collision.url)) {
+        seen.set(state.pages, false); return false;
+      }
       remapGraphEndpoint(state, oldPath, file.path,
         /** Native filename changes do not overwrite configured aliases or note properties. */ renamed => {
           renamed.file = file; renamed.name = file.basename; renamed.mtime = file.stat.mtime;
@@ -6335,8 +6371,8 @@ export class GraphIndex {
       seen.set(state.pages, true);
       return true;
     };
-    for (const [center, scope] of this.semanticScopes) {
-      if (scope.pagesByPath.get(oldPath)?.file !== file) continue;
+    for (const [center, scope] of [...this.semanticScopes]) {
+      if (!(scope.pagesByPath.get(oldPath)?.file === file || materialize && isMaterializablePage(scope.pagesByPath.get(oldPath)))) continue;
       const state = { ...createGraphState(), pages: new Map(scope.pagesByPath), evidence: scope.evidence };
       if (!remap(state)) continue;
       /** Retained coverage changes coordinates, never the original source proof. */
@@ -6349,25 +6385,27 @@ export class GraphIndex {
       this.releasedSemanticScopePaths.delete(center);
     }
     for (const scopes of [this.onDemandCachedScopes, this.onDemandHostScopes, this.hostPreviewScopes]) {
-      for (const [center, state] of scopes) if (remap(state)) {
+      for (const [center, state] of [...scopes]) if (remap(state)) {
         state.lowercasePathMap.delete(oldPath.toLowerCase()); state.lowercasePathMap.set(file.path.toLowerCase(), file.path);
         this.localScopeCertificates.delete(state);
         if (center === oldPath) { scopes.delete(center); scopes.set(file.path, state); }
       }
     }
-    for (const [center, retained] of this.retainedLocalScopes) if (remap(retained.state)) {
+    for (const [center, retained] of [...this.retainedLocalScopes]) if (remap(retained.state)) {
       this.localScopeCertificates.delete(retained.state);
       if (center === oldPath) { this.retainedLocalScopes.delete(center); this.retainedLocalScopes.set(file.path, retained); }
     }
-    for (const [key, pair] of this.relationshipPairs) if (pair.files.get(oldPath) === file) {
+    for (const [key, pair] of [...this.relationshipPairs]) if (pair.files.get(oldPath) === file
+      || materialize && pair.paths.includes(oldPath) && !pair.files.has(oldPath)) {
       const paths: readonly [string, string] = [pair.paths[0] === oldPath ? file.path : pair.paths[0],
         pair.paths[1] === oldPath ? file.path : pair.paths[1]];
       const files = new Map(pair.files); files.delete(oldPath); files.set(file.path, file);
       const relations = new Map<string, Relation | undefined>();
       for (const [path, relation] of pair.relations) {
         const target = relation?.target;
-        relations.set(path === oldPath ? file.path : path, relation && target?.file === file && target.path === oldPath
-          ? { ...relation, target: { ...target, path: file.path, name: file.basename, mtime: file.stat.mtime } } : relation);
+        relations.set(path === oldPath ? file.path : path, relation && target?.path === oldPath
+          && (target.file === file || materialize && isMaterializablePage(target))
+          ? { ...relation, target: { ...target, file, path: file.path, name: file.basename, mtime: file.stat.mtime } } : relation);
       }
       pair.evidence.renamePath(oldPath, file.path);
       const nextKey = relationshipPairKey(...paths), collision = this.relationshipPairs.get(nextKey);
@@ -6383,18 +6421,24 @@ export class GraphIndex {
   }
 
   /** Remap one known physical endpoint using the same evidence/search/identity boundary for files and folders. */
-  private renameTreeEndpoint(oldPath: string, file: TFile | TFolder): boolean {
+  private renameTreeEndpoint(oldPath: string, file: TFile | TFolder, materialize = false): boolean {
     const isFolder = file instanceof TFolder;
     const newPath = isFolder ? `folder:${file.path}` : file.path;
     if (!oldPath || !newPath || oldPath === newPath) return true;
     if (!isFolder) this.refreshRenamedUrlOwner(oldPath, file);
 
     // Publish only after all retained read owners have followed the native identity.
-    const retiredHost = this.retireHostEndpoint(oldPath, isFolder ? undefined : file, { notify: false, retainMovedReads: true });
+    const retiredHost = this.retireHostEndpoint(oldPath, isFolder ? undefined : file, { notify: false, retainMovedReads: true, materialize });
 
     const page = this.state.pages.get(oldPath);
     if (!page || page.isFolder !== isFolder || page.isTag || page.url) {
-      const remapped = !isFolder && this.remapPublishedFileReads(oldPath, file);
+      const remapped = !isFolder && this.remapPublishedFileReads(oldPath, file, materialize);
+      if (materialize && !isFolder) {
+        this.publicationRevision += 1;
+        this.snapshotPublicationCause = "rename";
+        this.insertCreatedFile(file, [], true);
+        return true;
+      }
       if (remapped) {
         this.titleCache.delete(oldPath); this.titleCache.delete(newPath);
         this.nodeVisualCache.delete(oldPath); this.nodeVisualCache.delete(newPath);
@@ -6422,7 +6466,7 @@ export class GraphIndex {
       });
     this.state.lowercasePathMap.delete(oldPath.toLowerCase());
     this.state.lowercasePathMap.set(newPath.toLowerCase(), newPath);
-    if (!isFolder) this.remapPublishedFileReads(oldPath, file);
+    if (!isFolder) this.remapPublishedFileReads(oldPath, file, materialize);
 
     // File-tree ancestry is the only semantic relation that can legitimately change when a rename
     // also moves the file to another folder. Reconcile just that ancestry locally. A basename-only
@@ -6839,13 +6883,15 @@ export class GraphIndex {
    * Materialize a known newly created file and its ancestry without enumerating the vault. For
    * Markdown, the normal metadata event remains authoritative and may enrich this page later;
    * attachments need only their physical endpoint plus source-local inbound resolution maintenance.
+   * @param materializedReads Explicit promotion already reconciled host availability while retaining
+   * coherent preview incidence. Publish even if those read maps shared the newly bound canonical page.
    */
-  insertCreatedFile(file: TFile, aliases: readonly string[] = []): GraphPage {
-    this.updateHostFileAvailability(file.path, file);
+  insertCreatedFile(file: TFile, aliases: readonly string[] = [], materializedReads = false): GraphPage {
+    if (!materializedReads) this.updateHostFileAvailability(file.path, file);
     // A prepared scope can already contain this file before the physical event is patched. The
     // canonical patch baseline must still own its endpoint; never promote only the private view.
     const existing = this.state.pages.get(file.path);
-    if (existing?.file === file && aliases.length === 0) return existing;
+    if (existing?.file === file && aliases.length === 0 && !materializedReads) return existing;
     if (existing) {
       // A K-Plex-created note can materialize a previously unresolved/virtual graph page. Promote
       // that page immediately instead of waiting for the managed Obsidian create event (which is

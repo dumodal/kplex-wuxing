@@ -1,7 +1,3 @@
-import { subscribeAppearanceSources } from "../adapters/obsidian/colorChanges";
-import type {AppearanceOwner} from "../core/plex/appearanceThemes";
-import { ColorSourceModal } from "./ColorSourceModal";
-import type { LensColorRequest, LensColorDialog } from "./PlexFilter";
 /**
  * Host-bound React shell for K-Plex navigation, startup guidance, File Explorer note drops, toolbar and Sidecar controls. It composes shared components and injected environment/localization capabilities; plugin methods own host effects. The native view owns session display modes; React projects Zen chrome and supplies exact camera-resize preparation without replacing its root. Search/Find scopes and hints use effective action bindings; each surface releases its own registrations on teardown.
  * Wander owns one cancellable per-view session over graph projection ports and the shared activation path;
@@ -11,7 +7,12 @@ import type { LensColorRequest, LensColorDialog } from "./PlexFilter";
  * Action-dispatched sync/Sidecar menus resolve fresh surface-local control anchors without routing DOM events through the action manager.
  * Native follow retains the latest canonical file while hidden and suppresses fallback scenes/motion during partial hydration.
  * Directional Sidecar attachment controls project host eligibility and use the same native follow owner for inward synchronization.
+ * Existing native File properties panes follow the active surface's central file through a leased host adapter.
  */
+import { subscribeAppearanceSources } from "../adapters/obsidian/colorChanges";
+import type {AppearanceOwner} from "../core/plex/appearanceThemes";
+import { ColorSourceModal } from "./ColorSourceModal";
+import type { LensColorRequest, LensColorDialog } from "./PlexFilter";
 import { appearanceWithoutColors } from "../core/contracts/appearance";
 import {
   useCallback,
@@ -53,6 +54,7 @@ import { createLegacyGraphSearchRead } from "../adapters/obsidian/graphContracts
 import { isEmbeddedMarkdownLeaf } from "../adapters/obsidian/embeddedMarkdownLeaf";
 import { focusEmbeddedMarkdown } from "../adapters/obsidian/embeddedMarkdownFocus";
 import { getDraggedFile } from "../adapters/obsidian/fileExplorerDrag";
+import { registerFilePropertiesCenter, type FilePropertiesCenterLease } from "../adapters/obsidian/filePropertiesCenter";
 import { ActionButton } from "./components/ActionButton";
 import { DoubleTapGesture } from "./components/DoubleTapGesture";
 import { InfoBubble } from "./components/InfoBubble";
@@ -527,6 +529,22 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     ?? (fallbackPath ? plugin.index.get(fallbackPath) : undefined)
     ?? (waitingForDocument ? undefined : plugin.index.get("folder:/"));
   const hasPage = Boolean(page);
+  const propertiesCenterFile = useRef<TFile | null>(null);
+  const propertiesCenterLease = useRef<FilePropertiesCenterLease | null>(null);
+  propertiesCenterFile.current = page?.file ?? null;
+  useEffect(/** The native Properties follower owns no graph demand and retires with this exact root/document. */ () => {
+    const lease = registerFilePropertiesCenter(plugin.app, hostLeaf,
+      /** Read the rendered center's canonical file, including materialization and non-file centers. */ () => propertiesCenterFile.current,
+      /** Background Plex roots must not replace the foreground surface's utility-pane identity. */ () => plugin.isKplexLeafVisible(hostLeaf));
+    propertiesCenterLease.current = lease;
+    return /** Release this root without cancelling a native disk operation already accepted by the host. */ () => {
+      if (propertiesCenterLease.current === lease) propertiesCenterLease.current = null;
+      lease.dispose();
+    };
+  }, [plugin, hostLeaf]);
+  useEffect(/** Refresh only a changed center identity/path; color and progress renders do not reload Properties. */ () => {
+    propertiesCenterLease.current?.refresh();
+  }, [page?.file, page?.path]);
   const graphSearchRead = useMemo(() => createLegacyGraphSearchRead({
     /** Preserve Vault files and URL aliases independently of the current Plex and graph filters. */
     search: (query, limit) => plugin.index.search(query, limit, "vault-files"),
@@ -837,7 +855,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     rootRef.current?.focus({ preventScroll: true });
   };
 
-  /** Accept a single current Vault file from Obsidian File Explorer, including images and Canvas. */
+  /** Accept a current Vault file from native file or resolved-link drags, including Bases. */
   const handlePlexDragOver = (event: ReactDragEvent<HTMLDivElement>) => {
     if (!getDraggedFile(plugin.app)) return;
     event.preventDefault();

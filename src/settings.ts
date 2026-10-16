@@ -1,5 +1,3 @@
-import { readObsidianPresentationEnvironment } from "./adapters/obsidian/presentationEnvironment";
-import { formatShortcut } from "./core/plex/shortcutPresentation";
 /**
  * Obsidian settings persistence, bounded legacy graph import, declarative controls and style/ontology
  * managers. Foreign imports cannot change plugin workflow preferences; own persisted K-Plex keys
@@ -21,7 +19,11 @@ import { formatShortcut } from "./core/plex/shortcutPresentation";
  * changing it does not invalidate semantic data or change placeholder-removal policy.
  * Typed color sources retain literal alpha and named/theme identity; local palette preferences
  * are isolated from foreign graph imports and unsupported formats retain a persistence marker.
+ * Hover modifier requirements are local workflow preferences, independent of themes and graph data;
+ * absent or malformed values enable gating while explicit saved false values remain respected.
  */
+import { readObsidianPresentationEnvironment } from "./adapters/obsidian/presentationEnvironment";
+import { formatShortcut } from "./core/plex/shortcutPresentation";
 import {AppearanceThemesManagerModal} from "./ui/AppearanceThemesModal";
 import {StyleManagerList} from "./ui/StyleManagerList";
 import {ColorSwatchList, type ColorSwatchItem} from "./ui/ColorSwatchList";
@@ -306,6 +308,8 @@ export interface KplexSettings {
   mouseInteractionMode: MouseInteractionMode;
   /** Require the alternate modifier instead of delayed pointer highlighting. */
   hoverHighlightRequiresAlt: boolean;
+  /** Require the alternate modifier for area hover outlines outside explicit area-settings mode. */
+  areaOutlineRequiresAlt: boolean;
   toolbarExpanded: boolean;
   sidecarOpen: boolean;
   sidecarPosition: SidecarPosition;
@@ -447,7 +451,8 @@ const LEGACY_DEFAULT_SETTINGS: KplexSettings = {
   pinnedNodes: [],
   layoutProfiles: DEFAULT_LAYOUT_PROFILES,
   mouseInteractionMode: "smart",
-  hoverHighlightRequiresAlt: false,
+  hoverHighlightRequiresAlt: true,
+  areaOutlineRequiresAlt: true,
   toolbarExpanded: false,
   sidecarOpen: false,
   sidecarPosition: "right",
@@ -692,7 +697,8 @@ export function migrateAndMergeSettings(raw: unknown): KplexSettings {
     pinnedNodes: Array.isArray(old.pinnedNodes) ? old.pinnedNodes.filter((value): value is string => typeof value === "string") : [],
     layoutProfiles: migratedProfiles,
     typographyProfiles: sanitizeTypographyProfiles(old.typographyProfiles),
-    hoverHighlightRequiresAlt: old.hoverHighlightRequiresAlt === true,
+    hoverHighlightRequiresAlt: typeof old.hoverHighlightRequiresAlt === "boolean" ? old.hoverHighlightRequiresAlt : true,
+    areaOutlineRequiresAlt: typeof old.areaOutlineRequiresAlt === "boolean" ? old.areaOutlineRequiresAlt : true,
     mouseInteractionMode: old.mouseInteractionMode === "legacy" || old.mouseInteractionMode === "middle-only" ? old.mouseInteractionMode : "smart",
     // ExcaliBrain persisted `embedCentralNode` for its own center presentation. K-Plex's native
     // embedded editor is a different, explicitly opt-in surface, so legacy imports must start
@@ -2324,6 +2330,7 @@ export class KplexSettingTab extends PluginSettingTab {
             heading: translate("settings.ui.navigation.interaction"),
             items: [
               { name: translate("settings.hoverHighlight.name"), desc: translate("settings.hoverHighlight.help", {key: hoverModifier}), control: {type: "toggle", key: "hoverHighlightRequiresAlt"} },
+              { name: translate("settings.areaOutline.name"), desc: translate("settings.areaOutline.help", {key: hoverModifier}), control: {type: "toggle", key: "areaOutlineRequiresAlt"} },
               { name: translate("settings.ui.animation.speed"), desc: translate("settings.ui.speed.multiplier.0.off.0.5.slow.1.normal.1.5.fast.2.very"), control: { type: "slider", key: "animationSpeed", min: 0, max: 2, step: 0.1 } },
               { name: translate("settings.ui.auto.fit.on.navigation"), control: { type: "toggle", key: "allowAutozoom" } },
               { name: translate("settings.ui.open.k.plex.in.a.pop.out.window"), desc: translate("settings.ui.when.k.plex.is.opened.and.no.k.plex.view.already.exists"), control: { type: "toggle", key: "startInPopout" } },

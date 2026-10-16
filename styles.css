@@ -429,7 +429,7 @@ button.kplex-sidecar-unfold-plex:hover,
   scrollbar-color: var(--scrollbar-thumb-bg) transparent;
   overscroll-behavior: contain;
   border-radius: 10px;
-  background: var(--background-secondary);
+  background: transparent;
 }
 .kplex-sibling-scroll::-webkit-scrollbar { width: 7px; }
 .kplex-sibling-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -709,9 +709,8 @@ button.kplex-sidecar-unfold-plex,
 }
 .kplex-toolbar-divider { align-self: center; }
 
-/* Direct manipulation for the configured relationship-area heights. Frames are transient and
-   theme-native: hovering empty area space reveals the dashed boundary; the draggable edge is
-   promoted to the accent color when the pointer reaches it. */
+/* Eligible hover reveals transient relationship-area boundaries; the modifier preference gates
+   normal pointer input. Explicit area settings retain all frames and keyboard height controls. */
 .kplex-area-frame {
   position: absolute;
   z-index: 14;
@@ -774,7 +773,8 @@ button.kplex-sidecar-unfold-plex,
   z-index: 16;
   overflow: visible;
   border-radius: 10px;
-  background: var(--background-secondary);
+  /* Connectors and the Compass decoration remain visible beneath overflowing rows. */
+  background: transparent;
 }
 /* An overflowing focused field must remain interactive above adjacent areas' node clips. */
 .kplex-zone-panel:focus-within { z-index: 17; }

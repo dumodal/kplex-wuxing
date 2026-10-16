@@ -4155,3 +4155,98 @@ Revalidated exact d5958787 build against dist and106-file Small. Original gate s
 Original touch retry reaches debugger-owner guard: idle CLI debugger attached, no DevTools/live test. Public installed dev:debug off releases that owner; unchanged driver passes8 trusted range cases, reload, geometry and all cleanup/restoration. Earlier reload-readiness issue not reproduced, cause still unproven. Both corrected gate runs pass5 visual cases but fail no-source-work on clear: +1 acquisition.checked/+1 semantic revision, stable source revision,0 fresh reads/parses/rebuild/body-read/requested-neighborhood-degree-pair calls. Do not infer a full rebuild or wrong gate display; source of validation/publication remains unproven. Leave PR #170 draft; do not implement a broader semantic/performance change as part of retesting.
 
 Original settings/layout/bounds/four config bytes/CLI debugger state/106 files restore; no owned notes/controllers, same artifacts. Local29-file retest manifest/source receipt and old evidence retained, unpublished; private backups separate. Updated validation report and CONTRIBUTING make current acceptance and debugger prerequisite explicit. macOS and physical-mobile acceptance remain separate.
+
+
+## Plex interaction fixes and features (2026-10-16)
+
+| Checkpoint | Status |
+| --- | --- |
+| I0: authorized #170 merge and main update | Complete: CI retry passed, #170 merged at `3294bea`; fetched/fast-forwarded main and created `2026-10-16-plex-interaction-updates`. |
+| I1: interaction and central-file implementation | Complete: final full 2,044 tests/lint/types/build/exact smoke, 14 native interaction cases and 7 main/popout hover cases pass. All seven requests implemented; native-observed admission-key and stale readable-identity fixes included. |
+| I2: evidence and draft PR closeout | Local closeout complete: original vault restored, 110 evidence files plus 6 private files verified; source checkpoint `6835353` pushed and draft #171 opened. CI pending at closeout; resource/platform gaps remain explicit. No merge/release. |
+| I3: compact node tooltip follow-up | Complete locally: preserve browser title/accessibility; remove duplicate host node hint using existing aria-labelledby pattern. Full2,045, focused9, native node5/interaction14/hover7 pass; original vault restored. Draft/no merge; prior gaps remain. |
+
+### 2026-10-16: I0, authorized hover PR merge
+
+The maintainer explicitly requested creating/merging the hover PR before starting the interaction
+batch. PR #170's existing head was already published; its complete CI retry passes at
+https://github.com/zsviczian/kplex/actions/runs/38929685957/job/117113490279 . Main merged #170,
+fetched and fast-forwarded local main to `3294bea18093b33791830fb55d97d53c6e3c980a`, then created
+the new feature branch. The earlier H3 draft status is historical; its known Quick lens resource
+limitation remains recorded. C14 stays accepted; no structural refactoring resumed.
+
+
+### 2026-10-16: I1, validated Plex interaction implementation
+
+Main independently reviewed the scoped materialization, modifier/localization and Properties
+returns, fixed bounded defects and ran final verification against the actual installed host/types.
+Transparent scroll surfaces, displayed-gate geometry, separate modifier policies, additive sibling
+drops, resolved Bases navigation/linking, immediate placeholder reconciliation and central-file
+Properties integration extend existing owners. No new graph classifier, scheduler, storage format,
+source acquisition path, dependency or release version. Four sibling writes preserve their shared
+parent; native held-build conversion removes the old rendered ghost and retains exactly one real
+node. Properties tracks both file and editable metadata identities across held native loads,
+pinning, unsupported files and popouts without changing focus/history or emitting file-open.
+
+Native repetition exposed an obsolete settled gate task: cleanup used a mutable page path rather
+than its admission key. Capturing the coordinate fixes proof/retirement and preserves zero-read
+count behavior across both rename and materialization. A real separately published host-preview
+regression also establishes and rejects stale placeholder intent. Final 2,044 tests, official lint,
+installed types, real build/exact smoke, 14 interaction cases and 7 hover cases pass; no failure,
+skip or cancellation in the final verification groups. Exact runtime is `852d2c8e`.
+
+Touch passes 8 trusted gestures/reload/geometry; a second exact native interaction run passes all
+14 cases and cleanup. Final restoration matches original 107 files/settings/layout/bounds/four
+configuration files/debugger state, with no active/pending work. Broader gate/filter resource
+acceptance fails in both normal and isolated runs before the complete matrix: recorded oracle-to-
+failure +9 checks/+9 semantic publications, source revision unchanged and zero fresh reads/parses/
+builds. This is not a per-toggle measurement and does not establish a CPU cost or cause. The
+assertion remains unchanged; keep the PR draft and defer separate readmission investigation.
+Remaining closeout: verified local evidence, source receipts and draft PR. Highest-priority platform checks are actual macOS Option/menu/popout
+behavior and physical mobile touch/external-keyboard/Properties behavior. Desktop emulation is
+not device acceptance. The existing Quick lens resource gate remains independent; no optimization
+or structural C15+ work is authorized by this checkpoint.
+
+
+### 2026-10-16: I2, local evidence and draft PR closeout
+
+Implementation checkpoint `6835353ccb82ee7cbee1f63c65470e51c62ab00e` is pushed; draft
+https://github.com/zsviczian/kplex/pull/171 contains all seven requests, measured native results
+and unaccepted limits. Final diff has no dependency/lockfile, manifest/version, generated artifact,
+foreign repository, note payload or unrelated production changes. New regression/native tooling
+is reusable; one-off probes remain outside the PR. No assertion was weakened.
+
+Verified local evidence is `%LOCALAPPDATA%/kplex-validation/pr-171/`: 110 entries/12,724,181 bytes,
+with source blobs tied to `6835353` and exact final artifacts. Independent second verification
+passes every checksum; six private configuration/raw-touch files are copied and verified in the
+separate private sibling. Original evidence remains intact; HANDOFF is excluded and nothing is
+published as an archive. Source-receipt SHA-256 is
+`a6dc7a75eff5e09a165af9d4d5be4ba1c56eee96310b5819d70518505afd555d`.
+
+Original 107-file inventory, runtime settings keys, layout/bounds, four configuration files and
+CLI debugger state restore; validated runtime remains installed, with no active/pending preparation
+or test controllers. The new area preference inherits its default while original persisted choices
+are preserved. Feature acceptance passes Windows; keep draft because the broader resource lane
+and actual macOS/physical-device acceptance remain unaccepted. Investigating the filter readmission/
+publication activity is separate follow-up, with no CPU cause or savings established here. CI is
+running at closeout. Source is frozen; no automatic C15+ work, merge or release.
+
+### 2026-10-16: I3, compact node tooltip and accessibility
+
+At parent `08f620f`, native hover confirms an inner browser title plus a separate Obsidian styled
+hint from the outer aria-label. ThoughtNode now reuses existing useId/accessible-name/aria-labelledby
+presentation; full localized label/path accessibility remains, and compact titles, gates and explicit
+page previews retain their owners. No CSS/shared tooltip timers, graph work or settings changes.
+Browser regression covers ordinary/image modes and repeated occurrences; renderer fixtures use
+actual React rendering for the new hook. Main independently reviewed the scoped offline return.
+
+Full strict verification passes 2,045 tests/lint/types/build/exact smoke; focused9, native node5,
+interaction14 and hover7 pass. Runtime `fbe9eaa3`; original107 files/settings/layout/bounds/config
+bytes/debugger restore, no active/pending preparation. Native node checks also fail as expected on
+old runtime852d. A complete-control run passes12 then fails on the obsolete background-modal
+selector; retain it as unaccepted, and use the explicit node-only driver scope for this follow-up.
+Runtime/tests stayed frozen after full verification; only driver scope/docs changed, followed by
+syntax and actual native acceptance. Earlier checkpoint CI passes; new push CI remains pending.
+Evidence is a separate verified local supplement; original evidence remains intact, no publication.
+Actual macOS and physical-device behavior and the earlier gate/filter resource gap remain pending.
+Keep draft; no merge/release or C15+ work.
