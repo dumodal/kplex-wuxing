@@ -468,6 +468,9 @@ for (const file of [
   "src/ui/ColorLiteralEditor.ts",
   "src/ui/ColorSourceEditor.ts",
   "src/ui/ColorPreview.ts",
+  "src/ui/ColorSwatchList.ts",
+  "src/adapters/obsidian/sampledColorValue.ts",
+  "src/core/plex/colorCounterpart.ts",
   "src/core/plex/colorContrast.ts",
   "src/adapters/obsidian/rgbColorControl.ts",
   "src/adapters/obsidian/colorScope.ts",
@@ -618,7 +621,7 @@ class AbstractInputSuggest {}
 class SuggestModal extends Modal {}
 class ColorComponent {}
 const getLanguage = () => "en";
-class PluginSettingTab { constructor(app) { this.app = app; this.containerEl = { addClass() {} }; } update() {} }
+class PluginSettingTab { constructor(app) { this.app = app; this.containerEl = { addClass() {}, isConnected: true }; } update() {} }
 function getIcon() { return null; }
 function getIconIds() { return []; }
 function normalizePath(path) { return path; }

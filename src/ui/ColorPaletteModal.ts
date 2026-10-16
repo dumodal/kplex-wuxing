@@ -1,4 +1,5 @@
 /** Searchable native named-palette manager; only bounded metadata rows render and all writes use the supplied queue. */
+import {renderColorStrips} from "./ColorSwatchList";
 import {Notice, type App} from "obsidian";
 import {StyleEditorModal, type StyleCommitResult} from "./StyleEditorModal";
 import {ColorPairModal} from "./ColorPairModal";
@@ -69,7 +70,7 @@ export class ColorPaletteModal extends StyleEditorModal {
       const row = this.list.createDiv({cls: "kplex-palette-row", attr: {"data-kplex-color-id": pair.id}});
       const name = row.createEl("button", {text: pair.name, cls: "kplex-palette-name", attr: {type: "button"}}); name.disabled = readOnly;
       name.addEventListener("click", () => { if (this.canEdit() && !this.options.readOnly()) this.editPair(pair); });
-      for (const mode of ["light", "dark"] as const) row.createSpan({cls: "kplex-color-swatch", attr: {"aria-label": t(`colors.${mode}`)}}).setCssStyles({backgroundColor: pair[mode]});
+      renderColorStrips(row.createDiv(), t, {light: [{label: pair.name, color: pair.light}], dark: [{label: pair.name, color: pair.dark}]});
       row.createSpan({text: t("colors.uses", {count: uses.get(pair.id) ?? 0}), cls: "setting-item-description"});
       const duplicate = row.createEl("button", {text: t("colors.duplicate"), attr: {type: "button"}}); duplicate.disabled = readOnly || preferences.palette.length >= 5000;
       duplicate.addEventListener("click", () => { if (this.canEdit() && !this.options.readOnly()) this.editPair(null, pair); });

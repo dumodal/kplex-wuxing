@@ -5,10 +5,11 @@
  * only for completed theme names/context changes; local picker paint coalesces to one owner frame.
  * Compass examples reuse the viewport clipper and composite source alpha with mode/theme intensity.
  */
+import {sampledColorValue} from "../adapters/obsidian/sampledColorValue";
 import { NODE_COLOR_FIELDS, LINK_COLOR_FIELDS, isThemeColorName, parseLiteralColor, formatLiteralColor, type ColorValue } from "../core/contracts/colorValue";
 import {compassPolygons} from "../core/plex/compassBackground";
 import {COMPASS_DIRECTIONS, COMPASS_COLOR_VARIABLES, COMPASS_SEMANTIC_SLOTS, type CompassDirection} from "../core/plex/colorPreferences";
-import { SEMANTIC_COLOR_DEFAULTS, semanticSlotForVariable, type ColorPreferencesV1, type SemanticColorSlot, type SemanticColorPair } from "../core/plex/colorPreferences";
+import { SEMANTIC_COLOR_DEFAULTS, type ColorPreferencesV1, type SemanticColorPair } from "../core/plex/colorPreferences";
 import { colorContrastRatio, compositeColor } from "../core/plex/colorContrast";
 import { ThemePreviewSampler, THEME_PREVIEW_TOKENS, THEME_PREVIEW_CONTEXT_LIMIT, type ThemePreviewPair } from "../adapters/obsidian/themePreview";
 import { ColorSampleReader } from "../adapters/obsidian/colorSample";
@@ -135,18 +136,9 @@ export class ColorPreview {
   }
 
   /** Resolve preview-only source values in one sampled mode without altering saved source identities. */
-  private resolve(value: ColorValue | undefined, mode: "light" | "dark", fallback: string, seen = new Set<SemanticColorSlot>()): string {
-    const samples = this.samples?.[mode].colors ?? {}, preferences = this.options.preferences(this.value);
-    if (value === undefined || value === null || (typeof value !== "string" && typeof value !== "object")) return fallback;
-    if (typeof value === "string") return this.reader.read(this.cards[mode].canvas, value) ? value : fallback;
-    if (value.kind === "palette") return (this.options.pairDraft?.().id === value.id ? this.options.pairDraft() : preferences.palette.find(pair => pair.id === value.id))?.[mode] ?? fallback;
-    if (value.kind !== "theme") return fallback;
-    const slot = semanticSlotForVariable(value.variable);
-    if (!slot) return samples[value.variable] || this.samples?.[this.samples.activeMode].colors[value.variable] || fallback;
-    if (seen.has(slot)) return samples[value.variable] || samples[SEMANTIC_COLOR_DEFAULTS[slot]] || fallback;
-    const inherited = samples[value.variable] || samples[SEMANTIC_COLOR_DEFAULTS[slot]] || fallback;
-    const configured = preferences.semantic[slot]; if (configured === undefined) return inherited;
-    return this.resolve(configured, mode, inherited, new Set([...seen, slot]));
+  private resolve(value: ColorValue | undefined, mode: "light" | "dark", fallback: string): string {
+    if (typeof value === "string" && !this.reader.read(this.cards[mode].canvas, value)) return fallback;
+    return sampledColorValue(value, mode, this.samples, this.options.preferences(this.value), fallback, this.options.pairDraft?.());
   }
 
   /** Apply complete mode colors only to private preview properties, then report composited contrast. */

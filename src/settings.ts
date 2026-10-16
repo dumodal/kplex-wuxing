@@ -20,17 +20,18 @@
  * Typed color sources retain literal alpha and named/theme identity; local palette preferences
  * are isolated from foreign graph imports and unsupported formats retain a persistence marker.
  */
+import {ColorSwatchList, type ColorSwatchItem} from "./ui/ColorSwatchList";
 import { StyleSwatchScope } from "./ui/StyleSwatchScope";
 import {colorValueCss} from "./adapters/obsidian/colorPresentation";
 import { subscribeAppearanceSources } from "./adapters/obsidian/colorChanges";
 
 import { StyleEditorModal, appendIcon, type StyleCommitResult } from "./ui/StyleEditorModal";
-import { NATIVE_NODE_PAINT, NATIVE_LINK_STROKE, nodePaintFallbacks } from "./index/style";
+import { NATIVE_NODE_PAINT, NATIVE_LINK_STROKE, NATIVE_LINK_TEXT, NATIVE_CANVAS_FILL, nodeColorFallback, nodePaintFallbacks } from "./index/style";
 import { ColorAdoptionModal } from "./ui/ColorAdoptionModal";
 import { StyleColorControls, type StyleColorContext } from "./ui/StyleColorControls";
 import { ColorPaletteModal } from "./ui/ColorPaletteModal";
 import { standardColorSlots, adoptStandardThemeColors, withoutStyleColorOverrides, mergeStyleDraft, requireNamedColor, STANDARD_NODE_COLOR_STYLES, STANDARD_LINK_COLOR_STYLES } from "./core/plex/colorEditing";
-import {COMPASS_DIRECTIONS} from "./core/plex/colorPreferences";
+import {COMPASS_DIRECTIONS, COMPASS_COLOR_VARIABLES, COMPASS_SEMANTIC_SLOTS, SEMANTIC_COLOR_DEFAULTS} from "./core/plex/colorPreferences";
 import { ColorSourceModal } from "./ui/ColorSourceModal";
 import {
   AbstractInputSuggest,
@@ -40,6 +41,7 @@ import {
   PluginSettingTab,
   getIconIds,
   type SettingDefinitionItem,
+  type SettingDefinition,
   type Setting,
 } from "obsidian";
 import type KplexPlugin from "./main";
@@ -1697,6 +1699,8 @@ export class KplexSettingTab extends PluginSettingTab {
   private actionSettings: ActionSettingsController | null = null;
   private readonly colorDialogs = new Set<StyleEditorModal>();
   private colorDialogGeneration = 0;
+  private readonly colorSwatchPages = new WeakMap<HTMLElement, ColorSwatchList>();
+  private readonly colorSwatchOwners = new Set<ColorSwatchList>();
 
   /** Keep shortcut editing in the native settings hierarchy with lazy rendered resource ownership. */
   constructor(app: App, private kplexPlugin: KplexPlugin) {
@@ -1712,6 +1716,8 @@ export class KplexSettingTab extends PluginSettingTab {
   /** Release row subscriptions and transient input before navigation, unload or settings teardown. */
   disposeActionSettings(): void {
     this.colorDialogGeneration++;
+    for (const owner of this.colorSwatchOwners) owner.dispose();
+    this.colorSwatchOwners.clear();
     this.actionSettings?.dispose();
     for (const dialog of this.colorDialogs) dialog.retire();
     this.colorDialogs.clear();
@@ -1862,16 +1868,63 @@ export class KplexSettingTab extends PluginSettingTab {
     this.colorDialogs.add(dialog); dialog.open();
   }
 
+  /** Share one bounded paired-color sampler among the currently rendered native page's rows. */
+  private mountColorSwatches(element: HTMLElement, read: () => readonly ColorSwatchItem[]): () => void {
+    const page = element.closest<HTMLElement>(".setting-page-content, .vertical-tab-content") ?? this.colorSourceScope();
+    let owner = this.colorSwatchPages.get(page);
+    if (!owner) {
+      owner = new ColorSwatchList(page, this.styleColorContext(), /** Retired page owners do not accumulate across repeated navigation. */ () => {this.colorSwatchOwners.delete(owner!); this.colorSwatchPages.delete(page);});
+      this.colorSwatchPages.set(page, owner); this.colorSwatchOwners.add(owner);
+    }
+    return owner.add(element, read);
+  }
+
+  /** Render a reusable pair beside an explicit native Edit action; source/queue behavior stays in existing editors. */
+  private colorAction(name: string, read: () => readonly ColorSwatchItem[], action: () => void, desc?: string): SettingDefinition<DeclarativeSettingKey> {
+    return {name, desc, render: /** Native cleanup owns the paired preview registration. */ setting => {
+      const release = this.mountColorSwatches(setting.controlEl.createDiv(), read);
+      setting.addButton(/** Use a named button rather than an unexplained clickable color label. */ button => button.setButtonText(this.kplexPlugin.translator("colors.edit")).setDisabled(this.kplexPlugin.settings.colorPreferencesFuture !== undefined).onClick(action));
+      return release;
+    }};
+  }
+
+  /** Read the same inherited fields and native role fallbacks used by the existing standard source editor. */
+  private standardSwatchItems(key: typeof STANDARD_NODE_COLOR_STYLES[number] | typeof STANDARD_LINK_COLOR_STYLES[number]): readonly ColorSwatchItem[] {
+    const settings = this.kplexPlugin.settings, node = key.endsWith("NodeStyle"), t = this.kplexPlugin.translator;
+    const values = {...(node ? settings.baseNodeStyle : settings.baseLinkStyle), ...settings[key]};
+    const fallback = nodePaintFallbacks({page: {isFolder: key === "folderNodeStyle", isTag: key === "tagNodeStyle", url: key === "urlNodeStyle" ? "url" : null, file: key === "virtualNodeStyle" ? null : true},
+      role: key === "centralNodeStyle" ? "center" : key === "siblingNodeStyle" ? "sibling" : "child", relationType: key === "inferredNodeStyle" ? RelationType.INFERRED : undefined});
+    return (node ? NODE_COLOR_FIELDS : LINK_COLOR_FIELDS).map(/** Each cell preserves its field label and current source identity. */ field => ({id: field, label: t(node ? nodeColorLabel(field as typeof NODE_COLOR_FIELDS[number]) : linkColorLabel(field as typeof LINK_COLOR_FIELDS[number])),
+      value: Reflect.get(values, field) as ColorValue | undefined, fallback: node ? nodeColorFallback(field as typeof NODE_COLOR_FIELDS[number], fallback) : field === "textColor" ? NATIVE_LINK_TEXT : NATIVE_LINK_STROKE}));
+  }
+
+  /** Bind the host's cloned page-description strips only after declarative siblings have mounted. */
+  private mountStandardOverview(setting: Setting): () => void {
+    let retired = false; const releases: Array<() => void> = [];
+    setting.settingEl.ownerDocument.defaultView?.queueMicrotask(/** Descriptions are cloned by Obsidian; the connected clones own their samples. */ () => {
+      if (retired || !setting.settingEl.isConnected) return;
+      const page = setting.settingEl.closest(".setting-page-content, .vertical-tab-content");
+      for (const element of Array.from(page?.querySelectorAll<HTMLElement>("[data-kplex-color-style]") ?? [])) {
+        const key = element.dataset.kplexColorStyle;
+        const known = [...STANDARD_NODE_COLOR_STYLES, ...STANDARD_LINK_COLOR_STYLES].find(candidate => candidate === key);
+        if (known) releases.push(this.mountColorSwatches(element, () => this.standardSwatchItems(known)));
+      }
+    });
+    return /** Native subpage replacement retires every connected description registration. */ () => {retired = true; for (const release of releases) release();};
+  }
+
   /** Standard styles expose the same source controls without expanding user-defined collections. */
   private standardColorPages(): SettingDefinitionItem<DeclarativeSettingKey>[] {
     const plugin = this.kplexPlugin, t = plugin.translator;
     return [...STANDARD_NODE_COLOR_STYLES, ...STANDARD_LINK_COLOR_STYLES].map(key => {
       const title = t(`colors.standard.${key}`);
       const fields = key.endsWith("NodeStyle") ? NODE_COLOR_FIELDS : LINK_COLOR_FIELDS;
-      return {type: "page", name: title, items: [{type: "group", heading: title, items: fields.map(field => ({
-        name: t(field === "strokeColor" ? "styles.lineColor" : field === "textColor" && key.endsWith("LinkStyle") ? "styles.labelColor" : nodeColorLabel(field)),
-        action: () => this.openStandardColor(key, field),
-      }))}]};
+      const description = createFragment(); description.createDiv({attr: {"data-kplex-color-style": key}});
+      return {type: "page", name: title, desc: description, items: [{type: "group", heading: title, items: fields.map(field => this.colorAction(
+        t(field === "strokeColor" ? "styles.lineColor" : field === "textColor" && key.endsWith("LinkStyle") ? "styles.labelColor" : nodeColorLabel(field)),
+        () => this.standardSwatchItems(key).filter(item => item.id === field),
+        () => this.openStandardColor(key, field),
+      ))}]};
     });
   }
 
@@ -2292,24 +2345,28 @@ export class KplexSettingTab extends PluginSettingTab {
         name: translate("settings.ui.visual.styling"),
         desc: translate("settings.ui.canvas.node.and.link.appearance"),
         items: [
-          {type: "page", name: translate("colors.standardColors"), items: this.standardColorPages()},
-          {type: "page", name: translate("colors.semanticColors"), items: [{type: "group", heading: translate("colors.semanticColors"), items: SEMANTIC_COLOR_SLOTS.map(slot => ({
-            name: translate(`colors.semantic.${slot}`), disabled: this.kplexPlugin.settings.colorPreferencesFuture !== undefined,
-            action: () => this.openSemanticColor(slot),
-          }))}]},
-          {
-            type: "group",
-            heading: translate("settings.ui.canvas.labels"),
-            items: [
-              { name: translate("settings.ui.plex.background"), action: () => this.openCanvasColorEditor() },
-              {name: translate("compass.title"), action: /** Load the optional rail only after explicit native navigation. */ () => {void this.openCompassSettings();}, disabled: this.kplexPlugin.settings.colorPreferencesFuture !== undefined},
+          {type: "page", name: translate("colors.colorsPage"), items: [
+            {type: "page", name: translate("colors.standardColors"), items: [
+              {name: translate("colors.palettePreview"), desc: translate("colors.palettePreviewHelp"), render: setting => this.mountStandardOverview(setting)},
+              ...this.standardColorPages(),
+            ]},
+            {type: "page", name: translate("colors.semanticColors"), items: [{type: "group", heading: translate("colors.semanticColors"), items: SEMANTIC_COLOR_SLOTS.map(slot => this.colorAction(
+              translate(`colors.semantic.${slot}`), () => [{label: translate(`colors.semantic.${slot}`), value: {kind: "theme", variable: `--kplex-semantic-${slot}`}, fallback: `var(${SEMANTIC_COLOR_DEFAULTS[slot]}, var(--text-normal))`}],
+              () => this.openSemanticColor(slot), translate(`colors.semanticHelp.${slot}`),
+            ))}]},
+            {type: "group", items: [
+              this.colorAction(translate("settings.ui.plex.background"), () => [{label: translate("settings.ui.plex.background"), value: this.kplexPlugin.settings.backgroundColor, fallback: NATIVE_CANVAS_FILL}], () => this.openCanvasColorEditor()),
+              this.colorAction(translate("compass.title"), () => COMPASS_DIRECTIONS.map(direction => ({label: translate(`compass.${direction}`), value: this.kplexPlugin.settings.colorPreferences.compass.fills[direction] ?? {kind: "theme", variable: COMPASS_COLOR_VARIABLES[direction]},
+                inherit: {kind: "theme", variable: `--kplex-semantic-${COMPASS_SEMANTIC_SLOTS[direction]}`}, fallback: `var(${SEMANTIC_COLOR_DEFAULTS[COMPASS_SEMANTIC_SLOTS[direction]]}, var(--text-normal))`})), () => {void this.openCompassSettings();}),
               {name: translate("colors.namedColors"), action: () => this.openColorPalette()},
               {name: translate("colors.adopt"), desc: translate("colors.adoptHelp"), action: () => this.openColorAdoption()},
-              { name: translate("settings.ui.use.frontmatter.display.names"), desc: translate("settings.ui.use.the.first.non.empty.value.from.the.configured.name.f"), control: { type: "toggle", key: "renderAlias" } },
-              { name: translate("settings.ui.name.fields"), desc: translate("settings.ui.comma.separated.frontmatter.fields.checked.in.order.text"), control: { type: "text", key: "nameFields" } },
-              { name: translate("settings.ui.show.full.tag.names"), control: { type: "toggle", key: "showFullTagName" } },
-            ],
-          },
+            ]},
+          ]},
+          {type: "page", name: translate("colors.labelsPage"), items: [
+            { name: translate("settings.ui.use.frontmatter.display.names"), desc: translate("settings.ui.use.the.first.non.empty.value.from.the.configured.name.f"), control: { type: "toggle", key: "renderAlias" } },
+            { name: translate("settings.ui.name.fields"), desc: translate("settings.ui.comma.separated.frontmatter.fields.checked.in.order.text"), control: { type: "text", key: "nameFields" } },
+            { name: translate("settings.ui.show.full.tag.names"), control: { type: "toggle", key: "showFullTagName" } },
+          ]},
           {
             type: "page",
             name: translate("settings.ui.node.styling"),
@@ -2362,13 +2419,13 @@ export class KplexSettingTab extends PluginSettingTab {
                 heading: translate("settings.ui.link.appearance"),
                 items: [
                   { name: translate("settings.ui.link.shape"), control: { type: "dropdown", key: "connectorStyle", defaultValue: "bezier", options: { bezier: translate("settings.ui.curved"), straight: translate("settings.ui.straight") } } },
-                  { name: translate("settings.ui.default.line.color"), action: () => this.openStandardColor("baseLinkStyle", "strokeColor") },
+                  this.colorAction(translate("settings.ui.default.line.color"), () => this.standardSwatchItems("baseLinkStyle").filter(item => item.id === "strokeColor"), () => this.openStandardColor("baseLinkStyle", "strokeColor")),
                   { name: translate("settings.ui.default.line.width"), control: { type: "slider", key: "baseLinkStyle.strokeWidth", min: 0.5, max: 8, step: 0.5 } },
                   { name: translate("settings.ui.default.line.style"), control: { type: "dropdown", key: "baseLinkStyle.strokeStyle", defaultValue: "solid", options: { solid: translate("settings.ui.solid"), dashed: translate("settings.ui.dashed"), dotted: translate("settings.ui.dotted") } } },
                   { name: translate("settings.ui.start.arrowhead"), control: { type: "dropdown", key: "baseLinkStyle.startArrowHead", defaultValue: "none", options: arrowOptions(translate) } },
                   { name: translate("settings.ui.end.arrowhead"), control: { type: "dropdown", key: "baseLinkStyle.endArrowHead", defaultValue: "none", options: arrowOptions(translate) } },
                   { name: translate("settings.ui.show.relationship.labels"), control: { type: "toggle", key: "baseLinkStyle.showLabel" } },
-                  { name: translate("settings.ui.relationship.label.color"), action: () => this.openStandardColor("baseLinkStyle", "textColor") },
+                  this.colorAction(translate("settings.ui.relationship.label.color"), () => this.standardSwatchItems("baseLinkStyle").filter(item => item.id === "textColor"), () => this.openStandardColor("baseLinkStyle", "textColor")),
                   { name: translate("settings.ui.relationship.label.size"), control: { type: "slider", key: "baseLinkStyle.fontSize", min: 7, max: 24, step: 1 } },
                   { name: translate("settings.ui.cross.link.opacity"), desc: translate("settings.ui.opacity.of.extra.links.between.visible.non.central.nodes"), control: { type: "slider", key: "crossLinkOpacity", min: 0, max: 100, step: 5 } },
                   {

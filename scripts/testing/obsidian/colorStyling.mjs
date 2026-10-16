@@ -39,8 +39,9 @@ function start(){
    p.openSettings();await until(()=>tab.containerEl.isConnected,'Native Settings missing');
    tab.openSettingsPage(p.translator('settings.ui.visual.styling'));
    await until(()=>!tab.containerEl.isConnected,'Native subpage did not replace root');
+   check(tab.openSettingsPage(p.translator('colors.colorsPage')),'Colors subpage missing');await wait(100);
    const settingsDoc=tab.containerEl.ownerDocument;
-   const clickRow=key=>{const label=[...settingsDoc.querySelectorAll('.setting-item-name')].find(el=>el.textContent===p.translator(key)&&el.getClientRects().length);check(label,'Visible Settings action missing '+key);label.closest('.setting-item').click()};
+   const clickRow=key=>{const label=[...settingsDoc.querySelectorAll('.setting-item-name')].find(el=>el.textContent===p.translator(key)&&el.getClientRects().length);check(label,'Visible Settings action missing '+key);const row=label.closest('.setting-item');if(row.querySelector('button'))row.querySelector('button').click();else row.click()};
    clickRow('settings.ui.plex.background');
    await until(()=>[...tab.colorDialogs].some(d=>d.modalEl.isConnected),'Actual background Settings action inert');
    let actual=[...tab.colorDialogs].at(-1);c.dialogs.push(actual);
@@ -49,6 +50,15 @@ function start(){
    clickRow('compass.title');await until(()=>[...tab.colorDialogs].some(d=>d.modalEl.isConnected),'Actual Compass Settings action inert');
    actual=[...tab.colorDialogs].at(-1);c.dialogs.push(actual);actual.close();
    passed('actual declarative Settings subpage actions and both harvested theme contexts');
+   check(tab.openSettingsPage(p.translator('colors.standardColors')),'Standard colors subpage missing');
+   await until(()=>settingsDoc.querySelectorAll('[data-kplex-color-style] .kplex-color-strip').length===26,'Standard dual palette strips missing');
+   const strips=[...settingsDoc.querySelectorAll('[data-kplex-color-style]')];check(strips.length===13,'Standard style inventory changed');
+   for(const strip of strips){const node=strip.dataset.kplexColorStyle.endsWith('NodeStyle');check(strip.querySelectorAll('[role=img]').length===(node?10:4),'Standard strip field order/count missing');check([...strip.querySelectorAll('[role=img]')].every(el=>!!el.style.getPropertyValue('--kplex-color-swatch')),'Standard palette contains unavailable colors')}
+   check(tab.openSettingsPage(p.translator('colors.standard.baseNodeStyle')),'Base node subpage missing');
+   await until(()=>settingsDoc.querySelectorAll('.setting-page-content .setting-item-control .kplex-color-strip').length===10,'Paired standard field swatches missing');
+   clickRow('styles.background');await until(()=>[...tab.colorDialogs].some(d=>d.modalEl.isConnected),'Paired field Edit action inert');actual=[...tab.colorDialogs].at(-1);c.dialogs.push(actual);actual.close();
+   passed('native standard style overview shows thirteen dual strips and five paired editable fields');
+
    app.setting.close();await wait(100);p.openSettings();await until(()=>tab.containerEl.isConnected,'Native Settings root did not reopen');
    observe(p,'saveData','writes');
    let dialog=await open(),root=dialog.contentEl;

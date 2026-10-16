@@ -5,7 +5,7 @@ import test from "node:test";
 import {build} from "esbuild";
 import {chromiumHarness} from "./support/browserTypeScript.mjs";
 import {nativeColorControls,initializeColorDom} from "./support/nativeColorControls.mjs";
-const compiled=await build({stdin:{resolveDir:process.cwd(),contents:`export * from './src/core/plex/colorCounterpart';export * from './src/ui/ColorAdoptionModal';export * from './src/adapters/obsidian/colorChanges';export * from './src/adapters/obsidian/themePreview';export * as React from 'react';export {createRoot} from 'react-dom/client';export {flushSync} from 'react-dom';export * from './src/ui/PlexFilter';export * from './src/settings';export * from './src/ui/ColorPaletteModal';export * from './src/ui/ColorPairModal';export * from './src/ui/CompassSettingsModal';export * from './src/core/plex/colorEditing';export {Modal as TestModal} from 'obsidian';export * from './src/ui/ColorLiteralEditor';export * from './src/ui/ColorSourceModal';export * from './src/adapters/obsidian/colorScope';export * from './src/adapters/obsidian/colorSample';export * from './src/adapters/obsidian/colorPresentation';export * from './src/core/plex/colorPreferences';export * from './src/core/contracts/colorValue';export * from './src/lang';`},bundle:true,write:false,format:"iife",globalName:"sourceModules",platform:"browser",plugins:[{name:"native-controls",setup(builder){builder.onResolve({filter:/^obsidian$/},()=>({path:"obsidian",namespace:"native"}));builder.onLoad({filter:/.*/,namespace:"native"},()=>({contents:nativeColorControls}));}}]});
+const compiled=await build({stdin:{resolveDir:process.cwd(),contents:`export * from './src/ui/ColorSwatchList';export * from './src/core/plex/colorCounterpart';export * from './src/ui/ColorAdoptionModal';export * from './src/adapters/obsidian/colorChanges';export * from './src/adapters/obsidian/themePreview';export * as React from 'react';export {createRoot} from 'react-dom/client';export {flushSync} from 'react-dom';export * from './src/ui/PlexFilter';export * from './src/settings';export * from './src/ui/ColorPaletteModal';export * from './src/ui/ColorPairModal';export * from './src/ui/CompassSettingsModal';export * from './src/core/plex/colorEditing';export {Modal as TestModal} from 'obsidian';export * from './src/ui/ColorLiteralEditor';export * from './src/ui/ColorSourceModal';export * from './src/adapters/obsidian/colorScope';export * from './src/adapters/obsidian/colorSample';export * from './src/adapters/obsidian/colorPresentation';export * from './src/core/plex/colorPreferences';export * from './src/core/contracts/colorValue';export * from './src/lang';`},bundle:true,write:false,format:"iife",globalName:"sourceModules",platform:"browser",plugins:[{name:"native-controls",setup(builder){builder.onResolve({filter:/^obsidian$/},()=>({path:"obsidian",namespace:"native"}));builder.onLoad({filter:/.*/,namespace:"native"},()=>({contents:nativeColorControls}));}}]});
 /** Run one isolated document and always release its actual browser process/profile. */
 async function scenario(code){const host=await chromiumHarness(compiled.outputFiles[0].text);try{assert.equal(await host.evaluate(initializeColorDom),true);return await host.evaluate(code)}finally{await host.cleanup()}}
 
@@ -443,5 +443,24 @@ test("native style focus uses the control owner and retires before a closed or m
   try{modal.focusAfterAttachment(field);if(timers.size!==1)throw Error('Focus scheduled on another window');const replacement=document.implementation.createHTMLDocument();replacement.body.append(field);timers.delete(1);callbacks[0]();if(focused)throw Error('Migrated control stole focus');doc.body.append(field);modal.focusAfterAttachment(field);modal.retire();if(timers.size)throw Error('Closed modal retained focus timer');callbacks[1]();if(focused)throw Error('Retired callback stole focus');}
   finally{view.setTimeout=original;view.clearTimeout=clear;frame.remove();modal.retire()}
   if(document.querySelector('iframe[sandbox]'))throw Error('Focus case retained preview');return true;
+ })()`),true);
+});
+
+
+test("one visible color list shares dual-mode harvesting, preserves field order and retires updates",async()=>{
+ assert.equal(await scenario(`(async()=>{
+  const t=sourceModules.createTranslator('en'),page=scope.createDiv(),a=page.createDiv(),b=page.createDiv();let changed,cssChanged,harvests=0,released=0;
+  const previous=createEl;window.createEl=(tag,options)=>{if(tag==='iframe')harvests++;return previous(tag,options)};
+  preferences.palette.push({id:'pair',name:'Pair',light:'#12345640',dark:'#abcdef80'});
+  const context={sourceScope:scope,translate:t,preferences:()=>preferences,subscribeColors:callback=>{changed=callback;return()=>{changed=null;released++}},subscribeCss:callback=>{cssChanged=callback;return()=>{cssChanged=null;released++}}};
+  const owner=new sourceModules.ColorSwatchList(scope,context);
+  const releaseA=owner.add(a,()=>[{label:'Background',value:{kind:'palette',id:'pair'},fallback:'var(--background-secondary)'},{label:'Text',value:{kind:'theme',variable:'--text-normal'},fallback:'var(--text-normal)'}]);
+  const releaseB=owner.add(b,()=>[{label:'Border',value:undefined,fallback:'var(--background-modifier-border)'}]);
+  await waitFor(()=>a.querySelectorAll('[role=img]').length===4&&b.querySelectorAll('[role=img]').length===2);
+  if(harvests!==1)throw Error('Per-row CSS harvesting '+harvests);
+  const labels=[...a.querySelectorAll('[role=img]')].map(el=>el.getAttribute('aria-label'));if(!labels[0].includes('Light · Background')||!labels[1].includes('Light · Text')||!labels[2].includes('Dark · Background'))throw Error('Pair field order unclear');
+  const cells=()=>a.querySelectorAll('[role=img]');if(cells()[0].style.getPropertyValue('--kplex-color-swatch')!=='#12345640'||cells()[2].style.getPropertyValue('--kplex-color-swatch')!=='#abcdef80')throw Error('Wrong named modes');
+  preferences.palette[0].light='#334455';changed();await waitFor(()=>cells()[0].style.getPropertyValue('--kplex-color-swatch')==='#334455');if(harvests!==1)throw Error('Palette edit reharvested CSS');
+  releaseA();releaseB();if(released!==2||changed||cssChanged||document.querySelector('iframe[sandbox]'))throw Error('Page resource leak');window.createEl=previous;return true;
  })()`),true);
 });

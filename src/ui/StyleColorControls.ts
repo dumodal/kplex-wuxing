@@ -1,4 +1,6 @@
 /** Detached parent-style color fields; every native child reuses the single source editor. */
+import {ColorSwatchList} from "./ColorSwatchList";
+import {nodeColorFallback, NATIVE_LINK_STROKE, NATIVE_LINK_TEXT, NATIVE_CANVAS_FILL} from "../index/style";
 import type {App} from "obsidian";
 import {ColorSourceModal} from "./ColorSourceModal";
 import type {ColorPreviewOptions, ColorPreviewTarget} from "./ColorPreview";
@@ -13,11 +15,13 @@ export type StyleColorContext = Omit<ColorPreviewOptions, "target"> & Readonly<{
 export class StyleColorControls {
   private readonly dialogs = new Set<ColorSourceModal>();
   private alive = true;
+  private readonly swatches: ColorSwatchList;
   private readonly refreshers = new Set<() => void>();
   private releaseColors: (() => void) | null = null;
 
   /** Capture narrow preview/data ports without acquiring a plugin, graph or settings writer. */
   constructor(private readonly app: App, private readonly context: StyleColorContext, private readonly canEdit: () => boolean) {
+    this.swatches = new ColorSwatchList(context.sourceScope, context);
     this.releaseColors = context.subscribeColors?.(() => {if (this.alive) for (const refresh of this.refreshers) refresh();}) ?? null;
   }
 
@@ -27,6 +31,8 @@ export class StyleColorControls {
     inherit: () => ColorValue | undefined): void {
     const row = container.createDiv({cls: "kplex-style-row"});
     row.createSpan({text: label});
+    const fallback = target.kind === "node" ? nodeColorFallback(target.field, this.context.fallbacks) : target.kind === "link" ? target.field === "textColor" ? NATIVE_LINK_TEXT : NATIVE_LINK_STROKE : NATIVE_CANVAS_FILL;
+    this.swatches.add(row.createDiv(), () => [{label, value: read(), inherit: inherit(), fallback}]);
     const button = row.createEl("button", {attr: {type: "button", "aria-label": label}});
     const refresh = (): void => {const value = read(); button.setText(colorIdentityText(value, this.context.preferences().palette) || this.context.translate(value === undefined ? "colors.inherit" : "colors.unsupportedSource"));};
     this.refreshers.add(refresh); refresh();
@@ -36,7 +42,7 @@ export class StyleColorControls {
         title: label, initial: read(), help: this.context.translate("colors.parentHelp"), actionLabel: this.context.translate("colors.useColor"),
         onSave: async source => {
           if (!this.alive || !this.canEdit()) throw new Error("Parent style editor retired");
-          write(source); refresh(); return {refreshPending: false};
+          write(source); refresh(); this.swatches.update(); return {refreshPending: false};
         },
         onClosed: () => this.dialogs.delete(dialog),
       });
@@ -45,5 +51,5 @@ export class StyleColorControls {
   }
 
   /** Retire children before parent Save/close/migration; late callbacks cannot mutate a captured draft. */
-  dispose(): void { if (!this.alive) return; this.alive = false; this.releaseColors?.(); this.releaseColors = null; this.refreshers.clear(); for (const dialog of this.dialogs) dialog.retire(); this.dialogs.clear(); }
+  dispose(): void { if (!this.alive) return; this.alive = false; this.swatches.dispose(); this.releaseColors?.(); this.releaseColors = null; this.refreshers.clear(); for (const dialog of this.dialogs) dialog.retire(); this.dialogs.clear(); }
 }
