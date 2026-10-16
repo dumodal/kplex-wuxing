@@ -11,13 +11,13 @@ export const NODE_COLOR_FIELDS = ["backgroundColor", "textColor", "borderColor",
 export const LINK_COLOR_FIELDS = ["strokeColor", "textColor"] as const;
 
 /** Restrict custom-property selection to one case-sensitive name, never a CSS expression. */
-export function isThemeColorName(value: string): boolean {
-  return /^--[A-Za-z_][A-Za-z0-9_-]{0,100}$/.test(value);
+export function isThemeColorName(value: unknown): boolean {
+  return typeof value === "string" && /^--[A-Za-z_][A-Za-z0-9_-]{0,100}$/.test(value);
 }
 
 /** Stable generated identities are independent of labels and safe as private CSS suffixes. */
-export function isPaletteColorId(value: string): boolean {
-  return /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(value);
+export function isPaletteColorId(value: unknown): boolean {
+  return typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(value);
 }
 
 /** Parse bounded decimal CSS components without accepting expressions or non-finite values. */
@@ -74,16 +74,17 @@ export function colorIdentityText(value: ColorValue | undefined, palette: readon
 }
 
 /** Compare color intent; two distinct references remain distinct even when their current paint matches. */
-export function colorValuesEqual(left: ColorValue | undefined, right: ColorValue | undefined): boolean {
+export function colorValuesEqual(left: unknown, right: unknown): boolean {
   if (left === right) return true;
-  if (left === undefined || right === undefined || typeof left !== typeof right) return false;
   if (typeof left === "string" && typeof right === "string") {
     const a = parseLiteralColor(left), b = parseLiteralColor(right);
     return !!a && !!b && a.red === b.red && a.green === b.green && a.blue === b.blue && a.alpha === b.alpha;
   }
-  if (typeof left === "string" || typeof right === "string") return false;
-  return left.kind === "theme" ? right.kind === "theme" && left.variable === right.variable
-    : left.kind === "palette" && right.kind === "palette" && left.id === right.id;
+  if (!left || !right || typeof left !== "object" || typeof right !== "object" || !("kind" in left) || !("kind" in right)) return false;
+  if (left.kind === "theme" && right.kind === "theme")
+    return ("variable" in left ? left.variable : undefined) === ("variable" in right ? right.variable : undefined);
+  return left.kind === "palette" && right.kind === "palette"
+    && ("id" in left ? left.id : undefined) === ("id" in right ? right.id : undefined);
 }
 
 /** Supply the public native ColorComponent's RGB input without encoding or changing opacity. */

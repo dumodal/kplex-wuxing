@@ -58,3 +58,39 @@ test('inline active-mode host colors keep the live preview but label the unavail
  try{await fixture(host);const r=await host.evaluate(`(async()=>{document.body.style.setProperty('--background-primary','#123456');const pair=await sampler.sample(scope,tokens);sampler.dispose();return pair})()`);assert.equal(r.dark.colors['--background-primary'],'rgb(18, 52, 86)');assert.equal(r.dark.confidence,'matched');assert.equal(r.light.confidence,'estimated');assert(r.reasons.includes('inline-mode-context'));
  }finally{await host.cleanup()}
 });
+
+test('production fallback expressions and bounded theme attributes match actual switches without changing live mode',async()=>{
+ const host=await chromiumHarness(compiled.outputFiles[0].text);
+ try{await fixture(host,'body[data-theme-choice="test"].theme-light{--surface-special:#fedcba}body[data-theme-choice="test"].theme-dark{--surface-special:#123456}');
+ const r=await host.evaluate(`(async()=>{document.body.setAttribute('data-theme-choice','test');const before=document.body.className;const expressions={'--preview-fill':'var(--missing-public, var(--surface-special))'};const first=await sampler.sample(scope,tokens,expressions);if(document.body.className!==before)throw Error('Live appearance mutated');document.body.classList.replace('theme-dark','theme-light');sampler.invalidate();const switched=await sampler.sample(scope,tokens,expressions);sampler.dispose();return{first,switched,frames:document.querySelectorAll('iframe').length}})()`);
+ assert.equal(r.first.light.colors['--preview-fill'],'rgb(254, 220, 186)');assert.equal(r.first.dark.colors['--preview-fill'],'rgb(18, 52, 86)');assert.equal(r.first.light.confidence,'matched');assert.deepEqual(r.first.light.colors,r.switched.light.colors);assert.deepEqual(r.first.dark.colors,r.switched.dark.colors);assert.equal(r.frames,0);
+ }finally{await host.cleanup()}
+});
+
+test('indirect inline mode inputs and bounded authored-property copying cannot certify an opposite context',async()=>{
+ const host=await chromiumHarness(compiled.outputFiles[0].text);
+ try{await fixture(host,'body{--indirect-color:var(--host-only-input)}');const r=await host.evaluate(`(async()=>{document.body.style.setProperty('--host-only-input','#112233');const indirect=await sampler.sample(scope,['--indirect-color']);sampler.invalidate();for(let n=0;n<520;n++)document.body.style.setProperty('--fixture-'+n,'red');const bounded=await sampler.sample(scope,['--indirect-color']);sampler.dispose();return{indirect,bounded,frames:document.querySelectorAll('iframe').length}})()`);
+ assert.equal(r.indirect.dark.colors['--indirect-color'],'rgb(17, 34, 51)');assert.equal(r.indirect.dark.confidence,'matched');assert.equal(r.indirect.light.confidence,'estimated');assert(r.indirect.reasons.includes('inline-mode-context'));assert(r.bounded.reasons.includes('context-limit'));assert.equal(r.frames,0);
+ }finally{await host.cleanup()}
+});
+
+test('adopting the source into another document rejects pending old-document samples and cached colors',async()=>{
+ const host=await chromiumHarness(compiled.outputFiles[0].text);
+ try{await fixture(host);const r=await host.evaluate(`(async()=>{
+  const first=await sampler.sample(scope,tokens);
+  const destination=document.createElement('iframe');document.body.append(destination);const doc=destination.contentDocument,view=destination.contentWindow;
+  doc.body.className='theme-light';Object.defineProperty(doc,'win',{value:view});view.createEl=tag=>doc.createElement(tag);view.createDiv=()=>view.createEl('div');view.createSpan=()=>view.createEl('span');
+  const sheet=new view.CSSStyleSheet();sheet.replaceSync('body{--background-primary:#fedcba;--text-normal:#123456;--interactive-accent:#abcdef;--local-color:#112233}');doc.adoptedStyleSheets=[sheet];doc.body.append(scope);
+  const next=await sampler.sample(scope,tokens);sampler.invalidate();const pending=sampler.sample(scope,tokens);document.body.append(scope);const retired=await pending;sampler.dispose();destination.remove();return{first,retired,next,frames:document.querySelectorAll('iframe').length};
+ })()`);assert.equal(r.retired,null);assert.equal(r.next.activeMode,'light');assert.equal(r.next.light.colors['--background-primary'],'rgb(254, 220, 186)');assert.equal(r.frames,0);
+ }finally{await host.cleanup()}
+});
+
+test('bounded context captures ordinary deep native panes and labels an exceeded ancestor budget',async()=>{
+ const host=await chromiumHarness(compiled.outputFiles[0].text);
+ try{await fixture(host,'body.theme-light .native-outer .fixture-scope{--deep-color:#123456}body.theme-dark .native-outer .fixture-scope{--deep-color:#abcdef}');const r=await host.evaluate(`(async()=>{
+  const outer=createDiv();outer.className='native-outer';document.body.append(outer);let parent=outer;for(let n=0;n<15;n++){const child=createDiv();parent.append(child);parent=child}parent.append(scope);
+  const ordinary=await sampler.sample(scope,['--deep-color']);sampler.invalidate();for(let n=0;n<25;n++){const wrapper=createDiv();scope.parentElement.append(wrapper);wrapper.append(scope)}const exceeded=await sampler.sample(scope,['--deep-color']);sampler.dispose();outer.remove();return{ordinary,exceeded};
+ })()`);assert.equal(r.ordinary.light.colors['--deep-color'],'rgb(18, 52, 86)');assert.equal(r.ordinary.dark.colors['--deep-color'],'rgb(171, 205, 239)');assert.equal(r.ordinary.light.confidence,'matched');assert(r.exceeded.reasons.includes('context-limit'));assert.equal(r.exceeded.light.confidence,'estimated');
+ }finally{await host.cleanup()}
+});

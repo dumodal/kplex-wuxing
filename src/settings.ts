@@ -20,13 +20,14 @@
  * Typed color sources retain literal alpha and named/theme identity; local palette preferences
  * are isolated from foreign graph imports and unsupported formats retain a persistence marker.
  */
+import { StyleEditorModal, appendIcon, type StyleCommitResult } from "./ui/StyleEditorModal";
+import { ColorSourceModal } from "./ui/ColorSourceModal";
 import {
   AbstractInputSuggest,
   App,
   Modal,
   Notice,
   PluginSettingTab,
-  getIcon,
   getIconIds,
   type SettingDefinitionItem,
   type Setting,
@@ -705,12 +706,7 @@ const nodeStyleColor = (value: string, previous: ColorValue | undefined, fallbac
   return parsed ? replaceLiteralRgb(parsed, value) ?? previous : previous;
 };
 
-function appendIcon(button: HTMLElement, name: string): void {
-  const icon = getIcon(name);
-  if (!icon) return;
-  icon.classList.add("kplex-lucide");
-  button.prepend(icon);
-}
+
 
 type OntologyStyleField = { name: string; roles: Role[] };
 type NodeStyleKind = "property" | "tag";
@@ -874,93 +870,7 @@ const describeNodeStyle = (style: NodeStyle, translate: Translator): string => {
 export { STYLE_SETTINGS_KEYS } from "./core/contracts/appearance";
 /** Narrow mutable draft captured from the latest live appearance at one queued operation's boundary. */
 export type StyleSettingsDraft = Pick<KplexSettings, typeof STYLE_SETTINGS_KEYS[number]>;
-/** Persistence has succeeded; a failed refresh must never be offered as an unsaved retry. */
-export type StyleCommitResult = Readonly<{ refreshPending: boolean }>;
-
-/** Native style-editor shell sharing pending exclusion and truthful completion across both style families. */
-abstract class StyleEditorModal extends Modal {
-  protected readonly translate = createObsidianTranslator();
-  private operationPending = false;
-  private operationCommitted = false;
-  private lifetime = 0;
-  private editorOpen = false;
-  private feedback: HTMLElement | null = null;
-
-  /** Start a fresh editor lifetime; retired asynchronous completions cannot close its replacement. */
-  protected beginEditor(): void {
-    this.lifetime += 1;
-    this.editorOpen = true;
-    this.operationPending = false;
-    this.operationCommitted = false;
-    this.modalEl.setAttribute("aria-busy", "false");
-    this.feedback = this.contentEl.createDiv({ cls: "setting-item-description", attr: { role: "status", "aria-live": "polite" } });
-  }
-
-  /** Submit once, freeze the captured draft and block Cancel/Escape until its durable outcome is known. */
-  protected runOperation(operation: (isCurrent: () => boolean) => Promise<StyleCommitResult>): void {
-    if (this.operationPending || this.operationCommitted || !this.editorOpen) return;
-    const lifetime = this.lifetime;
-    /** External teardown retires UI callbacks but never pretends an already submitted disk write was canceled. */
-    const isCurrent = (): boolean => this.editorOpen && this.lifetime === lifetime
-      && this.modalEl.isConnected && !this.modalEl.ownerDocument.defaultView?.closed;
-    const controls = Array.from(this.contentEl.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>("input, select, button"));
-    const disabled = controls.map(/** Restore existing fixed-family and inherited disabled state after a failed save. */ control => control.disabled);
-    this.operationPending = true;
-    this.modalEl.setAttribute("aria-busy", "true");
-    this.feedback?.setText(this.translate("styles.operation.saving"));
-    for (const control of controls) control.disabled = true;
-    /** Separate durable operation failure from UI completion failure so a saved change never becomes an unsaved retry. */
-    const finish = async (): Promise<void> => {
-      let result: StyleCommitResult;
-      try {
-        result = await operation(isCurrent);
-      } catch (error) {
-        console.error("K-Plex style operation was not saved", error);
-        if (!isCurrent()) return;
-        this.operationPending = false;
-        this.modalEl.setAttribute("aria-busy", "false");
-        controls.forEach(/** Only restore this still-live form after persistence rejected. */ (control, index) => { control.disabled = disabled[index]; });
-        this.feedback?.setText(this.translate("styles.operation.notSaved"));
-        return;
-      }
-      if (!isCurrent()) return;
-      this.operationPending = false;
-      this.operationCommitted = true;
-      if (result.refreshPending) {
-        try { new Notice(this.translate("styles.operation.savedRefreshPending")); }
-        catch (error) { console.error("K-Plex saved style recovery notice failed", error); }
-      }
-      try { this.close(); } catch (error) {
-        console.error("K-Plex saved style editor close failed", error);
-        if (!isCurrent()) return;
-        this.modalEl.setAttribute("aria-busy", "false");
-        this.feedback?.setText(this.translate("styles.operation.savedRefreshPending"));
-        for (const control of controls) {
-          // Saved operations cannot run again. Only dismissal is available after a native close failure.
-          if (control.tagName === "BUTTON" && control.textContent === this.translate("common.cancel")) {
-            control.disabled = false;
-            control.setText(this.translate("styles.operation.close"));
-            appendIcon(control, "x");
-          }
-        }
-      }
-    };
-    void finish();
-  }
-
-  /** Native Escape, the close icon and Cancel share the pending-operation exclusion. */
-  close(): void {
-    if (!this.operationPending) super.close();
-  }
-
-  /** Retire the exact form before subclasses remove controls and suggestion popovers. */
-  onClose(): void {
-    this.editorOpen = false;
-    this.operationPending = false;
-    this.lifetime += 1;
-    this.feedback = null;
-  }
-}
+export type { StyleCommitResult } from "./ui/StyleEditorModal";
 
 class NodeStyleModal extends StyleEditorModal {
   private static nextFormId = 0;
@@ -1737,6 +1647,7 @@ const arrowOptions = (translate: Translator): Record<Arrowhead, string> => ({
 
 export class KplexSettingTab extends PluginSettingTab {
   private actionSettings: ActionSettingsController | null = null;
+  private readonly colorDialogs = new Set<ColorSourceModal>();
 
   /** Keep shortcut editing in the native settings hierarchy with lazy rendered resource ownership. */
   constructor(app: App, private kplexPlugin: KplexPlugin) {
@@ -1752,6 +1663,8 @@ export class KplexSettingTab extends PluginSettingTab {
   /** Release row subscriptions and transient input before navigation, unload or settings teardown. */
   disposeActionSettings(): void {
     this.actionSettings?.dispose();
+    for (const dialog of this.colorDialogs) dialog.retire();
+    this.colorDialogs.clear();
   }
 
   /** Native tab switches must not retain an editor or capture handler from the previous page. */
@@ -1822,6 +1735,25 @@ export class KplexSettingTab extends PluginSettingTab {
       }, isCurrent, afterChange),
       kind,
     ).open();
+  }
+
+  /** Settings and canvas reuse one detached source shell and the existing queued writer. */
+  private openCanvasColorEditor(): void {
+    if (!this.containerEl.isConnected) return;
+    const plugin = this.kplexPlugin;
+    const dialog = new ColorSourceModal(this.app, {
+      title: plugin.translator("settings.ui.plex.background"), initial: plugin.settings.backgroundColor,
+      sourceScope: this.containerEl, translate: plugin.translator, target: {kind: "canvas"},
+      preferences: () => plugin.settings.colorPreferences, nodeStyle: () => plugin.settings.baseNodeStyle,
+      linkStyle: () => plugin.settings.baseLinkStyle, background: () => plugin.settings.backgroundColor,
+      subscribeCss: changed => { const ref = this.app.workspace.on("css-change", changed); return () => this.app.workspace.offref(ref); },
+      onSave: (color, current) => this.commitStyleChange(draft => {
+        if (color && typeof color !== "string" && color.kind === "palette" && !draft.colorPreferences.palette.some(pair => pair.id === color.id)) throw new Error("Named color no longer exists");
+        draft.backgroundColor = color;
+      }, current),
+      onClosed: () => this.colorDialogs.delete(dialog),
+    });
+    this.colorDialogs.add(dialog); dialog.open();
   }
 
   /** Durable completion is authoritative; manager/settings failures become saved recovery hints and retired dialogs cannot refresh UI. */
@@ -2176,7 +2108,7 @@ export class KplexSettingTab extends PluginSettingTab {
             type: "group",
             heading: translate("settings.ui.canvas.labels"),
             items: [
-              { name: translate("settings.ui.plex.background"), control: { type: "color", key: "backgroundColorHex" } },
+              { name: translate("settings.ui.plex.background"), action: () => this.openCanvasColorEditor() },
               { name: translate("settings.ui.use.frontmatter.display.names"), desc: translate("settings.ui.use.the.first.non.empty.value.from.the.configured.name.f"), control: { type: "toggle", key: "renderAlias" } },
               { name: translate("settings.ui.name.fields"), desc: translate("settings.ui.comma.separated.frontmatter.fields.checked.in.order.text"), control: { type: "text", key: "nameFields" } },
               { name: translate("settings.ui.show.full.tag.names"), control: { type: "toggle", key: "showFullTagName" } },

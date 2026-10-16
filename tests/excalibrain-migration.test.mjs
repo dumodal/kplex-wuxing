@@ -70,6 +70,8 @@ await build({
         open() { this.onOpen?.(); }
         close() { this.closed = true; this.onClose?.(); }
       }
+      export class ColorComponent {}
+      export class SuggestModal extends Modal {}
       export class Notice { static messages = []; constructor(message) { Notice.messages.push(message); } }
       export class Setting {
         constructor(container) { this.container = container; }
@@ -133,7 +135,7 @@ test("remote node image consent is explicit, durable and independent of foreign 
   assert.equal(importExcaliBrainGraphSettings(fixture, consent).allowRemoteNodeImages, true);
   assert.deepEqual(classifySettingsChange(captureSettingsPolicy(defaults), captureSettingsPolicy(consent)), {
     semanticInvalidation: false, presentationFacets: false, searchTerms: false,
-    nodeVisuals: true, render: true, typographyOnly: false, changedKeys: ["allowRemoteNodeImages"],
+    nodeVisuals: true, render: true, typographyOnly: false, paintOnly: false, changedKeys: ["allowRemoteNodeImages"],
   });
   assert.equal(encodeIndexSettingsSignature(consent), encodeIndexSettingsSignature(defaults));
   const plugin = { manifest: { id: "k-plex" }, settings: structuredClone(defaults),
@@ -171,7 +173,7 @@ test("cross-link visibility persists across reload and uses a presentation-only 
     "foreign imports preserve the local preference");
   assert.deepEqual(classifySettingsChange(captureSettingsPolicy(defaults), captureSettingsPolicy(restored)), {
     semanticInvalidation: false, presentationFacets: false, searchTerms: false,
-    nodeVisuals: false, render: true, typographyOnly: false, changedKeys: ["showCrossLinks"],
+    nodeVisuals: false, render: true, typographyOnly: false, paintOnly: false, changedKeys: ["showCrossLinks"],
   });
   assert.equal(encodeIndexSettingsSignature(restored), encodeIndexSettingsSignature(defaults));
 });
@@ -217,7 +219,7 @@ test("background throttle settings use declarative localized controls and save w
   const faster = migrateAndMergeSettings({ indexingThrottle: "faster" });
   assert.deepEqual(classifySettingsChange(before, captureSettingsPolicy(faster)), {
     semanticInvalidation: false, presentationFacets: false, searchTerms: false,
-    nodeVisuals: false, render: false, typographyOnly: false, changedKeys: [],
+    nodeVisuals: false, render: false, typographyOnly: false, paintOnly: false, changedKeys: [],
   });
   assert.equal(encodeIndexSettingsSignature(faster), encodeIndexSettingsSignature(defaults));
   assert.equal(importExcaliBrainGraphSettings({ ...fixture, indexingThrottle: "balanced" }, faster).indexingThrottle, "faster");
@@ -364,7 +366,7 @@ test("per-note Markdown zoom preferences reload and remain independent of foreig
   assert.deepEqual(importExcaliBrainGraphSettings({ ...fixture, centralNodeMarkdownZoomModes: { "Foreign.md": "scale" } }, local).centralNodeMarkdownZoomModes, { "Local.md": "scale" });
   assert.deepEqual(classifySettingsChange(captureSettingsPolicy(defaults), captureSettingsPolicy(local)), {
     semanticInvalidation: false, presentationFacets: false, searchTerms: false, nodeVisuals: false,
-    render: false, typographyOnly: false, changedKeys: [],
+    render: false, typographyOnly: false, paintOnly: false, changedKeys: [],
   });
   assert.equal(encodeIndexSettingsSignature(local), encodeIndexSettingsSignature(defaults));
 });
@@ -379,7 +381,7 @@ test("editor drawing-fit override defaults on and preserves explicit saved choic
   assert.equal(importExcaliBrainGraphSettings(fixture, saved).excalidrawFitOnNodeOpen, false);
   assert.deepEqual(classifySettingsChange(captureSettingsPolicy(saved), captureSettingsPolicy({ ...saved, excalidrawFitOnNodeOpen: true })), {
     semanticInvalidation: false, presentationFacets: false, searchTerms: false, nodeVisuals: false,
-    render: false, typographyOnly: false, changedKeys: [],
+    render: false, typographyOnly: false, paintOnly: false, changedKeys: [],
   }, "opening-only preference must not trigger source/index recanonicalization");
 });
 

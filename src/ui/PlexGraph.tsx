@@ -8,9 +8,11 @@
  * Evidence hints distinguish literal property references from descriptive source-kind labels;
  * shared localization metadata owns reference quoting.
  */
+import { ColorScope } from "../adapters/obsidian/colorScope";
+import { appearanceColorReferences, STYLE_SETTINGS_KEYS } from "../core/contracts/appearance";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent, type RefObject } from "react";
 import { createPlexContextMenu } from "./plexContextMenu";
-import { PlexBackgroundModal } from "./PlexBackgroundModal";
+import { ColorSourceModal } from "./ColorSourceModal";
 import { Menu, Notice, Platform, type WorkspaceLeaf } from "obsidian";
 import { addNativeSubmenu } from "../adapters/obsidian/nativeSubmenu";
 import { getDraggedFile } from "../adapters/obsidian/fileExplorerDrag";
@@ -21,7 +23,7 @@ import type { GraphIndex } from "../index/GraphIndex";
 import type { KplexLayoutProfile, KplexSettings, KplexViewSurface, SidecarMarkdownMode } from "../settings";
 import type { GateRole, GateSide, GraphPage, Neighbour, Neighborhood, NodeStyle, NodeVisual, PositionedEdge, PositionedNode, Role, ScrollZone } from "../types";
 import { LinkDirection, RelationType } from "../types";
-import { alphaHexToCss, resolveLinkStyle, resolveNodeStyle } from "../index/style";
+import { alphaHexToCss, resolveLinkStyle, resolveNodeStyle, currentNodeColorStyle, nodePaint, nodePaintFallbacks, NATIVE_CANVAS_FILL, NATIVE_LINK_STROKE, NATIVE_LINK_TEXT, NATIVE_LINK_LABEL_FILL } from "../index/style";
 import { TYPOGRAPHY_FIELDS, TYPOGRAPHY_LIMITS, type TypographyValues } from "../core/plex/typographyPreferences";
 import { buildScene, buildSectionExpandedScene, appendVisibleCrossLinks, projectNodeCounts, rowIntersectsViewport, effectiveLabelLimit, expandedChildReserve, expandedNodeWidth, expandedMiniLayout, horizontalDensity, layoutColumns, spacingPolicy, gateDiameter, siblingScale, withAreaHeightOverrides, type CenterNodeSize, type ZoneViewport, type ZoneAreaBounds } from "./layout";
 import { LayoutSlider } from "./components/LayoutSlider";
@@ -648,7 +650,7 @@ function Edge({
   const markerEnd = markerFor(reverse ? style.startArrowHead : style.endArrowHead);
   const baseWidth = style.strokeWidth ?? 1.2;
   const strokeWidth = highlighted ? Math.max(baseWidth + 1.7, 2.8) : baseWidth;
-  const stroke = alphaHexToCss(style.strokeColor, "rgba(190,210,235,.52)");
+  const stroke = alphaHexToCss(style.strokeColor, NATIVE_LINK_STROKE);
   const label = style.showLabel ? relationLabel(edge.typeDefinition) : null;
   const fontSize = style.fontSize ?? 10;
   const labelWidth = label ? Math.max(20, label.length * fontSize * 0.58 + 10) : 0;
@@ -697,7 +699,7 @@ function Edge({
         y={geometry.midpoint.y}
         textAnchor="middle"
         dominantBaseline="central"
-        fill={alphaHexToCss(style.textColor, "white")}
+        fill={alphaHexToCss(style.textColor, NATIVE_LINK_TEXT)}
         fontSize={fontSize}
       >{label}</text>
     </g>}
@@ -705,10 +707,12 @@ function Edge({
 }
 
 /** Compose the deterministic Plex scene; native-follow layouts land immediately while explicit navigation retains motion and central Open uses a main tab. */
-export function PlexGraph({ plugin, index, settings: viewSettings, surface, hostLeaf, predicate, lenses, filterLayoutMode, predicateRevision, showCrossLinks, activePath, navigationOrigin = "user", onSemanticDemandAcquired, renderRevision, semanticRevision, findFocusRequest, areaSettingsMode, onAreaSettingsModeChange, onApplyFindFilter, appliedFindFilterQuery, onClearFindFilter, onActivate, onWanderActivate, onOpen, onOpenInSidecar, onCentralNodeEditorChange, onCentralNodeModeChange, actionPorts, actionSurfaceId, displayState, fullscreenAvailable }: {
+export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings, paintLenses, surface, hostLeaf, predicate, lenses, filterLayoutMode, predicateRevision, showCrossLinks, activePath, navigationOrigin = "user", onSemanticDemandAcquired, renderRevision, semanticRevision, findFocusRequest, areaSettingsMode, onAreaSettingsModeChange, onApplyFindFilter, appliedFindFilterQuery, onClearFindFilter, onActivate, onWanderActivate, onOpen, onOpenInSidecar, onCentralNodeEditorChange, onCentralNodeModeChange, actionPorts, actionSurfaceId, displayState, fullscreenAvailable }: {
   plugin: KplexPlugin;
   index: GraphIndex;
   settings: KplexSettings;
+  paintSettings: KplexSettings;
+  paintLenses: CompiledGraphLensSet;
   surface: KplexViewSurface;
   hostLeaf: WorkspaceLeaf;
   predicate: CompiledGraphPredicate | null;
@@ -752,6 +756,22 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
   // App receives fresh prepared facades during unrelated renders. Explicit drafts survive those
   // publications; mutating one temporary facade would discard slow slider changes mid-gesture.
   const settings = useMemo(() => Object.assign(withAreaHeightOverrides(viewSettings, areaHeightOverrides), layoutOverrides), [viewSettings, areaHeightOverrides, layoutOverrides]);
+  const colorScope = useRef<ColorScope | null>(null);
+  // This fixed-length inventory compares current appearance owners, not cloned presentation facades.
+  // Ordinary source/status publications therefore never enumerate configured styles or probe CSS.
+  const colorConfiguration = useMemo(/** Capture configured source identities once per actual appearance change. */ () => ({
+    preferences: plugin.settings.colorPreferences, references: appearanceColorReferences(plugin.settings),
+  }), STYLE_SETTINGS_KEYS.map(key => plugin.settings[key]));
+  useLayoutEffect(/** Bind exact owner CSS after commit, retaining scene geometry and public token inheritance. */ () => {
+    if (colorScope.current) { colorScope.current.update(colorConfiguration); return; }
+    const root = viewport.current; if (!root) return;
+    colorScope.current = new ColorScope(root, colorConfiguration, {
+      subscribeCss: changed => { const ref = plugin.app.workspace.on("css-change", changed); return () => plugin.app.workspace.offref(ref); },
+    });
+  }, [plugin, colorConfiguration]);
+  useEffect(/** Migration/unload retires the captured owning-window scope before a replacement mounts. */ () => () => {
+    colorScope.current?.dispose(); colorScope.current = null;
+  }, [plugin]);
   const predicateEngine = useMemo(() => new GraphPredicateEngine(plugin.app), [plugin]);
   useEffect(/** Acquire before acknowledging App's preview handover so the center never loses its final live demand. */ () => {
     const release = index.acquireSemanticDemand(activePath);
@@ -1618,6 +1638,8 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
       measuredViewport.current = { width, height };
       if (preserveDisplayCamera) { preserveCameraOnNextLayout.current = true; displayResizeLayout.current = true; }
       setViewportSize({ width, height });
+      // Context-only theme variables can appear/disappear at responsive pane breakpoints.
+      colorScope.current?.invalidate();
       if (preserveDisplayCamera || centralEditorMaximized || Date.now() < suppressAutoFitUntil.current) return;
       if (settings.allowAutozoom && automaticFit.current?.path === activePath
         && sameFitCamera(automaticFit.current.camera, camera.current)) fitCurrentScene.current();
@@ -2008,8 +2030,8 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
         if (childTop < cluster.top || childBottom > cluster.top + cluster.viewportHeight) continue;
         const target = { x: cluster.left + child.localX, y: childTop - 2 };
         const geometry = edgeGeometry(source, target, "bottom", "top", settings.connectorStyle);
-        const baseStyle = resolveLinkStyle(child.relation, settings);
-        const lensStyle = neighborhood ? graphLensEdgeStyle(predicateEngine, index, lenses, {
+        const baseStyle = resolveLinkStyle(child.relation, paintSettings);
+        const lensStyle = neighborhood ? graphLensEdgeStyle(predicateEngine, index, paintLenses, {
           page: child.relation.page,
           label: child.label,
           center: neighborhood.center,
@@ -2021,7 +2043,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
           key: child.key,
           definition: child.relation.typeDefinition,
           d: geometry.d,
-          stroke: alphaHexToCss(style.strokeColor, "rgba(190,210,235,.52)"),
+          stroke: alphaHexToCss(style.strokeColor, NATIVE_LINK_STROKE),
           width: Math.max(0.65, (style.strokeWidth ?? 1.2) * 0.75),
           dash: style.strokeStyle === "dashed" ? "5 5" : style.strokeStyle === "dotted" ? "1.5 5" : undefined,
           markerStart: markerFor(reverse ? style.endArrowHead : style.startArrowHead),
@@ -2030,7 +2052,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
       }
     }
     return connectors;
-  }, [expandedClusters, settings.graphDepth, settings.connectorStyle, settings.inverseArrowDirection, settings.baseLinkStyle, settings.hierarchyLinkStyles, neighborhood, predicateEngine, index, lenses, predicateRevision]);
+  }, [expandedClusters, settings.graphDepth, settings.connectorStyle, settings.inverseArrowDirection, settings.baseLinkStyle, settings.hierarchyLinkStyles, neighborhood, predicateEngine, index, paintLenses, predicateRevision]);
 
   // Find uses this surface's projection, including overflow rows and expanded children.
   // Global lenses and area filters exclude candidates; camera clipping does not.
@@ -2173,7 +2195,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
   useEffect(/** Unmount/window migration invalidates visible-target sessions and closes owned pickers. */ () => () => {
     keyboardConnectRef.current = null;
     plugin.actionManager.closeSession(visibleConnectSession);
-    for (const dialog of graphDialogs.current) dialog.close();
+    for (const dialog of graphDialogs.current) { if (dialog instanceof ColorSourceModal) dialog.retire(); else dialog.close(); }
     graphDialogs.current.clear();
     actionPorts.current = null;
   }, [actionPorts]);
@@ -2201,6 +2223,15 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     });
   }, [scene.edges, scene.nodes, visibleNodePaths, neighborhood, predicateEngine, index, settings, lenses,
     predicateRevision, showCrossLinks, globalFiltering, layoutSectionExpansion]);
+
+  const paintedEdges = useMemo(/** Re-layer visible edge colors without rebuilding their route or scene. */ () => visibleEdges.map(edge => {
+    const target = renderedNodeMap.get(edge.targetPath); if (!target || !neighborhood) return edge;
+    const current = resolveLinkStyle({page: target.page, role: edge.role, relationType: edge.relationType, typeDefinition: edge.typeDefinition, linkDirection: edge.direction}, paintSettings);
+    const layered = graphLensEdgeStyle(predicateEngine, index, paintLenses, {page: target.page, label: target.label, center: neighborhood.center,
+      edge: {role: edge.role, relationType: edge.relationType, definition: edge.typeDefinition, linkDirection: edge.direction,
+        sourcePath: edge.explanationSourcePath ?? edge.sourcePath, targetPath: edge.explanationTargetPath ?? edge.targetPath}});
+    return {...edge, style: {...edge.style, strokeColor: current.strokeColor, textColor: current.textColor, ...layered}};
+  }), [visibleEdges, renderedNodeMap, neighborhood, paintSettings, predicateEngine, index, paintLenses]);
 
   const interaction = useMemo(() => {
     const edgeIds = new Set<string>();
@@ -3614,7 +3645,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     }
     if (connectDrag?.originPath === baseNode.page.path) highlightedGates.add(connectDrag.gate);
 
-    const lensNodeStyle = neighborhood ? graphLensNodeStyle(predicateEngine, index, lenses, {
+    const lensNodeStyle = neighborhood ? graphLensNodeStyle(predicateEngine, index, paintLenses, {
       page: baseNode.page,
       label: baseNode.label,
       center: neighborhood.center,
@@ -3627,7 +3658,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     // Layout counts are deliberately deferred placeholders. Reuse the center's actual render-time
     // coverage for autonomous readiness without querying counts/acquiring sources in timer polls.
     if (baseNode.role === "center") renderedCenterGates.current = { identity: baseNode.page.path, stats: countedDisplayNode.gateStats };
-    const styledDisplayNode = Object.keys(lensNodeStyle).length ? { ...countedDisplayNode, style: { ...countedDisplayNode.style, ...lensNodeStyle } } : countedDisplayNode;
+    const styledDisplayNode = { ...countedDisplayNode, style: { ...currentNodeColorStyle(countedDisplayNode, paintSettings), ...lensNodeStyle } };
     const gateCounts = filteredGateCounts?.isCurrent() ? filteredGateCounts.counts.get(baseNode.page.path) : undefined;
     const nodeForDisplay = globalFiltering && gateCounts
       ? {
@@ -3815,6 +3846,12 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
           {cluster.children.map((child) => {
             const maxChars = Math.min(22, effectiveLabelLimit(child.style.maxLabelLength ?? 30));
             const text = child.label.length > maxChars ? `${child.label.slice(0, Math.max(1, maxChars - 1))}…` : child.label;
+            const current = currentNodeColorStyle({page: child.relation.page, role: "child", relationType: child.relation.relationType,
+              typeDefinition: child.relation.typeDefinition, linkDirection: child.relation.linkDirection, style: child.style}, paintSettings);
+            const lensStyle = neighborhood ? graphLensNodeStyle(predicateEngine, index, paintLenses, {page: child.relation.page, label: child.label,
+              center: neighborhood.center, edge: {role: child.relation.role, relationType: child.relation.relationType, definition: child.relation.typeDefinition,
+                linkDirection: child.relation.linkDirection, sourcePath: cluster.parent.page.path, targetPath: child.relation.page.path}}) : {};
+            const paint = nodePaint({...current, ...lensStyle}, nodePaintFallbacks({page: child.relation.page, role: "child", relationType: child.relation.relationType}));
             return <div
               key={child.key}
               className={`kplex-expanded-mini-thought${cluster.parent.role === "sibling" ? " is-sibling-descendant" : ""}${findNodePaths.has(child.relation.page.path) ? " is-find-match" : ""}${keyboardSelection === child.key ? " is-keyboard-selected" : ""}`}
@@ -3827,9 +3864,9 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
                 top: child.localY - child.height / 2,
                 width: child.width,
                 height: child.height,
-                background: alphaHexToCss(child.style.backgroundColor, "rgba(0,0,0,.42)"),
-                color: alphaHexToCss(child.style.textColor, "white"),
-                borderColor: alphaHexToCss(child.style.borderColor, "rgba(255,255,255,.18)"),
+                background: paint.background,
+                color: paint.foreground,
+                borderColor: paint.border,
                 fontSize: 8 * (cluster.parent.role === "sibling" ? siblingScale(settings) : 1) * (settings.baseFontSize ?? 12.4) / 12.4,
               }}
               title={translate("graph.relatedNotePath", { label: child.label, path: child.relation.page.path })}
@@ -3939,7 +3976,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     ref={viewport}
     className={`kplex-plex${finding ? " is-finding" : ""}${navigationOrigin === "follow" ? " is-following-document" : sceneTransitioning || pathChangedThisRender ? " is-scene-transitioning" : ""}${sectionExpanded ? " is-section-expanded" : ""}${centralEditorMaximized ? " is-central-editor-maximized" : ""}${Platform.isIosApp ? " is-ios" : ""}${areaSettingsMode ? " is-area-settings-mode" : ""}${areaHover?.edgeActive ? " is-area-resize-ready" : ""}${resizingArea ? " is-area-resizing" : ""}`}
     style={{
-      background: alphaHexToCss(settings.backgroundColor, "#0c2233"),
+      background: alphaHexToCss(paintSettings.backgroundColor, NATIVE_CANVAS_FILL),
       "--kplex-motion-scale": String(Math.max(0, Math.min(2, settings.animationSpeed))),
       "--kplex-motion-ms": settings.animationSpeed <= 0 ? "0ms" : `${Math.max(140, Math.round(520 / Math.max(.25, settings.animationSpeed)))}ms`,
     } as CSSProperties}
@@ -3963,9 +4000,19 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
         runAction: /** Reuse the exact view-scoped action owner for playback and display modes. */ id => { void plugin.actionManager.dispatch({ id, source: "context-menu", surfaceId: actionSurfaceId }); },
         openSettings: /** Preserve the guarded native settings bridge. */ () => plugin.openSettings(),
         chooseBackground: /** The view owns this picker and closes it on migration/unmount. */ () => {
-          const dialog = new PlexBackgroundModal(plugin.app, plugin.settings.backgroundColor, translate,
-            /** Use the same settings policy/persistence path as the native Settings color control. */ async color => { plugin.settings.backgroundColor = color; await plugin.saveSettings(false); },
-            /** Native close releases exactly this view's picker reference. */ () => { graphDialogs.current.delete(dialog); });
+          const sourceScope = viewport.current; if (!sourceScope?.isConnected) return;
+          const dialog = new ColorSourceModal(plugin.app, {
+            title: translate("actions.canvasBackground"), initial: plugin.settings.backgroundColor,
+            sourceScope, translate, target: {kind: "canvas"},
+            preferences: () => plugin.settings.colorPreferences, nodeStyle: () => plugin.settings.baseNodeStyle,
+            linkStyle: () => plugin.settings.baseLinkStyle, background: () => plugin.settings.backgroundColor,
+            subscribeCss: changed => { const ref = plugin.app.workspace.on("css-change", changed); return () => plugin.app.workspace.offref(ref); },
+            onSave: async color => plugin.updateStyleSettings(draft => {
+              if (color && typeof color !== "string" && color.kind === "palette" && !draft.colorPreferences.palette.some(pair => pair.id === color.id)) throw new Error("Named color no longer exists");
+              draft.backgroundColor = color;
+            }),
+            onClosed: () => { graphDialogs.current.delete(dialog); },
+          });
           graphDialogs.current.add(dialog); dialog.open();
         },
         reportBug: /** Start the existing clipboard-first support flow before any async dispatch. */ () => plugin.reportBug(viewport.current ?? undefined, actionSurfaceId),
@@ -4028,13 +4075,13 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
             />}
           </g>;
         })}
-        {visibleEdges.map((edge) => <Edge
+        {paintedEdges.map((edge) => <Edge
           key={edge.id}
           edge={edge}
           nodes={renderedNodeMap}
           inverseArrowDirection={settings.inverseArrowDirection}
           connectorStyle={settings.connectorStyle}
-          labelBackground={alphaHexToCss(settings.backgroundColor, "#0c3e6a")}
+          labelBackground={NATIVE_LINK_LABEL_FILL}
           crossLinkOpacity={Math.max(0, Math.min(1, settings.crossLinkOpacity / 100))}
           highlighted={!connectDrag && (finding ? matchesOntologyFind(findQuery, edge.style.showLabel ? relationLabel(edge.typeDefinition) ?? undefined : undefined) : interaction.edgeIds.has(edge.id))}
           dimmed={connectDrag ? connectBlockedEdgeIds.has(edge.id) : !finding && hover !== null && !interaction.edgeIds.has(edge.id)}

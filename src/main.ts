@@ -1800,7 +1800,7 @@ export default class KplexPlugin extends Plugin {
     // Device typography changes reuse the existing graph and cannot expand a requested scope.
     // Style dictionaries/order also reuse semantic coverage. Preserve the legacy refresh
     // for other render changes and mixed writes, which may change requested scopes.
-    else if (effects.render && !effects.typographyOnly && !consentOnly && !isStyleOnlySettingsChange(effects)) await this.index.refreshSemanticSettings();
+    else if (effects.render && !effects.typographyOnly && !effects.paintOnly && !consentOnly && !isStyleOnlySettingsChange(effects)) await this.index.refreshSemanticSettings();
     // Workflow-only callers can still request their historical view notification. Changed settings
     // use the separate presentation channel and never pretend relationship evidence changed.
     if ((!effects.render || effects.typographyOnly) && notifyIndex) this.index.notifyPresentation();

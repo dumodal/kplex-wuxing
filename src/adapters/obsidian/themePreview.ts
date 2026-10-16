@@ -3,6 +3,8 @@
  * already loaded CSS in both Obsidian modes. Samples never become saved colors or live graph
  * defaults. The editor owns invalidation/disposal; normal rendering never enumerates stylesheets.
  */
+import {isThemeColorName} from "../../core/contracts/colorValue";
+
 export type AppearanceMode = "light" | "dark";
 export const THEME_PREVIEW_TOKENS = ["--background-primary", "--background-secondary", "--background-primary-alt",
   "--text-normal", "--text-muted", "--background-modifier-border", "--interactive-accent", "--text-on-accent",
@@ -15,25 +17,39 @@ export type ThemePreviewPair = Readonly<{
   light: ThemePreviewSample; dark: ThemePreviewSample; activeMode: AppearanceMode;
   reasons: readonly string[]; stylesheetCount: number; cssBytes: number;
 }>;
+export const THEME_PREVIEW_CONTEXT_LIMIT = 32;
 const MAX_BYTES = 8 * 1024 * 1024, MAX_SHEETS = 128, MAX_RULES = 30_000;
 
-/** Copy only authored custom properties, preserving live accent inputs without copying content. */
-function copyProperties(source: HTMLElement, target: HTMLElement): void {
+type ContextBudget = {properties: number; bytes: number; limited: boolean};
+/** Copy bounded authored CSS inputs and theme attributes only, without note/resource-bearing data. */
+function copyContext(source: HTMLElement, target: HTMLElement, budget: ContextBudget): void {
   for (let i = 0; i < source.style.length; i++) {
-    const name = source.style.item(i);
-    if (name.startsWith("--")) target.style.setProperty(name, source.style.getPropertyValue(name), source.style.getPropertyPriority(name));
+    const name = source.style.item(i); if (!name.startsWith("--")) continue;
+    const value = source.style.getPropertyValue(name);
+    budget.bytes += (name.length + value.length) * 2;
+    if (++budget.properties > 512 || budget.bytes > 128 * 1024) { budget.limited = true; break; }
+    target.style.setProperty(name, value, source.style.getPropertyPriority(name));
   }
+  let attributes = 0;
+  for (const attribute of Array.from(source.attributes)) if (/^data-(theme|color|style|css)(-|$)/.test(attribute.name)) {
+    if (++attributes > 32 || attribute.value.length > 256) { budget.limited = true; continue; }
+    target.setAttribute(attribute.name, attribute.value);
+  }
+  target.dir = source.dir;
 }
 
 /** Resolve complete CSS colors in their actual scope, including modern color syntax and alpha. */
-function sampleColors(scope: HTMLElement, tokens: readonly string[], createProbe: () => HTMLElement): Record<string, string> {
+function sampleColors(scope: HTMLElement, tokens: readonly string[], createProbe: () => HTMLElement, expressions: Readonly<Record<string, string>> = {}): Record<string, string> {
   const owner = scope.ownerDocument, view = owner.defaultView;
   if (!view) return {};
   const computed = view.getComputedStyle(scope), probe = createProbe(), colors: Record<string, string> = {};
   scope.append(probe);
   try {
     for (const token of tokens) {
-      const raw = computed.getPropertyValue(token).trim();
+      const expression = expressions[token];
+      if (expression !== undefined) probe.style.setProperty("--_kplex-preview-expression", expression);
+      const raw = expression === undefined ? computed.getPropertyValue(token).trim()
+        : view.getComputedStyle(probe).getPropertyValue("--_kplex-preview-expression").trim();
       probe.style.removeProperty("color");
       if (raw) probe.style.setProperty("color", raw);
       colors[token] = probe.style.getPropertyValue("color") ? view.getComputedStyle(probe).color : "";
@@ -48,7 +64,7 @@ export class ThemePreviewSampler {
   private disposed = false;
   private frame: HTMLIFrameElement | null = null;
   private cancelLoad: (() => void) | null = null;
-  private cached: { scope: HTMLElement; tokens: string; value: ThemePreviewPair } | null = null;
+  private cached: { scope: HTMLElement; owner: Document; tokens: string; value: ThemePreviewPair } | null = null;
 
   /** Retire cached colors after a real owner-scope or CSS change, never on picker drag. */
   invalidate(): void { this.revision++; this.cached = null; this.cancelLoad?.(); this.frame?.remove(); this.frame = null; }
@@ -57,24 +73,26 @@ export class ThemePreviewSampler {
   dispose(): void { this.disposed = true; this.invalidate(); }
 
   /** Sample loaded local CSS once per editor revision; unavailable context is explicitly estimated. */
-  async sample(scope: HTMLElement, tokens: readonly string[] = THEME_PREVIEW_TOKENS): Promise<ThemePreviewPair | null> {
-    if (this.disposed || !scope.isConnected || tokens.length > 64 || tokens.some(token => !/^--[A-Za-z_][A-Za-z0-9_-]{0,100}$/.test(token))) return null;
-    const key = tokens.join("|");
-    if (this.cached?.scope === scope && this.cached.tokens === key) return this.cached.value;
+  async sample(scope: HTMLElement, requested: readonly string[] = THEME_PREVIEW_TOKENS, expressions: Readonly<Record<string, string>> = {}): Promise<ThemePreviewPair | null> {
+    const tokens = [...new Set([...requested, ...Object.keys(expressions)])];
+    if (this.disposed || !scope.isConnected || tokens.length > 64 || tokens.some(token => !isThemeColorName(token)) || Object.keys(expressions).length > 16 || Object.values(expressions).some(value => value.length > 1024)) return null;
+    const owner = scope.ownerDocument, view = owner.defaultView;
+    if (!view || view.closed) return null;
+    const key = JSON.stringify([tokens, expressions]);
+    if (this.cached?.scope === scope && this.cached.owner === scope.ownerDocument && this.cached.tokens === key) return this.cached.value;
     this.cancelLoad?.();
-    const generation = ++this.revision, owner = scope.ownerDocument, view = owner.defaultView;
-    if (!view) return null;
+    const generation = ++this.revision;
     const activeMode: AppearanceMode = owner.body.classList.contains("theme-light") ? "light" : "dark";
     // Create through the equipped owning window; insertion adopts inert nodes into the isolated
     // document without assuming Obsidian helpers are installed in that script-free iframe realm.
     const helpers = owner.win as Window & { createSpan: typeof createSpan; createDiv: typeof createDiv; createEl: typeof createEl };
     /** The equipped parent factory creates only an inert probe, adopted by its destination scope. */
     const createProbe = (): HTMLElement => helpers.createSpan();
-    const live = sampleColors(scope, tokens, createProbe), reasons: string[] = [], texts: string[] = [];
+    const live = sampleColors(scope, tokens, createProbe, expressions), reasons: string[] = [], texts: string[] = [];
     // Host scripts can publish only the active mode through inline root colors. Their unavailable
     // alternate execution cannot be inferred by copying CSS; retain live paint and label estimates.
-    if (tokens.some(token => token !== "--interactive-accent"
-      && (owner.body.style.getPropertyValue(token) || owner.documentElement.style.getPropertyValue(token)))) reasons.push("inline-mode-context");
+    if ([owner.documentElement, owner.body].some(element => Array.from(element.style).some(name => name.startsWith("--")
+      && !name.startsWith("--accent-") && !["--interactive-accent", "--zoom-factor", "--font-text-size", "--indent-size"].includes(name)))) reasons.push("inline-mode-context");
     let cssBytes = 0, ruleCount = 0;
     const sheets = [...Array.from(owner.styleSheets), ...owner.adoptedStyleSheets];
     if (sheets.length > MAX_SHEETS) reasons.push("stylesheet-limit");
@@ -107,7 +125,7 @@ export class ThemePreviewSampler {
       height: `${view.innerHeight}px`, visibility: "hidden", "pointer-events": "none", border: "0" })) frame.style.setProperty(property, value);
     this.frame?.remove(); this.frame = frame;
     /** Reject every late result after CSS supersession, scope removal or editor disposal. */
-    const current = (): boolean => !this.disposed && this.revision === generation && scope.isConnected;
+    const current = (): boolean => !this.disposed && this.revision === generation && scope.isConnected && scope.ownerDocument === owner && !view.closed;
     try {
       await new Promise<void>((resolve, reject) => {
         let settled = false;
@@ -135,28 +153,31 @@ export class ThemePreviewSampler {
       doc.adoptedStyleSheets = texts.map(/** Keep copied CSS in this exact isolated realm. */ text => { const sheet = new frameView.CSSStyleSheet(); sheet.replaceSync(text); return sheet; });
       doc.documentElement.className = owner.documentElement.className;
       doc.documentElement.dir = owner.documentElement.dir;
-      copyProperties(owner.documentElement, doc.documentElement); copyProperties(owner.body, doc.body);
+      const contextBudget: ContextBudget = {properties: 0, bytes: 0, limited: false};
+      copyContext(owner.documentElement, doc.documentElement, contextBudget); copyContext(owner.body, doc.body, contextBudget);
       const ancestors: HTMLElement[] = [];
-      for (let element: HTMLElement | null = scope; element && element !== owner.body && ancestors.length < 12; element = element.parentElement) ancestors.unshift(element);
+      for (let element: HTMLElement | null = scope; element && element !== owner.body && ancestors.length < THEME_PREVIEW_CONTEXT_LIMIT; element = element.parentElement) ancestors.unshift(element);
+      if (ancestors[0]?.parentElement && ancestors[0].parentElement !== owner.body) reasons.push("context-limit");
       let target = doc.body;
       for (const original of ancestors) {
         // Only inert context containers are copied, never note content or resource-bearing DOM.
         const clone = helpers.createDiv(); clone.className = original.className;
         if (original.id) clone.id = original.id;
-        copyProperties(original, clone); target.append(clone); target = clone;
+        copyContext(original, clone, contextBudget); target.append(clone); target = clone;
       }
+      if (contextBudget.limited) reasons.push("context-limit");
       const sampled: Partial<Record<AppearanceMode, Record<string, string>>> = {};
       for (const mode of ["light", "dark"] as const) {
         doc.body.className = owner.body.className;
         doc.body.classList.remove("theme-light", "theme-dark"); doc.body.classList.add(`theme-${mode}`);
-        sampled[mode] = sampleColors(target, tokens, createProbe);
+        sampled[mode] = sampleColors(target, tokens, createProbe, expressions);
       }
       if (tokens.some(token => sampled[activeMode]?.[token] !== live[token])) reasons.push("active-context-mismatch");
       if (!current()) return null;
       const confidence = reasons.length ? "estimated" : "matched";
       const value: ThemePreviewPair = { activeMode, light: { colors: activeMode === "light" ? live : sampled.light ?? {}, confidence: activeMode === "light" ? "matched" : confidence },
         dark: { colors: activeMode === "dark" ? live : sampled.dark ?? {}, confidence: activeMode === "dark" ? "matched" : confidence }, reasons: [...new Set(reasons)], stylesheetCount: texts.length, cssBytes };
-      this.cached = { scope, tokens: key, value };
+      this.cached = { scope, owner, tokens: key, value };
       return value;
     } catch (error) {
       if (!current()) return null;

@@ -16,7 +16,7 @@ export function paletteColorProperty(id: string): string { return `--_kplex-colo
 
 /** An explicit semantic choice precedes the public default; unset choices leave native inheritance intact. */
 export function semanticColorCss(slot: SemanticColorSlot): string {
-  return `var(--_kplex-color-semantic-${slot}, var(--kplex-semantic-${slot}, var(${SEMANTIC_COLOR_DEFAULTS[slot]})))`;
+  return `var(--_kplex-color-semantic-${slot}, var(${SEMANTIC_COLOR_DEFAULTS[slot]}, var(--text-normal)))`;
 }
 
 /** Project supported source intent without flattening references to today's RGB values. */

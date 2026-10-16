@@ -237,6 +237,20 @@ test('durable and compatibility style saves retain real on-demand authority with
   }finally{restores.reverse().forEach(restore=>restore());release?.();o.close();}
 })()`));
 
+test('actual color saves emit paint only and retain source, search and presentation authority', async()=>scenario(`(async()=>{
+ const o=await onDemandFixture('v2-demand-color-commit',{noteTypeStyles:{},tagNodeStyles:{},tagStyleList:[],hierarchyLinkStyles:{},colorPreferences:sourceModules.defaultColorPreferences()});const{f,index}=o;let release;const restores=[];
+ try{f.add('A.md','',{Parent:'[[B]]'});f.add('B.md','');f.app.metadataCache.resolvedLinks={'A.md':{'B.md':1}};ok(await index.initializeOnDemandBaseline(),'Baseline');release=index.acquireSemanticDemand('A.md');await settleDemand(index);await index.sourceAcquisition.repository.flush();
+ const host=typographyHost(o),work={reads:0,parses:0,acquisitions:0,semantics:0,search:0,visuals:0,publications:0},events=[];
+ const observe=(owner,name,counter)=>{const original=owner[name];owner[name]=function(...args){work[counter]++;return original.apply(this,args)};restores.push(()=>owner[name]=original)};
+ observe(f.app.vault,'read','reads');observe(f.app.vault,'cachedRead','reads');observe(index.sourceAcquisition,'parse','parses');observe(index.sourceAcquisition,'acquire','acquisitions');observe(index,'refreshSemanticSettings','semantics');observe(index,'prepareSearchIndex','search');observe(index,'invalidateNodeVisuals','visuals');restores.push(index.subscribe(()=>work.publications++));restores.push(index.subscribePresentation(event=>events.push(event)));
+ const revision=index.presentationRevision,token=index.onDemandIndexed.get('A.md');
+ await host.updateStyleSettings(draft=>{draft.baseNodeStyle={...draft.baseNodeStyle,textColor:{kind:'theme',variable:'--text-normal'}};});
+ await host.updateStyleSettings(draft=>{draft.colorPreferences.palette.push({id:'a',name:'A',light:'#11223300',dark:'#aabbcc80'});draft.backgroundColor={kind:'palette',id:'a'};});
+ host.settings.baseLinkStyle={...host.settings.baseLinkStyle,strokeColor:'#abcdef80'};await host.saveSettings(false);
+ equal(work,{reads:0,parses:0,acquisitions:0,semantics:0,search:0,visuals:0,publications:0},'Color changes do not request work');equal(events.map(event=>event.kind),['paint','paint','paint'],'No ordinary scene notification');equal(index.presentationRevision,revision,'Presentation capability remains valid');ok(index.onDemandIndexed.get('A.md')===token,'Exact source token retained');return true;
+ }finally{restores.reverse().forEach(restore=>restore());release?.();o.close()}
+})()`));
+
 test('actual typography saves and resets retain on-demand authority with zero source work; mixed overlapping saves still recanonicalize', async()=>scenario(`(async()=>{
   const o=await onDemandFixture('v2-demand-typography',{typographyProfiles:{},baseFontSize:12.4,wrapNodeLabels:true});
   const {f,index}=o;let release,releaseStorage;const restores=[];

@@ -142,7 +142,13 @@ import {
   presentationFacetsForPage, withPreparedPresentation, type PreparedGraphPresentation, type PresentationStatus,
 } from "./GraphPresentation";
 
+/** Existing presentation channel distinguishes color repaint from scene/presentation work. */
+export type PresentationChange = Readonly<{kind: "paint" | "presentation"; changedKeys?: readonly import("../core/graph/settingsPolicy").SettingDiagnosticKey[]}>;
+const ORDINARY_PRESENTATION_CHANGE: PresentationChange = {kind: "presentation"};
+
 type PreparedPresentationPublication = {
+  /** Reuse the immutable preparation proof at final acceptance without another full encoding. */
+  policy: ReturnType<typeof captureSettingsPolicy>;
   settings: KplexSettings;
   facets: PreparedGraphPresentation;
   search: PreparedSearchIndex;
@@ -470,7 +476,7 @@ export class GraphIndex {
   private urlBackgroundTask: Promise<boolean> | null = null;
   private persistentCachePurged = false;
   private listeners = new Set<() => void>();
-  private presentationListeners = new Set<() => void>();
+  private presentationListeners = new Set<(event: PresentationChange) => void>();
   private presentationSettings: KplexSettings;
   private presentationStatuses = new WeakMap<GraphPage, PresentationStatus>();
   private presentationRun = 0;
@@ -2507,7 +2513,7 @@ export class GraphIndex {
   notify(): void { this.emit(); }
 
   /** Subscribe to presentation publication without invalidating evidence/relationship consumers. */
-  subscribePresentation(listener: () => void): () => void {
+  subscribePresentation(listener: (event: PresentationChange) => void): () => void {
     this.presentationListeners.add(listener);
     return () => { this.presentationListeners.delete(listener); };
   }
@@ -2651,8 +2657,8 @@ export class GraphIndex {
   }
 
   /** Notify visible views; hidden views catch up through their existing visibility subscription. */
-  private emitPresentation(): void {
-    for (const listener of this.presentationListeners) listener();
+  private emitPresentation(event: PresentationChange = ORDINARY_PRESENTATION_CHANGE): void {
+    for (const listener of this.presentationListeners) listener(event);
   }
 
   /** Request a render-only update for legacy workflow controls without touching evidence. */
@@ -2719,7 +2725,7 @@ export class GraphIndex {
       // No await below this line: policy, facets and search become visible as one publication.
       if (facets) applyPreparedPresentation(facets, this.presentationStatuses);
       this.presentationSettings = settings;
-      this.presentationRevision += 1;
+      if (!effects.paintOnly) this.presentationRevision += 1;
       if (effects.presentationFacets || effects.searchTerms) this.aliasVocabularyPresentationRevision += 1;
       if (effects.searchTerms) this.titleCache.clear();
       if (search) this.installSearchIndex(search);
@@ -2727,7 +2733,7 @@ export class GraphIndex {
       if (effects.nodeVisuals) this.invalidateNodeVisuals();
       this.recordIndexDiagnostic("restore", facets?.pending ? "presentation-inputs-pending" : "presentation-settings-adapted",
         { changedKeys: [...keys], modified: facets?.pending ?? 0 });
-      this.emitPresentation();
+      this.emitPresentation({ kind: effects.paintOnly ? "paint" : "presentation", changedKeys: keys });
       if (effects.presentationFacets || effects.searchTerms) this.retryUrlAliasUpgrade();
       return;
     }
@@ -2755,7 +2761,13 @@ export class GraphIndex {
         const sourceRevision = this.plugin.getIndexSourceRevision();
         const current = (): boolean => isCurrent() && !this.diagnosticsClosed &&
           sourceRevision === this.plugin.getIndexSourceRevision();
-        const policyCurrent = (): boolean => current() && !classifySettingsChange(policy, captureSettingsPolicy(this.plugin.settings)).render;
+        const policyCurrent = (): boolean => {
+          if (!current()) return false;
+          const change = classifySettingsChange(policy, captureSettingsPolicy(this.plugin.settings));
+          // Colors cannot alter these cached source facets or search inputs. Mixed policy changes
+          // retain their conservative retry; every physical/source/compiler fence remains current().
+          return !change.render || change.paintOnly;
+        };
         const selection = sourceCompiledFacets ? { ...ALL_PRESENTATION_FACETS, noteType: false, styleTags: false } : ALL_PRESENTATION_FACETS;
         const facets = await prepareGraphPresentation(state.pages.values(), settings, selection,
           this.app, this.fieldCache, structuralPreview ? { getBodies: () => Promise.resolve(new Map()) } : this.indexedDb, current, onProgress, () => this.workScheduler.checkpoint(workPriority));
@@ -2776,13 +2788,13 @@ export class GraphIndex {
           const ready = { ...facets, facets: readyFacets };
           const search = await this.prepareSearchIndex(state, current, onProgress, settings, ready, undefined, background, workPriority, retainRestoreWork);
           if (!search || !policyCurrent() || !ready.isCurrent()) continue;
-          return { settings, facets: ready, search };
+          return { policy, settings, facets: ready, search };
         }
         // Cold structural publication keeps its bounded seed search and never preloads all bodies.
         const search = structuralPreview ? { entries: [], byPath: new Map<string, SearchEntry>() } :
           await this.prepareSearchIndex(state, current, onProgress, settings, facets, undefined, background, workPriority, retainRestoreWork);
         if (!search || !policyCurrent() || !facets.isCurrent()) continue;
-        return { settings, facets, search };
+        return { policy, settings, facets, search };
       }
       return null;
 } finally { releaseWork(); }
@@ -2790,10 +2802,14 @@ export class GraphIndex {
 
   /** Install facets and their narrow search lifetime immediately before graph/search publication. */
   private acceptPresentation(prepared: PreparedPresentationPublication): void {
-    const effects = classifySettingsChange(captureSettingsPolicy(this.presentationSettings), captureSettingsPolicy(prepared.settings));
+    const latestPolicy = captureSettingsPolicy(this.plugin.settings);
+    const paint = classifySettingsChange(prepared.policy, latestPolicy);
+    // No await: a source publication must never undo a color already committed during preparation.
+    const acceptedSettings = paint.paintOnly ? capturePresentationSettings(this.plugin.settings) : prepared.settings;
+    const effects = classifySettingsChange(captureSettingsPolicy(this.presentationSettings), paint.paintOnly ? latestPolicy : prepared.policy);
     if (effects.presentationFacets || effects.searchTerms) this.aliasVocabularyPresentationRevision += 1;
     applyPreparedPresentation(prepared.facets, this.presentationStatuses);
-    this.presentationSettings = prepared.settings;
+    this.presentationSettings = acceptedSettings;
     this.presentationRevision += 1;
   }
 

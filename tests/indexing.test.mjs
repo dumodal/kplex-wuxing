@@ -453,6 +453,16 @@ for (const file of [
   "src/adapters/obsidian/relationshipMetadataWrite.ts",
   "src/adapters/obsidian/settingsNavigation.ts",
   "src/adapters/obsidian/hiddenPropertyName.ts",
+  "src/ui/StyleEditorModal.ts",
+  "src/ui/ColorSourceModal.ts",
+  "src/ui/ColorLiteralEditor.ts",
+  "src/ui/ColorSourceEditor.ts",
+  "src/ui/ColorPreview.ts",
+  "src/core/plex/colorContrast.ts",
+  "src/adapters/obsidian/rgbColorControl.ts",
+  "src/adapters/obsidian/colorScope.ts",
+  "src/adapters/obsidian/colorSample.ts",
+  "src/adapters/obsidian/themePreview.ts",
   "src/ui/HiddenFieldSetupModal.ts",
   "src/util/perf.ts",
   "src/main.ts",
@@ -595,6 +605,9 @@ class Notice { constructor() {} }
 class Modal { constructor(app) { this.app = app; } open() { Modal.latest = this; } }
 class App {}
 class AbstractInputSuggest {}
+class SuggestModal extends Modal {}
+class ColorComponent {}
+const getLanguage = () => "en";
 class PluginSettingTab { constructor(app) { this.app = app; this.containerEl = { addClass() {} }; } update() {} }
 function getIcon() { return null; }
 function getIconIds() { return []; }
@@ -602,7 +615,7 @@ function normalizePath(path) { return path; }
 function setIcon() {}
 module.exports = {
   TAbstractFile, TFile, TFolder, getAllTags, moment, Platform, apiVersion: "1.14.2", Plugin, FileView, MarkdownView,
-  Menu, Notice, normalizePath, setIcon, Modal, App, AbstractInputSuggest, PluginSettingTab, getIcon, getIconIds,
+  Menu, Notice, normalizePath, setIcon, Modal, App, AbstractInputSuggest, PluginSettingTab, getIcon, getIconIds, SuggestModal, ColorComponent, getLanguage,
 };
 `);
 
@@ -4361,10 +4374,11 @@ try {
     const edgeJs = ts.transpileModule(plexGraphSource.slice(markerStart, markerEnd) + plexGraphSource.slice(edgeStart, edgeEnd), {
       compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None, jsx: ts.JsxEmit.React },
     }).outputText;
-    const Edge = new Function("React", "LinkDirection", "gatesForEdge", "gatePoint", "edgeGeometry", "alphaHexToCss", "relationLabel", `${edgeJs}; return Edge;`)(
+    const Edge = new Function("React", "LinkDirection", "gatesForEdge", "gatePoint", "edgeGeometry", "alphaHexToCss", "relationLabel", "NATIVE_LINK_STROKE", "NATIVE_LINK_TEXT", `${edgeJs}; return Edge;`)(
       { createElement: (type, props, ...children) => ({ type, props, children }) }, LinkDirection,
       () => ({ source: "left", target: "right" }), () => ({ x: 0, y: 0 }),
       () => ({ d: "M0 0L1 1", midpoint: { x: 0, y: 0 } }), value => value, value => value,
+      require(join(temp, "src/index/style.js")).NATIVE_LINK_STROKE, require(join(temp, "src/index/style.js")).NATIVE_LINK_TEXT,
     );
     try {
       assert.equal(await arrowIndex.rebuild(), true);
