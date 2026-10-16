@@ -357,3 +357,19 @@ test("Compass Settings merges only edited fields and rejects deleted named sourc
   const before=sourceModules.TestModal.instances.length;p.settings.colorPreferencesFuture={version:99};await tab.openCompassSettings();if(sourceModules.TestModal.instances.length!==before)throw Error('Future preferences editable');tab.disposeActionSettings();return true;
  })()`),true);
 });
+
+
+test("declarative Settings subpages replace the root but retain live color context and canvas action",async()=>{
+ assert.equal(await scenario(`(async()=>{
+  const t=sourceModules.createTranslator('en'),plugin={translator:t,settings:{...sourceModules.DEFAULT_SETTINGS,colorPreferences:preferences},index:{subscribePresentation:()=>()=>{}}};
+  const app={workspace:{on:()=>({}),offref:()=>{}}};
+  const tab=new sourceModules.KplexSettingTab(app,plugin);tab.containerEl.remove();
+  const page=document.body.createDiv({cls:'setting-page-content'});page.createSpan({text:'Native subpage'});
+  if(tab.styleColorContext().sourceScope!==page)throw Error('Detached root retained');
+  tab.openCanvasColorEditor();const modal=sourceModules.TestModal.instances.at(-1);
+  if(!modal?.modalEl.isConnected)throw Error('Canvas action inert');
+  await waitFor(()=>modal.contentEl.querySelectorAll('.kplex-color-preview-canvas').length===2&&[...modal.contentEl.querySelectorAll('.kplex-color-preview-canvas')].every(el=>el.style.display!=='none'&&!!el.style.getPropertyValue('--_kplex-preview-canvas')));
+  if(modal.contentEl.textContent.includes('Theme preview unavailable'))throw Error('Both contexts missing');
+  modal.close();tab.disposeActionSettings();page.remove();return true;
+ })()`),true);
+});

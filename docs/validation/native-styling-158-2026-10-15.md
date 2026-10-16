@@ -110,3 +110,13 @@ Full D1 found a new camera-fixture port, preserved the original flush-count asse
 E closeout still needs to verify/correct the separately identified transparent-counterpart preview backdrop, finish the touched-dialog focus lifetime cleanup and guides, and run final full/native acceptance. D does not establish transparent counterpart pixel correctness, minimum Obsidian1.13, macOS or physical iOS/Android picker/touch acceptance. Keep PR draft; no merge/release.
 
 Maintainer testing subsequently exposed gaps in the actual declarative Settings window: unavailable paired previews, inert canvas/tint actions, sparse color choices and unclear presentation. The six sampler combinations above do not establish acceptance of that Settings path. Follow-up work will repair that path, add explicit counterpart recommendations, paired swatches/strips and separate Colors/Labels navigation. PR remains draft.
+
+## Settings correction E1
+
+The maintainer's actual Settings report is reproduced on Windows: after native navigation into Visual styling, Obsidian removes `PluginSettingTab.containerEl` and displays a sibling `.setting-page-content`. The old scope is disconnected. The background action returns early, lazy Compass opening is rejected and the sampler correctly refuses that detached scope. This is an ownership defect, not missing light/dark theme support.
+
+The existing tab now reacquires only the visible native page in its exact Settings document; the connected page owns sampling and the lazy-load fence. No global theme mutation or second harvesting system is needed. The isolated style-harvesting approach matches the maintainer's Excalidraw reference while retaining resource blocking and bounded snapshots.
+
+Node22.22.2: all 22 shared-editor browser tests pass, including detached-root regression with actual painted dual cards; official lint, installed types and real production build pass. The exact installed build passes all 17 native color/Compass cases, including the actual declarative background and Compass row clicks after root detachment and both painted harvested contexts. Original configuration bytes restore; driver cleanup passes. Main SHA `4b7726a27b4d0243981b14e53455d944855e3e3786f7f53ae245644ca89056da`; CSS/manifest unchanged from D. Raw targeted logs, exact staging report and native report remain under `%TEMP%/kplex-158-E1-*`; no archive published. Full verification will run after the remaining UI revisions; these checks do not claim all community themes or physical-device acceptance.
+
+Remaining requested work: alpha display, expanded theme choices, explicit two-way counterpart recommendations, meaningful preview/adoption copy, relationship explanations, separate Colors/Labels and consistent paired swatches/strips.

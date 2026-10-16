@@ -1793,10 +1793,22 @@ export class KplexSettingTab extends PluginSettingTab {
     this.colorDialogs.add(dialog); dialog.open();
   }
 
+  /**
+   * Native declarative subpages replace (and detach) the tab root. Reacquire the visible page in
+   * that exact Settings document; never sample the retired root or a different application window.
+   * The host's connected page owns preview and lazy-dialog lifetime until navigation/teardown.
+   */
+  private colorSourceScope(): HTMLElement {
+    if (this.containerEl.isConnected) return this.containerEl;
+    const doc = this.containerEl.ownerDocument;
+    return Array.from(doc.querySelectorAll<HTMLElement>(".setting-page-content"))
+      .find(/** Only the currently displayed native page may supply a detached tab's context. */ page => page.isConnected && page.getClientRects().length > 0) ?? this.containerEl;
+  }
+
   /** Native color surfaces share current preview facts and one CSS subscription contract. */
   private styleColorContext(): StyleColorContext {
     const plugin = this.kplexPlugin;
-    return {sourceScope: this.containerEl, translate: plugin.translator,
+    return {sourceScope: this.colorSourceScope(), translate: plugin.translator,
       subscribeColors: changed => subscribeAppearanceSources(listener => plugin.index.subscribePresentation(listener), () => plugin.settings, changed),
       preferences: () => plugin.settings.colorPreferences, nodeStyle: () => plugin.settings.baseNodeStyle,
       linkStyle: () => plugin.settings.baseLinkStyle, background: () => plugin.settings.backgroundColor,
@@ -1805,10 +1817,10 @@ export class KplexSettingTab extends PluginSettingTab {
 
   /** Lazily open a native Compass draft; teardown/migration supersedes loading, and only edited fields enter the existing queue. */
   private async openCompassSettings(): Promise<void> {
-    const generation = ++this.colorDialogGeneration, owner = this.containerEl.ownerDocument;
+    const generation = ++this.colorDialogGeneration, sourceScope = this.colorSourceScope(), owner = sourceScope.ownerDocument;
     const plugin = this.kplexPlugin; if (plugin.settings.colorPreferencesFuture !== undefined) return;
     const {CompassSettingsModal} = await import("./ui/CompassSettingsModal");
-    if (generation !== this.colorDialogGeneration || !this.containerEl.isConnected || this.containerEl.ownerDocument !== owner || plugin.settings.colorPreferencesFuture !== undefined) return;
+    if (generation !== this.colorDialogGeneration || !sourceScope.isConnected || sourceScope.ownerDocument !== owner || plugin.settings.colorPreferencesFuture !== undefined) return;
     const dialog = new CompassSettingsModal(this.app, this.styleColorContext(), /** Merge against the latest durable owner without restoring stale palette or unedited fills. */ (initial, edited, current) => this.commitStyleChange(/** Each explicit Compass field has independent last-edit ownership. */ draft => {
       const latest = draft.colorPreferences.compass;
       if (initial.enabled !== edited.enabled) latest.enabled = edited.enabled;
@@ -1900,11 +1912,11 @@ export class KplexSettingTab extends PluginSettingTab {
 
   /** Settings and canvas reuse one detached source shell and the existing queued writer. */
   private openCanvasColorEditor(): void {
-    if (!this.containerEl.isConnected) return;
+    const sourceScope = this.colorSourceScope(); if (!sourceScope.isConnected) return;
     const plugin = this.kplexPlugin;
     const dialog = new ColorSourceModal(this.app, {
       title: plugin.translator("settings.ui.plex.background"), initial: plugin.settings.backgroundColor,
-      sourceScope: this.containerEl, translate: plugin.translator, target: {kind: "canvas"},
+      sourceScope, translate: plugin.translator, target: {kind: "canvas"},
       preferences: () => plugin.settings.colorPreferences, nodeStyle: () => plugin.settings.baseNodeStyle,
       linkStyle: () => plugin.settings.baseLinkStyle, background: () => plugin.settings.backgroundColor,
       subscribeCss: changed => { const ref = this.app.workspace.on("css-change", changed); return () => this.app.workspace.offref(ref); },
