@@ -7,6 +7,9 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const dutchTranslations = {
+  "settings.hoverHighlight.name": "Toets vereisen voor markering bij aanwijzen",
+  "settings.hoverHighlight.help": "Houd {key} ingedrukt terwijl je een knooppunt, poort of verbinding aanwijst om gerelateerde verbindingen direct te markeren. Uitgeschakeld begint de markering bij aanwijzen na een korte vertraging.",
+  "settings.hoverHighlight.modifier": "de alternatieve modificatietoets",
   "themes.label": "Thema",
   "themes.help": "Kleur- en stijlwijzigingen worden opgeslagen in het geselecteerde thema.",
   "themes.manage": "Thema’s beheren",

@@ -1,3 +1,5 @@
+import { readObsidianPresentationEnvironment } from "./adapters/obsidian/presentationEnvironment";
+import { formatShortcut } from "./core/plex/shortcutPresentation";
 /**
  * Obsidian settings persistence, bounded legacy graph import, declarative controls and style/ontology
  * managers. Foreign imports cannot change plugin workflow preferences; own persisted K-Plex keys
@@ -302,6 +304,8 @@ export interface KplexSettings {
   pinnedNodes: string[];
   layoutProfiles: Record<string, KplexLayoutProfile>;
   mouseInteractionMode: MouseInteractionMode;
+  /** Require the alternate modifier instead of delayed pointer highlighting. */
+  hoverHighlightRequiresAlt: boolean;
   toolbarExpanded: boolean;
   sidecarOpen: boolean;
   sidecarPosition: SidecarPosition;
@@ -443,6 +447,7 @@ const LEGACY_DEFAULT_SETTINGS: KplexSettings = {
   pinnedNodes: [],
   layoutProfiles: DEFAULT_LAYOUT_PROFILES,
   mouseInteractionMode: "smart",
+  hoverHighlightRequiresAlt: false,
   toolbarExpanded: false,
   sidecarOpen: false,
   sidecarPosition: "right",
@@ -687,6 +692,7 @@ export function migrateAndMergeSettings(raw: unknown): KplexSettings {
     pinnedNodes: Array.isArray(old.pinnedNodes) ? old.pinnedNodes.filter((value): value is string => typeof value === "string") : [],
     layoutProfiles: migratedProfiles,
     typographyProfiles: sanitizeTypographyProfiles(old.typographyProfiles),
+    hoverHighlightRequiresAlt: old.hoverHighlightRequiresAlt === true,
     mouseInteractionMode: old.mouseInteractionMode === "legacy" || old.mouseInteractionMode === "middle-only" ? old.mouseInteractionMode : "smart",
     // ExcaliBrain persisted `embedCentralNode` for its own center presentation. K-Plex's native
     // embedded editor is a different, explicitly opt-in surface, so legacy imports must start
@@ -2278,6 +2284,11 @@ export class KplexSettingTab extends PluginSettingTab {
   /** Build localized native settings and subpages, including shared persisted Plex visibility controls. */
   getSettingDefinitions(): SettingDefinitionItem<DeclarativeSettingKey>[] {
     const translate = createObsidianTranslator();
+    const environment = readObsidianPresentationEnvironment(this.containerEl?.ownerDocument?.defaultView ?? undefined);
+    const hoverModifier = formatShortcut({key: "", modifiers: ["alt"]}, {...environment, inputModes: {...environment.inputModes, keyboard: true}}, {
+      shift: translate("shortcut.shift"), command: translate("shortcut.command"), control: translate("shortcut.control"),
+      option: translate("shortcut.option"), alt: translate("shortcut.alt"),
+    }, true, "") ?? translate("settings.hoverHighlight.modifier");
     const deleteCleanupDescription = createFragment();
     deleteCleanupDescription.createSpan({ text: translate("settings.deletion.removeOntologyLinks.help"), attr: { id: "kplex-remove-ontology-links-on-delete" } });
     const nodeStyles = this.nodeStyleEntries();
@@ -2312,6 +2323,7 @@ export class KplexSettingTab extends PluginSettingTab {
             type: "group",
             heading: translate("settings.ui.navigation.interaction"),
             items: [
+              { name: translate("settings.hoverHighlight.name"), desc: translate("settings.hoverHighlight.help", {key: hoverModifier}), control: {type: "toggle", key: "hoverHighlightRequiresAlt"} },
               { name: translate("settings.ui.animation.speed"), desc: translate("settings.ui.speed.multiplier.0.off.0.5.slow.1.normal.1.5.fast.2.very"), control: { type: "slider", key: "animationSpeed", min: 0, max: 2, step: 0.1 } },
               { name: translate("settings.ui.auto.fit.on.navigation"), control: { type: "toggle", key: "allowAutozoom" } },
               { name: translate("settings.ui.open.k.plex.in.a.pop.out.window"), desc: translate("settings.ui.when.k.plex.is.opened.and.no.k.plex.view.already.exists"), control: { type: "toggle", key: "startInPopout" } },

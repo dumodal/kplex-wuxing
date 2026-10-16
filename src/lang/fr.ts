@@ -7,6 +7,9 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const frenchTranslations = {
+  "settings.hoverHighlight.name": "Exiger une touche pour la surbrillance au survol",
+  "settings.hoverHighlight.help": "Maintenez {key} en survolant un nœud, une porte ou un connecteur pour surligner immédiatement les connexions liées. Si désactivé, le survol seul déclenche la surbrillance après un bref délai.",
+  "settings.hoverHighlight.modifier": "la touche de modification alternative",
   "themes.label": "Thème",
   "themes.help": "Les modifications de couleurs et de styles sont enregistrées dans le thème sélectionné.",
   "themes.manage": "Gérer les thèmes",

@@ -7,6 +7,9 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const russianTranslations = {
+  "settings.hoverHighlight.name": "Подсвечивать при наведении только с клавишей",
+  "settings.hoverHighlight.help": "Удерживайте {key} при наведении на узел, порт или линию, чтобы сразу подсветить связанные соединения. Если выключено, достаточно навести указатель и немного подождать.",
+  "settings.hoverHighlight.modifier": "альтернативную клавишу-модификатор",
   "themes.label": "Тема",
   "themes.help": "Изменения цветов и стилей сохраняются в выбранной теме.",
   "themes.manage": "Управление темами",

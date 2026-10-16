@@ -60,8 +60,8 @@ export function ThoughtNode({
   connectionState?: ConnectionDragState;
   onActivate: (node: PositionedNode) => void;
   onOpen: (node: PositionedNode) => void;
-  onHoverNode: (node: PositionedNode) => void;
-  onHoverGate: (node: PositionedNode, gate: GateSide) => void;
+  onHoverNode: (node: PositionedNode, event: ReactPointerEvent) => void;
+  onHoverGate: (node: PositionedNode, gate: GateSide, event: ReactPointerEvent) => void;
   onHoverEnd: () => void;
   onHoverPreview: (node: PositionedNode, target: HTMLElement, event: PointerEvent) => void;
   onGatePointerDown: (node: PositionedNode, gate: GateSide, event: ReactPointerEvent<HTMLSpanElement>) => void;
@@ -139,7 +139,7 @@ export function ThoughtNode({
     aria-current={keyboardSelected ? "true" : undefined}
     onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { onNodePointerDown(node, e); }}
     onPointerEnter={(e: ReactPointerEvent<HTMLDivElement>) => {
-      onHoverNode(node);
+      onHoverNode(node, e);
       // Obsidian-style page preview is intentionally explicit: hold Ctrl/Cmd while entering
       // a thought. Without the modifier no preview is scheduled at all, which avoids timer
       // churn while moving across a dense Plex.
@@ -228,8 +228,8 @@ export function ThoughtNode({
         <span
           className={`kplex-gate gate-${gate}${stat.hasAny ? " has-connections" : " is-empty"}${highlightedGates.has(gate) ? " is-highlighted" : ""}${gateDisabled ? " is-link-disabled" : ""}`}
           data-kplex-gate={gate}
-          onPointerEnter={(e: ReactPointerEvent<HTMLSpanElement>) => { e.stopPropagation(); onHoverGate(node, gate); }}
-          onPointerLeave={(e: ReactPointerEvent<HTMLSpanElement>) => { e.stopPropagation(); onHoverNode(node); }}
+          onPointerEnter={(e: ReactPointerEvent<HTMLSpanElement>) => { e.stopPropagation(); onHoverGate(node, gate, e); }}
+          onPointerLeave={(e: ReactPointerEvent<HTMLSpanElement>) => { e.stopPropagation(); onHoverNode(node, e); }}
           onPointerDown={(e: ReactPointerEvent<HTMLSpanElement>) => { onGatePointerDown(node, gate, e); }}
           onClick={(e: MouseEvent<HTMLSpanElement>) => e.stopPropagation()}
           aria-label={gateTitle}

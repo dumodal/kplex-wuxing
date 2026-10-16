@@ -9,6 +9,9 @@
  * parameters remain unquoted regardless of their names. Locale catalogs inherit this classification.
  */
 export const englishCatalog = {
+  "settings.hoverHighlight.name": {"message": "Require modifier for hover highlighting", "context": "Global Plex pointer highlighting preference. The key parameter is the localized host modifier name.", "params": [], "referenceParams": []},
+  "settings.hoverHighlight.help": {"message": "Hold {key} while hovering over a node, gate or connector to highlight related connections immediately. When disabled, hovering alone highlights after a short delay.", "context": "Global Plex pointer highlighting preference. The key parameter is the localized host modifier name.", "params": ["key"], "referenceParams": []},
+  "settings.hoverHighlight.modifier": {"message": "the alternate modifier", "context": "Global Plex pointer highlighting preference. The key parameter is the localized host modifier name.", "params": [], "referenceParams": []},
   "themes.label": {"message": "Theme", "context": "Named K-Plex themes and scoped color reset. Names are literal user data; base/semantic styling stay separate from workflow.", "params": [], "referenceParams": []},
   "themes.help": {"message": "Color and style changes are saved to the selected theme.", "context": "Named K-Plex themes and scoped color reset. Names are literal user data; base/semantic styling stay separate from workflow.", "params": [], "referenceParams": []},
   "themes.manage": {"message": "Manage themes", "context": "Named K-Plex themes and scoped color reset. Names are literal user data; base/semantic styling stay separate from workflow.", "params": [], "referenceParams": []},

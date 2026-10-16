@@ -4124,3 +4124,16 @@ Production regressions prove stale selected-theme persistence after a rejected i
 Frozen runtime3131bac passes clean Node22.22.2 strict verification:1,997 tests (7 architecture/128 core/879 general/120 UI/334 source/529 source-browser),0 failures/skips/cancellations, official lint/installed types/real production build and exact native smoke. Matching main5f5c81d1581aae1688a4d2efdae2b7bbffb27d993e9cf5c4f9444ec84c09fdb3 passes6 native migration/15 style/9 theme combinations/27 color-theme-reset/6 foreground; restored live/durable migration appearance and failed compatibility retry/reload are asserted. Original runtime/workspace/four exact config bytes/106 files restore; no owned notes/controllers. Theme phase12writes/0 source-semantic-search-visual/3 real non-color neighborhoods, inactive metadata0 graph; no CPU/memory claim.
 
 Final report consolidates architecture, scope, versioned model/lifecycle, full/native evidence, raw reproduction and limitations. Two verified local evidence directories hold64+102 files, private backups excluded; canonical45-source receipt binds3131bac and artifacts. All failed controls, rejected rollback-only prototype and interrupted run retained, unpublished. Exact historical native event-loop cause remains unproven; do not erase failures with retry passes. No runtime change after frozen verification; no manifest/lockfile/README change. C14 accepted; later refactor paused. Keep draft, no merge/release/public archive. Manual priorities: physical mobile picker/touch/scroll/resume; macOS Settings/popout/picker; minimum1.13/community/high-contrast visual acceptance. Follow PR CI; no further implementation/optimization queued.
+
+
+## Alt/Option hover highlighting (2026-10-16)
+
+| Checkpoint | Status / evidence |
+| --- | --- |
+| H1 — Shared modifier-gated hover | Implemented on main after merged PR #158; production build, focused36 and migration/hover70 pass. Full retry/native acceptance pending. |
+
+### 2026-10-16 — H1: optional modifier hover
+
+PR #158 merged at b9d3527 with explicit maintainer authorization; fetched/updated main before creating 2026-10-16-alt-hover-highlight. Scoped new global Boolean defaults off, strict migration and foreign-import isolation. Shared surface-owned HoverHighlight replaces only the existing delayed hover owner for nodes/gates/connectors, with immediate modifier entry/stationary key transitions and cancellation on leave, blur, navigation, policy changes and teardown. Preserve direct drag/touch ownership, existing evidence tooltips and all theme styling. No semantic policy or theme schema changes; workflow save/presentation path only. Eight locales use environment-aware modifier names.
+
+Actual build and focused checks pass on Node22.22.2. First full run failed an unchanged menu browser-startup/loading assertion; focused retry passes. Full retry and exact native Settings/main/popout/touch/gate lanes pending, not yet acceptance. C14 accepted; later refactoring remains paused. Highest remaining risk: actual modifier delivery/focus across Settings and popouts. macOS Option/menu and physical mobile/hardware-keyboard behavior require separate coverage.

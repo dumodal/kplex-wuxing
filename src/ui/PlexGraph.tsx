@@ -10,6 +10,7 @@ import { subscribeAppearanceSources } from "../adapters/obsidian/colorChanges";
  * shared localization metadata owns reference quoting. Optional Compass paint shares the camera frame
  * and exact center-animation lifetime, owns no input target, and never rebuilds graph geometry.
  */
+import {HoverHighlight, bindHoverHighlight} from "./components/hoverHighlight";
 import {compassPolygons} from "../core/plex/compassBackground";
 import {COMPASS_DIRECTIONS, COMPASS_COLOR_VARIABLES, COMPASS_SEMANTIC_SLOTS, compassIntensity} from "../core/plex/colorPreferences";
 import {colorValueCss, semanticColorCss} from "../adapters/obsidian/colorPresentation";
@@ -1002,7 +1003,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   const automaticFit = useRef<{ path: string; camera: FitCamera } | null>(null);
   const fitCurrentScene = useRef<() => void>(/** Native resize callbacks must wait for the first composed scene fit. */ () => {});
   const [hover, setHover] = useState<HoverState>(null);
-  const hoverIntentTimer = useRef<number | null>(null);
+  const hoverHighlight = useRef<HoverHighlight<Exclude<HoverState, null>> | null>(null);
   const edgeTooltipTimer = useRef<number | null>(null);
   const edgeTooltipPoint = useRef<Point>({ x: 0, y: 0 });
   const [edgeHoverTooltip, setEdgeHoverTooltip] = useState<EdgeHoverTooltip>(null);
@@ -1117,18 +1118,25 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   };
 
   const clearHoverIntent = (clearActive = false) => {
-    if (hoverIntentTimer.current !== null) window.clearTimeout(hoverIntentTimer.current);
-    hoverIntentTimer.current = null;
+    hoverHighlight.current?.clear(clearActive);
     clearEdgeTooltip();
     if (clearActive) setHover(null);
   };
 
-  const scheduleHoverIntent = (next: Exclude<HoverState, null>) => {
-    clearHoverIntent(false);
-    hoverIntentTimer.current = window.setTimeout(() => {
-      hoverIntentTimer.current = null;
-      setHover(next);
-    }, 750);
+  useEffect(/** Each rendered graph owns its modifier listeners and delayed activation. */ () => {
+    const element = viewport.current;
+    if (!element) return;
+    const intent = new HoverHighlight<Exclude<HoverState, null>>(element.ownerDocument.defaultView ?? window, viewSettings.hoverHighlightRequiresAlt, setHover);
+    hoverHighlight.current = intent;
+    setHover(null);
+    const release = bindHoverHighlight(element, intent);
+    return () => { release(); if (hoverHighlight.current === intent) hoverHighlight.current = null; };
+  }, [viewSettings.hoverHighlightRequiresAlt, activePath, Boolean(neighborhood)]);
+
+  /** Route nodes, gates and connectors through the same surface-owned intent. */
+  const scheduleHoverIntent = (next: Exclude<HoverState, null>, event: {altKey: boolean; pointerType: string}) => {
+    clearEdgeTooltip();
+    hoverHighlight.current?.enter(next, event);
   };
 
   const edgeTooltipPosition = (clientX: number, clientY: number): Point => {
@@ -1143,7 +1151,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
 
   const scheduleEdgeHover = (edge: PositionedEdge, event: PointerEvent<SVGPathElement>) => {
     if (event.pointerType === "touch") return;
-    scheduleHoverIntent({ kind: "edge", id: edge.id });
+    scheduleHoverIntent({ kind: "edge", id: edge.id }, event);
     edgeTooltipPoint.current = edgeTooltipPosition(event.clientX, event.clientY);
     edgeTooltipTimer.current = window.setTimeout(() => {
       edgeTooltipTimer.current = null;
@@ -1809,7 +1817,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     typographySave.current = null;
     typographyDraft.current = null;
     sceneMotion.cancelAll();
-    if (hoverIntentTimer.current !== null) window.clearTimeout(hoverIntentTimer.current);
+    hoverHighlight.current?.clear(false);
     if (edgeTooltipTimer.current !== null) window.clearTimeout(edgeTooltipTimer.current);
     if (sceneTransitionTimer.current !== null) (sceneTransitionTimerWindow.current ?? window).clearTimeout(sceneTransitionTimer.current);
     sceneTransitionTimer.current = null;
@@ -3784,8 +3792,8 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       connectionState={connectionStateFor(baseNode)}
       onActivate={/** Capture the clicked occurrence before its semantic role changes. */ () => activateNode(baseNode.page, sceneNodeKeys.get(baseNode))}
       onOpen={() => openNode(baseNode.page)}
-      onHoverNode={() => { if (!connectDrag && !nodeDrag) scheduleHoverIntent({ kind: "node", path: baseNode.page.path }); }}
-      onHoverGate={(_, gate) => { if (!connectDrag && !nodeDrag) scheduleHoverIntent({ kind: "gate", path: baseNode.page.path, gate }); }}
+      onHoverNode={(_, event) => { if (!connectDrag && !nodeDrag) scheduleHoverIntent({ kind: "node", path: baseNode.page.path }, event); }}
+      onHoverGate={(_, gate, event) => { if (!connectDrag && !nodeDrag) scheduleHoverIntent({ kind: "gate", path: baseNode.page.path, gate }, event); }}
       onHoverEnd={() => { if (!connectDrag && !nodeDrag) clearHoverIntent(true); }}
       onHoverPreview={(_, targetEl, event) => {
         if (!connectDrag && !nodeDrag) plugin.triggerHoverPreview(baseNode.page, targetEl, event, neighborhood.center.file?.path ?? "");

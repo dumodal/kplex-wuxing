@@ -7,6 +7,9 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const traditionalChineseTranslations = {
+  "settings.hoverHighlight.name": "懸停強調顯示需要修飾鍵",
+  "settings.hoverHighlight.help": "將游標停在節點、閘門或連線上時，按住 {key} 即可立即強調顯示相關連線。停用時會在短暫延遲後顯示。",
+  "settings.hoverHighlight.modifier": "替代修飾鍵",
   "themes.label": "主題",
   "themes.help": "色彩和樣式變更會儲存至所選主題。",
   "themes.manage": "管理主題",
