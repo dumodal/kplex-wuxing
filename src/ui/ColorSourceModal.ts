@@ -16,23 +16,32 @@ import {colorValuesEqual, formatLiteralColor, parseLiteralColor, type ColorValue
 import type {SemanticColorPair} from "../core/plex/colorPreferences";
 
 export type ColorSourceModalOptions = ColorPreviewOptions & Readonly<{
+  confirmation?: Readonly<{description: string; actionLabel: string}>;
+  actionLabel?: string; help?: string;
+  acceptSource?: (source: ColorValue | undefined) => boolean;
   title: string; initial: ColorValue | undefined;
   subscribeCss?: (changed: () => void) => () => void;
+  subscribeColors?: (changed: () => void) => () => void;
   onSave: (source: ColorValue | undefined, isCurrent: () => boolean) => Promise<StyleCommitResult>;
   onClosed?: () => void;
 }>;
 
 /** Bounded native search covers every configured pair without mounting a large option collection. */
 class NamedColorSuggest extends SuggestModal<SemanticColorPair> {
+  private ambiguousNames = new Set<string>();
   /** Search current preferences at each query; names are labels and stable IDs remain source identity. */
   constructor(app: App, private readonly pairs: () => readonly SemanticColorPair[], private readonly chosen: (pair: SemanticColorPair) => void) { super(app); this.limit = 40; }
   /** Search configured metadata only; no graph or note access belongs to a color chooser. */
   getSuggestions(query: string): SemanticColorPair[] {
     const text = query.trim().toLocaleLowerCase();
-    return [...collectionWindow(this.pairs().filter(pair => pair.name.toLocaleLowerCase().includes(text)), 40, 40).visible];
+    const pairs = this.pairs(), names = new Set<string>(); this.ambiguousNames.clear();
+    for (const pair of pairs) {if (names.has(pair.name)) this.ambiguousNames.add(pair.name); else names.add(pair.name);}
+    return [...collectionWindow(pairs.filter(pair => pair.name.toLocaleLowerCase().includes(text)), 40, 40).visible];
   }
   /** Render names as text so labels never become selectors, HTML or persisted IDs. */
-  renderSuggestion(pair: SemanticColorPair, element: HTMLElement): void { element.setText(pair.name); }
+  renderSuggestion(pair: SemanticColorPair, element: HTMLElement): void {
+    element.setText(pair.name); if (this.ambiguousNames.has(pair.name)) element.createDiv({text: pair.id, cls: "suggestion-note"});
+  }
   /** The owning source form fences callbacks after pending submission or retirement. */
   onChooseSuggestion(pair: SemanticColorPair): void { this.chosen(pair); }
 }
@@ -45,6 +54,7 @@ export class ColorSourceModal extends StyleEditorModal {
   private save: ButtonComponent | null = null;
   private releaseCss: (() => void) | null = null;
   private opened = false;
+  private releaseColors: (() => void) | null = null;
 
   /** Capture narrow data/actions; callers retain the sole settings queue and originating-view lifetime. */
   constructor(app: App, private readonly options: ColorSourceModalOptions) { super(app); }
@@ -53,6 +63,8 @@ export class ColorSourceModal extends StyleEditorModal {
   onOpen(): void {
     this.opened = true; this.modalEl.addClass("kplex-color-modal"); this.titleEl.setText(this.options.title); this.beginEditor(this.options.sourceScope);
     const t = this.options.translate;
+    if (this.options.confirmation) this.contentEl.createDiv({text: this.options.confirmation.description, cls: "setting-item-description"});
+    if (this.options.help) this.contentEl.createDiv({text: this.options.help, cls: "setting-item-description"});
     const controls = this.contentEl.createDiv();
     this.preview = new ColorPreview(this.contentEl, {...this.options, onContextChange: () => this.editor?.refresh(true)}, this.options.initial);
     this.reader = new ColorSampleReader(this.options.sourceScope.ownerDocument);
@@ -63,6 +75,7 @@ export class ColorSourceModal extends StyleEditorModal {
         "--kplex-semantic-support", "--kplex-semantic-challenge"].map(variable => ({variable, label: variable})),
       chooseNamed: chosen => { const chooser = new NamedColorSuggest(this.app, () => this.options.preferences().palette, chosen); chooser.setPlaceholder(t("colors.searchColors")); chooser.open(); return () => chooser.close(); },
       fixedSeed: source => {
+        source ??= this.options.inherit?.();
         if (typeof source === "string" && parseLiteralColor(source)) return source;
         if (source && typeof source !== "string" && source.kind === "palette") {
           const pair = this.options.preferences().palette.find(pair => pair.id === source.id);
@@ -84,8 +97,9 @@ export class ColorSourceModal extends StyleEditorModal {
     });
     new Setting(this.contentEl)
       .addButton(button => button.setButtonText(t("common.cancel")).onClick(() => this.close()))
-      .addButton(button => { this.save = button; button.setButtonText(t("common.save")).setCta().onClick(() => this.submit()); });
+      .addButton(button => { this.save = button; button.setButtonText(this.options.confirmation?.actionLabel ?? this.options.actionLabel ?? t("common.save")).setCta().onClick(() => this.submit()); });
     this.releaseCss = this.options.subscribeCss?.(() => { this.editor?.refresh(true); this.preview?.invalidate(); }) ?? null;
+    this.releaseColors = this.options.subscribeColors?.(() => {this.editor?.refresh(false); this.preview?.refreshSources();}) ?? null;
     this.refreshSave();
   }
 
@@ -95,20 +109,22 @@ export class ColorSourceModal extends StyleEditorModal {
   /** Release exact resources once, including externally retired or already-submitted forms. */
   onClose(): void {
     super.onClose(); if (!this.opened) return; this.opened = false;
+    this.releaseColors?.(); this.releaseColors = null;
     this.releaseCss?.(); this.releaseCss = null; this.editor?.dispose(); this.editor = null;
     this.preview?.dispose(); this.preview = null; this.reader?.dispose(); this.reader = null; this.save = null;
     this.contentEl.empty(); this.options.onClosed?.();
   }
 
   /** Native shell state is authoritative; late CSS callbacks cannot re-enable a pending Save. */
-  private refreshSave(): void { this.save?.setDisabled(!this.canEdit() || !this.editor?.isValid()); }
+  private refreshSave(): void { this.save?.setDisabled(!this.canEdit() || !this.editor?.isValid() || this.options.acceptSource?.(this.editor?.getValue()) === false); }
 
   /** An unchanged source closes without a write, preventing resurrection after concurrent replacement. */
   private submit(): void {
     if (!this.canEdit() || !this.editor) return;
     this.editor.refresh(true); if (!this.editor.isValid()) return;
     const source = this.editor.getValue();
-    if (colorValuesEqual(source, this.options.initial)) { this.close(); return; }
+    if (this.options.acceptSource?.(source) === false) return;
+    if (!this.options.confirmation && colorValuesEqual(source, this.options.initial)) { this.close(); return; }
     const captured = source === undefined ? undefined : structuredClone(source);
     this.editor.setDisabled(true);
     this.runOperation(isCurrent => this.options.onSave(captured, isCurrent));

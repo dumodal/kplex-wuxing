@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {loadPortableModules} from "./support/portableTypeScript.mjs";
-const {exports:m}=loadPortableModules(["src/core/contracts/colorValue.ts","src/core/plex/colorPreferences.ts","src/core/contracts/appearance.ts","src/core/graph/settingsPolicy.ts"]);
+const {exports:m}=loadPortableModules(["src/core/contracts/colorValue.ts","src/core/plex/colorPreferences.ts","src/core/plex/colorEditing.ts","src/core/contracts/appearance.ts","src/core/graph/settingsPolicy.ts"]);
 
 test("literal round trips preserve spelling and opacity while RGB edits retain exact non-byte alpha", /** Exercise the real parser and explicit-edit serializer, including transparent zero. */ () => {
   for(const value of ["#123", "#1234", "#123456", "#12345600", "#AbCdEf80", "rgba(12, 34, 56, 0.123456789)", "rgb(10% 20% 30% / 0%)", "transparent"]){
@@ -77,4 +77,54 @@ test("paint classification retains every non-color policy and reads configured s
 test("opaque future/null identities compare safely without coercion or accidental source equality",()=>{
  assert.equal(m.colorValuesEqual(null,null),true);assert.equal(m.colorValuesEqual(null,undefined),false);assert.equal(m.colorValuesEqual(null,{kind:'theme',variable:'--text-normal'}),false);
  assert.equal(m.colorValuesEqual({kind:'theme',variable:null},{kind:'theme',variable:null}),true);assert.equal(m.colorValuesEqual({kind:'future'},{kind:'future'}),false);
+});
+
+
+test("named pair edits merge only changed fields and deletion rewrites every configured consumer atomically",()=>{
+ const settings={baseNodeStyle:{textColor:{kind:'palette',id:'a'},fontSize:19},baseLinkStyle:{strokeColor:{kind:'palette',id:'a'}},
+  noteTypeStyles:{Type:{borderColor:{kind:'palette',id:'a'},extension:{id:'a'}}},tagNodeStyles:{},hierarchyLinkStyles:{},
+  backgroundColor:{kind:'palette',id:'a'},graphLenses:[{style:{node:{backgroundColor:{kind:'palette',id:'a'}},edge:{textColor:{kind:'palette',id:'a'}}}}],colorPreferences:m.defaultColorPreferences()};
+ settings.colorPreferences.palette=[{id:'a',name:'A',light:'#11223300',dark:'rgba(1,2,3,.123456789)'},{id:'b',name:'B',light:'#ffffff',dark:'#000000'}];
+ settings.colorPreferences.semantic.origin={kind:'palette',id:'a'};settings.colorPreferences.compass.fills.north={kind:'palette',id:'a'};
+ assert.equal(m.namedColorUsage(settings).get('a'),8);
+ const opening={...settings.colorPreferences.palette[0]};settings.colorPreferences.palette[0].dark='#55667780';settings.colorPreferences.palette[0].extension=true;
+ m.saveNamedColor(settings,opening,{...opening,name:'Renamed'});
+ assert.deepEqual(settings.colorPreferences.palette[0],{...opening,name:'Renamed',dark:'#55667780',extension:true});
+ m.deleteNamedColor(settings,'a',{kind:'palette',id:'b'});
+ assert.equal(m.namedColorUsage(settings).get('a'),undefined);assert.equal(m.namedColorUsage(settings).get('b'),8);
+ assert.deepEqual(settings.noteTypeStyles.Type.extension,{id:'a'});assert.equal(settings.baseNodeStyle.fontSize,19);
+ assert.throws(()=>m.saveNamedColor(settings,opening,{...opening,name:'Restore'}));
+});
+
+test("destructive palette edits reject uncertain known sources and preserve all state on precondition failure",()=>{
+ const p=m.defaultColorPreferences();p.palette=[{id:'a',name:'A',light:'#123456',dark:'#abcdef'}];
+ for(const raw of [null,{kind:'future',payload:['a']},{kind:'theme',variable:['--text-normal']}]){
+  const settings={colorPreferences:structuredClone(p),baseNodeStyle:{textColor:raw}};const before=structuredClone(settings);
+  assert.equal(m.appearanceHasUnsupportedColors(settings),true);assert.throws(()=>m.deleteNamedColor(settings,'a',undefined));assert.deepEqual(settings,before);
+ }
+ const settings={colorPreferences:p,baseNodeStyle:{textColor:{kind:'palette',id:'a'}}};
+ assert.throws(()=>m.deleteNamedColor(settings,'a',{kind:'palette',id:'a'}));assert.equal(p.palette.length,1);
+ assert.throws(()=>m.deleteNamedColor(settings,'a',{kind:'palette',id:'missing'}));assert.equal(p.palette.length,1);
+});
+
+test("explicit standard adoption changes only listed color slots and detached parent saves retain concurrent replacements",()=>{
+ const initial={textColor:{kind:'palette',id:'old'},backgroundColor:'#12345600',fontSize:20};
+ const edited={...initial,fontSize:23},latest={...initial,textColor:{kind:'palette',id:'replacement'}};
+ assert.deepEqual(m.mergeStyleDraft(initial,edited,latest,m.NODE_COLOR_FIELDS),{...edited,textColor:latest.textColor});
+ const prefs=m.defaultColorPreferences(),settings={baseNodeStyle:initial,centralNodeStyle:{textColor:'#abcdef',maxWidth:370},baseLinkStyle:{strokeColor:'#ffffff',strokeWidth:2},backgroundColor:'transparent',
+  noteTypeStyles:{Type:{textColor:'#445566'}},graphLenses:[{style:{node:{textColor:'#556677'}}}],colorPreferences:prefs,unrelated:'kept'};
+ const before=structuredClone(settings);assert.deepEqual(m.standardColorSlots(settings),['backgroundColor','baseNodeStyle.backgroundColor','baseNodeStyle.textColor','centralNodeStyle.textColor','baseLinkStyle.strokeColor']);
+ m.adoptStandardThemeColors(settings);assert.equal(settings.standardStyleDefaults,'native');assert.equal(m.standardColorSlots(settings).length,0);
+ assert.deepEqual(settings.baseNodeStyle,{fontSize:20});assert.deepEqual(settings.centralNodeStyle,{maxWidth:370});assert.deepEqual(settings.baseLinkStyle,{strokeWidth:2});
+ for(const key of ['noteTypeStyles','graphLenses','colorPreferences','unrelated'])assert.deepEqual(settings[key],before[key]);
+});
+
+
+test("local style saves preserve concurrent unedited geometry/extensions and standard reference deletion retains native absence",()=>{
+ const first={textColor:{kind:'palette',id:'a'},fontSize:18,strokeWidth:1,extension:{source:'initial'}};
+ const edited={...first,textColor:'#ffffff'},latest={...first,fontSize:27,extension:{source:'latest'},gateRadius:7};
+ assert.deepEqual(m.mergeStyleDraft(first,edited,latest,m.NODE_COLOR_FIELDS),{...latest,textColor:'#ffffff'});
+ const settings={standardStyleDefaults:'legacy',baseNodeStyle:{textColor:{kind:'palette',id:'a'},backgroundColor:'#11223366',fontSize:18},colorPreferences:m.defaultColorPreferences()};
+ settings.colorPreferences.palette=[{id:'a',name:'A',light:'#123456',dark:'#abcdef'}];m.deleteNamedColor(settings,'a',undefined);
+ assert.equal(settings.standardStyleDefaults,'native');assert.deepEqual(settings.baseNodeStyle,{backgroundColor:'#11223366',fontSize:18});
 });

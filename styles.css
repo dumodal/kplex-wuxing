@@ -3631,3 +3631,9 @@ button.kplex-sidecar-unfold-plex:focus-visible,
 
 .kplex-color-source-editor select { width: 100%; max-width: 100%; min-width: 0; }
 .kplex-color-source-editor button { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+
+.kplex-lens-fields { border: 0; margin: 0; padding: 0; min-width: 0; }
+.kplex-palette-controls, .kplex-palette-row { display: flex; align-items: center; gap: 0.5em; flex-wrap: wrap; }
+.kplex-palette-controls input { flex: 1; min-width: 8em; }
+.kplex-palette-row { padding: var(--size-4-2) 0; border-bottom: var(--border-width) solid var(--background-modifier-border); }
+.kplex-palette-name { flex: 1; min-width: 8em; overflow-wrap: anywhere; }

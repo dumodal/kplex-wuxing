@@ -1,3 +1,4 @@
+import type {SemanticColorPair} from "../core/plex/colorPreferences";
 /**
  * Host-bound Plex filter and Graph Lens editor. Shared predicates own matching; this surface localizes
  * choices and validation. FloatingLayer owns portaling, dismissal and header drag in the owning document.
@@ -5,9 +6,9 @@
  */
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { GraphIndex } from "../index/GraphIndex";
-import type { GraphPage, Role } from "../types";
+import type { GraphPage, Role, NodeStyle, LinkStyle } from "../types";
 import type { NodeSortOrder } from "../settings";
-import { colorRgbInput } from "../core/contracts/colorValue";
+import {colorIdentityText, type ColorValue} from "../core/contracts/colorValue";
 import { createGraphLensId, defaultGraphLensStyle, validateGraphLensExpression, type GraphLensDefinition, type GraphLensMode, type GraphLensScope, type GraphLensStyle, type GraphLensValidationIssue } from "../lens/GraphLens";
 import {
   buildGraphLensSimpleExpression,
@@ -38,8 +39,19 @@ export type PlexVisibilitySetting =
   | "showTagNodes"
   | "showURLNodes";
 
+import type {StyleCommitResult} from "./StyleEditorModal";
+import type {ColorPreviewTarget} from "./ColorPreview";
+
+/** Native composition port: the filter owns the detached draft and retires its single source dialog. */
+export type LensColorRequest = Readonly<{sourceScope: HTMLElement; title: string; target: ColorPreviewTarget; initial: ColorValue | undefined;
+  nodeStyle: () => NodeStyle; linkStyle: () => LinkStyle; apply: (value: ColorValue | undefined) => boolean}>;
+
+/** The parent owns a nested native surface through its concrete root and exact retirement action. */
+export type LensColorDialog = Readonly<{element: HTMLElement; retire: () => void}>;
+
 type LensEditorMode = "simple" | "code";
 type LensDraft = Pick<GraphLensDefinition, "id" | "name" | "scope" | "mode" | "expression"> & {
+  initialDefinition?: GraphLensDefinition;
   editorMode: LensEditorMode;
   simple: GraphLensSimpleModel | null;
   style?: GraphLensStyle;
@@ -275,7 +287,7 @@ export function PlexFilter({
   value,
   onChange,
   lenses,
-  onLensesChange,
+  onLensesChange, onEditColor, lensesReadOnly = false, colorPalette = [],
   layoutMode,
   onLayoutModeChange,
   showSiblings,
@@ -292,7 +304,10 @@ export function PlexFilter({
   value: PlexFilterState;
   onChange: (value: PlexFilterState) => void;
   lenses: GraphLensDefinition[];
-  onLensesChange: (lenses: GraphLensDefinition[]) => void;
+  onLensesChange: (lenses: GraphLensDefinition[], baseline?: GraphLensDefinition[]) => Promise<StyleCommitResult> | void;
+  onEditColor?: (request: LensColorRequest) => LensColorDialog;
+  lensesReadOnly?: boolean;
+  colorPalette?: readonly SemanticColorPair[];
   layoutMode: GraphFilterLayoutMode;
   onLayoutModeChange: (mode: GraphFilterLayoutMode) => void;
   showSiblings: boolean;
@@ -322,6 +337,46 @@ export function PlexFilter({
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<LensDraft | null>(null);
   const [draftError, setDraftError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false), [operationMessage, setOperationMessage] = useState<string | null>(null);
+  const operation = useRef({alive: true, busy: false, token: 0});
+  const childColor = useRef<LensColorDialog | null>(null), draftRef = useRef(draft); draftRef.current = draft;
+  useEffect(() => {const owner = operation.current; owner.alive = true; return () => {owner.alive = false; owner.token++; childColor.current?.retire(); childColor.current = null;};}, []);
+  useEffect(() => () => {childColor.current?.retire(); childColor.current = null;}, [draft?.id, open, triggerRef.current?.ownerDocument]);
+
+  /** Capture one action; failures keep its draft and durable completion cannot become an unsaved retry. */
+  const submitLenses = (next: GraphLensDefinition[], baseline = lenses, saved?: () => void): void => {
+    const owner = operation.current; if (owner.busy || lensesReadOnly) return;
+    owner.busy = true; const token = ++owner.token; setPending(true); setOperationMessage(null);
+    const finish = async (): Promise<void> => {
+      let result: StyleCommitResult | void;
+      try {result = await onLensesChange(next, baseline);}
+      catch (error) {console.error("K-Plex lens edit was not saved", error); if (owner.alive && owner.token === token) {owner.busy = false; setPending(false); setOperationMessage(translate("styles.operation.notSaved"));} return;}
+      if (!owner.alive || owner.token !== token) return;
+      owner.busy = false; setPending(false);
+      try {saved?.(); setOperationMessage(result?.refreshPending ? translate("styles.operation.savedRefreshPending") : null);}
+      catch (error) {console.error("K-Plex saved lens UI refresh failed", error); setOperationMessage(translate("styles.operation.savedRefreshPending"));}
+    };
+    void finish();
+  };
+
+  /** Source selection updates only this exact live parent draft; the parent Save remains authoritative. */
+  const editColor = (element: HTMLElement, label: string, target: ColorPreviewTarget, initial: ColorValue | undefined): void => {
+    const opening = draftRef.current; if (!opening || operation.current.busy || lensesReadOnly || !onEditColor) return;
+    childColor.current?.retire();
+    childColor.current = onEditColor({sourceScope: element, title: label, target, initial,
+      nodeStyle: () => draftRef.current?.style?.node ?? {}, linkStyle: () => draftRef.current?.style?.edge ?? {},
+      apply: value => {
+        if (!operation.current.alive || operation.current.busy || draftRef.current?.id !== opening.id) return false;
+        setDraft(current => {
+          if (!current || current.id !== opening.id) return current;
+          const layer = target.kind === "node" ? {...current.style?.node} : {...current.style?.edge};
+          if (target.kind === "canvas") return current;
+          if (value === undefined) Reflect.deleteProperty(layer, target.field); else Object.assign(layer, {[target.field]: value});
+          return {...current, style: {...current.style, [target.kind === "node" ? "node" : "edge"]: layer}};
+        }); return true;
+      },
+    });
+  };
 
   const suggestions = useMemo(() => {
     // The editor is normally closed. Avoid touching the whole index until the user asks for it;
@@ -369,6 +424,7 @@ export function PlexFilter({
   }, [open, ownerDocument]);
 
   const editLens = (lens: GraphLensDefinition) => {
+    if (operation.current.busy || lensesReadOnly) return;
     let simple = tryParseGraphLensSimpleExpression(lens.expression);
     // Early checkpoint-2 builds exposed raw selector syntax. A quoted relationship name was a
     // tempting but ineffective input, and `edge.role == "working-on"` confused Plex position
@@ -388,6 +444,7 @@ export function PlexFilter({
     }
     setDraft({
       id: lens.id,
+      initialDefinition: structuredClone(lens),
       name: lens.name,
       scope: lens.scope,
       mode: lens.mode,
@@ -459,7 +516,7 @@ export function PlexFilter({
   };
 
   const saveDraft = () => {
-    if (!draft) return;
+    if (!draft || operation.current.busy || lensesReadOnly) return;
     let expression = draft.expression.trim();
     if (draft.editorMode === "simple") {
       if (!draft.simple) { setDraftError(translate("filter.addFilterCondition")); return; }
@@ -476,12 +533,13 @@ export function PlexFilter({
       scope: draft.scope,
       mode: draft.mode,
       expression,
-      enabled: existing?.enabled ?? true,
+      enabled: draft.initialDefinition?.enabled ?? existing?.enabled ?? true,
       style: draft.mode === "style" ? (draft.style ?? defaultGraphLensStyle(draft.scope)) : draft.style,
     };
-    onLensesChange(existing ? lenses.map((lens) => lens.id === next.id ? next : lens) : [...lenses, next]);
-    setDraft(null);
-    setDraftError(null);
+    const opening = draft.initialDefinition;
+    const baseline = opening ? lenses.map(lens => lens.id === opening.id ? opening : lens) : lenses;
+    if (opening && !baseline.some(lens => lens.id === opening.id)) baseline.push(opening);
+    submitLenses(existing ? lenses.map(lens => lens.id === next.id ? next : lens) : [...lenses, next], baseline, () => {setDraft(null); setDraftError(null);});
   };
 
   const valueChoices = (condition: GraphLensSimpleCondition): Choice[] | null => {
@@ -535,7 +593,7 @@ export function PlexFilter({
       <span>{translate("filter.panelTitle")}</span>
       <button type="button" className="kplex-icon-button" aria-label={translate("filter.closePanel")}
         onClick={/** Closing the panel restores its toolbar trigger without changing any filters. */ () => {
-          setOpen(false); triggerRef.current?.focus({ preventScroll: true });
+          if (operation.current.busy) return; setOpen(false); triggerRef.current?.focus({ preventScroll: true });
         }}><ObsidianIcon name="x" size={16} /></button>
     </div>
     <datalist id={tagListId}>{suggestions.tags.map((tag) => <option key={tag} value={tag} />)}</datalist>
@@ -631,11 +689,14 @@ export function PlexFilter({
     </section>
 
     <section className="kplex-filter-section kplex-lens-section">
+      {lensesReadOnly && <div role="status">{translate("colors.readOnly")}</div>}
+      {operationMessage && <div role="status">{operationMessage}</div>}
+      <fieldset className="kplex-lens-fields" disabled={pending || lensesReadOnly} aria-busy={pending}>
       <div className="kplex-filter-section-heading kplex-lens-heading">
         <span>{translate("filter.graphLenses")}</span>
         <div className="kplex-lens-heading-actions">
-          {activeLensCount > 0 && <button className="kplex-lens-disable-all" onClick={() => onLensesChange(lenses.map((lens) => ({ ...lens, enabled: false })))}>{translate("filter.turnAllOff")}</button>}
-          <button className="kplex-icon-button" aria-label={translate("filter.newLens")} onClick={() => { setDraft(EMPTY_DRAFT()); setDraftError(null); }}>
+          {activeLensCount > 0 && <button className="kplex-lens-disable-all" onClick={() => submitLenses(lenses.map((lens) => ({ ...lens, enabled: false })))}>{translate("filter.turnAllOff")}</button>}
+          <button className="kplex-icon-button" aria-label={translate("filter.newLens")} disabled={pending || lensesReadOnly} onClick={() => { if (operation.current.busy || lensesReadOnly) return; setDraft(EMPTY_DRAFT()); setDraftError(null); }}>
             <ObsidianIcon name="plus" size={15} />
           </button>
         </div>
@@ -651,7 +712,7 @@ export function PlexFilter({
               className={`kplex-lens-enable-button${lens.enabled ? " is-on" : ""}`}
               aria-label={translate(lens.enabled ? "filter.turnOffLens" : "filter.turnOnLens", { name: displayName })}
               aria-pressed={lens.enabled}
-              onClick={() => onLensesChange(lenses.map((item) => item.id === lens.id ? { ...item, enabled: !item.enabled } : item))}
+              onClick={() => submitLenses(lenses.map((item) => item.id === lens.id ? { ...item, enabled: !item.enabled } : item))}
             ><ObsidianIcon name={lens.enabled ? "eye" : "eye-off"} size={14} /></button>
             <button className="kplex-lens-main" onClick={() => editLens(lens)} aria-label={`${displayName}\n${expressionErrorMessage ?? lens.expression}`}>
               <span className="kplex-lens-name">{displayName}</span>
@@ -659,7 +720,7 @@ export function PlexFilter({
             </button>
             {expressionErrorMessage && <span className="kplex-lens-error-dot" aria-label={expressionErrorMessage} data-kplex-control-tooltip>!</span>}
             <button className="kplex-icon-button" aria-label={translate("filter.editLens", { name: displayName })} onClick={() => editLens(lens)}><ObsidianIcon name="pencil" size={13} /></button>
-            <button className="kplex-icon-button" aria-label={translate("filter.deleteLens", { name: displayName })} onClick={() => onLensesChange(lenses.filter((item) => item.id !== lens.id))}><ObsidianIcon name="trash-2" size={13} /></button>
+            <button className="kplex-icon-button" aria-label={translate("filter.deleteLens", { name: displayName })} onClick={() => submitLenses(lenses.filter((item) => item.id !== lens.id))}><ObsidianIcon name="trash-2" size={13} /></button>
           </div>;
         })}
       </div>
@@ -729,15 +790,15 @@ export function PlexFilter({
         {draft.mode === "style" && <div className="kplex-lens-style-editor">
           <div className="kplex-lens-style-heading">{translate("filter.appearance")}</div>
           {draft.scope === "node" ? <div className="kplex-lens-style-grid">
-            <label>{translate("filter.fill")} <input type="color" value={colorRgbInput(draft.style?.node?.backgroundColor, "#1f4f78")} onChange={(event) => updateStyle({ node: { ...(draft.style?.node ?? {}), backgroundColor: event.currentTarget.value } })} /></label>
-            <label>{translate("filter.border")} <input type="color" value={colorRgbInput(draft.style?.node?.borderColor, "#ffb300")} onChange={(event) => updateStyle({ node: { ...(draft.style?.node ?? {}), borderColor: event.currentTarget.value } })} /></label>
-            <label>{translate("filter.text")} <input type="color" value={colorRgbInput(draft.style?.node?.textColor, "#ffffff")} onChange={(event) => updateStyle({ node: { ...(draft.style?.node ?? {}), textColor: event.currentTarget.value } })} /></label>
+            <label>{translate("filter.fill")} <button type="button" disabled={!onEditColor} onClick={event => editColor(event.currentTarget, translate("filter.fill"), {kind: "node", field: "backgroundColor"}, draft.style?.node?.backgroundColor)}>{colorIdentityText(draft.style?.node?.backgroundColor, colorPalette) || translate("colors.inherit")}</button></label>
+            <label>{translate("filter.border")} <button type="button" disabled={!onEditColor} onClick={event => editColor(event.currentTarget, translate("filter.border"), {kind: "node", field: "borderColor"}, draft.style?.node?.borderColor)}>{colorIdentityText(draft.style?.node?.borderColor, colorPalette) || translate("colors.inherit")}</button></label>
+            <label>{translate("filter.text")} <button type="button" disabled={!onEditColor} onClick={event => editColor(event.currentTarget, translate("filter.text"), {kind: "node", field: "textColor"}, draft.style?.node?.textColor)}>{colorIdentityText(draft.style?.node?.textColor, colorPalette) || translate("colors.inherit")}</button></label>
             <label>{translate("filter.borderStyle")} <select value={draft.style?.node?.strokeStyle ?? "solid"} onChange={(event) => updateStyle({ node: { ...(draft.style?.node ?? {}), strokeStyle: event.currentTarget.value as "solid" | "dashed" | "dotted" } })}><option value="solid">{translate("filter.solid")}</option><option value="dashed">{translate("filter.dashed")}</option><option value="dotted">{translate("filter.dotted")}</option></select></label>
             <label>{translate("filter.borderWidth")} <input type="number" min="0.5" max="8" step="0.5" value={draft.style?.node?.strokeWidth ?? 2} onChange={(event) => updateStyle({ node: { ...(draft.style?.node ?? {}), strokeWidth: Number(event.currentTarget.value) || 1 } })} /></label>
             <label>{translate("filter.fillStyle")} <select value={draft.style?.node?.fillStyle ?? "solid"} onChange={(event) => updateStyle({ node: { ...(draft.style?.node ?? {}), fillStyle: event.currentTarget.value as "solid" | "hachure" | "cross-hatch" } })}><option value="solid">{translate("filter.solid")}</option><option value="hachure">{translate("filter.hachure")}</option><option value="cross-hatch">{translate("filter.crossHatch")}</option></select></label>
           </div> : <div className="kplex-lens-style-grid">
-            <label>{translate("filter.line")} <input type="color" value={colorRgbInput(draft.style?.edge?.strokeColor, "#ffb300")} onChange={(event) => updateStyle({ edge: { ...(draft.style?.edge ?? {}), strokeColor: event.currentTarget.value } })} /></label>
-            <label>{translate("filter.label")} <input type="color" value={colorRgbInput(draft.style?.edge?.textColor, "#ffffff")} onChange={(event) => updateStyle({ edge: { ...(draft.style?.edge ?? {}), textColor: event.currentTarget.value } })} /></label>
+            <label>{translate("filter.line")} <button type="button" disabled={!onEditColor} onClick={event => editColor(event.currentTarget, translate("filter.line"), {kind: "link", field: "strokeColor"}, draft.style?.edge?.strokeColor)}>{colorIdentityText(draft.style?.edge?.strokeColor, colorPalette) || translate("colors.inherit")}</button></label>
+            <label>{translate("filter.label")} <button type="button" disabled={!onEditColor} onClick={event => editColor(event.currentTarget, translate("filter.label"), {kind: "link", field: "textColor"}, draft.style?.edge?.textColor)}>{colorIdentityText(draft.style?.edge?.textColor, colorPalette) || translate("colors.inherit")}</button></label>
             <label>{translate("filter.lineStyle")} <select value={draft.style?.edge?.strokeStyle ?? "solid"} onChange={(event) => updateStyle({ edge: { ...(draft.style?.edge ?? {}), strokeStyle: event.currentTarget.value as "solid" | "dashed" | "dotted" } })}><option value="solid">{translate("filter.solid")}</option><option value="dashed">{translate("filter.dashed")}</option><option value="dotted">{translate("filter.dotted")}</option></select></label>
             <label>{translate("filter.lineWidth")} <input type="number" min="0.5" max="8" step="0.5" value={draft.style?.edge?.strokeWidth ?? 2} onChange={(event) => updateStyle({ edge: { ...(draft.style?.edge ?? {}), strokeWidth: Number(event.currentTarget.value) || 1 } })} /></label>
             <label className="kplex-lens-style-check"><input type="checkbox" checked={draft.style?.edge?.showLabel === true} onChange={(event) => updateStyle({ edge: { ...(draft.style?.edge ?? {}), showLabel: event.currentTarget.checked } })} /> {translate("filter.showRelationshipLabel")}</label>
@@ -745,8 +806,9 @@ export function PlexFilter({
           <div className="kplex-lens-help">{translate("filter.styleHelp")}</div>
         </div>}
         {draftError && <div className="kplex-lens-editor-error">{draftError}</div>}
-        <div className="kplex-lens-editor-actions"><button onClick={() => { setDraft(null); setDraftError(null); }}>{translate("common.cancel")}</button><button className="mod-cta" onClick={saveDraft}>{translate("filter.saveLens")}</button></div>
+        <div className="kplex-lens-editor-actions"><button onClick={() => { if (operation.current.busy) return; setDraft(null); setDraftError(null); }}>{translate("common.cancel")}</button><button className="mod-cta" onClick={saveDraft}>{translate("filter.saveLens")}</button></div>
       </div>}
+      </fieldset>
     </section>
 
   </div>;
@@ -757,7 +819,7 @@ export function PlexFilter({
       className="kplex-icon-button kplex-filter-trigger"
       aria-label={translate("filter.trigger")}
       aria-expanded={open}
-      onClick={() => setOpen((current) => !current)}
+      onClick={() => {if (!operation.current.busy) setOpen(current => !current);}}
     >
       <ObsidianIcon name="list-filter" size={16} />
       {activeLensCount > 0 && <span className="kplex-lens-count" aria-label={translate("filter.activeLensCount", { count: String(activeLensCount) })}>{activeLensCount}</span>}
@@ -767,8 +829,9 @@ export function PlexFilter({
       anchorRef={triggerRef}
       panelRef={panelRef}
       dragHandleRef={dragHandleRef}
-      insideRoots={() => [triggerRef.current, panelRef.current]}
-      onDismiss={() => setOpen(false)}
+      insideRoots={() => [triggerRef.current, panelRef.current, childColor.current?.element]}
+      handleEscape={event => {const child = childColor.current?.element; return !child || (!child.isConnected && !event.composedPath().includes(child));}}
+      onDismiss={() => {if (!operation.current.busy && !childColor.current?.element.isConnected) setOpen(false);}}
       portalTarget={ownerDocumentBody}
       positioning={FILTER_PANEL_POSITIONING}
     >

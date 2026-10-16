@@ -1270,7 +1270,9 @@ const translate = (key) => key;
 const interaction = { gates: new Set(), nodePaths: new Set() }, connectDrag = null, nodeDrag = null;
 // The production unfiltered projection is absent; rename reconciliation must not invent a filtered read.
 const globalFiltering = false, filteredGateCounts = null, nodeVisuals = new Map();
-const predicate = null, lenses = { lenses: [] }, paintLenses = lenses, paintSettings = settings, predicateEngine = {}, predicateRevision = 0, layoutRevision = 0;
+const predicate = null, lenses = { lenses: [] }, paintLenses = lenses, predicateEngine = {}, predicateRevision = 0, layoutRevision = 0;
+let styleReads=0;const measuredStyle=()=>new Proxy({textColor:"#abcdef"},{ownKeys(target){styleReads++;return Reflect.ownKeys(target)}});
+settings.baseNodeStyle=measuredStyle();let paintSettings=settings;
 const graphLensNodeStyle = () => ({});
 const centralEditorCapable = true, finding = false, hover = null, activeNodeFlair = null, findNodePaths = new Set(), keyboardSelection = null;
 const connectionStateFor = () => "normal", onCentralNodeEditorChange = () => {}, gateKey = (path, gate) => path + ":" + gate;
@@ -1286,12 +1288,12 @@ const index = { gateStats: () => gates, neighbours: () => [{ page: miniPage, rol
 const node = (page, role, x, y, height = 26) => ({ page, role, x, y, width: 180, height, style: { fontSize: 18 }, label: page.name, neighbourCount: 0, gateStats: gates });
 /** Render actual base nodes with separate zone-local/count-hydrated display copies. */
 function Scene({ scene: sourceScene, expanded }) {
-  const scene = { ...sourceScene, zoneViewports: {}, zoneAreas: {} };
+  const scene = useMemo(() => ({ ...sourceScene, zoneViewports: {}, zoneAreas: {} }), [sourceScene]);
   const centralEditorPage = expanded ? centerPage : null;
-  const sectionExpansion = null, expandedScrollTop = {};
+  const sectionExpansion = null, expandedScrollTop = useMemo(() => ({}), []);
   const visibleNodePaths = useMemo(() => new Set(scene.nodes.map((item) => item.page.path)), [scene.nodes]);
   const renderedNodeMap = useMemo(() => new Map(scene.nodes.map((item) => [item.page.path, { ...item }])), [scene.nodes]);
-  ${uiDefinitions("src/ui/PlexGraph.tsx", ["sceneNodeKeys", "expandedClusters", "renderNode", "renderExpandedCluster", "zoneForRole"])}
+  ${uiDefinitions("src/ui/PlexGraph.tsx", ["paintedNodeStyles", "sceneNodeKeys", "expandedClusters", "renderNode", "renderExpandedCluster", "zoneForRole"])}
   const miniKeys = expandedClusters.flatMap((cluster) => cluster.children.map((child) => child.key));
   check(new Set(miniKeys).size === miniKeys.length, "expanded connector keys collide during rename");
   return <><div className="kplex-nodes">{scene.nodes.map((item) => renderNode(item, { ...item }))}</div><div>{expandedClusters.map(renderExpandedCluster)}</div></>;
@@ -1307,6 +1309,11 @@ try {
   const attachments = () => [...container.querySelectorAll(".kplex-thought")].filter((element) => element.dataset.kplexPath === "After.png");
   const clusters = () => container.querySelectorAll(".kplex-expanded-cluster").length;
   render(initial, true);
+  const firstStyleReads=styleReads;render(initial,true);render(initial,true);
+  check(styleReads===firstStyleReads,"Stable scene rerenders repeated style-dictionary work");
+  paintSettings={...settings,baseNodeStyle:measuredStyle()};render(initial,true);
+  check(styleReads>firstStyleReads,"New paint settings failed to re-resolve colors");
+  const recoloredReads=styleReads;render(initial,true);check(styleReads===recoloredReads,"New paint cache did not settle");
   check(container.querySelectorAll(".kplex-thought").length === 4, "initial real endpoint and unresolved placeholder were not distinct");
   check(clusters() === 3, "fixture did not render expanded strips through the production owner");
   // GraphIndex.renameTreeEndpoint intentionally retains canonical page identity and mutates its

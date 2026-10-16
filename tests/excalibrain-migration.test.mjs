@@ -20,15 +20,15 @@ process.on("exit", () => rmSync(temp, { recursive: true, force: true }));
 /** Extract the production durable owner rather than substituting a successful style save. */
 function styleHostSource() {
   const source = ts.createSourceFile("main.ts", readFileSync(join(root, "src/main.ts"), "utf8"), ts.ScriptTarget.Latest, true);
-  const names = new Set(["updateStyleSettings", "saveSettings", "enqueueSettingsWrite", "settingsSnapshotForPersistence", "persistSettingsSnapshot"]);
+  const names = new Set(["updateStyleSettings", "saveSettings", "enqueueSettingsWrite", "settingsSnapshotForPersistence", "persistSettingsSnapshot", "setGraphLenses"]);
   const methods = [];
   /** Preserve actual queue/classifier/commit method bodies with their original await boundaries. */
   const visit = node => { if (ts.isMethodDeclaration(node) && names.has(node.name.getText(source))) methods.push(node.getText(source)); ts.forEachChild(node, visit); };
   visit(source); assert.equal(methods.length, names.size);
-  return 'import {STYLE_SETTINGS_KEYS} from "./src/core/contracts/appearance"; import {cyclicSemanticColorSlots,migrateColorPreferences} from "./src/core/plex/colorPreferences"; import {captureSettingsPolicy,classifySettingsChange,isStyleOnlySettingsChange} from "./src/core/graph/settingsPolicy"; export class StyleSettingsHost {' + methods.join('\n') + '}';
+  return 'import {mergeGraphLensDefinitions} from "./src/lens/GraphLens"; import {requireNamedColor} from "./src/core/plex/colorEditing"; import {appearanceColorReferences} from "./src/core/contracts/appearance"; import {STYLE_SETTINGS_KEYS} from "./src/core/contracts/appearance"; import {cyclicSemanticColorSlots,migrateColorPreferences} from "./src/core/plex/colorPreferences"; import {captureSettingsPolicy,classifySettingsChange,isStyleOnlySettingsChange} from "./src/core/graph/settingsPolicy"; export class StyleSettingsHost {' + methods.join('\n') + '}';
 }
 await build({
-  stdin: { contents: styleHostSource() + '\nexport * from "./src/settings"; export * from "./src/core/graph/settingsPolicy"; export * from "./src/index/style"; export * from "./src/ui/layout"; export * from "./src/ui/PurgeIndexCacheModal"; export { Modal as TestModal, Notice as TestNotice, AbstractInputSuggest as TestSuggest } from "obsidian"; export { createObsidianTranslator } from "./src/adapters/obsidian/localization";', resolveDir: root, loader: "ts" },
+  stdin: { contents: styleHostSource() + '\nexport * from "./src/settings"; export {adoptStandardThemeColors,deleteNamedColor} from "./src/core/plex/colorEditing"; export * from "./src/core/graph/settingsPolicy"; export * from "./src/index/style"; export * from "./src/ui/layout"; export * from "./src/ui/PurgeIndexCacheModal"; export { Modal as TestModal, Notice as TestNotice, AbstractInputSuggest as TestSuggest } from "obsidian"; export { createObsidianTranslator } from "./src/adapters/obsidian/localization";', resolveDir: root, loader: "ts" },
   outfile: join(temp, "migration.mjs"), bundle: true, platform: "node", format: "esm",
   plugins: [{ name: "obsidian-boundary-double", setup(builder) {
     builder.onResolve({ filter: /^obsidian$/ }, () => ({ path: "obsidian", namespace: "double" }));
@@ -129,7 +129,7 @@ test("remote node image consent is explicit, durable and independent of foreign 
     assert.equal(migrateAndMergeSettings({ allowRemoteNodeImages: value }).allowRemoteNodeImages, false);
   }
   assert.equal(defaults.allowRemoteNodeImages, false);
-  const consent = migrateAndMergeSettings({ allowRemoteNodeImages: true });
+  const consent = migrateAndMergeSettings({ ...defaults, allowRemoteNodeImages: true });
   assert.equal(migrateAndMergeSettings(JSON.parse(JSON.stringify(consent))).allowRemoteNodeImages, true);
   assert.equal(importExcaliBrainGraphSettings({ ...fixture, allowRemoteNodeImages: true }, defaults).allowRemoteNodeImages, false);
   assert.equal(importExcaliBrainGraphSettings(fixture, consent).allowRemoteNodeImages, true);
@@ -216,7 +216,7 @@ test("background throttle settings use declarative localized controls and save w
   assert.equal(plugin.settings.indexingThrottle, "responsive");
   assert.deepEqual(saves, [[false, false], [false, false]]);
   const before = captureSettingsPolicy(defaults);
-  const faster = migrateAndMergeSettings({ indexingThrottle: "faster" });
+  const faster = migrateAndMergeSettings({ ...defaults, indexingThrottle: "faster" });
   assert.deepEqual(classifySettingsChange(before, captureSettingsPolicy(faster)), {
     semanticInvalidation: false, presentationFacets: false, searchTerms: false,
     nodeVisuals: false, render: false, typographyOnly: false, paintOnly: false, changedKeys: [],
@@ -360,7 +360,7 @@ test("central editor stays opt-in while its local mode defaults safely", () => {
 
 test("per-note Markdown zoom preferences reload and remain independent of foreign imports and graph policy", /** Sparse local workflow choices have no semantic/presentation/index signature effects. */ () => {
   assert.deepEqual(defaults.centralNodeMarkdownZoomModes, {});
-  const local = migrateAndMergeSettings({ centralNodeMarkdownZoomModes: { "Local.md": "scale", "Fixed.md": "fixed", "Bad.md": true } });
+  const local = migrateAndMergeSettings({ ...defaults, centralNodeMarkdownZoomModes: { "Local.md": "scale", "Fixed.md": "fixed", "Bad.md": true } });
   assert.deepEqual(local.centralNodeMarkdownZoomModes, { "Local.md": "scale" });
   assert.deepEqual(migrateAndMergeSettings(JSON.parse(JSON.stringify(local))).centralNodeMarkdownZoomModes, { "Local.md": "scale" });
   assert.deepEqual(importExcaliBrainGraphSettings({ ...fixture, centralNodeMarkdownZoomModes: { "Foreign.md": "scale" } }, local).centralNodeMarkdownZoomModes, { "Local.md": "scale" });
@@ -498,7 +498,7 @@ async function activate(element, type = "click") {
 function styleEditorFixture(settings = structuredClone(defaults)) {
   const saves = [];
   const plugin = Object.assign(new StyleSettingsHost(), { settings, settingsWriteQueue: Promise.resolve(), savedSettingsPolicy: captureSettingsPolicy(settings),
-    saveData: async snapshot => { saves.push(structuredClone(snapshot)); }, index: { refreshPresentationSettings: async () => {}, refreshSemanticSettings: async () => { throw new Error("Style-only save acquired semantics"); }, allPages: () => [
+    saveData: async snapshot => { saves.push(structuredClone(snapshot)); }, index: { subscribePresentation: () => () => {}, refreshPresentationSettings: async () => {}, refreshSemanticSettings: async () => { throw new Error("Style-only save acquired semantics"); }, allPages: () => [
     { noteType: "Project", tags: ["#project/active", "project/backlog"] },
     { noteType: "Person", tags: ["#person"] },
   ] } });
@@ -527,7 +527,7 @@ test("new node style explicitly selects a tag prefix and preserves the appearanc
   assert.deepEqual(select.children.map(option => [option.value, option.text]), [["property", "Note type"], ["tag", "Tag"]]);
   assert.equal(select.disabled, false);
   const name = byLabel("Note type"), icon = byLabel("Lucide icon"), prefix = byLabel("Label prefix");
-  icon.value = "briefcase"; byLabel("Background").value = "#123456"; byLabel("Font size").value = "23";
+  icon.value = "briefcase"; assert.equal(byLabel("Background").tag, "button"); byLabel("Font size").value = "23";
   assert.equal(prefix.parent.visible, false);
   name.value = "project/active";
   select.value = "tag"; await activate(select, "change");
@@ -556,10 +556,10 @@ test("new node style explicitly selects a tag prefix and preserves the appearanc
   assert.deepEqual(settings.noteTypeStyles, {});
   assert.equal(settings.tagNodeStyles["#project/backlog"].icon, "briefcase");
   assert.equal(settings.tagNodeStyles["#project/backlog"].prefix, "Work ");
-  assert.equal(settings.tagNodeStyles["#project/backlog"].backgroundColor, "#123456ff");
+  assert.equal(settings.tagNodeStyles["#project/backlog"].backgroundColor, undefined, "Opening the source action never manufactures an override");
   assert.equal(settings.tagNodeStyles["#project/backlog"].fontSize, 23);
   const effective = resolveNodeStyle({ primaryStyleTag: "#project/backlog/task", styleTags: [], file: { extension: "md" }, noteType: null }, null, "center", settings);
-  assert.equal(effective.icon, "briefcase"); assert.equal(effective.backgroundColor, "#123456ff");
+  assert.equal(effective.icon, "briefcase"); assert.equal(effective.backgroundColor, undefined);
   assert.equal(suggest.closed, true);
   assert.equal(saves.length, 1);
   assert.match(elements.find(element => element.tag === "p").text, /primary style tag/);
@@ -757,14 +757,14 @@ test("a native close failure after persistence remains saved and cannot submit t
   modal.close = close; const dismiss = elements.find(e => e.text === "Close"); assert.equal(dismiss.disabled, false); await activate(dismiss); assert.equal(modal.closed, true);
 });
 
-test("native RGB normalization and edited colors preserve imported alpha and absent appearance fields", async () => {
+test("unchanged source actions preserve imported literal spelling, alpha and absent appearance fields", async () => {
   const { tab, settings } = styleEditorFixture(); settings.noteTypeStyles.Alpha = { backgroundColor: "#AABBCC80", textColor: "#FFEEDD66", borderColor: "#11223344" };
   const modal = openStyle(tab, "property", "Alpha"), elements = formElements(modal);
-  elements.find(e => e.attrs["aria-label"] === "Background").value = "#aabbcc";
-  elements.find(e => e.attrs["aria-label"] === "Text").value = "#010203";
+  assert.equal(elements.find(e => e.attrs["aria-label"] === "Background").tag, "button");
+  assert.equal(elements.find(e => e.attrs["aria-label"] === "Text").text, "#FFEEDD66");
   await activate(elements.find(e => e.text === "Save"));
   assert.equal(settings.noteTypeStyles.Alpha.backgroundColor, "#AABBCC80");
-  assert.equal(settings.noteTypeStyles.Alpha.textColor, "#01020366");
+  assert.equal(settings.noteTypeStyles.Alpha.textColor, "#FFEEDD66");
   assert.equal(settings.noteTypeStyles.Alpha.borderColor, "#11223344");
   assert.equal(settings.noteTypeStyles.Alpha.fontSize, undefined); assert.equal(settings.noteTypeStyles.Alpha.prefix, undefined);
 });
@@ -936,4 +936,74 @@ test("long labels and fixed two-line rows clear the center and neighboring zones
     assert(wrapNodeLabels ? regular[0].height > 26 : regular[0].height === 26, "Two-line mode must reserve a taller fixed row");
     assert.equal(Math.abs(scene.nodes.find(n => n.role === "left").x), scene.nodes.find(n => n.role === "right").x, "Lateral zones must stay symmetrical");
   }
+});
+
+
+test("fresh native defaults and legacy absence policy survive explicit single-field clearing and foreign import",()=>{
+ const fresh=migrateAndMergeSettings(undefined);assert.equal(fresh.standardStyleDefaults,'native');assert.equal(fresh.backgroundColor,undefined);
+ for(const key of ['baseNodeStyle','centralNodeStyle','inferredNodeStyle','virtualNodeStyle','folderNodeStyle','tagNodeStyle'])for(const field of ['backgroundColor','textColor','borderColor','gateStrokeColor','gateBackgroundColor'])assert.equal(fresh[key][field],undefined);
+ const old=migrateAndMergeSettings({baseFontSize:13});assert.equal(old.standardStyleDefaults,'legacy');assert.equal(old.backgroundColor,'#0c3e6aff');assert.equal(old.baseNodeStyle.textColor,'#ffffffff');
+ const original=structuredClone(old);old.standardStyleDefaults='native';delete old.backgroundColor;delete old.baseNodeStyle.textColor;
+ const loaded=migrateAndMergeSettings(JSON.parse(JSON.stringify(old)));assert.equal(loaded.backgroundColor,undefined);assert.equal(loaded.baseNodeStyle.textColor,undefined);
+ assert.equal(loaded.baseNodeStyle.backgroundColor,original.baseNodeStyle.backgroundColor);assert.deepEqual(loaded.centralNodeStyle,original.centralNodeStyle);assert.equal(loaded.baseNodeStyle.fontSize,original.baseNodeStyle.fontSize);
+ const imported=importExcaliBrainGraphSettings({standardStyleDefaults:'native',baseNodeStyle:{fontSize:24},colorPreferences:{version:9}},fresh);
+ assert.equal(imported.standardStyleDefaults,'native');assert.equal(imported.baseNodeStyle.fontSize,24);assert.equal(imported.baseNodeStyle.textColor,'#ffffffff');assert.deepEqual(imported.colorPreferences,fresh.colorPreferences);
+ const explicit=migrateAndMergeSettings({baseNodeStyle:{textColor:'#ffffffff'}});assert.equal(explicit.baseNodeStyle.textColor,'#ffffffff');assert.equal(explicit.standardStyleDefaults,'legacy');
+});
+
+test("future lens colors survive ordinary saves and imports; active lens edits are read-only",async()=>{
+ for(const color of [null,{kind:'future-source',payload:['unchanged']},{kind:'theme',variable:['--text-normal']}]){
+  const raw=[{id:'future',name:'Future',enabled:true,scope:'node',mode:'style',expression:'node.kind == "note"',style:{node:{textColor:color}}}];
+  const settings=migrateAndMergeSettings({graphLenses:raw});assert.deepEqual(settings.graphLensesColorFuture,raw);
+  const {plugin,saves}=styleEditorFixture(settings);plugin.graphLensListeners=new Set();
+  await plugin.updateStyleSettings(draft=>{draft.backgroundColor='#12345680';});
+  assert.deepEqual(saves.at(-1).graphLenses,raw);assert(!('graphLensesColorFuture'in saves.at(-1)));
+  const reloaded=migrateAndMergeSettings(saves.at(-1));assert.deepEqual(reloaded.graphLensesColorFuture,raw);
+  const imported=importExcaliBrainGraphSettings({backgroundColor:'#ffffff'},reloaded);assert.deepEqual(imported.graphLensesColorFuture,raw);
+  await assert.rejects(plugin.setGraphLenses([],settings.graphLenses),/read-only/);
+ }
+});
+
+test("queued lens parent save preserves a replaced named color and concurrent new lenses without optimistic publication",async()=>{
+ const {plugin,settings,saves}=styleEditorFixture();plugin.graphLensListeners=new Set();
+ settings.colorPreferences.palette=[{id:'a',name:'A',light:'#123456',dark:'#abcdef'},{id:'b',name:'B',light:'#234567',dark:'#fedcba'}];
+ const opening={id:'edited',name:'Opening',enabled:true,scope:'node',mode:'style',expression:'node.kind == "note"',style:{node:{textColor:{kind:'palette',id:'a'},strokeWidth:1}}};
+ settings.graphLenses=[structuredClone(opening)];plugin.savedSettingsPolicy=captureSettingsPolicy(settings);
+ const disk=deferred();plugin.saveData=async snapshot=>{saves.push(structuredClone(snapshot));if(saves.length===1)await disk.promise;};
+ const remap=plugin.updateStyleSettings(draft=>{draft.graphLenses[0].style.node.textColor={kind:'palette',id:'b'};draft.colorPreferences.palette=draft.colorPreferences.palette.filter(p=>p.id!=='a');});
+ const renamed={...structuredClone(opening),name:'Renamed'};const save=plugin.setGraphLenses([renamed],[opening]);
+ await new Promise(resolve=>setImmediate(resolve));assert.equal(settings.graphLenses[0].name,'Opening');assert.equal(settings.graphLenses[0].style.node.textColor.id,'a');
+ disk.resolve();await Promise.all([remap,save]);assert.equal(settings.graphLenses[0].name,'Renamed');assert.equal(settings.graphLenses[0].style.node.textColor.id,'b');assert.equal(saves.length,2);
+ const baseline=structuredClone(settings.graphLenses);settings.graphLenses.push({...opening,id:'concurrent',name:'Concurrent'});
+ await plugin.setGraphLenses([{...baseline[0],enabled:false}],baseline);assert.deepEqual(settings.graphLenses.map(l=>l.id),['edited','concurrent']);assert.equal(settings.graphLenses[0].enabled,false);
+ settings.graphLenses=settings.graphLenses.filter(l=>l.id!=='edited');await assert.rejects(plugin.setGraphLenses([{...baseline[0],name:'Resurrect'}],baseline),/no longer exists/);
+});
+
+
+test("unchanged sparse ontology styles retain inheritance while a concurrent base style changes",async()=>{
+ const {tab,settings}=styleEditorFixture();settings.hierarchyLinkStyles.parent={strokeColor:'#11223380'};
+ const previousWindow=globalThis.window;let modal;
+ try{globalThis.window={setTimeout:run=>{run();return 0}};tab.openOntologyLinkStyleEditor('parent');modal=TestModal.latest;}finally{globalThis.window=previousWindow;}
+ settings.baseLinkStyle={...settings.baseLinkStyle,strokeWidth:4,fontSize:22};
+ await activate(formElements(modal).find(element=>element.text==='Save'));
+ assert.deepEqual(settings.hierarchyLinkStyles.parent,{strokeColor:'#11223380'});assert.equal(settings.baseLinkStyle.strokeWidth,4);assert.equal(settings.baseLinkStyle.fontSize,22);
+});
+
+/** Exercise the real disk-before-live writer; deleting an optional root draft key must override its old value. */
+test("standard adoption and named deletion durably clear an existing canvas through the production queue",async()=>{
+ const {adoptStandardThemeColors,deleteNamedColor}=await import(pathToFileURL(join(temp,"migration.mjs")));
+ for(const action of ['adopt','delete']){
+  const {plugin,settings,saves}=styleEditorFixture();
+  settings.backgroundColor={kind:'palette',id:'canvas-pair'};
+  settings.colorPreferences.palette=[{id:'canvas-pair',name:'Canvas',light:'#11223380',dark:'#aabbcc40'}];
+  settings.baseNodeStyle={...settings.baseNodeStyle,textColor:'#abcdef',fontSize:27};
+  plugin.savedSettingsPolicy=captureSettingsPolicy(settings);
+  await plugin.updateStyleSettings(draft=>action==='adopt'?adoptStandardThemeColors(draft):deleteNamedColor(draft,'canvas-pair',undefined));
+  assert.equal(settings.backgroundColor,undefined,action+' live canvas');
+  assert.equal(saves.at(-1).backgroundColor,undefined,action+' durable canvas');
+  assert.equal(migrateAndMergeSettings(JSON.parse(JSON.stringify(saves.at(-1)))).backgroundColor,undefined,action+' restart');
+  assert.equal(settings.baseNodeStyle.fontSize,27);
+  if(action==='adopt'){assert.equal(settings.baseNodeStyle.textColor,undefined);assert.equal(settings.colorPreferences.palette.length,1)}
+  else{assert.equal(settings.baseNodeStyle.textColor,'#abcdef');assert.equal(settings.colorPreferences.palette.length,0)}
+ }
 });

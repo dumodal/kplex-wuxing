@@ -5,7 +5,7 @@
  * only for completed theme names/context changes; local picker paint coalesces to one owner frame.
  */
 import { NODE_COLOR_FIELDS, LINK_COLOR_FIELDS, isThemeColorName, parseLiteralColor, type ColorValue } from "../core/contracts/colorValue";
-import { SEMANTIC_COLOR_DEFAULTS, semanticSlotForVariable, type ColorPreferencesV1, type SemanticColorSlot } from "../core/plex/colorPreferences";
+import { SEMANTIC_COLOR_DEFAULTS, semanticSlotForVariable, type ColorPreferencesV1, type SemanticColorSlot, type SemanticColorPair } from "../core/plex/colorPreferences";
 import { colorContrastRatio, compositeColor } from "../core/plex/colorContrast";
 import { ThemePreviewSampler, THEME_PREVIEW_TOKENS, THEME_PREVIEW_CONTEXT_LIMIT, type ThemePreviewPair } from "../adapters/obsidian/themePreview";
 import { ColorSampleReader } from "../adapters/obsidian/colorSample";
@@ -19,7 +19,9 @@ export type ColorPreviewOptions = Readonly<{
   onContextChange?: () => void;
   sourceScope: HTMLElement; translate: Translator; target: ColorPreviewTarget;
   fallbacks?: NodePaintFallbacks;
-  preferences: () => ColorPreferencesV1; nodeStyle: () => NodeStyle; linkStyle: () => LinkStyle; background: () => ColorValue | undefined;
+  inherit?: () => ColorValue | undefined;
+  pairDraft?: () => SemanticColorPair;
+  preferences: (draftSource?: ColorValue) => ColorPreferencesV1; nodeStyle: () => NodeStyle; linkStyle: () => LinkStyle; background: () => ColorValue | undefined;
 }>;
 type PreviewCard = Readonly<{ root: HTMLElement; canvas: HTMLElement; status: HTMLElement; help: HTMLElement; contrast: HTMLElement }>;
 const PREVIEW_PUBLIC_TOKENS = ["--canvas-background", "--kplex-panel", "--kplex-canvas-background", "--kplex-node-fill", "--kplex-node-text",
@@ -78,6 +80,8 @@ export class ColorPreview {
     if (this.disposed) return; this.value = value;
     if (finishedThemeName) void this.readTheme(); else this.schedulePaint();
   }
+  /** Palette/semantic publications repaint current drafts; CSS harvesting occurs only for newly needed tokens. */
+  refreshSources(): void { if (!this.disposed) {void this.readTheme(); this.schedulePaint();} }
   /** Real owner CSS/context changes retire old snapshots without persisting sampled RGB values. */
   invalidate(): void {
     if (this.disposed) return;
@@ -97,8 +101,8 @@ export class ColorPreview {
   /** Request only configured example sources and fixed native/public tokens, never discover arbitrary theme variables. */
   private async readTheme(): Promise<void> {
     const tokens = new Set<string>([...THEME_PREVIEW_TOKENS, ...PREVIEW_PUBLIC_TOKENS]);
-    const node = this.options.nodeStyle(), link = this.options.linkStyle(), preferences = this.options.preferences();
-    const references = [...NODE_COLOR_FIELDS.map(field => node[field]), ...LINK_COLOR_FIELDS.map(field => link[field]), this.options.background(), this.value,
+    const node = this.options.nodeStyle(), link = this.options.linkStyle(), preferences = this.options.preferences(this.value);
+    const references = [...NODE_COLOR_FIELDS.map(field => node[field]), ...LINK_COLOR_FIELDS.map(field => link[field]), this.options.background(), this.value, this.options.inherit?.(),
       ...Object.values(preferences.semantic)];
     for (const value of references) if (value && typeof value !== "string" && value.kind === "theme" && isThemeColorName(value.variable) && !value.variable.startsWith("--_kplex-")) tokens.add(value.variable);
     const native = this.options.fallbacks ?? NATIVE_NODE_PAINT;
@@ -123,10 +127,10 @@ export class ColorPreview {
 
   /** Resolve preview-only source values in one sampled mode without altering saved source identities. */
   private resolve(value: ColorValue | undefined, mode: "light" | "dark", fallback: string, seen = new Set<SemanticColorSlot>()): string {
-    const samples = this.samples?.[mode].colors ?? {}, preferences = this.options.preferences();
+    const samples = this.samples?.[mode].colors ?? {}, preferences = this.options.preferences(this.value);
     if (value === undefined || value === null || (typeof value !== "string" && typeof value !== "object")) return fallback;
     if (typeof value === "string") return this.reader.read(this.cards[mode].canvas, value) ? value : fallback;
-    if (value.kind === "palette") return preferences.palette.find(pair => pair.id === value.id)?.[mode] ?? fallback;
+    if (value.kind === "palette") return (this.options.pairDraft?.().id === value.id ? this.options.pairDraft() : preferences.palette.find(pair => pair.id === value.id))?.[mode] ?? fallback;
     if (value.kind !== "theme") return fallback;
     const slot = semanticSlotForVariable(value.variable);
     if (!slot) return samples[value.variable] || fallback;
@@ -147,8 +151,9 @@ export class ColorPreview {
     const fallback = Object.fromEntries(Object.keys(NATIVE_NODE_PAINT).map(key => [key, samples.colors[`--kplex-preview-${key}`] || "transparent"])) as NodePaintFallbacks;
     const node = { ...this.options.nodeStyle() }, link = { ...this.options.linkStyle() };
     let canvas = this.options.background(); const target = this.options.target;
-    if (target.kind === "node") node[target.field] = this.value;
-    else if (target.kind === "link") link[target.field] = this.value; else canvas = this.value;
+    const inherited = this.value === undefined ? this.options.inherit?.() : this.value;
+    if (target.kind === "node") node[target.field] = inherited;
+    else if (target.kind === "link") link[target.field] = inherited; else canvas = inherited;
     const opaqueLiteral = [...NODE_COLOR_FIELDS.map(field => node[field]), ...LINK_COLOR_FIELDS.map(field => link[field]), canvas]
       .some(value => typeof value === "string" && !parseLiteralColor(value));
     if (opaqueLiteral) { card.status.setText(t("colors.estimated")); card.help.setText(t("colors.estimatedHelp")); }

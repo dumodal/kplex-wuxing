@@ -1,3 +1,4 @@
+import { subscribeAppearanceSources } from "../adapters/obsidian/colorChanges";
 /**
  * Host-bound Plex scene composition, shared captured center-arrival motion and finite Wander navigation ports, layout and relationship interactions. Semantic resolution stays index/core-owned; UI labels and on-demand evidence hints use the injected translator. Navigation fits keep the central node centered and follow late geometry until manual camera input; publication and ordinary pane resizing preserve manual intent. View-owned display transitions retain camera coordinates and scene settings. Device typography stages scalar live preferences and persists after input settles; unmount flushes storage without replaying stale overrides. Area-height gestures own viewport pointer capture and persist existing presentation settings on completion or interruption. History and pinned drag targets share composer eligibility; external file drops follow the rendered area's semantic role. Theme-native area previews follow the existing drop action without intercepting capture or moving the dragged thought. Visible rows retain finite cache-only presentation demand; hidden surfaces and effect teardown release it. Geometry defers gate/count queries until a row intersects the displayed viewport, including partially clipped rows. Ordinary unfiltered scenes project cross-links for clipped visible rows; filtered and section scenes retain their established edge/count policy. Scene-local React keys capture paths before canonical pages can mutate during rename; semantic pages and actions retain their live identity. Normal-mode keyboard and exact-phrase typing selection are view-local; the displayed occurrence projection supplies all candidates and the shared selection owner reveals them without changing the center, filters or native search. Host methods own activation/rename/creation. Filtered badge numerators use revision-scoped semantic endpoint membership independently of connector routing and viewport clipping. Pane-fit native layout controls own local touch containment and bounded scrolling without changing preferences or browser range behavior. Accessible layout-wrapper hints use the shell's shared tooltip owner; inputs retain concise accessible names.
  * Visual resolution and metadata refreshes retain the index consent epoch; teardown and revocation
@@ -756,6 +757,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   // App receives fresh prepared facades during unrelated renders. Explicit drafts survive those
   // publications; mutating one temporary facade would discard slow slider changes mid-gesture.
   const settings = useMemo(() => Object.assign(withAreaHeightOverrides(viewSettings, areaHeightOverrides), layoutOverrides), [viewSettings, areaHeightOverrides, layoutOverrides]);
+  const paintedNodeStyles = useMemo(/** Reuse resolved colors for stable scene occurrences across hover/count/scroll renders. */ () => new WeakMap<object, NodeStyle>(), [paintSettings]);
   const colorScope = useRef<ColorScope | null>(null);
   // This fixed-length inventory compares current appearance owners, not cloned presentation facades.
   // Ordinary source/status publications therefore never enumerate configured styles or probe CSS.
@@ -3658,7 +3660,9 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     // Layout counts are deliberately deferred placeholders. Reuse the center's actual render-time
     // coverage for autonomous readiness without querying counts/acquiring sources in timer polls.
     if (baseNode.role === "center") renderedCenterGates.current = { identity: baseNode.page.path, stats: countedDisplayNode.gateStats };
-    const styledDisplayNode = { ...countedDisplayNode, style: { ...currentNodeColorStyle(countedDisplayNode, paintSettings), ...lensNodeStyle } };
+    let colorStyle = paintedNodeStyles.get(baseNode);
+    if (!colorStyle) {colorStyle = currentNodeColorStyle(baseNode, paintSettings); paintedNodeStyles.set(baseNode, colorStyle);}
+    const styledDisplayNode = { ...countedDisplayNode, style: { ...colorStyle, ...lensNodeStyle } };
     const gateCounts = filteredGateCounts?.isCurrent() ? filteredGateCounts.counts.get(baseNode.page.path) : undefined;
     const nodeForDisplay = globalFiltering && gateCounts
       ? {
@@ -3846,8 +3850,12 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
           {cluster.children.map((child) => {
             const maxChars = Math.min(22, effectiveLabelLimit(child.style.maxLabelLength ?? 30));
             const text = child.label.length > maxChars ? `${child.label.slice(0, Math.max(1, maxChars - 1))}…` : child.label;
-            const current = currentNodeColorStyle({page: child.relation.page, role: "child", relationType: child.relation.relationType,
-              typeDefinition: child.relation.typeDefinition, linkDirection: child.relation.linkDirection, style: child.style}, paintSettings);
+            let current = paintedNodeStyles.get(child);
+            if (!current) {
+              current = currentNodeColorStyle({page: child.relation.page, role: "child", relationType: child.relation.relationType,
+                typeDefinition: child.relation.typeDefinition, linkDirection: child.relation.linkDirection, style: child.style}, paintSettings);
+              paintedNodeStyles.set(child, current);
+            }
             const lensStyle = neighborhood ? graphLensNodeStyle(predicateEngine, index, paintLenses, {page: child.relation.page, label: child.label,
               center: neighborhood.center, edge: {role: child.relation.role, relationType: child.relation.relationType, definition: child.relation.typeDefinition,
                 linkDirection: child.relation.linkDirection, sourcePath: cluster.parent.page.path, targetPath: child.relation.page.path}}) : {};
@@ -4007,9 +4015,10 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
             preferences: () => plugin.settings.colorPreferences, nodeStyle: () => plugin.settings.baseNodeStyle,
             linkStyle: () => plugin.settings.baseLinkStyle, background: () => plugin.settings.backgroundColor,
             subscribeCss: changed => { const ref = plugin.app.workspace.on("css-change", changed); return () => plugin.app.workspace.offref(ref); },
+            subscribeColors: changed => subscribeAppearanceSources(listener => plugin.index.subscribePresentation(listener), () => plugin.settings, changed),
             onSave: async color => plugin.updateStyleSettings(draft => {
               if (color && typeof color !== "string" && color.kind === "palette" && !draft.colorPreferences.palette.some(pair => pair.id === color.id)) throw new Error("Named color no longer exists");
-              draft.backgroundColor = color;
+              draft.backgroundColor = color; draft.standardStyleDefaults = "native";
             }),
             onClosed: () => { graphDialogs.current.delete(dialog); },
           });

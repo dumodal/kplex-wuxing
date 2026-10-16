@@ -1,3 +1,6 @@
+import { subscribeAppearanceSources } from "../adapters/obsidian/colorChanges";
+import { ColorSourceModal } from "./ColorSourceModal";
+import type { LensColorRequest, LensColorDialog } from "./PlexFilter";
 /**
  * Host-bound React shell for K-Plex navigation, startup guidance, File Explorer note drops, toolbar and Sidecar controls. It composes shared components and injected environment/localization capabilities; plugin methods own host effects. The native view owns session display modes; React projects Zen chrome and supplies exact camera-resize preparation without replacing its root. Search/Find scopes and hints use effective action bindings; each surface releases its own registrations on teardown.
  * Wander owns one cancellable per-view session over graph projection ports and the shared activation path;
@@ -651,10 +654,21 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     return plugin.openPage(target, hostLeaf.view.containerEl.ownerDocument);
   }, [plugin, hostLeaf]);
 
-  const updateGraphLenses = useCallback((next: GraphLensDefinition[]) => {
-    setGraphLensesState(next);
-    void plugin.setGraphLenses(next);
-  }, [plugin]);
+  const updateGraphLenses = useCallback((next: GraphLensDefinition[], baseline?: GraphLensDefinition[]) => plugin.setGraphLenses(next, baseline), [plugin]);
+
+  /** The native shell previews current paint; the detached React lens still owns its local draft. */
+  const editLensColor = useCallback((request: LensColorRequest): LensColorDialog => {
+    const target = request.target;
+    const dialog = new ColorSourceModal(plugin.app, {sourceScope: rootRef.current?.querySelector<HTMLElement>(".kplex-plex") ?? rootRef.current ?? request.sourceScope, translate, title: request.title, target, initial: request.initial,
+      help: translate("colors.parentHelp"), actionLabel: translate("colors.useColor"), preferences: () => plugin.settings.colorPreferences,
+      nodeStyle: () => ({...plugin.settings.baseNodeStyle, ...request.nodeStyle()}), linkStyle: () => ({...plugin.settings.baseLinkStyle, ...request.linkStyle()}),
+      background: () => plugin.settings.backgroundColor, inherit: () => target.kind === "canvas" ? plugin.settings.backgroundColor
+        : target.kind === "node" ? plugin.settings.baseNodeStyle[target.field] : plugin.settings.baseLinkStyle[target.field],
+      subscribeCss: changed => {const ref = plugin.app.workspace.on("css-change", changed); return () => plugin.app.workspace.offref(ref);},
+      subscribeColors: changed => subscribeAppearanceSources(listener => plugin.index.subscribePresentation(listener), () => plugin.settings, changed),
+      onSave: async source => {if (!request.apply(source)) throw new Error("Lens editor retired"); return {refreshPending: false};},
+    }); dialog.open(); return {element: dialog.containerEl, retire: () => dialog.retire()};
+  }, [plugin, translate]);
 
   const goHistory = (delta: number) => {
     const list = plugin.settings.navigationHistory;
@@ -1159,8 +1173,8 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
               if (next.showCrossLinks !== plugin.settings.showCrossLinks) void toggleToolbarSetting("showCrossLinks");
               setFindFilterOwner(null); setPlexFilter(next);
             }}
-            lenses={graphLenses}
-            onLensesChange={updateGraphLenses}
+            lenses={plugin.settings.graphLenses} colorPalette={plugin.settings.colorPreferences.palette}
+            onLensesChange={updateGraphLenses} onEditColor={editLensColor} lensesReadOnly={plugin.settings.graphLensesColorFuture !== undefined}
             layoutMode={filterLayoutMode}
             onLayoutModeChange={/** An explicit layout choice belongs to the filter panel. */ (mode) => {
               setFindFilterOwner(null); setFilterLayoutMode(mode);

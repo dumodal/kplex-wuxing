@@ -1,3 +1,6 @@
+import { mergeGraphLensDefinitions } from "./lens/GraphLens";
+import { appearanceColorReferences } from "./core/contracts/appearance";
+import { requireNamedColor } from "./core/plex/colorEditing";
 /**
  * Obsidian plugin lifecycle and host orchestration for indexing, navigation and vault mutations. Portable owners determine semantics; this host boundary supplies effects, cleanup and localized product feedback. Native metadata events request finite visible presentation repair independently of semantic readiness. Passive document synchronization preserves the current representation of exact matching native destinations; explicit opening and source inspection retain their separate navigation contracts. Support reporting projects retained facts without starting index work; this lifetime owns its bounded recorder and native report dialogs. Per-note Markdown zoom preferences follow Vault rename/delete events independently of index readiness.
  * Remote node image consent publishes synchronously before persistence and never requests semantics.
@@ -1522,8 +1525,8 @@ export default class KplexPlugin extends Plugin {
 
   /** Omit runtime recovery markers while retaining the actual future schema in its original field. */
   private settingsSnapshotForPersistence(actionPreferences: unknown, source: KplexSettings = this.settings): Record<string, unknown> {
-    const { actionPreferencesFuture: _runtimeFuture, colorPreferencesFuture: _runtimeColorFuture, ...settings } = source;
-    return { ...settings, actionPreferences, colorPreferences: source.colorPreferencesFuture !== undefined
+    const { actionPreferencesFuture: _runtimeFuture, colorPreferencesFuture: _runtimeColorFuture, graphLensesColorFuture: _runtimeLensColorFuture, ...settings } = source;
+    return { ...settings, actionPreferences, ...(source.graphLensesColorFuture !== undefined ? {graphLenses: source.graphLensesColorFuture} : {}), colorPreferences: source.colorPreferencesFuture !== undefined
       ? source.colorPreferencesFuture : source.colorPreferences };
   }
 
@@ -1550,9 +1553,13 @@ export default class KplexPlugin extends Plugin {
         /** Each operation receives only appearance-owned values from this current serialized boundary. */ key => [key, source[key]],
       ))) as StyleSettingsDraft;
       edit(draft);
-      const next = { ...source, ...draft };
+      const next = { ...source };
+      // Optional root fields can be deleted by adoption or atomic palette replacement. Copy the
+      // complete finite inventory, including absence, so an old canvas cannot survive the draft.
+      for (const key of STYLE_SETTINGS_KEYS) Object.assign(next, { [key]: draft[key] });
       const policy = captureSettingsPolicy(next);
       const effects = classifySettingsChange(before, policy);
+      if (effects.changedKeys.includes("graphLenses") && source.graphLensesColorFuture !== undefined) throw new Error("Newer lens colors are read-only");
       if (effects.changedKeys.includes("colorPreferences")) {
         if (source.colorPreferencesFuture !== undefined) throw new Error("Newer color preferences are read-only");
         if (migrateColorPreferences(draft.colorPreferences).future !== undefined || cyclicSemanticColorSlots(draft.colorPreferences).length)
@@ -3000,10 +3007,18 @@ export default class KplexPlugin extends Plugin {
     return () => this.graphLensListeners.delete(listener);
   }
 
-  async setGraphLenses(lenses: KplexSettings["graphLenses"]): Promise<void> {
-    this.settings.graphLenses = lenses;
-    await this.saveSettings(false, false);
-    for (const listener of this.graphLensListeners) listener(lenses);
+  /** Lens edits share the durable appearance queue and merge against their captured editor baseline. */
+  async setGraphLenses(lenses: KplexSettings["graphLenses"], baseline = this.settings.graphLenses): Promise<StyleCommitResult> {
+    const opening = structuredClone(baseline), edited = structuredClone(lenses);
+    const result = await this.updateStyleSettings(draft => {
+      if (this.settings.graphLensesColorFuture !== undefined) throw new Error("Newer lens colors are read-only");
+      const merged = mergeGraphLensDefinitions(opening, edited, draft.graphLenses);
+      const known = new Set(appearanceColorReferences({graphLenses: draft.graphLenses}).map(value => JSON.stringify(value)));
+      for (const value of appearanceColorReferences({graphLenses: merged})) if (!known.has(JSON.stringify(value))) requireNamedColor(value, draft.colorPreferences);
+      draft.graphLenses = merged;
+    });
+    try {for (const listener of this.graphLensListeners) listener(this.settings.graphLenses); return result;}
+    catch (error) {console.error("K-Plex saved lens notification failed", error); return {refreshPending: true};}
   }
 
   subscribeNodeFlair(listener: (path: string) => void): () => void {

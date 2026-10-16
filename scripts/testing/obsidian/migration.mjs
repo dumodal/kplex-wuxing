@@ -147,7 +147,7 @@ try {
     const names=Array.from(content.querySelectorAll(".kplex-style-manager-name")).map(el=>el.textContent);
     const row=Array.from(content.querySelectorAll(".kplex-style-manager-row")).find(el=>el.querySelector(".kplex-style-manager-name").textContent==="#person");
     if(!row) throw new Error("Imported #person style missing");
-    const nodeSwatch=row.querySelector(".kplex-style-manager-node-swatch").style.getPropertyValue("--kplex-style-node-border");
+    const nodeSwatch=doc.defaultView.getComputedStyle(row.querySelector(".kplex-style-manager-node-swatch")).borderTopColor;
     row.click();
     const editor=doc.querySelector(".kplex-style-editor");
     const inputs=Array.from(editor.querySelectorAll("input")).map(el=>({type:el.type,value:el.value}));
@@ -169,21 +169,22 @@ try {
     while((more=links.querySelector(".kplex-style-manager-more"))) more.click();
     const linkNames=Array.from(links.querySelectorAll(".kplex-style-manager-name")).map(el=>el.textContent);
     const inspired=Array.from(links.querySelectorAll(".kplex-style-manager-row")).find(el=>el.querySelector(".kplex-style-manager-name").textContent==="Inspired by");
-    const linkSwatch=inspired?.querySelector(".kplex-style-manager-line-swatch").style.getPropertyValue("--kplex-style-swatch");
+    const linkSwatch=doc.defaultView.getComputedStyle(inspired.querySelector(".kplex-style-manager-line-swatch")).borderTopColor;
     inspired.click();
+    const linkSourceAction=doc.querySelector('button[aria-label="Line color"]')?.textContent;
     const linkEditor=Array.from(doc.querySelector(".kplex-style-editor").querySelectorAll("input")).map(el=>({type:el.type,value:el.value,checked:el.checked}));
     doc.querySelector(".kplex-style-editor").closest(".modal").querySelector(".modal-close-button, .modal-header-button").click();
     modal.querySelector(".modal-close-button, .modal-header-button").click();
     app.setting.close();
-    return JSON.stringify({names,nodeSwatch,prefix,linkNames,customNames,linkSwatch,linkEditor});
+    return JSON.stringify({names,nodeSwatch,prefix,linkNames,customNames,linkSwatch,linkEditor,linkSourceAction});
   })()`);
   for (const key of Object.keys(fixture.tagNodeStyles)) assert(managers.names.includes(key), `Node manager missing ${key}`);
-  assert.equal(managers.nodeSwatch, "#f7ce46"); assert.equal(managers.prefix, true);
+  assert.equal(managers.nodeSwatch, "rgb(247, 206, 70)"); assert.equal(managers.prefix, true);
   for (const key of Object.keys(fixture.hierarchyLinkStyles).filter(Boolean))
     assert(managers.linkNames.some(name => name.toLowerCase().replaceAll(" ", "-") === key.toLowerCase().replaceAll(" ", "-")), `Link manager missing ${key}`);
   assert(managers.customNames.includes("Inspired by"));
-  assert.equal(managers.linkSwatch, "#fefb41");
-  assert(managers.linkEditor.some(input => input.type === "color" && input.value === "#fefb41"));
+  assert.equal(managers.linkSwatch, "rgba(254, 251, 65, 0.6)");
+  assert.equal(managers.linkSourceAction,Object.entries(fixture.hierarchyLinkStyles).find(([key])=>key.toLowerCase().replaceAll(" ","-") === "inspired-by")[1].strokeColor);
   console.log("Node and link style managers passed");
   report.scenarios.push({ id: "rendered-settings-style-managers", status: "passed", ...managers });
 

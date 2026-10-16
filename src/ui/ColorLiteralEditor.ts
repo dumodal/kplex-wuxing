@@ -67,12 +67,15 @@ export class ColorLiteralEditor {
     this.feedback = this.root.createDiv({ cls: "kplex-color-error", attr: { id: id + "-error", role: "status", "aria-live": "polite" } });
     this.legacyHelp = this.root.createDiv({ cls: "setting-item-description" });
     const reset = this.root.createEl("button", { text: options.labels.reset, attr: { type: "button" } });
-    reset.addEventListener("click", /** Reset only this variant to its exact opening literal, not an independently edited counterpart. */ () => {
-      if (!this.editable()) return;
-      this.value = options.initial; this.parsed = parseLiteralColor(this.value); this.textValid = true; this.opacityValid = true; this.composing = false;
-      this.text.value = this.value; this.sync("reset"); this.showError(); this.notify();
-    });
+    reset.addEventListener("click", /** Reset only this variant, retaining its counterpart. */ () => this.reset());
     this.sync("initial");
+  }
+
+  /** Restore this variant's exact opening literal, including alpha and original serialization. */
+  reset(): void {
+    if (!this.editable()) return;
+    this.value = this.options.initial; this.parsed = parseLiteralColor(this.value); this.textValid = true; this.opacityValid = true; this.composing = false;
+    this.text.value = this.value; this.sync("reset"); this.showError(); this.notify();
   }
 
   /** Expose the last valid draft; callers still check validity before submitting. */

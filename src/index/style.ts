@@ -118,7 +118,7 @@ export const NATIVE_CANVAS_FILL = "var(--kplex-canvas-background, var(--canvas-b
 export const NATIVE_LINK_LABEL_FILL = "var(--kplex-link-label-background, var(--background-primary))";
 
 /** Select fresh native slot fallbacks; explicit winning style fields always take precedence. */
-export function nodePaintFallbacks(node: Pick<PositionedNode, "page" | "role" | "relationType">): NodePaintFallbacks {
+export function nodePaintFallbacks(node: Readonly<{page: Pick<GraphPage, "isFolder" | "isTag" | "url"> & {file: unknown}; role: Role | "center"; relationType?: Neighbour["relationType"]}>): NodePaintFallbacks {
   const fallback = { ...NATIVE_NODE_PAINT };
   if (node.role === "center") {
     fallback.fill = "var(--kplex-central-node-fill, var(--kplex-node-fill, var(--background-primary-alt, var(--background-primary))))";

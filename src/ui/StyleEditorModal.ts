@@ -138,4 +138,3 @@ export abstract class StyleEditorModal extends Modal {
   }
 
 }
-

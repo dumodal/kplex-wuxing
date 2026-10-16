@@ -4,7 +4,7 @@ import test from "node:test";
 import {build} from "esbuild";
 import {chromiumHarness} from "./support/browserTypeScript.mjs";
 import {nativeColorControls,initializeColorDom} from "./support/nativeColorControls.mjs";
-const compiled=await build({stdin:{resolveDir:process.cwd(),contents:`export * from './src/ui/ColorLiteralEditor';export * from './src/ui/ColorSourceModal';export * from './src/adapters/obsidian/colorScope';export * from './src/adapters/obsidian/colorSample';export * from './src/adapters/obsidian/colorPresentation';export * from './src/core/plex/colorPreferences';export * from './src/core/contracts/colorValue';export * from './src/lang';`},bundle:true,write:false,format:"iife",globalName:"sourceModules",platform:"browser",plugins:[{name:"native-controls",setup(builder){builder.onResolve({filter:/^obsidian$/},()=>({path:"obsidian",namespace:"native"}));builder.onLoad({filter:/.*/,namespace:"native"},()=>({contents:nativeColorControls}));}}]});
+const compiled=await build({stdin:{resolveDir:process.cwd(),contents:`export * from './src/adapters/obsidian/colorChanges';export * from './src/adapters/obsidian/themePreview';export * as React from 'react';export {createRoot} from 'react-dom/client';export {flushSync} from 'react-dom';export * from './src/ui/PlexFilter';export * from './src/settings';export * from './src/ui/ColorPaletteModal';export * from './src/ui/ColorPairModal';export * from './src/core/plex/colorEditing';export {Modal as TestModal} from 'obsidian';export * from './src/ui/ColorLiteralEditor';export * from './src/ui/ColorSourceModal';export * from './src/adapters/obsidian/colorScope';export * from './src/adapters/obsidian/colorSample';export * from './src/adapters/obsidian/colorPresentation';export * from './src/core/plex/colorPreferences';export * from './src/core/contracts/colorValue';export * from './src/lang';`},bundle:true,write:false,format:"iife",globalName:"sourceModules",platform:"browser",plugins:[{name:"native-controls",setup(builder){builder.onResolve({filter:/^obsidian$/},()=>({path:"obsidian",namespace:"native"}));builder.onLoad({filter:/.*/,namespace:"native"},()=>({contents:nativeColorControls}));}}]});
 /** Run one isolated document and always release its actual browser process/profile. */
 async function scenario(code){const host=await chromiumHarness(compiled.outputFiles[0].text);try{assert.equal(await host.evaluate(initializeColorDom),true);return await host.evaluate(code)}finally{await host.cleanup()}}
 
@@ -94,5 +94,200 @@ test("explicit Fixed conversion uses the consumer fallback and preserves exact n
   const t=sourceModules.createTranslator('en'),options={title:'Color',sourceScope:scope,translate:t,target:{kind:'canvas'},preferences:()=>preferences,nodeStyle:()=>({}),linkStyle:()=>({}),background:()=>undefined,onSave:async()=>({refreshPending:false})};
   let modal=new sourceModules.ColorSourceModal({}, {...options,initial:undefined});modal.open();input(modal.contentEl.querySelector('select'),'fixed','change');let value=sourceModules.parseLiteralColor(modal.contentEl.querySelector('input[type=text]').value);if(value.red!==24||value.green!==24||value.blue!==24)throw Error('Canvas seeded from unrelated text color');modal.close();
   preferences.palette.push({id:'alpha',name:'Alpha',light:'#12345640',dark:'#33445588'});modal=new sourceModules.ColorSourceModal({}, {...options,initial:{kind:'palette',id:'alpha'}});modal.open();input(modal.contentEl.querySelector('select'),'fixed','change');const text=modal.contentEl.querySelector('input[type=text]');if(text.value!=='#33445588')throw Error('Named alpha rounded by CSS');input(modal.contentEl.querySelector('input[type=color]'),'#abcdef');if(sourceModules.parseLiteralColor(text.value).alpha!==136/255)throw Error('RGB changed named alpha');modal.close();return true;
+ })()`),true);
+});
+
+
+test("paired editor preserves the other mode, exact alpha, partial drafts, explicit resets and failed-save retry",async()=>{
+ assert.equal(await scenario(`(async()=>{
+  const t=sourceModules.createTranslator('en'),initial={id:'pair',name:'Pair',light:'rgba(1,2,3,.123456789)',dark:'#aabbcc80'};let writes=0,fail=true,saved;
+  const dialog=new sourceModules.ColorPairModal({}, {title:'Pair',initial,sourceScope:scope,translate:t,preferences:()=>preferences,nodeStyle:()=>({}),linkStyle:()=>({}),background:()=>undefined,
+   onSave:async pair=>{writes++;if(fail)throw Error('disk rejected');saved=pair;return{refreshPending:false}}});dialog.open();
+  const controls=[...dialog.contentEl.querySelectorAll('fieldset')],light=controls[0],dark=controls[1];
+  input(light.querySelector('input[type=color]'),'#112233');if(sourceModules.parseLiteralColor(dark.querySelector('input[type=text]').value).alpha!==128/255)throw Error('Opposite mode overwritten');
+  const alpha=sourceModules.parseLiteralColor(light.querySelector('input[type=text]').value).alpha;if(alpha!==.123456789||writes)throw Error('Alpha/open write');
+  input(light.querySelector('input[type=text]'),'#12');const save=[...dialog.contentEl.querySelectorAll('button')].find(b=>b.textContent==='Save');if(!save.disabled)throw Error('Partial draft admitted');
+  light.querySelector('button').click();if(light.querySelector('input[type=text]').value!==initial.light)throw Error('Variant reset failed');
+  input(dark.querySelector('input[type=number]'),'0');if(light.querySelector('input[type=text]').value!==initial.light)throw Error('Opacity edited opposite mode');
+  save.click();await waitFor(()=>writes===1&&dialog.modalEl.getAttribute('aria-busy')==='false');if(!dialog.modalEl.isConnected||dark.querySelector('input[type=number]').value!=='0')throw Error('Failure lost draft');
+  fail=false;save.click();await waitFor(()=>!dialog.modalEl.isConnected);if(writes!==2||sourceModules.parseLiteralColor(saved.dark).alpha!==0||saved.light!==initial.light)throw Error('Retry changed pair');
+  const reset=new sourceModules.ColorPairModal({}, {title:'Reset',initial,sourceScope:scope,translate:t,preferences:()=>preferences,nodeStyle:()=>({}),linkStyle:()=>({}),background:()=>undefined,onSave:async()=>{throw Error('Unexpected write')}});reset.open();
+  for(const el of reset.contentEl.querySelectorAll('input[type=color]'))input(el,'#ffffff');[...reset.contentEl.querySelectorAll('button')].find(b=>b.textContent==='Reset both variants').click();
+  const values=[...reset.contentEl.querySelectorAll('fieldset input[type=text]')].map(el=>el.value);if(JSON.stringify(values)!==JSON.stringify([initial.light,initial.dark]))throw Error('Pair reset lost opening values');reset.retire();
+  if(document.querySelector('iframe[sandbox]')||window.migrationListeners)throw Error('Pair lifetime leaked');return true;
+ })()`),true);
+});
+
+test("searchable palette bounds rows and atomically replaces all configured uses before deleting",async()=>{
+ assert.equal(await scenario(`(async()=>{
+  const t=sourceModules.createTranslator('en');for(let i=0;i<15;i++)preferences.palette.push({id:'p'+i,name:'Pair '+i,light:'#11223300',dark:'#aabbcc80'});
+  let settings={colorPreferences:preferences,baseNodeStyle:{textColor:{kind:'palette',id:'p0'}},graphLenses:[{style:{edge:{strokeColor:{kind:'palette',id:'p0'}}}}]},writes=0,changed;
+  const options={sourceScope:scope,translate:t,preferences:()=>settings.colorPreferences,nodeStyle:()=>settings.baseNodeStyle,linkStyle:()=>({}),background:()=>undefined,read:()=>settings,readOnly:()=>false,canDelete:()=>true,
+   subscribe:callback=>{changed=callback;return()=>changed=null},write:async edit=>{const draft=structuredClone(settings);edit(draft);settings=draft;writes++;changed?.();return{refreshPending:false}}};
+  const dialog=new sourceModules.ColorPaletteModal({},options);dialog.open();if(dialog.contentEl.querySelectorAll('.kplex-palette-row').length!==12||writes)throw Error('Unbounded rows/open write');
+  [...dialog.contentEl.querySelectorAll('button')].find(b=>b.textContent==='Show 3 more').click();if(dialog.contentEl.querySelectorAll('.kplex-palette-row').length!==15)throw Error('More missing');
+  input(dialog.contentEl.querySelector('input[type=search]'),'Pair 0');if(dialog.contentEl.querySelectorAll('.kplex-palette-row').length!==1)throw Error('Search missing');
+  dialog.contentEl.querySelector('.kplex-palette-row').querySelectorAll('button')[2].click();
+  const remove=sourceModules.TestModal.instances.at(-1),deleteButton=[...remove.contentEl.querySelectorAll('button')].find(b=>b.textContent==='Delete');if(!deleteButton.disabled)throw Error('In-use deletion admitted self replacement');
+  input(remove.contentEl.querySelector('.kplex-color-source-editor select'),'inherit','change');if(deleteButton.disabled)throw Error('Explicit Default not admitted');deleteButton.click();await waitFor(()=>writes===1);
+  if(settings.colorPreferences.palette.some(pair=>pair.id==='p0')||sourceModules.namedColorUsage(settings).has('p0'))throw Error('Non-atomic delete');
+  if(settings.baseNodeStyle.textColor!==undefined||settings.graphLenses[0].style.edge.strokeColor!==undefined)throw Error('Configured refs not replaced');dialog.retire();
+  if(changed||window.migrationListeners)throw Error('Manager lifetime leaked');return true;
+ })()`),true);
+});
+
+test("unused deletion rejects a newly arrived use and post-durable manager errors report saved refresh pending",async()=>{
+ assert.equal(await scenario(`(async()=>{
+  const t=sourceModules.createTranslator('en');preferences.palette.push({id:'race',name:'Race',light:'#112233',dark:'#445566'});
+  let settings={colorPreferences:preferences,baseNodeStyle:{}},writes=0,failRefresh=false;const common={sourceScope:scope,translate:t,preferences:()=>{if(failRefresh)throw Error('render failed');return settings.colorPreferences},nodeStyle:()=>({}),linkStyle:()=>({}),background:()=>undefined,read:()=>settings,readOnly:()=>false,canDelete:()=>true,subscribe:()=>()=>{},
+   write:async edit=>{const draft=structuredClone(settings);edit(draft);settings=draft;writes++;failRefresh=true;return{refreshPending:false}}};
+  const manager=new sourceModules.ColorPaletteModal({},common);manager.open();manager.contentEl.querySelector('.kplex-palette-row').querySelectorAll('button')[2].click();const remove=sourceModules.TestModal.instances.at(-1);
+  settings.baseNodeStyle.textColor={kind:'palette',id:'race'};[...remove.contentEl.querySelectorAll('button')].find(b=>b.textContent==='Delete').click();await waitFor(()=>remove.modalEl.getAttribute('aria-busy')==='false');
+  if(writes||settings.colorPreferences.palette.length!==1||!remove.modalEl.isConnected||!window.notices.some(message=>message.includes('now used')))throw Error('New use silently cleared');remove.retire();
+  manager.contentEl.querySelector('.kplex-palette-name').click();const pair=sourceModules.TestModal.instances.at(-1);input(pair.contentEl.querySelector('input[type=text]'),'Renamed');[...pair.contentEl.querySelectorAll('button')].find(b=>b.textContent==='Save').click();
+  await waitFor(()=>writes===1&&!pair.modalEl.isConnected);if(settings.colorPreferences.palette[0].name!=='Renamed'||!window.notices.some(message=>message.includes('saved')))throw Error('Durable outcome became unsaved');manager.retire();return true;
+ })()`),true);
+});
+
+test("actual custom node source action preserves alpha through type switches and parent durable Save",async()=>{
+ assert.equal(await scenario(`(async()=>{
+  const t=sourceModules.createTranslator('en');let settings=structuredClone(sourceModules.DEFAULT_SETTINGS),writes=0;
+  const app={workspace:{on:()=>({}),offref:()=>{}}},plugin={settings,translator:t,index:{subscribePresentation:()=>()=>{},allPages:()=>[],unassignedOntologyFields:()=>[]},updateStyleSettings:async edit=>{const next=structuredClone(settings);edit(next);settings=next;plugin.settings=next;writes++;return{refreshPending:false}}};
+  const tab=new sourceModules.KplexSettingTab(app,plugin);tab.update=()=>{};tab.openNodeStyleEditor('property',null);const parent=sourceModules.TestModal.instances.at(-1);
+  input(parent.contentEl.querySelector('input[aria-label="Note type"]'),'Project');parent.contentEl.querySelector('button[aria-label="Background"]').click();const source=sourceModules.TestModal.instances.at(-1);
+  input(source.contentEl.querySelector('.kplex-color-source-editor select'),'fixed','change');input(source.contentEl.querySelector('fieldset input[type=text]'),'rgba(12,34,56,.123456789)');
+  [...source.contentEl.querySelectorAll('button')].find(b=>b.textContent==='Use color').click();await waitFor(()=>!source.modalEl.isConnected);if(writes)throw Error('Child wrote settings');
+  input(parent.contentEl.querySelector('select'),'tag','change');if(parent.contentEl.querySelector('button[aria-label="Background"]').textContent!=='rgba(12,34,56,.123456789)')throw Error('Type switch lost source');
+  [...parent.contentEl.querySelectorAll('button')].find(b=>b.textContent==='Save').click();await waitFor(()=>writes===1);if(settings.tagNodeStyles['#Project'].backgroundColor!=='rgba(12,34,56,.123456789)')throw Error('Parent lost exact alpha');
+  settings.noteTypeStyles.Alpha={textColor:'#FFEEDD66'};tab.openNodeStyleEditor('property','Alpha');const imported=sourceModules.TestModal.instances.at(-1);imported.contentEl.querySelector('button[aria-label="Text"]').click();const rgb=sourceModules.TestModal.instances.at(-1);
+  input(rgb.contentEl.querySelector('input[type=color]'),'#010203');[...rgb.contentEl.querySelectorAll('button')].find(b=>b.textContent==='Use color').click();await waitFor(()=>!rgb.modalEl.isConnected);[...imported.contentEl.querySelectorAll('button')].find(b=>b.textContent==='Save').click();await waitFor(()=>writes===2);
+  if(sourceModules.parseLiteralColor(settings.noteTypeStyles.Alpha.textColor).alpha!==102/255||!settings.noteTypeStyles.Alpha.textColor.startsWith('#010203'))throw Error('Imported RGB edit lost alpha');tab.disposeActionSettings();return true;
+ })()`),true);
+});
+
+
+test("actual lens editor retains its opening color baseline, excludes pending dismissal and keeps drafts after storage failure",async()=>{
+ assert.equal(await scenario(`(async()=>{
+  const t=sourceModules.createTranslator('en'),R=sourceModules.React,{flushSync}=sourceModules;let calls=0,reject,resolve,child,retired=0,captured;
+  let lenses=[{id:'lens',name:'Opening',enabled:true,scope:'node',mode:'style',expression:'node.kind == "note"',style:{node:{textColor:{kind:'palette',id:'a'}}}}];
+  const index={suggestionCatalog:()=>({tags:[],noteTypes:[],folders:[],properties:[],paths:[]})};
+  const onLensesChange=(next,baseline)=>{calls++;captured={next,baseline};return new Promise((yes,no)=>{resolve=yes;reject=no})};
+  const onEditColor=request=>{child=request;const element=createDiv();document.body.append(element);return{element,retire:()=>{retired++;element.remove()}}};
+  const props={index,revision:0,value:sourceModules.EMPTY_PLEX_FILTER,onChange:()=>{},onLensesChange,onEditColor,layoutMode:'keep',onLayoutModeChange:()=>{},showSiblings:false,onShowSiblingsChange:()=>{},visibility:{},onVisibilityChange:()=>{},sortOrder:'name',onSortOrderChange:()=>{},translate:t};
+  const container=createDiv();document.body.append(container);const root=sourceModules.createRoot(container);const render=()=>flushSync(()=>root.render(R.createElement(sourceModules.PlexFilter,{...props,lenses})));render();
+  flushSync(()=>container.querySelector('button').click());await waitFor(()=>document.querySelector('.kplex-lens-main'));
+  flushSync(()=>document.querySelector('.kplex-lens-main').click());const name=document.querySelector('.kplex-lens-editor input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(name,'Renamed');name.dispatchEvent(new Event('input',{bubbles:true}));await new Promise(r=>setTimeout(r,0));
+  const sourceButtons=[...document.querySelectorAll('.kplex-lens-style-grid button')];flushSync(()=>sourceButtons.at(-1).click());if(!child||child.initial.id!=='a')throw Error('Lens did not use shared source port');
+  lenses=structuredClone(lenses);lenses[0].style.node.textColor={kind:'palette',id:'b'};render();
+  const save=[...document.querySelectorAll('.kplex-lens-editor-actions button')].find(b=>b.textContent==='Save lens');flushSync(()=>save.click());flushSync(()=>save.click());
+  document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));document.querySelector('.kplex-lens-editor-actions button').click();
+  if(calls!==1||!document.querySelector('.kplex-lens-editor')||!document.querySelector('.kplex-filter-panel')||!document.querySelector('.kplex-lens-fields').disabled)throw Error('Pending duplicate or dismissal');
+  if(captured.baseline[0].style.node.textColor.id!=='a'||captured.next[0].name!=='Renamed'||child.apply('#ffffff'))throw Error('Opening baseline/pending draft fence lost');
+  reject(Error('disk rejected'));await waitFor(()=>!document.querySelector('.kplex-lens-fields').disabled);if(!document.querySelector('.kplex-lens-editor')||name.value!=='Renamed')throw Error('Failed save lost draft');
+  flushSync(()=>save.click());resolve({refreshPending:true});await waitFor(()=>!document.querySelector('.kplex-lens-editor'));
+  if(calls!==2||!document.querySelector('.kplex-lens-section').textContent.includes('saved')||child.apply('#ffffff'))throw Error('Durable result/retired child fence lost');
+  flushSync(()=>root.unmount());if(!retired||document.querySelector('.kplex-filter-panel'))throw Error('Lens lifetime leaked');return true;
+ })()`),true);
+});
+
+
+test("semantic Default previews public inheritance safely and standard role previews use production fallbacks",async()=>{
+ assert.equal(await scenario(`(async()=>{
+  const t=sourceModules.createTranslator('en'),settings=structuredClone(sourceModules.DEFAULT_SETTINGS);settings.colorPreferences.semantic.origin='#123456';
+  const app={workspace:{on:()=>({}),offref:()=>{}}},plugin={settings,translator:t,index:{subscribePresentation:()=>()=>{},allPages:()=>[],unassignedOntologyFields:()=>[]}};
+  const tab=new sourceModules.KplexSettingTab(app,plugin);tab.containerEl.style.setProperty('--kplex-semantic-origin','12px');tab.containerEl.style.setProperty('--kplex-tag-text','#56789a');
+  tab.openSemanticColor('origin');const semantic=sourceModules.TestModal.instances.at(-1);input(semantic.contentEl.querySelector('.kplex-color-source-editor select'),'inherit','change');
+  await waitFor(()=>semantic.contentEl.querySelector('.kplex-color-preview-canvas')?.style.getPropertyValue('--_kplex-preview-node-border'));
+  const previewSeed=sourceModules.parseLiteralColor(semantic.contentEl.querySelector('.kplex-color-preview-canvas').style.getPropertyValue('--_kplex-preview-node-border'));
+  if(!previewSeed||Math.round(previewSeed.red)!==170||Math.round(previewSeed.green)!==85||Math.round(previewSeed.blue)!==238)throw Error('Semantic Default preview used old choice or poisoned public token');semantic.retire();
+  delete settings.colorPreferences.semantic.origin;tab.openSemanticColor('origin');const inherited=sourceModules.TestModal.instances.at(-1);input(inherited.contentEl.querySelector('.kplex-color-source-editor select'),'fixed','change');const seed=sourceModules.parseLiteralColor(inherited.contentEl.querySelector('fieldset input[type=text]').value);
+  if(!seed||Math.round(seed.red)!==170||Math.round(seed.green)!==85||Math.round(seed.blue)!==238)throw Error('Initial Default conversion used a poisoned public token');inherited.retire();
+  tab.openStandardColor('tagNodeStyle','textColor');const tag=sourceModules.TestModal.instances.at(-1);input(tag.contentEl.querySelector('.kplex-color-source-editor select'),'fixed','change');
+  const tagSeed=sourceModules.parseLiteralColor(tag.contentEl.querySelector('fieldset input[type=text]').value);if(Math.round(tagSeed.red)!==86||Math.round(tagSeed.green)!==120||Math.round(tagSeed.blue)!==154)throw Error('Tag Default ignored native production fallback');tag.retire();tab.disposeActionSettings();return true;
+ })()`),true);
+});
+
+test("palette duplicate preserves literal variants under an independent identity and unchanged pair Save writes nothing",async()=>{
+ assert.equal(await scenario(`(async()=>{
+  const t=sourceModules.createTranslator('en');preferences.palette.push({id:'original',name:'Original',light:'rgba(12,34,56,.123456789)',dark:'#abcdef00'});let settings={colorPreferences:preferences},writes=0;
+  const manager=new sourceModules.ColorPaletteModal({}, {sourceScope:scope,translate:t,preferences:()=>settings.colorPreferences,nodeStyle:()=>({}),linkStyle:()=>({}),background:()=>undefined,read:()=>settings,readOnly:()=>false,canDelete:()=>true,subscribe:()=>()=>{},write:async edit=>{const next=structuredClone(settings);edit(next);settings=next;writes++;return{refreshPending:false}}});manager.open();
+  manager.contentEl.querySelector('.kplex-palette-row').querySelectorAll('button')[1].click();const duplicate=sourceModules.TestModal.instances.at(-1);[...duplicate.contentEl.querySelectorAll('button')].find(b=>b.textContent==='Save').click();await waitFor(()=>writes===1&&!duplicate.modalEl.isConnected);
+  const added=settings.colorPreferences.palette[1];if(!added||added.id==='original'||added.light!==preferences.palette[0].light||added.dark!==preferences.palette[0].dark)throw Error('Duplicate lost independent exact pair');
+  manager.contentEl.querySelector('.kplex-palette-name').click();const unchanged=sourceModules.TestModal.instances.at(-1);[...unchanged.contentEl.querySelectorAll('button')].find(b=>b.textContent==='Save').click();await waitFor(()=>!unchanged.modalEl.isConnected);if(writes!==1)throw Error('Unchanged pair wrote');manager.retire();return true;
+ })()`),true);
+});
+
+
+test("appearance subscriptions ignore ordinary source events, recognize legacy in-place signals and retire callbacks",async()=>{
+ assert.equal(await scenario(`(()=>{
+  const settings={colorPreferences:preferences,baseNodeStyle:{}},listeners=new Set();let changes=0,releases=0;
+  const stop=sourceModules.subscribeAppearanceSources(callback=>{listeners.add(callback);return()=>{listeners.delete(callback);releases++}},()=>settings,()=>changes++);
+  const callback=[...listeners][0];for(let i=0;i<100;i++)callback({kind:'presentation'});if(changes)throw Error('Source events rescanned appearance');
+  settings.colorPreferences={...preferences,palette:[]};callback({kind:'paint',changedKeys:['colorPreferences']});if(changes!==1)throw Error('Published owner not observed');
+  settings.baseNodeStyle.textColor='#123456';callback({kind:'paint',changedKeys:['baseNodeStyle']});if(changes!==2)throw Error('Legacy in-place signal lost');
+  stop();stop();callback({changedKeys:['colorPreferences']});if(changes!==2||releases!==1||listeners.size)throw Error('Subscription leaked');return true;
+ })()`),true);
+});
+
+test("nested native source editors retain origin-only CSS and live palette previews refresh without writes or repeated sampling",async()=>{
+ assert.equal(await scenario(`(async()=>{
+  const t=sourceModules.createTranslator('en'),settings=structuredClone(sourceModules.DEFAULT_SETTINGS),listeners=new Set();let writes=0,samples=0;
+  settings.colorPreferences.palette=[{id:'pair',name:'Opening name',light:'#123456',dark:'#334455'}];settings.noteTypeStyles.Type={backgroundColor:{kind:'palette',id:'pair'}};
+  const app={workspace:{on:()=>({}),offref:()=>{}}},plugin={settings,translator:t,index:{subscribePresentation:callback=>{listeners.add(callback);return()=>listeners.delete(callback)},allPages:()=>[],unassignedOntologyFields:()=>[]},updateStyleSettings:async()=>{writes++;throw Error('Unexpected write')}};
+  const tab=new sourceModules.KplexSettingTab(app,plugin);tab.containerEl.style.setProperty('--Local-only','#789abc');tab.openNodeStyleEditor('property','Type');const parent=sourceModules.TestModal.instances.at(-1);
+  parent.contentEl.querySelector('button[aria-label="Background"]').click();let child=sourceModules.TestModal.instances.at(-1);
+  input(child.contentEl.querySelector('.kplex-color-source-editor select'),'theme','change');input(child.contentEl.querySelectorAll('select')[1],'custom','change');const variable=[...child.contentEl.querySelectorAll('label')].find(label=>label.textContent.includes('CSS variable name')).querySelector('input');input(variable,'--Local-only');variable.dispatchEvent(new Event('blur'));
+  if([...child.contentEl.querySelectorAll('button')].find(b=>b.textContent==='Use color').disabled)throw Error('Origin-only CSS lost through native modal');child.retire();
+  const original=sourceModules.ThemePreviewSampler.prototype.sample;sourceModules.ThemePreviewSampler.prototype.sample=function(...args){samples++;return original.apply(this,args)};
+  parent.contentEl.querySelector('button[aria-label="Background"]').click();child=sourceModules.TestModal.instances.at(-1);await waitFor(()=>child.contentEl.querySelector('.kplex-color-preview-canvas')?.style.getPropertyValue('--_kplex-preview-node-fill'));const before=samples;
+  settings.colorPreferences={...settings.colorPreferences,palette:[{...settings.colorPreferences.palette[0],name:'Renamed color',dark:'#556677'}]};for(const callback of [...listeners])callback({kind:'paint',changedKeys:['colorPreferences']});
+  await waitFor(()=>sourceModules.parseLiteralColor(child.contentEl.querySelectorAll('.kplex-color-preview-canvas')[1].style.getPropertyValue('--_kplex-preview-node-fill'))?.red===85);
+  if(!child.contentEl.textContent.includes('Renamed color')||parent.contentEl.querySelector('button[aria-label="Background"]').textContent!=='Renamed color'||samples!==before||writes)throw Error('Live metadata refresh wrote or resampled unchanged CSS');
+  for(let i=0;i<50;i++)for(const callback of [...listeners])callback({kind:'presentation'});if(samples!==before)throw Error('Source events sampled CSS');
+  child.retire();parent.retire();tab.disposeActionSettings();if(listeners.size)throw Error('Editor metadata subscription leaked');return true;
+ })()`),true);
+});
+
+test("actual style-manager swatches preserve alpha and named/theme identity in their native document",async()=>{
+ assert.equal(await scenario(`(async()=>{
+  const t=sourceModules.createTranslator('en'),settings=structuredClone(sourceModules.DEFAULT_SETTINGS),listeners=new Set();
+  settings.colorPreferences.palette=[{id:'pair',name:'Visible name',light:'#12345600',dark:'#44556680'}];settings.noteTypeStyles.Type={backgroundColor:{kind:'palette',id:'pair'},borderColor:{kind:'theme',variable:'--text-normal'}};
+  const app={workspace:{on:()=>({}),offref:()=>{}}},plugin={settings,translator:t,index:{subscribePresentation:callback=>{listeners.add(callback);return()=>listeners.delete(callback)},allPages:()=>[],unassignedOntologyFields:()=>[]}};
+  const tab=new sourceModules.KplexSettingTab(app,plugin);tab.openNoteTypeStylesManager();const manager=sourceModules.TestModal.instances.at(-1),reader=new sourceModules.ColorSampleReader(document);
+  const read=()=>{const swatch=manager.contentEl.querySelector('.kplex-style-manager-node-swatch');return reader.read(swatch,getComputedStyle(swatch).getPropertyValue('--kplex-style-node-bg'))};
+  if(!manager.contentEl.textContent.includes('Visible name')||Math.abs(read().alpha-.5)>.003)throw Error('Named swatch became opaque fallback');
+  document.body.className='theme-light';await waitFor(()=>read()?.alpha===0);if(settings.noteTypeStyles.Type.backgroundColor.id!=='pair')throw Error('Mode flattened saved reference');
+  const search=manager.contentEl.querySelector('input[type=search]');input(search,'No match');if(manager.contentEl.querySelector('.kplex-style-manager-node-swatch')||manager.contentEl.style.getPropertyValue(sourceModules.paletteColorProperty('pair')))throw Error('Empty list retained binding');
+  input(search,'');const action=manager.contentEl.querySelector('.kplex-style-manager-row');manager.retire();const count=sourceModules.TestModal.instances.length;action.click();if(sourceModules.TestModal.instances.length!==count)throw Error('Retired row opened an editor');tab.disposeActionSettings();reader.dispose();if(listeners.size||window.migrationListeners)throw Error('Manager lifetime leaked');return true;
+ })()`),true);
+});
+
+test("nested native color modal keeps pointer and Escape ownership above the actual lens panel",async()=>{
+ assert.equal(await scenario(`(async()=>{
+  const t=sourceModules.createTranslator('en'),R=sourceModules.React,{flushSync}=sourceModules;let dialog=null,changed=0;
+  const lenses=[{id:'nested',name:'Nested',enabled:false,scope:'node',mode:'style',expression:'node.kind == "note"',style:{node:{textColor:'#11223380'}}}];
+  const index={suggestionCatalog:()=>({tags:[],noteTypes:[],folders:[],properties:[],paths:[]})};
+  const onEditColor=request=>{
+    const doc=request.sourceScope.ownerDocument;
+    const nativeEscape=event=>{if(event.key==='Escape'&&dialog?.modalEl.isConnected){event.stopPropagation();dialog.close()}};
+    dialog=new sourceModules.ColorSourceModal({}, {title:request.title,initial:request.initial,target:request.target,sourceScope:scope,translate:t,preferences:()=>preferences,nodeStyle:()=>({}),linkStyle:()=>({}),background:()=>undefined,
+      onSave:async value=>{if(!request.apply(value))throw Error('Parent retired');return{refreshPending:false}},onClosed:()=>doc.removeEventListener('keydown',nativeEscape)});
+    dialog.open();doc.addEventListener('keydown',nativeEscape);
+    return{element:dialog.modalEl,retire:()=>{doc.removeEventListener('keydown',nativeEscape);dialog.retire()}};
+  };
+  const props={index,revision:0,value:sourceModules.EMPTY_PLEX_FILTER,onChange:()=>{},lenses,onLensesChange:()=>{changed++;return Promise.resolve({refreshPending:false})},onEditColor,layoutMode:'keep',onLayoutModeChange:()=>{},showSiblings:false,onShowSiblingsChange:()=>{},visibility:{},onVisibilityChange:()=>{},sortOrder:'name',onSortOrderChange:()=>{},translate:t};
+  const container=createDiv();document.body.append(container);const root=sourceModules.createRoot(container);flushSync(()=>root.render(R.createElement(sourceModules.PlexFilter,props)));
+  flushSync(()=>container.querySelector('button').click());await waitFor(()=>document.querySelector('.kplex-lens-main'));flushSync(()=>document.querySelector('.kplex-lens-main').click());
+  const buttons=[...document.querySelectorAll('.kplex-lens-style-grid button')];flushSync(()=>buttons.at(-1).click());await waitFor(()=>dialog?.modalEl.isConnected);
+  const text=dialog.contentEl.querySelector('input[type=text]');flushSync(()=>text.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,composed:true,pointerId:1,pointerType:'mouse',button:0})));
+  if(!dialog.modalEl.isConnected||!document.querySelector('.kplex-filter-panel'))throw Error('Nested source pointer dismissed the parent');
+  text.focus();flushSync(()=>text.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})));
+  if(dialog.modalEl.isConnected||!document.querySelector('.kplex-lens-editor'))throw Error('Escape did not belong to native child');
+  flushSync(()=>document.querySelectorAll('.kplex-lens-style-grid button')[2].click());const early=dialog,text2=early.contentEl.querySelector('input[type=text]');
+  const nativeCapture=()=>early.close();window.addEventListener('keydown',nativeCapture,{capture:true,once:true});
+  flushSync(()=>text2.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})));
+  if(early.modalEl.isConnected||!document.querySelector('.kplex-lens-editor'))throw Error('Earlier native capture made parent consume the same Escape');
+  flushSync(()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})));if(document.querySelector('.kplex-filter-panel')||changed)throw Error('Parent Escape or zero-write cancellation failed');
+  flushSync(()=>root.unmount());return true;
  })()`),true);
 });

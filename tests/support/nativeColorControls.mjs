@@ -1,10 +1,15 @@
 /** Finite native-control boundary for real Chromium editor tests; installed types/native lanes remain authoritative. */
 export const nativeColorControls = `
+export const setIcon=()=>{}; export const setTooltip=()=>{}; export class SearchComponent{} export class ButtonComponent{}
+export const Platform={}; export const getIconIds=()=>[]; export class App{} export class Scope{} export class ExtraButtonComponent{}
+export class AbstractInputSuggest {constructor(app,input){this.app=app;this.input=input} close(){}}
+export class PluginSettingTab {constructor(app,plugin){this.app=app;this.plugin=plugin;this.containerEl=createDiv();document.body.append(this.containerEl)} hide(){}}
 export const getLanguage=()=>"en";
 export const getIcon=()=>null;
 export class Notice {constructor(message){window.notices.push(message)}}
 export class Modal {
- constructor(app){this.app=app;this.modalEl=createDiv();this.titleEl=this.modalEl.createDiv();this.contentEl=this.modalEl.createDiv();}
+ static instances=[];
+ constructor(app){Modal.instances.push(this);this.app=app;this.modalEl=createDiv();this.containerEl=this.modalEl;this.titleEl=this.modalEl.createDiv();this.contentEl=this.modalEl.createDiv();}
  open(){document.body.append(this.modalEl);this.onOpen?.();}
  close(){this.onClose?.();this.modalEl.remove();}
 }
@@ -16,13 +21,15 @@ export class ColorComponent {
 }
 export class Setting {
  constructor(container){this.el=container.createDiv();}
- addButton(create){const input=this.el.createEl("button",{attr:{type:"button"}});const api={setButtonText(value){input.textContent=value;return api},setCta(){return api},setDisabled(value){input.disabled=value;return api},onClick(run){input.addEventListener("click",run);return api}};create(api);return this}
+ setName(value){this.el.createDiv({text:value});return this} setDesc(value){this.el.createDiv({text:value});return this}
+ addText(create){const input=this.el.createEl("input",{attr:{type:"text"}});const api={inputEl:input,setValue(value){input.value=value;return api},onChange(run){input.addEventListener("input",()=>run(input.value));return api}};create(api);return this}
+ addButton(create){const input=this.el.createEl("button",{attr:{type:"button"}});const api={setButtonText(value){input.textContent=value;return api},setCta(){return api},setDestructive(){return api},setDisabled(value){input.disabled=value;return api},onClick(run){input.addEventListener("click",run);return api}};create(api);return this}
 }
 `;
 
 /** Only host helper spellings are doubled; native DOM, CSS, iframe isolation and input events are real. */
 export const initializeColorDom = `(()=>{
- function decorate(element,options={}){if(options.cls)element.className=options.cls;if(options.text)element.textContent=options.text;for(const [key,value] of Object.entries(options.attr||{}))element.setAttribute(key,value);return element;}
+ function decorate(element,options={}){if(options.cls)element.className=options.cls;if(options.text)element.textContent=options.text;if(options.value!==undefined)element.value=options.value;for(const [key,value] of Object.entries(options.attr||{}))element.setAttribute(key,value);return element;}
  function create(tag,options){return decorate(document.createElement(tag),options)}
  window.createEl=create;window.createDiv=options=>create('div',options);window.createSpan=options=>create('span',options);
  Object.defineProperty(Document.prototype,'win',{configurable:true,get(){return this.defaultView}});

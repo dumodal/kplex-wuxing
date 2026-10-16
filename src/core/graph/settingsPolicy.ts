@@ -12,7 +12,7 @@ export const PRESENTATION_KEYS = [
   "baseNodeStyle", "centralNodeStyle", "inferredNodeStyle", "virtualNodeStyle", "siblingNodeStyle", "urlNodeStyle",
   "attachmentNodeStyle", "folderNodeStyle", "tagNodeStyle", "tagNodeStyles", "noteTypeStyles", "displayAllStylePrefixes",
   "baseLinkStyle", "inferredLinkStyle", "folderLinkStyle", "tagLinkStyle", "hierarchyLinkStyles", "attachmentImageDisplay", "allowRemoteNodeImages",
-  "colorPreferences",
+  "colorPreferences", "standardStyleDefaults",
 ] as const;
 const SEMANTIC_KEYS = ["inferAllLinksAsFriends", "inverseInfer", "thumbnailProperty", "nodeImageProperty", "datePropertyRelations"] as const;
 const VIEW_KEYS = [

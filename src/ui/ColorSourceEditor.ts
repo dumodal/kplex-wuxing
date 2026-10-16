@@ -13,7 +13,7 @@ import type { Translator } from "../lang";
 type ColorSourceKind = "inherit" | "fixed" | "named" | "theme" | "unsupported";
 export type ColorSourceEditorOptions = Readonly<{
   initial: ColorValue | undefined; sourceScope: HTMLElement; translate: Translator;
-  preferences: () => ColorPreferencesV1;
+  preferences: (draftSource?: ColorValue) => ColorPreferencesV1;
   themeTokens: readonly Readonly<{ variable: string; label: string }>[];
   chooseNamed: (chosen: (pair: SemanticColorPair) => void) => () => void;
   fixedSeed: (source: ColorValue | undefined) => string;
@@ -122,7 +122,7 @@ export class ColorSourceEditor {
   /** Re-evaluate current palette/CSS context without resampling styles on literal movement. */
   refresh(finishedThemeName: boolean): void {
     if (!this.alive) return;
-    const value = this.getValue(), reference = value && typeof value === "object" ? value : undefined, preferences = this.options.preferences();
+    const value = this.getValue(), reference = value && typeof value === "object" ? value : undefined, preferences = this.options.preferences(value);
     if (finishedThemeName || preferences !== this.validatedPreferences || !colorValuesEqual(reference, this.validatedSource)) {
       this.validation.update({preferences, references: reference === undefined ? [] : [reference]});
       this.validatedSource = reference; this.validatedPreferences = preferences;

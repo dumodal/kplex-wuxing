@@ -315,9 +315,32 @@ function start() {
       }
   );
 
+  /** Apply one local child color draft through the actual shared native source shell, never persistence. */
+  const editColor = async (root, caption, value, rgbOnly = false) => {
+    const action = root.querySelector('button[aria-label="' + p.translator(caption) + '"]');
+    check(action, "Shared color-source action missing"); action.click();
+    await until(() => root.ownerDocument.querySelector(".kplex-color-modal"), "Color source did not mount");
+    const modal = root.ownerDocument.querySelector(".kplex-color-modal"); c.modals.push(modal);
+    const selector = modal.querySelector(".kplex-color-source-editor select");
+    if (selector.value !== "fixed") {selector.value = "fixed"; selector.dispatchEvent(new modal.ownerDocument.defaultView.Event("change", {bubbles:true}));}
+    const input = modal.querySelector(rgbOnly ? 'input[type="color"]' : 'fieldset input[type="text"]');
+    check(input, "Native literal control missing for " + caption + "; source=" + selector.value + "; controls=" + [...modal.querySelectorAll("input")].map(field => field.type).join(","));
+    input.value = value; input.dispatchEvent(new modal.ownerDocument.defaultView.Event("input", {bubbles:true}));
+    if (rgbOnly) input.dispatchEvent(new modal.ownerDocument.defaultView.Event("change", {bubbles:true}));
+    button(modal, "colors.useColor").click();
+    await until(() => !modal.isConnected, "Local source draft did not close");
+  };
+
   /** Open the real manager, then its real Add/row action, in the current native document. */
   const open = async (kind, name = null, managerAlreadyOpen = false) => {
-    if (!managerAlreadyOpen) tab.openNoteTypeStylesManager();
+    if (!managerAlreadyOpen) {
+      // The shared source chooser preserves its originating Settings CSS/document. Attach the
+      // actual native tab before invoking its manager, even in the no-Plex-view scenario.
+      if (!tab.containerEl.isConnected || !tab.containerEl.ownerDocument.defaultView) {
+        p.openSettings(); await until(() => tab.containerEl.isConnected && !!tab.containerEl.ownerDocument.defaultView, "Native Settings did not attach");
+      }
+      tab.openNoteTypeStylesManager();
+    }
     await until(
       /** Wait for native attachment in its concrete owner. */ () =>
         documents().some((doc) =>
@@ -362,6 +385,7 @@ function start() {
         new root.ownerDocument.defaultView.Event("change", { bubbles: true })
       );
     }
+    check(root.querySelector('input[aria-label="' + p.translator(kind === "tag" ? "styles.tagPrefix" : "styles.propertyValue") + '"]'), "Native name field missing for " + kind);
     return root;
   };
   /** Close only the owned manager shells after the editor has reached a durable outcome. */
@@ -471,7 +495,7 @@ function start() {
       c.noViewBefore = before;
       let root = await open("property");
       root.querySelector('input[aria-label="' + p.translator("styles.propertyValue") + '"]').value = other;
-      root.querySelector('input[aria-label="' + p.translator("styles.background") + '"]').value = "#123456";
+      await editColor(root, "styles.background", "#123456");
       button(root, "common.cancel").click();
       await until(/** A cancelled draft owns no storage or live publication. */ () => !root.isConnected, "Draft Cancel did not close");
       closeManagers();
@@ -562,15 +586,8 @@ function start() {
         }
       );
       root = await open("property", key);
-      check(
-        root.querySelector(
-          'input[aria-label="' + p.translator("styles.background") + '"]'
-        ).value === "#aabbcc",
-        "Native RGB normalization prerequisite differs"
-      );
-      root.querySelector(
-        'input[aria-label="' + p.translator("styles.text") + '"]'
-      ).value = "#010203";
+      check(root.querySelector('button[aria-label="' + p.translator("styles.background") + '"]').textContent === "#AABBCC80", "Opening source action normalized saved spelling");
+      await editColor(root, "styles.text", "#010203", true);
       await save(root);
       const rgba = (await stored()).noteTypeStyles[key];
       check(
