@@ -75,6 +75,7 @@ On phones, K-Plex opens naturally in the side panel. Tablets can use either a no
 - Drag empty graph space to pan and use the mouse wheel or pinch gesture to zoom.
 - Long-press on touch devices opens the same context menus available with right-click on desktop.
 - Clicking or touching empty graph space clears temporary node, gate and connector highlights.
+- To highlight connections only on demand, enable **Require modifier for hover highlighting** under **Settings → K-Plex → Plex behavior → Navigation & interaction**. Hold **Alt** (**Option** on macOS) while hovering over a node, gate or connector. Releasing the key clears the highlight; with the setting off, hovering uses the usual short delay.
 - Right-click empty Plex space for **K-Plex settings**, **Zen mode**, **Full-screen mode**, **Set background color…**, **Wander**, and **Report a bug**. The background picker saves only when you select **Save**.
 - Use **Fit graph** whenever you want to bring the visible Plex back into view.
 

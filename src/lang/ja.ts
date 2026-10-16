@@ -7,6 +7,9 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const japaneseTranslations = {
+  "settings.hoverHighlight.name": "ホバー強調表示に修飾キーを必要とする",
+  "settings.hoverHighlight.help": "ノード、ゲート、接続線にポインターを合わせながら {key} を押すと、関連する接続がすぐに強調表示されます。無効の場合は少し待ってから強調表示されます。",
+  "settings.hoverHighlight.modifier": "代替修飾キー",
   "themes.label": "テーマ",
   "themes.help": "色とスタイルの変更は、選択中のテーマに保存されます。",
   "themes.manage": "テーマを管理",

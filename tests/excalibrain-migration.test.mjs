@@ -1220,3 +1220,17 @@ test("standard adoption and named deletion durably clear an existing canvas thro
   else{assert.equal(settings.baseNodeStyle.textColor,'#abcdef');assert.equal(settings.colorPreferences.palette.length,0)}
  }
 });
+
+
+test("hover modifier preference defaults off, survives restart/import and never invalidates graph policy", () => {
+  assert.equal(defaults.hoverHighlightRequiresAlt, false);
+  const saved = migrateAndMergeSettings({kplexInitialized: true, hoverHighlightRequiresAlt: true});
+  assert.equal(migrateAndMergeSettings(JSON.parse(JSON.stringify(saved))).hoverHighlightRequiresAlt, true);
+  assert.equal(migrateAndMergeSettings({hoverHighlightRequiresAlt: "true"}).hoverHighlightRequiresAlt, false);
+  assert.equal(importExcaliBrainGraphSettings(fixture, saved).hoverHighlightRequiresAlt, true);
+  assert.deepEqual(classifySettingsChange(captureSettingsPolicy(defaults), captureSettingsPolicy({...defaults, hoverHighlightRequiresAlt: true})), {
+    semanticInvalidation: false, presentationFacets: false, searchTerms: false, nodeVisuals: false,
+    render: false, typographyOnly: false, paintOnly: false, changedKeys: [],
+  });
+  assert.equal(encodeIndexSettingsSignature(saved), encodeIndexSettingsSignature({...saved,hoverHighlightRequiresAlt: false}));
+});

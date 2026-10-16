@@ -211,7 +211,7 @@ test("actual quick debounce/unmount persists latest staged device once and canno
   const dependencies = { plugin, typographyDevice: "desktop", typographyDraft: ref(), typographySave: ref(),
     viewport: { current: { ownerDocument: { defaultView: ownerWindow }, classList: { remove() {} } } }, window: ownerWindow,
     suppressLayoutMotionUntil: ref(), suppressAutoFitUntil: ref(), preserveCameraOnNextLayout: ref(), sceneMotion: { cancelAll() {} }, setLayoutRevision() {},
-    layoutSaveTimer: ref(), layoutDraft: ref(), hoverIntentTimer: ref(), edgeTooltipTimer: ref(), sceneTransitionTimer: ref(), sceneTransitionTimerWindow: ref(), cameraFrame: ref(), cameraFrameWindow: ref() };
+    layoutSaveTimer: ref(), layoutDraft: ref(), hoverHighlight: ref(), edgeTooltipTimer: ref(), sceneTransitionTimer: ref(), sceneTransitionTimerWindow: ref(), cameraFrame: ref(), cameraFrameWindow: ref() };
   const quick = quickTypographyCallbacks(dependencies);
   quick.change({ baseFontSize: 18 }); quick.change({ maxLabelLength: 60 });
   plugin.stageTypographyOverride("tablet", { maxWidth: 500 });

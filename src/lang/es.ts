@@ -7,6 +7,9 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const spanishTranslations = {
+  "settings.hoverHighlight.name": "Exigir modificador para resaltar al pasar el cursor",
+  "settings.hoverHighlight.help": "Mantén {key} al pasar el cursor sobre un nodo, una puerta o un conector para resaltar sus conexiones de inmediato. Si se desactiva, basta con pasar el cursor y esperar un momento.",
+  "settings.hoverHighlight.modifier": "la tecla modificadora alternativa",
   "themes.label": "Tema",
   "themes.help": "Los cambios de color y estilo se guardan en el tema seleccionado.",
   "themes.manage": "Gestionar temas",
