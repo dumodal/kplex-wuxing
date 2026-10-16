@@ -8,6 +8,16 @@ import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const dutchTranslations = {
 
+  "compass.title": "Richtinggebonden achtergrondtint",
+  "compass.help": "Toon een oriëntatiehulp achter de Plex. De tint geeft richting aan, geen exacte indeling van relaties.",
+  "compass.enabled": "Richtingstint tonen",
+  "compass.intensity": "Tintsterkte",
+  "compass.inheritHelp": "Standaard volgt het thema en de lichte of donkere modus. Nul verbergt de tint.",
+  "compass.resetIntensity": "Standaardsterkte gebruiken",
+  "compass.north": "Noord · Oorsprong / Ouders",
+  "compass.east": "Oost · Uitdaging / Volgende",
+  "compass.south": "Zuid · Ontwikkeling / Kinderen",
+  "compass.west": "West · Ondersteuning / Vorige",
   "colors.name": "Naam",
   "colors.resetPair": "Beide varianten herstellen",
   "colors.resetPairHelp": "Herstel beide varianten naar hun waarden bij het openen.",
@@ -22,7 +32,7 @@ const dutchTranslations = {
   "colors.deletePair": "Benoemde kleur verwijderen",
   "colors.deleteUses": "“{name}” heeft {count} ingestelde toepassingen. Kies een vervanging vóór het verwijderen.",
   "colors.deleteNowUsed": "Deze kleur wordt nu gebruikt. Annuleer en open opnieuw om een vervanging te kiezen.",
-  "colors.parentHelp": "Dit wijzigt het lokale concept. Sla de bovenliggende stijl of lens op om het te bewaren.",
+  "colors.parentHelp": "Dit wijzigt het lokale concept. Sla het op in de bovenliggende editor.",
   "colors.useColor": "Kleur gebruiken",
   "colors.gateStroke": "Poortrand",
   "colors.gateFill": "Poortvulling",

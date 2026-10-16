@@ -8,6 +8,16 @@ import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const japaneseTranslations = {
 
+  "compass.title": "背景の方向別の色付け",
+  "compass.help": "Plex の背後に方向の目印を表示します。色は方向を示し、関係の厳密な所属を示すものではありません。",
+  "compass.enabled": "方向別の色付けを表示",
+  "compass.intensity": "色付けの強さ",
+  "compass.inheritHelp": "既定ではテーマとライト・ダークモードに従います。ゼロで色付けを非表示にします。",
+  "compass.resetIntensity": "既定の強さを使用",
+  "compass.north": "北 · 起源 / 親",
+  "compass.east": "東 · 課題 / 次",
+  "compass.south": "南 · 発展 / 子",
+  "compass.west": "西 · 支援 / 前",
   "colors.name": "名前",
   "colors.resetPair": "両方の色をリセット",
   "colors.resetPairHelp": "両方の色を開いた時点の値に戻します。",
@@ -22,7 +32,7 @@ const japaneseTranslations = {
   "colors.deletePair": "名前付きの色を削除",
   "colors.deleteUses": "「{name}」は設定内で {count} 件使われています。削除前に置き換える色を選んでください。",
   "colors.deleteNowUsed": "この色は現在使われています。キャンセルして開き直し、置き換える色を選んでください。",
-  "colors.parentHelp": "ローカルの下書きを変更します。保持するには元のスタイルまたはレンズを保存してください。",
+  "colors.parentHelp": "ローカルの下書きが変更されます。保持するには親のエディターで保存してください。",
   "colors.useColor": "色を使用",
   "colors.gateStroke": "ゲートの輪郭",
   "colors.gateFill": "ゲートの塗り",

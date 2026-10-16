@@ -10,6 +10,16 @@
  */
 export const englishCatalog = {
 
+  "compass.title": {"message": "Directional background tint", "context": "Optional viewport Compass decoration and local native editor.", "params": []},
+  "compass.help": {"message": "Show an orientation cue behind the Plex. Tint indicates direction, not exact relationship membership.", "context": "Optional viewport Compass decoration and local native editor.", "params": []},
+  "compass.enabled": {"message": "Show directional tint", "context": "Optional viewport Compass decoration and local native editor.", "params": []},
+  "compass.intensity": {"message": "Tint intensity", "context": "Optional viewport Compass decoration and local native editor.", "params": []},
+  "compass.inheritHelp": {"message": "Default follows the theme and light or dark mode. Zero hides the tint.", "context": "Optional viewport Compass decoration and local native editor.", "params": []},
+  "compass.resetIntensity": {"message": "Use default intensity", "context": "Optional viewport Compass decoration and local native editor.", "params": []},
+  "compass.north": {"message": "North · Origin / Parents", "context": "Optional viewport Compass decoration and local native editor.", "params": []},
+  "compass.east": {"message": "East · Challenge / Next", "context": "Optional viewport Compass decoration and local native editor.", "params": []},
+  "compass.south": {"message": "South · Development / Children", "context": "Optional viewport Compass decoration and local native editor.", "params": []},
+  "compass.west": {"message": "West · Support / Previous", "context": "Optional viewport Compass decoration and local native editor.", "params": []},
   "colors.name": {"message": "Name", "context": "Native palette, semantic/standard colors and explicit adoption. Names and IDs are user data.", "params": []},
   "colors.resetPair": {"message": "Reset both variants", "context": "Native palette, semantic/standard colors and explicit adoption. Names and IDs are user data.", "params": []},
   "colors.resetPairHelp": {"message": "Restore both variants to their opening values.", "context": "Native palette, semantic/standard colors and explicit adoption. Names and IDs are user data.", "params": []},
@@ -24,7 +34,7 @@ export const englishCatalog = {
   "colors.deletePair": {"message": "Delete named color", "context": "Native palette, semantic/standard colors and explicit adoption. Names and IDs are user data.", "params": []},
   "colors.deleteUses": {"message": "“{name}” has {count} configured uses. Choose their replacement before deleting.", "context": "Native palette, semantic/standard colors and explicit adoption. Names and IDs are user data.", "params": ["count", "name"], "referenceParams": []},
   "colors.deleteNowUsed": {"message": "This color is now used. Cancel and reopen to choose a replacement.", "context": "Native palette, semantic/standard colors and explicit adoption. Names and IDs are user data.", "params": []},
-  "colors.parentHelp": {"message": "This changes the local draft. Save the parent style or lens to keep it.", "context": "Native palette, semantic/standard colors and explicit adoption. Names and IDs are user data.", "params": []},
+  "colors.parentHelp": {"message": "This changes the local draft. Save the containing editor to keep it.", "context": "Native palette, semantic/standard colors and explicit adoption. Names and IDs are user data.", "params": []},
   "colors.useColor": {"message": "Use color", "context": "Native palette, semantic/standard colors and explicit adoption. Names and IDs are user data.", "params": []},
   "colors.gateStroke": {"message": "Gate outline", "context": "Native palette, semantic/standard colors and explicit adoption. Names and IDs are user data.", "params": []},
   "colors.gateFill": {"message": "Gate fill", "context": "Native palette, semantic/standard colors and explicit adoption. Names and IDs are user data.", "params": []},

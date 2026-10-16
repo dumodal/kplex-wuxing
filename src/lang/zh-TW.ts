@@ -8,6 +8,16 @@ import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const traditionalChineseTranslations = {
 
+  "compass.title": "背景方向色調",
+  "compass.help": "在 Plex 後方顯示方向提示。色調代表方向，不代表關係的精確歸屬。",
+  "compass.enabled": "顯示方向色調",
+  "compass.intensity": "色調強度",
+  "compass.inheritHelp": "預設值會依佈景主題與淺色或深色模式調整。設為零可隱藏色調。",
+  "compass.resetIntensity": "使用預設強度",
+  "compass.north": "北 · 起源 / 父項",
+  "compass.east": "東 · 挑戰 / 下一項",
+  "compass.south": "南 · 發展 / 子項",
+  "compass.west": "西 · 支援 / 上一項",
   "colors.name": "名稱",
   "colors.resetPair": "重設兩種外觀",
   "colors.resetPairHelp": "將兩種外觀的顏色恢復為開啟時的值。",
@@ -22,7 +32,7 @@ const traditionalChineseTranslations = {
   "colors.deletePair": "刪除命名色彩",
   "colors.deleteUses": "「{name}」在設定中使用了 {count} 次。刪除前請選擇替代色彩。",
   "colors.deleteNowUsed": "此色彩目前已被使用。請取消並重新開啟，以選擇替代色彩。",
-  "colors.parentHelp": "這會變更本機草稿。請儲存上層樣式或透鏡以保留變更。",
+  "colors.parentHelp": "這會變更本機草稿。請在上層編輯器儲存以保留變更。",
   "colors.useColor": "使用色彩",
   "colors.gateStroke": "閘口外框",
   "colors.gateFill": "閘口填色",

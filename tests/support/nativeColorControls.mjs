@@ -22,6 +22,7 @@ export class ColorComponent {
 export class Setting {
  constructor(container){this.el=container.createDiv();}
  setName(value){this.el.createDiv({text:value});return this} setDesc(value){this.el.createDiv({text:value});return this}
+ addToggle(create){const input=this.el.createEl("input",{attr:{type:"checkbox"}});const api={setValue(value){input.checked=value;return api},onChange(run){input.addEventListener("change",()=>run(input.checked));return api}};create(api);return this}
  addText(create){const input=this.el.createEl("input",{attr:{type:"text"}});const api={inputEl:input,setValue(value){input.value=value;return api},onChange(run){input.addEventListener("input",()=>run(input.value));return api}};create(api);return this}
  addButton(create){const input=this.el.createEl("button",{attr:{type:"button"}});const api={setButtonText(value){input.textContent=value;return api},setCta(){return api},setDestructive(){return api},setDisabled(value){input.disabled=value;return api},onClick(run){input.addEventListener("click",run);return api}};create(api);return this}
 }
@@ -29,7 +30,7 @@ export class Setting {
 
 /** Only host helper spellings are doubled; native DOM, CSS, iframe isolation and input events are real. */
 export const initializeColorDom = `(()=>{
- function decorate(element,options={}){if(options.cls)element.className=options.cls;if(options.text)element.textContent=options.text;if(options.value!==undefined)element.value=options.value;for(const [key,value] of Object.entries(options.attr||{}))element.setAttribute(key,value);return element;}
+ function decorate(element,options={}){if(options.cls)element.setAttribute("class",options.cls);if(options.text)element.textContent=options.text;if(options.value!==undefined)element.value=options.value;for(const [key,value] of Object.entries(options.attr||{}))element.setAttribute(key,value);return element;}
  function create(tag,options){return decorate(document.createElement(tag),options)}
  window.createEl=create;window.createDiv=options=>create('div',options);window.createSpan=options=>create('span',options);
  Object.defineProperty(Document.prototype,'win',{configurable:true,get(){return this.defaultView}});

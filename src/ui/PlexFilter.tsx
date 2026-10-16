@@ -1,9 +1,9 @@
-import type {SemanticColorPair} from "../core/plex/colorPreferences";
 /**
  * Host-bound Plex filter and Graph Lens editor. Shared predicates own matching; this surface localizes
  * choices and validation. FloatingLayer owns portaling, dismissal and header drag in the owning document.
  * Portalled controls opt into the shell's shared delayed hover hints without browser title duplicates.
  */
+import type {SemanticColorPair} from "../core/plex/colorPreferences";
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { GraphIndex } from "../index/GraphIndex";
 import type { GraphPage, Role, NodeStyle, LinkStyle } from "../types";
@@ -43,7 +43,7 @@ import type {StyleCommitResult} from "./StyleEditorModal";
 import type {ColorPreviewTarget} from "./ColorPreview";
 
 /** Native composition port: the filter owns the detached draft and retires its single source dialog. */
-export type LensColorRequest = Readonly<{sourceScope: HTMLElement; title: string; target: ColorPreviewTarget; initial: ColorValue | undefined;
+export type LensColorRequest = Readonly<{sourceScope: HTMLElement; title: string; target: Exclude<ColorPreviewTarget, {kind: "compass"}>; initial: ColorValue | undefined;
   nodeStyle: () => NodeStyle; linkStyle: () => LinkStyle; apply: (value: ColorValue | undefined) => boolean}>;
 
 /** The parent owns a nested native surface through its concrete root and exact retirement action. */
@@ -360,7 +360,7 @@ export function PlexFilter({
   };
 
   /** Source selection updates only this exact live parent draft; the parent Save remains authoritative. */
-  const editColor = (element: HTMLElement, label: string, target: ColorPreviewTarget, initial: ColorValue | undefined): void => {
+  const editColor = (element: HTMLElement, label: string, target: LensColorRequest["target"], initial: ColorValue | undefined): void => {
     const opening = draftRef.current; if (!opening || operation.current.busy || lensesReadOnly || !onEditColor) return;
     childColor.current?.retire();
     childColor.current = onEditColor({sourceScope: element, title: label, target, initial,

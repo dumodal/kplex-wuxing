@@ -3,8 +3,11 @@
  * text, border and gate treatment; a static labelled connector uses the same source contract. No
  * graph, predicate, note read, image or real host-mode mutation participates. CSS snapshots refresh
  * only for completed theme names/context changes; local picker paint coalesces to one owner frame.
+ * Compass examples reuse the viewport clipper and composite source alpha with mode/theme intensity.
  */
 import { NODE_COLOR_FIELDS, LINK_COLOR_FIELDS, isThemeColorName, parseLiteralColor, type ColorValue } from "../core/contracts/colorValue";
+import {compassPolygons} from "../core/plex/compassBackground";
+import {COMPASS_DIRECTIONS, COMPASS_COLOR_VARIABLES, COMPASS_SEMANTIC_SLOTS, type CompassDirection} from "../core/plex/colorPreferences";
 import { SEMANTIC_COLOR_DEFAULTS, semanticSlotForVariable, type ColorPreferencesV1, type SemanticColorSlot, type SemanticColorPair } from "../core/plex/colorPreferences";
 import { colorContrastRatio, compositeColor } from "../core/plex/colorContrast";
 import { ThemePreviewSampler, THEME_PREVIEW_TOKENS, THEME_PREVIEW_CONTEXT_LIMIT, type ThemePreviewPair } from "../adapters/obsidian/themePreview";
@@ -14,7 +17,7 @@ import type { NodeStyle, LinkStyle } from "../types";
 import type { Translator } from "../lang";
 
 export type ColorPreviewTarget = Readonly<{ kind: "node"; field: typeof NODE_COLOR_FIELDS[number] }>
-  | Readonly<{ kind: "link"; field: typeof LINK_COLOR_FIELDS[number] }> | Readonly<{ kind: "canvas" }>;
+  | Readonly<{ kind: "link"; field: typeof LINK_COLOR_FIELDS[number] }> | Readonly<{ kind: "canvas" }> | Readonly<{kind: "compass"; direction?: CompassDirection}>;
 export type ColorPreviewOptions = Readonly<{
   onContextChange?: () => void;
   sourceScope: HTMLElement; translate: Translator; target: ColorPreviewTarget;
@@ -58,6 +61,11 @@ export class ColorPreview {
       const status = heading.createSpan({ cls: "setting-item-description" });
       const canvas = root.createDiv({ cls: "kplex-color-preview-canvas", attr: { "aria-label": options.translate("colors.samplePreview") } });
       const svg = canvas.createSvg("svg", { attr: { viewBox: "0 0 300 140", "aria-hidden": "true", focusable: "false" } });
+      if (options.target.kind === "compass") {
+        const compass = svg.createSvg("g", {cls: "kplex-color-preview-compass"});
+        const polygons = compassPolygons(300, 140, {x: 150, y: 70});
+        for (const direction of COMPASS_DIRECTIONS) compass.createSvg("polygon", {attr: {points: polygons[direction].map(/** Reuse the viewport clipper for a fixed synthetic center. */ point => `${point.x},${point.y}`).join(" ")}});
+      }
       svg.createSvg("path", { attr: { d: "M 18 108 C 55 108 62 70 105 70", fill: "none", stroke: "var(--_kplex-preview-link)", "stroke-width": "2" } });
       const node = canvas.createDiv({ cls: "kplex-color-preview-node", text: options.translate("colors.sampleNode") });
       node.createSpan({ cls: "kplex-color-preview-gate", attr: { "aria-hidden": "true" } });
@@ -101,9 +109,10 @@ export class ColorPreview {
   /** Request only configured example sources and fixed native/public tokens, never discover arbitrary theme variables. */
   private async readTheme(): Promise<void> {
     const tokens = new Set<string>([...THEME_PREVIEW_TOKENS, ...PREVIEW_PUBLIC_TOKENS]);
+    if (this.options.target.kind === "compass") for (const token of [...Object.values(COMPASS_COLOR_VARIABLES), "--kplex-compass-opacity"]) tokens.add(token);
     const node = this.options.nodeStyle(), link = this.options.linkStyle(), preferences = this.options.preferences(this.value);
     const references = [...NODE_COLOR_FIELDS.map(field => node[field]), ...LINK_COLOR_FIELDS.map(field => link[field]), this.options.background(), this.value, this.options.inherit?.(),
-      ...Object.values(preferences.semantic)];
+      ...Object.values(preferences.semantic), ...(this.options.target.kind === "compass" ? Object.values(preferences.compass.fills) : [])];
     for (const value of references) if (value && typeof value !== "string" && value.kind === "theme" && isThemeColorName(value.variable) && !value.variable.startsWith("--_kplex-")) tokens.add(value.variable);
     const native = this.options.fallbacks ?? NATIVE_NODE_PAINT;
     const expressions = Object.fromEntries(Object.entries(native).map(([key, value]) => [`--kplex-preview-${key}`, value]));
@@ -153,8 +162,8 @@ export class ColorPreview {
     let canvas = this.options.background(); const target = this.options.target;
     const inherited = this.value === undefined ? this.options.inherit?.() : this.value;
     if (target.kind === "node") node[target.field] = inherited;
-    else if (target.kind === "link") link[target.field] = inherited; else canvas = inherited;
-    const opaqueLiteral = [...NODE_COLOR_FIELDS.map(field => node[field]), ...LINK_COLOR_FIELDS.map(field => link[field]), canvas]
+    else if (target.kind === "link") link[target.field] = inherited; else if (target.kind === "canvas") canvas = inherited;
+    const opaqueLiteral = [...NODE_COLOR_FIELDS.map(field => node[field]), ...LINK_COLOR_FIELDS.map(field => link[field]), canvas, ...(target.kind === "compass" ? [...Object.values(this.options.preferences(this.value).compass.fills), this.value] : [])]
       .some(value => typeof value === "string" && !parseLiteralColor(value));
     if (opaqueLiteral) { card.status.setText(t("colors.estimated")); card.help.setText(t("colors.estimatedHelp")); }
     for (const field of NODE_COLOR_FIELDS) node[field] = this.resolve(node[field], mode, nodeColorFallback(field, fallback));
@@ -170,6 +179,26 @@ export class ColorPreview {
     const fill = this.reader.read(card.canvas, typeof node.backgroundColor === "string" ? node.backgroundColor : fallback.fill), text = this.reader.read(card.canvas, paint.foreground), line = this.reader.read(card.canvas, stroke);
     if (!base || !canvasSample || !fill || !text || !line) { card.contrast.setText(t("colors.contrastUnavailable")); return; }
     const surface = compositeColor(canvasSample, base), nodeSurface = compositeColor(fill, surface);
+    const compass = target.kind === "compass" ? card.canvas.querySelector<SVGGElement>(".kplex-color-preview-compass") : null;
+    const compassSurfaces = [surface];
+    if (compass) {
+      compass.style.setProperty("display", target.kind === "compass" ? "" : "none");
+      if (target.kind === "compass") {
+        compassSurfaces.length = 0;
+        const preferences = this.options.preferences(this.value);
+        const opacity = preferences.compass.enabled ? preferences.compass.intensity === undefined ? samples.compassOpacity ?? (mode === "light" ? .05 : .07) : preferences.compass.intensity / 100 : 0;
+        for (let index = 0; index < COMPASS_DIRECTIONS.length; index++) {
+          const direction = COMPASS_DIRECTIONS[index], slot = COMPASS_SEMANTIC_SLOTS[direction];
+          const lower = this.resolve({kind: "theme", variable: `--kplex-semantic-${slot}`}, mode, samples.colors[SEMANTIC_COLOR_DEFAULTS[slot]] || "transparent");
+          const fallbackColor = samples.colors[COMPASS_COLOR_VARIABLES[direction]] || lower;
+          const source = target.direction === direction ? inherited : preferences.compass.fills[direction];
+          const color = this.resolve(source, mode, fallbackColor), polygon = compass.children[index];
+          polygon?.setAttribute("fill", alphaHexToCss(color)); polygon?.setAttribute("fill-opacity", String(opacity));
+          const tint = this.reader.read(card.canvas, color);
+          if (tint) compassSurfaces.push(compositeColor({...tint, alpha: tint.alpha * opacity}, surface));
+        }
+      }
+    }
     const labelSurface = this.reader.read(card.canvas, labelFill), labelForeground = this.reader.read(card.canvas, labelText);
     let ratio = colorContrastRatio(text, nodeSurface), message: "colors.nodeContrast" | "colors.linkContrast" | "colors.labelContrast" | "colors.borderContrast" | "colors.gateContrast" = "colors.nodeContrast";
     if (target.kind === "link") {
@@ -180,10 +209,15 @@ export class ColorPreview {
       ratio = foreground ? Math.min(colorContrastRatio(foreground, surface) ?? 0, colorContrastRatio(foreground, nodeSurface) ?? 0) : null;
       message = target.field === "borderColor" ? "colors.borderContrast" : "colors.gateContrast";
     }
+    if (target.kind === "compass") {
+      const ratios = compassSurfaces.map(/** Evaluate transparent node fill over each actual tinted sector. */ background => colorContrastRatio(text, compositeColor(fill, background)));
+      ratio = ratios.length === 4 && ratios.every(/** Unknown alpha composition cannot certify a contrast number. */ value => value !== null) ? Math.min(...ratios) : null;
+    }
     // Hatch examples have a varying surface; a scalar ratio cannot certify every stripe.
     if (this.contextStale || opaqueLiteral || ratio === null || node.fillStyle === "hachure" || node.fillStyle === "cross-hatch") card.contrast.setText(t("colors.contrastUnavailable"));
-    else if (target.kind === "canvas") {
-      const connectorRatio = colorContrastRatio(line, surface);
+    else if (target.kind === "canvas" || target.kind === "compass") {
+      const ratios = compassSurfaces.map(/** Essential connector contrast uses the least favorable tinted surface. */ background => colorContrastRatio(line, background));
+      const connectorRatio = ratios.every(/** Unknown alpha composition cannot certify a contrast number. */ value => value !== null) ? Math.min(...ratios) : null;
       card.contrast.setText(t("colors.nodeContrast", {ratio: ratio.toFixed(1)}) + " · " + (connectorRatio === null ? t("colors.contrastUnavailable") : t("colors.linkContrast", {ratio: connectorRatio.toFixed(1)})));
     } else card.contrast.setText(t(message, {ratio: ratio.toFixed(1)}));
   }

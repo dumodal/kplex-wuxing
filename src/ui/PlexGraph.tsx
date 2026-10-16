@@ -7,8 +7,13 @@ import { subscribeAppearanceSources } from "../adapters/obsidian/colorChanges";
  * dialogs and retires approval when its graph generation or owning window is released. Disabled
  * Hidden menu entries remain available for explicit first-field setup when configuration is absent.
  * Evidence hints distinguish literal property references from descriptive source-kind labels;
- * shared localization metadata owns reference quoting.
+ * shared localization metadata owns reference quoting. Optional Compass paint shares the camera frame
+ * and exact center-animation lifetime, owns no input target, and never rebuilds graph geometry.
  */
+import {compassPolygons} from "../core/plex/compassBackground";
+import {COMPASS_DIRECTIONS, COMPASS_COLOR_VARIABLES, COMPASS_SEMANTIC_SLOTS, compassIntensity} from "../core/plex/colorPreferences";
+import {colorValueCss, semanticColorCss} from "../adapters/obsidian/colorPresentation";
+import type {MotionPose} from "./components/motionPose";
 import { ColorScope } from "../adapters/obsidian/colorScope";
 import { appearanceColorReferences, STYLE_SETTINGS_KEYS } from "../core/contracts/appearance";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent, type RefObject } from "react";
@@ -759,15 +764,17 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   const settings = useMemo(() => Object.assign(withAreaHeightOverrides(viewSettings, areaHeightOverrides), layoutOverrides), [viewSettings, areaHeightOverrides, layoutOverrides]);
   const paintedNodeStyles = useMemo(/** Reuse resolved colors for stable scene occurrences across hover/count/scroll renders. */ () => new WeakMap<object, NodeStyle>(), [paintSettings]);
   const colorScope = useRef<ColorScope | null>(null);
+  const compassRefresh = useRef<() => void>(/** Context can initialize before layout has captured a center. */ () => {});
   // This fixed-length inventory compares current appearance owners, not cloned presentation facades.
   // Ordinary source/status publications therefore never enumerate configured styles or probe CSS.
   const colorConfiguration = useMemo(/** Capture configured source identities once per actual appearance change. */ () => ({
-    preferences: plugin.settings.colorPreferences, references: appearanceColorReferences(plugin.settings),
+    preferences: plugin.settings.colorPreferences, references: [...appearanceColorReferences(plugin.settings), ...(plugin.settings.colorPreferences.compass.enabled ? COMPASS_DIRECTIONS.map(/** Validate the four public direction defaults only while tint is enabled. */ direction => ({kind: "theme" as const, variable: COMPASS_COLOR_VARIABLES[direction]})) : [])],
   }), STYLE_SETTINGS_KEYS.map(key => plugin.settings[key]));
   useLayoutEffect(/** Bind exact owner CSS after commit, retaining scene geometry and public token inheritance. */ () => {
     if (colorScope.current) { colorScope.current.update(colorConfiguration); return; }
     const root = viewport.current; if (!root) return;
     colorScope.current = new ColorScope(root, colorConfiguration, {
+      onChange: /** Reuse this scope revision for the one numeric opacity input. */ () => compassRefresh.current(),
       subscribeCss: changed => { const ref = plugin.app.workspace.on("css-change", changed); return () => plugin.app.workspace.offref(ref); },
     });
   }, [plugin, colorConfiguration]);
@@ -980,6 +987,13 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   const viewport = useRef<HTMLDivElement | null>(null);
   const cameraElement = useRef<HTMLDivElement | null>(null);
   const centralEditorOverlayElement = useRef<HTMLDivElement | null>(null);
+  const compassElement = useRef<SVGSVGElement | null>(null);
+  const compassCenter = useRef<{element: HTMLElement | null; owner: Document; left: number; top: number; width: number; height: number} | null>(null);
+  const compassPreferences = useRef(paintSettings.colorPreferences);
+  compassPreferences.current = paintSettings.colorPreferences;
+  const compassOpacity = useRef(0);
+  const compassSync = useRef<() => boolean>(/** No follower can start before a committed viewport owner exists. */ () => false);
+  const cameraWritePending = useRef(false);
   const cameraFrame = useRef<number | null>(null);
   const cameraFrameWindow = useRef<Window | null>(null);
   const zoneScrollRefs = useRef<Partial<Record<ScrollZone, HTMLDivElement>>>({});
@@ -1242,6 +1256,59 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     overlay.style.setProperty("--kplex-editor-camera-scale", String(current.scale));
   };
 
+  /** Share the existing camera callback with finite center-motion paint; never poll an idle scene. */
+  const requestCameraFrame = (): void => {
+    if (cameraFrame.current !== null) return;
+    const viewWindow = viewport.current?.ownerDocument.defaultView ?? window;
+    cameraFrameWindow.current = viewWindow;
+    cameraFrame.current = viewWindow.requestAnimationFrame(/** Publish camera intent once, then sample only the tracked center's owned effect. */ () => {
+      cameraFrame.current = null; cameraFrameWindow.current = null;
+      if (cameraWritePending.current) {
+        cameraWritePending.current = false;
+        const element = cameraElement.current, current = camera.current;
+        if (element) element.style.transform = `translate(${current.x}px, ${current.y}px) scale(${current.scale})`;
+        syncCentralEditorOverlay();
+      }
+      if (compassSync.current()) requestCameraFrame();
+    });
+  };
+
+  /** Update four bounded polygons from stored target geometry and actual Web Animation progress. */
+  const syncCompass = (): boolean => {
+    const root = viewport.current, svg = compassElement.current, target = compassCenter.current;
+    if (!svg || !root) return false;
+    const size = measuredViewport.current, view = root.ownerDocument.defaultView;
+    const visible = compassPreferences.current.compass.enabled && compassOpacity.current > 0 && root.isConnected
+      && !root.ownerDocument.hidden && !!view && !view.closed && size.width > 0 && size.height > 0
+      && !!target && target.owner === root.ownerDocument;
+    svg.style.setProperty("display", visible ? "" : "none");
+    if (!visible || !target) return false;
+    const pose = target.element ? sceneMotion.sample(target.element) : null;
+    const x = target.left + (pose ? pose.originX + (target.width / 2 - pose.originX) * pose.scaleX + pose.x : target.width / 2);
+    const y = target.top + (pose ? pose.originY + (target.height / 2 - pose.originY) * pose.scaleY + pose.y : target.height / 2);
+    const current = camera.current;
+    const box = `0 0 ${size.width} ${size.height}`; if (svg.getAttribute("viewBox") !== box) svg.setAttribute("viewBox", box);
+    const polygons = compassPolygons(size.width, size.height, {x: current.x + x * current.scale, y: current.y + y * current.scale});
+    for (let index = 0; index < COMPASS_DIRECTIONS.length; index++) {
+      const points = polygons[COMPASS_DIRECTIONS[index]].map(/** Serialize one bounded viewport vertex without touching a graph occurrence. */ point => `${point.x},${point.y}`).join(" ");
+      const polygon = svg.children[index]; if (polygon?.getAttribute("points") !== points) polygon?.setAttribute("points", points);
+    }
+    return !!target.element && sceneMotion.isRunning(target.element);
+  };
+  compassSync.current = syncCompass;
+  compassRefresh.current = /** Theme/source updates read one numeric token, never a node or stylesheet inventory. */ (): void => {
+    const root = viewport.current, svg = compassElement.current; if (!root || !svg) return;
+    const prefs = compassPreferences.current;
+    const opacity = prefs.compass.enabled ? compassIntensity(prefs, root.ownerDocument.body.classList.contains("theme-light") ? "light" : "dark",
+      root.ownerDocument.defaultView?.getComputedStyle(root).getPropertyValue("--kplex-compass-opacity")) : 0;
+    compassOpacity.current = opacity;
+    svg.style.setProperty("fill-opacity", String(opacity));
+    if (syncCompass()) requestCameraFrame();
+  };
+  useLayoutEffect(/** Paint-only toggles reuse current target/animation; geometry and native editors stay mounted. */ () => {
+    compassRefresh.current();
+  }, [paintSettings.colorPreferences]);
+
   /** Apply camera intent; manual movement retires late-layout fitting until navigation or explicit Fit. */
   const applyCamera = (nextOrUpdater: FitCamera | ((current: FitCamera) => FitCamera), fitted = false) => {
     const next = typeof nextOrUpdater === "function" ? nextOrUpdater(camera.current) : nextOrUpdater;
@@ -1253,20 +1320,8 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     // Coalesce camera writes to one per animation frame, and use a 2D transform for graph-only
     // content. Native embedded views are positioned separately above the camera so Excalidraw and
     // other host canvases continue receiving untransformed pointer coordinates at every Plex zoom.
-    if (cameraFrame.current === null) {
-      const viewWindow = cameraElement.current?.ownerDocument.defaultView ?? viewport.current?.ownerDocument.defaultView ?? window;
-      cameraFrameWindow.current = viewWindow;
-      cameraFrame.current = viewWindow.requestAnimationFrame(() => {
-        cameraFrame.current = null;
-        cameraFrameWindow.current = null;
-        const element = cameraElement.current;
-        if (element) {
-          const current = camera.current;
-          element.style.transform = `translate(${current.x}px, ${current.y}px) scale(${current.scale})`;
-        }
-        syncCentralEditorOverlay();
-      });
-    }
+    cameraWritePending.current = true;
+    requestCameraFrame();
     return next;
   };
 
@@ -1274,7 +1329,9 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     const element = cameraElement.current;
     const current = camera.current;
     if (element) element.style.transform = `translate(${current.x}px, ${current.y}px) scale(${current.scale})`;
+    cameraWritePending.current = false;
     syncCentralEditorOverlay();
+    if (compassSync.current()) requestCameraFrame();
   };
 
   /** Expand or restore the embedded central editor without losing the user's previous Plex camera. */
@@ -1355,15 +1412,25 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
         // Recenter navigation while retaining the user's zoom when automatic fitting is disabled.
         if (el) applyCamera((current) => ({ ...current, x: el.clientWidth / 2, y: el.clientHeight / 2 }));
       }
-      flushCameraTransform();
     }
 
+    compassCenter.current = null;
+    flushCameraTransform();
+    const rootRect = root.getBoundingClientRect();
     const nextRects = new Map<string, { left: number; top: number; width: number; height: number }>();
     const elements = root.querySelectorAll<HTMLElement>("[data-kplex-path]");
     elements.forEach((element) => {
       const path = element.dataset.kplexPath;
       if (!path) return;
       const rect = element.getBoundingClientRect();
+      if (element.classList.contains("kplex-role-center")) {
+        const measured = centralEditorAvailable ? centralEditorOverlayElement.current?.getBoundingClientRect() ?? rect : rect;
+        const current = camera.current;
+        compassCenter.current = {element: centralEditorAvailable ? null : element, owner: root.ownerDocument,
+          left: (measured.left - rootRect.left - root.clientLeft - current.x) / current.scale,
+          top: (measured.top - rootRect.top - root.clientTop - current.y) / current.scale,
+          width: measured.width / current.scale, height: measured.height / current.scale};
+      }
       if (nextRects.has(path)) return;
       nextRects.set(path, { left: rect.left, top: rect.top, width: rect.width, height: rect.height });
     });
@@ -1391,20 +1458,31 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
           const sy = current.height > 0 ? previous.height / current.height : 1;
           if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5 || Math.abs(sx - 1) > 0.02 || Math.abs(sy - 1) > 0.02) {
             const curved = isIncoming && !centralEditorAvailable;
-            sceneMotion.play(element, curved ? centerArrivalFrames(previous, current, camera.current.scale) : [
+            const tracked = compassCenter.current?.element === element;
+            const poses: MotionPose[] | undefined = tracked ? [] : undefined;
+            if (poses && !curved) poses.push({offset: 0, x: dx, y: dy, scaleX: sx, scaleY: sy, originX: 0, originY: 0},
+              {offset: 1, x: 0, y: 0, scaleX: 1, scaleY: 1, originX: 0, originY: 0});
+            sceneMotion.play(element, curved ? centerArrivalFrames(previous, current, camera.current.scale, poses) : [
               { transformOrigin: "0 0", transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`, opacity: 0.90 },
               { transformOrigin: "0 0", transform: "translate(0, 0) scale(1, 1)", opacity: 1 },
-            ], { duration: curved ? Math.max(220, Math.round((incomingCenter.current?.origin === "wander" ? 820 : 520) / Math.max(0.25, speed))) : element.classList.contains("kplex-role-center") ? Math.max(150, Math.round(duration * 0.58)) : duration, easing });
+            ], { duration: curved ? Math.max(220, Math.round((incomingCenter.current?.origin === "wander" ? 820 : 520) / Math.max(0.25, speed))) : element.classList.contains("kplex-role-center") ? Math.max(150, Math.round(duration * 0.58)) : duration, easing }, poses);
           }
           return;
         }
 
         const role = Array.from(element.classList).find((value) => value.startsWith("kplex-role-"))?.replace("kplex-role-", "") ?? "child";
         const offset = role === "parent" ? [0, 22] : role === "child" ? [0, -22] : role === "left" || role === "previous" ? [22, 0] : role === "right" || role === "next" ? [-22, 0] : [0, 14];
+        let poses: MotionPose[] | undefined;
+        if (compassCenter.current?.element === element) {
+          const origin = root.ownerDocument.defaultView?.getComputedStyle(element).transformOrigin.split(" ").map(Number.parseFloat) ?? [0, 0];
+          const originX = origin[0] || 0, originY = origin[1] || 0;
+          poses = [{offset: 0, x: offset[0], y: offset[1], scaleX: 0.92, scaleY: 0.92, originX, originY},
+            {offset: 1, x: 0, y: 0, scaleX: 1, scaleY: 1, originX, originY}];
+        }
         sceneMotion.play(element, [
           { transform: `translate(${offset[0]}px, ${offset[1]}px) scale(.92)`, opacity: 0 },
           { transform: "translate(0, 0) scale(1)", opacity: 1 },
-        ], { duration: Math.max(160, Math.round(duration * 0.75)), easing });
+        ], { duration: Math.max(160, Math.round(duration * 0.75)), easing }, poses);
       });
     }
     incomingCenter.current = null;
@@ -1414,6 +1492,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     preserveCameraOnNextLayout.current = false;
     displayResizeLayout.current = false;
     syncCentralEditorOverlay();
+    if (compassSync.current()) requestCameraFrame();
   }, [sceneLayoutKey, navigationOrigin, settings.animationSpeed, nodeDrag?.path, connectDrag?.originPath, sceneMotion, viewportSize.width, viewportSize.height, displayState.revision]);
 
   /** Center the actual central node and fit symmetric displayed bounds; explicit Fit renews ownership. */
@@ -1638,6 +1717,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       displayResizePending.current = false;
       if (measuredViewport.current.width === width && measuredViewport.current.height === height) return;
       measuredViewport.current = { width, height };
+      if (compassSync.current()) requestCameraFrame();
       if (preserveDisplayCamera) { preserveCameraOnNextLayout.current = true; displayResizeLayout.current = true; }
       setViewportSize({ width, height });
       // Context-only theme variables can appear/disappear at responsive pane breakpoints.
@@ -1649,7 +1729,10 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     updateViewport();
     const observer = new owningWindow.ResizeObserver(updateViewport);
     observer.observe(el);
-    return () => observer.disconnect();
+    /** Reappearance joins the existing frame owner only if exact center motion still needs following. */
+    const visible = (): void => { if (!el.ownerDocument.hidden && compassSync.current()) requestCameraFrame(); };
+    el.ownerDocument.addEventListener("visibilitychange", visible);
+    return () => {observer.disconnect(); el.ownerDocument.removeEventListener("visibilitychange", visible);};
   }, [settings.allowAutozoom, centralEditorMaximized, displayState.revision, activePath]);
 
   useEffect(() => {
@@ -4049,6 +4132,10 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       icon={<ObsidianIcon name="search" size={15} />} closeIcon={<ObsidianIcon name="x" size={14} />}
       label={translate("find.ariaLabel")} placeholder={translate("find.placeholder")} closeLabel={translate("find.close")}
       matchLabel={translate("find.matches", { count: findPaths.length })} />
+    <svg ref={compassElement} className="kplex-compass-background" aria-hidden="true" focusable="false">
+      {COMPASS_DIRECTIONS.map(/** Keep four stable decoration nodes; React never owns their animated points. */ direction => <polygon key={direction} points="" fill={colorValueCss(paintSettings.colorPreferences.compass.fills[direction],
+        colorValueCss({kind: "theme", variable: COMPASS_COLOR_VARIABLES[direction]}, semanticColorCss(COMPASS_SEMANTIC_SLOTS[direction])))} />)}
+    </svg>
     <div ref={cameraElement} className="kplex-camera" style={{ transform: `translate(${camera.current.x}px, ${camera.current.y}px) scale(${camera.current.scale})` }}>
       <svg className="kplex-links" width="3200" height="2400" viewBox="-1600 -1200 3200 2400">
         <defs>

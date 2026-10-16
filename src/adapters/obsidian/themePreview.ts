@@ -1,8 +1,10 @@
 /**
  * Preview-only, owner-document color sampling. A bounded, script-free isolated document resolves
  * already loaded CSS in both Obsidian modes. Samples never become saved colors or live graph
- * defaults. The editor owns invalidation/disposal; normal rendering never enumerates stylesheets.
+ * defaults. The one optional Compass opacity is sampled separately as a bounded numeric input.
+ * The editor owns invalidation/disposal; normal rendering never enumerates stylesheets.
  */
+import {compassCssIntensity} from "../../core/plex/colorPreferences";
 import {isThemeColorName} from "../../core/contracts/colorValue";
 
 export type AppearanceMode = "light" | "dark";
@@ -11,6 +13,8 @@ export const THEME_PREVIEW_TOKENS = ["--background-primary", "--background-secon
   "--graph-line", "--color-purple", "--color-green", "--color-cyan", "--color-orange"] as const;
 export type ThemePreviewSample = Readonly<{
   colors: Readonly<Record<string, string>>;
+  /** Only the finite optional Compass opacity input is sampled as a number, separately from colors. */
+  compassOpacity?: number;
   confidence: "matched" | "estimated";
 }>;
 export type ThemePreviewPair = Readonly<{
@@ -88,6 +92,10 @@ export class ThemePreviewSampler {
     const helpers = owner.win as Window & { createSpan: typeof createSpan; createDiv: typeof createDiv; createEl: typeof createEl };
     /** The equipped parent factory creates only an inert probe, adopted by its destination scope. */
     const createProbe = (): HTMLElement => helpers.createSpan();
+    /** Sample the one supported numeric CSS input only when this preview requests Compass. */
+    const sampleOpacity = (element: HTMLElement): number | undefined => tokens.includes("--kplex-compass-opacity")
+      ? compassCssIntensity(element.ownerDocument.defaultView?.getComputedStyle(element).getPropertyValue("--kplex-compass-opacity") ?? "") : undefined;
+    const liveOpacity = sampleOpacity(scope);
     const live = sampleColors(scope, tokens, createProbe, expressions), reasons: string[] = [], texts: string[] = [];
     // Host scripts can publish only the active mode through inline root colors. Their unavailable
     // alternate execution cannot be inferred by copying CSS; retain live paint and label estimates.
@@ -114,8 +122,8 @@ export class ThemePreviewSampler {
     }
     /** Preserve accurate current-mode colors while labelling missing alternate context honestly. */
     const fallback = (): ThemePreviewPair => ({
-      activeMode, light: { colors: activeMode === "light" ? live : {}, confidence: activeMode === "light" ? "matched" : "estimated" },
-      dark: { colors: activeMode === "dark" ? live : {}, confidence: activeMode === "dark" ? "matched" : "estimated" },
+      activeMode, light: { colors: activeMode === "light" ? live : {}, compassOpacity: activeMode === "light" ? liveOpacity : undefined, confidence: activeMode === "light" ? "matched" : "estimated" },
+      dark: { colors: activeMode === "dark" ? live : {}, compassOpacity: activeMode === "dark" ? liveOpacity : undefined, confidence: activeMode === "dark" ? "matched" : "estimated" },
       reasons: [...new Set(reasons)], stylesheetCount: texts.length, cssBytes,
     });
     const frame = helpers.createEl("iframe");
@@ -167,16 +175,19 @@ export class ThemePreviewSampler {
       }
       if (contextBudget.limited) reasons.push("context-limit");
       const sampled: Partial<Record<AppearanceMode, Record<string, string>>> = {};
+      const sampledOpacity: Partial<Record<AppearanceMode, number>> = {};
       for (const mode of ["light", "dark"] as const) {
         doc.body.className = owner.body.className;
         doc.body.classList.remove("theme-light", "theme-dark"); doc.body.classList.add(`theme-${mode}`);
         sampled[mode] = sampleColors(target, tokens, createProbe, expressions);
+        sampledOpacity[mode] = sampleOpacity(target);
       }
+      if (sampledOpacity[activeMode] !== liveOpacity) reasons.push("active-context-mismatch");
       if (tokens.some(token => sampled[activeMode]?.[token] !== live[token])) reasons.push("active-context-mismatch");
       if (!current()) return null;
       const confidence = reasons.length ? "estimated" : "matched";
-      const value: ThemePreviewPair = { activeMode, light: { colors: activeMode === "light" ? live : sampled.light ?? {}, confidence: activeMode === "light" ? "matched" : confidence },
-        dark: { colors: activeMode === "dark" ? live : sampled.dark ?? {}, confidence: activeMode === "dark" ? "matched" : confidence }, reasons: [...new Set(reasons)], stylesheetCount: texts.length, cssBytes };
+      const value: ThemePreviewPair = { activeMode, light: { colors: activeMode === "light" ? live : sampled.light ?? {}, compassOpacity: activeMode === "light" ? liveOpacity : sampledOpacity.light, confidence: activeMode === "light" ? "matched" : confidence },
+        dark: { colors: activeMode === "dark" ? live : sampled.dark ?? {}, compassOpacity: activeMode === "dark" ? liveOpacity : sampledOpacity.dark, confidence: activeMode === "dark" ? "matched" : confidence }, reasons: [...new Set(reasons)], stylesheetCount: texts.length, cssBytes };
       this.cached = { scope, owner, tokens: key, value };
       return value;
     } catch (error) {

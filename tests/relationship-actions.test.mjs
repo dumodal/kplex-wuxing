@@ -583,7 +583,8 @@ function cameraLayoutEffect(dependencies) {
 test("navigation with autofit disabled recenters without resetting manual scale", () => {
   const camera = { x: 63, y: -44, scale: 1.73 }, calls = [];
   const dependencies = {
-    viewport: { current: { clientWidth: 800, clientHeight: 600, querySelectorAll: () => [], ownerDocument: { defaultView: { matchMedia: () => ({ matches: false }) } } } },
+    compassCenter: {current: null}, compassSync: {current: () => false}, requestCameraFrame: () => {},
+    viewport: { current: { clientWidth: 800, clientHeight: 600, getBoundingClientRect: () => ({left: 0, top: 0}), querySelectorAll: () => [], ownerDocument: { defaultView: { matchMedia: () => ({ matches: false }) } } } },
     sceneMotion: { cancelAll: () => {} }, preserveCameraOnNextLayout: { current: false }, displayResizeLayout: { current: false },
     centralEditorAvailabilityRef: { current: false }, centralEditorAvailable: false, centralEditorSize: null,
     incomingCenter: { current: null }, centralEditorSizeKeyRef: { current: "" }, previousNodeRects: { current: new Map([["prior", {}]]) },

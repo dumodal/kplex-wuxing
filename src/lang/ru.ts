@@ -8,6 +8,16 @@ import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const russianTranslations = {
 
+  "compass.title": "Направленный оттенок фона",
+  "compass.help": "Показать ориентир за Plex. Оттенок обозначает направление, а не точную принадлежность связей.",
+  "compass.enabled": "Показывать направленный оттенок",
+  "compass.intensity": "Интенсивность оттенка",
+  "compass.inheritHelp": "По умолчанию зависит от темы и светлого или тёмного режима. Ноль скрывает оттенок.",
+  "compass.resetIntensity": "Использовать интенсивность по умолчанию",
+  "compass.north": "Север · Истоки / Родители",
+  "compass.east": "Восток · Вызовы / Следующие",
+  "compass.south": "Юг · Развитие / Дети",
+  "compass.west": "Запад · Поддержка / Предыдущие",
   "colors.name": "Название",
   "colors.resetPair": "Сбросить оба варианта",
   "colors.resetPairHelp": "Вернуть оба варианта к значениям на момент открытия.",
@@ -22,7 +32,7 @@ const russianTranslations = {
   "colors.deletePair": "Удалить именованный цвет",
   "colors.deleteUses": "«{name}» используется в настройках {count} раз. Перед удалением выберите замену.",
   "colors.deleteNowUsed": "Этот цвет теперь используется. Отмените и откройте снова, чтобы выбрать замену.",
-  "colors.parentHelp": "Изменяется локальный черновик. Сохраните родительский стиль или линзу, чтобы сохранить изменение.",
+  "colors.parentHelp": "Это изменяет локальный черновик. Сохраните его в родительском редакторе.",
   "colors.useColor": "Использовать цвет",
   "colors.gateStroke": "Контур порта",
   "colors.gateFill": "Заливка порта",

@@ -29,6 +29,7 @@ import { ColorAdoptionModal } from "./ui/ColorAdoptionModal";
 import { StyleColorControls, type StyleColorContext } from "./ui/StyleColorControls";
 import { ColorPaletteModal } from "./ui/ColorPaletteModal";
 import { standardColorSlots, adoptStandardThemeColors, withoutStyleColorOverrides, mergeStyleDraft, requireNamedColor, STANDARD_NODE_COLOR_STYLES, STANDARD_LINK_COLOR_STYLES } from "./core/plex/colorEditing";
+import {COMPASS_DIRECTIONS} from "./core/plex/colorPreferences";
 import { ColorSourceModal } from "./ui/ColorSourceModal";
 import {
   AbstractInputSuggest,
@@ -1694,6 +1695,7 @@ const arrowOptions = (translate: Translator): Record<Arrowhead, string> => ({
 export class KplexSettingTab extends PluginSettingTab {
   private actionSettings: ActionSettingsController | null = null;
   private readonly colorDialogs = new Set<StyleEditorModal>();
+  private colorDialogGeneration = 0;
 
   /** Keep shortcut editing in the native settings hierarchy with lazy rendered resource ownership. */
   constructor(app: App, private kplexPlugin: KplexPlugin) {
@@ -1708,6 +1710,7 @@ export class KplexSettingTab extends PluginSettingTab {
 
   /** Release row subscriptions and transient input before navigation, unload or settings teardown. */
   disposeActionSettings(): void {
+    this.colorDialogGeneration++;
     this.actionSettings?.dispose();
     for (const dialog of this.colorDialogs) dialog.retire();
     this.colorDialogs.clear();
@@ -1798,6 +1801,24 @@ export class KplexSettingTab extends PluginSettingTab {
       preferences: () => plugin.settings.colorPreferences, nodeStyle: () => plugin.settings.baseNodeStyle,
       linkStyle: () => plugin.settings.baseLinkStyle, background: () => plugin.settings.backgroundColor,
       subscribeCss: changed => {const ref = this.app.workspace.on("css-change", changed); return () => this.app.workspace.offref(ref);}};
+  }
+
+  /** Lazily open a native Compass draft; teardown/migration supersedes loading, and only edited fields enter the existing queue. */
+  private async openCompassSettings(): Promise<void> {
+    const generation = ++this.colorDialogGeneration, owner = this.containerEl.ownerDocument;
+    const plugin = this.kplexPlugin; if (plugin.settings.colorPreferencesFuture !== undefined) return;
+    const {CompassSettingsModal} = await import("./ui/CompassSettingsModal");
+    if (generation !== this.colorDialogGeneration || !this.containerEl.isConnected || this.containerEl.ownerDocument !== owner || plugin.settings.colorPreferencesFuture !== undefined) return;
+    const dialog = new CompassSettingsModal(this.app, this.styleColorContext(), /** Merge against the latest durable owner without restoring stale palette or unedited fills. */ (initial, edited, current) => this.commitStyleChange(/** Each explicit Compass field has independent last-edit ownership. */ draft => {
+      const latest = draft.colorPreferences.compass;
+      if (initial.enabled !== edited.enabled) latest.enabled = edited.enabled;
+      if (initial.intensity !== edited.intensity) {if (edited.intensity === undefined) delete latest.intensity; else latest.intensity = edited.intensity;}
+      for (const direction of COMPASS_DIRECTIONS) if (!colorValuesEqual(initial.fills[direction], edited.fills[direction])) {
+        const value = edited.fills[direction]; requireNamedColor(value, draft.colorPreferences);
+        if (value === undefined) delete latest.fills[direction]; else latest.fills[direction] = value;
+      }
+    }, current), /** Release exactly this native editor after close or migration. */ () => this.colorDialogs.delete(dialog));
+    this.colorDialogs.add(dialog); dialog.open();
   }
 
   /** A searchable palette manager owns all pair and replacement dialogs until native tab teardown. */
@@ -2268,6 +2289,7 @@ export class KplexSettingTab extends PluginSettingTab {
             heading: translate("settings.ui.canvas.labels"),
             items: [
               { name: translate("settings.ui.plex.background"), action: () => this.openCanvasColorEditor() },
+              {name: translate("compass.title"), action: /** Load the optional rail only after explicit native navigation. */ () => {void this.openCompassSettings();}, disabled: this.kplexPlugin.settings.colorPreferencesFuture !== undefined},
               {name: translate("colors.namedColors"), action: () => this.openColorPalette()},
               {name: translate("colors.adopt"), desc: translate("colors.adoptHelp"), action: () => this.openColorAdoption()},
               { name: translate("settings.ui.use.frontmatter.display.names"), desc: translate("settings.ui.use.the.first.non.empty.value.from.the.configured.name.f"), control: { type: "toggle", key: "renderAlias" } },

@@ -16,7 +16,7 @@ export type ColorPreferencesV1 = {
   semantic: Partial<Record<SemanticColorSlot, ColorValue>>;
   compass: {
     enabled: boolean;
-    /** Undefined inherits the factory percentage; zero deliberately suppresses tint. */
+    /** Undefined inherits theme opacity then the native mode percentage; zero suppresses tint. */
     intensity?: number;
     fills: Partial<Record<CompassDirection, ColorValue>>;
   };
@@ -105,7 +105,19 @@ export function cyclicSemanticColorSlots(preferences: ColorPreferencesV1): Seman
   });
 }
 
-/** Resolve the optional user percentage to a conservative light/dark default, including explicit zero. */
-export function compassIntensity(preferences: ColorPreferencesV1, mode: "light" | "dark"): number {
-  return (preferences.compass.intensity ?? (mode === "light" ? 5 : 7)) / 100;
+export const COMPASS_COLOR_VARIABLES: Readonly<Record<CompassDirection, string>> = {
+  north: "--kplex-compass-parent-color", east: "--kplex-compass-challenger-color",
+  south: "--kplex-compass-child-color", west: "--kplex-compass-friend-color",
+};
+
+/** Parse the one public numeric/percentage opacity token; invalid CSS units inherit native defaults. */
+export function compassCssIntensity(raw: string): number | undefined {
+  const token = raw.trim(); if (!/^[+]?(?:\d+(?:\.\d*)?|\.\d+)%?$/.test(token)) return undefined;
+  const value = Number(token.endsWith("%") ? token.slice(0, -1) : token);
+  return Number.isFinite(value) ? Math.max(0, Math.min(0.15, token.endsWith("%") ? value / 100 : value)) : undefined;
+}
+
+/** Resolve explicit percentage, finite CSS opacity, then the native mode default; retain explicit zero. */
+export function compassIntensity(preferences: ColorPreferencesV1, mode: "light" | "dark", cssOpacity?: string): number {
+  return preferences.compass.intensity === undefined ? compassCssIntensity(cssOpacity ?? "") ?? (mode === "light" ? 0.05 : 0.07) : preferences.compass.intensity / 100;
 }

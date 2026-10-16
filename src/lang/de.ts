@@ -8,6 +8,16 @@ import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const germanTranslations = {
 
+  "compass.title": "Richtungsabhängige Hintergrundtönung",
+  "compass.help": "Eine Orientierungshilfe hinter dem Plex anzeigen. Die Tönung zeigt die Richtung, nicht die genaue Beziehungszugehörigkeit.",
+  "compass.enabled": "Richtungstönung anzeigen",
+  "compass.intensity": "Tönungsintensität",
+  "compass.inheritHelp": "Standard folgt dem Theme und dem hellen oder dunklen Modus. Null blendet die Tönung aus.",
+  "compass.resetIntensity": "Standardintensität verwenden",
+  "compass.north": "Norden · Ursprung / Übergeordnet",
+  "compass.east": "Osten · Herausforderung / Nächste",
+  "compass.south": "Süden · Entwicklung / Untergeordnet",
+  "compass.west": "Westen · Unterstützung / Vorherige",
   "colors.name": "Name",
   "colors.resetPair": "Beide Varianten zurücksetzen",
   "colors.resetPairHelp": "Beide Varianten auf die Werte beim Öffnen zurücksetzen.",
@@ -22,7 +32,7 @@ const germanTranslations = {
   "colors.deletePair": "Benannte Farbe löschen",
   "colors.deleteUses": "„{name}“ wird {count}-mal verwendet. Vor dem Löschen einen Ersatz wählen.",
   "colors.deleteNowUsed": "Diese Farbe wird jetzt verwendet. Abbrechen und erneut öffnen, um einen Ersatz zu wählen.",
-  "colors.parentHelp": "Dies ändert den lokalen Entwurf. Den übergeordneten Stil oder die Linse speichern, um die Änderung zu behalten.",
+  "colors.parentHelp": "Dies ändert den lokalen Entwurf. Speichere ihn im übergeordneten Editor.",
   "colors.useColor": "Farbe verwenden",
   "colors.gateStroke": "Tor-Umrandung",
   "colors.gateFill": "Tor-Füllung",

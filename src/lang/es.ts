@@ -8,6 +8,16 @@ import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const spanishTranslations = {
 
+  "compass.title": "Tinte direccional del fondo",
+  "compass.help": "Mostrar una guía de orientación detrás del Plex. El tinte indica la dirección, no la pertenencia exacta a una relación.",
+  "compass.enabled": "Mostrar tinte direccional",
+  "compass.intensity": "Intensidad del tinte",
+  "compass.inheritHelp": "El valor predeterminado sigue el tema y el modo claro u oscuro. Cero oculta el tinte.",
+  "compass.resetIntensity": "Usar intensidad predeterminada",
+  "compass.north": "Norte · Origen / Padres",
+  "compass.east": "Este · Desafío / Siguientes",
+  "compass.south": "Sur · Desarrollo / Hijos",
+  "compass.west": "Oeste · Apoyo / Anteriores",
   "colors.name": "Nombre",
   "colors.resetPair": "Restablecer ambas variantes",
   "colors.resetPairHelp": "Restaurar los valores de ambas variantes al abrir.",
@@ -22,7 +32,7 @@ const spanishTranslations = {
   "colors.deletePair": "Eliminar color con nombre",
   "colors.deleteUses": "«{name}» tiene {count} usos configurados. Elige su sustituto antes de eliminarlo.",
   "colors.deleteNowUsed": "Este color ahora está en uso. Cancela y vuelve a abrir para elegir un sustituto.",
-  "colors.parentHelp": "Esto cambia el borrador local. Guarda el estilo o la lente para conservar el cambio.",
+  "colors.parentHelp": "Esto cambia el borrador local. Guarda en el editor principal para conservarlo.",
   "colors.useColor": "Usar color",
   "colors.gateStroke": "Contorno de conectores",
   "colors.gateFill": "Relleno de conectores",

@@ -4,7 +4,7 @@ import test from "node:test";
 import {build} from "esbuild";
 import {chromiumHarness} from "./support/browserTypeScript.mjs";
 import {nativeColorControls,initializeColorDom} from "./support/nativeColorControls.mjs";
-const compiled=await build({stdin:{resolveDir:process.cwd(),contents:`export * from './src/adapters/obsidian/colorChanges';export * from './src/adapters/obsidian/themePreview';export * as React from 'react';export {createRoot} from 'react-dom/client';export {flushSync} from 'react-dom';export * from './src/ui/PlexFilter';export * from './src/settings';export * from './src/ui/ColorPaletteModal';export * from './src/ui/ColorPairModal';export * from './src/core/plex/colorEditing';export {Modal as TestModal} from 'obsidian';export * from './src/ui/ColorLiteralEditor';export * from './src/ui/ColorSourceModal';export * from './src/adapters/obsidian/colorScope';export * from './src/adapters/obsidian/colorSample';export * from './src/adapters/obsidian/colorPresentation';export * from './src/core/plex/colorPreferences';export * from './src/core/contracts/colorValue';export * from './src/lang';`},bundle:true,write:false,format:"iife",globalName:"sourceModules",platform:"browser",plugins:[{name:"native-controls",setup(builder){builder.onResolve({filter:/^obsidian$/},()=>({path:"obsidian",namespace:"native"}));builder.onLoad({filter:/.*/,namespace:"native"},()=>({contents:nativeColorControls}));}}]});
+const compiled=await build({stdin:{resolveDir:process.cwd(),contents:`export * from './src/adapters/obsidian/colorChanges';export * from './src/adapters/obsidian/themePreview';export * as React from 'react';export {createRoot} from 'react-dom/client';export {flushSync} from 'react-dom';export * from './src/ui/PlexFilter';export * from './src/settings';export * from './src/ui/ColorPaletteModal';export * from './src/ui/ColorPairModal';export * from './src/ui/CompassSettingsModal';export * from './src/core/plex/colorEditing';export {Modal as TestModal} from 'obsidian';export * from './src/ui/ColorLiteralEditor';export * from './src/ui/ColorSourceModal';export * from './src/adapters/obsidian/colorScope';export * from './src/adapters/obsidian/colorSample';export * from './src/adapters/obsidian/colorPresentation';export * from './src/core/plex/colorPreferences';export * from './src/core/contracts/colorValue';export * from './src/lang';`},bundle:true,write:false,format:"iife",globalName:"sourceModules",platform:"browser",plugins:[{name:"native-controls",setup(builder){builder.onResolve({filter:/^obsidian$/},()=>({path:"obsidian",namespace:"native"}));builder.onLoad({filter:/.*/,namespace:"native"},()=>({contents:nativeColorControls}));}}]});
 /** Run one isolated document and always release its actual browser process/profile. */
 async function scenario(code){const host=await chromiumHarness(compiled.outputFiles[0].text);try{assert.equal(await host.evaluate(initializeColorDom),true);return await host.evaluate(code)}finally{await host.cleanup()}}
 
@@ -289,5 +289,71 @@ test("nested native color modal keeps pointer and Escape ownership above the act
   if(early.modalEl.isConnected||!document.querySelector('.kplex-lens-editor'))throw Error('Earlier native capture made parent consume the same Escape');
   flushSync(()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})));if(document.querySelector('.kplex-filter-panel')||changed)throw Error('Parent Escape or zero-write cancellation failed');
   flushSync(()=>root.unmount());return true;
+ })()`),true);
+});
+
+/** Native modal content reuses the real React rail/source shell with a detached explicit-save draft. */
+test("Compass editor preserves inherited and zero intensity, child drafts, failure and native lifetime",async()=>{
+ const result=await scenario(`(async()=>{
+  const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),button=(root,text)=>[...root.querySelectorAll('button')].find(el=>el.textContent===text);
+  const {CompassSettingsModal,TestModal,defaultColorPreferences,createTranslator}=sourceModules,t=createTranslator('en');let writes=0,saved=null,reject=false;
+  const preferences=defaultColorPreferences();preferences.palette=[{id:'tint',name:'Tint',light:'#ff000080',dark:'#00ff0040'}];
+  const context={sourceScope:scope,translate:t,preferences:()=>preferences,nodeStyle:()=>({}),linkStyle:()=>({}),background:()=>undefined};
+  const save=async(initial,edited)=>{writes++;if(reject)throw Error('Expected Compass write fault');saved=structuredClone(edited);return{refreshPending:false}};
+  const open=()=>{const modal=new CompassSettingsModal({},context,save,()=>{});modal.open();return modal};
+  let modal=open();button(modal.contentEl,t('common.save')).click();await wait(20);if(writes||modal.modalEl.isConnected)throw Error('Unchanged Compass Save wrote');
+  modal=open();await wait(40);const toggle=modal.contentEl.querySelector('input[type=checkbox]');toggle.checked=true;toggle.dispatchEvent(new Event('change',{bubbles:true}));
+  const range=modal.contentEl.querySelector('input[type=range]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(range,'0');range.dispatchEvent(new Event('input',{bubbles:true}));await wait(30);
+  if(modal.draft.intensity!==0||!modal.draft.enabled)throw Error('Explicit zero/toggle not retained');
+  const north=modal.contentEl.querySelector('.kplex-style-row button');north.click();const child=TestModal.instances.at(-1);
+  const select=child.contentEl.querySelector('.kplex-color-source-editor select');input(select,'named','change');child.contentEl.querySelector('.kplex-color-source-editor button').click();const chooser=TestModal.instances.at(-1);chooser.onChooseSuggestion(preferences.palette[0]);chooser.close();button(child.contentEl,t('colors.useColor')).click();await wait(20);
+  if(writes||modal.draft.fills.north?.id!=='tint')throw Error('Child draft reached storage or lost identity');
+  button(modal.contentEl,t('common.cancel')).click();if(writes||preferences.compass.enabled||preferences.compass.intensity!==undefined)throw Error('Cancel changed preferences');
+  modal=open();await wait(40);modal.draft.enabled=true;modal.draft.intensity=0;reject=true;button(modal.contentEl,t('common.save')).click();await wait(30);if(!modal.modalEl.isConnected||modal.modalEl.getAttribute('aria-busy')!=='false'||modal.draft.intensity!==0)throw Error('Rejected draft lost');
+  reject=false;button(modal.contentEl,t('common.save')).click();await wait(30);if(modal.modalEl.isConnected||saved.intensity!==0||!saved.enabled||writes!==2)throw Error('Explicit Save failed');
+  modal=open();await wait(40);const destination=document.createElement('iframe');document.body.append(destination);destination.contentDocument.body.append(scope);emitMigration(scope);await wait(20);if(modal.modalEl.isConnected||document.querySelector('iframe[sandbox]'))throw Error('Compass migration leaked');
+  destination.remove();return{writes,saved,original:preferences.compass};
+ })()`);
+ assert.equal(result.writes,2);assert.equal(result.saved.intensity,0);assert.equal(result.original.enabled,false);assert.equal(result.original.intensity,undefined);
+});
+
+/** Four actual preview polygons use the same finite mode/alpha policy and preserve source precedence. */
+test("Compass paired preview resolves theme and named fills with inherited, invalid and explicit zero intensity",async()=>{
+ assert.equal(await scenario(`(async()=>{
+  const t=sourceModules.createTranslator('en'),prefs=sourceModules.defaultColorPreferences();prefs.compass.enabled=true;
+  prefs.palette=[{id:'sectors',name:'Sectors',light:'#ff000080',dark:'#00ff0040'}];let changed;
+  scope.style.setProperty('--kplex-compass-parent-color','#11223380');scope.style.setProperty('--kplex-compass-opacity','10%');
+  const options={title:'Compass',sourceScope:scope,translate:t,target:{kind:'compass',direction:'north'},initial:undefined,preferences:()=>prefs,nodeStyle:()=>({}),linkStyle:()=>({}),background:()=>undefined,
+   subscribeColors:callback=>{changed=callback;return()=>changed=null},onSave:async()=>{throw Error('Unexpected write')}};
+  let modal=new sourceModules.ColorSourceModal({},options);modal.open();
+  await waitFor(()=>modal.contentEl.querySelectorAll('.kplex-color-preview-compass').length===2&&[...modal.contentEl.querySelectorAll('.kplex-color-preview-compass')].every(g=>g.children[0].getAttribute('fill-opacity')==='.1'||g.children[0].getAttribute('fill-opacity')==='0.1'));
+  for(const g of modal.contentEl.querySelectorAll('.kplex-color-preview-compass')){if(g.children.length!==4||sourceModules.parseLiteralColor(g.children[0].getAttribute('fill')).red!==17)throw Error('Inherited direction token lost')}
+  modal.close();modal=new sourceModules.ColorSourceModal({}, {...options,initial:{kind:'palette',id:'sectors'}});modal.open();
+  await waitFor(()=>modal.contentEl.querySelector('.kplex-color-preview-compass polygon')?.getAttribute('fill'));
+  const groups=[...modal.contentEl.querySelectorAll('.kplex-color-preview-compass')];
+  if(sourceModules.parseLiteralColor(groups[0].children[0].getAttribute('fill')).red!==255||sourceModules.parseLiteralColor(groups[1].children[0].getAttribute('fill')).green!==255)throw Error('Named variants lost');
+  if(Math.abs(sourceModules.parseLiteralColor(groups[0].children[0].getAttribute('fill')).alpha-128/255)>1e-6)throw Error('Source alpha flattened');
+  scope.style.setProperty('--kplex-compass-opacity','12px');
+  await waitFor(()=>groups[0].children[0].getAttribute('fill-opacity')==='0.05'&&groups[1].children[0].getAttribute('fill-opacity')==='0.07');
+  prefs.compass.intensity=0;changed();await waitFor(()=>groups.every(g=>g.children[0].getAttribute('fill-opacity')==='0'));
+  modal.retire();if(changed||document.querySelector('iframe[sandbox]'))throw Error('Compass preview leaked');return true;
+ })()`),true);
+});
+
+/** Exercise the native Settings action's actual queue callback against changed current preferences. */
+test("Compass Settings merges only edited fields and rejects deleted named sources without restoring old palette data",async()=>{
+ assert.equal(await scenario(`(async()=>{
+  const t=sourceModules.createTranslator('en'),prefs=sourceModules.defaultColorPreferences(),app={workspace:{on:()=>({}),offref:()=>{}}};
+  prefs.palette=[{id:'a',name:'Old',light:'#123456',dark:'#abcdef'},{id:'b',name:'Latest',light:'#223344',dark:'#aabbcc'}];prefs.compass.fills.north={kind:'palette',id:'a'};
+  const p={settings:{colorPreferences:prefs,baseNodeStyle:{},baseLinkStyle:{}},translator:t,index:{subscribePresentation:()=>()=>{}}};let writes=0;
+  p.updateStyleSettings=async edit=>{const draft=structuredClone(p.settings);edit(draft);p.settings=draft;writes++;return{refreshPending:false}};
+  const tab=new sourceModules.KplexSettingTab(app,p);await tab.openCompassSettings();let modal=sourceModules.TestModal.instances.at(-1);modal.draft.intensity=8;
+  p.settings.colorPreferences.compass.fills.north={kind:'palette',id:'b'};p.settings.colorPreferences.compass.extension='latest';p.settings.colorPreferences.palette=prefs.palette.filter(pair=>pair.id!=='a');p.settings.colorPreferences.semantic.support='#44556680';
+  [...modal.contentEl.querySelectorAll('button')].find(button=>button.textContent===t('common.save')).click();await waitFor(()=>!modal.modalEl.isConnected);
+  if(writes!==1||p.settings.colorPreferences.compass.intensity!==8||p.settings.colorPreferences.compass.fills.north.id!=='b'||p.settings.colorPreferences.compass.extension!=='latest'||p.settings.colorPreferences.palette.length!==1||p.settings.colorPreferences.semantic.support!=='#44556680')throw Error('Compass save restored unedited stale fields');
+  await tab.openCompassSettings();modal=sourceModules.TestModal.instances.at(-1);modal.draft.fills.east={kind:'palette',id:'deleted'};
+  [...modal.contentEl.querySelectorAll('button')].find(button=>button.textContent===t('common.save')).click();await waitFor(()=>modal.modalEl.getAttribute('aria-busy')==='false');
+  if(!modal.modalEl.isConnected||writes!==1||p.settings.colorPreferences.compass.fills.east)throw Error('Missing named reference persisted');modal.retire();
+  const before=sourceModules.TestModal.instances.length;p.settings.colorPreferencesFuture={version:99};await tab.openCompassSettings();if(sourceModules.TestModal.instances.length!==before)throw Error('Future preferences editable');tab.disposeActionSettings();return true;
  })()`),true);
 });

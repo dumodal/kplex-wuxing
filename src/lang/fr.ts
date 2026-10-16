@@ -8,6 +8,16 @@ import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const frenchTranslations = {
 
+  "compass.title": "Teinte directionnelle du fond",
+  "compass.help": "Afficher un repère derrière le Plex. La teinte indique une direction, pas une appartenance exacte aux relations.",
+  "compass.enabled": "Afficher la teinte directionnelle",
+  "compass.intensity": "Intensité de la teinte",
+  "compass.inheritHelp": "Par défaut, suivre le thème et le mode clair ou sombre. Zéro masque la teinte.",
+  "compass.resetIntensity": "Utiliser l’intensité par défaut",
+  "compass.north": "Nord · Origine / Parents",
+  "compass.east": "Est · Défi / Suivants",
+  "compass.south": "Sud · Développement / Enfants",
+  "compass.west": "Ouest · Soutien / Précédents",
   "colors.name": "Nom",
   "colors.resetPair": "Réinitialiser les deux variantes",
   "colors.resetPairHelp": "Rétablir les valeurs des deux variantes à l’ouverture.",
@@ -22,7 +32,7 @@ const frenchTranslations = {
   "colors.deletePair": "Supprimer la couleur nommée",
   "colors.deleteUses": "« {name} » a {count} utilisations configurées. Choisissez leur remplacement avant de supprimer.",
   "colors.deleteNowUsed": "Cette couleur est maintenant utilisée. Annulez et rouvrez pour choisir un remplacement.",
-  "colors.parentHelp": "Ceci modifie le brouillon local. Enregistrez le style ou la lentille pour conserver la modification.",
+  "colors.parentHelp": "Cela modifie le brouillon local. Enregistrez dans l’éditeur parent pour le conserver.",
   "colors.useColor": "Utiliser la couleur",
   "colors.gateStroke": "Contour des ports",
   "colors.gateFill": "Remplissage des ports",

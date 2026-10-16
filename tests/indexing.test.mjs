@@ -371,7 +371,7 @@ globalThis.window = globalThis;
 
 function compile(relativePath, targetPath = relativePath) {
   const sourcePath = join(root, relativePath);
-  const outputPath = join(temp, targetPath.replace(/\.ts$/, ".js"));
+  const outputPath = join(temp, targetPath.replace(/\.tsx?$/, ".js"));
   mkdirSync(dirname(outputPath), { recursive: true });
   const source = readFileSync(sourcePath, "utf8");
   const result = ts.transpileModule(source, {
@@ -379,6 +379,7 @@ function compile(relativePath, targetPath = relativePath) {
       target: ts.ScriptTarget.ES2021,
       module: ts.ModuleKind.CommonJS,
       esModuleInterop: true,
+      jsx: ts.JsxEmit.ReactJSX,
       strict: true,
     },
     fileName: sourcePath,
@@ -422,6 +423,7 @@ for (const file of [
   "src/core/contracts/appearance.ts",
   "src/core/contracts/colorValue.ts",
   "src/core/plex/colorPreferences.ts",
+  "src/core/plex/compassBackground.ts",
   "src/core/plex/colorEditing.ts",
   "src/adapters/obsidian/colorPresentation.ts",
   "src/core/graph/presentation.ts",
@@ -456,6 +458,7 @@ for (const file of [
   "src/adapters/obsidian/hiddenPropertyName.ts",
   "src/ui/StyleEditorModal.ts",
   "src/ui/ColorSourceModal.ts",
+  "src/ui/CompassSettingsModal.tsx",
   "src/ui/ColorPaletteModal.ts",
   "src/ui/ColorPairModal.ts",
   "src/ui/ColorAdoptionModal.ts",

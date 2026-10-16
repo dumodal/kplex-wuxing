@@ -4,6 +4,8 @@
  * Opening, Cancel, theme changes and picker streams never write settings or touch vault data.
  */
 import {NATIVE_CANVAS_FILL, NATIVE_LINK_STROKE, NATIVE_LINK_TEXT, nodeColorFallback} from "../index/style";
+import {COMPASS_COLOR_VARIABLES, COMPASS_SEMANTIC_SLOTS} from "../core/plex/colorPreferences";
+import {semanticColorCss} from "../adapters/obsidian/colorPresentation";
 import {ColorScope} from "../adapters/obsidian/colorScope";
 import {Setting, SuggestModal, type App, type ButtonComponent} from "obsidian";
 import {StyleEditorModal, type StyleCommitResult} from "./StyleEditorModal";
@@ -82,11 +84,11 @@ export class ColorSourceModal extends StyleEditorModal {
           if (pair) return pair[this.options.sourceScope.ownerDocument.body.classList.contains("theme-light") ? "light" : "dark"];
         }
         const target = this.options.target;
-        const fallback = target.kind === "canvas" ? NATIVE_CANVAS_FILL : target.kind === "node" ? nodeColorFallback(target.field, this.options.fallbacks)
+        const fallback = target.kind === "compass" ? colorValueCss({kind: "theme", variable: COMPASS_COLOR_VARIABLES[target.direction ?? "north"]}, semanticColorCss(COMPASS_SEMANTIC_SLOTS[target.direction ?? "north"])) : target.kind === "canvas" ? NATIVE_CANVAS_FILL : target.kind === "node" ? nodeColorFallback(target.field, this.options.fallbacks)
           : target.field === "textColor" ? NATIVE_LINK_TEXT : NATIVE_LINK_STROKE;
         const scope = this.options.sourceScope.createDiv();
         scope.setCssStyles({position: "fixed", left: "-100000px", visibility: "hidden", pointerEvents: "none"});
-        const binding = new ColorScope(scope, {preferences: this.options.preferences(), references: source === undefined || source === null ? [] : [source]}, {observe: false});
+        const binding = new ColorScope(scope, {preferences: this.options.preferences(), references: [...(source === undefined || source === null ? [] : [source]), ...(target.kind === "compass" ? [{kind: "theme" as const, variable: COMPASS_COLOR_VARIABLES[target.direction ?? "north"]}] : [])]}, {observe: false});
         try {
           const literal = this.reader?.read(scope, colorValueCss(source, fallback));
           return literal ? formatLiteralColor(literal) : "#808080";
