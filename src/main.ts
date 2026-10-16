@@ -574,6 +574,7 @@ export default class KplexPlugin extends Plugin {
     this.kplexVisibilityListeners.clear();
     this.visibleKplexLeaves.clear();
     this.graphLensListeners.clear();
+    this.appearanceThemeListeners.clear();
     this.linkedDocumentLeaf = null;
     if (this.visibleMetadataTimer !== null) window.clearTimeout(this.visibleMetadataTimer);
     this.visibleMetadataPaths.clear();

@@ -3,7 +3,7 @@ export const nativeColorControls = `
 export const setIcon=()=>{}; export const setTooltip=()=>{}; export class SearchComponent{} export class ButtonComponent{}
 export const Platform={}; export const getIconIds=()=>[]; export class App{} export class Scope{} export class ExtraButtonComponent{}
 export class AbstractInputSuggest {constructor(app,input){this.app=app;this.input=input} close(){}}
-export class PluginSettingTab {constructor(app,plugin){this.app=app;this.plugin=plugin;this.containerEl=createDiv();document.body.append(this.containerEl)} hide(){}}
+export class PluginSettingTab {update(){} constructor(app,plugin){this.app=app;this.plugin=plugin;this.containerEl=createDiv();document.body.append(this.containerEl)} hide(){}}
 export const getLanguage=()=>"en";
 export const getIcon=()=>null;
 export class Notice {constructor(message){window.notices.push(message)}}
@@ -20,13 +20,15 @@ export class ColorComponent {
  setDisabled(disabled){this.input.disabled=disabled;return this}
 }
 export class Setting {
- constructor(container){this.el=this.settingEl=container.createDiv();this.nameEl=this.el.createDiv();this.descEl=this.el.createDiv();this.controlEl=this.el.createDiv();}
+ constructor(container){this.components=[];this.el=this.settingEl=container.createDiv();this.nameEl=this.el.createDiv();this.descEl=this.el.createDiv();this.controlEl=this.el.createDiv();}
+ clear(){this.controlEl.empty();this.components=[];return this}
  setName(value){this.nameEl.textContent=value;return this} setDesc(value){this.descEl.textContent=value;return this}
- addToggle(create){const input=this.controlEl.createEl("input",{attr:{type:"checkbox"}});const api={toggleEl:input,setValue(value){input.checked=value;return api},setDisabled(value){input.disabled=value;return api},onChange(run){input.addEventListener("change",()=>run(input.checked));return api}};create(api);return this}
- addSlider(create){const input=this.controlEl.createEl("input",{attr:{type:"range"}});const api={sliderEl:input,setLimits(min,max,step){input.min=min;input.max=max;input.step=step;return api},setValue(value){input.value=value;return api},setDisabled(value){input.disabled=value;return api},setDynamicTooltip(){return api},onChange(run){input.addEventListener("input",()=>run(Number(input.value)));return api}};create(api);return this}
- addDropdown(create){const input=this.controlEl.createEl("select");const api={selectEl:input,addOptions(options){for(const [value,text] of Object.entries(options))input.createEl("option",{value,text});return api},setValue(value){input.value=value;return api},setDisabled(value){input.disabled=value;return api},onChange(run){input.addEventListener("change",()=>run(input.value));return api}};create(api);return this}
- addText(create){const input=this.el.createEl("input",{attr:{type:"text"}});const api={inputEl:input,setValue(value){input.value=value;return api},onChange(run){input.addEventListener("input",()=>run(input.value));return api}};create(api);return this}
- addButton(create){const input=this.el.createEl("button",{attr:{type:"button"}});const api={setButtonText(value){input.textContent=value;return api},setCta(){return api},setDestructive(){return api},setDisabled(value){input.disabled=value;return api},onClick(run){input.addEventListener("click",run);return api}};create(api);return this}
+ addToggle(create){const input=this.controlEl.createEl("input",{attr:{type:"checkbox"}});const api={toggleEl:input,setValue(value){input.checked=value;return api},setDisabled(value){input.disabled=value;return api},onChange(run){input.addEventListener("change",()=>run(input.checked));return api}};this.components.push(api);create(api);return this}
+ addSlider(create){const input=this.controlEl.createEl("input",{attr:{type:"range"}});const api={sliderEl:input,setLimits(min,max,step){input.min=min;input.max=max;input.step=step;return api},setValue(value){input.value=value;return api},setDisabled(value){input.disabled=value;return api},setDynamicTooltip(){return api},onChange(run){input.addEventListener("input",()=>run(Number(input.value)));return api}};this.components.push(api);create(api);return this}
+ addDropdown(create){const input=this.controlEl.createEl("select");const api={selectEl:input,addOptions(options){for(const [value,text] of Object.entries(options))input.createEl("option",{value,text});return api},setValue(value){input.value=value;return api},setDisabled(value){input.disabled=value;return api},onChange(run){input.addEventListener("change",()=>run(input.value));return api}};this.components.push(api);create(api);return this}
+ addText(create){const input=this.controlEl.createEl("input",{attr:{type:"text"}});const api={inputEl:input,setDisabled(value){input.disabled=value;return api},setValue(value){input.value=value;return api},onChange(run){input.addEventListener("input",()=>run(input.value));return api}};this.components.push(api);create(api);return this}
+ addExtraButton(create){const input=this.controlEl.createEl("button",{cls:"clickable-icon",attr:{type:"button"}});const api={extraSettingsEl:input,setIcon(value){input.dataset.icon=value;return api},setTooltip(value){input.setAttribute("aria-label",value);return api},setDisabled(value){input.disabled=value;return api},onClick(run){input.addEventListener("click",run);return api}};this.components.push(api);create(api);return this}
+ addButton(create){const input=this.controlEl.createEl("button",{attr:{type:"button"}});const api={buttonEl:input,setButtonText(value){input.textContent=value;return api},setCta(){return api},setDestructive(){return api},setDisabled(value){input.disabled=value;return api},onClick(run){input.addEventListener("click",run);return api}};this.components.push(api);create(api);return this}
 }
 `;
 
@@ -34,9 +36,9 @@ export class Setting {
 export const initializeColorDom = `(()=>{
  function decorate(element,options={}){if(options.cls)element.setAttribute("class",options.cls);if(options.text)element.textContent=options.text;if(options.value!==undefined)element.value=options.value;for(const [key,value] of Object.entries(options.attr||{}))element.setAttribute(key,value);return element;}
  function create(tag,options){return decorate(document.createElement(tag),options)}
- window.createEl=create;window.createDiv=options=>create('div',options);window.createSpan=options=>create('span',options);
+ window.createEl=create;window.createDiv=options=>create('div',options);window.createSpan=options=>create('span',options);window.createFragment=()=>document.createDocumentFragment();
  Object.defineProperty(Document.prototype,'win',{configurable:true,get(){return this.defaultView}});
- for(const proto of [HTMLElement.prototype,SVGElement.prototype]){
+ for(const proto of [HTMLElement.prototype,SVGElement.prototype,DocumentFragment.prototype]){
   proto.createEl=function(tag,options){const child=decorate(this.ownerDocument.createElement(tag),options);this.append(child);return child};
   proto.createDiv=function(options){return this.createEl('div',options)};proto.createSpan=function(options){return this.createEl('span',options)};
   proto.createSvg=function(tag,options){const child=decorate(this.ownerDocument.createElementNS('http://www.w3.org/2000/svg',tag),options);this.append(child);return child};

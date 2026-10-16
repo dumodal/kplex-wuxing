@@ -2,6 +2,43 @@
 
 A fresh K-Plex installation follows Obsidian’s theme. Open **Settings → K-Plex → Visual styling → Colors** to change colors. No companion plugin is required.
 
+## Save named K-Plex themes
+
+Open **Settings → K-Plex → Visual styling**. Select a theme from **Theme** to apply it. Color and style changes are saved to that theme, including changes made from a graph’s background menu or lens editor.
+
+**Manage themes** opens the same searchable manager used for node and link styles. Open a row to preview, rename or delete it; opening a row does not activate it. **Create theme** starts with **Copy current theme**, which identifies the source, or **Start from defaults**. Copies are independent. Search and **Show more** keep large libraries manageable.
+
+Each theme keeps two sections:
+
+| Section | Saved appearance |
+| --- | --- |
+| Base styling | Canvas color and complete standard node/link styles, including their native or legacy baseline. |
+| Semantic styling | Custom property/tag/link styles, tag priority, named Light/Dark pairs, semantic assignments, directional tint and lens colors. |
+
+Ontology, label sources, device typography profiles, layout/navigation, image permissions and lens expressions, enabled state, order and non-color lens styling stay shared. Switching themes changes colors only on existing lenses; it never recreates a deleted lens.
+
+A fresh installation starts with **Default theme**. This theme follows Obsidian’s live native colors and cannot be renamed, deleted or reset. The first saved appearance change creates and selects **Custom theme**. Opening, cancelling or saving unchanged creates nothing.
+
+Existing appearances are saved once as **User theme**, selected initially. **Default base + my semantic colors** keeps an independent copy of the semantic styling and restores native base colors. **Default theme** supplies factory base styling and built-in semantic defaults. Successful first-run ExcaliBrain import receives the same User-theme protection. The migration message can be dismissed.
+
+Deleting the active theme asks for confirmation and switches to **Default theme** in the same save. Failed storage leaves the theme and selection intact. Deleting another theme preserves the active appearance.
+
+An editor belongs to the theme that opened it. After switching themes, an old draft remains read-only for **Discard draft**, including after switching back. A Save already accepted ahead of the switch finishes in order.
+
+## Reset selected theme colors
+
+Select **Reset colors** beside the theme dropdown. Review the affected colors and Light/Dark preview, then confirm:
+
+| Scope | Result |
+| --- | --- |
+| Base colors only | Restore native canvas and standard node/link colors. Keep custom semantic styling. This is the default choice. |
+| Semantic colors only | Clear color overrides in custom rules, semantic assignments, directional tint and lenses. Keep base assignments. |
+| All colors | Apply both resets. |
+
+Resets preserve rule names, matching keys, tag order, icons, fonts, sizes, shapes, line styles and other non-color fields. Directional tint keeps its enabled state and intensity. Named palette entries and other saved themes are kept. Use **Named colors** for explicit palette deletion and replacement.
+
+Custom rules may still override base colors after a base-only reset. A base field that follows a semantic color retains that reference; resetting its semantic assignment can change the resulting color. Defaults remain live references rather than sampled copies of today’s colors.
+
 ## Choose a color source
 
 Canvas, standard styles, custom node/link styles, style lenses, semantic colors and directional tint share these choices:
@@ -19,9 +56,9 @@ In a style, lens or tint editor, **Use color** updates its local draft. Select *
 
 ## Manage named colors
 
-Select **Named colors** under **Visual styling → Colors**. Add a name and separate **Light** and **Dark** variants, then select **Save**. Each variant has its own RGB, opacity, text and reset controls; **Reset both variants** returns to the opening pair. Search and **Show more** keep larger palettes manageable.
+Select **Named colors** under **Visual styling → Colors** to edit the selected theme’s palette. Add a name and separate **Light** and **Dark** variants, then select **Save**. Each variant has its own RGB, opacity, text and reset controls; **Reset both variants** returns to the opening pair. Search and **Show more** keep larger palettes manageable.
 
-Renaming keeps existing references. Duplicating creates an independent pair. Deleting a used color requires a replacement, including **Default**, and applies that replacement to its configured uses together. Counts describe settings uses, rather than the number of visible nodes. If another editor adds a use while deletion is open, reopen the confirmation to review it.
+Renaming keeps existing references. Duplicating creates an independent pair. Deleting a used color requires a replacement, including **Default**, and applies that replacement to its configured uses together. Counts describe uses in the selected theme, rather than the number of visible nodes. Other saved themes keep their own palettes. If another editor adds a use while deletion is open, reopen the confirmation to review it.
 
 Select **Suggest dark from light** or **Suggest light from dark** to propose the opposite variant. The suggestion mirrors lightness while keeping hue, saturation and opacity. It changes only the local draft, and some colors near middle lightness will barely change. Adjust the result before saving; a suggestion cannot guarantee contrast for every use.
 

@@ -9,6 +9,7 @@ import {isThemeColorName, colorIdentityText, type ColorValue} from "../core/cont
 import {SEMANTIC_COLOR_DEFAULTS} from "../core/plex/colorPreferences";
 import type {Translator} from "../lang";
 import type {StyleColorContext} from "./StyleColorControls";
+import type {ColorPreferencesV1} from "../core/plex/colorPreferences";
 
 export type ColorSwatchItem = Readonly<{id?: string; label: string; value: ColorValue | undefined; inherit?: ColorValue; fallback: string}>;
 
@@ -31,7 +32,7 @@ export function renderColorStrips(element: HTMLElement, translate: Translator, c
 /** One small visible list coalesces row construction into one preview harvest, never one per swatch. */
 export class ColorSwatchList {
   private readonly sampler = new ThemePreviewSampler();
-  private readonly rows = new Map<HTMLElement, () => readonly ColorSwatchItem[]>();
+  private readonly rows = new Map<HTMLElement, {read: () => readonly ColorSwatchItem[]; preferences: () => ColorPreferencesV1}>();
   private readonly releases: Array<() => void> = [];
   private queued = false;
   private snapshot: {key: string; pending: Promise<ThemePreviewPair | null>} | null = null;
@@ -54,8 +55,8 @@ export class ColorSwatchList {
   }
 
   /** Register one pair or sequence; the same renderer is used for properties and parent summaries. */
-  add(element: HTMLElement, read: () => readonly ColorSwatchItem[]): () => void {
-    this.rows.set(element, read); element.addClass("kplex-color-strips"); this.refresh();
+  add(element: HTMLElement, read: () => readonly ColorSwatchItem[], preferences = this.context.preferences): () => void {
+    this.rows.set(element, {read, preferences}); element.addClass("kplex-color-strips"); this.refresh();
     return /** Native row cleanup removes its exact registration without affecting peers. */ () => {this.rows.delete(element); if (!this.rows.size) this.dispose();};
   }
 
@@ -80,22 +81,22 @@ export class ColorSwatchList {
 
   /** Resolve only visible configured sources and at most the sampler's established token/expression budgets. */
   private async paint(): Promise<void> {
-    const generation = ++this.generation, preferences = this.context.preferences();
-    const rows = [...this.rows].filter(([element]) => element.isConnected).map(([element, read]) => ({element, items: read()}));
+    const generation = ++this.generation;
+    const rows = [...this.rows].filter(([element]) => element.isConnected).map(([element, row]) => ({element, items: row.read(), preferences: row.preferences()}));
     if (!rows.length || !this.scope.isConnected) return;
     const tokens = new Set<string>(Object.values(SEMANTIC_COLOR_DEFAULTS));
     const expressions: Record<string, string> = {}, fallbacks = new Map<string, string>();
     for (const {items} of rows) for (const item of items) if (!fallbacks.has(item.fallback)) {
       const key = `--kplex-swatch-${fallbacks.size}`; fallbacks.set(item.fallback, key); expressions[key] = item.fallback;
     }
-    for (const value of [...rows.flatMap(row => row.items.flatMap(item => [item.value, item.inherit])), ...Object.values(preferences.semantic)])
+    for (const value of rows.flatMap(row => [...row.items.flatMap(item => [item.value, item.inherit]), ...Object.values(row.preferences.semantic)]))
       if (value && typeof value !== "string" && value.kind === "theme" && isThemeColorName(value.variable)) tokens.add(value.variable);
     try {
       const key = JSON.stringify([[...tokens].sort(), expressions]);
       if (this.snapshot?.key !== key) this.snapshot = {key, pending: this.sampler.sample(this.scope, [...tokens].sort(), expressions)};
       const samples = await this.snapshot.pending;
       if (this.disposed || generation !== this.generation) return;
-      for (const {element, items} of rows) {
+      for (const {element, items, preferences} of rows) {
         if (!element.isConnected || !this.rows.has(element)) continue;
         const colors = {light: [] as ResolvedSwatch[], dark: [] as ResolvedSwatch[]};
         for (const mode of ["light", "dark"] as const) for (const item of items) {

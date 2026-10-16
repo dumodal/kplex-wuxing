@@ -32,7 +32,7 @@ export class CompassSettingsModal extends StyleEditorModal {
   onOpen(): void {
     this.beginEditor(this.context.sourceScope, this.context.bindEditor); this.modalEl.addClass("kplex-color-modal"); this.modalEl.addClass("kplex-compass-modal");
     const t = this.context.translate; this.titleEl.setText(t("compass.title"));
-    const body = this.contentEl.createDiv({cls: "kplex-compass-body"});
+    const {body, actions} = this.scrollableContent(); body.addClass("kplex-compass-body"); actions.addClass("kplex-compass-actions");
     const context: StyleColorContext = {...this.context, preferences: /** Read current palette/semantics while retaining only the detached Compass draft. */ () => ({...this.context.preferences(), compass: this.draft})};
     body.createDiv({text: t("compass.help"), cls: "setting-item-description"});
     new Setting(body).setName(t("compass.enabled")).addToggle(/** The native toggle controls local preview only. */ toggle => toggle.setValue(this.draft.enabled).onChange(/** Retain the draft until the containing explicit Save. */ value => {
@@ -50,7 +50,6 @@ export class CompassSettingsModal extends StyleEditorModal {
     this.preview = new ColorPreview(body, {...context, target: {kind: "compass"}}, undefined);
     this.releaseCss = context.subscribeCss?.(/** CSS changes retire only this editor?s isolated sample. */ () => this.preview?.invalidate()) ?? null;
     this.releaseColors = context.subscribeColors?.(/** Current named/semantic changes repaint without replacing local edits. */ () => this.preview?.refreshSources()) ?? null;
-    const actions = this.contentEl.createDiv({cls: "kplex-compass-actions"});
     new Setting(actions).addButton(/** Cancel leaves persistence untouched. */ button => button.setButtonText(t("common.cancel")).onClick(/** The base shell excludes cancellation during a submitted write. */ () => this.close()))
       .addButton(/** One explicit Save submits an immutable local snapshot. */ button => button.setButtonText(t("common.save")).setCta().onClick(/** Unchanged Save closes without storage or presentation work. */ () => {
         if (JSON.stringify(this.initial) === JSON.stringify(this.draft)) {this.close(); return;}

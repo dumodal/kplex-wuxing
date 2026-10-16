@@ -72,10 +72,18 @@ export abstract class StyleEditorModal extends Modal {
     if (!this.editorOpen || this.operationPending || this.operationCommitted) return;
     this.feedback?.setText(this.translate("themes.staleDraft", {name: this.openingThemeName}));
     const cancel = this.translate("common.cancel"), discard = this.translate("themes.discardDraft");
+    let hasDismiss = false;
     for (const control of Array.from(this.contentEl.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>("input, select, button"))) {
       const dismiss = control.tagName === "BUTTON" && (control.textContent === cancel || control.textContent === discard);
-      control.disabled = !dismiss; if (dismiss) control.setText(discard);
+      control.disabled = !dismiss; if (dismiss) {control.setText(discard); hasDismiss = true;}
     }
+    if (!hasDismiss) this.contentEl.createEl("button", {text: discard, attr: {type: "button"}}).addEventListener("click", /** Managers without a Cancel footer still provide explicit dismissal. */ () => this.close());
+  }
+
+  /** Share a native scrolling body and always-visible action footer across real appearance editors. */
+  protected scrollableContent(): {body: HTMLElement; actions: HTMLElement} {
+    this.modalEl.addClass("kplex-scroll-editor-modal");
+    return {body: this.contentEl.createDiv({cls: "kplex-style-editor-body"}), actions: this.contentEl.createDiv({cls: "kplex-style-editor-actions"})};
   }
 
   /** Submit once, freeze the captured draft and block Cancel/Escape until its durable outcome is known. */
