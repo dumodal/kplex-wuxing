@@ -51,23 +51,27 @@ test("startup resource observer is self-contained and preserves native forwardin
     assert.equal(await browser.evaluate(contributorBrowserInitialize),true);
     assert.equal(await browser.evaluate(`window.sourceResourceFactory=(${createStartupResourceProbe.toString()});true`),true);
     assert.equal(await browser.evaluate(`(/** Exercise the observer against genuine source/storage operations. */ async()=>{
-      const f=await fixture('resource-observer-contract');let probe,request,promise,receiver;
-      const nativeGet=IDBObjectStore.prototype.get,inspect=f.repository.inspect;
+      const f=await fixture('resource-observer-contract');let probe,request,promise,receiver,nativeTransaction,transactionReceiver,selectedPromise,selectedReceiver;
+      const nativeGet=IDBObjectStore.prototype.get,nativeTransactionMethod=IDBDatabase.prototype.transaction,inspect=f.repository.inspect,readSelected=f.repository.readSelected;
       /** Witness the actual native request without replacing it. */
       const getWitness=function(...args){receiver=this;request=nativeGet.apply(this,args);return request;};
       /** Witness the exact returned repository promise. */
       const inspectWitness=function(...args){promise=inspect.apply(this,args);return promise;};
+      /** Witness native transaction and selected-reader identities before the probe observes them. */
+      const transactionWitness=function(...args){transactionReceiver=this;nativeTransaction=nativeTransactionMethod.apply(this,args);return nativeTransaction;};
+      const selectedWitness=function(...args){selectedReceiver=this;selectedPromise=readSelected.apply(this,args);return selectedPromise;};
       try {
         const file=f.add('Observer-private-A.md','Friends:: [[Observer-private-B]]');
         f.add('Observer-private-B.md','');await f.acquire();ok(await f.acquisition.reconcile(),'Seed real source authority');
         const originalCache=f.app.metadataCache.getFileCache,originalDaily=f.acquisition.metadataHost.dailyNotesSettings;
-        IDBObjectStore.prototype.get=getWitness;f.repository.inspect=inspectWitness;
+        IDBObjectStore.prototype.get=getWitness;IDBDatabase.prototype.transaction=transactionWitness;f.repository.inspect=inspectWitness;f.repository.readSelected=selectedWitness;
         probe=window.sourceResourceFactory({phase:()=> 'probe',now:()=>performance.now(),cpuProcess:{pid:123,type:'renderer',privateOwner:'never-export-process-extra.md'},databaseName:dbName('resource-observer-contract'),detailed:true});
         equal(probe.snapshot().cpuProcess,{pid:123,type:'renderer'},'Only the CPU closure process identity is retained');
         ok(!JSON.stringify(probe.snapshot()).includes('never-export-process-extra.md'),'CPU identity excludes arbitrary properties');
         probe.attach({sourceAcquisition:f.acquisition,indexedDb:f.cache});
         f.acquisition.metadataHost.dailyNotesSettings();
         const db=await f.cache.open(),tx=db.transaction('sourceHeads','readonly'),store=tx.objectStore('sourceHeads');
+        ok(tx===nativeTransaction&&transactionReceiver===db,'Exact native transaction and receiver preserved');
         const completed=new Promise(/** Retain the native transaction's terminal event. */ (resolve,reject)=>{tx.oncomplete=resolve;tx.onabort=()=>reject(tx.error);});
         const returned=store.get(file.path);ok(returned===request&&receiver===store,'Exact native request and receiver preserved');
         await value(returned);await completed;
@@ -76,11 +80,51 @@ test("startup resource observer is self-contained and preserves native forwardin
         f.acquisition.metadataHost.dailyNotesSettings();
         equal(probe.snapshot().groups['probe:host.dailyNotesSettings'].calls,2,'Host wrapper installed once despite multiple IDB requests');
         ok(await f.acquisition.readBody(file),'Actual bounded family decoder remains usable');
+        let resume,entered;const hold=new Promise(resolve=>{resume=resolve}),reached=new Promise(resolve=>{entered=resolve});
+        const selected=f.repository.readSelected(file.path,stamp=>stamp.saved?'ready':'unsaved',async reader=>{
+          entered();await hold;return reader.visit('metadata',()=>true);
+        });
+        ok(selected===selectedPromise&&selectedReceiver===f.repository,'Exact selected-reader promise and receiver preserved');
+        await reached;
+        const held=probe.snapshot();
+        equal(held.readers.active,1,'Actual selected source reader remains active while its consumer is held');
+        equal(held.readerWaitUnion.active,0,'Consumer-owned holding time is outside the pin/release/selection await union');
+        ok(held.leases.live>0&&held.leases.trackedLive===held.leases.live,'Committed source-family lease rows protect the held consumer');
+        equal(held.drain.readers,false,'Held reader cannot be called drained');equal(held.drain.sourceLeases,false,'Held durable leases cannot be called drained');
+        resume();equal((await selected).outcome,'ready','Held real family reader completes normally');
         const snapshot=probe.snapshot();equal(snapshot.activeTransactions,0,'Native transactions drained');equal(snapshot.pending,0,'Observed promises drained');
         ok(snapshot.decodePeak>0&&snapshot.decodeCurrent===0,'Decode reservations released');
+        equal(snapshot.readers.active,0,'Source reader lifetime drained');equal(snapshot.readers.started,snapshot.readers.released,'Each observed reader retired');
+        ok(snapshot.readers.peak>=1&&snapshot.readers.elapsedMs>=0,'Reader high-water and elapsed lifetime recorded');
+        ok(snapshot.leases.created>0&&snapshot.leases.created===snapshot.leases.retired,'Committed source leases have matching retirement requests');
+        equal(snapshot.leases.live,0,'No observed source lease rows remain');equal(snapshot.leases.trackedLive,0,'No private opaque lease keys retained after drain');
+        equal(snapshot.leases.unknownRetirements,0,'Every source lease retirement belongs to an observed creation');
+        ok(Object.values(snapshot.drain).every(Boolean),'Methods, native transactions, reader lifetimes and decode all genuinely drain');
+        equal(snapshot.groups['probe:repository.inspect.headOnly'].calls,1,'Head-only observations are separately attributed');
+        ok(snapshot.groups['probe:repository.pin.families'].calls>0&&snapshot.groups['probe:repository.pin.headOnly'].calls>0,'Both actual pin paths attributed');
+        for(const method of ['readBody','readSelected','visitFamily','releaseLeases','unpin','selectionReason']){
+          const group=snapshot.groups['probe:repository.'+method];ok(group.calls>0&&group.active===0&&group.elapsedMs>=0,'Actual method lifecycle attributed: '+method);
+        }
+        const unionMethods=['pin','releaseLeases','selectionReason'].map(method=>snapshot.groups['probe:repository.'+method]);
+        equal(snapshot.readerWaitUnion.calls,unionMethods.reduce((sum,group)=>sum+group.calls,0),'Union includes exactly the three named await owners');
+        equal(snapshot.readerWaitUnion.active,0,'Reader wait union drained');
+        ok(snapshot.readerWaitUnion.elapsedMs<=unionMethods.reduce((sum,group)=>sum+group.elapsedMs,0),'Overlapping await union never exceeds summed inclusive method time');
+        ok(snapshot.groups['probe:storage.source-lease.pin.readwrite'].completed>0&&snapshot.groups['probe:storage.source-lease.release.readwrite'].completed>0,'Actual lease transactions separately classified by source protocol keys');
+        const created=snapshot.leases.created,retired=snapshot.leases.retired;
+        await edit(db,['meta'],transaction=>{const store=transaction.objectStore('meta'),key='source-impact-lease:Observer-private-contributor';store.put({key,impactSlot:0});store.delete(key);});
+        const afterContributor=probe.snapshot();equal(afterContributor.leases.created,created,'Contributor lease rows are not source-family leases');
+        equal(afterContributor.leases.retired,retired,'Contributor cleanup is not source-family retirement');
+        equal(afterContributor.groups['probe:storage.contributor-lease.readwrite'].completed,1,'Contributor protocol operations have their own aggregate bucket');
+        // A genuine unexpected abort can close this cache's normal handle. Exercise it last;
+        // the probe must observe that policy, never replace it to keep a test handle usable.
+        const aborted=db.transaction('meta','readwrite'),abortedDone=new Promise(resolve=>aborted.addEventListener('abort',resolve,{once:true}));
+        aborted.objectStore('meta').add({key:'source-lease:Observer-private-aborted',sourceId:file.path,revision:'private-revision',owner:'private-owner'});aborted.abort();await abortedDone;
+        const afterAbort=probe.snapshot();equal(afterAbort.leases.created,created,'Aborted lease creation is never counted durable');
+        equal(afterAbort.leases.abortedCreates,1,'Aborted source-row request retained as a separate failure');
+        snapshot.readers.active=999;snapshot.leases.live=999;equal(probe.snapshot().readers.active,0,'Reader observations are copied');equal(probe.snapshot().leases.live,0,'Lease observations are copied');
         ok(!JSON.stringify(snapshot).includes('Observer-private-'),'Only aggregate diagnostics exported');
         probe.stop();
-        ok(IDBObjectStore.prototype.get===getWitness&&f.repository.inspect===inspectWitness,'Exact wrapped methods restored');
+        ok(IDBObjectStore.prototype.get===getWitness&&IDBDatabase.prototype.transaction===transactionWitness&&f.repository.inspect===inspectWitness&&f.repository.readSelected===selectedWitness,'Exact wrapped methods restored');
         ok(f.app.metadataCache.getFileCache===originalCache&&f.acquisition.metadataHost.dailyNotesSettings===originalDaily,'Exact host methods restored');
         const digest=f.repository.runtime.digest;let digestPromise,digestReceiver;
         const digestWitness=function(...args){digestReceiver=this;digestPromise=digest.apply(this,args);return digestPromise;};
@@ -92,13 +136,50 @@ test("startup resource observer is self-contained and preserves native forwardin
           ok(result===digestPromise&&digestReceiver===f.repository.runtime,'Counts preserve original digest promise and receiver');await result;
           await f.repository.runtime.digest('Observer-private-raw-input');
           const counted=probe.snapshot();equal(counted.hashing['snapshot-pages'],{calls:1,utf16Units:text.length},'Receipt payload hash work is counted without encoding a copy');
+          ok(!('readers' in counted)&&!('leases' in counted)&&!('readerWaitUnion' in counted)&&!('drain' in counted),'Counts mode adds no detailed lifetime observations');
+          ok(f.repository.inspect===inspectWitness&&f.repository.readSelected===selectedWitness,'Counts mode does not wrap extra reader methods');
           equal(counted.hashing.source.calls,1,'Source hashes remain separately counted');
           ok(!JSON.stringify(counted).includes('Observer-private-'),'Hash payload text is never retained or exported');
           counted.hashing.source.calls=999;equal(probe.snapshot().hashing.source.calls,1,'Caller cannot mutate private counters');
           probe.stop();ok(f.repository.runtime.digest===digestWitness,'Exact digest method restored');
         }finally{probe?.stop();f.repository.runtime.digest=digest;}
         return true;
-      } finally {probe?.stop();IDBObjectStore.prototype.get=nativeGet;f.repository.inspect=inspect;f.close();}
+      } finally {probe?.stop();IDBObjectStore.prototype.get=nativeGet;IDBDatabase.prototype.transaction=nativeTransactionMethod;f.repository.inspect=inspect;f.repository.readSelected=readSelected;f.close();}
+    })()`),true);
+  } finally {await browser.cleanup();}
+});
+
+/** An ended reader can retain conservative durable protection after its release transaction aborts. */
+test("startup resource observer never mistakes an aborted source lease retirement for durable drain", async () => {
+  const browser=await chromiumHarness(bundle);
+  try {
+    assert.equal(await browser.evaluate(contributorBrowserInitialize),true);
+    assert.equal(await browser.evaluate(`window.sourceResourceFactory=(${createStartupResourceProbe.toString()});true`),true);
+    assert.equal(await browser.evaluate(`(async()=>{
+      const f=await fixture('resource-observer-retirement'),nativeDelete=IDBObjectStore.prototype.delete;let probe,reopened,abortedDone;
+      try {
+        f.add('Observer-private-retained.md','Friends:: [[Observer-private-target]]');await f.acquire();
+        IDBObjectStore.prototype.delete=function(key){
+          const request=nativeDelete.apply(this,arguments);
+          if(this.name==='meta'&&typeof key==='string'&&key.startsWith('source-lease:')){
+            abortedDone=new Promise(resolve=>this.transaction.addEventListener('abort',resolve,{once:true}));this.transaction.abort();
+          }
+          return request;
+        };
+        probe=window.sourceResourceFactory({phase:()=> 'failed-release',now:()=>performance.now(),databaseName:dbName('resource-observer-retirement'),detailed:true});
+        probe.attach({sourceAcquisition:f.acquisition,indexedDb:f.cache});
+        equal(await f.repository.visit('Observer-private-retained.md','metadata',()=>true),'ready','Original visit result is not rewritten by measurement');
+        await abortedDone;
+        const snapshot=probe.snapshot();
+        equal(snapshot.readers.active,0,'The caller lifetime genuinely ended');
+        ok(snapshot.leases.created>0&&snapshot.leases.retired===0&&snapshot.leases.abortedRetires>0,'An aborted retirement never counts as committed deletion: '+JSON.stringify(snapshot.leases));
+        ok(snapshot.leases.live>0&&!snapshot.drain.sourceLeases,'Ended readers with durable orphan protection cannot count as fully drained');
+        reopened=await rawOpen(dbName('resource-observer-retirement'));
+        const rows=await value(reopened.transaction('meta','readonly').objectStore('meta').getAll());
+        equal(rows.filter(row=>row.key?.startsWith('source-lease:')).length,snapshot.leases.live,'Independent connection confirms actual retained durable rows');
+        ok(!JSON.stringify(snapshot).includes('Observer-private-'),'Failure observations still export no private keys or payloads');
+        return true;
+      } finally {probe?.stop();IDBObjectStore.prototype.delete=nativeDelete;reopened?.close();f.close();}
     })()`),true);
   } finally {await browser.cleanup();}
 });

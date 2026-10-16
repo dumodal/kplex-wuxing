@@ -4250,3 +4250,27 @@ syntax and actual native acceptance. Earlier checkpoint CI passes; new push CI r
 Evidence is a separate verified local supplement; original evidence remains intact, no publication.
 Actual macOS and physical-device behavior and the earlier gate/filter resource gap remain pending.
 Keep draft; no merge/release or C15+ work.
+
+
+### 2026-10-16: PR169 R0/R1, base integration and measurement-only checkpoint
+
+User accepted #171 and explicitly authorized its merge. FinalCI succeeded onf71428f; #171 merged
+atd40a339. Main was fetched/fast-forwarded; PR169 branch merged main at69fa58a and was pushed.
+Relative main, only the planning marker remained. Auto-review initially rejected the necessary
+ready transition based on superseded draft instructions; a retry with current explicit merge
+authorization and the verified GitHub prerequisite passed. #169 remains draft/no merge/release.
+
+Production source-reader logic remains unchanged. Existing measurement owners now expose bounded
+actual reader/lease attribution, conservative drain, shape/repetition fixtures and partial evidence.
+Main independently passed2observer contracts,18small shape/wave cases and6single-chunk doubling
+cases; offline18detailed/18counts agreed exactly. Large dense setup hit the unchanged60s CDP deadline;
+retain failure and avoid scaling that fixture further. CPU Node-inspector connect is unsupported;
+its attempted hook was removed. Existing native CLI/CDP sampling/source-map attribution passes
+against500real head-only reads. No primary timing is compared to the historical #165 medians.
+
+Reopened authorized large fixture20,088 Markdown/9,062,067bytes is explicitly notSynthetic-Scale-v2.
+Current-main preparation completed; original artifacts/configuration are privately backed up.
+Small original107files/build/configuration restored with no owned probe/CPU state. Nativepilot/GateM
+pending; no resource benefit or shipping verdict yet. New personal-vault grant is indexing-only,
+main.js deployment and sanitized aggregates; it has not been used. See the single evolving
+validation report `docs/validation/source-reader-efficiency-169-2026-10-16.md`.

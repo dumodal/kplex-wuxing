@@ -14,31 +14,23 @@ Return uncommitted changes and actual results for main-agent review unless the m
 
 Obsidian is the production host; preserve the established portable semantic, identity/source, publication/revision, localization and environment boundaries.
 
-
-
-
-
-
-
 ---
 
-# Node tooltip follow-up: returned for review, inactive
+# PR #169: main-reviewed measurement checkpoint
 
-Draft PR171 on `2026-10-16-plex-interaction-updates`, parent08f620f. Scoped offline agent returned
-ThoughtNode and regressions; main independently reviewed, ran actual native verification and
-manages the authorized checkpoint/push. No further work is assigned by this inactive handoff.
+Branch 2026-10-15-source-reader-efficiency, integrated accepted main at 69fa58a.
+Offline measurement return reviewed; two observer contracts, 18 small shape/wave cases and six
+single-chunk doubling cases independently passed. Production source-reader code is unchanged.
+See docs/validation/source-reader-efficiency-169-2026-10-16.md for scope and limitations.
+Main now owns the isolated native Gate M pilot, Git and PR updates. No concurrent browser/native
+work. Metadata/resolution reader sharing remains a hypothesis, not an approved implementation.
+Offline source analyst may prepare the narrow safety/API analysis without edits or native access.
+Preserve all current-head, inter-family, post-release, physical/host/policy and parser safeguards.
+No receipt, schema, scheduler, reclamation policy or C15+ architecture work. Stop at one measured
+correction or a documented negative result. Commit and push validated checkpoints; keep PR draft.
 
-Compact browser title retained, duplicate host hint removed using existing aria-labelledby/name
-pattern. Exact localized accessibility, gates, image titles and explicit previews are preserved.
-Runtime source SHA-2565a976f6698628eee6c3411c2898159e4a6b37b12e76f292bd9af1511a28cbffc;
-artifact fbe9eaa3ba01e0b9c9634ddb5b82fc62503fb3d90da27be025547560182c1c85.
-Full strict2,045/focused9/native node5/interaction14/hover7 pass. Old-runtime native rejection
-retained; complete-control lane passes12 then hits obsolete background-modal selector, so only
-explicit node scope accepted here. No assertion weakened or unrelated production fix attempted.
-See durable validation report and Refactor plan I3 for source/evidence references and limits.
-
-Original107 files/settings/layout/bounds/four configuration bytes/debugger restore, no active or
-pending work/controllers. Original110-file evidence remains unchanged; new supplement local
-only, no archive publication. Earlier checkpoint CI passes; new checkpoint CI must be checked.
-macOS/physical-device and existing gate/filter resource acceptance remain pending. PR stays draft;
-no merge/release, personal-vault access, optimization or structural refactoring authorized.
+Only authorized disposable fixtures have been accessed. Personal-vault permission is strictly
+indexing diagnostics/main.js deployment and sanitized aggregate evidence; no note/path/payload
+inspection or configuration/cache/note mutation. Offline agents have no personal-vault authority.
+Raw evidence and byte-verified original configuration backups remain private under
+TEMP/kplex-169-2026-10-16. Do not publish archives without applicable approval.
