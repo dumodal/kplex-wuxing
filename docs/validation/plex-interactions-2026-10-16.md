@@ -2,7 +2,7 @@
 
 This follow-up contains fixes and new features on `2026-10-16-plex-interaction-updates`.
 Base: `3294bea18093b33791830fb55d97d53c6e3c980a`, the authorized merge of PR #170 after its
-complete CI retry passed. The follow-up stays draft; no release or merge is authorized.
+complete CI retry passed. [PR #171](https://github.com/zsviczian/kplex/pull/171) stays draft; no release or merge is authorized.
 
 ## Delivered behavior
 
@@ -76,7 +76,16 @@ CSS: `2bf34f58c561564fd890abae90946db04894fa53012b32bee3b6739ace013f4c`; manifes
 ## Controls, evidence and reproduction
 
 Raw trials remain local under `%TEMP%/kplex-interactions-2026-10-16/`; configuration/runtime
-backups prefixed `private-` are private and must not be published. Verified source/checksum receipts and durable evidence location will be added at closeout. No new public evidence archive is approved.
+backups prefixed `private-` are private and must not be published. A durable local copy lives at `%LOCALAPPDATA%/kplex-validation/pr-171/`: 110 files,
+12,724,181 bytes, independently checksum-verified. It includes exact artifacts, final source
+snapshots, raw trials/failures, drivers and source references. `SOURCE-RECEIPT.json` binds source
+blob identities to `6835353ccb82ee7cbee1f63c65470e51c62ab00e`; its SHA-256 is
+`a6dc7a75eff5e09a165af9d4d5be4ba1c56eee96310b5819d70518505afd555d`.
+`MANIFEST.json` SHA-256:
+`f2203757209e9a6cfcf823a720472aa1cf4dfe2aeb18b0995db5004e4c035665`.
+Six private backup/raw-touch files are separately copied and verified at the sibling
+`pr-171-private/`; they are excluded from the main manifest. Original raw files are retained.
+HANDOFF is excluded from all evidence copies. No new public evidence archive is approved.
 
 Retained failed controls include the initial long CLI deadline and unfocused input, empty owned
 folder deletion without the native force flag, incomplete sibling fixture preparation, a Bases

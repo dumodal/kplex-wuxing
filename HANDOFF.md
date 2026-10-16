@@ -22,37 +22,32 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Plex interaction updates: final validation
+# Plex interaction updates: returned for maintainer review, inactive
 
-Main validation agent owns branch `2026-10-16-plex-interaction-updates`, base
-`3294bea18093b33791830fb55d97d53c6e3c980a` (authorized merge of #170 after complete CI retry).
-The scoped offline owners have returned their changes; main reviewed/fixed the combined tree.
-C14 is accepted and later structural refactoring remains paused.
+Branch `2026-10-16-plex-interaction-updates`, source checkpoint
+`6835353ccb82ee7cbee1f63c65470e51c62ab00e`, pushed to draft
+https://github.com/zsviczian/kplex/pull/171 . Base `3294bea` is the authorized merge of #170.
+All seven requested fixes/features are implemented. Main reviewed the scoped offline returns
+and validated the exact final source; see the durable
+[validation report](docs/validation/plex-interactions-2026-10-16.md) and Refactor plan I1/I2.
 
-The seven requested fixes/features are implemented. See
-[the validation report](docs/validation/plex-interactions-2026-10-16.md) for behavior, ownership,
-actual results and retained controls. All eight locales, native Settings and established writers
-are preserved. Materialization rejects stale physical identities, remaps retained reads and cancels
-older private graph builds. A native-observed gate task now retains its original admission path
-for proof and cleanup; a settled task cannot survive rename/materialization under an obsolete key.
-Properties checks both the native file and editable metadata identity, with per-pane accepted-load
-serialization, ownership fences and failed-read suppression.
+Final verification: 2,044 tests/lint/installed types/production build/exact native smoke pass.
+Two final native interaction runs each pass 14 cases; hover passes seven main/popout/Settings
+cases with zero observed source/semantic/search work; touch passes eight gestures/reload/geometry.
+Final runtime is `852d2c8e`. Materialization and rename retire count tasks under captured keys,
+reject stale native identity/proof and cannot leave an obsolete rendered placeholder. Properties
+checks native file and editable metadata identity, ownership and accepted-load completion.
 
-Final strict verification passes 2,044 tests/lint/installed types/production build/exact smoke.
-The final exact build passes 14 native interaction cases plus one fixture observation and seven
-actual Settings/main/popout hover cases. Owned count tasks fully retire, and the live index has
-no active/pending preparation after fixture cleanup. Runtime SHA-256 is
-852d2c8ef8bd1f3949396a06f7eec70ed2b2607cdb9d4fc66c5700d140c66700.
-Touch passes 8 gestures/reload/geometry, and a second native interaction run passes all 14 cases.
-Final restoration matches original 107 files/settings/layout/bounds/four configuration files and
-debugger state; no active/pending work remains. Broader gate/filter resource acceptance fails
-in two runs before the complete matrix (+9 checks/publications over the recorded oracle-to-failure
-interval, no fresh reads/parses/builds). Preserve that assertion and failure; no optimization here.
-Verified evidence/source receipts and draft PR closeout remain in progress.
-The validated implementation checkpoint may now be committed/pushed under maintainer authorization.
+The broader gate/filter resource lane fails twice before completing its matrix: recorded oracle-
+to-failure +9 checks/publications, unchanged source revision and zero fresh reads/parses/builds.
+That interval includes filter setup; CPU cost and cause are unproven. Keep the assertion and
+failure explicit. Actual macOS Option/menu/popout, physical mobile/external keyboard and other
+native Properties versions need acceptance. Do not optimize or expand architecture without a
+new assignment; C14 remains accepted and C15+ paused. No merge or release.
 
-Use only the authorized disposable Small vault, originally 107 files. Original private backups
-remain in TEMP/kplex-interactions-2026-10-16/private-*. Raw failures and probes are retained;
-HANDOFF must never be archived. Do not access personal vaults or publish a new evidence archive.
-After final checks, commit and push the validated checkpoint and open the follow-up PR as draft.
-No merge or release. macOS and physical mobile remain separate acceptance.
+Original Small vault state restores: 107-file inventory/settings/layout/bounds/four config bytes/
+debugger, no owned notes/controllers or active/pending preparation. Validated build is installed.
+110 evidence files and six separate private files are checksum-verified under LOCALAPPDATA/
+kplex-validation/pr-171 and pr-171-private; raw TEMP originals remain. HANDOFF must never be
+archived. No personal vault access and no archive publication are authorized. CI is running;
+main may finish checking it and update the PR without changing frozen source.

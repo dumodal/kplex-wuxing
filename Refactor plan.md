@@ -4163,7 +4163,7 @@ Original settings/layout/bounds/four config bytes/CLI debugger state/106 files r
 | --- | --- |
 | I0: authorized #170 merge and main update | Complete: CI retry passed, #170 merged at `3294bea`; fetched/fast-forwarded main and created `2026-10-16-plex-interaction-updates`. |
 | I1: interaction and central-file implementation | Complete: final full 2,044 tests/lint/types/build/exact smoke, 14 native interaction cases and 7 main/popout hover cases pass. All seven requests implemented; native-observed admission-key and stale readable-identity fixes included. |
-| I2: evidence and draft PR closeout | Pending final exact-build checks, restoration, source receipts and authorized commits/pushes. No follow-up merge/release. |
+| I2: evidence and draft PR closeout | Local closeout complete: original vault restored, 110 evidence files plus 6 private files verified; source checkpoint `6835353` pushed and draft #171 opened. CI pending at closeout; resource/platform gaps remain explicit. No merge/release. |
 
 ### 2026-10-16: I0, authorized hover PR merge
 
@@ -4205,3 +4205,27 @@ Remaining closeout: verified local evidence, source receipts and draft PR. Highe
 behavior and physical mobile touch/external-keyboard/Properties behavior. Desktop emulation is
 not device acceptance. The existing Quick lens resource gate remains independent; no optimization
 or structural C15+ work is authorized by this checkpoint.
+
+
+### 2026-10-16: I2, local evidence and draft PR closeout
+
+Implementation checkpoint `6835353ccb82ee7cbee1f63c65470e51c62ab00e` is pushed; draft
+https://github.com/zsviczian/kplex/pull/171 contains all seven requests, measured native results
+and unaccepted limits. Final diff has no dependency/lockfile, manifest/version, generated artifact,
+foreign repository, note payload or unrelated production changes. New regression/native tooling
+is reusable; one-off probes remain outside the PR. No assertion was weakened.
+
+Verified local evidence is `%LOCALAPPDATA%/kplex-validation/pr-171/`: 110 entries/12,724,181 bytes,
+with source blobs tied to `6835353` and exact final artifacts. Independent second verification
+passes every checksum; six private configuration/raw-touch files are copied and verified in the
+separate private sibling. Original evidence remains intact; HANDOFF is excluded and nothing is
+published as an archive. Source-receipt SHA-256 is
+`a6dc7a75eff5e09a165af9d4d5be4ba1c56eee96310b5819d70518505afd555d`.
+
+Original 107-file inventory, runtime settings keys, layout/bounds, four configuration files and
+CLI debugger state restore; validated runtime remains installed, with no active/pending preparation
+or test controllers. The new area preference inherits its default while original persisted choices
+are preserved. Feature acceptance passes Windows; keep draft because the broader resource lane
+and actual macOS/physical-device acceptance remain unaccepted. Investigating the filter readmission/
+publication activity is separate follow-up, with no CPU cause or savings established here. CI is
+running at closeout. Source is frozen; no automatic C15+ work, merge or release.
