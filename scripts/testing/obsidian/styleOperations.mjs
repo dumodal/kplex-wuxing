@@ -842,6 +842,19 @@ function start() {
       app.setting.close();
       c.ownsSettings = false;
 
+      const compatibilityBefore = {semantics: c.counts.semantics, acquisitions: c.counts.acquisitions, sourceReads: c.counts.sourceReads};
+      p.settings.noteTypeStyles[key].textColor = "#12345678";
+      let compatibilityRejected = false;
+      c.diskFailure = true;
+      try {await p.saveSettings(false, false);} catch {compatibilityRejected = true;} finally {c.diskFailure = false;}
+      check(compatibilityRejected, "Compatibility storage fault was not observed");
+      await p.saveSettings(false, false);
+      const retried = await stored(), selected = retried.appearanceThemes.themes.find(theme => theme.id === retried.appearanceThemes.selectedId);
+      check(retried.noteTypeStyles[key].textColor === "#12345678" && selected.appearance.semantic.noteTypeStyles[key].textColor === "#12345678",
+        "Retried compatibility save left the active theme out of sync");
+      check(Object.entries(compatibilityBefore).every(([name, count]) => c.counts[name] === count), "Compatibility color retry requested semantic/source work");
+      passed("failed imperative appearance save retries with a coherent durable selected theme and no source work");
+
       const data = await stored();
       await app.plugins.disablePlugin("k-plex");
       await app.plugins.enablePlugin("k-plex");
@@ -851,6 +864,7 @@ function start() {
           data.tagNodeStyles["#" + key].prefix,
         "Reload lost committed style"
       );
+      check(reloaded.settings.noteTypeStyles[key].textColor === "#12345678", "Reload lost retried compatibility color");
       // Cleanup reacquires the new lifetime; it cannot restore wrappers or settings onto the retired plugin.
       for (const restore of c.restores.reverse()) restore();
       c.restores = [];

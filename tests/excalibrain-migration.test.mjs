@@ -1060,6 +1060,60 @@ test("compatibility saves persist a replaced coherent theme snapshot instead of 
   assert.equal(calls.semantic, 0);
 }));
 
+test("a rejected imperative appearance save can retry without persisting an old selected-theme snapshot", async () => withThemeWindow(async () => {
+  const {plugin, saves} = await themeFixture({baseNodeStyle: {fontSize: 23}});
+  const saveData = plugin.saveData;
+  plugin.settings.baseNodeStyle.fontSize = 31;
+  plugin.saveData = async () => {throw Error("Expected compatibility storage fault");};
+  await assert.rejects(plugin.saveSettings(false, false), /compatibility storage fault/);
+  assert.equal(saves.at(-1).baseNodeStyle.fontSize, 23);
+  plugin.saveData = saveData;
+  await plugin.saveSettings(false, false);
+  assert.equal(saves.at(-1).baseNodeStyle.fontSize, 31);
+  assert.equal(saves.at(-1).appearanceThemes.themes[0].appearance.base.baseNodeStyle.fontSize, 31);
+  assert.equal(migrateAndMergeSettings(saves.at(-1)).baseNodeStyle.fontSize, 31, "Restart must preserve the successfully retried edit");
+}));
+
+test("an older rejected compatibility write cannot rewind a newer pending save's policy or theme appearance", async () => withThemeWindow(async () => {
+  const {plugin, saves} = await themeFixture({baseNodeStyle: {fontSize: 23}}), originalSave = plugin.saveData;
+  let rejectOlder, releaseNewer, calls = 0;
+  plugin.saveData = async snapshot => {
+    const call = ++calls;
+    if (call === 1) await new Promise((resolve, reject) => {rejectOlder = reject;});
+    else await new Promise(resolve => {releaseNewer = resolve;});
+    await originalSave(snapshot);
+  };
+  plugin.settings.baseNodeStyle.fontSize = 31;
+  const older = plugin.saveSettings(false, false), rejected = assert.rejects(older, /older compatibility fault/);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(typeof rejectOlder, "function", "First queued write must reach its held storage boundary");
+  plugin.settings.baseNodeStyle.fontSize = 32;
+  const newer = plugin.saveSettings(false, false), newerPolicy = plugin.savedSettingsPolicy;
+  rejectOlder(Error("Expected older compatibility fault")); await rejected;
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(typeof releaseNewer, "function", "Second write must continue after the older rejection");
+  assert.equal(plugin.savedSettingsPolicy, newerPolicy, "An older failure must not undo a newer pending policy");
+  releaseNewer(); await newer;
+  assert.equal(saves.at(-1).baseNodeStyle.fontSize, 32);
+  assert.equal(migrateAndMergeSettings(saves.at(-1)).baseNodeStyle.fontSize, 32);
+  assert.deepEqual(plugin.savedSettingsPolicy, captureSettingsPolicy(plugin.settings));
+}));
+
+test("a workflow save queued behind a rejected imperative appearance edit preserves both the edit and its selected theme", async () => withThemeWindow(async () => {
+  const {plugin, saves} = await themeFixture({baseNodeStyle: {fontSize: 23}}), originalSave = plugin.saveData;
+  let rejectDisk, calls = 0;
+  plugin.saveData = async snapshot => {if (++calls === 1) await new Promise((resolve, reject) => {rejectDisk = reject;}); await originalSave(snapshot);};
+  plugin.settings.baseNodeStyle.fontSize = 31;
+  const appearance = plugin.saveSettings(false, false), rejected = assert.rejects(appearance, /overlapping compatibility fault/);
+  await new Promise(resolve => setImmediate(resolve)); assert.equal(typeof rejectDisk, "function");
+  plugin.settings.editNewNodeAfterCreate = !plugin.settings.editNewNodeAfterCreate;
+  const expectedWorkflow = plugin.settings.editNewNodeAfterCreate, workflow = plugin.saveSettings(false, false);
+  rejectDisk(Error("Expected overlapping compatibility fault")); await rejected; await workflow;
+  assert.equal(saves.at(-1).editNewNodeAfterCreate, expectedWorkflow);
+  assert.equal(saves.at(-1).baseNodeStyle.fontSize, 31);
+  assert.equal(migrateAndMergeSettings(saves.at(-1)).baseNodeStyle.fontSize, 31, "An unrelated queued save cannot persist stale theme content");
+}));
+
 test("compatibility saves skip semantics only for style-only edits; mixed view changes retain requested-scope refresh", async () => {
   const { plugin, settings } = styleEditorFixture(); let semantic = 0; plugin.index.refreshSemanticSettings = async () => { semantic++; };
   settings.noteTypeStyles.Project = { icon: "box" }; await plugin.saveSettings(false); assert.equal(semantic, 0);

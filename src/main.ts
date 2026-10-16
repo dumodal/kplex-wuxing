@@ -1661,7 +1661,9 @@ export default class KplexPlugin extends Plugin {
       }
       for (const field of importedFields) if (appearanceThemes.themeValuesEqual(Reflect.get(this.settings, field.key), field.before)) Object.assign(this.settings, {[field.key]: field.after});
       for (const key of effects.changedKeys) if (current.values[key] === before.values[key]) values[key] = policy.values[key];
-      this.savedSettingsPolicy = {values};
+      // Compatibility callers already published their live fields. Record the exact queued disk
+      // snapshot only after storage succeeds; a failed write must remain dirty for any next save.
+      this.savedSettingsPolicy = options.persistExistingChanges ? policy : {values};
       if (options.initializeThemes) this.settings.kplexInitialized = true;
       if (libraryChanged && library) {
         const previous = source.appearanceThemes?.selectedId;
@@ -1885,16 +1887,20 @@ export default class KplexPlugin extends Plugin {
   async saveSettings(_reindex = false, notifyIndex = true): Promise<void> {
     this.settings.primaryTagFieldLowerCase = this.settings.primaryTagField.toLowerCase().replaceAll(" ", "-");
     const next = captureSettingsPolicy(this.settings);
-    const effects = classifySettingsChange(this.savedSettingsPolicy ?? next, next);
+    const previousPolicy = this.savedSettingsPolicy;
+    const effects = classifySettingsChange(previousPolicy ?? next, next);
     const consentOnly = effects.changedKeys.length === 1 && effects.changedKeys[0] === "allowRemoteNodeImages";
-    this.savedSettingsPolicy = next;
+    const appearanceChanged = effects.changedKeys.some(/** Legacy imperative saves delegate appearance synchronization to the one queued owner. */ key => STYLE_SETTINGS_KEYS.some(/** This is the appearance-write inventory, not the theme schema. */ field => field === key));
+    const queuedAppearance = appearanceChanged && (this.settings.appearanceThemes || this.settings.appearanceThemesFuture !== undefined);
+    // The appearance queue owns its durable policy baseline. Advancing it here would make a
+    // retry or overlapping workflow save miss an appearance whose first disk write rejected.
+    if (!queuedAppearance) this.savedSettingsPolicy = next;
     if (effects.changedKeys.includes("allowRemoteNodeImages")) {
       this.index.invalidateNodeVisuals();
       this.index.notifyPresentation();
     }
     if (effects.semanticInvalidation) this.index.invalidateSemanticPolicy();
-    const appearanceChanged = effects.changedKeys.some(/** Legacy imperative saves delegate appearance synchronization to the one queued owner. */ key => STYLE_SETTINGS_KEYS.some(/** This is the appearance-write inventory, not the theme schema. */ field => field === key));
-    if (appearanceChanged && (this.settings.appearanceThemes || this.settings.appearanceThemesFuture !== undefined))
+    if (queuedAppearance)
       await this.updateStyleSettings(/** Existing callers already published their imperative fields; persist their coherent snapshot even if its library matches. */ () => {},
         this.captureAppearanceOwner(), {persistExistingChanges: true});
     else await this.persistSettingsSnapshot();

@@ -410,7 +410,7 @@ After exact-build staging, run `npm run verify:obsidian:style-operations` with t
 `kplex-test-small` vault variables and a fresh `KPLEX_HOST_REPORT_DIR`. Run native and browser lanes
 serially. The driver exercises the real node-style manager/editor with no graph view and an active
 on-demand graph, controlled storage and post-save refresh failures, repeated submissions, pending
-Cancel/Escape, native Settings subpages in their owning window, and durable plugin reload.
+Cancel/Escape, native Settings subpages in their owning window, imperative appearance retry after failed storage, and durable plugin reload.
 
 Warm startup and drain retired demand before attributing work to styles. Native Markdown file-open
 reads remain in the report, separately identified by their actual caller; unknown/plugin reads stay
