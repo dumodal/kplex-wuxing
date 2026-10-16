@@ -4131,7 +4131,8 @@ Final report consolidates architecture, scope, versioned model/lifecycle, full/n
 | Checkpoint | Status / evidence |
 | --- | --- |
 | H1 — Shared modifier-gated hover | `a16719e`: full2,003/lint/types/build/exact smoke and CI pass; default delay preserved, eight locales, no semantic/theme policy change. |
-| H2 — Native hover validation and closeout | Seven actual Settings/main/popout cases plus cleanup pass,0 observed source/semantic/search calls; original106-file fixture and four config bytes restored. Broader touch/gate lanes remain unaccepted; keep PR #170 draft. |
+| H2 — Native hover validation and closeout | Seven actual Settings/main/popout cases plus cleanup pass,0 observed source/semantic/search calls; original106-file fixture and four config bytes restored. Initial broader failures retained below. |
+| H3 — Requested Small-vault retest | Unchanged touch driver passes8 gestures/reload/geometry/cleanup after releasing idle CLI debugger. Gate canonical fixture binding fixed;5 display cases pass, unchanged no-source-work assertion fails reproducibly (+1 check/revision,0 reads/parses/builds). Runtime unchanged; keep #170 draft. |
 
 ### 2026-10-16 — H1: optional modifier hover
 
@@ -4145,3 +4146,12 @@ Actual build and focused checks pass on Node22.22.2. First full run failed an un
 Runtime remains a16719e; full2,003 and CI pass. Exact d5958787 build passes7 actual Settings/trusted hover cases in main/popout and complete cleanup. Corrected native probe only: preserve current focus during keys, choose visible fixture gate, await existing popout readiness, release listeners before closing their document and rebind original workspace owners. No production change after full verification.0 body reads/parses/acquisitions/semantic/search in measured intervals; no CPU/memory claim. Final restoration matches original settings keys/four exact config files/106 files/no owned fixtures or controllers; validated build retained.
 
 Failed controls preserved, including first full Chromium startup failure, native probe focus/gate/readiness/closed-window cleanup failures and rejected capture prototype. Broader touch lane fails plugin readiness across emulation before cases; explicit same-build enable and final restoration recover desktop. Both broader gate runs cancel their setup patch without observed source/policy/metadata change, before gate assertions; fixture cleanup passes. Causes remain unproven; no assertion weakening, semantic fix or further architecture work. See docs/validation/alt-hover-highlight-2026-10-16.md and local58-file evidence manifest/source receipt. Keep #170 draft; no merge/release. Highest remaining risks: unresolved broader native harness acceptance, macOS Option/menu/popout and physical mobile touch/external-keyboard behavior.
+
+
+### 2026-10-16 — H3: requested touch/gate rerun in Small
+
+Revalidated exact d5958787 build against dist and106-file Small. Original gate setup cancellation repeats; source trace stops before acquisition of Note A. Actual fixture receipts show3 readable foreground pages absent from canonical patch state. Native setup now uses the existing idempotent insertion owner for every owned Markdown file; no new production code, scheduler, full build or weakened assertion. Regression executes actual binding block; all20 native-runner tests pass on Node22.22.2. Both native drivers pass syntax checks and diff is clean.
+
+Original touch retry reaches debugger-owner guard: idle CLI debugger attached, no DevTools/live test. Public installed dev:debug off releases that owner; unchanged driver passes8 trusted range cases, reload, geometry and all cleanup/restoration. Earlier reload-readiness issue not reproduced, cause still unproven. Both corrected gate runs pass5 visual cases but fail no-source-work on clear: +1 acquisition.checked/+1 semantic revision, stable source revision,0 fresh reads/parses/rebuild/body-read/requested-neighborhood-degree-pair calls. Do not infer a full rebuild or wrong gate display; source of validation/publication remains unproven. Leave PR #170 draft; do not implement a broader semantic/performance change as part of retesting.
+
+Original settings/layout/bounds/four config bytes/CLI debugger state/106 files restore; no owned notes/controllers, same artifacts. Local29-file retest manifest/source receipt and old evidence retained, unpublished; private backups separate. Updated validation report and CONTRIBUTING make current acceptance and debugger prerequisite explicit. macOS and physical-mobile acceptance remain separate.

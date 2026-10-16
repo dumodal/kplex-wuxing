@@ -18,6 +18,36 @@ import { startupCacheIdentity } from "../scripts/testing/obsidian/startupCacheId
 import { startupRetainedMemory } from "../scripts/testing/obsidian/startupRetainedMemory.mjs";
 import ts from "typescript";
 
+test("native gate setup binds foreground-only pages into the canonical patch baseline", () => {
+  const source = readFileSync(new URL("../scripts/testing/obsidian/interactionGateCounts.mjs", import.meta.url), "utf8");
+  const start = source.indexOf("c.fixtureBindings=[];");
+  const end = source.indexOf("c.setupAttempts=[];", start);
+  assert(start >= 0 && end > start, "Actual native fixture-binding block missing");
+  const files = new Map(["Published.md", "Foreground.md", "Absent.md"].map(path => [path, {path}]));
+  const published = {file: files.get("Published.md")};
+  const pages = new Map([["Published.md", published]]);
+  const foreground = {file: files.get("Foreground.md")};
+  const inserted = [];
+  const index = {
+    state: {pages},
+    get: path => pages.get(path) ?? (path === "Foreground.md" ? foreground : undefined),
+    /** Match the existing insertion owner's idempotent exact-file identity contract. */
+    insertCreatedFile(file) {
+      inserted.push(file.path);
+      if (pages.get(file.path)?.file !== file) pages.set(file.path, {file});
+      return pages.get(file.path);
+    },
+  };
+  const c = {check: (condition, message) => assert.ok(condition, message)};
+  runInNewContext(source.slice(start, end), {ownedMarkdown: [...files.keys()], p: {index}, app: {vault: {getFileByPath: path => files.get(path)}}, c});
+  assert.deepEqual(inserted, [...files.keys()]);
+  assert.equal(pages.get("Published.md"), published, "An existing canonical page must remain intact");
+  assert.deepEqual(JSON.parse(JSON.stringify(c.fixtureBindings[1])), {
+    path: "Foreground.md", canonicalBefore: false, readableBefore: true, canonicalAfter: true,
+  });
+  assert([...files].every(([path, file]) => pages.get(path)?.file === file));
+});
+
 test("native theme helpers wrap chainable Obsidian Settings instead of assimilating their then method", async () => {
   const source = ts.createSourceFile("colorStyling.mjs", readFileSync(new URL("../scripts/testing/obsidian/colorStyling.mjs", import.meta.url), "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
   let initializer;
