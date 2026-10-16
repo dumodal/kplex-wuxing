@@ -16,6 +16,56 @@ import { createRequire } from "node:module";
 import { createHash } from "node:crypto";
 import { startupCacheIdentity } from "../scripts/testing/obsidian/startupCacheIdentity.mjs";
 import { startupRetainedMemory } from "../scripts/testing/obsidian/startupRetainedMemory.mjs";
+import ts from "typescript";
+
+test("native gate setup binds foreground-only pages into the canonical patch baseline", () => {
+  const source = readFileSync(new URL("../scripts/testing/obsidian/interactionGateCounts.mjs", import.meta.url), "utf8");
+  const start = source.indexOf("c.fixtureBindings=[];");
+  const end = source.indexOf("c.setupAttempts=[];", start);
+  assert(start >= 0 && end > start, "Actual native fixture-binding block missing");
+  const files = new Map(["Published.md", "Foreground.md", "Absent.md"].map(path => [path, {path}]));
+  const published = {file: files.get("Published.md")};
+  const pages = new Map([["Published.md", published]]);
+  const foreground = {file: files.get("Foreground.md")};
+  const inserted = [];
+  const index = {
+    state: {pages},
+    get: path => pages.get(path) ?? (path === "Foreground.md" ? foreground : undefined),
+    /** Match the existing insertion owner's idempotent exact-file identity contract. */
+    insertCreatedFile(file) {
+      inserted.push(file.path);
+      if (pages.get(file.path)?.file !== file) pages.set(file.path, {file});
+      return pages.get(file.path);
+    },
+  };
+  const c = {check: (condition, message) => assert.ok(condition, message)};
+  runInNewContext(source.slice(start, end), {ownedMarkdown: [...files.keys()], p: {index}, app: {vault: {getFileByPath: path => files.get(path)}}, c});
+  assert.deepEqual(inserted, [...files.keys()]);
+  assert.equal(pages.get("Published.md"), published, "An existing canonical page must remain intact");
+  assert.deepEqual(JSON.parse(JSON.stringify(c.fixtureBindings[1])), {
+    path: "Foreground.md", canonicalBefore: false, readableBefore: true, canonicalAfter: true,
+  });
+  assert([...files].every(([path, file]) => pages.get(path)?.file === file));
+});
+
+test("native theme helpers wrap chainable Obsidian Settings instead of assimilating their then method", async () => {
+  const source = ts.createSourceFile("colorStyling.mjs", readFileSync(new URL("../scripts/testing/obsidian/colorStyling.mjs", import.meta.url), "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  let initializer;
+  /** Extract the actual native helper; a second implementation would miss this Promise boundary. */
+  const visit = node => {if (ts.isVariableDeclaration(node) && node.name.getText(source) === "openVisual") initializer = node.initializer.getText(source); ts.forEachChild(node, visit);};
+  visit(source); assert(initializer);
+  let thenCalls = 0;
+  const setting = {settingEl: {isConnected: true}, controlEl: {querySelector: () => ({})},
+    /** Mirror the installed Setting.then chaining contract, with a finite failure if accidentally assimilated. */
+    then(callback) {if (++thenCalls > 3) throw new Error("Native Setting was assimilated"); callback(this); return this;}};
+  const c = {themeNativeRow: setting}, app = {setting: {isOpen: false, close() {this.isOpen = false;}}};
+  const environment = {app, c, wait: async () => {}, native: {show() {}, focus() {}, webContents: {focus() {}}},
+    document: {hidden: false, hasFocus: () => true}, p: {openSettings() {app.setting.isOpen = true;}, translator: value => value},
+    tab: {containerEl: {isConnected: true}, openSettingsPage: () => true}, check: assert,
+    until: async predicate => {assert(predicate());}};
+  const openVisual = runInNewContext(`(${initializer})`, environment);
+  const handle = await openVisual(); assert.equal(handle.setting, setting); assert.equal(thenCalls, 0);
+});
 
 test("retained-memory probe rejects unapproved targets before native access", /** Keep observations inside explicit disposable-vault scope. */ async () => {
   const app={vault:{getName:/** Refuse this synthetic unapproved target. */ ()=>"unapproved"}};
