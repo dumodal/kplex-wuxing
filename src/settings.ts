@@ -1893,7 +1893,10 @@ export class KplexSettingTab extends PluginSettingTab {
   private colorAction(name: string, read: () => readonly ColorSwatchItem[], action: () => void, desc?: string): SettingDefinition<DeclarativeSettingKey> {
     return {name, desc, render: /** Native cleanup owns the paired preview registration. */ setting => {
       const release = this.mountColorSwatches(setting.controlEl.createDiv(), read);
-      setting.addButton(/** Use a named button rather than an unexplained clickable color label. */ button => button.setButtonText(this.kplexPlugin.translator("colors.edit")).setDisabled(this.kplexPlugin.settings.colorPreferencesFuture !== undefined).onClick(action));
+      setting.addButton(/** Associate repeated Edit actions with their specific color property for keyboard/screen-reader users. */ button => {
+        button.setButtonText(this.kplexPlugin.translator("colors.edit")).setDisabled(this.kplexPlugin.settings.colorPreferencesFuture !== undefined).onClick(action);
+        button.buttonEl.setAttribute("aria-label", `${this.kplexPlugin.translator("colors.edit")}: ${name}`);
+      });
       return release;
     }};
   }

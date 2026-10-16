@@ -56,6 +56,7 @@ function start(){
    for(const strip of strips){const node=strip.dataset.kplexColorStyle.endsWith('NodeStyle');check(strip.querySelectorAll('[role=img]').length===(node?10:4),'Standard strip field order/count missing');check([...strip.querySelectorAll('[role=img]')].every(el=>!!el.style.getPropertyValue('--kplex-color-swatch')),'Standard palette contains unavailable colors')}
    check(tab.openSettingsPage(p.translator('colors.standard.baseNodeStyle')),'Base node subpage missing');
    await until(()=>settingsDoc.querySelectorAll('.setting-page-content .setting-item-control .kplex-color-strip').length===10,'Paired standard field swatches missing');
+   const pairedButtons=[...settingsDoc.querySelectorAll('.setting-page-content .setting-item-control button')];check(pairedButtons.length===5&&pairedButtons.every(el=>el.getAttribute('aria-label')?.startsWith(p.translator('colors.edit')+': '))&&new Set(pairedButtons.map(el=>el.getAttribute('aria-label'))).size===5,'Paired Edit actions lack distinct accessible field names');
    clickRow('styles.background');await until(()=>[...tab.colorDialogs].some(d=>d.modalEl.isConnected),'Paired field Edit action inert');actual=[...tab.colorDialogs].at(-1);c.dialogs.push(actual);actual.close();
    passed('native standard style overview shows thirteen dual strips and five paired editable fields');
 

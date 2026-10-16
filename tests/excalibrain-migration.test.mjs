@@ -734,7 +734,7 @@ test("durable style refresh failure and thrown manager callback close with truth
     if (failure === "presentation") plugin.index.refreshPresentationSettings = async () => { throw new Error("Expected presentation failure"); };
     if (failure === "settings") tab.update = () => { throw new Error("Expected settings failure"); };
     const priorWindow = globalThis.window;
-    try { globalThis.window = { setTimeout: fn => { fn(); return 0; } }; tab.openNodeStyleEditor("property", null,
+    try { globalThis.window = { setTimeout: fn => { fn(); return 0; }, clearTimeout() {} }; tab.openNodeStyleEditor("property", null,
       /** The real manager callback may throw after the successful disk commit. */ () => { if (failure === "manager") throw new Error("Expected manager failure"); });
     } finally { globalThis.window = priorWindow; }
     const modal = TestModal.latest, elements = formElements(modal); elements.find(e => e.attrs["aria-label"] === "Note type").value = "Saved";
@@ -991,7 +991,7 @@ test("queued lens parent save preserves a replaced named color and concurrent ne
 test("unchanged sparse ontology styles retain inheritance while a concurrent base style changes",async()=>{
  const {tab,settings}=styleEditorFixture();settings.hierarchyLinkStyles.parent={strokeColor:'#11223380'};
  const previousWindow=globalThis.window;let modal;
- try{globalThis.window={setTimeout:run=>{run();return 0}};tab.openOntologyLinkStyleEditor('parent');modal=TestModal.latest;}finally{globalThis.window=previousWindow;}
+ try{globalThis.window={setTimeout:run=>{run();return 0},clearTimeout(){}};tab.openOntologyLinkStyleEditor('parent');modal=TestModal.latest;}finally{globalThis.window=previousWindow;}
  settings.baseLinkStyle={...settings.baseLinkStyle,strokeWidth:4,fontSize:22};
  await activate(formElements(modal).find(element=>element.text==='Save'));
  assert.deepEqual(settings.hierarchyLinkStyles.parent,{strokeColor:'#11223380'});assert.equal(settings.baseLinkStyle.strokeWidth,4);assert.equal(settings.baseLinkStyle.fontSize,22);
