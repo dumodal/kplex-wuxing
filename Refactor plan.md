@@ -4164,6 +4164,7 @@ Original settings/layout/bounds/four config bytes/CLI debugger state/106 files r
 | I0: authorized #170 merge and main update | Complete: CI retry passed, #170 merged at `3294bea`; fetched/fast-forwarded main and created `2026-10-16-plex-interaction-updates`. |
 | I1: interaction and central-file implementation | Complete: final full 2,044 tests/lint/types/build/exact smoke, 14 native interaction cases and 7 main/popout hover cases pass. All seven requests implemented; native-observed admission-key and stale readable-identity fixes included. |
 | I2: evidence and draft PR closeout | Local closeout complete: original vault restored, 110 evidence files plus 6 private files verified; source checkpoint `6835353` pushed and draft #171 opened. CI pending at closeout; resource/platform gaps remain explicit. No merge/release. |
+| I3: compact node tooltip follow-up | Complete locally: preserve browser title/accessibility; remove duplicate host node hint using existing aria-labelledby pattern. Full2,045, focused9, native node5/interaction14/hover7 pass; original vault restored. Draft/no merge; prior gaps remain. |
 
 ### 2026-10-16: I0, authorized hover PR merge
 
@@ -4229,3 +4230,23 @@ are preserved. Feature acceptance passes Windows; keep draft because the broader
 and actual macOS/physical-device acceptance remain unaccepted. Investigating the filter readmission/
 publication activity is separate follow-up, with no CPU cause or savings established here. CI is
 running at closeout. Source is frozen; no automatic C15+ work, merge or release.
+
+### 2026-10-16: I3, compact node tooltip and accessibility
+
+At parent `08f620f`, native hover confirms an inner browser title plus a separate Obsidian styled
+hint from the outer aria-label. ThoughtNode now reuses existing useId/accessible-name/aria-labelledby
+presentation; full localized label/path accessibility remains, and compact titles, gates and explicit
+page previews retain their owners. No CSS/shared tooltip timers, graph work or settings changes.
+Browser regression covers ordinary/image modes and repeated occurrences; renderer fixtures use
+actual React rendering for the new hook. Main independently reviewed the scoped offline return.
+
+Full strict verification passes 2,045 tests/lint/types/build/exact smoke; focused9, native node5,
+interaction14 and hover7 pass. Runtime `fbe9eaa3`; original107 files/settings/layout/bounds/config
+bytes/debugger restore, no active/pending preparation. Native node checks also fail as expected on
+old runtime852d. A complete-control run passes12 then fails on the obsolete background-modal
+selector; retain it as unaccepted, and use the explicit node-only driver scope for this follow-up.
+Runtime/tests stayed frozen after full verification; only driver scope/docs changed, followed by
+syntax and actual native acceptance. Earlier checkpoint CI passes; new push CI remains pending.
+Evidence is a separate verified local supplement; original evidence remains intact, no publication.
+Actual macOS and physical-device behavior and the earlier gate/filter resource gap remain pending.
+Keep draft; no merge/release or C15+ work.

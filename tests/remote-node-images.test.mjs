@@ -15,7 +15,7 @@ import { contributorBrowserBundle, contributorBrowserInitialize } from './suppor
 import { centerGateSettings } from './support/requestedCenterGateFixture.mjs';
 
 const indexBundle = await contributorBrowserBundle(['src/index/GraphIndex.ts', 'src/index/GraphPresentation.ts', 'src/core/graph/settingsPolicy.ts', 'src/core/contracts/appearance.ts']);
-const ui = await build({ stdin: { resolveDir: process.cwd(), contents: `export {ThoughtNode} from './src/ui/ThoughtNode'; export {createElement} from 'react'; export {createRoot} from 'react-dom/client'; export {flushSync} from 'react-dom';` }, bundle: true, write: false, platform: 'browser', format: 'iife', globalName: 'nodeUI', plugins: [{ name: 'native-icon-boundary', setup(builder) {
+const ui = await build({ stdin: { resolveDir: process.cwd(), contents: `export {ThoughtNode} from './src/ui/ThoughtNode'; export {createElement} from 'react'; export {createRoot} from 'react-dom/client'; export {flushSync} from 'react-dom'; export {renderToStaticMarkup} from 'react-dom/server';` }, bundle: true, write: false, platform: 'browser', format: 'iife', globalName: 'nodeUI', plugins: [{ name: 'native-icon-boundary', setup(builder) {
   builder.onResolve({filter:/^obsidian$/}, /** Keep only the native icon API doubled. */ () => ({path:'obsidian',namespace:'native'}));
   builder.onLoad({filter:/.*/,namespace:'native'}, /** The fixture uses no icons or native shell components. */ () => ({contents:'export const getIcon=()=>null;'}));
 } }] });
@@ -94,8 +94,9 @@ test('resolved URL forms, mixed fallback, hot/cold inline fields and consent-key
 test('renderer classifies the resolved Vault destination independently of host resource URL spelling', /** Inspect real React output without assigning a test host URL to network-producing DOM. */ async () => {
   assert.equal(await scenario(`(()=>{
     const U=nodeUI,p=page('Local.md'),visual={mode:'replace',src:'https://example.invalid/host-local-resource',path:'Picture.png',alt:'Local'};
-    const output=U.ThoughtNode({node:{page:p,style:{},label:p.name,role:'center',x:0,y:0,width:120,height:40,gateStats:Object.fromEntries(['top','bottom','left','right'].map(side=>[side,{visibleCount:0,totalCount:0}]))},settings:o.settings,visual,selected:false,highlighted:false,dimmed:false,highlightedGates:new Set(),translate:key=>key});
-    const images=[];const visit=element=>{if(Array.isArray(element)){element.forEach(visit);return;}if(!element?.props)return;if(element.type==='img')images.push(element.props.src);visit(element.props.children)};visit(output);equal(images,[visual.src],'Resolved local file stays visible regardless of host transport');return true;
+    const template=document.createElement('template');
+    template.innerHTML=U.renderToStaticMarkup(U.createElement(U.ThoughtNode,{node:{page:p,style:{},label:p.name,role:'center',x:0,y:0,width:120,height:40,gateStats:Object.fromEntries(['top','bottom','left','right'].map(side=>[side,{visibleCount:0,totalCount:0}]))},settings:o.settings,visual,selected:false,highlighted:false,dimmed:false,highlightedGates:new Set(),translate:key=>key}));
+    equal([...template.content.querySelectorAll('img')].map(image=>image.getAttribute('src')),[visual.src],'Resolved local file stays visible regardless of host transport');return true;
   })()`),true);
 });
 

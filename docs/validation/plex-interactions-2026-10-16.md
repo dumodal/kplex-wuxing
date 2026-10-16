@@ -22,6 +22,9 @@ complete CI retry passed. [PR #171](https://github.com/zsviczian/kplex/pull/171)
 - Existing visible, unbound File properties follows the active Plex's central physical file.
   Pinned/grouped panes retain their native ownership. Other native content hands authority back to
   Obsidian; non-file centers clear the pane. Main/popout leases retire with their exact roots.
+- Node labels retain their compact delayed browser tooltip. A referenced accessible name removes
+  the competing larger Obsidian tooltip, preserving full label/path accessibility, image titles,
+  gate hints and explicit modifier-triggered page previews.
 
 ## Correctness and ownership
 
@@ -46,7 +49,7 @@ reads do not retry on layout/header noise. Markdown-only metadata semantics prev
 files from creating a load loop. No synthetic file-open, native activation or graph demand is used.
 Native Properties may legitimately read Markdown to display it; this is distinct from graph work.
 
-## Actual validation
+## I1 validation (`6835353`)
 
 Windows 10.0.26200, Node 22.22.2, Obsidian 1.14.4 / installer 1.14.0. Only the authorized disposable
 `kplex-test-small` was used, initially 107 files, including the maintainer's `test base.base`.
@@ -69,7 +72,7 @@ The native geometry comparison changes an opaque `rgb(40, 40, 40)` panel to
 area. Tested area Settings/hover/draft intervals observe zero builds, semantic refreshes and
 source acquisitions. These are operation counts and geometry observations, not CPU benchmarks.
 
-Final runtime artifact SHA-256: `852d2c8ef8bd1f3949396a06f7eec70ed2b2607cdb9d4fc66c5700d140c66700`.
+I1 runtime artifact SHA-256: `852d2c8ef8bd1f3949396a06f7eec70ed2b2607cdb9d4fc66c5700d140c66700`.
 CSS: `2bf34f58c561564fd890abae90946db04894fa53012b32bee3b6739ace013f4c`; manifest unchanged:
 `19d9ecce5557733e0ff0f2e27155e635c30158c3cfa6fbca0f11c16e4dedfd2c`.
 
@@ -127,3 +130,45 @@ installed. Live preparation is neither active nor pending. Private backups are r
 
 The requested behavior passes Windows feature acceptance, but the PR remains draft for review
 with the resource-lane and platform limits above. No merge or release.
+
+## Node tooltip follow-up
+
+The native baseline at `08f620f` has an inner text `title` and outer node `aria-label`.
+Trusted hover observes Obsidian's separate `.tooltip` showing the outer name; Chromium owns
+the compact delayed title outside the DOM. Reuse the canvas's existing `useId`,
+`.kplex-accessible-name` and `aria-labelledby` pattern on each node. No CSS, shared tooltip
+scheduler, gate hint, page-preview gesture or semantic owner changes. Repeated node occurrences
+have distinct accessible-name IDs and retain stable IDs during rerendering.
+
+Validation on the unchanged Windows/Node/Obsidian environment above:
+
+- Full strict `verify:obsidian`: **2,045 tests pass**, including 128 UI tests, with no failures,
+  skips or cancellations; architecture/core, official lint, installed types, production build and
+  exact native smoke pass. Runtime and regression sources remain unchanged after this run.
+- Focused browser/component checks: 9/9 pass, covering ordinary/thumbnail/replacement nodes,
+  exact accessible names, unique/stable occurrence IDs, full compact titles, gates and page previews.
+- `KPLEX_TOOLTIP_NODE_ONLY=true` with `verify:obsidian:tooltips`: **5 scenarios pass**, including
+  main/popout/returned node and gate hints, canvas and retired-owner cleanup. Each node observation
+  waits 2,200 ms with no styled node hint; gate hints still appear independently. This explicitly
+  limited scope excludes the separate menu/color checks. Native DOM does not establish exact
+  Chromium tooltip-chrome paint or physical-device behavior.
+- Exact-build interaction rerun: **14 cases pass** plus the fixture observation; hover rerun:
+  **7 cases pass**. Cleanup restores 107 files, settings/layout/bounds/debugger and four configuration
+  files byte for byte; no owned files/controllers, pending or active preparation remain.
+- The extended native check correctly rejects the old `852d2c8e` runtime for retaining the duplicate
+  node owner. The first complete-control run on the new runtime passes 12 scenarios, including the
+  main node check, then fails at its obsolete `.kplex-background-modal` selector. Preserve that
+  failure; it is not a complete control/color acceptance pass. Focused node scope reuses the same
+  driver and all assertions, without changing production behavior or the unrelated color editor.
+
+Current runtime SHA-256:
+`fbe9eaa3ba01e0b9c9634ddb5b82fc62503fb3d90da27be025547560182c1c85`.
+CSS and manifest hashes remain those recorded above. Source identities, raw old/new trials, failed
+controls, full logs, reusable driver snapshots, exact artifacts and restoration receipts are retained
+separately under `%LOCALAPPDATA%/kplex-validation/pr-171-node-tooltips/`, with per-file checksums
+and `SOURCE-RECEIPT.json`; TEMP originals remain under `kplex-node-tooltips-2026-10-16/`.
+The original 110-file evidence set is unchanged. No evidence archive is published.
+
+CI passes on both earlier checkpoints (`6835353` and `08f620f`); the new push requires its own CI.
+The broader gate/filter resource lane, macOS and physical-device acceptance remain unaccepted.
+No source-acquisition, semantic, CSS, settings or shared-tooltip behavior changes in this follow-up.

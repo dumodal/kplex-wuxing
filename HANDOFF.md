@@ -22,32 +22,23 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Plex interaction updates: returned for maintainer review, inactive
+# Node tooltip follow-up: returned for review, inactive
 
-Branch `2026-10-16-plex-interaction-updates`, source checkpoint
-`6835353ccb82ee7cbee1f63c65470e51c62ab00e`, pushed to draft
-https://github.com/zsviczian/kplex/pull/171 . Base `3294bea` is the authorized merge of #170.
-All seven requested fixes/features are implemented. Main reviewed the scoped offline returns
-and validated the exact final source; see the durable
-[validation report](docs/validation/plex-interactions-2026-10-16.md) and Refactor plan I1/I2.
+Draft PR171 on `2026-10-16-plex-interaction-updates`, parent08f620f. Scoped offline agent returned
+ThoughtNode and regressions; main independently reviewed, ran actual native verification and
+manages the authorized checkpoint/push. No further work is assigned by this inactive handoff.
 
-Final verification: 2,044 tests/lint/installed types/production build/exact native smoke pass.
-Two final native interaction runs each pass 14 cases; hover passes seven main/popout/Settings
-cases with zero observed source/semantic/search work; touch passes eight gestures/reload/geometry.
-Final runtime is `852d2c8e`. Materialization and rename retire count tasks under captured keys,
-reject stale native identity/proof and cannot leave an obsolete rendered placeholder. Properties
-checks native file and editable metadata identity, ownership and accepted-load completion.
+Compact browser title retained, duplicate host hint removed using existing aria-labelledby/name
+pattern. Exact localized accessibility, gates, image titles and explicit previews are preserved.
+Runtime source SHA-2565a976f6698628eee6c3411c2898159e4a6b37b12e76f292bd9af1511a28cbffc;
+artifact fbe9eaa3ba01e0b9c9634ddb5b82fc62503fb3d90da27be025547560182c1c85.
+Full strict2,045/focused9/native node5/interaction14/hover7 pass. Old-runtime native rejection
+retained; complete-control lane passes12 then hits obsolete background-modal selector, so only
+explicit node scope accepted here. No assertion weakened or unrelated production fix attempted.
+See durable validation report and Refactor plan I3 for source/evidence references and limits.
 
-The broader gate/filter resource lane fails twice before completing its matrix: recorded oracle-
-to-failure +9 checks/publications, unchanged source revision and zero fresh reads/parses/builds.
-That interval includes filter setup; CPU cost and cause are unproven. Keep the assertion and
-failure explicit. Actual macOS Option/menu/popout, physical mobile/external keyboard and other
-native Properties versions need acceptance. Do not optimize or expand architecture without a
-new assignment; C14 remains accepted and C15+ paused. No merge or release.
-
-Original Small vault state restores: 107-file inventory/settings/layout/bounds/four config bytes/
-debugger, no owned notes/controllers or active/pending preparation. Validated build is installed.
-110 evidence files and six separate private files are checksum-verified under LOCALAPPDATA/
-kplex-validation/pr-171 and pr-171-private; raw TEMP originals remain. HANDOFF must never be
-archived. No personal vault access and no archive publication are authorized. CI is running;
-main may finish checking it and update the PR without changing frozen source.
+Original107 files/settings/layout/bounds/four configuration bytes/debugger restore, no active or
+pending work/controllers. Original110-file evidence remains unchanged; new supplement local
+only, no archive publication. Earlier checkpoint CI passes; new checkpoint CI must be checked.
+macOS/physical-device and existing gate/filter resource acceptance remain pending. PR stays draft;
+no merge/release, personal-vault access, optimization or structural refactoring authorized.

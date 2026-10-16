@@ -1250,7 +1250,7 @@ test("ActionButton rendered browser behavior", () => {
 /** Exercise production reconciliation keys and thought DOM across a mutable rename/placeholder handover. */
 function attachmentRenameBrowserEntry() {
   return `
-import React, { useMemo } from "react";
+import React, { useId, useMemo } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { alphaHexToCss, resolveNodeStyle, currentNodeColorStyle, nodePaint, nodePaintFallbacks } from ${JSON.stringify(join(root, "src/index/style.ts"))};
@@ -2010,10 +2010,66 @@ test("Native hotkey pills support disable, customize, restore, conflicts and rec
  runBrowserDom(internalHotkeySettingsBrowserEntry(),"Native hotkey pills and recording lifecycle passed");
 });
 
+/** Keep native compact titles separate from accessible naming without altering gate or preview ownership. */
+function nodeTooltipBrowserEntry() {
+ return `
+import React, {useId} from 'react';
+import {flushSync} from 'react-dom';
+import {createRoot} from 'react-dom/client';
+import {nodePaint,nodePaintFallbacks} from ${JSON.stringify(join(root,'src/index/style.ts'))};
+import {effectiveLabelLimit,nodeLabelFontSize,gateDiameter} from ${JSON.stringify(join(root,'src/ui/layout.ts'))};
+import {physicalPositionLabel} from ${JSON.stringify(join(root,'src/ui/features/positionPresentation.ts'))};
+import {canDisplayNodeImage} from ${JSON.stringify(join(root,'src/core/plex/nodeImagePolicy.ts'))};
+import {createTranslator} from ${JSON.stringify(join(root,'src/lang/index.ts'))};
+const ObsidianIcon=()=>null;
+${uiDefinitions('src/ui/ThoughtNode.tsx',['GATES','ThoughtNode'])}
+const result=document.querySelector('#result'),container=document.body.appendChild(document.createElement('div')),root=createRoot(container);
+const check=(condition,message)=>{if(!condition)throw Error(message)},translate=createTranslator('en'),noop=()=>{};
+const label='A long meaningful note name',page={path:'Folder/Original.md',name:label},gates=Object.fromEntries(['top','bottom','left','right'].map(gate=>[gate,{visibleCount:0,complete:true,hasAny:false}]));
+const node={page,label,role:'child',style:{prefix:'@ ',maxLabelLength:8},x:0,y:0,width:180,height:40,gateStats:gates},settings={baseFontSize:12.4,showNeighborCount:false};
+const events={preview:0,node:0,gate:0,end:0};
+const props={node,settings,selected:false,highlighted:false,dimmed:false,highlightedGates:new Set(),translate,onActivate:noop,onOpen:noop,onHoverNode:()=>events.node++,onHoverGate:()=>events.gate++,onHoverEnd:()=>events.end++,onHoverPreview:()=>events.preview++,onGatePointerDown:noop,onNodePointerDown:noop};
+try{
+ let firstNameId;
+ for(const mode of [null,'thumbnail','replace']){
+  const visual=mode?{mode,path:'Picture.png',src:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',alt:'Local picture'}:undefined;
+  flushSync(()=>root.render(<ThoughtNode {...props} visual={visual}/>));
+  const element=container.querySelector('.kplex-thought'),nameId=element.getAttribute('aria-labelledby'),name=document.getElementById(nameId);
+  check(name&&name.classList.contains('kplex-accessible-name'),'Node lost its established accessible-name mechanism');
+  check(name.textContent===translate('node.accessibleLabel',{label,path:page.path}),'Localized accessible name lost note label/path');
+  check(!element.hasAttribute('aria-label')&&!element.hasAttribute('title'),'Node reintroduced a competing host tooltip');
+  check(firstNameId===undefined||nameId===firstNameId,'Same mounted node changed its accessible name identity');firstNameId=nameId;
+  const text=container.querySelector('.kplex-thought-text');
+  if(mode!=='replace')check(text.title==='@ '+label&&text.textContent==='@ A lon…','Compact full-title hint or visible truncation changed');
+  if(mode)check(container.querySelector('.kplex-node-visual').title===visual.alt,'Image compact title changed');
+  for(const gate of container.querySelectorAll('.kplex-gate'))check(gate.getAttribute('aria-label')&&!gate.hasAttribute('title'),'Gate native hint/accessibility changed');
+ }
+ const element=container.querySelector('.kplex-thought');
+ element.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse'}));
+ check(events.node===1&&events.preview===0,'Unmodified pointer unexpectedly opened page preview');
+ element.dispatchEvent(new PointerEvent('pointerout',{bubbles:true,pointerType:'mouse'}));
+ element.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse',ctrlKey:true}));
+ check(events.preview===1&&events.node===2,'Explicit page preview stopped forwarding');
+ const gate=container.querySelector('.kplex-gate');
+ element.dispatchEvent(new PointerEvent('pointerout',{bubbles:true,pointerType:'mouse',relatedTarget:gate}));
+ gate.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse',relatedTarget:element}));
+ check(events.gate===1,'Gate hover ownership changed');
+ flushSync(()=>root.render(<><ThoughtNode {...props}/><ThoughtNode {...props}/></>));
+ const ids=[...container.querySelectorAll('.kplex-thought')].map(node=>node.getAttribute('aria-labelledby'));
+ check(ids.length===2&&new Set(ids).size===2&&ids.every(id=>document.getElementById(id)),'Repeated node occurrences share accessible-name IDs');
+ result.dataset.status='passed';result.textContent='Node tooltip ownership passed';
+}catch(error){result.dataset.status='failed';result.textContent=String(error?.stack??error)}finally{flushSync(()=>root.unmount());container.remove()}
+`;
+}
+
+test('nodes retain compact delayed titles and accessible names without a duplicate styled tooltip owner',()=>{
+ runBrowserDom(nodeTooltipBrowserEntry(),'Node tooltip ownership passed');
+});
+
 /** Render the actual ThoughtNode text and geometry for long titles/aliases across independent density values. */
 function typographyLabelsBrowserEntry() {
   return `
-import React from "react";
+import React, { useId } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { alphaHexToCss, nodePaint, nodePaintFallbacks } from ${JSON.stringify(join(root, "src/index/style.ts"))};

@@ -5,8 +5,10 @@
  * is distinct from the central node and uses caller-supplied occurrence identity. Visible text shares
  * the density-independent geometry limit, preserving prefixes, ellipsis and center allowance.
  * The final image boundary rechecks consent before producing a src, including retained cached props.
+ * A separately referenced accessible name avoids Obsidian's competing node tooltip; visible labels
+ * retain the compact browser title, while gate hints and explicit page previews keep their owners.
  */
-import { type CSSProperties, type MouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useId, type CSSProperties, type MouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import type { GateSide, NodeVisual, PositionedNode } from "../types";
 import { nodePaint, nodePaintFallbacks } from "../index/style";
 import type { KplexSettings } from "../settings";
@@ -84,6 +86,7 @@ export function ThoughtNode({
     foldedTitle?: string;
   };
 }) {
+  const accessibleNameId = useId();
   // Cached props can outlive resolution. Remove the image before React can assign a denied src.
   if (visual && !canDisplayNodeImage(visual.path, settings.allowRemoteNodeImages)) visual = undefined;
   const style = node.style;
@@ -161,8 +164,9 @@ export function ThoughtNode({
         onContextMenu(node, e);
       }
     }}
-    aria-label={translate("node.accessibleLabel", { label: node.label, path: node.page.path })}
+    aria-labelledby={accessibleNameId}
   >
+    <span id={accessibleNameId} className="kplex-accessible-name">{translate("node.accessibleLabel", { label: node.label, path: node.page.path })}</span>
     {content ? <div
       className="kplex-thought-embedded-content"
       onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => e.stopPropagation()}
