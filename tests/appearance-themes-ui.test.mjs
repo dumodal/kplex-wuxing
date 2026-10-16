@@ -3,6 +3,20 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {colorEditorScenario as scenario} from "./support/colorEditorBrowser.mjs";
 
+test("unsupported future theme libraries expose existing appearance editors read-only and survive unrelated persistence", async () => {
+ assert.equal(await scenario(`(async()=>{
+  const future={version:999,themes:[{opaque:{keep:['future',42]}}]},p=await createAppearanceHost({appearanceThemes:future,noteTypeStyles:{Project:{fontSize:25,textColor:'#12345680'}}}),t=p.translator;
+  const tab=new sourceModules.KplexSettingTab({workspace:{on:()=>({}),offref:()=>{}}},p),before=p.writes.length;tab.openNodeStyleEditor('property','Project');
+  const modal=sourceModules.TestModal.instances.at(-1);await new Promise(r=>setTimeout(r,0));
+  if(!modal.contentEl.textContent.includes(t('themes.unavailable'))||modal.canEdit())throw Error('Future library editable or unexplained');
+  const controls=[...modal.contentEl.querySelectorAll('input,select,button')],close=controls.find(x=>x.textContent===t('styles.operation.close'));
+  if(!close||close.disabled||controls.some(x=>x!==close&&!x.disabled)||p.writes.length!==before)throw Error('Read-only controls or opening write wrong');
+  modal.runOperation(async()=>{throw Error('Future operation submitted')});if(p.writes.length!==before)throw Error('Future editor wrote');close.click();
+  p.settings.showFullTagNames=true;await p.persistSettingsSnapshot();if(JSON.stringify(p.writes.at(-1).appearanceThemes)!==JSON.stringify(future)||p.writes.at(-1).appearanceThemesFuture!==undefined||p.settings.noteTypeStyles.Project.fontSize!==25)throw Error('Future payload overwritten by workflow save');
+  tab.disposeActionSettings();if(p.appearanceThemeListeners.size||window.migrationListeners)throw Error('Read-only editor leaked');return true;
+ })()`),true);
+});
+
 test("Visual styling exposes native theme selection, accessible manager/reset icons and one durable dismissible migration message", async () => {
  assert.equal(await scenario(`(async()=>{
   const p=await createAppearanceHost({backgroundColor:'#12345680'}),t=p.translator,tab=new sourceModules.KplexSettingTab({workspace:{on:()=>({}),offref:()=>{}}},p);

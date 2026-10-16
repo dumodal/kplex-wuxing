@@ -463,6 +463,8 @@ for (const file of [
   "src/ui/ColorPaletteModal.ts",
   "src/ui/ColorPairModal.ts",
   "src/ui/ColorAdoptionModal.ts",
+  "src/ui/AppearanceThemesModal.ts",
+  "src/ui/StyleManagerList.ts",
   "src/ui/StyleColorControls.ts",
   "src/ui/StyleSwatchScope.ts",
   "src/adapters/obsidian/colorChanges.ts",

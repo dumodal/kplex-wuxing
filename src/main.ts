@@ -1560,7 +1560,8 @@ export default class KplexPlugin extends Plugin {
   bindAppearanceEditor(editor: StyleEditorModal, owner: appearanceThemes.AppearanceOwner): void {
     const name = this.settings.appearanceThemes?.themes.find(/** Resolve only the opening identity's display name. */ theme => theme.id === owner.themeId)?.name ?? this.appearanceThemeNames().user;
     editor.bindThemeOwner(/** A selected-ID match alone cannot revive A→B→A. */ () => this.isAppearanceOwnerCurrent(owner),
-      /** The editor releases this subscription with its existing native lifetime. */ changed => this.subscribeAppearanceThemes(changed), name);
+      /** The editor releases this subscription with its existing native lifetime. */ changed => this.subscribeAppearanceThemes(changed), name,
+      this.settings.appearanceThemesFuture !== undefined ? this.translator("themes.unavailable") : undefined);
   }
 
   /** Supply localized initial preset/copy names; stored display names remain user data after creation. */

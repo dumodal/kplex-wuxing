@@ -29,6 +29,7 @@ export abstract class StyleEditorModal extends Modal {
   private contextReleases: Array<() => void> = [];
   private themeCurrent: (() => boolean) | null = null;
   private openingThemeName = "";
+  private themeReadOnlyMessage: string | undefined;
 
   /** Start a fresh editor lifetime; retired asynchronous completions cannot close its replacement. */
   protected beginEditor(sourceScope?: HTMLElement, bindEditor?: (editor: StyleEditorModal) => void): void {
@@ -56,11 +57,11 @@ export abstract class StyleEditorModal extends Modal {
   }
 
   /** Bind the opening activation; stale unsubmitted drafts stay visible until explicit discard. */
-  bindThemeOwner(isCurrent: () => boolean, subscribe: (changed: () => void) => () => void, name: string): void {
-    this.themeCurrent = isCurrent; this.openingThemeName = name;
+  bindThemeOwner(isCurrent: () => boolean, subscribe: (changed: () => void) => () => void, name: string, readOnlyMessage?: string): void {
+    this.themeCurrent = isCurrent; this.openingThemeName = name; this.themeReadOnlyMessage = readOnlyMessage;
     const lifetime = this.lifetime;
     /** Metadata changes may be harmless; only an actual activation mismatch freezes this draft. */
-    const check = (): void => {if (this.editorOpen && this.lifetime === lifetime && !isCurrent()) this.showStaleThemeDraft();};
+    const check = (): void => {if (this.editorOpen && this.lifetime === lifetime && (this.themeReadOnlyMessage || !isCurrent())) this.showStaleThemeDraft();};
     this.contextReleases.push(subscribe(check));
     // beginEditor precedes control construction. Finish attachment before disabling a stale form;
     // canEdit/runOperation fence callbacks even before this one microtask runs.
@@ -70,8 +71,8 @@ export abstract class StyleEditorModal extends Modal {
   /** Preserve unsaved values, explain their owner and leave only explicit dismissal available. */
   private showStaleThemeDraft(): void {
     if (!this.editorOpen || this.operationPending || this.operationCommitted) return;
-    this.feedback?.setText(this.translate("themes.staleDraft", {name: this.openingThemeName}));
-    const cancel = this.translate("common.cancel"), discard = this.translate("themes.discardDraft");
+    this.feedback?.setText(this.themeReadOnlyMessage ?? this.translate("themes.staleDraft", {name: this.openingThemeName}));
+    const cancel = this.translate("common.cancel"), discard = this.translate(this.themeReadOnlyMessage ? "styles.operation.close" : "themes.discardDraft");
     let hasDismiss = false;
     for (const control of Array.from(this.contentEl.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>("input, select, button"))) {
       const dismiss = control.tagName === "BUTTON" && (control.textContent === cancel || control.textContent === discard);
@@ -88,7 +89,7 @@ export abstract class StyleEditorModal extends Modal {
 
   /** Submit once, freeze the captured draft and block Cancel/Escape until its durable outcome is known. */
   protected runOperation(operation: (isCurrent: () => boolean) => Promise<StyleCommitResult>): void {
-    if (this.themeCurrent?.() === false) {this.showStaleThemeDraft(); return;}
+    if (this.themeReadOnlyMessage || this.themeCurrent?.() === false) {this.showStaleThemeDraft(); return;}
     if (this.operationPending || this.operationCommitted || !this.editorOpen) return;
     const lifetime = this.lifetime;
     /** External teardown retires UI callbacks but never pretends an already submitted disk write was canceled. */
@@ -154,7 +155,7 @@ export abstract class StyleEditorModal extends Modal {
   }
 
   /** Permit local validation feedback to exclude Save during an existing durable operation. */
-  protected canEdit(): boolean { return this.editorOpen && !this.operationPending && !this.operationCommitted && this.themeCurrent?.() !== false; }
+  protected canEdit(): boolean { return this.editorOpen && !this.operationPending && !this.operationCommitted && !this.themeReadOnlyMessage && this.themeCurrent?.() !== false; }
 
   /** External teardown retires UI even if storage is already submitted; durable work is not falsely canceled. */
   retire(): void {
@@ -180,7 +181,7 @@ export abstract class StyleEditorModal extends Modal {
   /** Closing, migration and reuse release native context registrations exactly once. */
   private releaseEditorContext(): void {
     for (const release of this.contextReleases.splice(0)) release();
-    this.themeCurrent = null; this.openingThemeName = "";
+    this.themeCurrent = null; this.openingThemeName = ""; this.themeReadOnlyMessage = undefined;
   }
 
 }
