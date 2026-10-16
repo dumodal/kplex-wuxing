@@ -195,6 +195,12 @@ Right-click a connector to inspect, unlink or hide its relationship:
 
 **Go to source** opens the real Markdown note at the relevant location, using the Sidecar when it is available. Continue editing there with Obsidian's normal editor, wikilinks, suggestions and hotkeys. The source Markdown files remain the source of truth; K-Plex does not create a separate database of edge notes.
 
+## Colors and appearance
+
+A fresh installation follows Obsidian’s theme. In **Settings → K-Plex → Visual styling → Colors**, choose fixed colors, live theme colors or named Light/Dark pairs for nodes, links and lenses. Existing saved colors stay intact; **Use theme colors for standard styles…** previews an explicit adoption.
+
+Optional **Directional background tint** adds four subtle Compass sectors behind the graph. It is off by default and follows the rendered center while you navigate. See [Colors and appearance](docs/APPEARANCE.md) for color sources, paired previews, palette management and tint settings.
+
 ## Quick Filter and Graph Lenses
 
 K-Plex offers two levels of filtering.
@@ -402,7 +408,7 @@ Sibling relative size (30–85%) is under **Plex behavior → Layout & sizing**.
 
 1. **Plex behavior** — navigation, layout, visibility, animation and relationship behavior
 2. **Ontology** — separate pages for relationship fields, editor suggestions and discovered/unassigned vault properties
-3. **Visual styling** — canvas options plus dedicated **Node styling** and **Link styling** pages
+3. **Visual styling** — dedicated **Colors**, **Labels**, **Node styling** and **Link styling** pages
 4. **Sidecar** — companion-pane behavior and Markdown mode
 5. **Compatibility** — ExcaliBrain settings import and Excalidraw editor-node behavior
 

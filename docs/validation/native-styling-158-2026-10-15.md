@@ -1,152 +1,80 @@
 # Native styling and Idea Compass — PR #158
 
-**Implementation in progress; keep the PR draft.** Checkpoints A, B and C1 deliver native chrome, backward-compatible color contracts, queued persistence, the shared native canvas/source editor and scoped paint-only updates. Palette/all-style/lens integration, fresh native defaults and compass sectors remain pending. No merge, release or issue closure is authorized.
+Implementation and Windows acceptance are complete; the PR remains draft for review and the platform checks below. No merge, release or issue closure is authorized. Runtime checkpoint: [`701fd62`](https://github.com/zsviczian/kplex/commit/701fd62), based on main `867ef55` integrated through `689399d`. C14 remains accepted; C15–C26 remain paused.
 
-## Checkpoint A
+## Delivered behavior
 
-The branch integrates `main@867ef55` through `689399d`. Existing graph semantics, geometry, saved literal colors and imported style precedence remain unchanged. Native chrome now consumes Obsidian surfaces, text, controls, borders and shadows. Public K-Plex overrides inherit from body or the view instead of being masked by root declarations. This checkpoint does not yet change fresh graph/canvas defaults.
+- Native Obsidian surfaces, typography, controls, borders and shadows; inherited public overrides remain usable. Fresh graph defaults follow the theme. Existing and imported literal colors remain explicit until deliberate adoption.
+- Shared Default / Fixed / Named / Theme sources across standard/custom styles, lenses, canvas and tint. Named pairs retain stable IDs, separate Light/Dark values and alpha. Partial text/IME, reset, Cancel, failure recovery, concurrent edits and atomic in-use replacement are covered.
+- Colors and Labels have separate native subpages. Standard styles show 13 paired palette strips; fields and parent editors show paired swatches. Relationship color labels explain Parents/North, Children/South, Friends–Previous/West and Challengers–Next/East without changing semantic IDs.
+- Explicit two-way counterpart suggestions mirror HSL lightness and retain hue, saturation and exact alpha. Generated alpha text is rounded to two decimals without normalizing untouched stored values. Suggestions require explicit Save and cannot guarantee perceptual contrast.
+- Directional tint is off by default. Four viewport polygons meet at the rendered center, follow the existing camera and exact center-motion samples, remain non-interactive and disappear under forced-colors. Intensity inherits theme/mode defaults or an explicit 0–15% override; source alpha multiplies tint only.
 
-`ThemePreviewSampler` is an editor adapter, not a live graph dependency. It samples current colors directly and resolves two modes in a bounded, script-free isolated document using already loaded readable CSS. CSP blocks resources; no host appearance changes, vault reads, graph engine, remote requests or saved RGB substitutions are part of production sampling. The editor owns cache invalidation and disposal. Missing/inaccessible context, limits and inline host-mode colors lower alternate-mode confidence to **Estimated**. Arbitrary host scripts and selector context cannot be reproduced reliably.
+[User guide](../APPEARANCE.md) · [Public theme tokens](../THEMING.md) · [Architecture and ownership](../ARCHITECTURE.md#appearance-and-native-color-editors) · [Evidence and reproduction](native-styling-158-evidence.md).
 
-### Verification
+## Decisions and correctness
 
-Windows 10.0.26200, Node **22.22.2**, Obsidian **1.14.4**, Electron **43.3.0**, Chromium **150.0.7871.212**; only the authorized disposable `kplex-test-small` vault was used.
+Live paint resolves preserved source identities in the actual document after existing style/lens precedence. It never uses harvested RGB as persisted state or a rendering dependency. Preview-only CSS harvesting uses loaded readable local styles in a script-free, resource-blocked isolated document, informed by Excalidraw's StylesManager. Bounds are 8 MiB estimated UTF-16 CSS,128 sheets / 30,000 rules, 32 ancestors, 64 tokens and 16 expressions per sample. One visible Settings page shares a cached snapshot; palette-only updates reuse it. Frames, listeners and pending work belong to the editor/page lifetime.
+
+Maintainer testing exposed actual Settings paths missing from the initial sampler/direct-method coverage. Native subpages detach the tab root, and CSS refresh can replace the subpage underneath an open draft. The tab now separates its transient action-page/lazy-opening guard from the stable owning Settings document used for previews. Attached roots retain explicit local context. The exact declarative row path and refresh lifetime now have browser/native regression protection. No instruction to leave the editor and switch appearance is required. A theme color without a distinct counterpart can use the same value in both modes.
+
+Each usage card owns its sampled panel backdrop and source-alpha layer. A before-control proves the old transparent counterpart could reveal the active modal. Contrast is calculated against the displayed sample; uncertain translucent backing and patterned fills cannot certify a scalar contrast. A white/black fixture deliberately reports 21.0/1.0 for black text and 13.5/1.2 after a 25% red overlay; these are accuracy controls, not readability acceptance.
+
+All durable appearance writes reuse the serialized settings queue: validate/capture latest fields, persist, then publish only unchanged owners. Deleted optional root colors are copied explicitly. Palette replacement is settings-only. Foreign imports preserve local appearance preferences. Unsupported newer color formats retain raw payloads and read-only behavior; no schema upgrade or cache purge is introduced.
+
+A real-IDB preparation race found duplicate source-facet preparation and stale final paint. The existing finality boundary now permits only paint-policy drift and rebinds current paint synchronously. Source/generation/physical identity and mixed-policy retry fences remain. No separate compiler, classifier, scheduler or broad architecture refactor is added.
+
+## Validation
+
+Windows 10.0.26200; Node 22.22.2; Obsidian 1.14.4; Electron 43.3.0 / Chromium 150.0.7871.212. Formal native acceptance used authorized disposable `kplex-test-small` (88 files; restored local graph11). An observational CSS/preview check used authorized `testvault` (514 files), preserving its existing installed build, open Settings session and configuration hashes. No personal vault was accessed.
 
 | Check | Result |
 | --- | --- |
-| `node scripts/testing/obsidian/verify.mjs` | **1,902 tests**, no failures/skips/cancellations; architecture, core, official lint, production build and exact staged native smoke pass |
-| `node scripts/testing/obsidian/foreground.mjs` | Six foreground scenarios pass during held background inventory; zero foreground full flushes; owned fixtures/controller removed |
-| `node scripts/testing/obsidian/themePreview.mjs` | Six Default/Minimal/Things × main/popout combinations match actual native light/dark switches |
-| Focused tests | Public body/local overrides/reset, detached controls, explicit literals, modern colors, alpha, isolated resource blocking, cancellation, inaccessible/limited CSS and inline-mode confidence |
-| Cleanup | Original settings/enabled-plugin bytes match; appearance/workspace restored; owned frames/popout/controllers removed; temporary awake lease released without power-policy changes |
+| Final `verify:obsidian` | **1,963 pass**:7 architecture /128 core /859 general /106 UI /334 source /529 source-browser; no failures/skips/cancellations. Official lint, installed types, actual production build and exact-artifact native smoke pass |
+| Exact native color/Compass |19 cases pass, including actual Settings row clicks,13 dual strips, paired field editing, alpha, replacement/adoption, source identity, mode and motion |
+| Exact native style operations |14 cases pass, including storage failure, concurrency, durable refresh recovery and window ownership |
+| Legacy migration |6 matching-build cases pass, including complete imported appearance/ontology, alpha/order, native managers, rendered notes/links and reload |
+| Actual theme matrix |9 combinations pass: Default/Minimal/Things × main/popout/actual Settings, with real native light/dark parity and scoped snippet checks |
+| Foreground interaction |6 matching-build scenarios pass while inventory is held; zero broad flush calls and normal native foreground/throttling |
+| Cleanup | All four baseline configuration files compare byte-for-byte; original runtime keys and saved workspace restore; owned notes/controllers/frames are absent, local graph ready11/88, awake lease released without power-plan change |
+| Remote CI | Full verification passes for implementation `701fd62`; the documentation closeout is tracked in the PR checks |
 
-The initial full run found an obsolete test requiring root variable declarations. Its correction asserts inherited consumer hooks; it also exposed and restored the toolbar's `--kplex-panel-2` hook. Focused tests and the complete second run pass. Raw failed observations remain preserved.
+Exact final SHA-256:
 
-Exact staged SHA-256:
+```text
+4fbd918a6cf7637986c6cdc6b8fca65ae56582081aa4084d7cae346264fc4dc5  main.js
+45cc1d7da17b9282bf8eec1930cc31c5565e03fac2ee6406b05061f46d030655  styles.css
+19d9ecce5557733e0ff0f2e27155e635c30158c3cfa6fbca0f11c16e4dedfd2c  manifest.json
+```
 
-| Artifact | SHA-256 |
+The actual **Obsidian gruvbox** check resolves `--color-green` to `#98971a` in both modes, with Light/Dark panel backgrounds `#f9f5d7` / `#282828`. Current isolated preview content paints both cards; a shared source color does not mean either theme context is missing. This preserves the existing installed plugin/session rather than deploying over open Settings. The first diagnostic trials incorrectly mixed current preview code and the older installed translator; the matching current translator resolves that setup failure. Configuration hashes are unchanged and the diagnostic does not request note content.
+
+Portable coverage includes literal/reference equality, future-data preservation, import isolation, queue races, failed saves, semantic cycles, selected-source repair, paired samples, resource blockade, bounds, cancellation, viewport clipping, real animation timing and lifecycle. Geometry covers1,200 generated cases; 70 browser motion comparisons retain the original effect. 28 integrated positions have maximum observed apex error 0.0000201 CSS px; native observations reach 0.0000305176px. These are DOM/math checks, not actual paint or FPS measurements.
+
+For tested paint/mode changes, forwarding counters observe zero note reads/parses/acquisitions, semantic/search refreshes, visual invalidations and neighborhood lookups, while center/camera DOM remains. The expanded theme matrix completes each new native view's first activation before measuring. An earlier control included two initial popout-demand lookups and is preserved as failed; work was not relabelled as a timing improvement. Empty/300-node and native settled cases schedule zero plugin-follow frames during the observed idle window. No native CPU, retained-memory, allocation, energy or startup-speed improvement is claimed.
+
+## Checkpoints and failed controls
+
+| Checkpoint | Source |
 | --- | --- |
-| `main.js` | `4cb08ded50af580470c6049b3e10a88d9f0d356399368442379e0515fa8f2711` |
-| `styles.css` | `992d7b85fef40e9e2aab65f1063871ad34079c027e83447e113ecbd6cece170a` |
-| `manifest.json` | `19d9ecce5557733e0ff0f2e27155e635c30158c3cfa6fbca0f11c16e4dedfd2c` |
+| Native chrome / isolated sampler | `8a33627` |
+| Color contracts / durable drafts | `2d0232d` |
+| Shared editors / paint boundary | `4f52c12` |
+| Palette / adoption / style integration | `25ab5fa` |
+| Viewport Compass | `3ad76f6` |
+| Actual Settings subpage ownership | `60fa70e` |
+| Counterparts / alpha / transparent previews | `f9d765d` |
+| Paired Settings strips / navigation | `a68c59d` |
+| CSS-refresh lifetime / actual-view matrix | `24af90b` |
+| Complete finite form-fixture ports | `289af15` |
+| Distinct accessible field actions / final fixture cleanup | `701fd62` |
 
-The sampler source SHA-256 is `3944031c50beeb0fc190a3826e92c4c99d38b49f46b4c500ecefa2c15f0e92c7`. It is compiled separately by the native feasibility driver; it is not imported into the live plugin bundle until editor integration. The unchanged `main.js` hash therefore proves preserved runtime code, not delivered palette UI.
+Raw successful and failed controls remain outside the PR tree, indexed separately. The verified final supplement has 3,953,297 bytes / 237 entries, SHA-256 `437eef0034c44a7e887a705d8eadab7316e6e14ab29fd4c499c1b522293bf9aa`; exact inventory, CRCs and all 236 per-file checksums pass. A–D archives are independently reverified and retained. Durable copies are local and unpublished; no evidence archive was uploaded. They include genuine before-fix races/compositing failures, native setup errors, browser setup failures before domain assertions, and E2's missing finite fixture compile entry. The compile inventory/attached-root double and non-browser CSS/timer ports are corrected. Final full 1 preserves16 fixture-port failures; full 2 preserves one source bundle-load timeout before assertions, with its unchanged direct control passing. Frozen full 3 passes all 1,963 tests. Some browser setup timeouts remain intermittent; no claim is made that every historical timeout was root-caused. Implementation CI is green. The browser harness keeps its original deadline, owns one explicit navigation and requires the loaded/focused intended document. No domain assertion was removed to accept a failed trial.
 
-### Reproduction and evidence
+## Remaining acceptance and deferred scope
 
-Use the [contributor native-test setup](../../CONTRIBUTING.md#desktop-cli-setup-windows-and-macos), all three explicit disposable-vault variables and a fresh `KPLEX_HOST_REPORT_DIR` for each command above. Run browser/native lanes serially. For community CSS sampling, set `KPLEX_THEME_FIXTURES` to a local folder containing `Minimal.css`, `Things.css` and its manifest; the driver verifies hashes and rejects external resource URLs/imports. These fixtures are loaded temporarily in each native document, not installed as themes or companion plugins.
+1. Physical iOS/Android: native picker, two-way suggestions, touch/scroll/focus, narrow settings/modal layouts, theme change, hide/resume and motion cleanup.
+2. macOS/Electron: Settings/popout migration, native picker/focus, Escape/close, overlapping durable saves and unload. Windows evidence does not establish macOS behavior.
+3. Minimum Obsidian 1.13 runtime and visual acceptance: installed1.13 typings pass, but runtime tests use1.14.4. Review the actual preferred community theme, high contrast, gate/selection distinctions and composited colors. Pinned CSS fixtures do not reproduce theme scripts/plugins or every selector context.
 
-| Public fixture | Pinned source | SHA-256 |
-| --- | --- | --- |
-| Minimal | [theme.css at 93321bd](https://github.com/kepano/obsidian-minimal/blob/93321bdc23fc879966e1e3aa0cfeda77012f540f/theme.css) | `b63ef8a162529a06a945b51a4dacf73333b1d273660be26c86def455584996a8` |
-| Things | [theme.css at 9b8bef9](https://github.com/colineckert/obsidian-things/blob/9b8bef93d3919f7693ac78597beaa35bbbd4cfff/theme.css) | `b98c8b9ba0c3cc67ec42cbe34d5a1aea27a903bc7256351162e6584fb0b686d8` |
-
-The sampled CSS estimate was **2.29–2.72 MB in UTF-16 units**, across 6–8 sheets. This is copied CSS size, not measured peak memory or a speed claim. Production budgets are 8 MiB copied CSS, 128 sheets, 30,000 top-level rules and 64 requested tokens, with a three-second frame-load deadline. Over-budget content is excluded and confidence lowered.
-
-Complete local evidence: `%TEMP%\kplex-158-checkpoint-A-evidence.zip` — **222,442 bytes / 24 entries**, SHA-256 `a3151777b1c4f0e0a55ccd605e4f06a992dbbe6069e14d494972a4a94e010cff`. Exact entry sets, ZIP CRCs and every manifest checksum pass. It contains source snapshots, successful/failed logs and native reports, pinned fixture metadata and reproduction instructions. It excludes handoffs, note/cache payloads and private configuration backups. The archive has not been published.
-
-### Remaining acceptance
-
-Checkpoint A is a foundation, not complete acceptance of #155/#90. Paired editors, settings concurrency, live palette repaint, migration/adoption, compass motion and their resource/lifetime tests follow. Minimum Obsidian 1.13, macOS and physical iOS/Android acceptance remain open. Desktop theme-token parity does not prove full community-theme UI contrast, native touch/picker behavior or arbitrary companion-script compatibility.
-
-## Checkpoint B
-
-Typed literal, theme-variable and named-palette identities now pass through existing node/link/lens contracts, sanitizers, summaries and persistence without flattening references to sampled RGB. Literal edits preserve exact alpha. Palette IDs are stable; undefined inheritance differs from transparent. Optional versioned preferences retain unknown future payloads verbatim and read-only. Foreign graph imports preserve local palette/semantic/compass preferences. Semantic cycles and malformed new palette writes fail before storage.
-
-The existing serialized style queue remains the only writer. Operations capture current appearance fields at their queue boundary, save before publication and retain unrelated concurrent changes. Focused regressions exercise reference/alpha round trips, import isolation, overlapping saves, future/null payloads, validation failure and retry. This checkpoint retains existing graph defaults and does not claim delivered palette UI or a paint-only render path.
-
-Node **22.22.2** full verification passes **1,910 tests** (7 architecture /128 core /846 general /70 UI-browser /334 source /525 source-browser), official lint, installed types, the real production build and exact staged Windows smoke. The native style-operation lane passes **14 cases**. The native import lane passes all **six scenarios**, including rendered style managers, unchanged alpha-preserving save, rendered node/link appearance and persistence after reload.
-
-Two initial portable failures (a touched lint type and an explicit test-module inventory) were corrected before the complete passing run. The first native import attempt revealed that its on-demand fixture had no source lease: metadata existed but the expected graph page had never been requested. A separate diagnostic confirmed that the normal existing demand lease acquires the fixture. The reusable migration driver now owns/releases that lease. The original assertions and timeout remain unchanged; no production indexing behavior or forced full build was added. Failed attempts and a failed diagnostic search control are preserved separately from passing evidence.
-
-Exact staged `main.js` SHA-256: `77acef7a4c54aae198352e1365b8cbbdfc9a25efec5decb3c0471164691a366c`; CSS and manifest match A. Original configuration/enabled-plugin bytes are restored, original effective settings compare equal (apart from the new in-memory default), all owned notes/controllers are absent and the index returns to local readiness. The temporary awake lease is released. No personal vault was accessed.
-
-Complete local B evidence: `%TEMP%\kplex-158-checkpoint-B-evidence.zip` — **665,904 bytes / 60 entries**, SHA-256 `f1ac010ef4c245dfed48f383d56df14ada229354cb77a48ba3f66d4e7b43a254`. Source snapshots, successful/failed verification and diagnostic logs, reproduction metadata, cleanup and lifetime receipts are preserved. Exact entry sets, CRCs and all per-file checksums pass. Private configuration backups, handoffs and note/cache payloads are excluded. This archive is not published. Minimum-host, macOS and physical-mobile acceptance remain pending; no CPU or memory saving is claimed.
-
-## Checkpoint C1
-
-The shared native source editor now offers Default, Fixed, Named and Theme choices. Its RGB control, independent opacity and text draft preserve exact alpha, incomplete input, IME and unknown legacy values. Opening, Cancel and unchanged Save make no settings write. Two preview cards use real production paint sources and a bounded isolated sampler; stale or unsupported context is labelled Estimated. Active samples match the live owning document. Missing/cyclic references remain repairable. Preview sampling never becomes a live-graph dependency.
-
-Scoped bindings follow the actual owning document/mode and body/view overrides. Color-only publication retains layout, source authority, camera, editor, image and predicate identities. A reproduced presentation race initially prepared two cache batches and could restore stale paint at final acceptance. The correction reuses the existing captured policy, accepts paint changes without duplicate preparation and rebinds current paint at the final synchronous boundary. Mixed geometry changes still retry; source/generation/canonical/metadata fences remain intact. Permanent real-IndexedDB regressions cover all three cases.
-
-Final Node **22.22.2** verification passes **1,927 tests** (7 architecture /128 core /847 general /82 UI-browser /334 source /529 source-browser), official lint, installed types, production build and exact staged Windows smoke. Final serial native checks pass **6 source/paint cases**, **14 style-operation cases** and **6 Default/Minimal/Things × main/popout preview combinations**. Named-color saves and actual host mode switches record **zero fresh note reads, parser calls, source acquisitions, semantic notifications, search invalidations, visual/neighborhood cache requests**; center/camera remain stable. These are operation counts, not measured native CPU/retained-memory savings.
-
-Exact staged SHA-256: `main.js` **`7fd835cbe34358844f623de88141032f6b290021ecd772c52c969d3071a86dbf`**; CSS **`4125ccc1e87029a41092eab0f1797ede85fbcfac15b2fa047da69a77a442192d`**; manifest matches A/B. Windows/host versions match A. The original three configuration files compare byte-for-byte after reload, effective original settings compare equal, owned controllers/preview frames are absent, and the selected vault returns to local readiness. Each final color driver restores its appearance bytes; the original effective mode is restored. Both bounded awake requests ended without power-policy changes. No note content was changed and no personal vault was accessed.
-
-Complete local C1 evidence: `%TEMP%\kplex-158-checkpoint-C1-evidence.zip` — **2,131,912 bytes /133 entries**, SHA-256 **`4e91ee71f650947dfa5b848a170a7d0bf29da611199a78ee322f888ad4396dae`**. Exact entry set, ZIP CRCs and every manifest checksum pass. It contains base/delta/source snapshots, artifacts, reproduction references, successful and failed runs (including final full8 and native receipts), race controls and cleanup receipts. Private configuration backups, handoffs and note/cache payloads are excluded. Originals remain local; no archive is published.
-
-Earlier full attempts exposed missing finite test-host exports/inventories, a CRLF-sensitive existing source oracle and a missing resize fixture port; these were repaired without weakening assertions or architecture guards. Two earlier full runs passed before later lifetime/finality fixes; only final full8 and the matching native checks establish this checkpoint's acceptance. The actual native scope has 14 ancestors; the sampler now has a bounded 32-level context and explicitly lowers confidence beyond that limit.
-
-Remaining: C2 integrates named-palette management, standard/custom/lens source controls and explicit legacy-color adoption; D adds Compass sectors. Existing source tests include real document adoption and retirement of pending dialogs, but native OS picker interaction, minimum Obsidian 1.13, macOS and physical iOS/Android remain separate acceptance gaps. Prioritize native picker/focus, physical touch/theme switching, and visual contrast in community/high-contrast themes.
-
-## Checkpoint C2
-
-Named colors now have searchable management, stable identities and independent exact light/dark literals. In-use deletion replaces every known configured use atomically, with a queue-time check for concurrent changes. Standard, custom node/link and lens editors share the same source chooser and local-only child draft. The parent saves through the existing durable queue. Opening, Cancel and unchanged Save make no write.
-
-Fresh installations use native color defaults. Existing settings retain their historical materialized defaults, including factory-equal literal overrides. An explicit adoption confirmation lists affected standard slots and previews the result; it clears only standard color overrides and canvas paint, retaining geometry, custom dictionaries, lenses and the palette. A local absence-policy marker prevents deliberate Default values from being backfilled on restart. Foreign imports preserve local appearance preferences. Unsupported known future lens sources remain raw and read-only through unrelated saves.
-
-Baseline-aware style/lens merging preserves concurrent replacement, insertion and untouched fields. A fixed-owner appearance subscription avoids style enumeration on ordinary source events. Scoped manager swatches retain alpha and actual originating CSS. One resolved style per stable scene occurrence is reused across hover/count/scroll renders. A real browser regression exposed a nested native source dialog dismissing its parent lens editor; pointer ownership and Escape now use the actual native container, including the earlier host-capture/composed-event boundary.
-
-Final Node **22.22.2** verification passes **1,947 tests** (7 architecture /128 core /856 general /93 UI-browser /334 source /529 source-browser), official lint, installed types, production build and exact staged Windows smoke. Serial native acceptance passes **12 color/palette/adoption/nested-Escape cases**, **14 style-operation cases**, **six migration scenarios** and **six Default/Minimal/Things ? main/popout preview combinations**. Live named-color repaint, atomic replacement and host-mode changes record zero source reads/parses/acquisitions, semantic/search/visual/neighborhood work, with retained center/camera elements.
-
-Exact final artifacts: `main.js` **`662f0336d0258b3985326a2b136b76f8de357f3154721784dc786fd068651d52`**; CSS **`8e74cc65c4be4fc1724ba0b003da08bd3ab444eeb157696169b4cece68162276`**; manifest matches C1. Original configuration bytes/effective settings and the saved workspace are restored. Owned notes, controllers and preview frames are absent; the selected vault returns to local readiness (11 indexed /88 files). Both bounded awake requests ended without changing power policy. No personal vault was accessed.
-
-Complete local evidence: `%TEMP%\kplex-158-checkpoint-C2-evidence.zip` ? **6,464,566 bytes /143 entries**, SHA-256 **`ea96ac043fd04bfa8ca3d0abd7a1eb24be971992f1d1039f26cf15f6d532d5d1`**. Exact entry sets, CRCs and all manifest checksums pass, including the three nested frozen controls. Base/delta/new-source snapshots, exact artifacts, fixture references, successful/failed logs and cleanup receipts are retained. Private configuration backups, handoffs and note/cache payloads are excluded. The archive is unpublished; raw originals remain local.
-
-The first frozen control passed 1,941 tests, the third 1,945; neither establishes final C2 native acceptance. Full2 had an unchanged Chromium action-settings bundle-load timeout; the affected 35-case suite and three exact controls passed without timeout/assertion changes. Raw failures, the reproduced nested-dialog failure and both verified frozen controls are retained in the final evidence. No native CPU/memory saving is claimed. D Compass and E closeout remain pending. Native OS picker, minimum-host 1.13, macOS and physical iOS/Android remain acceptance gaps.
-
-Native acceptance of the fourth control exposed an actual optional-root deletion defect: spreading the edited draft over old settings retained the old canvas after adoption or palette deletion. The final writer publishes the complete finite appearance inventory, including absence. A production-queue regression fails before and passes after the correction, including reload. Its 52-case migration/queue suite passes, and full5 plus matching native trials establish final acceptance. Two style-driver failures used a detached Settings document; the final driver attaches the actual native Settings origin before its manager, retaining every assertion. The temporary migration adapter reuses the completed full5 report only after target/Node/artifact checks; it changes no migration assertion or normal staging/cleanup. Both failure controls are archived.
-
-## Checkpoint D
-
-Delivered the off-by-default directional underlay within existing owners. Four convex polygons (at most six vertices each) cover the actual viewport and meet at the captured rendered center. They remain behind links/nodes, outside the camera, with no input/drop target or fifth sibling region. Existing ResizeObserver/camera frames update bounded attributes. Source alpha multiplies 0?15% intensity; undefined inherits finite theme opacity then 5% light/7% dark, while zero is explicit. Forced-colors hides decoration.
-
-The exact ElementMotion effect supplies already-eased progress and the same numeric keyframe samples, including transform origin and pop scale. No independent curve or clock is added. A center-only record (up to five poses, even while tint is off for late enable) is the small bounded allocation cost; no idle follower or per-frame node-rectangle scan is introduced. Native editor overlays use their actual geometry. Settings reuse the source chooser, paired compositing examples and accessible LayoutSlider; the rail loads only after explicit native navigation. Edits merge only changed fields into latest preferences. All eight locales are included.
-
-Automated geometry covers 1,200 ordinary/offscreen/asymmetric cases plus invalid/giant inputs. Seventy actual browser motion comparisons retain the original animation; 28 integrated camera/center cases have max observed error0.0000201 CSS px and zero per-frame node reads. Empty/300-node cases stop at settle/cancel/disable/hidden/zero viewport and keep follow-only camera-overlay writes at zero. Native preliminary16 passes with maximum DOM apex error0.0000305176px and zero idle plugin frame requests, including trusted native range Home, Fit/zoom/arrival and source/mode changes with zero source/graph work. These are bounded operation/DOM checks, not CPU, heap, FPS, energy or physical-paint claims.
-
-Full D1 found a new camera-fixture port, preserved the original flush-count assertion and exposed a redundant flush, now removed. Two unchanged browser setup failures are preserved. D2 passed all except one source-case bundle-load timeout before its domain assertion. Strict direct controls pass; the shared test harness now owns one explicit navigation and requires the loaded/focused intended document within the original deadline. Its43 affected controls pass. The change is not proof that every historical startup/host timeout shares one cause. C2 remote CI attempt1 failed startup; unchanged attempt2 is green. Final D3 passes all 1,956 tests (7 architecture / 128 core / 859 general / 99 UI / 334 source / 529 source-browser), official lint, installed types, real build and exact-artifact Windows smoke. Matching native lanes pass 16 color/Compass, 14 style, 6 migration and 6 sampler combinations. Configuration bytes, effective settings and saved workspace restore; owned notes/controllers/frames are absent and the awake lease is released. Verified unpublished evidence: `%TEMP%/kplex-158-checkpoint-D-evidence.zip`, 2,746,137 bytes / 121 entries, SHA-256 `bbe6636aec5ee0c7d303dfb5dd6e878f53ce054fa54bdd670a55e785a355065d`. CRCs, entry inventory and every per-file checksum pass; raw failed controls remain preserved.
-
-E closeout still needs to verify/correct the separately identified transparent-counterpart preview backdrop, finish the touched-dialog focus lifetime cleanup and guides, and run final full/native acceptance. D does not establish transparent counterpart pixel correctness, minimum Obsidian1.13, macOS or physical iOS/Android picker/touch acceptance. Keep PR draft; no merge/release.
-
-Maintainer testing subsequently exposed gaps in the actual declarative Settings window: unavailable paired previews, inert canvas/tint actions, sparse color choices and unclear presentation. The six sampler combinations above do not establish acceptance of that Settings path. Follow-up work will repair that path, add explicit counterpart recommendations, paired swatches/strips and separate Colors/Labels navigation. PR remains draft.
-
-## Settings correction E1
-
-The maintainer's actual Settings report is reproduced on Windows: after native navigation into Visual styling, Obsidian removes `PluginSettingTab.containerEl` and displays a sibling `.setting-page-content`. The old scope is disconnected. The background action returns early, lazy Compass opening is rejected and the sampler correctly refuses that detached scope. This is an ownership defect, not missing light/dark theme support.
-
-The existing tab now reacquires only the visible native page in its exact Settings document; the connected page owns sampling and the lazy-load fence. No global theme mutation or second harvesting system is needed. The isolated style-harvesting approach matches the maintainer's Excalidraw reference while retaining resource blocking and bounded snapshots.
-
-Node22.22.2: all 22 shared-editor browser tests pass, including detached-root regression with actual painted dual cards; official lint, installed types and real production build pass. The exact installed build passes all 17 native color/Compass cases, including the actual declarative background and Compass row clicks after root detachment and both painted harvested contexts. Original configuration bytes restore; driver cleanup passes. Main SHA `4b7726a27b4d0243981b14e53455d944855e3e3786f7f53ae245644ca89056da`; CSS/manifest unchanged from D. Raw targeted logs, exact staging report and native report remain under `%TEMP%/kplex-158-E1-*`; no archive published. Full verification will run after the remaining UI revisions; these checks do not claim all community themes or physical-device acceptance.
-
-Remaining requested work: alpha display, expanded theme choices, explicit two-way counterpart recommendations, meaningful preview/adoption copy, relationship explanations, separate Colors/Labels and consistent paired swatches/strips.
-
-## Shared controls E2
-
-Explicit Light→Dark and Dark→Light recommendations mirror HSL lightness around0.5 while preserving hue, saturation and exact alpha. Equal channel shifting implements that bounded operation without adding a library. The suggestion changes only the opposite local draft; reset, Cancel and explicit Save retain their existing contracts. This is a starting suggestion, not a perceptual-contrast guarantee. Named-pair previews explain that they show an example note background and require selecting the saved color in a style.
-
-Generated RGBA text now displays two alpha decimals and percentages omit floating-point noise. Exact underlying untouched values and active text/IME drafts remain unchanged. The theme chooser includes text, surfaces, all eight accent colors, heading, tag, checkbox, table, code and graph tokens, plus the existing custom-variable entry. Only selected tokens are sampled; channel tuples are not offered. The old instruction to leave the editor and switch Obsidian appearance is removed. Shared theme values can appear in both modes without flattening saved references. Empty standard-color adoption explains that there is nothing to clear and disables confirmation; its example is labelled as the resulting appearance.
-
-A before-control reproduces transparent previews exposing the active modal instead of their sampled mode. Each card now owns the correct sampled panel backdrop and source-alpha layer. Black text measures21.0/1.0 on white/black transparent samples and13.5/1.2 with25% red; uncertain translucent backing cannot certify contrast. Touched native style editors also cancel focus callbacks through the existing modal lifetime and use the control's actual window.
-
-Node22.22.2:49 focused browser/localization checks pass, official lint/types/production build pass, all18 matching native color/Compass cases pass including two-way recommendation/reset with zero pre-Save writes. Original disposable configuration bytes restore and controller/fixture cleanup passes. Raw failed fixture setup, genuine before-control, successful logs and exact staging/native reports remain under `%TEMP%/kplex-158-E2-*`, unpublished. Full final verification remains pending after Settings swatches/navigation and documentation cleanup.
-
-Exact production hashes: `main.js`: `f06755529a996ba851903bff5ae052236bd5f2fbd25df852c68e1213accf6c08`, `manifest.json`: `19d9ecce5557733e0ff0f2e27155e635c30158c3cfa6fbca0f11c16e4dedfd2c`, `styles.css`: `61b2ec0212a041856ff41ea78be5fb9e92633b56a06faa4f3be8ee8077dadc6e`.
-
-## Settings presentation E3
-
-Visual styling now separates Colors and Labels from Node styling and Link styling. Standard styles show thirteen native navigable rows with separate Light/Dark sequences (five fields per node style, two per link style); their property pages show paired swatches and explicit Edit buttons. Link appearance and parent style editors reuse the same paired component, and named-palette rows share its labelled strip renderer. Semantic labels use Parents/North, Children/South, Friends and previous/West, Challengers and next/East; descriptions explain their tint/opt-in style purpose without changing stable IDs or relationship semantics.
-
-One visible page shares the existing bounded preview sampler. Synchronous row construction coalesces into one harvest, configured palette updates reuse the pending/completed CSS snapshot, and native row cleanup/window retirement releases owners. A host probe establishes that Obsidian clones description fragments: the overview binds the connected clones rather than retaining insertion listeners on detached originals. There is no graph/renderer/queue or new general scheduler. The preview-only source projection is shared with existing usage cards.
-
-Node22.22.2:50 browser/localization checks pass, including one-harvest multi-row construction and no CSS reharvest on palette edits; indexing fixture and24 production settings-independence scenarios pass; official lint/types and actual build pass. All19 exact native color/Compass cases pass, including the thirteen strips, five paired properties and actual Edit actions. The14 native style-operation cases also pass on the same implementation before the final stable-field lookup cleanup. Original disposable configuration bytes restore. Raw runs remain under `%TEMP%/kplex-158-E3-*`; exact final production binaries are retained under `%TEMP%/kplex-158-E3-production-artifacts`.
-
-E2 remote CI caught a missing counterpart module in the finite test compile inventory. The inventory and its attached-root DOM double are corrected here; current indexing assertions pass unchanged. The failed remote log is preserved. Final full verification and current-head remote CI are still required; targeted acceptance is not presented as a complete PR pass.
-
-## Settings theme-refresh lifetime E4
-
-The expanded actual-view matrix reproduces one more production edge: a `css-change` replaces the native Settings subpage while its modal remains open. Capturing that transient page for all future samples can lose both preview contexts again. The existing tab now separates the short-lived action-page guard from its theme context: a subpage editor samples the stable body of its exact owning Settings document; a still-attached root retains explicit local scope. Delayed Compass loading still requires its captured action page to remain current. No global mode changes, new appearance framework or source-validation weakening is introduced.
-
-The reusable native theme driver now exercises real main/popout graphs and the actual declarative Settings editor. Default, Minimal and Things each pass all three documents (nine combinations), matching paired samples through real native mode switches. Main/popout camera/center DOM and scoped snippet paint remain intact. After completing first activation of the newly created view, the measured theme/snippet interval has zero note reads, parses, acquisitions, semantic/search refreshes, visual invalidations or neighborhood queries. An earlier trial incorrectly included two initial popout-demand lookups; that failed control is retained, and setup is now completed before instrumentation. No CPU/memory/paint claim is made.
-
-Three focused browser lifetime/cache checks pass; real build and official lint pass;19 color/Compass and14 style-operation native cases pass on the corrected exact artifacts, with disposable configuration restored. Matrix setup failures (wrong legacy view type, transient source and overlapping first activation) and their successful cleanup remain under `%TEMP%/kplex-158-E4-*`. Full final verification, migration and current-head CI remain required.
+Style Settings/Style Manager metadata is explicitly deferred; neither plugin is needed. Plain public CSS snippets remain supported. No companion-state synchronization, presets, extra layout mode or further performance optimization is included. Theme-script-only/inaccessible/over-budget alternate contexts remain Estimated, and a preview cannot guarantee contrast for arbitrary imagery or patterned/translucent surfaces. Keep the PR draft for review.
