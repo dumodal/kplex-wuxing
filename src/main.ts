@@ -128,7 +128,9 @@ type RecentIndexedNavigationTarget = {
 };
 
 /** Finite appearance intents cross the same settings queue; initialization/import never add another writer. */
-type StyleCommitOptions = Readonly<{themeAction?: appearanceThemes.AppearanceThemeAction; legacyImport?: unknown; initializeThemes?: {existing: boolean}}>;
+type StyleCommitOptions = Readonly<{themeAction?: appearanceThemes.AppearanceThemeAction; legacyImport?: unknown; initializeThemes?: {existing: boolean};
+  /** Imperative compatibility callers may replace a coherent root/library pair that still differs from disk. */
+  persistExistingChanges?: boolean}>;
 
 export default class KplexPlugin extends Plugin {
   settings: KplexSettings = DEFAULT_SETTINGS;
@@ -1649,7 +1651,7 @@ export default class KplexPlugin extends Plugin {
         !STYLE_SETTINGS_KEYS.some(/** Appearance roots are published by their existing field-level fence. */ field => field === key)
         && key !== "appearanceThemes" && key !== "appearanceThemesFuture" && !appearanceThemes.themeValuesEqual(Reflect.get(source, key), Reflect.get(working, key)))
         .map(/** Detach only a changed imported root's comparison token. */ key => ({key, before: appearanceThemes.copyThemeValue(Reflect.get(source, key) as unknown), after: Reflect.get(working, key) as unknown})) : [];
-      if ((library || options.initializeThemes) && !effects.changedKeys.length && !libraryChanged && !importedFields.length && next.kplexInitialized === source.kplexInitialized) return;
+      if (!options.persistExistingChanges && (library || options.initializeThemes) && !effects.changedKeys.length && !libraryChanged && !importedFields.length && next.kplexInitialized === source.kplexInitialized) return;
       await this.saveData(this.settingsSnapshotForPersistence(source.actionPreferencesFuture ?? source.actionPreferences, next));
       persisted = true;
       const current = captureSettingsPolicy(this.settings), values = {...(this.savedSettingsPolicy ?? current).values};
@@ -1893,7 +1895,8 @@ export default class KplexPlugin extends Plugin {
     if (effects.semanticInvalidation) this.index.invalidateSemanticPolicy();
     const appearanceChanged = effects.changedKeys.some(/** Legacy imperative saves delegate appearance synchronization to the one queued owner. */ key => STYLE_SETTINGS_KEYS.some(/** This is the appearance-write inventory, not the theme schema. */ field => field === key));
     if (appearanceChanged && (this.settings.appearanceThemes || this.settings.appearanceThemesFuture !== undefined))
-      await this.updateStyleSettings(/** Existing callers already published their imperative fields; synchronize only their durable theme projection. */ () => {});
+      await this.updateStyleSettings(/** Existing callers already published their imperative fields; persist their coherent snapshot even if its library matches. */ () => {},
+        this.captureAppearanceOwner(), {persistExistingChanges: true});
     else await this.persistSettingsSnapshot();
     if (this.unloading) return;
     await this.index.refreshPresentationSettings();

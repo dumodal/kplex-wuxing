@@ -27,6 +27,13 @@ export const localPreferenceKeys = [
   "deletePromptInitialized", "confirmFileDelete", "removeOntologyLinksOnDelete", "editNewNodeAfterCreate", "newNodeDefaultType",
 ];
 
+/** Verify complete restored appearance/ontology, including its library, in both live and durable native data. This independent oracle follows the captured settings' style keys; it never defines a persistence schema. */
+export function assertRestoredKplexAppearance(actual, expected) {
+  const keys = new Set(["hierarchy", "appearanceThemes", "tagStyleList", "backgroundColor", "standardStyleDefaults", "colorPreferences", "graphLenses",
+    ...Object.keys(expected).filter(key => key.endsWith("Style") || key.endsWith("Styles"))]);
+  for (const key of keys) assert.deepEqual(actual[key], expected[key], `Restored ${key} differs from the pre-import appearance`);
+}
+
 /** Compare complete imported dictionaries and local preferences without masking changed fields. */
 export function assertMigratedExcaliBrainSettings(actual, fixture, current) {
   assert.equal(Object.hasOwn(actual, "excalibrainFilepath"), false,

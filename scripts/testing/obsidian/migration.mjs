@@ -14,7 +14,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Script } from "node:vm";
 import { runObsidianVerification, validateTarget } from "./runner.mjs";
-import { assertMigratedExcaliBrainSettings } from "../../../tests/support/excalibrainMigration.mjs";
+import { assertMigratedExcaliBrainSettings, assertRestoredKplexAppearance } from "../../../tests/support/excalibrainMigration.mjs";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const reportDir = process.env.KPLEX_HOST_REPORT_DIR || mkdtempSync(join(tmpdir(), "kplex-migration-host-"));
@@ -261,6 +261,7 @@ try {
   console.log("Restoring test settings and removing owned notes");
   if(installedController){
     try {
+      const expectedRestore = evaluate(`JSON.stringify(window.${controller}.settings)`);
       evaluate(`(()=>{const state=window.${controller};state.done=false;state.error=null;
         (async()=>{try{
           app.setting.doc.querySelectorAll(".kplex-style-editor,.kplex-style-manager,.kplex-import-settings-modal").forEach(el=>el.closest(".modal").querySelector(".modal-close-button, .modal-header-button").click());
@@ -276,7 +277,9 @@ try {
       cli(target.vaultName,"plugin:disable","id=k-plex");cli(target.vaultName,"plugin:enable","id=k-plex");
       cli(target.vaultName,"command","id=k-plex:kplex-start");
       await until('JSON.stringify(app.plugins.plugins["k-plex"].getIndexStatus().upToDate)',"Restored settings index did not settle");
-      report.cleanup={settingsRestored:true,notesRemoved:true,controllerRemoved:true,indexSettled:true};
+      assertRestoredKplexAppearance(evaluate('JSON.stringify(app.plugins.plugins["k-plex"].settings)'), expectedRestore);
+      assertRestoredKplexAppearance(JSON.parse(readFileSync(join(validateTarget(target).pluginDir, "data.json"), "utf8")), expectedRestore);
+      report.cleanup={settingsRestored:true,appearanceAndLibraryVerified:true,durableAppearanceVerified:true,notesRemoved:true,controllerRemoved:true,indexSettled:true};
     }catch(error){report.status="failed";report.cleanupError=String(error);}
   }
   report.completedAt=new Date().toISOString();

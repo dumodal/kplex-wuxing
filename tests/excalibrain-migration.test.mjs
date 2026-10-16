@@ -1044,6 +1044,22 @@ test("relationship style Save/Reset use the same duplicate and failure contract"
   disk.resolve(); await new Promise(resolve => setImmediate(resolve)); assert.equal(modal.closed, true); assert.equal(settings.hierarchyLinkStyles.parent, undefined);
 });
 
+test("compatibility saves persist a replaced coherent theme snapshot instead of treating it as an unchanged editor draft", async () => withThemeWindow(async () => {
+  const {plugin, saves, calls} = await themeFixture({baseNodeStyle: {fontSize: 23}});
+  const original = structuredClone(plugin.settings);
+  await plugin.updateStyleSettings(draft => {draft.baseNodeStyle.fontSize = 31;});
+  assert.equal(saves.at(-1).baseNodeStyle.fontSize, 31);
+  plugin.settings = structuredClone(original);
+  const before = saves.length;
+  await plugin.saveSettings(false);
+  assert.equal(saves.length, before + 1, "An imperative replacement owns a disk write even when its supplied library already matches");
+  assert.equal(saves.at(-1).baseNodeStyle.fontSize, 23);
+  assert.deepEqual(themeModel.captureThemeAppearance(migrateAndMergeSettings(saves.at(-1))), themeModel.captureThemeAppearance(original));
+  await plugin.updateStyleSettings(() => {});
+  assert.equal(saves.length, before + 1, "Unchanged ordinary editor saves remain no-ops");
+  assert.equal(calls.semantic, 0);
+}));
+
 test("compatibility saves skip semantics only for style-only edits; mixed view changes retain requested-scope refresh", async () => {
   const { plugin, settings } = styleEditorFixture(); let semantic = 0; plugin.index.refreshSemanticSettings = async () => { semantic++; };
   settings.noteTypeStyles.Project = { icon: "box" }; await plugin.saveSettings(false); assert.equal(semantic, 0);
