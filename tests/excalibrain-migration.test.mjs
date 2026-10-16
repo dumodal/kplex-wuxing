@@ -31,6 +31,14 @@ await build({
   stdin: { contents: styleHostSource() + '\nexport * from "./src/settings"; export {adoptStandardThemeColors,deleteNamedColor} from "./src/core/plex/colorEditing"; export * from "./src/core/graph/settingsPolicy"; export * from "./src/index/style"; export * from "./src/ui/layout"; export * from "./src/ui/PurgeIndexCacheModal"; export { Modal as TestModal, Notice as TestNotice, AbstractInputSuggest as TestSuggest } from "obsidian"; export { createObsidianTranslator } from "./src/adapters/obsidian/localization";', resolveDir: root, loader: "ts" },
   outfile: join(temp, "migration.mjs"), bundle: true, platform: "node", format: "esm",
   plugins: [{ name: "obsidian-boundary-double", setup(builder) {
+    // This finite non-browser form fixture has no CSS document or workspace event bus. Keep the
+    // decoration-only port finite here; color-editors.test exercises the actual sampler/strips in
+    // Chromium and native lanes prove installed host behavior. All queue/form assertions stay real.
+    builder.onResolve({filter: /ColorSwatchList$/}, () => ({path: "paired-swatches", namespace: "decoration"}));
+    builder.onLoad({filter: /.*/, namespace: "decoration"}, () => ({contents: `
+      export class ColorSwatchList { add() { return () => {}; } update() {} dispose() {} }
+      export function renderColorStrips() {}
+    `}));
     builder.onResolve({ filter: /^obsidian$/ }, () => ({ path: "obsidian", namespace: "double" }));
     builder.onLoad({ filter: /.*/, namespace: "double" }, () => ({ contents: `
       export class App {}
@@ -512,7 +520,7 @@ function styleEditorFixture(settings = structuredClone(defaults)) {
 function openStyle(tab, kind, name = null) {
   const priorWindow = globalThis.window;
   try {
-    globalThis.window = { setTimeout(callback) { callback(); return 0; } };
+    globalThis.window = { setTimeout(callback) { callback(); return 0; }, clearTimeout() {} };
     tab.openNodeStyleEditor(kind, name);
     return TestModal.latest;
   } finally { globalThis.window = priorWindow; }
