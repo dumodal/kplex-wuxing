@@ -28,8 +28,9 @@ export const englishCatalog = {
   "colors.sameVariant": {"message": "This theme color uses the same value in both modes.", "context": "Shared color editor: explicit local counterpart recommendations, usage previews and safe theme adoption.", "params": []},
 
   "compass.title": {"message": "Directional background tint", "context": "Optional viewport Compass decoration and local native editor.", "params": []},
-  "compass.help": {"message": "Show an orientation cue behind the Plex. Tint indicates direction, not exact relationship membership.", "context": "Optional viewport Compass decoration and local native editor.", "params": []},
+  "compass.help": {"message": "Show an orientation cue behind the Plex. Tint indicates direction, not exact relationship membership. Changes apply when you select Save.", "context": "Optional viewport Compass decoration and local native editor.", "params": []},
   "compass.enabled": {"message": "Show directional tint", "context": "Optional viewport Compass decoration and local native editor.", "params": []},
+  "compass.inheritedIntensity": {"message": "{value}% (Default)", "context": "Directional tint intensity: whole percentage inherited from theme/native defaults.", "params": ["value"], "referenceParams": []},
   "compass.intensity": {"message": "Tint intensity", "context": "Optional viewport Compass decoration and local native editor.", "params": []},
   "compass.inheritHelp": {"message": "Default follows the theme and light or dark mode. Zero hides the tint.", "context": "Optional viewport Compass decoration and local native editor.", "params": []},
   "compass.resetIntensity": {"message": "Use default intensity", "context": "Optional viewport Compass decoration and local native editor.", "params": []},

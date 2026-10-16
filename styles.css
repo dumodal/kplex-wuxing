@@ -3652,3 +3652,10 @@ button.kplex-sidecar-unfold-plex:focus-visible,
 .kplex-color-strip-cells .kplex-color-swatch { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 16px; border-radius: 0; flex-shrink: 1; }
 .setting-item-control > .kplex-color-strips { margin-inline-end: var(--size-4-2); }
 .kplex-style-row > .kplex-color-strips { margin-inline-start: auto; }
+
+/* Compass retains an explicit draft; only its body scrolls, keeping native Save/Cancel visible. */
+.modal.kplex-compass-modal { display: flex; flex-direction: column; max-height: 90vh; }
+.modal.kplex-compass-modal .modal-content { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.kplex-compass-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.kplex-compass-actions { flex: 0 0 auto; background: var(--modal-background, var(--background-primary)); }
+.kplex-compass-actions .setting-item { border-top: var(--border-width) solid var(--background-modifier-border); padding-bottom: 0; }

@@ -26,8 +26,9 @@ const japaneseTranslations = {
   "colors.sameVariant": "このテーマの色は両モードで同じ値を使用します。",
 
   "compass.title": "背景の方向別の色付け",
-  "compass.help": "Plex の背後に方向の目印を表示します。色は方向を示し、関係の厳密な所属を示すものではありません。",
+  "compass.help": "Plex の背後に方向の目印を表示します。色は方向を示し、関係の厳密な所属を示すものではありません。「保存」を選択すると変更が適用されます。",
   "compass.enabled": "方向別の色付けを表示",
+  "compass.inheritedIntensity": "{value}%（既定）",
   "compass.intensity": "色付けの強さ",
   "compass.inheritHelp": "既定ではテーマとライト・ダークモードに従います。ゼロで色付けを非表示にします。",
   "compass.resetIntensity": "既定の強さを使用",

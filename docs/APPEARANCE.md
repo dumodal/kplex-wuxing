@@ -58,7 +58,9 @@ Open **Visual styling → Colors → Directional background tint**. It is off by
 
 The four sectors meet at the rendered center and cover the viewport while panning, zooming and navigating. They stay independent of empty, filtered or collapsed lists. Siblings keep their own relationship role; wide rows can cross a diagonal. Tint is an orientation cue, not an exact membership boundary or a drop target.
 
-**Tint intensity** accepts 0–15%. **Use default intensity** follows a theme override, then 5% in light mode or 7% in dark mode. An explicit zero hides tint. Source alpha and intensity multiply, leaving text, nodes and controls at their normal opacity. Decorative tint is suppressed in forced-colors mode.
+Save and Cancel remain visible while the directional-tint controls scroll. Turning the toggle on previews the draft; choose **Save** to apply it to the Plex.
+
+**Tint intensity** accepts whole percentages from 0–15%. **Use default intensity** follows a theme override, then 7% in either mode. An explicit zero hides tint. Source alpha and intensity multiply, leaving text, nodes and controls at their normal opacity. Decorative tint is suppressed in forced-colors mode.
 
 For CSS snippets and theme-author tokens, see [Theming K-Plex](THEMING.md).
 

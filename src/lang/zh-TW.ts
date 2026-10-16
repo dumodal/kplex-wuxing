@@ -26,8 +26,9 @@ const traditionalChineseTranslations = {
   "colors.sameVariant": "此主題顏色在兩種模式使用相同值。",
 
   "compass.title": "背景方向色調",
-  "compass.help": "在 Plex 後方顯示方向提示。色調代表方向，不代表關係的精確歸屬。",
+  "compass.help": "在 Plex 後方顯示方向提示。色調代表方向，不代表關係的精確歸屬。選取「儲存」後才會套用變更。",
   "compass.enabled": "顯示方向色調",
+  "compass.inheritedIntensity": "{value}%（預設）",
   "compass.intensity": "色調強度",
   "compass.inheritHelp": "預設值會依佈景主題與淺色或深色模式調整。設為零可隱藏色調。",
   "compass.resetIntensity": "使用預設強度",

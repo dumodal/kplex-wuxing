@@ -4064,13 +4064,18 @@ Frozen runtime `701fd62` passes full Node22.22.2 verification:1,963 tests (7/128
 Concise final findings, user/theme-author guides and reproducible evidence index replace planning-only material. The temporary issue155 marker is removed after verified preservation. A–D archives and the3,953,297-byte/237-entry final supplement are verified and copied to durable local storage, unpublished; SHA437eef0034c44a7e887a705d8eadab7316e6e14ab29fd4c499c1b522293bf9aa. All failed controls remain. No CPU/memory/energy claim, schema/cache/scheduler change or additional optimization. C14 accepted; C15–C26 paused. Keep draft, no merge/release/issue closure. Remaining manual priorities: physical mobile picker/touch/resume; macOS picker/Settings/popout lifecycle; minimum1.13 runtime and community/high-contrast visual acceptance. Style-manager metadata remains deferred.
 
 
-### 2026-10-16 ? PR #158 extension F1: named appearance model
+### 2026-10-16 — PR #158 extension F1: named appearance model
 
 | Extension checkpoint | State and evidence |
 | --- | --- |
-| F1 ? Theme model / source reset | Validated: Node22.22.2 full `npm run verify`,1,969 tests, architecture/core/official lint/installed types/actual production build |
-| F2 ? Compass UX correction | Prepared outside frozen source; native/browser validation pending |
-| F3 ? Theme queue / migration / ownership | Pending |
-| F4 ? Shared managers / locales / final native acceptance | Pending |
+| F1 — Theme model / source reset | Validated: Node22.22.2 full `npm run verify`,1,969 tests, architecture/core/official lint/installed types/actual production build |
+| F2 — Compass UX correction |66 focused tests, official lint/build,20 exact native cases and outer restoration pass |
+| F3 — Theme queue / migration / ownership | Pending |
+| F4 — Shared managers / locales / final native acceptance | Pending |
 
-Portable version1 JSON library captures finite base/semantic records and only stable-ID lens colors. Independent migration choices, immutable factory identity/copy-on-write, metadata operations, reset invariants and future-data rejection have six focused production-owner tests. Helpers remain unconnected to startup/UI; no native feature acceptance is claimed. Successful first-run ExcaliBrain import must produce selected User theme and native-base/factory choices; fresh/no-import starts with factory only. C14 accepted; C15?C26 paused. Full raw log `%TEMP%/kplex-158-themes-foundation-verify-1.log` is local/unpublished. No manual check is needed for this inactive pure foundation; integration/native, physical mobile, macOS and minimum-host/visual acceptance remain pending. The extension report records scope and the maintainer's subsequent Compass UX feedback.
+Portable version1 JSON library captures finite base/semantic records and only stable-ID lens colors. Independent migration choices, immutable factory identity/copy-on-write, metadata operations, reset invariants and future-data rejection have six focused production-owner tests. Helpers remain unconnected to startup/UI; no native feature acceptance is claimed. Successful first-run ExcaliBrain import must produce selected User theme and native-base/factory choices; fresh/no-import starts with factory only. C14 accepted; C15–C26 paused. Full raw log `%TEMP%/kplex-158-themes-foundation-verify-1.log` is local/unpublished. No manual check is needed for this inactive pure foundation; integration/native, physical mobile, macOS and minimum-host/visual acceptance remain pending. The extension report records scope and the maintainer's subsequent Compass UX feedback.
+
+
+### 2026-10-16 — PR #158 extension F2: directional-tint usability
+
+Existing Compass draft keeps its durable Save/Cancel; only the body scrolls and actions remain visible. Editor and Settings overview share the same four directional source chains, including private named pairs and semantic defaults. Whole-percent display/inherited value and eight-locale Save explanation remove ambiguity. Native Light default rises5→7%; explicit percentages/CSS keep precedence. The preview delegates intensity to the production owner. Node22.22.2 focused66, official lint/real types/build and exact native20 pass. A real Settings scroll/parity case extends the existing native lane; the first missing-Plex prerequisite failure is retained, followed by unchanged acceptance after normal command activation. All four initial config files, runtime and workspace restore;106 files, owned notes/controllers absent, test artifacts retained. Pure foundation’s committed prose encoding is repaired without runtime change. Full integrated verification remains pending. C14 accepted; C15–C26 paused. Manual priorities: preferred community-theme Light visibility; macOS picker/modal/popout lifecycle; physical mobile scrolling/touch. The native driver automates the available Windows equivalent; no screenshot is counted as interaction/performance acceptance.

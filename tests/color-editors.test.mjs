@@ -5,7 +5,7 @@ import test from "node:test";
 import {build} from "esbuild";
 import {chromiumHarness} from "./support/browserTypeScript.mjs";
 import {nativeColorControls,initializeColorDom} from "./support/nativeColorControls.mjs";
-const compiled=await build({stdin:{resolveDir:process.cwd(),contents:`export * from './src/ui/ColorSwatchList';export * from './src/core/plex/colorCounterpart';export * from './src/ui/ColorAdoptionModal';export * from './src/adapters/obsidian/colorChanges';export * from './src/adapters/obsidian/themePreview';export * as React from 'react';export {createRoot} from 'react-dom/client';export {flushSync} from 'react-dom';export * from './src/ui/PlexFilter';export * from './src/settings';export * from './src/ui/ColorPaletteModal';export * from './src/ui/ColorPairModal';export * from './src/ui/CompassSettingsModal';export * from './src/core/plex/colorEditing';export {Modal as TestModal} from 'obsidian';export * from './src/ui/ColorLiteralEditor';export * from './src/ui/ColorSourceModal';export * from './src/adapters/obsidian/colorScope';export * from './src/adapters/obsidian/colorSample';export * from './src/adapters/obsidian/colorPresentation';export * from './src/core/plex/colorPreferences';export * from './src/core/contracts/colorValue';export * from './src/lang';`},bundle:true,write:false,format:"iife",globalName:"sourceModules",platform:"browser",plugins:[{name:"native-controls",setup(builder){builder.onResolve({filter:/^obsidian$/},()=>({path:"obsidian",namespace:"native"}));builder.onLoad({filter:/.*/,namespace:"native"},()=>({contents:nativeColorControls}));}}]});
+const compiled=await build({stdin:{resolveDir:process.cwd(),contents:`export * from './src/ui/StyleColorControls';export * from './src/ui/ColorSwatchList';export * from './src/core/plex/colorCounterpart';export * from './src/ui/ColorAdoptionModal';export * from './src/adapters/obsidian/colorChanges';export * from './src/adapters/obsidian/themePreview';export * as React from 'react';export {createRoot} from 'react-dom/client';export {flushSync} from 'react-dom';export * from './src/ui/PlexFilter';export * from './src/settings';export * from './src/ui/ColorPaletteModal';export * from './src/ui/ColorPairModal';export * from './src/ui/CompassSettingsModal';export * from './src/core/plex/colorEditing';export {Modal as TestModal} from 'obsidian';export * from './src/ui/ColorLiteralEditor';export * from './src/ui/ColorSourceModal';export * from './src/adapters/obsidian/colorScope';export * from './src/adapters/obsidian/colorSample';export * from './src/adapters/obsidian/colorPresentation';export * from './src/core/plex/colorPreferences';export * from './src/core/contracts/colorValue';export * from './src/lang';`},bundle:true,write:false,format:"iife",globalName:"sourceModules",platform:"browser",plugins:[{name:"native-controls",setup(builder){builder.onResolve({filter:/^obsidian$/},()=>({path:"obsidian",namespace:"native"}));builder.onLoad({filter:/.*/,namespace:"native"},()=>({contents:nativeColorControls}));}}]});
 /** Run one isolated document and always release its actual browser process/profile. */
 async function scenario(code){const host=await chromiumHarness(compiled.outputFiles[0].text);try{assert.equal(await host.evaluate(initializeColorDom),true);return await host.evaluate(code)}finally{await host.cleanup()}}
 
@@ -335,7 +335,7 @@ test("Compass paired preview resolves theme and named fills with inherited, inva
   if(sourceModules.parseLiteralColor(groups[0].children[0].getAttribute('fill')).red!==255||sourceModules.parseLiteralColor(groups[1].children[0].getAttribute('fill')).green!==255)throw Error('Named variants lost');
   if(Math.abs(sourceModules.parseLiteralColor(groups[0].children[0].getAttribute('fill')).alpha-128/255)>1e-6)throw Error('Source alpha flattened');
   scope.style.setProperty('--kplex-compass-opacity','12px');
-  await waitFor(()=>groups[0].children[0].getAttribute('fill-opacity')==='0.05'&&groups[1].children[0].getAttribute('fill-opacity')==='0.07');
+  await waitFor(()=>groups[0].children[0].getAttribute('fill-opacity')==='0.07'&&groups[1].children[0].getAttribute('fill-opacity')==='0.07');
   prefs.compass.intensity=0;changed();await waitFor(()=>groups.every(g=>g.children[0].getAttribute('fill-opacity')==='0'));
   modal.retire();if(changed||document.querySelector('iframe[sandbox]'))throw Error('Compass preview leaked');return true;
  })()`),true);
@@ -463,5 +463,33 @@ test("one visible color list shares dual-mode harvesting, preserves field order 
   const cells=()=>a.querySelectorAll('[role=img]');if(cells()[0].style.getPropertyValue('--kplex-color-swatch')!=='#12345640'||cells()[2].style.getPropertyValue('--kplex-color-swatch')!=='#abcdef80')throw Error('Wrong named modes');
   preferences.palette[0].light='#334455';changed();await waitFor(()=>cells()[0].style.getPropertyValue('--kplex-color-swatch')==='#334455');if(harvests!==1)throw Error('Palette edit reharvested CSS');
   releaseA();releaseB();if(released!==2||changed||cssChanged||document.querySelector('iframe[sandbox]'))throw Error('Page resource leak');window.createEl=previous;return true;
+ })()`),true);
+});
+
+
+test("Compass settings and source controls share four real directional fallbacks, palette pairs and visible fixed actions", async () => {
+ const css=readFileSync('styles.css','utf8');
+ assert.equal(await scenario(`(async()=>{
+  const {CompassSettingsModal,ColorSwatchList,compassSwatchItem,createTranslator}=sourceModules,t=createTranslator('en');
+  const sheet=new CSSStyleSheet();sheet.replaceSync(${JSON.stringify(css)});document.adoptedStyleSheets=[...document.adoptedStyleSheets,sheet];
+  const context={sourceScope:scope,translate:t,preferences:()=>preferences,nodeStyle:()=>({}),linkStyle:()=>({}),background:()=>undefined};
+  const directions=['north','east','south','west'];
+  const overview=scope.createDiv(),list=new ColorSwatchList(scope,context);list.add(overview,()=>directions.map(d=>compassSwatchItem(d,d,preferences.compass.fills[d])));
+  const open=()=>{const modal=new CompassSettingsModal({},context,async()=>{throw Error('Preview wrote')},()=>{});modal.open();modal.modalEl.addClass('modal');modal.contentEl.addClass('modal-content');modal.modalEl.style.height='420px';return modal};
+  const colors=root=>[...root.querySelectorAll('.kplex-color-swatch')].map(el=>el.style.getPropertyValue('--kplex-color-swatch'));
+  let modal=open();await waitFor(()=>colors(overview).length===8&&colors(overview).every(Boolean)&&modal.contentEl.querySelectorAll('.kplex-style-row .kplex-color-swatch').length===8&&colors(modal.contentEl.querySelector('.kplex-style-row')).every(Boolean));
+  const rows=[...modal.contentEl.querySelectorAll('.kplex-style-row')];
+  const expected=['#aa55ee','#dd8833','#33aa66','#22bbcc'];
+  for(let i=0;i<4;i++){const pair=colors(rows[i]);if(pair.some(value=>sourceModules.parseLiteralColor(value)?.red!==sourceModules.parseLiteralColor(expected[i]).red||sourceModules.parseLiteralColor(value)?.green!==sourceModules.parseLiteralColor(expected[i]).green||sourceModules.parseLiteralColor(value)?.blue!==sourceModules.parseLiteralColor(expected[i]).blue))throw Error('Wrong inherited direction '+directions[i]+' '+pair);}
+  const a=colors(overview),b=rows.flatMap(colors);for(let i=0;i<4;i++)if(a[i]!==b[i*2]||a[i+4]!==b[i*2+1])throw Error('Overview/editor mismatch');
+  const body=modal.contentEl.querySelector('.kplex-compass-body'),actions=modal.contentEl.querySelector('.kplex-compass-actions');
+  if(body.scrollHeight<=body.clientHeight||body.clientHeight<40)throw Error('Scroll body not constrained');
+  const within=()=>{const outer=modal.modalEl.getBoundingClientRect(),footer=actions.getBoundingClientRect();return footer.top>=outer.top&&footer.bottom<=outer.bottom+1&&footer.height>0};
+  if(!within())throw Error('Actions initially below fold');const y=actions.getBoundingClientRect().top;body.scrollTop=body.scrollHeight;await new Promise(r=>requestAnimationFrame(r));
+  if(!within()||Math.abs(actions.getBoundingClientRect().top-y)>1||!body.scrollTop)throw Error('Actions scrolled away');modal.close();
+  preferences.palette.push({id:'paired',name:'Pair',light:'#ff000080',dark:'#0000ff80'});preferences.semantic.origin={kind:'palette',id:'paired'};preferences.compass.intensity=7.000000000000001;
+  modal=open();await waitFor(()=>{const pair=colors(modal.contentEl.querySelector('.kplex-style-row'));return pair.length===2&&sourceModules.parseLiteralColor(pair[0])?.red===255&&sourceModules.parseLiteralColor(pair[1])?.blue===255});
+  await waitFor(()=>modal.contentEl.textContent.includes('7%'));if(modal.contentEl.textContent.includes('7.0000'))throw Error('Intensity float noise');
+  modal.close();list.dispose();if(document.querySelector('iframe[sandbox]'))throw Error('Preview leaked');return true;
  })()`),true);
 });

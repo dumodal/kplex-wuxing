@@ -26,8 +26,9 @@ const germanTranslations = {
   "colors.sameVariant": "Diese Theme-Farbe verwendet in beiden Modi denselben Wert.",
 
   "compass.title": "Richtungsabhängige Hintergrundtönung",
-  "compass.help": "Eine Orientierungshilfe hinter dem Plex anzeigen. Die Tönung zeigt die Richtung, nicht die genaue Beziehungszugehörigkeit.",
+  "compass.help": "Eine Orientierungshilfe hinter dem Plex anzeigen. Die Tönung zeigt die Richtung, nicht die genaue Beziehungszugehörigkeit. Änderungen werden mit Speichern angewendet.",
   "compass.enabled": "Richtungstönung anzeigen",
+  "compass.inheritedIntensity": "{value}% (Standard)",
   "compass.intensity": "Tönungsintensität",
   "compass.inheritHelp": "Standard folgt dem Theme und dem hellen oder dunklen Modus. Null blendet die Tönung aus.",
   "compass.resetIntensity": "Standardintensität verwenden",

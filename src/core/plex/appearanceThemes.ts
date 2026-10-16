@@ -118,7 +118,7 @@ function validAppearance(value: Record<string, unknown>): boolean {
   for (const [id, colors] of Object.entries(semantic.lensColors)) {
     if (!record(colors) || Object.keys(colors).some(/** Lens projection carries no behavior or non-color style. */ key => key !== "node" && key !== "edge")) return false;
     for (const [part, fields] of [["node", NODE_COLOR_FIELDS], ["edge", LINK_COLOR_FIELDS]] as const)
-      if (colors[part] !== undefined && (!record(colors[part]) || Object.keys(colors[part]).some(/** Reject extensions that cannot be represented losslessly. */ key => !fields.some(/** Match only this part?s public color inventory. */ field => field === key)))) return false;
+      if (colors[part] !== undefined && (!record(colors[part]) || Object.keys(colors[part]).some(/** Reject extensions that cannot be represented losslessly. */ key => !fields.some(/** Match only this part’s public color inventory. */ field => field === key)))) return false;
     lenses.push({id, style: colors});
   }
   const source = {...base, ...semantic, graphLenses: lenses};

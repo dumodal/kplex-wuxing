@@ -1,6 +1,7 @@
 /** Detached parent-style color fields; every native child reuses the single source editor. */
-import {ColorSwatchList} from "./ColorSwatchList";
+import {ColorSwatchList, type ColorSwatchItem} from "./ColorSwatchList";
 import {nodeColorFallback, NATIVE_LINK_STROKE, NATIVE_LINK_TEXT, NATIVE_CANVAS_FILL} from "../index/style";
+import {COMPASS_COLOR_VARIABLES, COMPASS_SEMANTIC_SLOTS, SEMANTIC_COLOR_DEFAULTS, type CompassDirection} from "../core/plex/colorPreferences";
 import type {App} from "obsidian";
 import {ColorSourceModal} from "./ColorSourceModal";
 import type {ColorPreviewOptions, ColorPreviewTarget} from "./ColorPreview";
@@ -10,6 +11,13 @@ export type StyleColorContext = Omit<ColorPreviewOptions, "target"> & Readonly<{
   subscribeCss?: (changed: () => void) => () => void;
   subscribeColors?: (changed: () => void) => () => void;
 }>;
+
+/** Both Settings and editors resolve direction token → semantic slot → native hue through the same paired swatch. */
+export function compassSwatchItem(label: string, direction: CompassDirection, value: ColorValue | undefined): ColorSwatchItem {
+  const slot = COMPASS_SEMANTIC_SLOTS[direction];
+  return {label, value: value ?? {kind: "theme", variable: COMPASS_COLOR_VARIABLES[direction]},
+    inherit: {kind: "theme", variable: `--kplex-semantic-${slot}`}, fallback: `var(${SEMANTIC_COLOR_DEFAULTS[slot]}, var(--text-normal))`};
+}
 
 /** Parent owns the draft and lifetime; selecting a source never writes settings by itself. */
 export class StyleColorControls {
@@ -32,7 +40,7 @@ export class StyleColorControls {
     const row = container.createDiv({cls: "kplex-style-row"});
     row.createSpan({text: label});
     const fallback = target.kind === "node" ? nodeColorFallback(target.field, this.context.fallbacks) : target.kind === "link" ? target.field === "textColor" ? NATIVE_LINK_TEXT : NATIVE_LINK_STROKE : NATIVE_CANVAS_FILL;
-    this.swatches.add(row.createDiv(), () => [{label, value: read(), inherit: inherit(), fallback}]);
+    this.swatches.add(row.createDiv(), /** Directional defaults retain their semantic fallback instead of sampling the canvas as all four fills. */ () => target.kind === "compass" ? [compassSwatchItem(label, target.direction ?? "north", read())] : [{label, value: read(), inherit: inherit(), fallback}]);
     const button = row.createEl("button", {attr: {type: "button", "aria-label": label}});
     const refresh = (): void => {const value = read(); button.setText(colorIdentityText(value, this.context.preferences().palette) || this.context.translate(value === undefined ? "colors.inherit" : "colors.unsupportedSource"));};
     this.refreshers.add(refresh); refresh();

@@ -24,7 +24,7 @@ Color tokens accept complete CSS colors, including alpha, rather than RGB/HSL ch
 | `--kplex-link-color`, `--kplex-link-text`, `--kplex-link-label-background` | Native graph-line/muted blend, normal text and primary label surface. |
 | `--kplex-semantic-origin`, `--kplex-semantic-development`, `--kplex-semantic-support`, `--kplex-semantic-challenge` | Purple, green, cyan and orange defaults for the four semantic slots. Saved slot sources override these defaults. |
 | `--kplex-compass-parent-color`, `--kplex-compass-child-color`, `--kplex-compass-friend-color`, `--kplex-compass-challenger-color` | North/south/west/east tint defaults; absent values use the corresponding semantic slot. Saved direction fills override these defaults. |
-| `--kplex-compass-opacity` | Decimal opacity such as `0.08`, or `8%`, bounded to 0–0.15. Invalid/unit-bearing values inherit 0.05 light /0.07 dark. A saved intensity overrides this token, including zero. |
+| `--kplex-compass-opacity` | Decimal opacity such as `0.08`, or `8%`, bounded to 0–0.15. Invalid/unit-bearing values inherit 0.07 in either mode. A saved intensity overrides this token, including zero. |
 
 These are appearance inputs. Font metrics, layout constraints, gate geometry and runtime camera variables retain their existing owners. Theme tokens do not reclassify relationships or replace explicit property/tag/lens precedence.
 

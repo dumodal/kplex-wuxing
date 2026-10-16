@@ -26,8 +26,9 @@ const dutchTranslations = {
   "colors.sameVariant": "Deze themakleur gebruikt in beide modi dezelfde waarde.",
 
   "compass.title": "Richtinggebonden achtergrondtint",
-  "compass.help": "Toon een oriëntatiehulp achter de Plex. De tint geeft richting aan, geen exacte indeling van relaties.",
+  "compass.help": "Toon een oriëntatiehulp achter de Plex. De tint geeft richting aan, geen exacte indeling van relaties. Selecteer Opslaan om de wijzigingen toe te passen.",
   "compass.enabled": "Richtingstint tonen",
+  "compass.inheritedIntensity": "{value}% (Standaard)",
   "compass.intensity": "Tintsterkte",
   "compass.inheritHelp": "Standaard volgt het thema en de lichte of donkere modus. Nul verbergt de tint.",
   "compass.resetIntensity": "Standaardsterkte gebruiken",

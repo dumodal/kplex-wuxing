@@ -28,10 +28,10 @@ import { subscribeAppearanceSources } from "./adapters/obsidian/colorChanges";
 import { StyleEditorModal, appendIcon, type StyleCommitResult } from "./ui/StyleEditorModal";
 import { NATIVE_NODE_PAINT, NATIVE_LINK_STROKE, NATIVE_LINK_TEXT, NATIVE_CANVAS_FILL, nodeColorFallback, nodePaintFallbacks } from "./index/style";
 import { ColorAdoptionModal } from "./ui/ColorAdoptionModal";
-import { StyleColorControls, type StyleColorContext } from "./ui/StyleColorControls";
+import { StyleColorControls, compassSwatchItem, type StyleColorContext } from "./ui/StyleColorControls";
 import { ColorPaletteModal } from "./ui/ColorPaletteModal";
 import { standardColorSlots, adoptStandardThemeColors, withoutStyleColorOverrides, mergeStyleDraft, requireNamedColor, STANDARD_NODE_COLOR_STYLES, STANDARD_LINK_COLOR_STYLES } from "./core/plex/colorEditing";
-import {COMPASS_DIRECTIONS, COMPASS_COLOR_VARIABLES, COMPASS_SEMANTIC_SLOTS, SEMANTIC_COLOR_DEFAULTS} from "./core/plex/colorPreferences";
+import {COMPASS_DIRECTIONS, SEMANTIC_COLOR_DEFAULTS} from "./core/plex/colorPreferences";
 import { ColorSourceModal } from "./ui/ColorSourceModal";
 import {
   AbstractInputSuggest,
@@ -2369,8 +2369,7 @@ export class KplexSettingTab extends PluginSettingTab {
             ))}]},
             {type: "group", items: [
               this.colorAction(translate("settings.ui.plex.background"), () => [{label: translate("settings.ui.plex.background"), value: this.kplexPlugin.settings.backgroundColor, fallback: NATIVE_CANVAS_FILL}], () => this.openCanvasColorEditor()),
-              this.colorAction(translate("compass.title"), () => COMPASS_DIRECTIONS.map(direction => ({label: translate(`compass.${direction}`), value: this.kplexPlugin.settings.colorPreferences.compass.fills[direction] ?? {kind: "theme", variable: COMPASS_COLOR_VARIABLES[direction]},
-                inherit: {kind: "theme", variable: `--kplex-semantic-${COMPASS_SEMANTIC_SLOTS[direction]}`}, fallback: `var(${SEMANTIC_COLOR_DEFAULTS[COMPASS_SEMANTIC_SLOTS[direction]]}, var(--text-normal))`})), () => {void this.openCompassSettings();}),
+              this.colorAction(translate("compass.title"), () => COMPASS_DIRECTIONS.map(/** Reuse the exact directional source chain shown inside its editor. */ direction => compassSwatchItem(translate(`compass.${direction}`), direction, this.kplexPlugin.settings.colorPreferences.compass.fills[direction])), () => {void this.openCompassSettings();}),
               {name: translate("colors.namedColors"), action: () => this.openColorPalette()},
               {name: translate("colors.adopt"), desc: translate("colors.adoptHelp"), action: () => this.openColorAdoption()},
             ]},

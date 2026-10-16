@@ -26,8 +26,9 @@ const spanishTranslations = {
   "colors.sameVariant": "Este color del tema usa el mismo valor en ambos modos.",
 
   "compass.title": "Tinte direccional del fondo",
-  "compass.help": "Mostrar una guía de orientación detrás del Plex. El tinte indica la dirección, no la pertenencia exacta a una relación.",
+  "compass.help": "Mostrar una guía de orientación detrás del Plex. El tinte indica la dirección, no la pertenencia exacta a una relación. Selecciona Guardar para aplicar los cambios.",
   "compass.enabled": "Mostrar tinte direccional",
+  "compass.inheritedIntensity": "{value}% (Predeterminado)",
   "compass.intensity": "Intensidad del tinte",
   "compass.inheritHelp": "El valor predeterminado sigue el tema y el modo claro u oscuro. Cero oculta el tinte.",
   "compass.resetIntensity": "Usar intensidad predeterminada",

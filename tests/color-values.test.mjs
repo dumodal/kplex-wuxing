@@ -37,7 +37,7 @@ test("palette schemas and unrepresentable data persist read-only rather than los
   const loaded=m.migrateColorPreferences(JSON.parse(JSON.stringify(p)));
   assert.deepEqual(loaded.preferences,p);assert.equal(loaded.future,undefined);
   assert.equal(m.compassIntensity(loaded.preferences,"light"),0);assert.equal(m.compassIntensity(loaded.preferences,"dark"),0);
-  const defaults=m.defaultColorPreferences();assert.equal(m.compassIntensity(defaults,"light"),.05);assert.equal(m.compassIntensity(defaults,"dark"),.07);assert.equal(defaults.compass.enabled,false);
+  const defaults=m.defaultColorPreferences();assert.equal(m.compassIntensity(defaults,"light"),.07);assert.equal(m.compassIntensity(defaults,"dark"),.07);assert.equal(defaults.compass.enabled,false);
   for(const raw of [{version:2,palette:[{newData:true}]},{...p,palette:[{...p.palette[0],dark:"future-color-function()"}]},{...p,palette:[...p.palette,...p.palette]}]){
     const result=m.migrateColorPreferences(raw);assert.equal(result.future,raw);assert.deepEqual(result.preferences,m.defaultColorPreferences());
   }

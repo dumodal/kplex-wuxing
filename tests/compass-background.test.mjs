@@ -23,7 +23,7 @@ test('cardinal meanings remain fixed and invalid or missing centers paint no sec
  for(const [w,h,p]of [[0,10,{x:1,y:1}],[-1,10,{x:1,y:1}],[10,Infinity,{x:1,y:1}],[10,10,{x:NaN,y:1}],[10,10,null]])assert(Object.values(compassPolygons(w,h,p)).every(points=>points.length===0));
 });
 test('opacity inherits mode or finite CSS, preserves explicit zero and rejects nonnumeric units',()=>{
- const p=defaultColorPreferences();assert.equal(compassIntensity(p,'light'),.05);assert.equal(compassIntensity(p,'dark'),.07);
+ const p=defaultColorPreferences();assert.equal(compassIntensity(p,'light'),.07);assert.equal(compassIntensity(p,'dark'),.07);
  for(const [raw,value]of [['.08',.08],['8%',.08],['0',0],['100%',.15],['1',.15]])assert.equal(compassCssIntensity(raw),value);
  for(const raw of ['','12px','calc(.05 + .02)','NaN','Infinity','8% trailing'])assert.equal(compassCssIntensity(raw),undefined);
  assert.equal(compassIntensity(p,'dark','12px'),.07);assert.equal(compassIntensity(p,'light','8%'),.08);

@@ -8,7 +8,7 @@
 import {sampledColorValue} from "../adapters/obsidian/sampledColorValue";
 import { NODE_COLOR_FIELDS, LINK_COLOR_FIELDS, isThemeColorName, parseLiteralColor, formatLiteralColor, type ColorValue } from "../core/contracts/colorValue";
 import {compassPolygons} from "../core/plex/compassBackground";
-import {COMPASS_DIRECTIONS, COMPASS_COLOR_VARIABLES, COMPASS_SEMANTIC_SLOTS, type CompassDirection} from "../core/plex/colorPreferences";
+import {compassIntensity, COMPASS_DIRECTIONS, COMPASS_COLOR_VARIABLES, COMPASS_SEMANTIC_SLOTS, type CompassDirection} from "../core/plex/colorPreferences";
 import { SEMANTIC_COLOR_DEFAULTS, type ColorPreferencesV1, type SemanticColorPair } from "../core/plex/colorPreferences";
 import { colorContrastRatio, compositeColor } from "../core/plex/colorContrast";
 import { ThemePreviewSampler, THEME_PREVIEW_TOKENS, THEME_PREVIEW_CONTEXT_LIMIT, type ThemePreviewPair } from "../adapters/obsidian/themePreview";
@@ -190,7 +190,7 @@ export class ColorPreview {
       if (target.kind === "compass") {
         compassSurfaces.length = 0;
         const preferences = this.options.preferences(this.value);
-        const opacity = preferences.compass.enabled ? preferences.compass.intensity === undefined ? samples.compassOpacity ?? (mode === "light" ? .05 : .07) : preferences.compass.intensity / 100 : 0;
+        const opacity = preferences.compass.enabled ? compassIntensity(preferences, mode, samples.compassOpacity === undefined ? undefined : String(samples.compassOpacity)) : 0;
         for (let index = 0; index < COMPASS_DIRECTIONS.length; index++) {
           const direction = COMPASS_DIRECTIONS[index], slot = COMPASS_SEMANTIC_SLOTS[direction];
           const lower = this.resolve({kind: "theme", variable: `--kplex-semantic-${slot}`}, mode, samples.colors[SEMANTIC_COLOR_DEFAULTS[slot]] || "transparent");

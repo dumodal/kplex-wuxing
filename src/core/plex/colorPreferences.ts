@@ -8,6 +8,8 @@ import { sanitizeColorValue, isPaletteColorId, parseLiteralColor, type ColorValu
 export const SEMANTIC_COLOR_SLOTS = ["origin", "development", "support", "challenge"] as const;
 export type SemanticColorSlot = typeof SEMANTIC_COLOR_SLOTS[number];
 export const COMPASS_DIRECTIONS = ["north", "east", "south", "west"] as const;
+/** Slightly stronger native Light cue; explicit percentages and theme CSS retain precedence. */
+const NATIVE_COMPASS_INTENSITY = {light: 0.07, dark: 0.07} as const;
 export type CompassDirection = typeof COMPASS_DIRECTIONS[number];
 export type SemanticColorPair = { id: string; name: string; light: string; dark: string };
 export type ColorPreferencesV1 = {
@@ -119,5 +121,5 @@ export function compassCssIntensity(raw: string): number | undefined {
 
 /** Resolve explicit percentage, finite CSS opacity, then the native mode default; retain explicit zero. */
 export function compassIntensity(preferences: ColorPreferencesV1, mode: "light" | "dark", cssOpacity?: string): number {
-  return preferences.compass.intensity === undefined ? compassCssIntensity(cssOpacity ?? "") ?? (mode === "light" ? 0.05 : 0.07) : preferences.compass.intensity / 100;
+  return preferences.compass.intensity === undefined ? compassCssIntensity(cssOpacity ?? "") ?? NATIVE_COMPASS_INTENSITY[mode] : preferences.compass.intensity / 100;
 }

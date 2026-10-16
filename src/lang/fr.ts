@@ -26,8 +26,9 @@ const frenchTranslations = {
   "colors.sameVariant": "Cette couleur de thème utilise la même valeur dans les deux modes.",
 
   "compass.title": "Teinte directionnelle du fond",
-  "compass.help": "Afficher un repère derrière le Plex. La teinte indique une direction, pas une appartenance exacte aux relations.",
+  "compass.help": "Afficher un repère derrière le Plex. La teinte indique une direction, pas une appartenance exacte aux relations. Sélectionnez Enregistrer pour appliquer les modifications.",
   "compass.enabled": "Afficher la teinte directionnelle",
+  "compass.inheritedIntensity": "{value} % (Par défaut)",
   "compass.intensity": "Intensité de la teinte",
   "compass.inheritHelp": "Par défaut, suivre le thème et le mode clair ou sombre. Zéro masque la teinte.",
   "compass.resetIntensity": "Utiliser l’intensité par défaut",
