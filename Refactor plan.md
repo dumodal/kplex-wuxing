@@ -4411,3 +4411,20 @@ Temporary planning marker removed. #172 stays draft with Closes #161; no merge/m
 closure/release/personal-vault access. C14 structural pause remains. Windows #161 four variants/
 16fullcycles/four explicit edits pass; highest remaining acceptance priorities are Linux/macOS
 actual Create EX and interruption, popout/reveal lifetimes, and physical mobile suspend/resume.
+
+
+### 2026-10-17: #173 prerequisite ? declined native animation acquisition
+
+A native folding/migration trial exposed a null Web Animation return followed by a secondary
+cancel failure from the retained null owner. ElementMotion now retires the old animation/pose
+before replacement and admits only a successfully acquired animation. Callers already ignore
+the return; no timing, transforms, graph semantics or source policy change. Three actual-source
+regressions cover null acquisition, null replacement followed by a valid successor, and unchanged
+valid completion ownership; existing Chromium interpolation/replacement checks remain green.
+
+Node 22.22.2 full verification, installed typings, official scanner, production build and strict
+Small-vault native staging pass. The complete folding feature remains under independent native
+acceptance on the existing #173 draft branch. The null return's underlying host cause is not proven;
+this checkpoint fixes retention and teardown only. C14 structural refactoring remains paused.
+Highest remaining workflow risks are interrupted layout motion and cross-window teardown;
+Windows native migration is exercised, while physical macOS/mobile motion needs separate coverage.
