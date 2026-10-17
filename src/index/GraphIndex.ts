@@ -81,7 +81,7 @@ import { canonicalWebUrl } from "../adapters/obsidian/urlIdentity";
 import { remapGraphEndpoint } from "./remapGraphEndpoint";
 import { isRemoteNodeImageSource } from "../core/plex/nodeImagePolicy";
 import { yieldToHostTask } from "../adapters/obsidian/yieldToHostTask";
-import { ForegroundWorkScheduler, INDEX_WORK_PRIORITY, type IndexWorkPriority } from "./ForegroundWorkScheduler";
+import { ForegroundWorkScheduler, INDEX_WORK_PRIORITY, type IndexWorkPriority, type IndexingThrottle } from "./ForegroundWorkScheduler";
 import { HostMetadataPreview } from "./HostMetadataPreview";
 import { ObsidianSourceAcquisition } from "../adapters/obsidian/sourceAcquisition";
 import { graphCompilerSettingsFromLegacy, graphNodeViewFromLegacy } from "../adapters/obsidian/graphContracts";
@@ -112,6 +112,7 @@ import { MAX_CACHED_SCOPE_RETAINED_BYTES } from "./CachedSourceSemantics";
 import { KplexIndexedDbCache, URL_ALIAS_FACET_VERSION, sanitizeIndexDiagnostics, type IndexedDbSnapshotMeta, type IndexDiagnosticEntry,
   type SnapshotWriteFailureReason, type SnapshotReadOperation, type SnapshotReadFailureReason } from "./IndexedDbCache";
 import { createGraphState, getGraphPage, type GraphState } from "./GraphState";
+import { ACTIVITY_CURRENT_COLUMNS, type ActivityKind, type ActivityOutcome, type ActivityReason } from "../application/IndexingActivity";
 import type { EvidenceRole, EvidenceSourceKind, RelationEvidence } from "./RelationEvidence";
 import { MetadataParser } from "./MetadataParser";
 import {
@@ -596,6 +597,9 @@ export class GraphIndex {
   private resumableCheckpointPaths: Set<string> | null = null;
   private snapshotHydrationTask: Promise<{ restored: boolean; fresh: boolean; createdAt: number | null }> | null = null;
   private snapshotHydrationRun = 0;
+  /** One scalar diagnostic token follows the exact existing hydration run, never source authority. */
+  private snapshotHydrationActivityToken = 0;
+  private snapshotHydrationActivityRun = 0;
   private cancelSnapshotHydration: (() => void) | null = null;
   /** One restore-owned observer; the existing source scheduler owns all transient retries. */
   private startupSourceAuthorityWaiter: { check: () => void; cancel: () => void } | null = null;
@@ -1095,6 +1099,36 @@ export class GraphIndex {
   /** Inspect aggregate scheduling activity; request identities and vault content are never retained. */
   getWorkPriorityDiagnostics() { return this.workScheduler.diagnostics(); }
 
+  /** Copy only O(1) retained health facts for an explicit report. No scope/file iteration, status
+   * computation, authority check, queue drainage, scheduling or storage acquisition occurs here. */
+  getIndexingActivityFacts(): Readonly<{mode: "eager" | "on-demand"; urls: "background"; pacing: IndexingThrottle | null; current: readonly (number | null)[]}> {
+    const source = this.sourceAcquisition.getActivityState(), counters = this.sourceAcquisition.getActivityCounters();
+    const cache = this.indexedDb.getActivityState(), scheduler = this.workScheduler.diagnostics(), urls = this.getUrlIndexProgress();
+    const semantic = this.semanticPreparationDiagnostics;
+    const current: Readonly<Record<typeof ACTIVITY_CURRENT_COLUMNS[number], number | null>> = {
+      pendingKnown: source.pendingKnown, knownImpactTasks: source.knownImpactTasks, sourceActive: source.sourceActive,
+      hydrationActive: Number(this.snapshotHydrationTask !== null), semanticActive: this.semanticPreparationTasks.size,
+      buildBlocked: this.onDemandBuildWaiters.size, repoWrites: source.repoWrites, cacheWrites: cache.queuedBodies,
+      schedulerMutation: scheduler.active[INDEX_WORK_PRIORITY.mutation] ?? null, schedulerCurrent: scheduler.active[INDEX_WORK_PRIORITY.currentNode] ?? null,
+      schedulerVisible: scheduler.active[INDEX_WORK_PRIORITY.visibleNeighborhood] ?? null, schedulerUrl: scheduler.active[INDEX_WORK_PRIORITY.urlInventory] ?? null, schedulerBackground: scheduler.active[INDEX_WORK_PRIORITY.background] ?? null,
+      schedulerWaiting: scheduler.waiting,
+      checked: counters.checked, reusedBodies: counters.reusedBodies, legacyBodies: counters.legacyBodies, vaultReads: counters.vaultReads,
+      parses: counters.parses, repaired: counters.repaired, resolutionRefreshes: counters.resolutionRefreshes,
+      pendingMetadata: counters.pendingMetadata, failures: counters.failures,
+      sourceInventoryPasses: null, fullBuildStarts: null, nodeCatalogStarts: null, completeSnapshotSaves: null, checkpointSaves: null,
+      demandedCenters: this.semanticDemandCounts.size, scopeTasks: this.semanticPreparationTasks.size,
+      onDemandTasks: this.onDemandTasks.size, gateTasks: this.onDemandGateTasks.size,
+      handoverStarts: this.localHandoverStarts, handoverCompletions: this.localHandoverCompletions, handoverFailures: this.localHandoverFailures,
+      semanticRequested: semantic.requested, semanticPrepared: semantic.prepared, semanticPublished: semantic.published,
+      semanticCancelled: semantic.cancelled, semanticPendingObservations: semantic.pending,
+      fullBuildAdmissions: semantic.fullBuilds,
+      urlActive: Number(urls.active), urlProcessed: urls.processed, urlTotal: urls.total,
+      repoDeleteTask: source.repoDeleteTask, cacheWriterActive: Number(cache.writerActive),
+    };
+    return {mode: this.isOnDemandMode() ? "on-demand" : "eager", urls: "background", pacing: scheduler.throttle,
+      current: ACTIVITY_CURRENT_COLUMNS.map(/** Copy only the fixed dictionary, never dynamic source keys. */ name => current[name])};
+  }
+
   /** Prime physical Find immediately after layout-ready, without opening durable storage or parsing bodies. */
   async primePhysicalSearchCatalog(): Promise<void> {
     await this.preparePhysicalSearchCatalog(new Map(this.app.vault.getFiles().map(file => [file.path, file])),
@@ -1500,9 +1534,16 @@ export class GraphIndex {
           await this.workScheduler.checkpoint(INDEX_WORK_PRIORITY.background);
           refreshPolicy();
         });
-      const next = await builder.buildSourceNodeCatalog(
-        /** Real completed node work advances the existing restore inactivity watchdog. */
-        () => { if (current()) this.touchSnapshotHydrationProgress(run); });
+      const activity = this.beginIndexActivity("node-catalog", "startup-offline");
+      let catalogOutcome: ActivityOutcome = "incomplete";
+      let next: GraphState | null;
+      try {
+        next = await builder.buildSourceNodeCatalog(
+          /** Real completed node work advances the existing restore inactivity watchdog. */
+          () => { if (current()) this.touchSnapshotHydrationProgress(run); });
+        catalogOutcome = !current() ? "cancelled" : next ? "complete" : "incomplete";
+      } catch (error) { catalogOutcome = "failed"; throw error; }
+      finally { this.endIndexActivity(activity, catalogOutcome); }
       if (!next || !refreshPolicy() || !current()) return false;
       const prepared = await this.preparePresentationPublication(next, current, undefined, true, true, true);
       if (!prepared || !current() || !prepared.facets.isCurrent()) return false;
@@ -1589,7 +1630,14 @@ export class GraphIndex {
           this.indexedDb, current, new Map(), this.sourceAcquisition, async () => {
             await this.workScheduler.checkpoint(INDEX_WORK_PRIORITY.background); refreshPolicy();
           });
-        const nodes = await builder.buildSourceNodeCatalog(onProgress);
+        const activity = this.beginIndexActivity("node-catalog", "unknown");
+        let catalogOutcome: ActivityOutcome = "incomplete";
+        let nodes: GraphState | null;
+        try {
+          nodes = await builder.buildSourceNodeCatalog(onProgress);
+          catalogOutcome = !current() ? "cancelled" : nodes ? "complete" : "incomplete";
+        } catch (error) { catalogOutcome = "failed"; throw error; }
+        finally { this.endIndexActivity(activity, catalogOutcome); }
         if (!nodes || !refreshPolicy() || !current()) {
           if (current()) this.urlAliasUpgradeFailure = { token, reason: "url-alias-vocabulary-unavailable" };
           return null;
@@ -4810,9 +4858,25 @@ export class GraphIndex {
     return Promise.race([preview, task]);
   }
 
+  /** Observe one actual global index pass using only existing trusted numeric counter records. */
+  private beginIndexActivity(kind: ActivityKind, reason: ActivityReason): number {
+    try { return this.plugin.startupDiagnostics?.beginActivity?.(kind, "global", reason, this.sourceAcquisition?.getActivityCounters?.()) ?? 0; }
+    catch { return 0; }
+  }
+
+  /** A missing/throwing optional observer cannot alter publication, cancellation or native errors. */
+  private endIndexActivity(token: number, outcome: ActivityOutcome): void {
+    if (!token) return;
+    try { this.plugin.startupDiagnostics?.endActivity?.(token, outcome, this.sourceAcquisition?.getActivityCounters?.()); }
+    catch { /* Preserve the actual index work owner's outcome. */ }
+  }
+
   /** Start watchdog facts and the optional passive timing lane for this exact restore lifetime. */
   private beginSnapshotHydrationDiagnostics(run: number): void {
     const now = Date.now();
+    this.endIndexActivity(this.snapshotHydrationActivityToken, "superseded");
+    this.snapshotHydrationActivityToken = this.beginIndexActivity("hydration", "startup-offline");
+    this.snapshotHydrationActivityRun = run;
     this.plugin.startupDiagnostics?.phase("hydration", "metadata");
     this.snapshotHydrationDiagnostics = {
       run, phase: "metadata", lastActivePhase: "metadata", startedAt: now, phaseStartedAt: now, lastProgressAt: now,
@@ -4884,6 +4948,9 @@ export class GraphIndex {
     // Preserve the actual last work timestamp and phase for diagnosing stalls. Terminal outcomes
     // are immutable: a late callback/rejection from abandoned work cannot rewrite them.
     this.snapshotHydrationDiagnostics.outcome = outcome;
+    this.endIndexActivity(this.snapshotHydrationActivityToken,
+      outcome === "complete" ? "complete" : outcome === "cancelled" ? "cancelled" : "failed");
+    this.snapshotHydrationActivityToken = 0;
   }
 
   /** Export independent aggregate copies; callers cannot rewrite the first failure after capture. */
@@ -4979,6 +5046,17 @@ export class GraphIndex {
     return Promise.race([task, stalled]).finally(() => {
       if (timer !== null) window.clearTimeout(timer);
       if (this.cancelSnapshotHydration === cancel) this.cancelSnapshotHydration = null;
+      // Retire an abandoned observer only for its own settled task. Existing watchdog/product
+      // diagnostics remain untouched; a newer run must keep its current phase and token.
+      if (this.snapshotHydrationActivityRun === run) {
+        this.endIndexActivity(this.snapshotHydrationActivityToken,
+          run !== this.snapshotHydrationRun || this.diagnosticsClosed ? "cancelled" : "incomplete");
+        this.snapshotHydrationActivityToken = 0;
+        if (this.snapshotHydrationDiagnostics.outcome === "running") {
+          try { this.plugin.startupDiagnostics?.stopActivityPhase?.("hydration"); }
+          catch { /* Retiring an orphan observation cannot change the settled native task. */ }
+        }
+      }
     });
   }
 
@@ -5639,6 +5717,8 @@ export class GraphIndex {
     // file zero. GraphBuilder still fences each source by its exact TFile/stat revision; a source
     // changed during its own read cancels safely, while unrelated events leave committed work intact.
     const isCurrent = (): boolean => run === this.generation && !this.diagnosticsClosed;
+    const activity = this.beginIndexActivity("full-build", "unknown");
+    let activityOutcome: ActivityOutcome = "incomplete";
     let workPriority: IndexWorkPriority = INDEX_WORK_PRIORITY.background;
     let releaseWork = this.workScheduler.begin(workPriority);
     /** Completed progressive phases relinquish their lane before the next lane is retained. */
@@ -5840,8 +5920,11 @@ export class GraphIndex {
       this.relationViewCache = new WeakMap<GraphPage, CachedRelationView>();
       this.emit();
       this.scheduleSnapshotPersist();
+      activityOutcome = "complete";
       return true;
+    } catch (error) { activityOutcome = "failed"; throw error;
     } finally {
+      this.endIndexActivity(activity, activityOutcome === "incomplete" && !isCurrent() ? "cancelled" : activityOutcome);
       releaseWork();
       this.building = false;
       this.rebuildQueued = false;
@@ -5871,6 +5954,8 @@ export class GraphIndex {
       const physicalFoldersRevision = this.hostStructuralRevision;
       const current = (): boolean => run === this.generation && !this.diagnosticsClosed;
       const resumeInventory = this.sourceAcquisition.pauseInventory();
+      const activity = this.beginIndexActivity("full-build", "unknown");
+      let activityOutcome: ActivityOutcome = "incomplete";
       try {
         const nextFingerprints = new Map<string, string>();
         this.sourceAcquisition.start();
@@ -5932,8 +6017,11 @@ export class GraphIndex {
         this.installSearchIndex(preparedSearch);
         this.emit();
         this.scheduleSnapshotPersist();
+        activityOutcome = "complete";
         return true;
+      } catch (error) { activityOutcome = "failed"; throw error;
       } finally {
+        this.endIndexActivity(activity, activityOutcome === "incomplete" && !current() ? "cancelled" : activityOutcome);
         this.sourceAcquisition.resumeInventory(resumeInventory);
         this.building = false;
         this.rebuildQueued = false;

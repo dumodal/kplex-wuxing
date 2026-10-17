@@ -1,12 +1,26 @@
 /** Fixed-capacity session diagnostics: long use, pure copies, privacy and truthful work intervals. */
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import ts from 'typescript';
+import {readFileSync} from 'node:fs';
 import {browserBundle} from './support/browserTypeScript.mjs';
-const bundle=await browserBundle(['src/application/IndexingActivity.ts']);
+const bundle=await browserBundle(['src/application/IndexingActivity.ts','src/index/ForegroundWorkScheduler.ts']);
 const host={};new Function('window',bundle)(host);
 const {IndexingActivity,projectIndexingActivity,ACTIVITY_KINDS,ACTIVITY_REASONS,ACTIVITY_MILESTONES,
   ACTIVITY_SOURCE_COLUMNS,ACTIVITY_SESSION_COLUMNS,ACTIVITY_CURRENT_COLUMNS,INDEXING_ACTIVITY_BYTE_LIMIT,INDEXING_ACTIVITY_CELL_CAPACITY,INDEXING_ACTIVITY_CAPTURE_ADMISSION_LIMIT}=host.sourceModules;
 const HOUR=3600000,MAX=4294967295;
+const {INDEX_WORK_PRIORITY}=host.sourceModules;
+
+/** Execute only an actual passive getter, excluding native module initialization and storage. */
+function passiveMethod(path,name,dependencies={}){
+  const source=ts.createSourceFile(path,readFileSync(new URL('../'+path,import.meta.url),'utf8'),ts.ScriptTarget.Latest,true);let declaration;
+  function visit(node){if(ts.isMethodDeclaration(node)&&node.name.getText(source)===name)declaration=node;ts.forEachChild(node,visit)}visit(source);assert(declaration,name);
+  const text=declaration.getText(source),compiled=ts.transpileModule('const getter=function '+name+text.slice(text.indexOf('('))+';', {compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.None}}).outputText;
+  return new Function(...Object.keys(dependencies),compiled+'return getter;')(...Object.values(dependencies));
+}
+/** Native collection sizes stay readable while any attempted iteration fails the purity test. */
+function opaqueCollection(size,set=false){const collection=set?new Set():new Map();for(let index=0;index<size;index++)set?collection.add('private-'+index):collection.set('private-'+index,{});
+  for(const name of ['values','keys','entries',Symbol.iterator])Object.defineProperty(collection,name,{value:assert.fail});return collection;}
 
 /** Supply actual retained owner-counter shapes; no path or source object enters the recorder. */
 function fixture(){let now=0,clockReads=0;const d=new IndexingActivity(()=>{clockReads++;return now});
@@ -92,6 +106,43 @@ test('capture admission remains eight weak keys even when consumers retain a tho
   assert.equal(projectIndexingActivity(latest),latest,'Both immediate export paths can admit the same latest capture repeatedly');assert.equal(projectIndexingActivity(latest),latest);
   let traps=0;const hostile=new Proxy({},{get(){traps++;throw Error('private')},getOwnPropertyDescriptor(){traps++;throw Error('private')},ownKeys(){traps++;throw Error('private')}});
   const revoked=Proxy.revocable({},{});revoked.revoke();assert.equal(projectIndexingActivity(hostile),null);assert.equal(projectIndexingActivity(revoked.proxy),null);assert.equal(traps,0);
+});
+
+test('actual persistence/source health getters use retained sizes and flags without storage or iteration',()=>{
+  const repository={lanes:opaqueCollection(2),deleteTask:{},open:assert.fail,transaction:assert.fail};
+  const repositoryRead=passiveMethod('src/index/SourceRepository.ts','getActivityState');assert.deepEqual(repositoryRead.call(repository),{writes:2,deleteTask:true});
+  const cache={queuedBodyWrites:opaqueCollection(3),bodyWriteInFlight:true,open:assert.fail,flushQueuedBodyWrites:assert.fail};
+  assert.deepEqual(passiveMethod('src/index/IndexedDbCache.ts','getActivityState').call(cache),{queuedBodies:3,writerActive:true});
+  const counters=Object.fromEntries(ACTIVITY_SOURCE_COLUMNS.map((key,index)=>[key,index]));
+  const source={counters,pendingKnownFiles:opaqueCollection(4,true),knownImpactTasks:5,inventory:{},repository:{getActivityState:()=>repositoryRead.call(repository)},requestInventory:assert.fail,reconcile:assert.fail};
+  const counterRead=passiveMethod('src/adapters/obsidian/sourceAcquisition.ts','getActivityCounters'),stateRead=passiveMethod('src/adapters/obsidian/sourceAcquisition.ts','getActivityState');
+  assert.equal(counterRead.call(source),counters);assert.equal(counterRead.call(source),counters,'Trusted boundary port allocates no counter copy');
+  assert.deepEqual(stateRead.call(source),{pendingKnown:4,knownImpactTasks:5,sourceActive:1,repoWrites:2,repoDeleteTask:1});
+  source.inventory=null;repository.deleteTask=null;cache.bodyWriteInFlight=false;
+  assert.equal(stateRead.call(source).sourceActive,0);assert.equal(stateRead.call(source).repoDeleteTask,0);assert.equal(passiveMethod('src/index/IndexedDbCache.ts','getActivityState').call(cache).writerActive,false);
+});
+
+test('actual index activity facts stay O(1), dictionary-ordered and independent of pending preferences/status',()=>{
+  const counters=Object.fromEntries(ACTIVITY_SOURCE_COLUMNS.map((key,index)=>[key,index]));let schedulerReads=0;
+  const owner={sourceAcquisition:{getActivityState:()=>({pendingKnown:4,knownImpactTasks:5,sourceActive:1,repoWrites:2,repoDeleteTask:1}),getActivityCounters:()=>counters},
+    indexedDb:{getActivityState:()=>({queuedBodies:3,writerActive:true})},workScheduler:{diagnostics:()=>{schedulerReads++;return{active:[1,2,3,4,5],waiting:6,throttle:'balanced'}}},
+    indexingMode:'eager',snapshotHydrationTask:{},semanticPreparationTasks:opaqueCollection(2),onDemandBuildWaiters:opaqueCollection(1),semanticDemandCounts:opaqueCollection(3),onDemandTasks:opaqueCollection(4),onDemandGateTasks:opaqueCollection(5),
+    semanticPreparationDiagnostics:{requested:10,prepared:8,published:7,cancelled:2,pending:11,fullBuilds:12},localHandoverStarts:3,localHandoverCompletions:2,localHandoverFailures:1,
+    urlDiscoveryRunning:true,urlOwnerTasks:opaqueCollection(0),urlPendingPublications:0,urlDiscoveryProcessed:23,urlDiscoveryTotal:88,urlDiscoveryComplete:false,urlOwnerFailures:opaqueCollection(0,true),urlRestoredOwners:0,urlReadOwners:0,urlCheckedOwners:0,urlCacheAvailable:true,urlCacheWritesFailed:0,
+    hasPendingSemanticPreparation:assert.fail,getVisiblePresentationDiagnostics:assert.fail,prepareSearchIndex:assert.fail};
+  for(const property of ['app','plugin','state'])Object.defineProperty(owner,property,{get:assert.fail});
+  owner.isOnDemandMode=passiveMethod('src/index/GraphIndex.ts','isOnDemandMode');owner.getUrlIndexProgress=passiveMethod('src/index/GraphIndex.ts','getUrlIndexProgress');
+  const read=passiveMethod('src/index/GraphIndex.ts','getIndexingActivityFacts',{ACTIVITY_CURRENT_COLUMNS,INDEX_WORK_PRIORITY});
+  const first=read.call(owner),second=read.call(owner),fields=Object.fromEntries(ACTIVITY_CURRENT_COLUMNS.map((name,index)=>[name,first.current[index]]));
+  assert.deepEqual(first,second);assert.equal(schedulerReads,2);assert.equal(first.mode,'eager');assert.equal(first.urls,'background');assert.equal(first.pacing,'balanced');
+  assert.equal(first.current.length,ACTIVITY_CURRENT_COLUMNS.length);assert.equal(new Set(ACTIVITY_CURRENT_COLUMNS).size,ACTIVITY_CURRENT_COLUMNS.length);
+  assert.equal(fields.pendingKnown,4);assert.equal(fields.semanticActive,2);assert.equal(fields.scopeTasks,2);assert.equal(fields.demandedCenters,3);assert.equal(fields.buildBlocked,1);
+  assert.equal(fields.schedulerBackground,5);assert.equal(fields.schedulerWaiting,6);assert.equal(fields.parses,4);assert.equal(fields.semanticPendingObservations,11);assert.equal(fields.urlTotal,88);assert.equal(fields.cacheWriterActive,1);
+  assert.equal(fields.fullBuildAdmissions,12,'Includes existing progressive and private-build admissions');
+  for(const name of ACTIVITY_SESSION_COLUMNS)assert.equal(fields[name],null,'Only StartupDiagnostics owns actual session work');
+  assert(!JSON.stringify(first).includes('private-'));first.current[ACTIVITY_CURRENT_COLUMNS.indexOf('checked')]=999;
+  assert.equal(read.call(owner).current[ACTIVITY_CURRENT_COLUMNS.indexOf('checked')],0,'Fact copies do not mutate authoritative counters');
+  owner.indexingMode='on-demand';assert.equal(read.call(owner).mode,'on-demand');
 });
 
 test('clock rollback and long jumps retain ordering without inventing sleep, idle CPU or catch-up work',()=>{

@@ -19,16 +19,68 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR #174 — F3 native completion fix validated; D2/V closeout pending
+# PR #174 — D2 reviewed; final V acceptance active
 
-Keep branch `2026-10-17-local-folder-diagnostics` draft. #173 merged23aa44e, #164 closed withcomment, mainintegratedd4d65cd. D0pushed786e91c; F2pushedb4bb401. No personal vault, merge, ready, release or raw publication.
+State: main validation agent continuing. Offline implementation/review is returned and frozen.
+Branch: `2026-10-17-local-folder-diagnostics`. Baseline main is merged #173 at
+`23aa44eae13797a93890fd1ce1679074d45d9295`; integrated without history rewriting at `d4d65cd`.
+#164 is closed with the requested comment. D0 `786e91c`, F2 `b4bb401` and F3 `ebe26cc` are pushed.
+Keep #174 draft. No merge, release, personal-vault access or raw-evidence publication.
 
-F3 authoritative-absence source hunk plus38real-IDBtests/report/ledger are staged independently ofD2, readyforcheckpointcommit/push. Native rapidlycreate(empty)→fill→rename exposed existingadaptercontract mismatch: repository successfulabsent outcome was treatedasincomplete. D0globalrecovery masked it. Acceptactivated/absent onlycurrentpass+matchingoldPath+continuednativeabsence; heldA→B→Ctestpreservesnewerintent.38focusedbrowsercases, main/indexingfixtures, types/lint/build and native previouslyfailingpattern allpass. OrdinaryMD+validactualExcalidrawviewpass; inventory/configrestored. RawfailedD2nativefolder andD0passingcontrolpreserved. NoextraGlobalrecovery/scheduler redesign.
+## Reviewed implementation
 
-D2runtime/main/export/health/buildID/8localechanges remainUNSTAGED. Fullstrictverification+exactnativeSmoke passedbeforeF3 at `%TEMP%/kplex-174-final-verify-D2`, logwork/verify-D2-final.log: architecture7/indexing128/main960/UI131/sources334/browser596,0fail0skip. Integratedartifactmain6616c454…9e020e. LatestF3buildisrootdist andSmallinstalled frompin-F3-acceptance. Needfullfinalverifyafterruntimefix. D2benchmarkfinalactualdata-root16816bytes;~0.546usCPU/passpair;capture0.141ms/serialize0.031ms;nonzero sampledallocationsandwhole-modulelimitdisclosed.
+F2 authenticates only one bounded native empty-folder wave using existing complete physical
+publication proof, exact identities/membership, existing per-cause expiry and one close. It never
+grants semantic/source authority. F3 accepts successful `activated` or `absent` old-path retirement
+only for the current pass, matching intent and continued native absence. Held A → B → C completion
+cannot erase a newer rename. No receipt, schema, scheduler or parser/compiler redesign.
 
-NativeSupportReport now24/24pass (`native-D2-support-report-canonical-clipboard`) on preF3artifact; main/popoutCopyIndexdistinctwriters1each,wrong0, sharedownedactivity4669bytes, fullreport<=32KiB, actualSettings/narrow390/sidebar/popout, readerpurityandcleanupallpass. Earliercontrols failunowneddebuggermetrics andtestinvokingObsidian'sforwardingmainclipboardgetter, whichoverwrotepopoutinterception. Reusablehelpernowusesnativewindowresizeandcapturescanonicalmainclipboardbeforepopout; originalclipboardbackupretaineduntilallcopycasesfinish. Do notclaimearlyfailedcontrolsproveunexpectedclipboardwritesrestored. Privatecopy-method-probe establishedgetterbehavior; no productionwindowselectionchange. Actualmethoddistinct-windowunitpass includingrapidactiveWindowchange.
+D2 adds shared branded safe captures to both real exports, O(1) retained health, static public build
+identity and eight-locale disclosure. Unknown accessors/proxies/serializers are never trusted.
+Report reads do not record readiness, reset capture, acquire sources or schedule work. Coarse
+observations remain independent of detailed profiling; field/counter/overlap limits are documented.
+Main-agent source review covered ownership, publication/finality, privacy, bounded retention,
+exception isolation, localization, owner-document clipboard behavior, reuse and meaningful comments.
 
-Nextrootseriallanes: commit/pushF3; runheldP3foreground live-updates(+composer) andissue161EX/pinned controls oncurrentbuild; finalcoarse-callfrequencyprobe ifneeded. Fullfinalverify(node22.22.2/npm_execpathactual/KPLEX_HOST_REPORT_DIR), thenexactfinalnativeReport/folder610quiet. Commit/pushD2validatedcheckpoint. Exactfinalcodebounded2hsoak reviewedprivate `%TEMP%/kplex-174-work/native-indexing-activity-soak-reviewed.mjs`; no native/browser/heavy/resourceoverlap, modesunchanged. Actual24h/mac/mobileunrun. No furtheroptimization/broadbenchmarking.
+## Actual validation
 
-AlloriginalsprivateTEMPkplex-174-* plusD0nativekplex-obsidian-QUYpZD retained. Pendingprivatebackupdriver `%TEMP%/kplex-174-evidence-backup.mjs` (notexecuted; syntaxreviewneeded) copies toLOCALAPPDATA/KplexValidation/pr-174-2026-10-17/final-evidence, verifieshashes, skipsjunctions/node_modules/transienthandoffs, nooriginaldeletion/publication. Finishdocs/report/PRactualoutcomes,separateF/Dshipdecisions, removesingleplanmarker, finaldiff/checks/checkpointpush. Roothandlesallnative/Git. Sandboxprocesserror1909requiresauthorizedrequire_escalated. C14paused. Agentsareofflineonly andcurrentlydone.
+Node 22.22.2 final combined `verify:obsidian` passes at
+`%TEMP%/kplex-174-final-verify-F3-D2-35m`: architecture 7, indexing 128, main 960, UI 131,
+sources 334, browser sources 598; zero failures/skips, actual installed types, core, official lint,
+production build and exact native smoke pass. Main artifact SHA-256:
+`d46b370199b0a2b06347266308e539f3a71a9e83459d50934be4b38bbc067ebc`.
+The earlier aggregate 20-minute wrapper failure is preserved; its child finished before the clean
+35-minute rerun. Individual 14-minute large-case and 30-second native CLI deadlines are unchanged.
+
+38 focused real-IDB folder cases, native ordinary Markdown/real Excalidraw/create-fill-rename,
+#172 held-P3 Find/sync/stationary completion and #161's 28 variants pass. The earlier 24-case
+native report lane passes actual Settings, narrow desktop, sidebar and distinct main/popout writers.
+Its final-artifact repeat completes 23 recorded cases; optional real clipboard writing remains pending to preserve non-plain-text formats. All guarded effects/owner checks and cleanup pass. The clipboard helper no longer invokes the main forwarding
+getter while comparing capabilities. Earlier failed controls do not establish clipboard restoration.
+
+Final D2 amplified cost is approximately 0.546 microseconds/pass pair; observed diagnostic data-root
+cut 16,816 bytes. Capture/serialization approximately 0.141/0.031 ms; transient allocations are
+nonzero. Native D CPU differences remain inconclusive. Folder work counts improve independently;
+no universal speedup or memory saving is claimed. See the consolidated report and schema guide.
+
+## Next action and safety limits
+
+The first final-artifact quiet trial lost foreground focus and was explicitly cancelled through its
+owned timer. Its exclusion and exact cleanup are preserved in
+`%TEMP%/kplex-174-native-final-integrated-quiet`. The fresh unchanged-condition trial passes at
+`%TEMP%/kplex-174-native-final-integrated-quiet-foreground`: 610.411 seconds, no source work,
+build/save/digest; two existing cache transactions/requests. Ordinary Markdown, actual Excalidraw
+and rapid create/fill/rename also pass. Final `supportReport.mjs` passes at
+`%TEMP%/kplex-174-native-final-support-report`, with exact configuration/clipboard restoration.
+D2 is ready for validated checkpoint commit/push. All native/browser/resource lanes remain serial.
+
+Run the reviewed bounded real two-hour soak with the exact staged artifact and actual selected
+mode/policy unchanged. Driver: `%TEMP%/kplex-174-work/native-indexing-activity-soak-reviewed.mjs`.
+No forced builds/flushes, clock advance or changed policy. Preserve all failed controls/cleanup.
+Then finalize separate F/D ship/revise/defer decisions, remove the planning marker, and create/verify
+the private durable evidence copy using `%TEMP%/kplex-174-evidence-backup.mjs`. Do not archive this
+handoff, follow dependency junctions, publish raw configuration/local metadata or delete originals.
+
+Remaining device priorities: (1) real 24-hour Windows use with idle/edit/report cycles, (2) macOS
+popout/copy and interrupted folder waves, (3) physical Android/iOS suspend/resume, clipboard and
+memory. Accelerated 24/48-hour tests do not prove those device behaviors. C14 remains paused.

@@ -40,7 +40,7 @@
 import { yieldToHostTask } from "./yieldToHostTask";
 import { canonicalTagPaths } from "../../core/graph/tagPaths";
 import type { StartupDiagnostics } from "./startupDiagnostics";
-import type { ActivityReason } from "../../application/IndexingActivity";
+import type { ActivityReason, ActivitySourceWork } from "../../application/IndexingActivity";
 import { Platform, TFile, TFolder, type App, type CachedMetadata } from "obsidian";
 import type { GraphCompilerRuntime, NormalizedGraphCompiler, CompiledGraphNode } from "../../core/graph/compiler";
 import { estimateReferenceRecordBytes, sourceRevision, acceptSourceBatch, beginSourceRead, sourceReadCanPublish, type NormalizedSourceBatch,
@@ -247,6 +247,14 @@ export class ObsidianSourceAcquisition {
   }
   /** Keep immutable copies of aggregate counters suitable for a native read/parser reuse probe. */
   getCounters(): SourceAcquisitionCounters { return { ...this.counters }; }
+  /** Trusted diagnostic boundary port: read existing numeric counters without copying or retaining owners. */
+  getActivityCounters(): ActivitySourceWork { return this.counters; }
+  /** Read only existing collection sizes/task flags; never request source work or inspect a file. */
+  getActivityState(): Readonly<{pendingKnown: number; knownImpactTasks: number; sourceActive: number; repoWrites: number; repoDeleteTask: number}> {
+    const repository = this.repository.getActivityState();
+    return {pendingKnown: this.pendingKnownFiles.size, knownImpactTasks: this.knownImpactTasks, sourceActive: Number(this.inventory !== null),
+      repoWrites: repository.writes, repoDeleteTask: Number(repository.deleteTask)};
+  }
   /** The repository independently sanitizes all persistent diagnostic fields. */
   getDiagnostics(): SourceRepositoryDiagnostics { return this.repository.getDiagnostics(); }
   /** Subscribe before asynchronous acquisition; pure graph no-ops never suppress this fence. */
@@ -451,8 +459,13 @@ export class ObsidianSourceAcquisition {
     const folderCovered = !this.emptyFolderCreateWave || this.emptyFolderWaveComplete(this.emptyFolderCreateWave);
     const covered = this.knownResolverWave && !this.uncoveredResolverWave && folderCovered;
     if (!folderCovered) this.uncoveredResolverWave = true;
-    this.resolverActivityReason = this.uncoveredResolverWave ? "uncovered-non-file"
+    this.resolverActivityReason = covered ? (this.emptyFolderCreateWave ? "qualified-folder" : "known-resolver")
+      : this.uncoveredResolverWave ? "uncovered-non-file"
       : this.resolverWaveExpired ? "expired-resolver" : this.resolverCloseObserved ? "extra-resolved" : "unscoped-resolved";
+    if (covered && this.emptyFolderCreateWave) {
+      try { this.startupDiagnostics?.activityCause?.("qualified-folder"); }
+      catch { /* Successful native coverage never depends on optional accounting. */ }
+    }
     this.resolverCloseObserved = true;
     this.resolverWaveExpired = false;
     this.resolverWaveGeneration += 1;
@@ -1886,7 +1899,8 @@ export class ObsidianSourceAcquisition {
         if (!current()) return false;
         if (this.localDependencyAuthorityReady && this.restartInventoryChecked
           && !this.uncertainResolution && !this.environmentMaintenancePending) {
-          try { activityToken = this.startupDiagnostics?.beginActivity?.("local-maintenance", "local", "known-file", this.counters) ?? 0; }
+          try { activityToken = this.startupDiagnostics?.beginActivity?.("local-maintenance", "local",
+            this.pendingKnownFiles.size ? "known-file" : "known-topology", this.counters) ?? 0; }
           catch { /* The local work owner is authoritative even if accounting fails. */ }
           return this.reconcileKnownImpacts(current);
         }

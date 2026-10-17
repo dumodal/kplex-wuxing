@@ -7,7 +7,7 @@
  * A separate fixed-memory activity owner observes coarse boundaries through the entire lifetime;
  * report capture is passive and neither per-file method adds activity instrumentation.
  */
-import { IndexingActivity, type ActivityKind, type ActivityOutcome, type ActivityReason,
+import { IndexingActivity, ACTIVITY_CURRENT_COLUMNS, ACTIVITY_SESSION_COLUMNS, type ActivityKind, type ActivityOutcome, type ActivityReason,
   type ActivityScope, type ActivitySourceWork, type IndexingActivityCapture } from "../../application/IndexingActivity";
 export type StartupLane = "source" | "hydration";
 export type StartupProgress = { phase: string; pass: number; processed: number; total: number | null };
@@ -113,7 +113,11 @@ export class StartupDiagnostics {
   }
   /** Build an owned safe summary only on explicit report capture; unknown facts remain unavailable. */
   captureActivity(mode?: unknown, urls?: unknown, pacing?: unknown, build?: unknown, ...current: unknown[]): IndexingActivityCapture | null {
-    try { return this.activity?.capture(mode, urls, pacing, build, ...current) ?? null; }
+    try {
+      if (!this.activity) return null;
+      for (const name of ACTIVITY_SESSION_COLUMNS) current[ACTIVITY_CURRENT_COLUMNS.indexOf(name)] = this.sessionWork[name];
+      return this.activity.capture(mode, urls, pacing, build, ...current);
+    }
     catch { return null; }
   }
   /** Freeze the measured lifetime and release all private owner identities on strict readiness. */

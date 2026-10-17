@@ -110,3 +110,15 @@ test("actual phase closure survives omitted pass detail without accruing idle ti
   assert.deepEqual(capture.phases.current[0], [null, null]); assert.equal(capture.phases.elapsedMs[0][phase], 35);
   assert.equal(capture.omitted.capacity, 1); assert.equal(capture.outcomeCoverage, "capacity-limited");
 });
+
+test("explicit activity capture fills authentic session totals by shared column names only",()=>{
+  const d=new StartupDiagnostics(()=>0);d.begin(false);d.recordWork('fullBuildStarts');d.recordWork('checkpointSaves');
+  const initial=d.captureActivity(),names=initial.columns.current,current=Array(names.length).fill(null);
+  current[names.indexOf('checked')]=7;current[names.indexOf('fullBuildStarts')]=999;current[names.indexOf('semanticPendingObservations')]=4;
+  const before=[...current],capture=d.captureActivity('eager','background','balanced','1.2.3+abcdef012345',...current);
+  assert.deepEqual(current,before,'The caller facts array is never rewritten');
+  assert.equal(capture.current[names.indexOf('fullBuildStarts')],1);assert.equal(capture.current[names.indexOf('checkpointSaves')],1);
+  assert.equal(capture.current[names.indexOf('completeSnapshotSaves')],0);assert.equal(capture.current[names.indexOf('checked')],7);
+  assert.equal(capture.current[names.indexOf('semanticPendingObservations')],4);assert.equal(capture.current[names.indexOf('parses')],null);
+  assert.equal(d.snapshot().sessionWork.fullBuildStarts,1);d.dispose();assert.equal(d.captureActivity(),null);
+});

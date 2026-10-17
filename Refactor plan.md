@@ -4519,3 +4519,28 @@ test-only debugger and host-forwarding clipboard assumptions; final combined ver
 and bounded two-hour soak remain pending. Preserve failed controls; keep #174 draft and C14 paused.
 Remaining platform risks: Windows final lifecycle, macOS popout/interrupted waves and physical
 mobile suspend/resume, touch and clipboard. No merge, release or personal-vault access.
+
+### 2026-10-17 — #174 shared passive reports checkpoint D2
+
+D2 extends the existing report owners with one deeply frozen, branded activity capture shared by
+both exports. O(1) health getters read existing task flags, sizes and counters; no source acquisition,
+readiness write, timer, I/O or scheduler is introduced by capture. Static public build identity is
+resolved at build time. All eight locale disclosures are updated. Source review confirms canonical
+ownership, fixed retention, exception isolation, owner-window clipboard behavior and unchanged
+semantic policy; C14 remains paused.
+
+Final combined `verify:obsidian` passes on Node 22.22.2: architecture 7, indexing 128, main 960,
+UI 131, sources 334, browser sources 598; zero failures/skips, actual types/core/lint/build and exact
+Windows native smoke pass. The 20-minute aggregate-wrapper failure is retained; the clean 35-minute
+run leaves all individual test deadlines unchanged. Final integrated 610-second quiet and native
+Markdown/Excalidraw/create-fill-rename pass with restored baseline/configuration. A foreground-loss
+quiet attempt is excluded and retained. Actual native report/Settings/main/popout repeat completes
+23 recorded cases; optional real clipboard writing is pending to preserve non-plain-text formats.
+Earlier 24-case native control includes that real-write case. #172 and #161 native regressions pass.
+
+Amplified D cost is about 0.55 microseconds/pass pair; observed diagnostic data-root cut 16,816 bytes,
+with nonzero capture/serialization allocations. No native diagnostic CPU saving or memory saving is
+claimed. The separate bounded two-hour real soak and private durable evidence verification remain
+V gates before final recommendation. Highest remaining device checks: 24-hour Windows use,
+macOS popout/copy/interrupted folder waves, physical Android/iOS suspend/resume/clipboard/memory.
+Keep #174 draft; no merge, release, raw publication or personal-vault access.
