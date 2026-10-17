@@ -16,22 +16,18 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR #169: bounded Gate M closeout
+# Main closeout #169; offline analysis preparation for #172
 
-Main integrated accepted #171 into the existing branch (69fa58a) and committed/pushed reviewed
-measurement tooling (0333fc4). Gate M did not establish a material net-resource benefit for
-metadata/resolution reader sharing. Production implementation is deferred, not claimed falsified.
-No runtime source changes or candidate acceptance series. No receipt, schema, scheduler, lease
-reclamation or C15+ changes. Preserve current source-reader correctness and runtime behavior.
+Main owns169 archive verification/durable backup, docs-only closeout, final CI and authorized
+merge without branch deletion/release. Current169 headf794a067; base/main d40a339. Runtime,
+reusable tools and regression tests are unchanged. No new evidence consolidation or experiments.
 
-The native control reconciled all 20,088 sources, zero fresh Vault reads/parses/repairs, with
-82,770/82,770 leases created/retired and genuine drain. Its 610.633-second quiet window passed with no new transactions, digests, builds or saves.
-Full verification passed 2,046 tests plus lint/types/build and exact native smoke. See docs/validation/source-reader-efficiency-169-2026-10-16.md for actual
-counts, timings, attribution caveats and the separate compilation/snapshot-write follow-up.
-Both fixtures are restored; verified local evidence archive and source references are recorded in
-the validation report. Main owns the final documentation commit/push and draft PR outcome update.
-No more production optimization or offline work. Keep PR draft; no merge/release.
-
-Only disposable fixtures were accessed; personal-vault permission remains unused. Original private
-configuration backups remain separate. Do not publish a raw archive without applicable approval.
-No offline agent work remains pending; returned analysis and tooling were independently reviewed.
+Offline materialization_trace may prepare READ-ONLY source analysis for172 while169 CI runs:
+read current PR description captured at TEMP/kplex-172-work/pr-172.md and issue-161.md, plus
+main/runtime owners. No implementation, tests, Git mutation, native/browser/vault access yet.
+Map discovery, stationary requested-center completion and all161 navigation/materialization/
+pinned-tab/relationship variants to precise causal candidates and focused reproduction hooks.
+Do not claim source leads prove reported causes. Main will integrate resulting accepted main into
+172 existing branch without rewriting history before implementation. No personal-vault access,
+rejected receipt/reader sharing, new scheduler/schema or broad benchmark/architecture campaign.
+172 remains draft; preserve Closes161; no merge/release/manual issue closure.

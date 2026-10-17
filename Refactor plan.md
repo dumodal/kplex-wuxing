@@ -4319,3 +4319,17 @@ A Windows default-codepage failure interrupted the first ledger update after wri
 the standing handoff header is restored byte-for-byte from 0333fc4 with explicit UTF-8, and this
 entry completes that update. Production/test/tool scopes remain unchanged after verification.
 Keep #169 draft; no merge/release, next optimization or C15+ work authorized by this closeout.
+
+
+### 2026-10-17: #169 authorized merge closeout; #172 owns implementation
+
+Reverified the unchanged 22,719,434-byte evidence ZIP: all84 entries/83 file sizes+hashes and CRCs
+pass; SHA2564f0739d70445593203f3377811737c636dcff1c53a14f05c1e093f77300243f5.
+Byte-identical durable backup is under LOCALAPPDATA/kplex-validation/pr-169, outside temporary
+storage. Originals remain intact; no raw traces added to Git, publication or extra consolidation.
+Final-headf794a067 CI38977394989 passes; this closeout changes documentation only, with final
+closeout CI recorded on the PR. No production src diff/indexing change or demonstrated improvement.
+The maintainer explicitly authorizes merging169 without branch deletion/release. Next work is172,
+including all161 acceptance variants, focused causal reproductions before fixes, and no personal
+vault access. Keep172 draft; do not merge, close161 manually, revive receipt/reader sharing or
+resume structural C15+ work. See the consolidated report for accepted results and limitations.
