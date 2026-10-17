@@ -4456,3 +4456,10 @@ see docs/validation/safe-plex-folding-173-2026-10-17.md. Keep #173 draft and #16
 Highest risks: focused companion-popout closure, physical desktop group drag/multi-monitor, and
 full application/macOS/Linux/physical-tablet lifecycle. These need separate acceptance; Windows
 Electron automation and renderer interruption do not establish physical-device/full-process safety.
+
+Private evidence closeout: implementation checkpoint `5e53eb6` pushed; 749 manifest files plus
+implementation patch independently verified outside temporary storage. Manifest SHA-256
+`8c5461f9f5b18f30de8a34df295fa2c458326ea303a0af10ec37017306efbd26`.
+Originals retained; no raw evidence publication. Prerequisite CI passes; implementation CI is
+running, not yet acceptance. Native-runner20 contracts pass after tooling cleanup. Source and
+build unchanged by this documentation closeout. Draft/native/platform gaps above remain open.

@@ -21,7 +21,7 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 # PR #173 - implementation returned for draft review
 
-Branch: `2026-10-17-issue-164-safe-plex-folding`. #172 merged at `ef301dc07fa6a8754455a6aeb94ae871d2aacd75`; #161 closed with the requested comment referencing #172. Main integrated without rewriting history at `2735550a28b7ad16a68da1df2a0cac4ad9845217`. Animation prerequisite checkpoint `75ac2ab` pushed. Feature checkpoint prepared below; keep #173 draft and #164 open. No merge/release/branch deletion/personal-vault access.
+Branch: `2026-10-17-issue-164-safe-plex-folding`. #172 merged at `ef301dc07fa6a8754455a6aeb94ae871d2aacd75`; #161 closed with the requested comment referencing #172. Main integrated without rewriting history at `2735550a28b7ad16a68da1df2a0cac4ad9845217`. Animation prerequisite checkpoint `75ac2ab` pushed. Feature checkpoint `5e53eb6` committed and pushed; keep #173 draft and #164 open. No merge/release/branch deletion/personal-vault access.
 
 ## Returned implementation and review
 
@@ -41,6 +41,6 @@ Existing display-mode lane passes after correcting its proven Mac-only chrome as
 
 ## Evidence and next owner
 
-Curated source/artifact/driver/results/limits: `docs/validation/safe-plex-folding-173-2026-10-17.md`. Raw originals and failed controls retained in `%TEMP%/kplex-173-*`; final closeout records a verified private backup outside temporary storage. Do not publish private configuration/raw evidence or delete originals. All native drivers run serially with the three explicit disposable-vault variables. No active portable/native suite should overlap another.
+Curated source/artifact/driver/results/limits: `docs/validation/safe-plex-folding-173-2026-10-17.md`. Raw originals and failed controls retained in `%TEMP%/kplex-173-*`; verified private backup is `%LOCALAPPDATA%/KplexValidation/pr-173-2026-10-17/final-evidence/`, manifest SHA-256 `8c5461f9f5b18f30de8a34df295fa2c458326ea303a0af10ec37017306efbd26`; all749 files plus patch independently verified. Implementation CI39023891312 is running; prerequisite75ac CI passed. Native-runner20 contracts pass. Do not publish private configuration/raw evidence or delete originals. All native drivers run serially with the three explicit disposable-vault variables. No active portable/native suite should overlap another.
 
 Remaining acceptance: settle native popout-close error and broad action recorder gap; physical desktop group dragging/multi-monitor; full application interruption/restart and macOS/Linux/physical tablet lifecycle/touch. Never infer physical-device or perceived-paint coverage from Electron automation. Native repository management remains root-owned. Commit/push checkpoints within standing user authorization, update #173 with real outcomes, keep draft/#164 open. Do not resume receipts/reader optimizations or C15+ refactoring.
