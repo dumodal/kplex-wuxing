@@ -4333,3 +4333,81 @@ The maintainer explicitly authorizes merging169 without branch deletion/release.
 including all161 acceptance variants, focused causal reproductions before fixes, and no personal
 vault access. Keep172 draft; do not merge, close161 manually, revive receipt/reader sharing or
 resume structural C15+ work. See the consolidated report for accepted results and limitations.
+
+
+### 2026-10-17: #169 merged; #172 causal checkpoint and provisional discovery
+
+Authorized #169 merge completed at9381c38 after exact-head d8afda8 CI39009347730 passed.
+The measured result remains no production indexing change or demonstrated performance gain;
+verified original archive/durable backup preserved, unpublished. Existing #172 branch integrated
+that main through merge612a0c8 and was pushed without rewriting history; draft/Closes161 retained.
+
+Focused accepted-main reproductions confirm missing external filename availability during an
+active On-demand coordinator, stationary demand stranded behind a real unrelated patch, and
+both actual Create EX ghost-history variants with graph/pinned-file disagreement. A later native
+Parent:: edit reproduces inferred-child misclassification. Exact deployed source/artifact,
+failed/excluded controls, private evidence and pending acceptance are recorded in
+[the172 validation report](docs/validation/indexing-live-updates-172-2026-10-17.md).
+
+Checkpoint A corrects unmanaged Markdown create discovery through existing provisional physical
+availability when canonical insertion is not currently admitted. Managed creation, dirty epoch,
+patch backlog and source/write authority remain unchanged. Node22.22.2 indexing harness passes;
+full verification and exact-build native acceptance remain pending. B/liveness and borrowed-read
+corrections are separately in progress, not included in this independently reviewable checkpoint.
+No scheduler/parser/schema/receipt/reader-sharing change, personal-vault access or C15+ refactor.
+Highest-probability remaining workflow risk is loss of provisional discovery across old publication
+or a stale visible editor/graph scope. Main-window external creation, popout demand/hide/reveal,
+macOS native sync and physical mobile suspend/resume require separate coverage before final claims.
+
+
+### 2026-10-17: #172 checkpoint B ? live demand and native endpoint continuity
+
+Existing completion owners now readmit only still-live build-blocked center demand; exact native
+neighbors remain addressable through current local scopes without acquiring source/write proof.
+Finite native event additions survive older graph/search publication until canonical membership
+catches up. A reproduced retained-scope Find mask is corrected only for current physical search
+identity; semantic validation and suppression policy remain unchanged. Independent review added
+the failing real-IDB search regression before the minimal correction.
+
+Node 22.22.2 full verify, installed typings, official lint, production build and exact-build Small
+Obsidian smoke pass. All 103 On-demand tests and 560 source-browser cases pass. Two final native
+Create EX runs cover both #161 variants, 16 full navigation cycles and four stationary Parent/Child
+edits, with correct explicit roles/solid links, first-click pinned agreement and complete cleanup.
+Two earlier browser-load failures and their isolated successful reruns remain private evidence;
+no deadline was relaxed. Artifact/source identities and limitations are in the #172 report.
+
+Verified private durable evidence contains 37 files; originals remain, no archive/publication.
+Checkpoint A full CI39011260178 is green. #172 remains draft with Closes #161; no merge/release,
+receipt, source-validation relaxation, scheduler replacement or C15+ refactor. Next: genuine P3
+held Find/recent-sync controls, existing-note composer discovery and short Eager invalidation
+causal observations. Highest remaining workflow risks are external creation during unrelated
+background publication and window-lifetime changes. Windows main-window cases are exercised;
+macOS/Linux, popout migration and physical mobile suspend/resume need separate acceptance.
+
+
+### 2026-10-17: #172 native closeout and bounded invalidation decision
+
+Checkpoint B40c4f84 is pushed and passes full CI39014152315. The existing native foreground
+owner now retains real P3-held external Find/local-completion/recent-sync coverage and an actual
+physical-only existing-note composer control. Final native lane passes with15s foreground bounds,
+selected-renderer/throttling guards and all active source/storage/scheduler queues drained. The
+existing six inventory-held mutation scenarios pass after native surface readiness is awaited.
+An earlier initial-DOM setup failure and successful diagnostic replay are retained; no production
+fix or relaxed assertion is attributed to that failure. Native shell contract tests20/20 pass.
+
+Two actual Eager candidate pilots and one accepted-main runtime control isolate inherited folder
+wave amplification: existing-folder note2 source checks/77IDBtransactions/197requests versus new
+folder+note92checks/1527transactions/2925requests. Each note reads/parses once, with no full
+graph build or snapshot write. Counts match across builds; sequential CPU/memory/elapsed samples
+with different cache histories demonstrate no efficiency improvement. Both candidate traces show
+uncovered folder activity causing natural resolved?host-revision globalization. Preserve that
+conservative contract. Highest-value separate follow-up is proving narrowly complete new-folder
+creation waves before source-local narrowing, with unknown/concurrent/expired/rename/delete and
+extra-close safeguards retained. No such runtime change is included.
+
+The source/artifact/evidence report records the limits, failed controls and two verified private
+manifests (37-file B,34-file native causal closeout); originals remain, no archive/publication.
+Temporary planning marker removed. #172 stays draft with Closes #161; no merge/manual issue
+closure/release/personal-vault access. C14 structural pause remains. Windows #161 four variants/
+16fullcycles/four explicit edits pass; highest remaining acceptance priorities are Linux/macOS
+actual Create EX and interruption, popout/reveal lifetimes, and physical mobile suspend/resume.
