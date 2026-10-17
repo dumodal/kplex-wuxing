@@ -1036,6 +1036,7 @@ assert.equal(indexingStatusContext.markdownFileCountReads, 1, "Progress publicat
   };
   statusMembershipCoordinator.index = { isOnDemandMode: () => false,
     hasLocalBaseline: () => false,
+    hasPhysicalBaseline: () => false,
     getUrlIndexProgress: () => ({ active: false, failed: false, processed: 0, total: 0 }),
     invalidateHostStructure: () => { structuralInvalidations += 1; },
     size: 10,

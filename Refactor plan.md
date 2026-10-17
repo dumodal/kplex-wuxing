@@ -4488,3 +4488,19 @@ D2 public exports, final native controls/quiet window and two-hour soak remain p
 [diagnostic contract](docs/INDEXING_DIAGNOSTICS.md). C14 stays paused; #174 stays draft. Highest
 remaining acceptance risks are actual Windows create/report flows, macOS popout/interruption, and
 physical Android/iOS suspend/copy/extended-use behavior. No merge, release or personal-vault access.
+
+### 2026-10-17 — #174 bounded physical-folder checkpoint F2
+
+F2 keeps one native empty-folder wave local only with existing complete physical publication proof,
+exact parent/direct-member identity and the existing per-cause expiry. It does not grant source or
+semantic authority. Missing membership, interrupted/replaced ownership, partial bootstrap and
+On-demand remain conservative. No persisted format, scheduler or architecture milestone changes.
+The original full-semantic-only and absolute-opening-deadline candidates are rejected and preserved.
+The revised isolated build passes 36 real-IndexedDB/browser tests, actual types, affected lint,
+production build and main/indexing fixtures. Native eligible folder-plus-note work falls from
+92 to 2 source checks, 1,526 to 78 transactions and 1,499 to 58 source digests; fresh reads/parses
+remain one each. Inclusive CPU/drain improve in that observation, without a general speed or memory
+claim. The 610-second genuine quiet control and exact cleanup pass. See the consolidated #174 report.
+D2 integration and final V acceptance remain pending; #174 stays draft. Highest remaining risks:
+Windows actual report/Excalidraw flows, macOS interrupted/popout ownership, physical mobile
+suspend/resume and clipboard. C14 remains paused.

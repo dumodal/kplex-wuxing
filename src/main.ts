@@ -791,7 +791,8 @@ export default class KplexPlugin extends Plugin {
     this.registerEvent(this.app.vault.on("create",
       /** Publish native file availability independently of startup/build completion, then queue its source patch. */
       (created) => {
-        this.index.invalidateHostStructure();
+        this.index.invalidateHostStructure(Boolean((created instanceof TFile || created instanceof TFolder)
+          && this.initialIndexComplete && this.index.hasPhysicalBaseline()));
         this.pruneManagedMetadataWrites();
         if (created instanceof TFile && created.extension === "md") {
           this.deletedMarkdownFiles.delete(created);

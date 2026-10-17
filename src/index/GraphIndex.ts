@@ -1,4 +1,6 @@
 /**
+ * Complete fresh physical ownership can qualify one observed empty-folder create before insertion;
+ * the short source-local witness never turns partial presentation into negative inventory authority.
  * Touched canonical physical facets retire their cached exact-pair facade before selected reads.
  * Exact-pair preparation fences its full compiler presentation input until publication; retained
  * source/write authority thereafter follows the canonical semantic signature independently of styles.
@@ -614,6 +616,12 @@ export class GraphIndex {
   /** Host observations also fence warm presentation when managed writes suppress dirty revisions. */
   private hostPresentationRevision = 0;
   private fullSnapshotHydrated = false;
+  /** Exact current state's complete physical-folder membership, independently of semantic incidence.
+   * Existing full structural producers grant it; every replacement clears it unless explicitly proven.
+   * No prior graph is retained, and live structural mutations remain fenced by pendingStructuralTasks. */
+  private completePhysicalFolderInventory = false;
+  /** Monotonic physical proof incarnation; short native witnesses capture no former graph state. */
+  private physicalFolderCoverageEpoch = 0;
   private fullSnapshotFresh = false;
   /** A graph borrowed during neutral-source startup is acceleration, never requested semantic authority. */
   private sourceBackedSemantics = false;
@@ -737,6 +745,7 @@ export class GraphIndex {
    * Retire aggregate alias membership immediately so cancelled preparation cannot retain or rebuild it.
    */
   async purgePersistentIndexCache(): Promise<boolean> {
+    this.retirePhysicalFolderInventory();
     if (this.persistentCachePurged) return this.indexedDb.purgeAndClose();
     this.persistentCachePurged = true;
     this.snapshotRestoreRequest++;
@@ -766,6 +775,7 @@ export class GraphIndex {
     for (const entry of this.fieldCache.values()) delete entry.semanticSignature;
     this.cancelPendingPersistence();
     const run = ++this.generation, baselineRevision = this.onDemandBaselineRevision;
+    const physicalFoldersRevision = this.hostStructuralRevision;
     const current = (): boolean => !this.diagnosticsClosed && !this.persistentCachePurged && run === this.generation
       && baselineRevision === this.onDemandBaselineRevision && this.usesLocalForeground();
     const task = this.withForegroundPriority(async () => {
@@ -787,7 +797,7 @@ export class GraphIndex {
       // strategy. Publishing this body-free baseline cannot downgrade that newer strategy.
       this.hostPreviewScopes.clear();
       const foregroundWindow = this.snapshotForegroundWindow, publication = this.publicationRevision;
-      this.publishRestoredState(next, search, false, false);
+      this.publishRestoredState(next, search, false, false, false, physicalFoldersRevision);
       // The body-free producer owns exactly one publication. Any reentrant publisher makes the
       // observed delta larger and deliberately leaves this receipt unaccounted, preserving fallback.
       if (foregroundWindow && foregroundWindow === this.snapshotForegroundWindow
@@ -1129,8 +1139,15 @@ export class GraphIndex {
       () => this.hostPreviewScopes.get(centerPath) === preview.state), 2);
   }
 
-  /** Retire native membership proofs on every Vault topology event, including pre-restore events. */
-  invalidateHostStructure(): void {
+  /** Retire native membership proofs on every Vault topology event, including pre-restore events.
+   * @param applyingPhysicalCreate Main's existing synchronous native-create admission is open;
+   * all other callers retain conservative retirement, independently of source validation. */
+  invalidateHostStructure(applyingPhysicalCreate = false): void {
+    // An event skipped by main's physical-create admission cannot preserve negative membership.
+    // In particular, failed/retained hydration must not revive a certificate from its page preview.
+    if (!applyingPhysicalCreate || this.building || this.snapshotHydrationTask || !this.hasPhysicalBaseline()) {
+      this.retirePhysicalFolderInventory();
+    }
     this.hostStructuralRevision += 1;
     this.navigableSnapshotSourceRevision = null;
     this.folderGateInfo = new WeakMap();
@@ -1348,6 +1365,7 @@ export class GraphIndex {
   /** Retain a navigable warm graph after supersession while the existing source owner certifies replacements. */
   private retainWarmSourceRecovery(): boolean {
     if (!this.warmSourceRecoveryAvailable || this.diagnosticsClosed) return false;
+    this.retirePhysicalFolderInventory();
     this.sourceBackedStartup = true;
     this.sourceBackedSemantics = true;
     this.fullSemanticPolicyRevision = 0;
@@ -1357,6 +1375,7 @@ export class GraphIndex {
 
   /** Recover requested semantics from neutral progress when the optional graph cache is absent. */
   private async restoreSourceBackedBaseline(isCurrent: () => boolean, run: number, preview?: () => void): Promise<boolean> {
+    const physicalFoldersRevision = this.hostStructuralRevision;
     const releaseWork = this.workScheduler.begin(INDEX_WORK_PRIORITY.background);
     try {
       const sourceRevision = this.plugin.getIndexSourceRevision();
@@ -1381,7 +1400,7 @@ export class GraphIndex {
       this.previewSnapshotPublished = false;
       this.resumableCheckpointPaths = null;
       this.acceptPresentation(prepared);
-      this.publishRestoredState(next, search, false, false);
+      this.publishRestoredState(next, search, false, false, false, physicalFoldersRevision);
       this.setSnapshotHydrationRoute(run, "source-recovery");
       this.recordIndexDiagnostic("restore", "source-backed-physical-baseline");
       preview?.();
@@ -1463,6 +1482,7 @@ export class GraphIndex {
       const generation = this.generation, publication = this.publicationRevision;
       const maintenance = this.sourceAcquisition.getMaintenanceRevision();
       const run = this.snapshotHydrationRun;
+      const physicalFoldersRevision = this.hostStructuralRevision;
       /** Recheck mutable facet policy at cooperative/final boundaries, never for every source record. */
       const refreshPolicy = (): boolean => presentationValid = !classifySettingsChange(
         presentationPolicy, captureSettingsPolicy(this.plugin.settings)).presentationFacets;
@@ -1495,7 +1515,7 @@ export class GraphIndex {
       this.urlAliasFacetVersion = this.pendingUrlAliasUpgrade ? 0 : URL_ALIAS_FACET_VERSION;
       this.urlAliasUpgradeFailure = null;
       this.acceptPresentation(prepared);
-      this.publishRestoredState(next, search, false, false);
+      this.publishRestoredState(next, search, false, false, false, physicalFoldersRevision);
       this.setSnapshotHydrationRoute(run, "source-vocabulary");
       return !this.diagnosticsClosed && run === this.snapshotHydrationRun && source === this.plugin.getIndexSourceRevision()
         && policy === this.semanticPolicyRevision && maintenance === this.sourceAcquisition.getMaintenanceRevision()
@@ -3859,6 +3879,7 @@ export class GraphIndex {
    * Published snapshots remain untouched; late cancelled continuations cannot republish their data.
    */
   destroy(): void {
+    this.retirePhysicalFolderInventory();
     this.snapshotRestoreRequest++;
     this.cancelSnapshotRestoreWait?.();
     this.cancelUrlRestore?.();
@@ -3964,6 +3985,9 @@ export class GraphIndex {
    * Publish a privately prepared generation and its search atomically. Node-only catalogs retire
    * warm incidence proof; only the same hydration owner's fenced evidence promotion preserves it.
    * No asynchronous work occurs between state replacement, cache retirement and notification.
+   * @param physicalFoldersRevision Native topology epoch captured before an existing complete
+   * physical producer's first enumeration. Equality is checked inside this atomic publication;
+   * omitted or advanced epochs clear proof, so clipped/legacy publishers cannot inherit it.
    */
   private publishRestoredState(
     next: ReturnType<typeof createGraphState>,
@@ -3971,6 +3995,7 @@ export class GraphIndex {
     keepExistingSearch = false,
     authoritativeSemantics = true,
     preserveSnapshotPresentation = false,
+    physicalFoldersRevision?: number,
   ): void {
     // Node-only source catalogs and new generations do not inherit the replaced snapshot's
     // complete incidence proof. Only its fenced evidence promotion preserves that presentation.
@@ -3978,6 +4003,9 @@ export class GraphIndex {
       this.navigableSnapshotSourceRevision = null;
       this.retiredSnapshotPaths.clear();
     }
+    this.retirePhysicalFolderInventory();
+    this.completePhysicalFolderInventory = physicalFoldersRevision !== undefined
+      && physicalFoldersRevision === this.hostStructuralRevision;
     this.state = next;
     this.synchronizePublishedUrlFacets();
     if (authoritativeSemantics) this.hostPreviewScopes.clear();
@@ -4142,6 +4170,10 @@ export class GraphIndex {
    * Optional foreground proof must match saved owner fingerprints before even page-only publication.
    * Only an actual zero-page cancellation after publication supersession is reported as retryable;
    * the caller owns admission of a new candidate, never revival of this one or source authority.
+   *
+   * @param physicalFoldersRevision Optional topology epoch captured before the caller's native
+   * inventory enumeration. Only that unchanged epoch can grant the published folder certificate;
+   * it never changes snapshot acceptance, semantic trust or the existing inventory comparison.
    */
   private async restoreFullIndexedDbSnapshot(
     meta: IndexedDbSnapshotMeta,
@@ -4156,6 +4188,7 @@ export class GraphIndex {
     retainRestoreWork?: (priority: IndexWorkPriority) => () => void,
     parentRecordCurrent: (operation?: SnapshotReadOperation) => boolean = parentCurrent,
     foregroundProof?: ReadonlyMap<string, string>,
+    physicalFoldersRevision?: number,
   ): Promise<{ restored: boolean; fresh: boolean; createdAt: number | null; interruptedBeforePages?: boolean }> {
     const releaseWork = retainRestoreWork?.(INDEX_WORK_PRIORITY.background) ?? this.workScheduler.begin(INDEX_WORK_PRIORITY.background);
     try {
@@ -4331,7 +4364,7 @@ export class GraphIndex {
         if (!prepared || !isCurrent() || !prepared.facets.isCurrent()) return { restored: false, fresh: false, createdAt: meta.createdAt };
         this.acceptPresentation(prepared);
         if (!semanticCurrent()) this.retainCachedStartupPresentation(pagePreview);
-        this.publishRestoredState(pagePreview, prepared.search, false, false);
+        this.publishRestoredState(pagePreview, prepared.search, false, false, false, physicalFoldersRevision);
         if (semanticCurrent() && fresh && meta.key === "active" && modifiedMarkdownPaths.size === 0) {
           this.navigableSnapshotSourceRevision = this.plugin.getIndexSourceRevision();
           this.retiredSnapshotPaths.clear();
@@ -4393,14 +4426,14 @@ export class GraphIndex {
           await this.refreshPresentationSettings();
           if (!isCurrent()) return { restored: false, fresh: false, createdAt: meta.createdAt };
         }
-        this.publishRestoredState(next, null, true, currentSemantics, true);
+        this.publishRestoredState(next, null, true, currentSemantics, true, physicalFoldersRevision);
         expectedPublicationRevision = this.publicationRevision;
       } else {
         this.setSnapshotHydrationPhase(run, "authoritative-search");
         const prepared = await this.preparePresentationPublication(next, isCurrent, () => this.touchSnapshotHydrationProgress(run), false, false, true, INDEX_WORK_PRIORITY.background, retainRestoreWork);
         if (!prepared || !isCurrent() || !prepared.facets.isCurrent()) return { restored: false, fresh: false, createdAt: meta.createdAt };
         this.acceptPresentation(prepared);
-        this.publishRestoredState(next, prepared.search, false, currentSemantics, true);
+        this.publishRestoredState(next, prepared.search, false, currentSemantics, true, physicalFoldersRevision);
         expectedPublicationRevision = this.publicationRevision;
       }
       this.fullSnapshotHydrated = !isCheckpoint;
@@ -4541,6 +4574,7 @@ export class GraphIndex {
         // schema-3 generation can supply navigation before source certification or provenance.
         this.plugin.startupDiagnostics?.mark("snapshot-catalog-read");
         this.plugin.startupDiagnostics?.mark("host-inventory-start");
+        const physicalFoldersRevision = this.hostStructuralRevision;
         const inventory = captureVaultInventory(this.app);
         this.plugin.startupDiagnostics?.mark("host-inventory-end");
         this.plugin.startupDiagnostics?.count("hydration", "inventoryFiles", inventory.filesByPath.size);
@@ -4700,7 +4734,8 @@ export class GraphIndex {
           let result;
           try {
             result = await this.restoreFullIndexedDbSnapshot(meta, fresh, run, inventory, candidateCurrent, upgradePaths,
-              onNavigable, candidateSemanticsCurrent, trustedWarmSnapshot ? physicalCurrent : undefined, retainRestoreWork, candidateRecordCurrent);
+              onNavigable, candidateSemanticsCurrent, trustedWarmSnapshot ? physicalCurrent : undefined, retainRestoreWork, candidateRecordCurrent,
+              undefined, physicalFoldersRevision);
             if (result.interruptedBeforePages && foregroundWindow && isCurrent()) {
               // Retire the old candidate first. The existing P4 checkpoint drains higher-priority
               // work; it is not a new queue or a retry loop. All later awaits keep their own guards.
@@ -4719,7 +4754,7 @@ export class GraphIndex {
                   // rejects it normally; no third attempt or large discarded graph is retained.
                   this.snapshotForegroundWindow = null;
                   result = await this.restoreFullIndexedDbSnapshot(meta, fresh, run, inventory, candidateCurrent, upgradePaths,
-                    onNavigable, candidateSemanticsCurrent, physicalCurrent, retainRestoreWork, candidateRecordCurrent, proof);
+                    onNavigable, candidateSemanticsCurrent, physicalCurrent, retainRestoreWork, candidateRecordCurrent, proof, physicalFoldersRevision);
                 }
               }
             }
@@ -5593,10 +5628,12 @@ export class GraphIndex {
     }
     this.cancelPendingPersistence();
     this.building = true;
+    this.retirePhysicalFolderInventory();
     this.semanticPreparationDiagnostics = { ...this.semanticPreparationDiagnostics,
       fullBuilds: this.semanticPreparationDiagnostics.fullBuilds + 1 };
     const run = ++this.generation;
     const sourceRevision = this.plugin.getIndexSourceRevision();
+    const physicalFoldersRevision = this.hostStructuralRevision;
     // The coordinator retains Markdown changes that arrive during cold ingestion as a per-file
     // backlog. Cancelling the entire pass for each sync/metadata event restarted large vaults at
     // file zero. GraphBuilder still fences each source by its exact TFile/stat revision; a source
@@ -5693,6 +5730,7 @@ export class GraphIndex {
         const prepared = await this.preparePresentationPublication(next, isCurrent, undefined, true, false, true, workPriority);
         if (!prepared || !isCurrent() || !prepared.facets.isCurrent()) return false;
         this.acceptPresentation(prepared);
+        this.retirePhysicalFolderInventory();
         this.state = next;
         this.synchronizePublishedUrlFacets();
         this.publicationRevision += 1;
@@ -5788,6 +5826,7 @@ export class GraphIndex {
       this.semanticScopes.clear();
       this.releasedSemanticScopePaths.clear();
       this.retirePublishedRelationshipPairs();
+      if (!resuming) this.completePhysicalFolderInventory = physicalFoldersRevision === this.hostStructuralRevision;
       this.fullSnapshotHydrated = true;
       this.enableGlobalSourceInventoryIfConfigured();
       this.fullSnapshotFresh = true;
@@ -5823,11 +5862,13 @@ export class GraphIndex {
         return false;
       }
       this.building = true;
+      this.retirePhysicalFolderInventory();
       this.semanticPreparationDiagnostics = { ...this.semanticPreparationDiagnostics,
         fullBuilds: this.semanticPreparationDiagnostics.fullBuilds + 1 };
       const run = ++this.generation;
       const semanticPolicy = computeIndexSettingsSignature(this.plugin.settings);
       const sourceRevision = this.plugin.getIndexSourceRevision();
+      const physicalFoldersRevision = this.hostStructuralRevision;
       const current = (): boolean => run === this.generation && !this.diagnosticsClosed;
       const resumeInventory = this.sourceAcquisition.pauseInventory();
       try {
@@ -5856,6 +5897,8 @@ export class GraphIndex {
         this.acceptPresentation(prepared);
 
         // Atomic graph-state swap: readers never observe a half-built graph.
+        this.retirePhysicalFolderInventory();
+        this.completePhysicalFolderInventory = physicalFoldersRevision === this.hostStructuralRevision;
         this.state = next;
         this.synchronizePublishedUrlFacets();
         this.publicationRevision += 1;
@@ -6595,6 +6638,8 @@ export class GraphIndex {
    * needed; uncertain inbound source resolution remains owned by acquisition.
    */
   renameFolder(oldPath: string, folder: TFolder): Promise<void> {
+    // A failed/interrupted cooperative remap must not revive old negative membership on finally.
+    this.retirePhysicalFolderInventory();
     const existing = this.folderRenameTasks.get(folder);
     if (existing) {
       void this.updateHostFolderAvailability(oldPath, folder);
@@ -6685,6 +6730,7 @@ export class GraphIndex {
 
   /** Remove a known deleted folder tree locally; return Markdown endpoints not already dematerialized by child events. */
   async removeDeletedFolder(folder: TFolder, onMarkdownRemoved?: (file: TFile) => void): Promise<number> {
+    this.retirePhysicalFolderInventory();
     const pending: Array<TFile | TFolder> = [folder]; let markdown = 0;
     this.pendingStructuralTasks += 1; let sliceStarted = performance.now();
     try {
@@ -6931,12 +6977,42 @@ export class GraphIndex {
     return page;
   }
 
+  /** Retire negative physical-folder membership without retaining the previous graph. A new full
+   * producer must grant a new incarnation; failed structural work cannot restore it in finally. */
+  private retirePhysicalFolderInventory(): void {
+    this.completePhysicalFolderInventory = false;
+    this.physicalFolderCoverageEpoch += 1;
+  }
+
   /**
    * Materialize a newly created physical folder without rebuilding the structural inventory. This
    * keeps empty-folder creation local while preserving canonical folder pages, parent relations and
    * search membership. Later file creation reuses the same ancestry through reconcileFileTreeMembership.
    */
   insertCreatedFolder(folder: TFolder): GraphPage {
+    // This owner inserts one ancestry, not an imported subtree. Missing descendants cannot
+    // leave a complete negative-membership certificate available to a later native wave.
+    if (folder.children.length) this.retirePhysicalFolderInventory();
+    // Only an unchanged complete physical owner can prove pre-insertion absence. A structural
+    // preview or source-backed search projection cannot turn missing membership into authority.
+    const parent = folder.parent, generation = this.generation;
+    const coverageEpoch = this.physicalFolderCoverageEpoch;
+    /** Fence the exact physical coverage incarnation until resolver close using only scalar tokens.
+     * No previous graph state is captured. Builds, hydration, replacement and failed structural work
+     * cannot inherit negative proof; this callback never grants durable source/semantic authority. */
+    const complete = (): boolean => !this.diagnosticsClosed && !this.persistentCachePurged
+      && !this.isOnDemandMode() && this.completePhysicalFolderInventory
+      && !this.building && !this.pendingStructuralTasks && !this.snapshotHydrationTask
+      && this.physicalFolderCoverageEpoch === coverageEpoch && this.generation === generation;
+    if (complete() && parent && !this.state.pages.has(`folder:${folder.path}`)
+      && this.state.pages.get(parent.path ? `folder:${parent.path}` : "folder:/")?.isFolder
+      && this.app.vault.getFolderByPath(folder.path) === folder
+      && (parent.path && parent.path !== "/" ? this.app.vault.getFolderByPath(parent.path) : this.app.vault.getRoot()) === parent) {
+      this.sourceAcquisition.qualifyEmptyFolderCreate(folder, complete, /** Missing native members
+       * invalidate only the granting incarnation, never a newer complete publication. */ () => {
+        if (this.physicalFolderCoverageEpoch === coverageEpoch) this.retirePhysicalFolderInventory();
+      });
+    }
     const touched = new Set<string>();
     const page = this.ensureFolderTreePath(folder.path, touched);
     touched.add(page.path);

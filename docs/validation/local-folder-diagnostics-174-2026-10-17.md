@@ -103,6 +103,92 @@ this relevant workload. The narrowly scoped alternative under review is one stat
 folder coverage bit/generation in the existing publication owner, granted only by existing complete
 producers and fenced by the existing structural revision. No semantic authority follows from it.
 
+## Folder proof and focused validation
+
+F1 separates complete physical-folder membership from semantic completeness. Existing complete
+structural/source-node and physically matched saved-snapshot producers grant one state-bound bit
+only if their pre-enumeration topology epoch still matches. Replacement, clipped previews,
+build/hydration interruption, retained warm recovery and incomplete subtree imports retire it.
+No old graph, new catalog, persisted receipt or scheduler is retained.
+
+Main's existing synchronous physical-create admission must qualify an already observed empty
+folder under an established parent. A source witness retains at most 32 direct native file creates
+until the existing 50 ms per-cause retirement deadline. Before rearming, an elapsed timestamp
+guard rejects an already overdue witness; a delayed timer cannot revive it. The first close checks exact folder/parent/file identities,
+membership, graph generation and coverage incarnation. Missing/nested membership retires that
+incarnation; ordinary expiry alone preserves complete physical coverage. Unknown, expired,
+replayed, replaced, nested and interrupted cases retain conservative source validation.
+
+The isolated F2 Chromium/real-IndexedDB run passes **36/36 tests**, including genuine held
+evidence hydration and warm retention, nonempty imports, missing nested members at close/expiry,
+second-connection source replacement and failed structural tasks. The actual main create callback
+is exercised; no test assigns complete/fresh flags. Eligible work reads/parses the new body once,
+repairs actual referrers and performs no global inventory/head paging. Counts remain identical
+with 3 versus 120 unrelated Markdown notes. Standalone body-free bootstrap and On-demand remain
+conservative. Installed types, affected official lint and production build pass. An earlier set
+of 204 source/startup/priority/On-demand regressions passed before the final retirement additions;
+the final complete verification remains pending.
+
+The first attempt at the final type check caught a private lifecycle-field access; the correction
+passes main's existing admission explicitly. Earlier failed tests and rejected prototypes remain
+preserved. These modeled operation/finality results do not establish native deadline eligibility,
+CPU savings, storage latency or allocation behavior.
+
+The first native matched F1 trial passes correctness/cleanup and the 610-second quiet control,
+but **fails the efficiency gate**: baseline and F1 both perform 92 checks, 1,499 source digests and
+one global pass. Inclusive renderer CPU is 2,327 versus 2,766 ms; drain is 5,978 versus 7,074 ms.
+These single repetitions do not isolate overhead or establish a speed regression.
+Both quiet controls have zero source reads/parses/digests/builds/saves and two existing cache
+maintenance transactions/requests. Originals, exact sources and the failed-efficiency result remain.
+
+The causal trace isolates F1's unnecessary absolute deadline: the folder qualifies at 6 ms,
+its direct file arrives at 47 ms, metadata changes at 69 ms and resolution closes at 70.2 ms.
+Membership, physical proof and generation remain current, and the existing per-event resolver
+timer is live. The additional opening-time cap alone rejects it. F2 is being checked against
+the existing 50 ms **per-cause** expiry, with a pre-rearm timestamp guard so a suspended/overdue
+callback cannot revive old coverage. No timeout duration, member cap or source-validation rule
+is increased. The two additional deterministic-clock regressions cover a continuously live
+0/30/60/65 ms wave and an overdue callback that must reject rearming; they are not native timing
+measurements.
+
+### F2 native checkpoint
+
+The same frozen driver and diagnostics-only D0 capture configuration compare the eligible
+new-folder-plus-note interval below. The original F1 failure remains above. Current note inputs,
+settings and 107-file baseline match; database bytes, CAS identities and prior cache history do not.
+
+| Observation | D0, folder fix absent | F2 |
+| --- | ---: | ---: |
+| Source checks / reused bodies | 92 / 91 | 2 / 1 |
+| Fresh reads / parses | 1 / 1 | 1 / 1 |
+| Global passes | 1 | 0 |
+| IndexedDB transactions / requests | 1,526 / 2,920 | 78 / 202 |
+| Source digests / UTF-16 units | 1,499 / 2,219,720 | 58 / 14,359 |
+| Inclusive renderer CPU | 2,327 ms | 469 ms |
+| Observed drain | 5,977.5 ms | 1,684 ms |
+| Sampled heap / RSS maxima | 217,649,220 / 614,596,608 bytes | 254,499,656 / 659,800,064 bytes |
+
+Both perform zero full/node-catalog builds and snapshot/checkpoint saves. The existing-folder,
+folder-only and subsequent settled-folder note controls retain their ordinary work counts.
+All three D0/F1/F2 610-second quiet observations pass with zero source checks, reads, parses,
+digests, builds and saves; each observes two existing cache-maintenance transactions/requests.
+F2 quiet renderer CPU is 1,140 ms over approximately 610.45 seconds, versus 1,360 ms for D0;
+that difference is not an isolated diagnostic or idle-overhead estimate. Foreground/throttling,
+owned fixture inventory and exact configuration restoration pass.
+
+The work-count reduction demonstrates avoided amplification for this eligible wave. CPU/drain
+are inclusive single-run observations, not a universal speedup. Higher sampled memory after
+sequential trials does not establish an allocation saving or attributable regression; GC/history
+and missed peaks prevent that conclusion. Baseline can already stay local when native events
+separate, as recorded earlier. On-demand, uncertain topology and incomplete physical authority
+remain conservative. F2 source is independently pinned by staged patch SHA-256
+`671fd2666c9aa94ee5d6bd8a29b5c8a26308ff06015fc41988bdc423ec81d1bd` on D0 `786e91c`.
+Its isolated actual types, affected official lint, production build and main/indexing fixtures pass.
+One bounded repetition with the same frozen driver again stays local: two checks, one read/parse,
+58 source digests, 77 transactions/197 requests, 406 ms inclusive CPU and 1,689.9 ms drain. Exact
+fixture/configuration restoration passes; the earlier dedicated quiet trial is not repeated here.
+The integrated D2 native lanes, complete verification and two-hour soak remain pending.
+
 ## Predeclared remaining acceptance
 
 1. Freeze and verify diagnostics-only D0, then compare unchanged native operation counts and actual
