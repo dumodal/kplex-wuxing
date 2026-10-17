@@ -20,6 +20,8 @@
  * originating graph/details owners retire pending dialogs while plugin lifetime owns saved work.
  * Its foreground write lease ends before lower-priority source publication can checkpoint.
  * Folder/tag notices supply complete literal references to the shared localization formatter.
+ * Native fold sessions hide only a verified two-group pair; captured recovery and ownership epochs
+ * restore before native reveal, release, migration or teardown without persisting zero dimensions.
  * New-file relationship additions persist against native file identities independently of semantic
  * indexing; current host metadata drives subsequent graph reconciliation and editor completion.
  */
@@ -29,7 +31,7 @@ import { requireNamedColor } from "./core/plex/colorEditing";
 import * as appearanceThemes from "./core/plex/appearanceThemes";
 import type {StyleEditorModal} from "./ui/StyleEditorModal";
 
-import { FileView, MarkdownView, Menu, Notice, Platform, Plugin, TFile, TFolder, apiVersion, getLanguage, getAllTags, normalizePath, setIcon, type Editor, type HoverParent, type WorkspaceLeaf } from "obsidian";
+import { FileView, ItemView, MarkdownView, Menu, Notice, Platform, Plugin, TFile, TFolder, apiVersion, getLanguage, getAllTags, normalizePath, type Editor, type HoverParent, type WorkspaceLeaf } from "obsidian";
 import { captureSettingsPolicy, classifySettingsChange, isStyleOnlySettingsChange, type SettingsPolicy } from "./core/graph/settingsPolicy";
 import { removeMarkdownZoomModes, renameMarkdownZoomModes } from "./core/plex/markdownZoomPreferences";
 import { GraphIndex } from "./index/GraphIndex";
@@ -73,13 +75,15 @@ import { SupportClipboardSession } from "./application/supportClipboard";
 import { SupportReportModal } from "./adapters/obsidian/SupportReportModal";
 import { readSupportCustomizations } from "./adapters/obsidian/supportEnvironment";
 import { PartialRelatedFileError } from "./adapters/obsidian/relatedFileOutcome";
-import { ActionManager, type ActionContext, type ActionImplementations } from "./application/ActionManager";
+import { ActionManager, type ActionContext, type ActionImplementations, type SidecarFoldRoute, type SidecarFoldTarget } from "./application/ActionManager";
 import { frontmatterDeclarationKey } from "./application/frontmatterUnlink";
-import { ACTION_BY_ID, ACTION_RELATION_ROLES, type ActionId, type ActionOutcome, type Availability } from "./core/plex/actions";
+import { ACTION_BY_ID, ACTION_RELATION_ROLES, type ActionId, type ActionOutcome, type ActionRequest, type Availability } from "./core/plex/actions";
 import { compileActionBindings, migrateActionPreferences, sanitizeActionPreferences, type ActionPreferencesV1 } from "./core/plex/actionPreferences";
 import { createActionCommandPublisher, type ActionCommandPublisher } from "./adapters/obsidian/actionCommands";
 import { actionNodeRef, resolveActionPage } from "./adapters/obsidian/actionNode";
 import { translateActionText } from "./ui/actionPresentation";
+import { ActionTargetPicker } from "./ui/ActionTargetPicker";
+import { PlexFoldSession, plexFoldIdentity, type PlexFoldCandidate } from "./ui/PlexFoldSession";
 
 type LoadAwareView = FileView & { _loaded?: boolean };
 
@@ -210,7 +214,9 @@ export default class KplexPlugin extends Plugin {
   private startupInitializing = true;
   private startupInitializationTimer: number | null = null;
   private readonly linkedLeafHighlightTimers = new Map<HTMLElement, { viewWindow: Window; timer: number }>();
-  private readonly collapsedPlexHosts = new Map<WorkspaceLeaf, { sidecarLeaf: WorkspaceLeaf; position: SidecarPosition; hostGroup: HTMLElement; unfoldButton: HTMLButtonElement }>();
+  private readonly collapsedPlexHosts = new Map<WorkspaceLeaf, PlexFoldSession>();
+  /** Incarnation metadata only; existing Sidecar and fold maps remain the sole owner inventories. */
+  private readonly plexFoldRevisions = new WeakMap<WorkspaceLeaf, number>();
   private readonly sidecarListeners = new Set<() => void>();
   private transientDocumentFollowSuppression: { path: string; until: number } | null = null;
   private readonly navigationListeners = new Set<(path: string) => void>();
@@ -334,6 +340,12 @@ export default class KplexPlugin extends Plugin {
     this.initializeActions();
 
     this.registerEvent(this.app.workspace.on("active-leaf-change", (leaf) => {
+      // A requested Presentation/other tab in a folded group must become visible without
+      // redirecting native activation to the Plex or its managed document.
+      if (leaf) for (const [host, session] of this.collapsedPlexHosts) {
+        if (this.leafGroupElement(leaf) === session.hostGroup) this.restoreCollapsedPlex(host);
+      }
+      if (this.reconcilePlexFolds()) void this.saveSettings(false, false);
       // Capture every actual leaf activation in sequence. Do not decide here whether the leaf is a
       // file/Web Viewer: active-leaf-change can arrive before a newly activated view is fully
       // materialized. Resolution walks this history backward and inspects each leaf's current view.
@@ -342,20 +354,18 @@ export default class KplexPlugin extends Plugin {
       this.notifySidecar(); // The selected neighboring tab can change while no Sidecar is owned.
       this.onKplexVisibilityMayHaveChanged();
     }));
-    this.registerEvent(this.app.workspace.on("file-open", /** Empty/document state changes can alter attachment eligibility without changing the split. */ () => this.notifySidecar()));
+    this.registerEvent(this.app.workspace.on("file-open", /** Native replacement may retire a fold; ordinary file/representation changes preserve it. */ () => {
+      if (this.reconcilePlexFolds()) void this.saveSettings(false, false);
+      this.notifySidecar();
+    }));
     this.registerEvent(this.app.workspace.on("layout-change", () => {
-      let changed = false;
-      for (const [host, collapsed] of [...this.collapsedPlexHosts.entries()]) {
-        if (this.leafIsAttached(host) && this.leafIsAttached(collapsed.sidecarLeaf)) continue;
-        this.restoreCollapsedPlex(host);
-        changed = true;
-      }
+      let changed = this.reconcilePlexFolds();
       for (const [host, sidecar] of [...this.sidecarLeaves.entries()]) {
         const hostAttached = this.leafIsAttached(host);
         const sidecarAttached = this.leafIsAttached(sidecar);
         if (!hostAttached || !sidecarAttached) {
           this.restoreCollapsedPlex(host);
-          this.sidecarLeaves.delete(host);
+          this.deleteSidecarOwner(host);
           if (this.linkedDocumentLeaf === sidecar) {
             this.linkedDocumentLeaf = null;
             this.settings.documentSyncMode = "off";
@@ -378,7 +388,7 @@ export default class KplexPlugin extends Plugin {
           // completes; otherwise a transient zero-width rect would make K-Plex orphan its own new
           // companion before Obsidian finishes laying it out.
           if (this.sidecarMovingHosts.has(host) || this.startupInitializing) continue;
-          this.sidecarLeaves.delete(host);
+          this.deleteSidecarOwner(host);
           if (this.linkedDocumentLeaf === sidecar) {
             this.linkedDocumentLeaf = null;
             this.settings.documentSyncMode = "off";
@@ -1448,6 +1458,99 @@ export default class KplexPlugin extends Plugin {
     return id;
   }
 
+  /** Resolve only this recovery action against native pair ownership in the invoking window.
+   * Explicit owners never fall through; checks read identities/capabilities without revealing,
+   * releasing, opening a graph or consulting its center. Other actions retain their resolver. */
+  private resolvePlexFoldAction(request: ActionRequest): SidecarFoldRoute {
+    /** Project a captured host pair to finite portable identity, never a native leaf. */
+    const resolved = (candidate: PlexFoldCandidate): SidecarFoldRoute => ({ state: "resolved",
+      target: { id: candidate.token, windowId: this.actionWindowId(candidate.ownerWindow) } });
+    /** An explicit surface/focused Plex cannot borrow another pair when it is ineligible. */
+    const explicit = (host: WorkspaceLeaf): SidecarFoldRoute => {
+      const candidate = this.readPlexFoldCandidate(host);
+      if (!candidate) return { state: "unavailable", reasonKey: this.readPlexFoldUnavailableReason(host) };
+      if (request.windowId !== undefined && request.windowId !== this.actionWindowId(candidate.ownerWindow)) return { state: "unavailable", reasonKey: "sidecar.foldUnavailable" };
+      return resolved(candidate);
+    };
+    if (request.surfaceId !== undefined) {
+      const owner = this.actionSurfaceHosts.get(request.surfaceId);
+      return owner ? explicit(owner.leaf) : { state: "unavailable", reasonKey: "sidecar.foldUnavailable" };
+    }
+    // Native window hints can outlive a closed popout. It cannot invoke a new action; retain
+    // this plugin's live main window rather than treating the retired document as an owner.
+    const ownerWindow = window.activeWindow && !window.activeWindow.closed ? window.activeWindow : window;
+    const windowId = this.actionWindowId(ownerWindow);
+    if (request.windowId !== undefined && request.windowId !== windowId) return { state: "unavailable", reasonKey: "sidecar.foldUnavailable" };
+    const focused = [...this.app.workspace.getLeavesOfType(KPLEX_VIEW_TYPE), ...this.app.workspace.getLeavesOfType(KPLEX_SIDEPANEL_VIEW_TYPE)]
+      .find(/** Embedded native editors may be the active leaf while their containing Plex owns focus. */ leaf => leaf.view.containerEl.ownerDocument.defaultView === ownerWindow
+        && leaf.view.containerEl.contains(ownerWindow.document.activeElement));
+    if (focused) return explicit(focused);
+    const active = this.app.workspace.getActiveViewOfType(ItemView)?.leaf;
+    if (active && active.view.containerEl.ownerDocument.defaultView === ownerWindow
+      && (active.view instanceof KplexView || active.view instanceof KplexSidepanelView)) return explicit(active);
+    const candidates = this.readPlexFoldCandidates(ownerWindow);
+    /** Ambiguity remains an explicit finite picker decision, never registration-order fallback. */
+    const choose = (pairs: readonly PlexFoldCandidate[]): SidecarFoldRoute => pairs.length === 1 ? resolved(pairs[0])
+      : pairs.length ? { state: "ambiguous", targets: pairs.map(/** Preserve each current native incarnation/window. */ pair => ({ id: pair.token, windowId })) }
+        : { state: "unavailable", reasonKey: "sidecar.foldUnavailable" };
+    const activeGroup = active?.view.containerEl.ownerDocument.defaultView === ownerWindow ? this.leafGroupElement(active) : null;
+    const associated = activeGroup ? candidates.filter(/** Any native sibling identifies its participating group without acquiring it. */ pair => pair.hostGroup === activeGroup || pair.sidecarGroup === activeGroup) : [];
+    if (associated.length) return choose(associated);
+    const folded = candidates.filter(/** A sole hidden owner is the recovery preference from unrelated controls. */ pair => pair.folded);
+    if (folded.length === 1) return resolved(folded[0]);
+    const ranked = candidates.map(/** Reuse the existing explicit interaction ledger; checks do not record activity. */ pair => ({ pair,
+      order: Math.max(0, ...[...this.actionSurfaceHosts].filter(/** Only this exact native owner contributes recency. */ ([, host]) => host.leaf === pair.hostLeaf)
+        .map(/** Surface registration identities remain opaque and generation-scoped. */ ([id]) => this.actionManager.readInteractionOrder(id))) }));
+    const newest = Math.max(0, ...ranked.map(/** Compare the shared ledger, not per-surface local counters. */ value => value.order));
+    const recent = ranked.filter(/** Stale/absent registrations have zero weight and cannot choose arbitrarily. */ value => newest > 0 && value.order === newest);
+    return recent.length === 1 ? resolved(recent[0].pair) : choose(candidates);
+  }
+
+  /** Reacquire only the captured native incarnation; stale acceptance cannot retarget another pair. */
+  private plexFoldTargetCandidate(target: SidecarFoldTarget): PlexFoldCandidate | null {
+    const hosts = new Set([...this.sidecarLeaves.keys(), ...this.collapsedPlexHosts.keys()]);
+    for (const host of hosts) {
+      const candidate = this.readPlexFoldCandidate(host);
+      if (candidate?.token === target.id && this.actionWindowId(candidate.ownerWindow) === target.windowId
+        && this.isPlexFoldCandidateCurrent(candidate)) return candidate;
+    }
+    return null;
+  }
+
+  /** Perform one exact pair transition; native focus/reveal fences remain in the fold owner. */
+  private async applyPlexFoldTarget(target: SidecarFoldTarget): Promise<ActionOutcome> {
+    const candidate = this.plexFoldTargetCandidate(target);
+    if (!candidate) return { status: "cancelled" };
+    for (const [id, owner] of this.actionSurfaceHosts) if (owner.leaf === candidate.hostLeaf) this.actionManager.recordInteraction(id);
+    return await this.togglePlexFold(candidate) ? { status: "completed" }
+      : { status: "unavailable", reasonKey: this.readPlexFoldUnavailableReason(candidate.hostLeaf) };
+  }
+
+  /** Execute captured routing or open the existing native picker. Cancelling changes no native pair. */
+  private executePlexFoldAction(context: ActionContext): ActionOutcome | Promise<ActionOutcome> {
+    const route = context.sidecarFold;
+    if (!route) return { status: "unavailable", reasonKey: "sidecar.foldUnavailable" };
+    if (route.state === "resolved") return this.applyPlexFoldTarget(route.target);
+    const sessionId = `sidecar-fold-${++this.actionInvocationSequence}`;
+    const items = route.targets.map(/** Read only native titles for a bounded captured list, never note contents or graph pages. */ (target, index) => {
+      const candidate = this.plexFoldTargetCandidate(target);
+      return { label: this.translator("sidecar.foldPairLabel", { number: index + 1 }),
+        detail: candidate?.sidecarLeaf.view.getDisplayText(), disabled: !candidate, value: target };
+    });
+    const picker = new ActionTargetPicker(this.app, items, this.translator("sidecar.chooseFoldPair"),
+      /** Choice validates its captured token; never dispatch a newly resolved generic command. */ target => {
+        void this.applyPlexFoldTarget(target).catch(/** Native picker callbacks share the established localized failure treatment. */ error => {
+          this.supportEvents.record("action-failed", { category: "action" });
+          console.error("K-Plex action failed", error); new Notice(this.translator("actions.failed"));
+        });
+      }, /** Release only this native picker/session on selection, Escape, teardown or unload. */ () => {
+        this.actionDialogs.delete(picker); this.actionManager.closeSession(sessionId);
+      });
+    this.actionDialogs.set(picker, context.surfaceId === undefined ? {} : { surfaceId: context.surfaceId, generation: context.generation });
+    picker.open();
+    return { status: "opened", sessionId };
+  }
+
   /** Associate a React generation with its leaf/document; release its menu without retiring another owner or successor. */
   registerActionSurfaceHost(id: string, generation: number, leaf: WorkspaceLeaf): () => void {
     const registration = { generation, leaf };
@@ -1723,6 +1826,7 @@ export default class KplexPlugin extends Plugin {
   async revealActionSurface(id: string): Promise<boolean> {
     const host = this.actionSurfaceHosts.get(id);
     if (!host || this.unloading) return false;
+    this.restorePlexFoldBeforeReveal(host.leaf);
     await this.app.workspace.revealLeaf(host.leaf);
     const view = host.leaf.view;
     if (view instanceof KplexView || view instanceof KplexSidepanelView) await view.waitUntilReady();
@@ -1758,6 +1862,9 @@ export default class KplexPlugin extends Plugin {
     operation("surface.open-sidepanel", completed(() => this.activateSidepanel()));
     operation("index.rebuild", completed(() => this.rebuildIndex(true)));
     operation("index.copy-diagnostics", completed(() => this.copyIndexDiagnostics()));
+    operation("view.sidecar.collapse-plex", /** All surfaces use the graph-independent host toggle and captured pair. */ context => this.executePlexFoldAction(context),
+      /** A pure ambiguous check advertises the existing picker without opening it. */ context => context.sidecarFold?.state === "ambiguous"
+        ? { state: "preparable", reasonKey: "sidecar.chooseFoldPair" } : context.sidecarFold ? enabled : { state: "disabled", reasonKey: "sidecar.foldUnavailable" });
     operation("support.report-bug", /** Alternate palette/command route remains usable when Zen hides the toolbar. */ context => {
       const origin = this.actionHostLeaf(context.surfaceId)?.view.containerEl;
       this.reportBug(origin, context.surfaceId);
@@ -1832,6 +1939,10 @@ export default class KplexPlugin extends Plugin {
     });
     this.actionManager = new ActionManager({
       implementations,
+      /** This recovery action has an explicit absence/ambiguity contract independent of generic surfaces. */
+      resolveSidecarFold: request => this.resolvePlexFoldAction(request),
+      /** Accepted pair identities expire on ownership, native generation or fold transitions. */
+      validateSidecarFold: target => this.plexFoldTargetCandidate(target) !== null,
       /** Prefer actual owning graph/native view, including sidebar palette launches; shared-center commands retain their distinct target. */
       readCommandContext: request => {
         const owner = window.activeWindow ?? window;
@@ -2117,63 +2228,215 @@ export default class KplexPlugin extends Plugin {
     this.applySidecarFootprint(hostLeaf, sidecarLeaf, footprint);
   }
 
+  /** Advance ownership/toggle incarnation, never persisted or used as an ownership inventory. */
+  private advancePlexFoldRevision(host: WorkspaceLeaf): void {
+    this.plexFoldRevisions.set(host, (this.plexFoldRevisions.get(host) ?? 0) + 1);
+  }
+
+  /** Explicitly claim one native Sidecar incarnation; reacquiring the same leaf retires old intent. */
+  private setSidecarOwner(host: WorkspaceLeaf, leaf: WorkspaceLeaf): void {
+    this.restoreCollapsedPlex(host);
+    this.advancePlexFoldRevision(host);
+    this.sidecarLeaves.set(host, leaf);
+  }
+
+  /** Visibility is restored synchronously before native ownership can be removed or replaced. */
+  private deleteSidecarOwner(host: WorkspaceLeaf): void {
+    this.restoreCollapsedPlex(host);
+    this.advancePlexFoldRevision(host);
+    this.sidecarLeaves.delete(host);
+  }
+
+  /** Undo only this captured session, including detached DOM; automatic restoration never focuses. */
   private restoreCollapsedPlex(hostLeaf: WorkspaceLeaf): void {
-    const collapsed = this.collapsedPlexHosts.get(hostLeaf);
-    if (!collapsed) return;
-    collapsed.unfoldButton.remove();
-    if (collapsed.hostGroup.isConnected) {
-      collapsed.hostGroup.setCssStyles({ display: "" });
-    }
+    const session = this.collapsedPlexHosts.get(hostLeaf);
+    if (!session) return;
     this.collapsedPlexHosts.delete(hostLeaf);
+    this.advancePlexFoldRevision(hostLeaf);
+    session.dispose();
+    this.notifySidecar();
+    this.onKplexVisibilityMayHaveChanged();
   }
 
-  isPlexFoldedForSidecar(hostLeaf: WorkspaceLeaf): boolean {
-    return this.collapsedPlexHosts.has(hostLeaf);
+  /** Native reveal/fullscreen/remount retires a fold before its current DOM or React owner moves. */
+  restorePlexFoldBeforeReveal(hostLeaf: WorkspaceLeaf): void { this.restoreCollapsedPlex(hostLeaf); }
+
+  /** Inspect ephemeral state without changing Sidecar ownership or touching graph readiness. */
+  isPlexFoldedForSidecar(hostLeaf: WorkspaceLeaf): boolean { return this.collapsedPlexHosts.has(hostLeaf); }
+
+  /** Build a pure, finite host capture; metadata identity memoization has no native side effects.
+   * Only two direct native tab groups may share the affected split. Unsafe third/partial/nested
+   * branches remain expanded, while an already-folded session always retains its recovery route. */
+  readPlexFoldCandidate(hostLeaf: WorkspaceLeaf): PlexFoldCandidate | null {
+    if (this.unloading) return null;
+    const session = this.collapsedPlexHosts.get(hostLeaf);
+    if (session) return { ...session.candidate, token: this.plexFoldToken(session.candidate), folded: true, session };
+    const hostView = hostLeaf.view;
+    const sidecarLeaf = this.sidecarLeaves.get(hostLeaf);
+    if (!(hostView instanceof KplexView) || !sidecarLeaf || this.sidecarMovingHosts.has(hostLeaf)
+      || !this.leafIsAttached(hostLeaf) || !this.leafIsAttached(sidecarLeaf)) return null;
+    const hostGroup = this.leafGroupElement(hostLeaf), sidecarGroup = this.leafGroupElement(sidecarLeaf);
+    const split = hostGroup?.parentElement;
+    if (!hostGroup || !sidecarGroup || !split || hostGroup === sidecarGroup
+      || !hostGroup.classList.contains("workspace-tabs") || !sidecarGroup.classList.contains("workspace-tabs")
+      || sidecarGroup.parentElement !== split || !split.classList.contains("workspace-split")
+      || hostGroup.ownerDocument !== sidecarGroup.ownerDocument) return null;
+    const branches = Array.from(split.children).filter(child => child.classList.contains("workspace-tabs") || child.classList.contains("workspace-split"));
+    const axis = this.splitAxis(split);
+    if (branches.length !== 2 || !branches.includes(hostGroup) || !branches.includes(sidecarGroup) || !axis) return null;
+    let position = this.adjacentPosition(hostLeaf, sidecarLeaf);
+    if (!position) {
+      const conflicting = [...this.collapsedPlexHosts.values()].some(fold =>
+        [fold.candidate.hostGroup, fold.candidate.sidecarGroup].some(group => group === hostGroup || group === sidecarGroup));
+      if (!conflicting) return null;
+      const before = branches.indexOf(sidecarGroup) < branches.indexOf(hostGroup);
+      position = axis === "width" ? before ? "left" : "right" : before ? "above" : "below";
+    }
+    if (axis !== (position === "left" || position === "right" ? "width" : "height")) return null;
+    const recoveryHost = sidecarGroup.querySelector<HTMLElement>(":scope > .workspace-tab-container");
+    const ownerWindow = hostGroup.ownerDocument.defaultView;
+    if (!recoveryHost || !ownerWindow) return null;
+    const ancestors: HTMLElement[] = [];
+    for (let ancestor: HTMLElement | null = split.parentElement; ancestor; ancestor = ancestor.parentElement) ancestors.push(ancestor);
+    const hostExtent = hostGroup.getBoundingClientRect()[axis], sidecarExtent = sidecarGroup.getBoundingClientRect()[axis];
+    const hostShare = hostExtent > 8 && sidecarExtent > 8 ? hostExtent / (hostExtent + sidecarExtent) : null;
+    const capture: PlexFoldCandidate = { token: "", hostLeaf, sidecarLeaf, hostView, generation: hostView.getPlexFoldGeneration(), hostShare,
+      hostGroup, sidecarGroup, split, ancestors, sidecarView: sidecarLeaf.view, sidecarType: sidecarLeaf.getViewState().type,
+      recoveryHost, ownerWindow, position, folded: false };
+    return { ...capture, token: this.plexFoldToken(capture) };
   }
 
-  /** Fold the current K-Plex surface for its native Sidecar and retain the localized control needed to expand it again. */
+  /** Create an opaque pair incarnation without retaining a parallel native ownership registry. */
+  private plexFoldToken(candidate: PlexFoldCandidate): string {
+    return [plexFoldIdentity(candidate.hostView), candidate.generation, plexFoldIdentity(candidate.sidecarLeaf),
+      plexFoldIdentity(candidate.hostGroup), plexFoldIdentity(candidate.sidecarGroup), plexFoldIdentity(candidate.split),
+      plexFoldIdentity(candidate.recoveryHost), ...candidate.ancestors.map(plexFoldIdentity),
+      this.plexFoldRevisions.get(candidate.hostLeaf) ?? 0].join(":");
+  }
+
+  /** Enumerate only existing associations/folds in the invoking native window, never graph nodes. */
+  readPlexFoldCandidates(ownerWindow: Window): readonly PlexFoldCandidate[] {
+    const hosts = new Set([...this.sidecarLeaves.keys(), ...this.collapsedPlexHosts.keys()]);
+    return [...hosts].map(host => this.readPlexFoldCandidate(host)).filter((candidate): candidate is PlexFoldCandidate => candidate?.ownerWindow === ownerWindow);
+  }
+
+  /** Distinguish an owned unsafe arrangement from an absent/unsupported native companion. */
+  readPlexFoldUnavailableReason(hostLeaf: WorkspaceLeaf): "sidecar.foldUnsupportedLayout" | "sidecar.foldUnavailable" {
+    return this.sidecarLeaves.has(hostLeaf) && hostLeaf.view instanceof KplexView
+      ? "sidecar.foldUnsupportedLayout" : "sidecar.foldUnavailable";
+  }
+
+  /** Validate accepted intent against the same incarnation; a stale explicit owner never falls through. */
+  isPlexFoldCandidateCurrent(candidate: PlexFoldCandidate): boolean {
+    const current = this.readPlexFoldCandidate(candidate.hostLeaf);
+    return current !== null && current.token === candidate.token && current.folded === candidate.folded
+      && current.hostView === candidate.hostView && current.hostGroup === candidate.hostGroup
+      && current.sidecarGroup === candidate.sidecarGroup && current.split === candidate.split
+      && current.recoveryHost === candidate.recoveryHost && current.ownerWindow === candidate.ownerWindow
+      && (!candidate.folded || current.session === candidate.session);
+  }
+
+  /** Validate captured native topology while hidden; zero host geometry is never an adjacency test. */
+  private isPlexFoldSessionValid(session: PlexFoldSession): boolean {
+    const c = session.candidate;
+    const ancestors: HTMLElement[] = [];
+    for (let ancestor: HTMLElement | null = c.split.parentElement; ancestor; ancestor = ancestor.parentElement) ancestors.push(ancestor);
+    const unexpectedEmpty = c.sidecarLeaf.getViewState().type === "empty"
+      && (c.sidecarType !== "empty" || c.sidecarLeaf.view !== c.sidecarView)
+      && !this.sidecarMovingHosts.has(c.hostLeaf) && !this.passiveSidecarSyncRequests.get(c.hostLeaf)?.pending;
+    return !unexpectedEmpty && ancestors.length === c.ancestors.length && ancestors.every((ancestor, index) => ancestor === c.ancestors[index])
+      && !this.unloading && this.collapsedPlexHosts.get(c.hostLeaf) === session
+      && this.sidecarLeaves.get(c.hostLeaf) === c.sidecarLeaf && this.leafIsAttached(c.hostLeaf) && this.leafIsAttached(c.sidecarLeaf)
+      && c.hostLeaf.view === c.hostView && c.hostView.getPlexFoldGeneration() === c.generation
+      && this.leafGroupElement(c.hostLeaf) === c.hostGroup && this.leafGroupElement(c.sidecarLeaf) === c.sidecarGroup
+      && c.hostGroup.ownerDocument.defaultView === c.ownerWindow && c.sidecarGroup.ownerDocument === c.hostGroup.ownerDocument
+      && c.hostGroup.parentElement === c.split && c.sidecarGroup.parentElement === c.split
+      && c.sidecarGroup.querySelector(":scope > .workspace-tab-container") === c.recoveryHost && c.hostGroup.isConnected && c.sidecarGroup.isConnected
+      && Array.from(c.split.children).filter(child => child.classList.contains("workspace-tabs") || child.classList.contains("workspace-split")).length === 2
+      && this.splitAxis(c.split) === (c.position === "left" || c.position === "right" ? "width" : "height");
+  }
+
+  /** Restore invalid sessions before releasing only their exact native association; no replacement adoption. */
+  private reconcilePlexFolds(): boolean {
+    let changed = false;
+    for (const [host, session] of [...this.collapsedPlexHosts]) {
+      if (this.isPlexFoldSessionValid(session)) continue;
+      this.restoreCollapsedPlex(host);
+      if (this.sidecarLeaves.get(host) !== session.sidecarLeaf) continue;
+      this.deleteSidecarOwner(host);
+      if (this.linkedDocumentLeaf === session.sidecarLeaf) { this.linkedDocumentLeaf = null; this.settings.documentSyncMode = "off"; }
+      if (this.leafIsAttached(host)) this.settings.sidecarOpen = false;
+      changed = true;
+    }
+    return changed;
+  }
+
+  /** Toggle exactly one captured host pair. All transitions commit synchronously before optional native reveal. */
+  async togglePlexFold(candidate: PlexFoldCandidate): Promise<boolean> {
+    if (!this.isPlexFoldCandidateCurrent(candidate)) return false;
+    if (candidate.folded) { await this.expandPlexFromSidecar(candidate.hostLeaf); return true; }
+    for (const [host, session] of [...this.collapsedPlexHosts]) {
+      if ([session.candidate.hostGroup, session.candidate.sidecarGroup].some(group => group === candidate.hostGroup || group === candidate.sidecarGroup)) this.restoreCollapsedPlex(host);
+    }
+    if (!this.isPlexFoldCandidateCurrent(candidate)) return false;
+    const active = this.app.workspace.getActiveViewOfType(ItemView)?.leaf;
+    const focusLeavesHost = (active && this.leafGroupElement(active) === candidate.hostGroup)
+      || candidate.hostGroup.contains(candidate.hostGroup.ownerDocument.activeElement);
+    let focusTarget: WorkspaceLeaf | null = null;
+    if (focusLeavesHost) {
+      this.app.workspace.iterateAllLeaves(/** Preserve the surviving group's native selected tab. */ leaf => {
+        if (this.leafGroupElement(leaf) === candidate.sidecarGroup && this.leafTabIsActive(leaf)) focusTarget = leaf;
+      });
+      if (!focusTarget) return false;
+    }
+    candidate.hostView.prepareForPlexFold();
+    if (!this.isPlexFoldCandidateCurrent(candidate)) return false;
+    let session: PlexFoldSession | null = null;
+    try {
+      session = new PlexFoldSession(candidate, this.translator("sidecar.unfoldPlex"),
+        /** A stale control/observer owns only its exact captured session. */ () => session !== null && this.isPlexFoldSessionValid(session),
+        /** Window retirement restores without stealing focus or persisting folded state. */ () => { if (this.collapsedPlexHosts.get(candidate.hostLeaf) === session) this.restoreCollapsedPlex(candidate.hostLeaf); },
+        /** Native button and published command share the exact same explicit restore owner. */ () => { if (this.collapsedPlexHosts.get(candidate.hostLeaf) === session) void this.expandPlexFromSidecar(candidate.hostLeaf); });
+      this.collapsedPlexHosts.set(candidate.hostLeaf, session);
+      this.advancePlexFoldRevision(candidate.hostLeaf);
+      if (!session.hide()) { this.restoreCollapsedPlex(candidate.hostLeaf); return false; }
+    } catch {
+      if (session && this.collapsedPlexHosts.get(candidate.hostLeaf) === session) this.restoreCollapsedPlex(candidate.hostLeaf);
+      else session?.dispose();
+      return false;
+    }
+    // Focus only when it would otherwise remain inside the disappearing group. Select the native
+    // group's current tab, never force the managed Sidecar over an unrelated selected sibling.
+    try { if (focusTarget) this.app.workspace.setActiveLeaf(focusTarget, { focus: true }); }
+    catch { this.restoreCollapsedPlex(candidate.hostLeaf); return false; }
+    this.notifySidecar(); this.onKplexVisibilityMayHaveChanged();
+    return true;
+  }
+
+  /** Retain the existing fold-only host entry point; published commands use the true toggle owner. */
   async collapsePlexForSidecar(hostLeaf: WorkspaceLeaf): Promise<void> {
     if (this.collapsedPlexHosts.has(hostLeaf)) return;
-    const position = this.getSidecarPosition(hostLeaf);
-    const sidecarLeaf = this.validateSidecarLeaf(hostLeaf);
-    if (!position || !sidecarLeaf) return;
-    const hostGroup = this.leafGroupElement(hostLeaf);
-    const sidecarGroup = this.leafGroupElement(sidecarLeaf);
-    if (!hostGroup || !sidecarGroup || hostGroup === sidecarGroup) return;
-
-    const button = sidecarGroup.createEl("button");
-    button.type = "button";
-    const unfoldSide = position === "right" ? "left" : position === "left" ? "right" : position === "above" ? "bottom" : "top";
-    const unfoldIcon = unfoldSide === "left" ? "panel-left-open"
-      : unfoldSide === "right" ? "panel-right-open"
-        : unfoldSide === "top" ? "panel-top-open"
-          : "panel-bottom-open";
-    button.className = `kplex-sidecar-unfold-plex is-${unfoldSide}`;
-    button.setAttribute("aria-label", this.translator("sidecar.unfoldPlex"));
-    setIcon(button, unfoldIcon);
-    button.addEventListener("click", () => void this.expandPlexFromSidecar(hostLeaf));
-    sidecarGroup.appendChild(button);
-
-    this.collapsedPlexHosts.set(hostLeaf, {
-      sidecarLeaf,
-      position,
-      hostGroup,
-      unfoldButton: button,
-    });
-    // Hiding the WorkspaceTabs group removes it from the split's flex layout completely; the
-    // native content sidecar expands into the released space while remaining an ordinary tab.
-    hostGroup.setCssStyles({ display: "none" });
-    this.notifySidecar();
+    const candidate = this.readPlexFoldCandidate(hostLeaf);
+    if (!candidate) { new Notice(this.translator(this.readPlexFoldUnavailableReason(hostLeaf))); return; }
+    await this.togglePlexFold(candidate);
   }
 
+  /** Explicit recovery reveals the exact live view; delayed completion yields to newer native selection. */
   async expandPlexFromSidecar(hostLeaf: WorkspaceLeaf): Promise<void> {
-    if (!this.collapsedPlexHosts.has(hostLeaf)) return;
-    const hostGroup = this.leafGroupElement(hostLeaf);
-    const viewWindow = hostGroup?.ownerDocument.defaultView ?? window;
+    const session = this.collapsedPlexHosts.get(hostLeaf);
+    if (!session) return;
+    const c = session.candidate;
     this.restoreCollapsedPlex(hostLeaf);
-    // Let Obsidian's split layout settle before recalculating sidecar geometry.
-    await new Promise<void>((resolve) => viewWindow.setTimeout(resolve, 0));
-    this.notifySidecar();
+    const revision = this.plexFoldRevisions.get(hostLeaf);
+    if (this.unloading || hostLeaf.view !== c.hostView || c.hostView.getPlexFoldGeneration() !== c.generation || !this.leafIsAttached(hostLeaf)) return;
+    const reveal = this.app.workspace.revealLeaf(hostLeaf);
+    // Native reveal may synchronously select the target before its loading promise settles.
+    // Its later completion must not add a focus change after a different tab was selected.
+    const activeAfterReveal = this.app.workspace.getActiveViewOfType(ItemView)?.leaf;
+    await reveal;
+    if (!this.unloading && this.plexFoldRevisions.get(hostLeaf) === revision && !this.collapsedPlexHosts.has(hostLeaf) && hostLeaf.view === c.hostView
+      && c.hostView.getPlexFoldGeneration() === c.generation && this.leafIsAttached(hostLeaf)
+      && this.app.workspace.getActiveViewOfType(ItemView)?.leaf === activeAfterReveal) this.app.workspace.setActiveLeaf(hostLeaf, { focus: true });
   }
 
   private leafRect(leaf: WorkspaceLeaf | null): DOMRect | null {
@@ -2715,7 +2978,7 @@ export default class KplexPlugin extends Plugin {
       const released = this.linkedDocumentLeaf;
       this.linkedDocumentLeaf = null;
       if (released) {
-        for (const [host, managed] of [...this.sidecarLeaves.entries()]) if (managed === released) this.sidecarLeaves.delete(host);
+        for (const [host, managed] of [...this.sidecarLeaves.entries()]) if (managed === released) this.deleteSidecarOwner(host);
       }
       this.settings.sidecarOpen = false;
       await this.saveSettings(false, false);
@@ -2727,7 +2990,7 @@ export default class KplexPlugin extends Plugin {
       const released = this.linkedDocumentLeaf;
       this.linkedDocumentLeaf = null;
       if (released) {
-        for (const [host, managed] of [...this.sidecarLeaves.entries()]) if (managed === released) this.sidecarLeaves.delete(host);
+        for (const [host, managed] of [...this.sidecarLeaves.entries()]) if (managed === released) this.deleteSidecarOwner(host);
       }
       this.settings.sidecarOpen = false;
       await this.saveSettings(false, false);
@@ -3155,7 +3418,7 @@ export default class KplexPlugin extends Plugin {
     const leaf = this.sidecarLeaves.get(hostLeaf) ?? null;
     if (!leaf) return null;
     if (!this.leafIsAttached(leaf)) {
-      this.sidecarLeaves.delete(hostLeaf);
+      this.deleteSidecarOwner(hostLeaf);
       return null;
     }
     return leaf;
@@ -3255,7 +3518,7 @@ export default class KplexPlugin extends Plugin {
       file: this.settings.sidecarLastFilePath, url: this.settings.sidecarLastUrl,
     };
     this.sidecarMovingHosts.add(hostLeaf);
-    this.sidecarLeaves.set(hostLeaf, leaf);
+    this.setSidecarOwner(hostLeaf, leaf);
     this.linkedDocumentLeaf = leaf;
     this.lastDocumentLeaf = leaf;
     this.settings.documentSyncMode = "pinned";
@@ -3279,7 +3542,7 @@ export default class KplexPlugin extends Plugin {
       return direction === "to-plex" && currentPath ? { file: currentFile, path: currentPath } : null;
     } catch (error) {
       if (this.sidecarLeaves.get(hostLeaf) === leaf) {
-        this.sidecarLeaves.delete(hostLeaf);
+        this.deleteSidecarOwner(hostLeaf);
         this.linkedDocumentLeaf = previous.linked;
         this.lastDocumentLeaf = previous.last;
         this.settings.documentSyncMode = previous.mode;
@@ -3399,6 +3662,7 @@ export default class KplexPlugin extends Plugin {
     return null;
   }
 
+  /** Adopt an unchanged startup match only while its exact opening view and unclaimed ownership survive. */
   private async restorePersistedSidecar(hostLeaf: WorkspaceLeaf): Promise<void> {
     if (!this.settings.sidecarOpen || hostLeaf.view.getViewType() === KPLEX_SIDEPANEL_VIEW_TYPE) return;
     if (!this.leafIsAttached(hostLeaf) || this.isSidecarOpen(hostLeaf)) return;
@@ -3411,25 +3675,35 @@ export default class KplexPlugin extends Plugin {
     const task = (async () => {
       if (!this.settings.sidecarOpen || !this.leafIsAttached(hostLeaf) || this.isSidecarOpen(hostLeaf)) return;
       this.sidecarRestoreAttemptedHosts.add(hostLeaf);
+      const hostView = hostLeaf.view, revision = this.plexFoldRevisions.get(hostLeaf);
+      const generation = hostView instanceof KplexView ? hostView.getPlexFoldGeneration() : null;
+      /** Awaited startup discovery cannot supersede explicit acquisition, release or native remount. */
+      const current = (): boolean => !this.unloading && this.settings.sidecarOpen && this.leafIsAttached(hostLeaf)
+        && hostLeaf.view === hostView && (generation === null || hostView instanceof KplexView && hostView.getPlexFoldGeneration() === generation)
+        && this.plexFoldRevisions.get(hostLeaf) === revision && !this.sidecarLeaves.has(hostLeaf) && !this.sidecarMovingHosts.has(hostLeaf);
 
       // Give Obsidian's restored split tree and DeferredViews time to hydrate before matching the
       // remembered adjacent tab-group. Startup restoration must never create an extra pane merely
       // because a legitimate restored sidecar has not produced a usable DOMRect yet.
       await this.waitForWorkspaceLayout(hostLeaf, 3);
+      if (!current()) return;
       const restored = await this.waitForRestoredSidecarCandidate(hostLeaf);
+      if (!current()) return;
       if (!restored) {
         // Preserve the user's restored workspace exactly as Obsidian opened it. A later explicit
         // sidecar action may create a managed companion, but startup itself is non-greedy.
         this.notifySidecar();
         return;
       }
+      if (!this.leafIsAttached(restored) || this.isManagedSidecarLeaf(restored)) return;
+      const actualPosition = this.adjacentPosition(hostLeaf, restored);
+      if (!actualPosition) return;
 
-      this.sidecarLeaves.set(hostLeaf, restored);
+      this.setSidecarOwner(hostLeaf, restored);
       this.linkedDocumentLeaf = restored;
       this.lastDocumentLeaf = restored;
       this.settings.documentSyncMode = "pinned";
-      const actualPosition = this.adjacentPosition(hostLeaf, restored);
-      if (actualPosition) this.settings.sidecarPosition = actualPosition;
+      this.settings.sidecarPosition = actualPosition;
       const restoredFile = this.fileForLeaf(restored);
       const restoredState = restored.getViewState();
       if (restoredFile) {
@@ -3461,7 +3735,7 @@ export default class KplexPlugin extends Plugin {
     // it open, release ownership, and create a fresh companion split rather than dragging that tab
     // back or later detaching it as collateral damage.
     if (leaf && !this.adjacentPosition(hostLeaf, leaf)) {
-      this.sidecarLeaves.delete(hostLeaf);
+      this.deleteSidecarOwner(hostLeaf);
       if (this.linkedDocumentLeaf === leaf) this.linkedDocumentLeaf = null;
       this.lastDocumentLeaf = leaf;
       leaf = null;
@@ -3470,7 +3744,7 @@ export default class KplexPlugin extends Plugin {
     // Normal Open never adopts an arbitrary adjacent/pinned tab. Existing tabs require the
     // separate explicit attachment gesture before Sidecar close/move can manage them.
     if (!leaf) leaf = this.createSidecarLeaf(hostLeaf, this.settings.sidecarPosition);
-    this.sidecarLeaves.set(hostLeaf, leaf);
+    this.setSidecarOwner(hostLeaf, leaf);
     this.settings.sidecarOpen = true;
     this.settings.documentSyncMode = "pinned";
     this.linkedDocumentLeaf = leaf;
@@ -3591,7 +3865,7 @@ export default class KplexPlugin extends Plugin {
     const collapsed = this.collapsedPlexHosts.get(hostLeaf);
     const leaf = this.sidecarLeaves.get(hostLeaf) ?? collapsed?.sidecarLeaf ?? null;
     this.restoreCollapsedPlex(hostLeaf);
-    this.sidecarLeaves.delete(hostLeaf);
+    this.deleteSidecarOwner(hostLeaf);
     if (leaf) {
       try { leaf.detach(); } catch { /* already detached */ }
     }
@@ -3615,7 +3889,7 @@ export default class KplexPlugin extends Plugin {
     const collapsed = this.collapsedPlexHosts.get(hostLeaf);
     const leaf = this.sidecarLeaves.get(hostLeaf) ?? collapsed?.sidecarLeaf ?? null;
     this.restoreCollapsedPlex(hostLeaf);
-    this.sidecarLeaves.delete(hostLeaf);
+    this.deleteSidecarOwner(hostLeaf);
     if (!leaf) return;
 
     // Releasing a K-Plex view must not disturb a separately pinned/recent note-tab link. Only the
@@ -3668,7 +3942,7 @@ export default class KplexPlugin extends Plugin {
       // workspace group.
       const preservedFootprint = this.sidecarFootprint(hostLeaf, previousSidecar);
       const replacement = this.createSidecarLeaf(hostLeaf, position);
-      this.sidecarLeaves.set(hostLeaf, replacement);
+      this.setSidecarOwner(hostLeaf, replacement);
       this.settings.sidecarOpen = true;
       this.settings.documentSyncMode = "pinned";
       this.linkedDocumentLeaf = replacement;
@@ -3684,7 +3958,7 @@ export default class KplexPlugin extends Plugin {
       } catch (error) {
         try { if (this.leafIsAttached(replacement)) replacement.detach(); } catch { /* best effort */ }
         if (this.leafIsAttached(previousSidecar)) {
-          this.sidecarLeaves.set(hostLeaf, previousSidecar);
+          this.setSidecarOwner(hostLeaf, previousSidecar);
           this.linkedDocumentLeaf = previousSidecar;
           this.lastDocumentLeaf = previousSidecar;
           const previousPosition = this.adjacentPosition(hostLeaf, previousSidecar);
@@ -3692,7 +3966,7 @@ export default class KplexPlugin extends Plugin {
           this.settings.sidecarOpen = true;
           this.settings.documentSyncMode = "pinned";
         } else {
-          this.sidecarLeaves.delete(hostLeaf);
+          this.deleteSidecarOwner(hostLeaf);
           this.linkedDocumentLeaf = null;
           this.settings.sidecarOpen = false;
           this.settings.documentSyncMode = "off";
@@ -3784,6 +4058,7 @@ export default class KplexPlugin extends Plugin {
       }
       await leaf.setViewState({ type: KPLEX_VIEW_TYPE, active: true });
     }
+    this.restorePlexFoldBeforeReveal(leaf);
     await this.app.workspace.revealLeaf(leaf);
   }
 

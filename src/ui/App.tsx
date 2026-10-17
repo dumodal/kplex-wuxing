@@ -979,7 +979,10 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     "history.open": uiAction(/** Include all saved history, beyond the footer's visible subset. */ () => openSavedPicker("history")),
     "pins.open": uiAction(/** Preserve saved order and unavailable rows in the complete searchable pins picker. */ () => openSavedPicker("pins")),
     "view.aliases.toggle": uiAction(/** Reuse the current toolbar's presentation-only mutation. */ () => toggleToolbarSetting("renderAlias")),
-    "view.fullscreen.toggle": uiAction(/** The view owns reversible native DOM placement, never workspace split changes. */ () => displayModes.toggleFullscreen(), () => displayModes.fullscreenAvailable),
+    "view.fullscreen.toggle": uiAction(/** Reveal the native group before fullscreen moves its content; the view retains Zen and overlay ownership. */ () => {
+      plugin.restorePlexFoldBeforeReveal(hostLeaf);
+      displayModes.toggleFullscreen();
+    }, () => displayModes.fullscreenAvailable),
     "view.wander.start": uiAction(/** All start surfaces resume the same per-view session. */ () => wander.start(), () => Boolean(page && rootRef.current?.querySelector(".kplex-plex"))),
     "view.wander.stop": uiAction(/** Stop restores the immutable entry Zen state. */ () => wander.stop(), () => wander.getSnapshot().phase !== "stopped"),
     "view.zen.toggle": uiAction(/** Independent session chrome visibility never changes persisted settings. */ () => displayModes.toggleZen()),
@@ -1000,7 +1003,6 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
       }
     }, /** An empty pane has nothing to bring into the Plex. */ () => plugin.getAdjacentSidecarTarget(hostLeaf) !== null),
     "view.sidecar.detach": uiAction(/** Detach the existing companion without selecting a different native leaf. */ () => plugin.detachSidecar(hostLeaf), () => surface !== "sidepanel" && plugin.isSidecarOpen(hostLeaf)),
-    "view.sidecar.collapse-plex": uiAction(/** Reuse the existing host fold control. */ () => plugin.collapsePlexForSidecar(hostLeaf), () => surface !== "sidepanel" && plugin.isSidecarOpen(hostLeaf)),
     "view.sidecar.position": uiAction(/** Explicit choices and keyboard menu share the same host move implementation. */ context => {
       if (context.request.id === "view.sidecar.position" && context.request.args?.position && page) return plugin.moveSidecar(hostLeaf, context.request.args.position, page);
       showSidecarMoveMenu();
@@ -1287,7 +1289,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
           onToLeaf={/** All entry points share typed action availability and ownership. */ () => runAction("view.sidecar.attach-from-center")}
           onToPlex={/** Reverse flow keeps the exact initiating surface. */ () => runAction("view.sidecar.attach-from-pane")} />}
         {sidecarOpen && <>
-          <button aria-label={translate("app.foldForSidecar")} onClick={() => runAction("view.sidecar.collapse-plex")}><ObsidianIcon name={foldPlexIcon} size={15} /></button>
+          <button type="button" aria-label={translate("app.foldForSidecar")} onClick={/** Explicit surface dispatch reaches the graph-independent host fold owner. */ () => runAction("view.sidecar.collapse-plex")}><ObsidianIcon name={foldPlexIcon} size={15} /></button>
           <button ref={sidecarMoveButtonRef} type="button" aria-haspopup="menu" data-kplex-menu-trigger="sidecar-position" aria-label={translate("app.moveSidecar")} onClick={() => runAction("view.sidecar.position")}><ObsidianIcon name="move" size={15} /></button>
           <button aria-label={translate("app.detachSidecar")} onClick={() => runAction("view.sidecar.detach")}><ObsidianIcon name="unlink" size={15} /></button>
         </>}

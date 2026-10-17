@@ -484,8 +484,8 @@ export const englishCatalog = {
   "actions.view.sidecar.position.description": { message: "Choose which side of the Plex holds its companion note pane.", context: "Action catalog label or target guidance.", params: [] },
   "actions.view.sidecar.detach": { message: "Detach sidecar", context: "Action catalog label or target guidance.", params: [] },
   "actions.view.sidecar.detach.description": { message: "Keep the companion note pane open as an independent workspace tab.", context: "Action catalog label or target guidance.", params: [] },
-  "actions.view.sidecar.collapse-plex": { message: "Fold or unfold Plex beside sidecar", context: "Action catalog label or target guidance.", params: [] },
-  "actions.view.sidecar.collapse-plex.description": { message: "Fold or restore the Plex to give its companion note pane more room.", context: "Action catalog label or target guidance.", params: [] },
+  "actions.view.sidecar.collapse-plex": { message: "Fold or unfold K-Plex tab group", context: "Stable fold action; the entire native K-Plex tab group is hidden or restored.", params: [] },
+  "actions.view.sidecar.collapse-plex.description": { message: "Fold or restore the whole K-Plex tab group. Other tabs in that group are hidden too.", context: "Stable fold action; the entire native K-Plex tab group is hidden or restored.", params: [] },
   "actions.surface.open-tab": { message: "Open graph", context: "Action catalog label or target guidance.", params: [] },
   "actions.surface.open-tab.description": { message: "Show K-Plex in an Obsidian workspace tab.", context: "Action catalog label or target guidance.", params: [] },
   "actions.surface.open-popout": { message: "Open graph in pop-out window", context: "Action catalog label or target guidance.", params: [] },
@@ -1422,9 +1422,29 @@ export const englishCatalog = {
     params: [],
   },
   "sidecar.unfoldPlex": {
-    message: "Unfold K-Plex",
-    context: "K-Plex host shell, command, toolbar, and status copy.",
+    message: "Unfold K-Plex tab group",
+    context: "Recovery button on the surviving native Sidecar group, including when another tab is selected.",
     params: [],
+  },
+  "sidecar.foldUnavailable": {
+    message: "No K-Plex and Sidecar pair is available in this window.",
+    context: "Fold action refusal; never select another window or create a replacement pair.",
+    params: [],
+  },
+  "sidecar.foldUnsupportedLayout": {
+    message: "This arrangement cannot be folded safely. K-Plex remains visible.",
+    context: "A new fold is refused when unrelated native groups cannot retain their allocation; existing recovery remains available.",
+    params: [],
+  },
+  "sidecar.chooseFoldPair": {
+    message: "Choose a K-Plex and Sidecar pair",
+    context: "Native finite target-picker placeholder for an ambiguous fold command in one window.",
+    params: [],
+  },
+  "sidecar.foldPairLabel": {
+    message: "K-Plex tab group {number}",
+    context: "Display ordinal in the current finite pair picker; the native Sidecar title appears separately as context.",
+    params: ["number"], referenceParams: [],
   },
   "index.startupMetadata": {
     message: "Reading cached index metadata",
@@ -1772,8 +1792,8 @@ export const englishCatalog = {
     params: ["position"], referenceParams: [],
   },
   "app.foldForSidecar": {
-    message: "Fold K-Plex and give the companion document the full split",
-    context: "K-Plex host shell, command, toolbar, and status copy.",
+    message: "Fold K-Plex tab group. Other tabs in this group are hidden too.",
+    context: "Accessible name and shared styled tooltip explaining the full native tab-group scope.",
     params: [],
   },
   "app.moveSidecar": {

@@ -4428,3 +4428,31 @@ acceptance on the existing #173 draft branch. The null return's underlying host 
 this checkpoint fixes retention and teardown only. C14 structural refactoring remains paused.
 Highest remaining workflow risks are interrupted layout motion and cross-window teardown;
 Windows native migration is exercised, while physical macOS/mobile motion needs separate coverage.
+
+
+### 2026-10-17: #173 safe native tab-group folding checkpoint
+
+The stable fold action now toggles a captured native pair independently of graph readiness.
+Existing Sidecar/fold owners retain native documents, tabs, pins and allocation; bounded sessions
+install group-level recovery before hiding and restore before release/reveal/remount/migration.
+Explicit absence/finite ambiguity and stale ownership/window/generation captures cannot retarget.
+Two direct groups in an isolated native split are supported on all edges; unsafe three-group or
+partial nested layouts remain expanded. A separately reproduced late startup adoption race now
+fences both awaited boundaries. Eight locales and contributor/user documentation are updated.
+No semantic/index/source/settings-schema/scheduler changes; C14 structural pause remains.
+
+Final Node 22.22.2 full verification and strict staging pass: 937 portable, 131 Chromium, 334 source
+contracts and 560 source-browser checks, actual types/scanner/build. Native persistence passes all
+five checks, including trusted 62/38 divider allocation and forced selected-renderer interruption
+followed by disabled startup. Display-mode and 38-sample Sidecar navigation lanes pass. Clean fold
+intervals add zero counted file opens/reads/writes or semantic/source work; no CPU/paint claim.
+
+Draft acceptance remains incomplete: final folding passes 36 functional cases but captures an
+Obsidian zoom-status exception during companion popout closure. A matched no-preceding-fold
+control is clean; removing remote diagnostic proxies does not resolve the error. Broader action
+recorder coverage fails after 13 passing groups; relationship workflow failure also reproduces on
+the merged #172 baseline. Preserve these outcomes, original failed controls and private evidence;
+see docs/validation/safe-plex-folding-173-2026-10-17.md. Keep #173 draft and #164 open. No merge/release.
+Highest risks: focused companion-popout closure, physical desktop group drag/multi-monitor, and
+full application/macOS/Linux/physical-tablet lifecycle. These need separate acceptance; Windows
+Electron automation and renderer interruption do not establish physical-device/full-process safety.

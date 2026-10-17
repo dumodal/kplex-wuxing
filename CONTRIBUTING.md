@@ -835,6 +835,35 @@ or browser fullscreen. Tablet/phone emulation checks Zen geometry and this avail
 constraint. Physical-device touch, screen readers and paint latency remain separate manual
 checks. A failed cleanup or an installed/build hash mismatch invalidates acceptance.
 
+### Native Sidecar folding acceptance
+
+After exact-build staging, run `npm run verify:obsidian:sidecar-folding` with all three explicit
+disposable `kplex-test-small` vault variables and a fresh `KPLEX_HOST_REPORT_DIR`. Run native and
+browser lanes serially. The lane exercises the published toggle and trusted native shortcut,
+keyboard/button recovery, actual ambiguity picker, whole-group tab ownership, four edges,
+disjoint/overlapping pairs, safe topology refusal, migration, content representation and stale
+controls. Clean transition counters distinguish presentation effects from source/index work.
+It creates a bounded owned content folder for drawing/PDF/Canvas checks; original fixture bytes,
+settings, native bindings and workspace are restored and verified. Driver/helper snapshots and
+hashes accompany the report. A missing prerequisite or cleanup failure is not acceptance.
+
+Run `npm run verify:obsidian:sidecar-folding-persistence` separately with the same explicit vault
+variables and a new private report directory. It verifies saved native layout, live plugin disable
+and enabled/disabled native renderer reloads. `KPLEX_FOLD_NATIVE_RESIZE=true` adds an actual trusted
+native divider drag for asymmetric allocation. `KPLEX_FOLD_FORCE_RENDERER_CRASH=true` deliberately
+interrupts only the verified disposable renderer and reloads it with K-Plex disabled, using a
+main-process recovery timer and exact webContents/process guards. Use that flag only where the
+maintainer authorized interruption of the selected disposable vault. Original configuration and
+workspace backups remain private; originals are restored independently of assertion success.
+Without the required interruption/asymmetry coverage, the driver reports partial acceptance
+(exit 2), rather than treating ordinary reload as crash recovery.
+
+The [folding report](docs/validation/safe-plex-folding-173-2026-10-17.md) records actual results and
+remaining restart, desktop drag, OS and physical-tablet gates. Serialized normal native dimensions
+alone do not prove interruption safety. Keep folding transient: no saved zero dimensions, native
+flex mutation, semantic invalidation or note writes. Unsupported direct three-group/nested partial
+pairs remain expanded; an existing hidden session always retains recovery.
+
 ### Native long-paste regression
 
 After the full `verify:obsidian` lane stages the exact build, run

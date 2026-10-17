@@ -2125,6 +2125,8 @@ button.kplex-sidecar-unfold-plex,
 
 /* Folding K-Plex in companion-sidecar mode removes the Plex tab group from the split. The
    surviving native document group owns this small edge control so K-Plex is always recoverable. */
+.kplex-folded-workspace-group { display: none; }
+.kplex-fold-recovery-host { position: relative; }
 .kplex-sidecar-unfold-plex {
   position: absolute;
   z-index: 1000;

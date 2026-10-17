@@ -16,36 +16,31 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 
 
+
 ---
 
-# PR #172 ? validated Windows closeout, draft review only
+# PR #173 - implementation returned for draft review
 
-Existing branch2026-10-17-indexing-live-updates; main9381c38 integrated without rewrite612a0c8.
-#169 merged with verified durable private raw archive; no runtime indexing change/improvement.
-A7f2f2f2 andB40c4f84 are pushed, full CI39011260178 and39014152315 PASS. Main is committing
-tooling/report closeout now. Production source remains exactly B; artifact c720a9f6e678fd35f2c1bec3b6218f9d62216c4b12ca0982805e961c844f9006.
+Branch: `2026-10-17-issue-164-safe-plex-folding`. #172 merged at `ef301dc07fa6a8754455a6aeb94ae871d2aacd75`; #161 closed with the requested comment referencing #172. Main integrated without rewriting history at `2735550a28b7ad16a68da1df2a0cac4ad9845217`. Animation prerequisite checkpoint `75ac2ab` pushed. Feature checkpoint prepared below; keep #173 draft and #164 open. No merge/release/branch deletion/personal-vault access.
 
-Full Node22.22.2 verify+exact-build native smoke PASS. #161 final2/2 native runs cover both prior
-ghost-history variants,16fullcycles,4later Parent/Child edits, exact identities/roles/solid links,
-first-click pinned agreement and cleanup. Real held-P3 Find/stationary semantics/recent-sync and
-physical-only existing-note composer PASS. Existing inventory-held mutation lane six scenarios
-PASS, foreground broadflush0; one initial-DOM setup failure/replay retained. Driver awaits existing
-surface readiness. Native shell contract tests20/20, source/script syntax and diff checks PASS.
+## Returned implementation and review
 
-C investigation complete at bounded causal scope: two B Eager pilots plus one M control show
-identical counts: existing-folder note2checks/77tx/197requests; folder+note92checks/1527tx/2925
-requests,1read/parse each, no fullbuild/snapshot. Natural uncovered-folder resolverclose advances
-host revision and causes whole-source cached validation. No efficiency gain claimed; cache-image
-history differs. Do not suppress folder uncertainty. Future work is a separate bounded causal-proof
-task for new-folder creation waves, not an approved automatic optimization.
+Stable fold action/command now toggles a graph-independent captured native pair. Existing Sidecar/fold maps remain sole ownership inventories. Exact generation/revision/window/group/ancestry fences, finite native picker, complete-group recovery, restore-before-release/reveal/migration, four edges, overlap/disjoint ownership and a proven late-startup-adoption race are covered. New folds deliberately require two direct native groups in an isolated split; unsafe layouts stay expanded. Native model/flex/dimensions are untouched. All eight locales and user documentation updated. No index/source/parser/settings/schema/scheduler changes; C14 structural refactoring remains paused.
 
-All current disposable fixtures/config/session modes/wrappers restored;107files. Durable private
-evidence: %LOCALAPPDATA%/kplex-validation/pr-172/checkpoint-b/ andcheckpoint-c-native/, manifests
-verified (37/34files), raw originals retained, no archives published. Exact sources/failed controls
-and limits in docs/validation/indexing-live-updates-172-2026-10-17.md and Refactor plan.md.
+Offline agent source review and independent main review found no additional concrete source blocker. Runtime tests exercise production owners, and UI tests compile real components. Main reviewed ownership, async fencing, architectural seams, lifecycle/document cleanup, native types, localization/accessibility and paint-versus-semantic boundaries. Automated verification supplements rather than replaces that review.
 
-Keep172draft andCloses #161; do not merge/release/close161 manually. Linux/macOS/physicalmobile,
-popout interruption and large-vault long quiet-window acceptance remain unrun. No personal-vault
-access, receipt, reader-sharing, new scheduler/schema or C15+ structural work. Stop further runtime
-changes unless review establishes a specific remaining cause; final-head tooling CI can be tracked
-from the PR checks after closeout push. Do not archive this transient handoff.
+## Actual evidence
+
+Only authorized disposable Small (107 files / 88 Markdown), Windows 10.0.26200 / Obsidian 1.14.4 / Electron 43.3.0 / Excalidraw 2.29.0; Node22.22.2. Final artifact SHA-256 `8d20bf308e935f353a9eea24256d44838b33863cd6d99d7b00ed056e7459e8c1` matches strict staging.
+
+Full `npm run verify:obsidian` passes: 937 portable, 131 general Chromium, 334 source-contract and 560 source-browser tests; architecture/core, installed types, official scanner, production build and strict native staging. Persistence passes all five checks including trusted asymmetric native divider drag, live disable, enabled/disabled reload, and actual selected-renderer interruption with a new PID followed by disabled startup. Both groups remain reachable at the same native share. Configuration/runtime and note inventory restore, no errors. Full application/OS restart is separate.
+
+The final-artifact matrix passes 36 functional checks, but runs nine/ten/eleven capture Obsidian's zoom-status exception during companion popout close. Simple no-fold controls and a matched matrix omitting the preceding fold are clean: this does not prove the exception unrelated. The helper-only control removing diagnostic child-realm remote proxies still passes all36 functional checks and reproduces the same zoom-status exception; exact closed-window and native-leaf-removal assertions remain. Do not suppress the error or claim native overall acceptance unless the final lane is clean.
+
+Existing display-mode lane passes after correcting its proven Mac-only chrome assertion for Windows. Sidecar navigation passes38 samples. Existing broader action lane's semantic Mod transport was corrected for Windows; 13 groups pass before explicit F1 recorder assertion fails. Relationship workflow stops at Wrong child target/storage on both final and merged-#172 baseline; final artifact restored afterward. These partial lanes remain explicit, not accepted passes.
+
+## Evidence and next owner
+
+Curated source/artifact/driver/results/limits: `docs/validation/safe-plex-folding-173-2026-10-17.md`. Raw originals and failed controls retained in `%TEMP%/kplex-173-*`; final closeout records a verified private backup outside temporary storage. Do not publish private configuration/raw evidence or delete originals. All native drivers run serially with the three explicit disposable-vault variables. No active portable/native suite should overlap another.
+
+Remaining acceptance: settle native popout-close error and broad action recorder gap; physical desktop group dragging/multi-monitor; full application interruption/restart and macOS/Linux/physical tablet lifecycle/touch. Never infer physical-device or perceived-paint coverage from Electron automation. Native repository management remains root-owned. Commit/push checkpoints within standing user authorization, update #173 with real outcomes, keep draft/#164 open. Do not resume receipts/reader optimizations or C15+ refactoring.
