@@ -36,6 +36,12 @@ abstract class BaseKplexView extends ItemView {
   /** Identify the owning surface so profile and environment policy stay outside the renderer. */
   protected abstract getSurface(): KplexViewSurface;
 
+  /** Native fold ownership follows this exact React lifetime, independently of graph readiness. */
+  getPlexFoldGeneration(): number { return this.renderGeneration; }
+
+  /** Restore the same content node to its native group before a fold; Zen remains independent. */
+  prepareForPlexFold(): void { this.displayModes?.exitFullscreen(false); }
+
   /** Resolve after initial rendering, or on close so pending callers cannot retain a dead view. */
   waitUntilReady(): Promise<void> {
     if (this.ready) return Promise.resolve();
@@ -51,6 +57,7 @@ abstract class BaseKplexView extends ItemView {
 
   /** Replace the React root in this owning document, releasing any previous root and listeners. */
   protected renderReact(): void {
+    this.plugin.restorePlexFoldBeforeReveal(this.leaf);
     this.ready = false;
     const generation = ++this.renderGeneration;
     this.root?.unmount();
@@ -88,6 +95,7 @@ abstract class BaseKplexView extends ItemView {
     });
     if (typeof this.containerEl.onWindowMigrated === "function") {
       this.windowMigrationCleanup = this.containerEl.onWindowMigrated(/** Unmount in the source realm before restoring an overlay host into its adopted native parent. */ () => {
+        this.plugin.restorePlexFoldBeforeReveal(this.leaf);
         this.root?.unmount(); this.root = null;
         this.displayModes?.exitFullscreen();
         this.renderReact();
@@ -103,6 +111,7 @@ abstract class BaseKplexView extends ItemView {
 
   /** Release window hooks, React resources and pending waiters before native view teardown. */
   async onClose(): Promise<void> {
+    this.plugin.restorePlexFoldBeforeReveal(this.leaf);
     this.displayModes?.dispose(); this.displayModes = null;
     this.releaseDisplayLifecycle?.(); this.releaseDisplayLifecycle = null;
     this.windowMigrationCleanup?.();

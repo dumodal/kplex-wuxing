@@ -2,6 +2,42 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {browserBundle,chromiumHarness} from './support/browserTypeScript.mjs';
+import {loadPortableModules} from './support/portableTypeScript.mjs';
+
+const {exports:{ElementMotion}} = loadPortableModules(['src/ui/components/ElementMotion.ts']);
+
+/** Controlled native effects expose acquisition and exact asynchronous completion ownership. */
+function animationFixture() {
+ let resolve,reject,canceled=0;
+ const effect={finished:new Promise((done,fail)=>{resolve=done;reject=fail}),cancel(){canceled++},effect:{getComputedTiming:()=>({progress:.5})}};
+ return {effect,finish:()=>resolve(),fail:()=>reject(Error('canceled')),get canceled(){return canceled}};
+}
+const motionPoses=[{offset:0,x:0,y:0,scaleX:1,scaleY:1,originX:0,originY:0},{offset:1,x:10,y:0,scaleX:1,scaleY:1,originX:0,originY:0}];
+
+test('native null animation acquisition retains no effect or pose and cancelAll stays safe',()=>{
+ const motion=new ElementMotion(),element={animate:()=>null};
+ assert.equal(motion.play(element,[{},{}],{duration:20},motionPoses),null);
+ assert.equal(motion.isRunning(),false);assert.equal(motion.isRunning(element),false);assert.equal(motion.sample(element),null);
+ assert.doesNotThrow(()=>motion.cancelAll());assert.doesNotThrow(()=>motion.cancelAll());
+});
+
+test('native null replacement retires old motion before admitting a later valid exact owner',async()=>{
+ const motion=new ElementMotion(),old=animationFixture(),current=animationFixture();let next=old.effect;
+ const element={animate:()=>next};
+ assert.equal(motion.play(element,[{},{}],{duration:20},motionPoses),old.effect);assert(motion.sample(element));
+ next=null;assert.equal(motion.play(element,[{},{}],{duration:20},motionPoses),null);assert.equal(old.canceled,1);assert.equal(motion.isRunning(),false);assert.equal(motion.sample(element),null);
+ next=current.effect;assert.equal(motion.play(element,[{},{}],{duration:20},motionPoses),current.effect);assert.equal(motion.isRunning(element),true);
+ old.fail();await Promise.resolve();assert.equal(motion.isRunning(element),true,'Retired completion cannot erase the new owner');assert(motion.sample(element));
+ motion.cancelAll();assert.equal(current.canceled,1);assert.equal(motion.isRunning(),false);assert.equal(motion.sample(element),null);
+ current.fail();await Promise.resolve();assert.equal(motion.isRunning(),false);
+});
+
+test('native valid animation preserves no-fill options and releases only its completed owner',async()=>{
+ const motion=new ElementMotion(),effect=animationFixture(),frames=[{},{}],options={duration:20,fill:'both'};let received;
+ const element={animate(actualFrames,actualOptions){received={frames:actualFrames,options:actualOptions};return effect.effect}};
+ assert.equal(motion.play(element,frames,options,motionPoses),effect.effect);assert.equal(received.frames,frames);assert.equal(received.options.fill,'none');assert.equal(options.fill,'both');assert(motion.sample(element));
+ effect.finish();await Promise.resolve();assert.equal(motion.isRunning(element),false);assert.equal(motion.sample(element),null);motion.cancelAll();assert.equal(effect.canceled,0);
+});
 
 test('element motion retires repeated transforms and restores actual scaled layout on finish or interruption',async()=>{
  const browser=await chromiumHarness(await browserBundle(['src/ui/components/ElementMotion.ts']));

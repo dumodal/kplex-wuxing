@@ -180,10 +180,13 @@ test("every action explains its behavior beyond its label, and help is distinct 
 test("bundled locale catalogs are complete and provide translated copy", () => {
   const english = require(join(portableTemp, "src/lang/en.js")).englishCatalog;
   const englishKeys = Object.keys(english).sort();
-  const attachmentKeys = [
+  const maintainedSidecarKeys = [
     "actions.view.sidecar.attach-from-center", "actions.view.sidecar.attach-from-center.description",
     "actions.view.sidecar.attach-from-pane", "actions.view.sidecar.attach-from-pane.description",
     "settings.ui.where.k.plex.creates.its.dedicated.companion.document.pa",
+    "actions.view.sidecar.collapse-plex", "actions.view.sidecar.collapse-plex.description",
+    "app.foldForSidecar", "sidecar.unfoldPlex", "sidecar.foldUnavailable",
+    "sidecar.foldUnsupportedLayout", "sidecar.chooseFoldPair",
   ];
   const catalogs = [
     ["de", "de.js", "germanCatalog", "Graph öffnen"],
@@ -199,13 +202,30 @@ test("bundled locale catalogs are complete and provide translated copy", () => {
     const catalog = require(join(portableTemp, `src/lang/${file}`))[exportName];
     assert.deepEqual(Object.keys(catalog).sort(), englishKeys, `${locale} must translate every English catalog key`);
     assert.equal(localization.createTranslator(locale)("command.openGraph"), expected);
-    for (const key of attachmentKeys) {
+    for (const key of maintainedSidecarKeys) {
       assert.notEqual(catalog[key].message, english[key].message, `${locale}:${key} must not silently fall back to English`);
       assert.equal(localization.createTranslator(locale)(key), catalog[key].message);
     }
+    assert.notEqual(catalog["sidecar.foldPairLabel"].message, english["sidecar.foldPairLabel"].message);
+    const pairLabel = localization.createTranslator(locale)("sidecar.foldPairLabel", {number: 2});
+    assert(pairLabel.includes("2") && !pairLabel.includes("{number}") && !pairLabel.includes('"2"'), `${locale}: pair display ordinals are counts, not quoted note references`);
   }
   assert.equal(localization.createTranslator("de-DE")("command.openGraph"), "Graph öffnen");
   assert.equal(localization.createTranslator("zh_TW")("command.openGraph"), "開啟圖譜");
+});
+
+test("Sidecar folding copy identifies the native group scope and preserves the published action identity", () => {
+  const translate = localization.createTranslator("en");
+  const actions = require(join(portableTemp, "src/core/plex/actions.js"));
+  const fold = actions.ACTION_BY_ID.get("view.sidecar.collapse-plex");
+  assert.equal(fold.command.id, "kplex-action-view-sidecar-collapse-plex");
+  assert.equal(translate(fold.labelKey), "Fold or unfold K-Plex tab group");
+  assert.match(translate(fold.descriptionKey), /Other tabs in that group are hidden too/u);
+  assert.match(translate("app.foldForSidecar"), /Other tabs in this group are hidden too/u);
+  assert.equal(translate("sidecar.unfoldPlex"), "Unfold K-Plex tab group");
+  assert.equal(translate("sidecar.foldPairLabel", {number: 2}), "K-Plex tab group 2");
+  assert.match(translate("sidecar.foldUnavailable"), /this window/u);
+  assert.match(translate("sidecar.foldUnsupportedLayout"), /K-Plex remains visible/u);
 });
 
 test("unknown keys and bad interpolation fail instead of leaking raw/blank UI", () => {

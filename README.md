@@ -292,10 +292,14 @@ The sidecar:
 - follows the current K-Plex center;
 - uses normal Obsidian Markdown reading/editing views;
 - supports plugin-owned file views such as Excalidraw;
-- can be folded so the document temporarily gets more space;
+- lets you temporarily fold the K-Plex tab group to give the Sidecar group more space;
 - can be detached and turned back into an ordinary independent Obsidian pane.
 
 The small **Sidecar control lives on the corresponding edge of K-Plex**. If you close the Sidecar, the control stays on that edge so you always know where to reopen it. K-Plex remembers the last Sidecar position; if you have never positioned it before, the configured default side is used.
+
+**Fold K-Plex tab group** temporarily hides every tab in the graph's group, including other notes beside K-Plex. The tabs stay open. Use **Unfold K-Plex tab group** on the surviving Sidecar group's edge, or repeat the fold command, to restore them. The recovery control remains available when you select another tab in the Sidecar group. Closing the exact managed Sidecar restores the hidden group and leaves any other document tabs open; closing an unrelated sibling tab does not end the fold. Activating a tab in the hidden group also restores it and honors that selected tab.
+
+The fold command targets a K-Plex and Sidecar pair in the current window. If the target is ambiguous, choose the pair from the native picker. Arrangements that cannot preserve unrelated panes remain expanded. Folding is temporary, works independently of the graph center and indexing, and does not change your notes. Fullscreen restores a folded group first; leaving fullscreen does not fold it again.
 
 When you move an open Sidecar, K-Plex preserves the combined screen area occupied by K-Plex and the Sidecar instead of gradually giving that space to other tab groups. On restart, Obsidian restores the workspace layout itself; K-Plex does **not** open another pane. It reconnects to the already-restored document tab-group on the same side where the Sidecar was last positioned and remembers the actual document/URL that Sidecar was showing. For example, a Sidecar remembered on the right reconnects only to the adjacent right-hand group, not to a note below or to the left. During the first few seconds of workspace hydration K-Plex also ignores Obsidian's transient “most recent tab” ordering so the graph center and Sidecar are not redirected to the first restored tab. If that edge is genuinely ambiguous, K-Plex leaves the restored workspace untouched rather than adding or taking over a pane.
 

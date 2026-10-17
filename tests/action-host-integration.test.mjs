@@ -89,6 +89,7 @@ test('Sidecar attachment uses both initial flows, rejects empty reverse flow and
   const attach = method('attachAdjacentSidecar', { isWebViewerAvailable: () => true });
   const make = () => ({ settings: { sidecarPosition: 'right', documentSyncMode: 'off', sidecarOpen: false, sidecarLastFilePath: '', sidecarLastUrl: '' },
     sidecarMovingHosts: new Set(), sidecarLeaves: new Map(), currentFile: file, openCalls: 0,
+    setSidecarOwner(host, leaf) { this.sidecarLeaves.set(host, leaf); }, deleteSidecarOwner(host) { this.sidecarLeaves.delete(host); },
     getAdjacentSidecarCandidate() { return this.sidecarLeaves.has(host) || this.sidecarMovingHosts.has(host) ? null : leaf; },
     fileForLeaf() { return this.currentFile; }, indexedUrlPathForLeaf: () => null, webViewerUrlForLeaf: () => null,
     app: { vault: { getFileByPath: () => page.file } }, leafIsAttached: () => true, adjacentPosition: () => 'right',
@@ -564,4 +565,269 @@ for(const replaceCanonical of [false,true])test('delete cleanup '+(replaceCanoni
   else{assert.deepEqual(f.frontmatter,{arbitrary:'[[B]]'});assert(semanticChecks>0,'Existing writer still requires semantic pair authority');assert.deepEqual(f.patches,['Owner.md']);assert.equal(index.pages.get(canonical.path),canonical);assert.equal(facade.file,null);}
   assert.equal(f.context.relationshipWriteCancels.size,0);
  }finally{globalThis.window=previous;}
+});
+
+
+// Native-host folding uses production methods and the production session owner with small DOM
+// ports. Actual native geometry, activation, save-layout and interruption remain separate lanes.
+const foldBundle = join(temporary, 'fold-session.mjs');
+await build({entryPoints: ['src/ui/PlexFoldSession.ts'], outfile: foldBundle, bundle: true, platform: 'node', format: 'esm', plugins: [{name:'fold-native-ports',setup(builder){
+  builder.onResolve({filter:/^obsidian$/},()=>({path:'obsidian',namespace:'fold-ports'}));
+  builder.onResolve({filter:/LongPressTooltip$/},()=>({path:'tooltip',namespace:'fold-ports'}));
+  builder.onLoad({filter:/.*/,namespace:'fold-ports'},({path})=>({contents:path==='obsidian' ? 'export function setIcon(el){if(el.ownerDocument.failIcon)throw Error("icon failed");}' : 'export function installKplexLongPressTooltips(doc){doc.leases++;let live=true;return()=>{if(live){live=false;doc.leases--;}}}',loader:'js'}));
+}}]});
+const {PlexFoldSession, plexFoldIdentity} = await import(pathToFileURL(foldBundle));
+
+/** Minimal native structural ports, deliberately without workspace save/open/index capabilities. */
+function foldFixture() {
+  class Classes extends Set { contains(value){return this.has(value)} remove(value){this.delete(value)} }
+  class Element {
+    constructor(doc,...classes){this.ownerDocument=doc;this.classList=new Classes(classes);this.children=[];this.parentElement=null;this.attrs=new Map();this.listeners=new Map();this.connected=false;this.extent=400;}
+    get isConnected(){return this.parentElement ? this.parentElement.isConnected : this.connected}
+    appendChild(child){child.remove();this.children.push(child);child.parentElement=this;return child}
+    remove(){if(this.parentElement)this.parentElement.children=this.parentElement.children.filter(child=>child!==this);this.parentElement=null;this.connected=false}
+    createEl(_tag,options={}){if(this.ownerDocument.failCreate)throw Error('create failed');return this.appendChild(new Element(this.ownerDocument,...(options.cls??'').split(' ').filter(Boolean)))}
+    querySelector(){return this.children.find(child=>child.classList.contains('workspace-tab-container'))??null}
+    contains(child){for(let node=child;node;node=node.parentElement)if(node===this)return true;return false}
+    setAttribute(key,value){this.attrs.set(key,value)} getAttribute(key){return this.attrs.get(key)??null} hasAttribute(key){return this.attrs.has(key)} removeAttribute(key){this.attrs.delete(key)}
+    addEventListener(key,fn){this.listeners.set(key,fn)}
+    getBoundingClientRect(){return {width:this.extent,height:this.extent}}
+  }
+  class KplexView {constructor(){this.generation=1;this.zen=true;this.fullscreen=false}getPlexFoldGeneration(){return this.generation}prepareForPlexFold(){this.fullscreen=false}}
+  const observers=new Set(),events=new Map(),doc={leases:0,activeElement:null};
+  doc.defaultView={addEventListener:(key,fn)=>events.set(key,fn),removeEventListener:(key,fn)=>{if(events.get(key)===fn)events.delete(key)},getComputedStyle:el=>({display:el.classList.contains('kplex-folded-workspace-group')?'none':'flex'}),MutationObserver:class{constructor(callback){this.callback=callback;observers.add(this)}observe(){}disconnect(){observers.delete(this)}}};
+  const root=new Element(doc);root.connected=true;const split=root.appendChild(new Element(doc,'workspace-split')),hostGroup=split.appendChild(new Element(doc,'workspace-tabs')),sidecarGroup=split.appendChild(new Element(doc,'workspace-tabs')),recovery=sidecarGroup.appendChild(new Element(doc,'workspace-tab-container'));
+  const host={group:hostGroup,view:new KplexView(),attached:true,getViewState:()=>({type:'kplex'})},sidecar={group:sidecarGroup,view:{},kind:'markdown',attached:true,getViewState(){return{type:this.kind}}},sibling={group:sidecarGroup,view:{},attached:true,selected:true};
+  const calls=[],owner={unloading:false,collapsedPlexHosts:new Map(),plexFoldRevisions:new WeakMap(),sidecarLeaves:new Map([[host,sidecar]]),sidecarMovingHosts:new Set(),passiveSidecarSyncRequests:new WeakMap(),settings:{documentSyncMode:'pinned',sidecarOpen:true},linkedDocumentLeaf:sidecar,
+    leafIsAttached:leaf=>leaf.attached,leafGroupElement:leaf=>leaf.group,splitAxis:()=>owner.axis??'width',adjacentPosition:()=>owner.geometry===false?null:'right',leafTabIsActive:leaf=>!!leaf.selected,translator:key=>key,notifySidecar:()=>calls.push('notify'),onKplexVisibilityMayHaveChanged:()=>calls.push('visibility'),
+    app:{workspace:{activeLeaf:host,getActiveViewOfType(){return {leaf:this.activeLeaf}},iterateAllLeaves(fn){[host,sidecar,sibling].forEach(fn)},setActiveLeaf(leaf){calls.push(['focus',leaf]);this.activeLeaf=leaf},async revealLeaf(leaf){calls.push(['reveal',leaf])}}}};
+  for(const name of ['advancePlexFoldRevision','setSidecarOwner','deleteSidecarOwner','restoreCollapsedPlex','restorePlexFoldBeforeReveal','isPlexFoldedForSidecar','readPlexFoldCandidate','plexFoldToken','readPlexFoldCandidates','readPlexFoldUnavailableReason','isPlexFoldCandidateCurrent','isPlexFoldSessionValid','reconcilePlexFolds','togglePlexFold','expandPlexFromSidecar'])owner[name]=method(name,{KplexView,ItemView:class{},PlexFoldSession,plexFoldIdentity});
+  return {owner,host,sidecar,sibling,root,split,hostGroup,sidecarGroup,recovery,doc,events,observers,calls,Element,KplexView};
+}
+
+/** Real pair captures and session transitions are graph-independent and reversible. */
+test('native fold toggles with no center, preserves selected sibling, and restores exact captured DOM',async()=>{
+  const f=foldFixture(),c=f.owner.readPlexFoldCandidate(f.host),original=c.token;
+  assert.equal(c.hostShare,.5);assert.equal(f.doc.leases,0);assert.equal(f.calls.length,0,'Checks have no native effects');
+  assert.equal(await f.owner.togglePlexFold(c),true);assert(f.hostGroup.classList.contains('kplex-folded-workspace-group'));assert.equal(f.owner.app.workspace.activeLeaf,f.sibling);assert.equal(f.doc.leases,1);assert.equal(f.recovery.children.length,1);assert(f.host.view.zen);
+  const folded=f.owner.readPlexFoldCandidate(f.host);assert.notEqual(folded.token,original);assert.equal(f.owner.isPlexFoldCandidateCurrent(c),false);
+  assert.equal(await f.owner.togglePlexFold(folded),true);assert.equal(f.owner.app.workspace.activeLeaf,f.host);assert.equal(f.doc.leases,0);assert.equal(f.recovery.children.length,0);assert.equal(f.events.size,0);assert.equal(f.observers.size,0);assert(!f.hostGroup.classList.contains('kplex-folded-workspace-group'));assert.notEqual(f.owner.readPlexFoldCandidate(f.host).token,original);
+});
+
+/** Capture fences survive owner ABA, React lifetime replacement and native ancestor movement. */
+test('native fold rejects stale owner, generation, recovery wrapper and whole-split ancestry',async()=>{
+  for(const change of [f=>{f.owner.deleteSidecarOwner(f.host);f.owner.setSidecarOwner(f.host,f.sidecar)},f=>f.host.view.generation++,f=>{f.recovery.remove();f.sidecarGroup.appendChild(new f.Element(f.doc,'workspace-tab-container'))},f=>{const outer=f.root.appendChild(new f.Element(f.doc,'workspace-split'));outer.appendChild(f.split)}]){
+    const f=foldFixture(),c=f.owner.readPlexFoldCandidate(f.host);change(f);assert.equal(f.owner.isPlexFoldCandidateCurrent(c),false);assert.equal(await f.owner.togglePlexFold(c),false);assert.equal(f.owner.collapsedPlexHosts.size,0);assert.equal(f.doc.leases,0);
+  }
+});
+
+/** Hidden invalid owners restore before release, while ordinary navigation and unrelated tabs survive. */
+test('native fold reconciles detach/replacement/migration without adopting or closing another tab',async()=>{
+  for(const change of [f=>{f.sidecar.attached=false},f=>{f.sidecar.kind='empty';f.sidecar.view={}},f=>{const outer=f.root.appendChild(new f.Element(f.doc,'workspace-split'));outer.appendChild(f.split)},f=>{f.host.view.generation++}]){
+    const f=foldFixture();await f.owner.togglePlexFold(f.owner.readPlexFoldCandidate(f.host));change(f);assert.equal(f.owner.reconcilePlexFolds(),true);assert.equal(f.owner.collapsedPlexHosts.size,0);assert.equal(f.owner.sidecarLeaves.size,0);assert(!f.hostGroup.classList.contains('kplex-folded-workspace-group'));assert.equal(f.doc.leases,0);assert.equal(f.sibling.attached,true);assert.equal(f.owner.app.workspace.activeLeaf,f.sibling);
+  }
+  const f=foldFixture();await f.owner.togglePlexFold(f.owner.readPlexFoldCandidate(f.host));f.sidecar.kind='excalidraw';f.sidecar.view={};f.sibling.attached=false;assert.equal(f.owner.reconcilePlexFolds(),false);assert.equal(f.owner.collapsedPlexHosts.size,1);f.owner.restorePlexFoldBeforeReveal(f.host);assert.equal(f.doc.leases,0);
+});
+
+/** Failed DOM/focus installation and foreign ownership must never leave a hidden group or lease. */
+test('native fold rolls back installation failures and refuses unsafe allocation',async()=>{
+  for(const fail of [f=>{f.doc.failCreate=true},f=>{f.doc.failIcon=true},f=>{f.owner.app.workspace.setActiveLeaf=()=>{throw Error('native focus failed')}},f=>{f.hostGroup.setAttribute('data-kplex-fold-owner','foreign')}]){
+    const f=foldFixture();fail(f);assert.equal(await f.owner.togglePlexFold(f.owner.readPlexFoldCandidate(f.host)),false);assert.equal(f.owner.collapsedPlexHosts.size,0);assert.equal(f.doc.leases,0);assert(!f.recovery.classList.contains('kplex-fold-recovery-host'));assert.equal(f.recovery.children.length,0);assert(!f.hostGroup.classList.contains('kplex-folded-workspace-group'));
+  }
+  const f=foldFixture();f.split.appendChild(new f.Element(f.doc,'workspace-tabs'));assert.equal(f.owner.readPlexFoldCandidate(f.host),null);assert.equal(f.owner.readPlexFoldUnavailableReason(f.host),'sidecar.foldUnsupportedLayout');assert.equal(f.calls.length,0);
+});
+
+/** Recovery control repair is bounded and retired callbacks cannot unfold a successor. */
+test('native recovery repairs a removed button and retires detached DOM, pagehide and old callbacks',async()=>{
+  const f=foldFixture();await f.owner.togglePlexFold(f.owner.readPlexFoldCandidate(f.host));const session=f.owner.collapsedPlexHosts.get(f.host),button=session.unfoldButton,callback=button.listeners.get('click');button.remove();[...f.observers][0].callback();assert.equal(button.parentElement,f.recovery);
+  f.hostGroup.remove();f.owner.restorePlexFoldBeforeReveal(f.host);assert(!f.hostGroup.classList.contains('kplex-folded-workspace-group'));assert.equal(f.doc.leases,0);session.dispose();callback();assert.equal(f.owner.collapsedPlexHosts.size,0);
+  f.split.appendChild(f.hostGroup);await f.owner.togglePlexFold(f.owner.readPlexFoldCandidate(f.host));f.events.get('pagehide')();assert.equal(f.owner.collapsedPlexHosts.size,0);assert.equal(f.doc.leases,0);
+});
+
+/** An older accepted reveal cannot focus after a newer complete fold/unfold round trip. */
+test('native explicit unfold fences delayed reveal after a newer fold incarnation',async()=>{
+  const f=foldFixture();await f.owner.togglePlexFold(f.owner.readPlexFoldCandidate(f.host));let finish;f.owner.app.workspace.revealLeaf=()=>new Promise(resolve=>{finish=resolve});const pending=f.owner.expandPlexFromSidecar(f.host);await Promise.resolve();
+  await f.owner.togglePlexFold(f.owner.readPlexFoldCandidate(f.host));f.owner.restorePlexFoldBeforeReveal(f.host);const focusCount=f.calls.filter(call=>Array.isArray(call)&&call[0]==='focus').length;finish();await pending;assert.equal(f.calls.filter(call=>Array.isArray(call)&&call[0]==='focus').length,focusCount);assert.equal(f.doc.leases,0);
+});
+
+/** Restoring visibility does not authorize a later completion to override newer native selection. */
+test('native explicit unfold preserves a different native tab selected during held reveal',async()=>{
+  for (const selectsSynchronously of [false,true]) {
+  const f=foldFixture();await f.owner.togglePlexFold(f.owner.readPlexFoldCandidate(f.host));
+  let finish;f.owner.app.workspace.revealLeaf=()=>{if(selectsSynchronously)f.owner.app.workspace.setActiveLeaf(f.host,{focus:true});return new Promise(resolve=>{finish=resolve})};
+  const pending=f.owner.expandPlexFromSidecar(f.host);assert.equal(f.owner.collapsedPlexHosts.size,0);
+  const other={group:f.hostGroup,view:{},attached:true};f.owner.app.workspace.setActiveLeaf(other,{focus:true});
+  const focusCount=f.calls.filter(call=>Array.isArray(call)&&call[0]==='focus').length;
+  finish();await pending;assert.equal(f.owner.app.workspace.activeLeaf,other);assert.equal(f.calls.filter(call=>Array.isArray(call)&&call[0]==='focus').length,focusCount);
+  }
+});
+
+/** Hold one real startup boundary; native creation/ownership remains the existing production owner. */
+function startupSidecarFixture(boundary='candidate') {
+  const f=foldFixture(),owner=f.owner;owner.deleteSidecarOwner(f.host);f.host.view.getViewType=()=> 'kplex';owner.linkedDocumentLeaf=null;
+  owner.settings.sidecarOpen=true;owner.sidecarRestoreAttemptedHosts=new Set();owner.sidecarRestoreTask=null;
+  owner.isSidecarOpen=host=>owner.sidecarLeaves.has(host);
+  let finish,admit;const admitted=new Promise(resolve=>{admit=resolve}),gate=new Promise(resolve=>{finish=resolve});
+  owner.waitForWorkspaceLayout=()=>{if(boundary==='layout'){admit();return gate}return Promise.resolve()};
+  owner.waitForRestoredSidecarCandidate=()=>{f.candidateCalls++;if(boundary==='candidate'){admit();return gate}return Promise.resolve(f.sidecar)};
+  f.saves=0;f.candidateCalls=0;owner.saveSettings=async()=>{f.saves++};owner.fileForLeaf=leaf=>leaf.file??null;
+  owner.isManagedSidecarLeaf=leaf=>Array.from(owner.sidecarLeaves.values()).includes(leaf);
+  const restore=method('restorePersistedSidecar',{KplexView:f.KplexView,KPLEX_SIDEPANEL_VIEW_TYPE:'sidepanel'});
+  return Object.assign(f,{admitted,finish:()=>finish(f.sidecar),start:()=>restore.call(owner,f.host)});
+}
+
+/** Startup matching owns no native pane until its opening lifetime survives both awaited boundaries. */
+test('native delayed startup Sidecar restore cannot overwrite a newer explicit owner',async()=>{
+  const f=startupSidecarFixture(),owner=f.owner,pending=f.start();await f.admitted;
+  const replacement={group:f.sidecarGroup,attached:true,view:{},file:{path:'Explicit.md'},getViewState:()=>({type:'markdown'})};
+  owner.setSidecarOwner(f.host,replacement);owner.linkedDocumentLeaf=replacement;owner.lastDocumentLeaf=replacement;owner.settings.sidecarLastFilePath='Explicit.md';
+  f.finish();await pending;assert.equal(owner.sidecarLeaves.get(f.host),replacement);assert.equal(owner.linkedDocumentLeaf,replacement);assert.equal(owner.lastDocumentLeaf,replacement);assert.equal(owner.settings.sidecarLastFilePath,'Explicit.md');assert.equal(f.saves,0);assert.equal(owner.sidecarRestoreTask,null);
+});
+
+/** Unchanged startup restoration must still adopt and persist its one exact existing native leaf. */
+test('native delayed startup Sidecar restore retains ordinary unchanged startup adoption',async()=>{
+  const f=startupSidecarFixture();f.sidecar.file={path:'Restored.md'};const pending=f.start();await f.admitted;f.finish();await pending;
+  assert.equal(f.owner.sidecarLeaves.get(f.host),f.sidecar);assert.equal(f.owner.linkedDocumentLeaf,f.sidecar);assert.equal(f.owner.lastDocumentLeaf,f.sidecar);assert.equal(f.owner.settings.sidecarLastFilePath,'Restored.md');assert.equal(f.owner.settings.documentSyncMode,'pinned');assert.equal(f.saves,1);assert.equal(f.owner.sidecarRestoreTask,null);
+});
+
+/** View/root lifetime, ownership ABA and candidate identity remain fenced across actual awaits. */
+test('native delayed startup Sidecar restore rejects remount, detached or separately claimed candidates',async()=>{
+  for(const change of [f=>f.host.view.generation++,f=>{f.host.view=new f.KplexView()},f=>{f.host.attached=false},f=>{f.sidecar.attached=false},f=>{f.owner.sidecarLeaves.set({},f.sidecar)},f=>{f.owner.setSidecarOwner(f.host,f.sidecar);f.owner.deleteSidecarOwner(f.host)},f=>{f.owner.geometry=false}]){
+    const f=startupSidecarFixture(),pending=f.start();await f.admitted;change(f);f.finish();await pending;
+    assert.equal(f.owner.sidecarLeaves.has(f.host),false);assert.equal(f.saves,0);assert.equal(f.owner.linkedDocumentLeaf,null);assert.equal(f.owner.sidecarRestoreTask,null);
+  }
+  const f=startupSidecarFixture('layout'),pending=f.start();await f.admitted;f.host.view.generation++;f.finish();await pending;assert.equal(f.candidateCalls,0,'Retired layout lifetime never starts candidate matching');assert.equal(f.saves,0);
+});
+
+/** A hidden-group programmatic owner can replace a conflicting fold without a focus chain. */
+test('native overlapping pair folds restore the prior owner before hiding the new owner',async()=>{
+  const f=foldFixture(),other={group:f.hostGroup,view:new f.KplexView(),attached:true,getViewState:()=>({type:'kplex'})};await f.owner.togglePlexFold(f.owner.readPlexFoldCandidate(f.host));f.owner.sidecarLeaves.set(other,f.sidecar);f.owner.geometry=false;const candidate=f.owner.readPlexFoldCandidate(other);assert(candidate);f.owner.geometry=true;assert.equal(await f.owner.togglePlexFold(candidate),true);assert.equal(f.owner.collapsedPlexHosts.has(f.host),false);assert.equal(f.owner.collapsedPlexHosts.has(other),true);assert.equal(f.doc.leases,1);f.owner.restorePlexFoldBeforeReveal(other);assert.equal(f.doc.leases,0);
+});
+
+
+/** Existing folded state is a recovery capability even after native topology ceases to qualify. */
+test('native invalid topology remains explicitly recoverable before layout reconciliation',async()=>{
+  const f=foldFixture();await f.owner.togglePlexFold(f.owner.readPlexFoldCandidate(f.host));f.split.appendChild(new f.Element(f.doc,'workspace-tabs'));const capture=f.owner.readPlexFoldCandidate(f.host);assert(capture?.folded);assert.equal(f.owner.isPlexFoldCandidateCurrent(capture),true);assert.equal(await f.owner.togglePlexFold(capture),true);assert(!f.hostGroup.classList.contains('kplex-folded-workspace-group'));assert.equal(f.doc.leases,0);
+});
+
+/** Compose the actual host router and portable dispatcher over the existing structural ports.
+ * The picker double supplies only its native shell; candidate selection remains production code. */
+function foldRoutingFixture() {
+  const f=foldFixture(),{owner}=f,leaves=[f.host,f.sidecar,f.sibling],pickers=[],window=f.doc.defaultView,windows=new Map([[f.doc.defaultView,'main']]);
+  window.activeWindow=window;
+  class KplexSidepanelView {}
+  class Picker {
+    constructor(_app,items,title,choose,release){Object.assign(this,{items,title,choose,release});pickers.push(this)}
+    open(){this.opened=true} close(){if(this.opened){this.opened=false;this.release()}}
+    select(index){const item=this.items[index];assert(!item.disabled);this.choose(item.value);this.close()}
+  }
+  /** Install only native container/title facts; no graph or editor state is supplied. */
+  const connect=pair=>{for(const leaf of [pair.host,pair.sidecar,pair.sibling])leaf.view.containerEl=leaf.group;pair.sidecar.view.getDisplayText=()=>`Companion ${leaves.indexOf(pair.host)}`;};
+  connect(f);f.doc.defaultView.document=f.doc;
+  Object.assign(owner,{actionSurfaceHosts:new Map(),actionDialogs:new Map(),actionInvocationSequence:0,
+    index:new Proxy({}, {get:()=>assert.fail('Fold routing must not read the graph')}),supportEvents:{record:assert.fail},
+    actionWindowId:value=>windows.get(value),translator:(key,params)=>params?`${key} ${params.number}`:key});
+  owner.app.workspace.iterateAllLeaves=fn=>leaves.forEach(fn);
+  owner.app.workspace.getLeavesOfType=type=>leaves.filter(leaf=>type==='kplex'?leaf.view instanceof f.KplexView:leaf.view instanceof KplexSidepanelView);
+  for(const name of ['resolvePlexFoldAction','plexFoldTargetCandidate','applyPlexFoldTarget','executePlexFoldAction'])owner[name]=method(name,{window,ItemView:class{},KplexView:f.KplexView,KplexSidepanelView,KPLEX_VIEW_TYPE:'kplex',KPLEX_SIDEPANEL_VIEW_TYPE:'sidepanel',ActionTargetPicker:Picker,Notice:class{constructor(){assert.fail('Unexpected failure notice')}}});
+  const id='view.sidecar.collapse-plex',request={id,source:'obsidian-command'};
+  owner.actionManager=new contracts.ActionManager({readCommandContext:assert.fail,validateNode:assert.fail,
+    resolveSidecarFold:value=>owner.resolvePlexFoldAction(value),validateSidecarFold:value=>owner.plexFoldTargetCandidate(value)!==null,
+    implementations:{[id]:{availability:context=>({state:context.sidecarFold.state==='ambiguous'?'preparable':'enabled'}),execute:context=>owner.executePlexFoldAction(context)}}});
+  /** Register a real interaction-ledger entry independently of graph readiness. */
+  const register=(host,name)=>{owner.actionSurfaceHosts.set(name,{leaf:host,generation:1});owner.actionManager.registerSurface({id:name,generation:1,readSnapshot:()=>({mounted:true,visible:true,windowId:windows.get(host.group.ownerDocument.defaultView),center:null,selected:null,focusRegion:'graph',interactionRevision:0})});};
+  register(f.host,'A');
+  /** Add an independent native two-group pair, optionally in another owning document. */
+  const addPair=(name,otherWindow=false)=>{
+    const doc=otherWindow?foldFixture().doc:f.doc;doc.defaultView.document=doc;if(otherWindow)windows.set(doc.defaultView,name);
+    const root=new f.Element(doc);root.connected=true;
+    const split=root.appendChild(new f.Element(doc,'workspace-split')),hostGroup=split.appendChild(new f.Element(doc,'workspace-tabs')),sidecarGroup=split.appendChild(new f.Element(doc,'workspace-tabs'));
+    sidecarGroup.appendChild(new f.Element(doc,'workspace-tab-container'));
+    const host={group:hostGroup,view:new f.KplexView(),attached:true,getViewState:()=>({type:'kplex'})},sidecar={group:sidecarGroup,view:{},kind:'markdown',attached:true,getViewState(){return{type:this.kind}}},sibling={group:sidecarGroup,view:{},attached:true,selected:true};
+    leaves.push(host,sidecar,sibling);const pair={host,sidecar,sibling,doc,hostGroup,sidecarGroup};connect(pair);owner.setSidecarOwner(host,sidecar);register(host,name);return pair;
+  };
+  /** Focus unrelated native chrome without changing the explicit-interaction ledger. */
+  const unrelated=()=>{f.doc.activeElement=null;owner.app.workspace.activeLeaf=null;};
+  const target=host=>({id:owner.readPlexFoldCandidate(host).token,windowId:windows.get(host.group.ownerDocument.defaultView)});
+  const dispose=()=>{for(const picker of pickers)picker.close();for(const host of [...owner.collapsedPlexHosts.keys()])owner.restorePlexFoldBeforeReveal(host);owner.actionManager.dispose();};
+  return {...f,window,leaves,pickers,register,addPair,unrelated,target,request,dispose,KplexSidepanelView};
+}
+
+/** Native focus ownership outranks global recovery and never borrows another eligible pair. */
+test('fold routing respects explicit, focused, embedded and participating sibling owners',()=>{
+  const f=foldRoutingFixture(),b=f.addPair('B');
+  try {
+    const expect=host=>assert.equal(f.owner.resolvePlexFoldAction(f.request).target.id,f.target(host).id);
+    expect(f.host);for(const leaf of [b.sidecar,b.sibling]){f.owner.app.workspace.activeLeaf=leaf;expect(b.host)}
+    f.owner.app.workspace.activeLeaf=f.sibling;f.doc.activeElement=b.hostGroup.appendChild(new f.Element(f.doc));expect(b.host);
+    f.doc.activeElement=null;f.owner.sidecarLeaves.delete(b.host);f.owner.app.workspace.activeLeaf=b.host;
+    assert.equal(f.owner.resolvePlexFoldAction(f.request).state,'unavailable');
+    assert.equal(f.owner.resolvePlexFoldAction({...f.request,surfaceId:'B'}).state,'unavailable');
+    const sidepanel={group:b.hostGroup,view:new f.KplexSidepanelView()};sidepanel.view.containerEl=b.hostGroup;f.leaves.push(sidepanel);f.owner.app.workspace.activeLeaf=sidepanel;
+    assert.equal(f.owner.resolvePlexFoldAction(f.request).state,'unavailable');
+    assert.equal(f.owner.collapsedPlexHosts.size,0);assert.equal(f.calls.length,0);
+  }finally{f.dispose()}
+});
+
+/** Checks inspect finite native associations only and isolate the invoking document. */
+test('fold routing checks are graph-independent and cannot recover a pair from another window',()=>{
+  const f=foldRoutingFixture(),other=f.addPair('popout',true);
+  try{
+    f.unrelated();const before=f.owner.actionManager.readInteractionOrder('A');
+    for(let i=0;i<3;i++)assert.equal(f.owner.actionManager.check(f.request).state,'enabled');
+    assert.equal(f.owner.actionManager.readInteractionOrder('A'),before);assert.equal(f.pickers.length,0);assert.equal(f.calls.length,0);assert.equal(f.doc.leases,0);
+    assert.equal(f.owner.resolvePlexFoldAction({...f.request,windowId:'popout'}).state,'unavailable');
+    f.owner.sidecarLeaves.delete(f.host);assert.equal(f.owner.resolvePlexFoldAction(f.request).state,'unavailable');
+    f.window.activeWindow=other.doc.defaultView;assert.equal(f.owner.resolvePlexFoldAction(f.request).target.id,f.target(other.host).id);
+    assert.equal(f.owner.resolvePlexFoldAction({...f.request,surfaceId:'popout',windowId:'main'}).state,'unavailable');
+  }finally{f.dispose()}
+});
+
+/** A native hint retained after popout closure cannot strand recovery in the live main window. */
+test('fold routing ignores a closed native active-window hint',()=>{
+  const f=foldRoutingFixture(),other=f.addPair('retired-popout',true);
+  try{
+    f.unrelated();other.doc.defaultView.closed=true;f.window.activeWindow=other.doc.defaultView;
+    assert.deepEqual(f.owner.resolvePlexFoldAction(f.request),{state:'resolved',target:f.target(f.host)});
+    assert.equal(f.owner.actionManager.check(f.request).state,'enabled');assert.equal(f.calls.length,0);
+  }finally{f.dispose()}
+});
+
+/** Recovery priority uses actual folded sessions and the existing deliberate-interaction ledger. */
+test('fold routing prefers the sole folded pair, then unique deliberate recency, then finite ambiguity',async()=>{
+  const f=foldRoutingFixture(),b=f.addPair('B');
+  try{
+    f.unrelated();let route=f.owner.resolvePlexFoldAction(f.request);assert.equal(route.state,'ambiguous');assert.deepEqual(route.targets,[f.target(f.host),f.target(b.host)]);
+    f.owner.actionManager.recordInteraction('B');assert.equal(f.owner.resolvePlexFoldAction(f.request).target.id,f.target(b.host).id);
+    await f.owner.togglePlexFold(f.owner.readPlexFoldCandidate(f.host));f.unrelated();assert.equal(f.owner.resolvePlexFoldAction(f.request).target.id,f.target(f.host).id);
+    f.owner.restorePlexFoldBeforeReveal(f.host);f.unrelated();assert.equal(f.owner.resolvePlexFoldAction(f.request).target.id,f.target(b.host).id);
+    f.owner.actionManager.recordInteraction('A');assert.equal(f.owner.resolvePlexFoldAction(f.request).target.id,f.target(f.host).id);
+  }finally{f.dispose()}
+});
+
+/** Accepted finite tokens survive focus changes but cannot survive a new native incarnation. */
+test('fold routing fences owner ABA and never retargets a captured action after window changes',async()=>{
+  const f=foldRoutingFixture(),other=f.addPair('popout',true);
+  try{
+    const old=f.target(f.host),accepted=f.owner.actionManager.prepare(f.request);assert.equal(accepted.state,'accepted');
+    f.owner.deleteSidecarOwner(f.host);f.owner.setSidecarOwner(f.host,f.sidecar);
+    assert.equal(f.owner.plexFoldTargetCandidate(old),null);assert.equal((await accepted.run()).status,'cancelled');assert.equal(f.owner.collapsedPlexHosts.size,0);
+    const current=f.owner.actionManager.prepare(f.request);assert.equal(current.state,'accepted');f.window.activeWindow=other.doc.defaultView;f.owner.app.workspace.activeLeaf=other.host;
+    assert.equal((await current.run()).status,'completed');assert(f.owner.collapsedPlexHosts.has(f.host));assert(!f.owner.collapsedPlexHosts.has(other.host));
+    f.owner.restorePlexFoldBeforeReveal(f.host);const stale=f.target(other.host);other.host.view.generation++;assert.equal((await f.owner.applyPlexFoldTarget(stale)).status,'cancelled');
+  }finally{f.dispose()}
+});
+
+/** Native chooser cancellation and selection operate on captured values, never a fresh resolver. */
+test('fold routing picker cancellation is inert and selection keeps the exact captured pair',async()=>{
+  const f=foldRoutingFixture(),b=f.addPair('B');
+  try{
+    f.unrelated();assert.equal(f.owner.actionManager.check(f.request).state,'preparable');assert.equal(f.pickers.length,0);
+    assert.equal((await f.owner.actionManager.dispatch(f.request)).status,'opened');const cancelled=f.pickers[0];assert.equal(cancelled.items.length,2);cancelled.close();assert.equal(f.owner.actionDialogs.size,0);assert.equal(f.owner.collapsedPlexHosts.size,0);assert.equal(f.calls.length,0);
+    assert.equal((await f.owner.actionManager.dispatch(f.request)).status,'opened');const chosen=f.pickers[1],captured=f.target(b.host);
+    assert.deepEqual(chosen.items[1].value,captured);f.owner.app.workspace.activeLeaf=f.host;f.owner.actionManager.recordInteraction('A');chosen.select(1);await new Promise(resolve=>setImmediate(resolve));
+    assert(f.owner.collapsedPlexHosts.has(b.host));assert(!f.owner.collapsedPlexHosts.has(f.host));assert.equal(f.owner.actionDialogs.size,0);
+    f.owner.restorePlexFoldBeforeReveal(b.host);f.unrelated();
+    const route={state:'ambiguous',targets:[f.target(f.host),f.target(b.host)]};f.owner.executePlexFoldAction({sidecarFold:route});const stale=f.pickers[2];f.owner.deleteSidecarOwner(b.host);f.owner.setSidecarOwner(b.host,b.sidecar);stale.select(1);await new Promise(resolve=>setImmediate(resolve));assert.equal(f.owner.collapsedPlexHosts.size,0);
+  }finally{f.dispose()}
 });

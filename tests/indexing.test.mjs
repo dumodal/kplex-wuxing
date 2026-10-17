@@ -669,6 +669,8 @@ for (const [path, name] of [
   ["src/ui/AddToOntologyModal.js", "AddToOntologyModal"],
   ["src/ui/NoteTypeModal.js", "NoteTypeModal"],
   ["src/ui/ActionSettingsController.js", "ActionSettingsController"],
+  ["src/ui/ActionTargetPicker.js", "ActionTargetPicker"],
+  ["src/ui/PlexFoldSession.js", "PlexFoldSession"],
 ]) writeRuntimeStub(path, `exports.${name} = class {};`);
 writeRuntimeStub("src/ui/DeleteNodeModal.js", `exports.DeleteNodeConfirmationModal = class {}; exports.RemainingNodeReferencesModal = class {};`);
 writeRuntimeStub("src/ui/viewProfile.js", `

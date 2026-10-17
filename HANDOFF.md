@@ -16,8 +16,8 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 
 
----
 
+---
 
 # PR #174 — local folder waves and day-long indexing diagnostics
 
@@ -25,7 +25,7 @@ Assignment prepared by Zsolt's Codex Agent, 2026-10-17.
 Branch: `2026-10-17-local-folder-diagnostics`; starting main: `ef301dc07fa6a8754455a6aeb94ae871d2aacd75` (includes merged #172).
 Draft: https://github.com/zsviczian/kplex/pull/174
 
-**Status:** Plan/assignment only. No runtime correction, diagnostic implementation or measured benefit yet. Read the latest PR description, current branch/source, AGENTS.md, CONTRIBUTING.md and docs/AGENT_WORKFLOW.md before work. Prior #172/#161 fixes are accepted baseline. Do not modify main or assume other branches merged.
+**Status:** Implementation authorized. No #174 runtime correction, diagnostic implementation or measured benefit yet. Read the latest PR description, current branch/source, AGENTS.md, CONTRIBUTING.md and docs/AGENT_WORKFLOW.md before work. Prior #172/#161 fixes are accepted baseline. Main was fetched after the maintainer-authorized #173 merge (`23aa44eae13797a93890fd1ce1679074d45d9295`) and is being integrated here without rewriting history. #164 is closed with a comment referencing #173. The prior folding return remains durably recorded in `docs/validation/safe-plex-folding-173-2026-10-17.md` and `Refactor plan.md`; its private evidence remains untouched. This single transient handoff now carries #174's assignment, as required by the standing header. Do not modify main.
 
 ## Two separable checkpoints
 
@@ -50,3 +50,4 @@ Draft: https://github.com/zsviczian/kplex/pull/174
 Follow PR checkpoints D0 (minimal safety schema and measured passive observer), F1 (proven narrow local path), D2 (24-hour bounded reports), V (separate resource/privacy/correctness judgments). Present independent **ship / revise / defer** recommendations for F and D. Document coverage gaps honestly: accelerated clock tests are not 24 hours of actual native use.
 
 Run required Node 22.22.2 `npm run verify`, installed Obsidian typing/lint/build, relevant real IndexedDB and exact-build native tests. Use only approved disposable vaults; do not access the personal vault, contact users, merge, release or mark ready. Keep the current branch and draft PR. Preserve this standing header; replace this assignment section during the next agent handoff. Remove only the temporary `docs/agent-handoffs/local-folder-diagnostics.md` plan marker at PR closeout; never delete root HANDOFF.md.
+
