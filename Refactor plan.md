@@ -4383,3 +4383,31 @@ held Find/recent-sync controls, existing-note composer discovery and short Eager
 causal observations. Highest remaining workflow risks are external creation during unrelated
 background publication and window-lifetime changes. Windows main-window cases are exercised;
 macOS/Linux, popout migration and physical mobile suspend/resume need separate acceptance.
+
+
+### 2026-10-17: #172 native closeout and bounded invalidation decision
+
+Checkpoint B40c4f84 is pushed and passes full CI39014152315. The existing native foreground
+owner now retains real P3-held external Find/local-completion/recent-sync coverage and an actual
+physical-only existing-note composer control. Final native lane passes with15s foreground bounds,
+selected-renderer/throttling guards and all active source/storage/scheduler queues drained. The
+existing six inventory-held mutation scenarios pass after native surface readiness is awaited.
+An earlier initial-DOM setup failure and successful diagnostic replay are retained; no production
+fix or relaxed assertion is attributed to that failure. Native shell contract tests20/20 pass.
+
+Two actual Eager candidate pilots and one accepted-main runtime control isolate inherited folder
+wave amplification: existing-folder note2 source checks/77IDBtransactions/197requests versus new
+folder+note92checks/1527transactions/2925requests. Each note reads/parses once, with no full
+graph build or snapshot write. Counts match across builds; sequential CPU/memory/elapsed samples
+with different cache histories demonstrate no efficiency improvement. Both candidate traces show
+uncovered folder activity causing natural resolved?host-revision globalization. Preserve that
+conservative contract. Highest-value separate follow-up is proving narrowly complete new-folder
+creation waves before source-local narrowing, with unknown/concurrent/expired/rename/delete and
+extra-close safeguards retained. No such runtime change is included.
+
+The source/artifact/evidence report records the limits, failed controls and two verified private
+manifests (37-file B,34-file native causal closeout); originals remain, no archive/publication.
+Temporary planning marker removed. #172 stays draft with Closes #161; no merge/manual issue
+closure/release/personal-vault access. C14 structural pause remains. Windows #161 four variants/
+16fullcycles/four explicit edits pass; highest remaining acceptance priorities are Linux/macOS
+actual Create EX and interruption, popout/reveal lifetimes, and physical mobile suspend/resume.

@@ -809,6 +809,17 @@ settings and enabled-list bytes. Measurements are inclusive native API/DOM compl
 paint, trusted pointer latency or physical-mobile acceptance. An unsuccessful cleanup is a failed run.
 The report refuses installed/build hash mismatches.
 
+Set `KPLEX_FOREGROUND_SCENARIO=live-updates` on that command for the external-discovery and
+stationary-completion regression. Use an actual On-demand session with background URLs and
+Responsive pacing in `kplex-test-small`. The lane holds a real unrelated P3 URL body read across
+visible Find selection, local explicit relationships and the public recent-tab sync action, then
+checks active-work drain and navigation continuity after release. Optional
+`KPLEX_FOREGROUND_COMPOSER=1` also creates a native file with Plex hidden and selects the
+physical-only target through the actual Add child composer without submitting a write. A target
+that becomes canonical before query is recorded as a setup exclusion, not a composer pass.
+The lane records bounded milestone/resource aggregates, checks foreground ownership and restores
+its fixture files, wrappers, workspace, preferences and exact configuration bytes.
+
 ### Fullscreen and Zen acceptance
 
 After `npm run verify:obsidian` stages the exact build, run

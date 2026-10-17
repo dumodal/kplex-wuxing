@@ -1,6 +1,7 @@
 # Live indexing and external materialization: PR #172
 
-Work in progress; #172 remains draft and #161 remains open. No merge recommendation yet.
+Windows implementation checkpoints are validated; #172 remains draft and #161 remains open.
+No indexing-efficiency improvement is demonstrated or claimed.
 The accepted main runtime is `d40a339` (also unchanged by merged #169 at `9381c38`).
 It was integrated into the existing implementation branch without rewriting history at `612a0c8`.
 Baseline `main.js` SHA-256: `fbe9eaa3ba01e0b9c9634ddb5b82fc62503fb3d90da27be025547560182c1c85`.
@@ -17,7 +18,7 @@ Node 22.22.2; Windows / Obsidian 1.14.4; Excalidraw 2.29.0. Only the authorized 
 | #161: prior ghost navigation | Independently reproduced: ghost/back navigation works; actual Create EX retains explicit `Child`, but the first trusted click still leaves graph and pinned file inconsistent. | Same exact-lookup omission; distinct from the stationary body-processing defect. |
 | #161: tab reveal / repeated cycles | Tab reveal repairs navigation in the first pilot; four complete cycles then agree on graph/pinned identities. Relations remain inferred in that run, so this is not a semantic acceptance pass. | Preserve this control separately from first-click success; verify four full correct cycles after the fixes. |
 | #161: later `Parent::` drawing edit | Reproduced: actual saved drawing and native metadata contain both links, but the stationary graph shows both as inferred children; no parent, hot body or active center task remains. | Consistent with the confirmed liveness failure. Require explicit parent above / child below and solid links after an actual drawing save. |
-| C: excessive invalidation after small changes | Not established. A small On-demand event trace consumed the known resolver wave with no additional source reads/parses or broad inventory. | Trace actual session strategy and first invalidator before choosing a correction. Unknown resolver/folder changes keep conservative validation. |
+| C: excessive invalidation after small changes | Two actual Eager pilots reproduce folder-plus-note source globalization; an existing-folder note stays local. Baseline main has the same operation counts. A many-minute delay is not reproduced in Small. | The new folder makes the resolver wave uncovered; its natural close advances the host revision and requires whole-vault cached-source validation. Preserve that contract; narrower causal proof is separate work. |
 
 The discovery pilot held a forced **On-demand local-baseline** publication. It does not establish
 the required unrelated P3/P4 hold, Eager restart, or startup listener-handover acceptance; those
@@ -43,6 +44,8 @@ acceptance is pending. Older-publication search continuity is covered by checkpo
 ## Checkpoint B: demand completion and endpoint continuity
 
 The production build passed full verification and exact-build native acceptance in Small.
+Checkpoint B `40c4f84` also passes full GitHub CI
+[39014152315](https://github.com/zsviczian/kplex/actions/runs/39014152315).
 `main.js` SHA-256: `c720a9f6e678fd35f2c1bec3b6218f9d62216c4b12ca0982805e961c844f9006`.
 
 - Build-blocked centers retain a demand-revision marker. Existing build/patch completion and
@@ -87,6 +90,91 @@ These are correctness corrections, not demonstrated CPU, storage or latency impr
 No global source-validation, background-admission, parser, cache schema or persistence change
 is included in this checkpoint.
 
+## Held background discovery and explicit navigation
+
+The native foreground owner now has a `live-updates` scenario. It reloads an actual On-demand /
+background-URL / Responsive session and holds the real unrelated URL owner's `cachedRead`,
+with scheduler diagnostics showing P3 active. While that read remains held, visible Find can
+select a new external note and its stationary center obtains an explicit Child relationship.
+The public recent-tab sync command likewise centers a second real new document and completes
+its local relationship. Releasing P3 does not overwrite the newer explicit navigation.
+
+The actual Add child composer also selects a naturally created **physical-only** target: Plex
+is hidden during creation, the target is absent from canonical pages at query time, and the
+existing-note selection occurs before P3 release. The narrower default search scope was a source
+lead, not a reproduced failure here; no composer runtime change is justified by this test.
+No direct materialization/insertion helper substitutes for external creation in these controls.
+
+The standalone pilot and the integrated native scenarios pass, with exact artifact hashes,
+foreground checks, drained observed requests and no broad build/catalog/snapshot write in the
+observed interval. The reusable lane records create, host metadata, Find and explicit-sync
+milestones separately. API/DOM completion is not actual paint or trusted pointer latency.
+In the final controlled run, native metadata was ready 99 ms after file creation; Find was
+requested at 236 ms, showed the result at 249 ms, centered it at 299 ms and had the explicit
+relationship at 349 ms. The explicit recent-tab command completed its center/relationship check
+in 148 ms. These are single-run observations within a declared 15-second foreground bound.
+All were observed before releasing the unrelated P3 read.
+
+The existing inventory-held foreground lane also passes all six scenarios, including actual
+relationship add/remove and visible edits, with zero foreground broad flush calls. One earlier
+run failed its initial-DOM setup before any scenario; a diagnostic replay and the final rerun
+pass. Its exact cause was not captured. The driver now awaits the established native surface
+readiness owner before its initial notification, rather than assuming reveal registered React's
+navigation subscription. The failed receipt and successful replay are preserved; no production
+change or relaxed assertion is attributed to that setup failure.
+
+## Small-change invalidation: inherited cost, separate follow-up
+
+The bounded causal pilot uses actual Eager restarts, a fixed visible center, natural Vault and
+metadata events, and the existing counts-only resource observer. Each interval ends after active
+source/repository/cache/graph queues and observed transactions drain continuously for 400 ms.
+The link-free probe has no large legitimate fan-in. Two B runs (`40c4f84`) and one accepted-main
+runtime control (`d40a339`, unchanged by `9381c38`) produce identical operation counts:
+
+| Natural change | Source checks | IDB transactions / requests | Source digests | Whole-source inventory passes |
+| --- | ---: | ---: | ---: | ---: |
+| Note in existing folder | 2 | 77 / 197 | 58 | 0 |
+| New folder, immediately followed by note | 92 | 1,527 / 2,925 | 1,499 | 1 |
+| New folder alone | 0 | 31 / 53 | 31 | 0 |
+| Note after that folder has settled | 2 | 77 / 197 | 58 | 0 |
+
+Checks include repeats, not distinct notes. Each note interval has one source-acquisition fresh
+read and one parse; folder-only has neither. Full build, node catalog and snapshot/checkpoint
+writes are zero in every interval. Digest input is about 15.5k UTF-16 units for a local note and
+2.22m for folder-plus-note. These are actual operation counts, not physical storage bytes.
+
+| Natural change | Main: drain / native CPU | B: drain range / native CPU range (2 runs) |
+| --- | ---: | ---: |
+| Note in existing folder | 1.646 s / 0.282 s | 1.570–1.620 s / 0.218–0.234 s |
+| Folder plus note | 8.025 s / 3.250 s | 5.861–7.349 s / 1.922–2.860 s |
+| Folder alone | 0.933 s / 0.219 s | 0.875–0.959 s / 0.109–0.250 s |
+| Note after settled folder | 1.619 s / 0.250 s | 1.619–1.684 s / 0.188–0.344 s |
+
+Native CPU is selected-renderer user+system time, including host/other activity. Elapsed time
+includes pacing, storage awaits and the stable-drain guard; their difference is not exclusive I/O.
+Inputs, policy and settled authority match, but persistent-cache bytes/history were not restored
+between builds. These few sequential timing observations establish no speedup. Sampled heap
+maxima span 281.5–304.3 MiB on main and 270.1–295.2 MiB on B; RSS spans 732.5–754.8 and
+691.1–741.5 MiB respectively. They are process observations, not allocation totals, isolated graph
+memory or demonstrated memory savings. Counts mode does not measure family decoding totals.
+
+The causal tape identifies the first invalidator in both B runs: the folder create marks the wave
+uncovered; known file create/metadata events follow, then the natural `resolved` cannot consume
+fully known proof. `markContributorHostChange("resolution", true)` advances host revision 0→1.
+The following pass checks cached sources instead of compiling/re-reading all Markdown. Separating
+folder creation from the note lets the later fully known file wave remain local.
+
+**Highest-value follow-up:** prove a narrowly complete new-empty-folder creation wave within
+the existing source-acquisition owner, before allowing source-local maintenance. Ambiguous,
+concurrent, expired, extra-close, rename/delete or incomplete waves must retain conservative
+validation. That is a new correctness-proof task; #172 preserves the current folder-uncertainty
+contract and tests. The observed amplification does not prove those checks can safely be skipped.
+
+This pilot excludes scheduled 30-second polling and five-minute orphan maintenance, and does not
+measure the 610-second quiet window, a large-vault lifecycle or lower-powered devices. #172 does
+not change background admission/invalidation or claim total-work savings. All fixtures, wrappers,
+settings, actual session mode and exact configuration bytes restore; inventory returns to 107.
+
 ## Evidence and remaining acceptance
 
 Private verified copies are retained outside temporary storage at
@@ -97,10 +185,12 @@ Raw originals and failed controls remain intact. No archive or raw traces are pu
 Checkpoint B's exact source/build, four native receipts, full/failed verification logs and focused
 regressions are copied privately to `pr-172/checkpoint-b/`: all 37 manifest entries were verified.
 Manifest SHA-256: `df70c0ae235336840c7ff67a7c47a6f72a2d66c48bb265ae7d3fc08e251cb4bd`.
+The held-P3/composer, Eager three-arm controls, baseline staging/restoration and failed native
+setup receipt are retained at `pr-172/checkpoint-c-native/`: 34 files verified; manifest SHA-256
+`3ed86bcc4a79e477d504219fc98fc3c84997526ba3ffc0354748db4f776f9842`.
 
-Remaining gates include real unrelated P3/P4 holds with visible search selection and explicit
-recent-document sync, the existing-note composer discovery check, genuine Eager restart and
-bounded small-change invalidation/resource observations. Stationary cancellation/lifetime,
+The held-P3, composer, actual Eager restart and bounded invalidation observations above are
+completed. Stationary cancellation/lifetime,
 rename/delete/replacement and hidden-demand cases have automated coverage; these do not replace
 every native popout/suspend workflow. Linux, macOS and
 physical mobile acceptance remain unrun. No personal vault access, receipt, reader sharing,
