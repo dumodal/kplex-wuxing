@@ -1,6 +1,6 @@
 # Indexing activity diagnostics
 
-PR #174 implementation reference (schema 1, capture 1; draft acceptance). Both **Copy index diagnostics** and **Report bug** include the shared, bounded `indexingActivity` summary. Explicit report capture reads retained scalar health without recording readiness or starting work. Windows native main/popout export acceptance has passed; the two-hour native soak remains pending. No actual 24-hour device run has been completed. No efficiency claim follows from the schema alone.
+PR #174 implementation reference (schema 1, capture 1; draft acceptance). Both **Copy index diagnostics** and **Report bug** include the shared, bounded `indexingActivity` summary. Explicit report capture reads retained scalar health without recording readiness or starting work. Windows native main/popout export acceptance has passed. Two foreground-soak attempts stop on failed focus prerequisites; the required real two-hour acceptance remains unproven. No actual 24-hour device run has been completed. No efficiency claim follows from the schema alone.
 
 ## Collection and privacy
 
@@ -139,4 +139,4 @@ Treat these other states explicitly:
 
 ## Validation gates
 
-Accelerated 24/48-hour tests cover retention, rollover, idle gaps, overlap, cancellation, privacy, saturation, disposal and event storms. They do not establish 24 hours of real-device use. Windows native copy/report acceptance and the separate amplified overhead measurements have passed; the bounded two-hour native soak remains pending. Actual 24-hour, macOS and physical-mobile acceptance remain unrun. Folder-wave resource gains cannot pay for diagnostic overhead. See [the PR validation report](validation/local-folder-diagnostics-174-2026-10-17.md) for measured results and remaining platform checks.
+Accelerated 24/48-hour tests cover retention, rollover, idle gaps, overlap, cancellation, privacy, saturation, disposal and event storms. They do not establish 24 hours of real-device use. Windows native copy/report acceptance and the separate amplified overhead measurements have passed; the required real two-hour native soak remains unproven after foreground-prerequisite failures. Those failed controls are preserved with successful cleanup; no focus oracle is weakened. Actual 24-hour, macOS and physical-mobile acceptance remain unrun. Folder-wave resource gains cannot pay for diagnostic overhead. See [the PR validation report](validation/local-folder-diagnostics-174-2026-10-17.md) for measured results and remaining platform checks.

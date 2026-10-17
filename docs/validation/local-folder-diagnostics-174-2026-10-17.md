@@ -1,14 +1,13 @@
 # Local folder updates and session diagnostics — PR #174
 
-Final acceptance is in progress. Folder handling (F) and diagnostics (D) have independent gates;
-folder savings do not fund diagnostic overhead. Keep the PR draft.
+Implementation and focused Windows validation are complete through `d6be473`. **F: ship for independent review within its stated eligibility. D: revise acceptance before field distribution**: its cost/privacy/retention tests pass, but a required real two-hour foreground soak has not completed. Folder savings do not fund diagnostic overhead. Keep the PR draft; do not merge or release.
 
 ## Scope and architecture
 
 Baseline is merged main `23aa44eae13797a93890fd1ce1679074d45d9295`, integrated without rewriting
 history at `d4d65cd`. D0 (`786e91c`) records passive activity independently of folder handling;
 F2 (`b4bb401`) proves bounded folder waves; F3 (`ebe26cc`) completes rapid absent-source rename
-retirement. No personal vault is accessed. No receipt, source schema, reader-sharing experiment,
+retirement. D2 (`d6be473`) integrates shared exports and current health. No personal vault is accessed. No receipt, source schema, reader-sharing experiment,
 parser, compiler policy or scheduler redesign is introduced.
 
 F qualifies one genuinely new, initially empty native folder under an established parent in a
@@ -148,9 +147,24 @@ physical disk, paint, continuous execution or device sleep.
   result/exclusions. #161 passes 28 cases: both ghost-history variants, repeated navigation, pinned
   control and subsequent Parent/Child edits. One setup retry first opens the documented visible
   Plex prerequisite; the original failed preflight remains.
-- Final integrated 610-second quiet, ordinary Markdown, real Excalidraw and rapid rename acceptance pass with exact fixture/configuration restoration. An earlier final-artifact quiet attempt loses foreground focus; it is cancelled through its owned timer, excluded and preserved with successful restoration. The bounded two-hour native soak and verified durable evidence backup remain pending. Accelerated 24/48-hour retention, reset/privacy/overflow/disposal
+- Final integrated 610-second quiet, ordinary Markdown, real Excalidraw and rapid rename acceptance pass with exact fixture/configuration restoration. An earlier final-artifact quiet attempt loses foreground focus; it is cancelled through its owned timer, excluded and preserved with successful restoration. Two real two-hour soak attempts fail before completion: one synchronous native-focus preflight before fixtures/captures; then a setup-only three-second focus-settlement variant reaches one ordinary edit/capture and two unchanged-idle controls before losing foreground focus. Both restore fixtures, settings, actual mode and configuration. No failing foreground oracle is removed or refocused away. Process-only checks identify pre-existing, Explorer-owned Chrome as the foreground process; no window titles, command lines, other-vault contents or actual input are read. The required two-hour gate remains unproven. The durable private evidence copy and independent re-read pass; see the manifest below. Accelerated 24/48-hour retention, reset/privacy/overflow/disposal
   and storm tests pass; they are not 24 hours of native use. Real 24-hour, macOS and physical Android/
   iOS suspend/resume, memory and clipboard acceptance remain unrun.
+
+## Remaining acceptance and component decision
+
+F is suitable for independent review: eligible wave work is reduced and conservative/finality
+counterexamples remain protected. This is not authorization to merge #174 or a claim that all folder
+operations become local. D's implementation is complete and bounded-cost/privacy tests pass, but
+field-distribution acceptance remains open until a real uninterrupted two-hour run succeeds.
+An active desktop cannot be made a valid control by suppressing focus-loss assertions. No further
+code/performance expansion is proposed to work around this environment limitation.
+
+Priorities: (1) finish the unchanged two-hour Windows soak in an available foreground window, then
+collect real 24-hour ordinary-use reports; (2) macOS popout/copy and interrupted folder waves;
+(3) physical Android/iOS suspend/resume, clipboard and memory. The expected result is retained
+startup/lifetime facts with bounded, truthful recent detail, correct native ownership and no work
+admitted by copying. Accelerated retention and desktop automation do not establish those devices.
 
 ## Reproduction and evidence
 
@@ -166,5 +180,16 @@ source/patch hashes, fixtures, failures and restoration receipts. Frozen F2 patc
 `671fd2666c9aa94ee5d6bd8a29b5c8a26308ff06015fc41988bdc423ec81d1bd`.
 Frozen matched-driver SHA-256:
 `cff57f71ce74aca563dc4d0dcbd415e19e479d37f9499c1314f9924886f9e57a`.
-A verified durable private backup outside temporary storage is required before closeout. Do not
-publish its configuration backups/local metadata, delete originals, or add raw traces to Git.
+The verified durable copy is outside temporary storage at
+`%LOCALAPPDATA%/KplexValidation/pr-174-2026-10-17/final-evidence`: 1,716 files, 103,633,691 bytes.
+Every manifest entry passes size/SHA-256 verification; a fresh process rechecks all 1,716 entries and
+1,713 original files at 2026-10-17 14:59:52 UTC. The private adjacent `independent-verification.json`
+records that result. A later bounded process/input-age setup probe is separately copied and checksum-verified in the adjacent private `focus-availability-addendum`; it contains no application/window content and does not change the primary manifest. `MANIFEST.json` SHA-256:
+`4a4cfaf45cdd5c90f73bf7909391984f5fd372ad5db127bfadc10ec75b93f58a`.
+It preserves original/rejected sources, source/build/driver identities, measurements, failed controls
+and cleanup receipts; excludes junctions/dependencies and transient handoffs. Public source refs
+D0/F2/F3/D2 above and the archived source snapshot bind the exact runtime. D2's precommit patch
+SHA-256 is `a52fe34a0be2f1ed658be6d12a7194c2c257f840e983f349d7316d528e094e78`;
+the exact verified artifact was built at `ebe26cc` with that patch and its static dirty build ID.
+Final documentation records the verification after the manifest is made; no runtime changes follow.
+Do not publish configuration backups/local metadata, delete originals, or add raw traces to Git.

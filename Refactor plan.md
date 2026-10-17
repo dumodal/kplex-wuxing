@@ -4544,3 +4544,25 @@ claimed. The separate bounded two-hour real soak and private durable evidence ve
 V gates before final recommendation. Highest remaining device checks: 24-hour Windows use,
 macOS popout/copy/interrupted folder waves, physical Android/iOS suspend/resume/clipboard/memory.
 Keep #174 draft; no merge, release, raw publication or personal-vault access.
+### 2026-10-17 — #174 bounded V closeout; long-session acceptance remains open
+
+D2 is pushed at `d6be473`. Full verification, exact Windows smoke, final 610-second quiet and
+ordinary Markdown/real Excalidraw/rapid rename cases pass. The final report lane completes 23
+recorded cases; its optional real clipboard write remains pending to preserve non-plain-text data.
+The earlier real-write control, all failed controls and cleanup evidence remain distinct.
+
+The real two-hour foreground soak is not accepted: one preflight fails before fixtures/captures;
+a bounded setup-only focus-settlement variant reaches an edit/capture and two unchanged-idle
+controls before losing foreground focus. Exact fixture/settings/mode/configuration restoration
+passes. Process-level checks identify pre-existing, non-test Chrome; no other applications are
+closed and no focus oracle is weakened. No further performance/code expansion is proposed.
+F: suitable for independent review within its narrow eligibility. D: revise acceptance before field
+distribution; code/cost/privacy/accelerated retention are verified, but the real multi-hour gate is
+unproven. Keep #174 draft; C14 stays paused. No merge, release or personal-vault access.
+
+Private durable evidence verification passes for 1,716 files / 103,633,691 bytes, followed by an
+independent re-read of every entry and 1,713 originals. The consolidated report records the location,
+manifest checksum and source identities. Nothing is published/deleted; transient handoffs and
+dependency junctions are excluded. The planning marker is removed after verification.
+Prioritized remaining checks: uninterrupted Windows two-hour then actual 24-hour use; macOS
+popout/copy/interrupted folder waves; physical Android/iOS suspend/resume, clipboard and memory.
