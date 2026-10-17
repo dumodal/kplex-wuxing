@@ -38,6 +38,7 @@
 import { yieldToHostTask } from "./yieldToHostTask";
 import { canonicalTagPaths } from "../../core/graph/tagPaths";
 import type { StartupDiagnostics } from "./startupDiagnostics";
+import type { ActivityReason } from "../../application/IndexingActivity";
 import { Platform, TFile, TFolder, type App, type CachedMetadata } from "obsidian";
 import type { GraphCompilerRuntime, NormalizedGraphCompiler, CompiledGraphNode } from "../../core/graph/compiler";
 import { estimateReferenceRecordBytes, sourceRevision, acceptSourceBatch, beginSourceRead, sourceReadCanPublish, type NormalizedSourceBatch,
@@ -175,6 +176,11 @@ export class ObsidianSourceAcquisition {
   /** Retires a known wave if the host never emits its traced closing resolved event. */
   private resolverWaveTimer: number | null = null;
   private resolverWaveGeneration = 0;
+  /** Finite coarse observations only; no event/source identities enter diagnostic history. */
+  private resolverWaveExpired = false;
+  private resolverCloseObserved = false;
+  private resolverActivityReason: ActivityReason = "unscoped-resolved";
+  private activityGlobalReason: ActivityReason | null = null;
   /** One coalesced retry clock keeps transient deferred local fan-out live without a per-event queue. */
   private deferredResolutionRetryTimer: number | null = null;
   private deferredResolutionRetryDelay = DEFERRED_RESOLUTION_RETRY_MIN_MS;
@@ -248,7 +254,7 @@ export class ObsidianSourceAcquisition {
         // Consume exactly one fully known TFile wave without globalizing it. A resolved event with
         // no live token, or one preceded by folder/non-file activity, remains the uncertain lane.
         if (this.consumeKnownResolverWave()) return;
-        this.markContributorHostChange("resolution", true);
+        this.markContributorHostChange("resolution", true, this.resolverActivityReason);
         this.requestInventory();
         return;
       }
@@ -320,6 +326,7 @@ export class ObsidianSourceAcquisition {
     this.resolverWaveTimer = window.setTimeout(() => {
       if (this.closed || generation !== this.resolverWaveGeneration) return;
       this.resolverWaveTimer = null;
+      this.resolverWaveExpired = this.knownResolverWave || this.uncoveredResolverWave;
       this.knownResolverWave = false;
       this.uncoveredResolverWave = false;
     }, KNOWN_RESOLVER_WAVE_RETIRE_MS);
@@ -328,6 +335,10 @@ export class ObsidianSourceAcquisition {
   /** Consume only a live wave whose every observed cause was a known TFile event. */
   private consumeKnownResolverWave(): boolean {
     const covered = this.knownResolverWave && !this.uncoveredResolverWave;
+    this.resolverActivityReason = this.uncoveredResolverWave ? "uncovered-non-file"
+      : this.resolverWaveExpired ? "expired-resolver" : this.resolverCloseObserved ? "extra-resolved" : "unscoped-resolved";
+    this.resolverCloseObserved = true;
+    this.resolverWaveExpired = false;
     this.resolverWaveGeneration += 1;
     if (this.resolverWaveTimer !== null) window.clearTimeout(this.resolverWaveTimer);
     this.resolverWaveTimer = null;
@@ -336,17 +347,21 @@ export class ObsidianSourceAcquisition {
     return covered;
   }
   /** Synchronously fence host authority and persist a bounded, coalesced host observation. */
-  private markContributorHostChange(kind: ContributorHostChange["kind"], global = kind === "resolution"): void {
+  private markContributorHostChange(kind: ContributorHostChange["kind"], global = kind === "resolution", activityReason: ActivityReason = "unknown"): void {
     // Known source events fence only their source plus proven referrers. Unscoped resolver and
     // environment observations are coalesced until reconciliation starts, so a native burst causes
     // one cached-fact pass rather than a per-event vault scan.
     if (global) {
+      this.activityGlobalReason ??= activityReason;
+      try { this.startupDiagnostics?.activityCause?.(activityReason); } catch { /* Optional diagnostics never fence sources. */ }
       if (!this.uncertainResolution) {
         this.uncertainResolution = true; this.hostRevision += 1; this.inventoryRevision += 1;
         this.maintenanceRevision += 1; this.localDependenciesReady = false; this.localDependencyAuthorityReady = false;
       }
     } else if (kind === "environment") {
       if (!this.environmentMaintenancePending) {
+        this.activityGlobalReason ??= "environment";
+        try { this.startupDiagnostics?.activityCause?.("environment"); } catch { /* Preserve environment validation independently. */ }
         this.environmentMaintenancePending = true; this.inventoryRevision += 1;
         this.maintenanceRevision += 1; this.localDependenciesReady = false; this.localDependencyAuthorityReady = false;
       }
@@ -457,6 +472,8 @@ export class ObsidianSourceAcquisition {
   private promoteUnknownFanout(): void {
     this.clearDeferredResolutionRetry(true);
     if (this.uncertainResolution) return;
+    this.activityGlobalReason ??= "dependency-repair";
+    try { this.startupDiagnostics?.activityCause?.("dependency-repair"); } catch { /* Diagnostics cannot repair or invalidate dependencies. */ }
     this.uncertainResolution = true; this.hostRevision += 1; this.inventoryRevision += 1;
     this.maintenanceRevision += 1;
     this.localDependenciesReady = false; this.localDependencyAuthorityReady = false; this.requested = true;
@@ -1730,6 +1747,7 @@ export class ObsidianSourceAcquisition {
     this.requested = false;
     // Events that arrive after this boundary advance inventoryRevision and cancel this pass.
     const revision = this.inventoryRevision;
+    let activityToken = 0, activityFailed = false;
     this.inventoryCaptureRevision = revision;
     const current = (): boolean => !this.closed && revision === this.inventoryRevision;
     /** Retain one broad task's priority without changing its existing inventory/CAS lifetime. */
@@ -1743,7 +1761,15 @@ export class ObsidianSourceAcquisition {
         }
         if (!current()) return false;
         if (this.localDependencyAuthorityReady && this.restartInventoryChecked
-          && !this.uncertainResolution && !this.environmentMaintenancePending) return this.reconcileKnownImpacts(current);
+          && !this.uncertainResolution && !this.environmentMaintenancePending) {
+          try { activityToken = this.startupDiagnostics?.beginActivity?.("local-maintenance", "local", "known-file", this.counters) ?? 0; }
+          catch { /* The local work owner is authoritative even if accounting fails. */ }
+          return this.reconcileKnownImpacts(current);
+        }
+        try { activityToken = this.startupDiagnostics?.beginActivity?.("host-inventory", "global",
+          this.activityGlobalReason ?? (this.restartInventoryChecked ? "local-authority-unavailable" : "startup-offline"), this.counters) ?? 0; }
+        catch { /* No work admission or validation result depends on diagnostic state. */ }
+        this.activityGlobalReason = null;
         // Events observed before this boundary are one coalesced cached-fact pass. A new unscoped
         // resolver/environment event after this point advances inventoryRevision and cancels the pass.
         // Keep whether this pass was already globally fenced so polling-discovered environment drift
@@ -1886,10 +1912,25 @@ export class ObsidianSourceAcquisition {
           this.inventoryReady?.();
         }
         return ready;
-      } catch { this.counters.failures += 1; return false; }
+      } catch { activityFailed = true; this.counters.failures += 1; return false; }
     };
     this.inventory = this.runBackgroundWork ? this.runBackgroundWork(work) : work();
-    try { return await this.inventory; }
+    try {
+      const result = await this.inventory;
+      try { this.startupDiagnostics?.endActivity?.(activityToken,
+        activityFailed ? "failed" : !current() ? "cancelled" : result ? "complete" : "incomplete", this.counters); }
+      catch { /* Keep the original source result, including an unsuccessful pass. */ }
+      try { this.startupDiagnostics?.stopActivityPhase?.("source"); }
+      catch { /* Capacity-limited pass detail cannot leave an idle phase accumulating time. */ }
+      return result;
+    }
+    catch (error) {
+      try { this.startupDiagnostics?.endActivity?.(activityToken, "failed", this.counters); }
+      catch { /* Accounting must not replace an existing task rejection. */ }
+      try { this.startupDiagnostics?.stopActivityPhase?.("source"); }
+      catch { /* Preserve the original rejection when optional accounting is unavailable. */ }
+      throw error;
+    }
     finally { this.inventory = null; this.inventoryCaptureRevision = null; if (this.requested) this.requestInventory(); }
   }
   /**

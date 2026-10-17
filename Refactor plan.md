@@ -4463,3 +4463,28 @@ implementation patch independently verified outside temporary storage. Manifest 
 Originals retained; no raw evidence publication. Prerequisite CI passes; implementation CI is
 running, not yet acceptance. Native-runner20 contracts pass after tooling cleanup. Source and
 build unchanged by this documentation closeout. Draft/native/platform gaps above remain open.
+
+### 2026-10-17 — #173 accepted merge and #174 D0 checkpoint
+
+The maintainer authorized #173's merge with its recorded validation limits. It merged at
+`23aa44e`; #164 is closed with the requested comment referencing #173. Main was integrated
+without rewriting history into draft #174 at `d4d65cd`. Earlier draft-only instructions above
+describe their historical checkpoints; they do not undo this authorized merge.
+
+#174 D0 adds a fixed-memory session recorder and coarse source/phase observations, independently
+of any folder admission correction. No per-file diagnostic accounting, I/O, scheduling, persisted
+format or semantic behavior is added. Eight weak admission slots bound explicit-copy bookkeeping;
+actual terminal boundaries close phases even when pass detail is omitted. Default capture excludes
+the legacy detailed per-file patch marker. Full verification, installed types/lint/build and exact
+Obsidian smoke pass; all 19 final focused recorder/startup tests pass. Amplified Node 22.22.2 cost is
+about 0.55 microseconds per begin/end pair; the observed complete diagnostic data cut is 15,896 bytes.
+Native stable-path/frequency controls preserve source reads/parses/builds/saves; storage/CPU timing
+variance remains explicit. No native resource saving is attributed to diagnostics.
+
+The full-semantic-snapshot-only F prototype excludes natural source-backed Eager startup. A bounded
+physical-folder publication certificate is under review; it must not imply semantic/source authority.
+D2 public exports, final native controls/quiet window and two-hour soak remain pending. See
+[the report](docs/validation/local-folder-diagnostics-174-2026-10-17.md) and
+[diagnostic contract](docs/INDEXING_DIAGNOSTICS.md). C14 stays paused; #174 stays draft. Highest
+remaining acceptance risks are actual Windows create/report flows, macOS popout/interruption, and
+physical Android/iOS suspend/copy/extended-use behavior. No merge, release or personal-vault access.

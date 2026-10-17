@@ -525,6 +525,7 @@ for (const file of [
   "src/core/plex/actionPreferences.ts",
   "src/core/plex/typographyPreferences.ts",
   "src/application/ActionManager.ts",
+  "src/application/IndexingActivity.ts",
   "src/application/SessionEventRecorder.ts",
   "src/application/supportClipboard.ts",
   "src/application/supportReport.ts",
