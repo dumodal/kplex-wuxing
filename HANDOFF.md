@@ -16,29 +16,36 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 
 
-
-
-
-
 ---
 
-# Node tooltip follow-up: returned for review, inactive
+# PR #172 ? validated Windows closeout, draft review only
 
-Draft PR171 on `2026-10-16-plex-interaction-updates`, parent08f620f. Scoped offline agent returned
-ThoughtNode and regressions; main independently reviewed, ran actual native verification and
-manages the authorized checkpoint/push. No further work is assigned by this inactive handoff.
+Existing branch2026-10-17-indexing-live-updates; main9381c38 integrated without rewrite612a0c8.
+#169 merged with verified durable private raw archive; no runtime indexing change/improvement.
+A7f2f2f2 andB40c4f84 are pushed, full CI39011260178 and39014152315 PASS. Main is committing
+tooling/report closeout now. Production source remains exactly B; artifact c720a9f6e678fd35f2c1bec3b6218f9d62216c4b12ca0982805e961c844f9006.
 
-Compact browser title retained, duplicate host hint removed using existing aria-labelledby/name
-pattern. Exact localized accessibility, gates, image titles and explicit previews are preserved.
-Runtime source SHA-2565a976f6698628eee6c3411c2898159e4a6b37b12e76f292bd9af1511a28cbffc;
-artifact fbe9eaa3ba01e0b9c9634ddb5b82fc62503fb3d90da27be025547560182c1c85.
-Full strict2,045/focused9/native node5/interaction14/hover7 pass. Old-runtime native rejection
-retained; complete-control lane passes12 then hits obsolete background-modal selector, so only
-explicit node scope accepted here. No assertion weakened or unrelated production fix attempted.
-See durable validation report and Refactor plan I3 for source/evidence references and limits.
+Full Node22.22.2 verify+exact-build native smoke PASS. #161 final2/2 native runs cover both prior
+ghost-history variants,16fullcycles,4later Parent/Child edits, exact identities/roles/solid links,
+first-click pinned agreement and cleanup. Real held-P3 Find/stationary semantics/recent-sync and
+physical-only existing-note composer PASS. Existing inventory-held mutation lane six scenarios
+PASS, foreground broadflush0; one initial-DOM setup failure/replay retained. Driver awaits existing
+surface readiness. Native shell contract tests20/20, source/script syntax and diff checks PASS.
 
-Original107 files/settings/layout/bounds/four configuration bytes/debugger restore, no active or
-pending work/controllers. Original110-file evidence remains unchanged; new supplement local
-only, no archive publication. Earlier checkpoint CI passes; new checkpoint CI must be checked.
-macOS/physical-device and existing gate/filter resource acceptance remain pending. PR stays draft;
-no merge/release, personal-vault access, optimization or structural refactoring authorized.
+C investigation complete at bounded causal scope: two B Eager pilots plus one M control show
+identical counts: existing-folder note2checks/77tx/197requests; folder+note92checks/1527tx/2925
+requests,1read/parse each, no fullbuild/snapshot. Natural uncovered-folder resolverclose advances
+host revision and causes whole-source cached validation. No efficiency gain claimed; cache-image
+history differs. Do not suppress folder uncertainty. Future work is a separate bounded causal-proof
+task for new-folder creation waves, not an approved automatic optimization.
+
+All current disposable fixtures/config/session modes/wrappers restored;107files. Durable private
+evidence: %LOCALAPPDATA%/kplex-validation/pr-172/checkpoint-b/ andcheckpoint-c-native/, manifests
+verified (37/34files), raw originals retained, no archives published. Exact sources/failed controls
+and limits in docs/validation/indexing-live-updates-172-2026-10-17.md and Refactor plan.md.
+
+Keep172draft andCloses #161; do not merge/release/close161 manually. Linux/macOS/physicalmobile,
+popout interruption and large-vault long quiet-window acceptance remain unrun. No personal-vault
+access, receipt, reader-sharing, new scheduler/schema or C15+ structural work. Stop further runtime
+changes unless review establishes a specific remaining cause; final-head tooling CI can be tracked
+from the PR checks after closeout push. Do not archive this transient handoff.

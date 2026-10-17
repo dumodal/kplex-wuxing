@@ -779,7 +779,7 @@ export default class KplexPlugin extends Plugin {
     this.cachedMarkdownFileCount = null;
 
     this.registerEvent(this.app.vault.on("create",
-      /** Update the known progress denominator before publishing a newly created Markdown source. */
+      /** Publish native file availability independently of startup/build completion, then queue its source patch. */
       (created) => {
         this.index.invalidateHostStructure();
         this.pruneManagedMetadataWrites();
@@ -796,6 +796,10 @@ export default class KplexPlugin extends Plugin {
           this.dirtyMarkdownPaths.add(created.path);
           if (this.initialIndexComplete && !this.rebuildTask && this.hasVisibleKplexSurface() && this.index?.hasPhysicalBaseline()) {
             this.index.insertCreatedFile(created);
+          } else {
+            // Find/navigation may use the exact native file while a graph owner is still awaiting
+            // unrelated work. This provisional endpoint grants no relationship or write authority.
+            this.index.updateHostFileAvailability(created.path, created);
           }
           this.scheduleRebuild("vault:create-markdown");
           return;

@@ -435,6 +435,167 @@ async function scenario(code) {
   } finally { await browser.cleanup(); }
 }
 
+for(const variant of ['stationary','released','reacquired','baseline-reset','policy-change','late-retirement','purged','destroyed']) test('build-blocked local demand wakes only its current lifetime ('+variant+')',async()=>scenario(`(async()=>{
+ const variant=${JSON.stringify(variant)},o=await onDemandFixture('pr172-build-blocked-'+variant);const{f,index}=o;let release,otherRelease,unblock,releaseRetirement;
+ const deadline=async(promise,label)=>{let timer;try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Deadline: '+label)),5000);})]);}finally{clearTimeout(timer);}};
+ try{
+  f.add('A.md','Child:: [[B]]');f.add('B.md','');f.add('Other.md','Parent:: [[U]]');f.add('U.md','unrelated held body');f.app.metadataCache.resolvedLinks={'A.md':{'B.md':1}};
+  ok(await index.initializeOnDemandBaseline(),'Real structural baseline');
+  const parse=index.metadataParser.parse.bind(index.metadataParser);let arrived;
+  const reached=new Promise(resolve=>arrived=resolve),gate=new Promise(resolve=>unblock=resolve);
+  index.metadataParser.parse=async(text,...args)=>{if(text==='unrelated held body'){arrived();await gate;}return parse(text,...args);};
+  const unrelated=index.patchMarkdownPaths(['U.md']);await deadline(reached,'actual unrelated patch parser');
+  let retirementReached;
+  if(variant==='late-retirement'){
+   const ensure=index.ensureSemanticScope.bind(index);let arrived;retirementReached=new Promise(resolve=>arrived=resolve);const retired=new Promise(resolve=>releaseRetirement=resolve);
+   index.ensureSemanticScope=async(...args)=>{await ensure(...args);arrived();await retired;};
+  }
+  release=index.acquireSemanticDemand('A.md');await deadline(retirementReached??settleDemand(index),'blocked demand settles without holding build');
+  ok(!index.fieldCache.has('A.md'),'Blocked owner has not acquired center body');equal(f.reads,['U.md'],'No extra source work while unrelated owner is held');
+  ok(index.hasPendingSemanticPreparation(),'A genuinely blocked live demand remains pending');
+  if(variant==='released'){release();release=null;}
+  if(variant==='reacquired'){release();otherRelease=index.acquireSemanticDemand('Other.md');otherRelease();otherRelease=null;release=index.acquireSemanticDemand('A.md');await deadline(settleDemand(index),'new demand lifetime defers');}
+  if(variant==='baseline-reset')ok(await deadline(index.refreshOnDemandGraph([],true),'actual structural baseline reset'),'Fresh baseline owner settles');
+  if(variant==='policy-change')index.invalidateSemanticPolicy();
+  if(variant==='purged')ok(await deadline(index.purgePersistentIndexCache(),'actual purge'),'Cache owner closes');
+  if(variant==='destroyed')index.destroy();
+  unblock();const result=await deadline(unrelated,'unrelated patch finishes');
+  if(variant==='late-retirement'){equal(index.onDemandBuildWaiters.size,1,'Completion preserves notification while older exact center task retires');releaseRetirement();}
+  await deadline(settleDemand(index),'deferred center after dependency completion');
+  equal(index.onDemandTasks.size,0,'No stranded center task');equal(index.onDemandBuildWaiters.size,0,'No stranded dependency notification');
+  if(variant==='released'||variant==='purged'||variant==='destroyed')equal(f.reads,['U.md'],'Retired demand never acquires a body after dependency completion');
+  else{
+   const relation=index.semanticRelationSource(index.get('A.md')).page.neighbours.get('B.md');
+   ok(relation?.isChild&&relation.childType===1,'Stationary live center gains actual explicit Child declaration without navigation');
+   equal(f.reads.filter(path=>path==='A.md').length,1,'Center acquired once');equal(f.reads.filter(path=>path==='B.md').length,1,'Direct owner acquired once');
+   equal(f.reads.filter(path=>path==='Other.md').length,0,'Superseded unrelated center is not acquired');
+   equal(index.semanticPreparationDiagnostics.fullBuilds,0,'No full compilation manufactures recovery');
+  }
+  if(variant==='stationary')equal(result.outcome,'patched','Unrelated source committed normally');
+  return true;
+ }finally{unblock?.();releaseRetirement?.();otherRelease?.();release?.();o.close();}
+})()`));
+
+for(const variant of ['lookup','handover']) test('issue-161 published local native neighbor remains addressable before source acquisition ('+variant+')',async()=>scenario(`(async()=>{
+ const variant=${JSON.stringify(variant)},o=await onDemandFixture('pr172-borrowed-native-'+variant);const{f,index}=o;let release,releaseChild,unblock,unsubscribePublication;
+ const deadline=async(promise,label)=>{let timer;try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Deadline: '+label)),5000);})]);}finally{clearTimeout(timer);}};
+ try{
+  f.add('A.md','Child:: [[B]]');f.app.metadataCache.unresolvedLinks={'A.md':{B:1}};
+  ok(await index.initializeOnDemandBaseline(),'Real native baseline');release=index.acquireSemanticDemand('A.md');await settleDemand(index);
+  ok(index.getNeighborhood('A.md').children.some(n=>n.page.path==='B'&&!n.page.file),'Actual explicit ghost before native creation');
+  const file=f.add('B.md','');o.bump();f.app.vault.trigger('create',file);f.app.metadataCache.unresolvedLinks={'A.md':{}};f.app.metadataCache.resolvedLinks={'A.md':{'B.md':1}};
+  f.app.metadataCache.trigger('changed',file);f.app.metadataCache.trigger('resolve',file);f.app.metadataCache.trigger('resolved');
+  const parse=index.metadataParser.parse.bind(index.metadataParser);let arrived;
+  const reached=new Promise(resolve=>arrived=resolve),gate=new Promise(resolve=>unblock=resolve);
+  index.metadataParser.parse=async(text,...args)=>{if(text===''){arrived();await gate;}return parse(text,...args);};
+  let observed=false;
+  unsubscribePublication=index.subscribePresentation(()=>{
+   if(observed||index.onDemandHostScopes.get('A.md')?.pages.get('B.md')?.file!==file)return;
+   observed=true;
+   ok(!index.state.pages.has('B.md'),'Initial borrowed read does not manufacture canonical membership');
+   ok(index.get('B.md')?.file===file&&index.getVaultSearchPage('B.md')?.file===file,'Exact lookup agrees synchronously with published native neighbor');
+   const reads=f.reads.length;
+   if(variant==='lookup'){
+    const mtime=file.stat.mtime,size=file.stat.size;file.stat.mtime++;ok(!index.get('B.md'),'Unnotified revision change rejects borrowed endpoint');file.stat.mtime=mtime;
+    file.stat.size++;ok(!index.get('B.md'),'Same-mtime size change rejects borrowed endpoint');file.stat.size=size;
+    f.add('B.md','');ok(!index.get('B.md'),'Same-stat native replacement rejects borrowed identity');f.files.set(file.path,file);
+    f.files.delete(file.path);ok(!index.get('B.md'),'Deleted native endpoint is never borrowed');f.files.set(file.path,file);
+   }
+   equal(f.reads.length,reads,'Synchronous endpoint safety checks acquire no source/body');
+  });
+  const refresh=index.refreshOnDemandGraph(['A.md']);
+  // The baseline defect ends its task before acquisition. The fix reaches the real parser hold.
+  await deadline(Promise.race([reached,refresh]),'new native endpoint publication');
+  const displayed=index.getNeighborhood('A.md').children.find(n=>n.page.file===file)?.page;
+  ok(displayed&&displayed.path==='B.md','Published parent scope renders exact current native child');
+  ok(observed,'Actual publication was observed before ordinary canonical admission');
+  ok(index.get('B.md')?.file===file,'Rendered native child resolves through exact lookup');
+  ok(index.getVaultSearchPage('B.md')?.file===file,'Existing physical navigation lookup agrees');
+  ok(!index.isSemanticWriteReady('A.md','B.md'),'Provisional endpoint cannot grant source write authority');
+  if(variant==='handover'){
+   let ready;const childScope=new Promise(resolve=>ready=resolve);
+   const unsubscribe=index.subscribePresentation(()=>{if(index.onDemandHostScopes.has('B.md'))ready();});
+   try{releaseChild=index.acquireSemanticDemand('B.md');await deadline(childScope,'child own-center preview');}finally{unsubscribe();}
+   release();release=null;ok(index.get('B.md')?.file===file,'Own-center demand preserves native identity when parent scope retires');
+  }
+  unblock();await deadline(refresh,'normal patch refresh');await deadline(settleDemand(index),'final center handover');
+  ok(index.get('B.md')?.file===file,'Settled native identity remains addressable');ok(index.fieldCache.has('B.md'),'Normal selected owner actually acquires the new body');return true;
+ }finally{unblock?.();unsubscribePublication?.();releaseChild?.();release?.();o.close();}
+})()`));
+
+for(const variant of ['ghost','replaced-native']) test('current physical availability outranks a superseded exact-path canonical identity ('+variant+')',async()=>scenario(`(async()=>{
+ const variant=${JSON.stringify(variant)},o=await onDemandFixture('pr172-physical-canonical-mask-'+variant);const{f,index}=o;
+ try{
+  f.add('A.md','Child:: [[Late.md]]');
+  if(variant==='ghost')f.app.metadataCache.unresolvedLinks={'A.md':{'Late.md':1}};
+  else{f.add('Late.md','');f.app.metadataCache.resolvedLinks={'A.md':{'Late.md':1}};}
+  ok(await index.rebuild(),'Actual old canonical source graph');
+  const old=index.state.pages.get('Late.md');ok(old,'Exact-path old canonical endpoint exists');
+  if(variant==='ghost')ok(!old.file,'Real unresolved source keeps exact suffix coordinate');
+  const file=f.add('Late.md','');o.bump();f.app.vault.trigger('create',file);index.updateHostFileAvailability(file.path,file);
+  ok(index.getVaultSearchPage(file.path)?.file===file,'New exact native availability wins over prior canonical identity');
+  ok(index.search('Late',10,'vault-files').some(page=>page.file===file),'Find cannot be masked by the old same-path record');
+  ok(index.get(file.path)?.file===file,'Navigation lookup agrees on exact current native identity');
+  ok(index.state.pages.get(file.path)===old,'Read availability never rewrites canonical provenance');
+  ok(!index.isSemanticWriteReady('A.md',file.path),'Physical replacement cannot grant new source authority');
+  return true;
+ }finally{o.close();}
+})()`));
+
+for(const variant of ['ordinary','deleted','renamed','replaced']) test('new provisional filenames survive an older full publication ('+variant+')',async()=>scenario(`(async()=>{
+ const variant=${JSON.stringify(variant)},o=await onDemandFixture('pr172-provisional-publication-'+variant);const{f,index}=o;let unblock;
+ try{
+  f.add('A.md','');ok(await index.initializeOnDemandBaseline(),'Initial native baseline');
+  const prepare=index.preparePresentationPublication.bind(index);let arrived,held=false;
+  const reached=new Promise(resolve=>arrived=resolve),gate=new Promise(resolve=>unblock=resolve);
+  // The compiler's physical inventory is captured; presentation must still capture the newer host
+  // observation normally. Holding after original preparation instead correctly rejects publication.
+  index.preparePresentationPublication=async(...args)=>{if(!held){held=true;arrived();await gate;}return prepare(...args);};
+  const build=index.rebuild();await reached;
+  let file=f.add('Late.md','');o.bump();f.app.vault.trigger('create',file);index.updateHostFileAvailability(file.path,file);
+  ok(index.search('Late',10,'vault-files').some(page=>page.file===file),'Native filename appears while old publication is held');
+  if(variant==='deleted'){f.files.delete(file.path);o.bump();f.app.vault.trigger('delete',file);index.updateHostFileAvailability(file.path);}
+  if(variant==='renamed'){const old=file.path;f.files.delete(old);file.path='Moved.md';file.name=file.path;file.basename='Moved';f.files.set(file.path,file);o.bump();f.app.vault.trigger('rename',file,old);index.updateHostFileAvailability(old,file);}
+  if(variant==='replaced'){file=f.add(file.path,'');o.bump();f.app.vault.trigger('create',file);index.updateHostFileAvailability(file.path,file);}
+  unblock();ok(await build,'Older graph still publishes its captured source revision');
+  if(variant==='deleted')ok(!index.search('Late',10,'vault-files').length&&!index.getVaultSearchPage('Late.md'),'Deleted provisional identity is not resurrected');
+  else{
+   ok(!index.state.pages.has(file.path),'Earlier private graph does not acquire later canonical authority');
+   ok(index.getVaultSearchPage(file.path)?.file===file,'Current native availability survives older graph publication');
+   ok(index.search(file.basename,10,'vault-files').some(page=>page.file===file),'Filename stays discoverable until catch-up');
+   ok(index.fullSemanticSourceRevision!==index.plugin.getIndexSourceRevision(),'Provisional visibility does not certify the newer source epoch');
+   index.insertCreatedFile(file);
+   equal((await index.patchMarkdownPaths([file.path])).outcome,'patched','Existing native admission and normal source-local catch-up own the endpoint');
+   ok(index.state.pages.get(file.path)?.file===file,'Catch-up publishes actual canonical identity');
+   ok(!index.physicalSearchUpdatedPaths.has(file.path)&&!index.physicalSearchEntries.has(file.path),'Covered native-event acceleration retires at ordinary source publication');
+  }
+  return true;
+ }finally{unblock?.();o.close();}
+})()`));
+
+test('current native availability remains searchable over an older requested semantic scope',async()=>scenario(`(async()=>{
+ const o=await onDemandFixture('pr172-physical-requested-scope-mask',{indexingMode:'eager'});const{f,index}=o;let release;
+ try{
+  f.add('A.md','Child:: [[Late.md]]');f.app.metadataCache.unresolvedLinks={'A.md':{'Late.md':1}};
+  ok(await index.initializeOnDemandBaseline(),'Real native structural baseline');
+  delete index.sourceAcquisition.enableInventory;index.plugin.startupDiagnostics.processed=()=>{};
+  index.sourceAcquisition.enableInventory();ok(await index.sourceAcquisition.flush(),'Real durable source authority');
+  release=index.acquireSemanticDemand('A.md');await index.ensureSemanticScope('A.md');
+  const scope=index.semanticScopes.get('A.md'),ghost=scope?.pagesByPath.get('Late.md');
+  ok(ghost&&!ghost.file,'Actual requested semantic publication owns an exact-path unresolved endpoint');
+  const maintenance=index.sourceAcquisition.getMaintenanceRevision();
+  const file=f.add('Late.md','');o.bump();f.app.vault.trigger('create',file);index.updateHostFileAvailability(file.path,file);
+  ok(index.sourceAcquisition.getMaintenanceRevision()>maintenance,'Native create invalidates the prior requested source lifetime');
+  ok(index.semanticScopes.get('A.md')===scope,'Coherent prior requested scope remains published while local repair is pending');
+  ok(index.getVaultSearchPage(file.path)?.file===file,'Explicit physical lookup owns the new native identity');
+  const hits=index.search('Late',10,'vault-files').filter(page=>page.path===file.path);
+  equal(hits.length,1,'Actual Find catalog keeps one current file despite the retained semantic ghost');
+  ok(hits[0].file===file,'Actual Find and explicit lookup select the same current native identity');
+  ok(!index.isSemanticWriteReady('A.md',file.path),'Physical discovery does not certify fresh source authority');
+  return true;
+ }finally{release?.();o.close();}
+})()`));
+
 test('cold startup is body-free, local demand uses bounded canonical owners and revisit reuses durable data', async()=>scenario(`(async()=>{
   const o=await onDemandFixture('v2-demand-cold');const {f,index}=o;let release;
   try{

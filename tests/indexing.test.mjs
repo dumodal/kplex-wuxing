@@ -1041,6 +1041,7 @@ assert.equal(indexingStatusContext.markdownFileCountReads, 1, "Progress publicat
     isCheckpointSaving: () => false,
     hasIncrementalRestorePatch: () => false,
     indexedMarkdownFileCount: () => 10,
+    updateHostFileAvailability: () => {},
     renameFile: () => true,
     dematerializeFile: () => undefined,
   };
@@ -4045,6 +4046,117 @@ try {
   nativeFiles.set(nativeImage.path, nativeImage);
   nativeCreateHandler(nativeImage);
   assert.equal(nativeCreationCoordinator.indexDirty, false, "Attachment recreation must remain local");
+
+  // The real reactive listener must preserve physical Find/navigation after the early restore
+  // listeners hand over, even when startup, hidden demand or an unrelated coordinator blocks patches.
+  for (const phase of ["startup-handover", "hidden", "active-coordinator"]) {
+    const availabilityCoordinator = new KplexPlugin();
+    const availabilityApp = { ...app, vault: { ...app.vault, ...fixtureEvents() },
+      metadataCache: { ...metadataCache, ...fixtureEvents() },
+      workspace: { getActiveFile: () => null, getMostRecentLeaf: () => null, iterateAllLeaves: () => {} } };
+    availabilityCoordinator.app = availabilityApp;
+    availabilityCoordinator.settings = { ...settings, indexingMode: phase === "active-coordinator" ? "on-demand" : "eager", lastActivePath: "",
+      sidecarLastFilePath: "", navigationHistory: [], pinnedNodes: [] };
+    availabilityCoordinator.notifyIndexStatus = () => {};
+    availabilityCoordinator.refreshBookmarkedEntryPoints = async () => {};
+    availabilityCoordinator.hasVisibleKplexSurface = () => phase !== "hidden";
+    availabilityCoordinator.initialIndexComplete = phase !== "startup-handover";
+    const availabilityIndex = new GraphIndex(availabilityCoordinator, availabilityApp);
+    availabilityCoordinator.index = availabilityIndex;
+    let availabilityCalls = 0;
+    const publishAvailability = availabilityIndex.updateHostFileAvailability.bind(availabilityIndex);
+    availabilityIndex.updateHostFileAvailability = (...args) => { availabilityCalls += 1; publishAvailability(...args); };
+    const beforeHandover = new TFile(`Before handover ${phase}.md`, 10_099);
+    const externalFile = new TFile(`External ${phase}.md`, 10_100);
+    const managedFile = new TFile(`Managed ${phase}.md`, 10_101);
+    let releaseGraph;
+    let activeCoordinator;
+    const graphGate = new Promise(resolve => { releaseGraph = resolve; });
+    try {
+      if (phase === "startup-handover") {
+        availabilityCoordinator.register = () => {};
+        availabilityCoordinator.installPreRestoreChangeFence();
+        files.set(beforeHandover.path, beforeHandover);
+        const beforeCreate = availabilityCoordinator.getIndexSourceRevision();
+        availabilityApp.vault.trigger("create", beforeHandover);
+        assert.equal(availabilityCoordinator.getIndexSourceRevision(), beforeCreate + 1, "The actual pre-restore fence owns one source epoch");
+        assert.equal(availabilityCalls, 1, "The pre-restore create publishes availability exactly once");
+        assert.equal(availabilityIndex.getVaultSearchPage(beforeHandover.path)?.file, beforeHandover,
+          "Physical selection is available before the listener handover");
+        const releasePreRestore = availabilityCoordinator.preRestoreListenerCleanup;
+        assert.equal(typeof releasePreRestore, "function", "The actual pre-restore fence exposes its lifecycle cleanup");
+        availabilityCoordinator.registerReactiveIndexListeners();
+        releasePreRestore();
+        releasePreRestore();
+        assert.equal(availabilityCoordinator.preRestoreListenerCleanup, null, "The pre-restore fence is retired idempotently after handover");
+      } else availabilityCoordinator.registerReactiveIndexListeners();
+      if (phase === "active-coordinator") {
+        let admitted;
+        const started = new Promise(resolve => { admitted = resolve; });
+        // Hold the existing On-demand coordinator entry, leaving physical APIs unmodified.
+        availabilityIndex.refreshOnDemandGraph = async () => { admitted(); await graphGate; return true; };
+        availabilityCoordinator.indexDirty = true;
+        availabilityCoordinator.indexBacklogReasons.add("manual-rebuild");
+        activeCoordinator = availabilityCoordinator.performRebuild(false, false, "manual-rebuild", false);
+        await started;
+        assert(availabilityCoordinator.rebuildTask, "The actual coordinator must remain pending during external creation");
+      }
+      const revision = availabilityCoordinator.getIndexSourceRevision();
+      const sourceCounters = availabilityIndex.getSourceAcquisitionCounters();
+      const beforeAvailability = availabilityCalls;
+      files.set(externalFile.path, externalFile);
+      availabilityApp.vault.trigger("create", externalFile);
+      assert.equal(availabilityCoordinator.getIndexSourceRevision(), revision + 1, `${phase}: normal source epoch advances once`);
+      assert.equal(availabilityCalls, beforeAvailability + 1, `${phase}: the reactive listener publishes availability exactly once`);
+      assert(availabilityCoordinator.dirtyMarkdownPaths.has(externalFile.path), `${phase}: normal per-file backlog remains queued`);
+      assert(availabilityCoordinator.indexBacklogReasons.has("vault:create-markdown"), `${phase}: creation remains a patch-only reason`);
+      assert.equal(availabilityIndex.search(externalFile.basename.toLowerCase(), 5, "vault-files")[0]?.file, externalFile,
+        `${phase}: Find exposes the exact native file before the unrelated owner completes`);
+      assert.equal(availabilityIndex.getVaultSearchPage(externalFile.path)?.file, externalFile,
+        `${phase}: explicit lookup can resolve the provisional native endpoint`);
+      assert.equal(availabilityIndex.state.pages.has(externalFile.path), false, `${phase}: physical discovery does not publish canonical relationships`);
+      assert.deepEqual(availabilityIndex.getSourceAcquisitionCounters(), sourceCounters, `${phase}: availability performs no source reads or parsing`);
+
+      const oldPath = externalFile.path;
+      files.delete(oldPath);
+      externalFile.path = `Renamed ${phase}.md`;
+      externalFile.name = externalFile.path;
+      externalFile.basename = externalFile.path.slice(0, -3);
+      files.set(externalFile.path, externalFile);
+      availabilityApp.vault.trigger("rename", externalFile, oldPath);
+      assert.equal(availabilityIndex.get(oldPath), undefined, `${phase}: old provisional path is retired on rename`);
+      assert.equal(availabilityIndex.search(externalFile.basename.toLowerCase(), 5, "vault-files")[0]?.file, externalFile,
+        `${phase}: provisional rename preserves the native identity in Find`);
+      files.delete(externalFile.path);
+      availabilityApp.vault.trigger("delete", externalFile);
+      assert.equal(availabilityIndex.get(externalFile.path), undefined, `${phase}: deleting the native file retires provisional lookup`);
+      assert.equal(availabilityIndex.search(externalFile.basename.toLowerCase(), 5, "vault-files").length, 0, `${phase}: deleting the native file retires Find membership`);
+
+      // Managed ghost creation retains its explicit materialization owner, including captured intent.
+      files.set(managedFile.path, managedFile);
+      availabilityCoordinator.managedCreatedPaths.set(managedFile.path, Date.now() + 60_000);
+      const beforeManaged = availabilityCoordinator.getIndexSourceRevision();
+      availabilityApp.vault.trigger("create", managedFile);
+      assert.equal(availabilityIndex.get(managedFile.path), undefined, `${phase}: managed creation is not provisionally promoted by this listener`);
+      assert.equal(availabilityCoordinator.getIndexSourceRevision(), beforeManaged, `${phase}: managed creation keeps its existing epoch ownership`);
+      assert.equal(availabilityCoordinator.dirtyMarkdownPaths.has(managedFile.path), false, `${phase}: managed creation keeps its existing patch ownership`);
+
+      files.delete(managedFile.path);
+      availabilityCoordinator.managedCreatedPaths.delete(managedFile.path);
+      // An already replaced native object must not become the readable endpoint.
+      const replacement = new TFile(managedFile.path, managedFile.stat.mtime);
+      files.set(replacement.path, replacement);
+      availabilityApp.vault.trigger("create", managedFile);
+      assert.equal(availabilityIndex.get(managedFile.path), undefined, `${phase}: a stale create cannot expose the replaced TFile`);
+      assert.equal(availabilityIndex.search(managedFile.basename.toLowerCase(), 5, "vault-files").length, 0, `${phase}: Find rejects stale native identity`);
+    } finally {
+      releaseGraph();
+      await activeCoordinator;
+      if (availabilityCoordinator.rebuildTimer !== null) window.clearTimeout(availabilityCoordinator.rebuildTimer);
+      availabilityIndex.destroy();
+      files.delete(beforeHandover.path); files.delete(externalFile.path); files.delete(managedFile.path);
+    }
+  }
 
   // A folder move owns its known subtree, including a second move during cooperative capture.
   const localFolder = ensureFolder("SI4Folder");

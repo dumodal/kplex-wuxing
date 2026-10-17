@@ -2,7 +2,9 @@
  * Disposable-vault startup acceptance: exact main.js staging, genuine complete-graph preparation,
  * vault-window application reloads and aggregate observation. Never accepts a personal vault.
  * Existing CLI process deadlines and renderer throttling remain unchanged. Settings are backed
- * up before preparation and restored explicitly; no operation can target a personal vault.
+ * up before preparation and restored explicitly; optional source-mapped CPU diagnostics produce only
+ * fixed aggregate categories and preserve bounded CLI/CDP profiles outside the vault. Primary counts runs retain
+ * their existing observation/scheduling behavior; no operation can target a personal vault.
  */
 import { createHash } from 'node:crypto';
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
@@ -10,6 +12,8 @@ import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Script } from 'node:vm';
 import { arch, cpus, release, totalmem } from 'node:os';
+import { SourceMap } from 'node:module';
+import ts from 'typescript';
 import { obsidianCliExecutable, spawnNativeSync } from './processTools.mjs';
 import { validateTarget } from './runner.mjs';
 import { startupCacheIdentity } from './startupCacheIdentity.mjs';
@@ -34,7 +38,8 @@ const processors=cpus();
 const report={action,vault,startedAt:new Date().toISOString(),node:process.version,
   hardware:{platform:process.platform,osRelease:release(),architecture:arch(),cpuModel:processors[0]?.model??null,
     logicalProcessors:processors.length,totalMemoryBytes:totalmem()},samples:[]};
-let stagedUnloaded=false,ownedStagePath=null;
+let stagedUnloaded=false,ownedStagePath=null,cpuWindow=null;
+const cpuWindows=[],cpuPhases=new Set(),cpuSampleMilliseconds=3000;
 /** Hash only explicit executable/configuration artifacts; never walk note files. */
 function hash(path){return createHash('sha256').update(readFileSync(path)).digest('hex');}
 /** Keep every CLI operation bounded; raw transport output is not copied into reports. */
@@ -88,7 +93,7 @@ function sample(){
     if(ready&&m[name]===undefined)m[name]=s.now;
   }
   // Complete evidence lives in the append-only stream; retaining it again distorts the observer's memory.
-  report.samples.push(s);if(report.samples.length>2)report.samples.splice(1,1);save();return s;
+  report.samples.push(s);if(report.samples.length>2)report.samples.splice(1,1);save();observeCpuWindow(s);return s;
 }
 /** Wait for honest readiness or a stable idle incomplete outcome; neither path changes flags, progress or deadlines. */
 async function settled(previousOrigin){
@@ -119,17 +124,21 @@ async function quiescent(first){
   report.quietWindow.endedAt=latest.at;report.quietWindow.endingResources=resources;
   report.quietWindow.broadWorkUnchanged=Boolean(resources?.broad&&JSON.stringify(resources.broad)===JSON.stringify(first.resources?.broad));
   if(resources?.broad&&!report.quietWindow.broadWorkUnchanged)throw Error('Unexplained inventory/build/save during the fixed quiet window');
-  if(report.quietWindow.violations||latest.scheduler.active.some(/** Require actual lane drain, not only a green status. */ count=>count>0)||latest.scheduler.waiting||resources?.pending||resources?.activeTransactions)throw Error('Post-ready work did not remain genuinely settled');
+  if(report.quietWindow.violations||latest.scheduler.active.some(/** Require actual lane drain, not only a green status. */ count=>count>0)||latest.scheduler.waiting||resources?.pending||resources?.activeTransactions||resources?.drain&&Object.values(resources.drain).some(value=>!value))throw Error('Post-ready work did not remain genuinely settled');
   return latest;
 }
 /** Wait for real post-ready cache/task drain before starting the fixed quiet window. */
 async function drained(first){
-  let latest=first,stable=0;
+  let latest=first,stable=0,undrained=0;
   while(stable<3){
-    const idle=latest.status?.upToDate&&!latest.initializing&&!latest.building&&!latest.inventory&&!latest.pendingPersistence
+    const baseIdle=latest.status?.upToDate&&!latest.initializing&&!latest.building&&!latest.inventory&&!latest.pendingPersistence
       &&!latest.semanticActivity.active&&!latest.semanticActivity.pending&&latest.semanticDependencies
       &&latest.scheduler.active.every(/** All actual scheduler leases must have ended. */ count=>count===0)&&!latest.scheduler.waiting
       &&!(latest.resources?.pending??0)&&!(latest.resources?.activeTransactions??0);
+    const diagnosticsDrained=!latest.resources?.drain||Object.values(latest.resources.drain).every(value=>value);
+    const idle=baseIdle&&diagnosticsDrained;
+    undrained=baseIdle&&!diagnosticsDrained?undrained+1:0;
+    if(undrained>=3)throw Error('Source reader/lease/decode observations did not drain after operations settled');
     stable=idle?stable+1:0;
     if(stable>=3)break;
     await delay(1000);
@@ -152,6 +161,92 @@ function startTask(code){evaluate(`(/** Own completion before leaving CLI transp
 async function taskDone(){while(true){await delay(1000);sample();const s=evaluate("JSON.stringify({done:window.kplexRestartProbe?.done,failed:window.kplexRestartProbe?.failed,value:window.kplexRestartProbe?.value})");if(s.done){if(s.failed)throw Error('Owned native operation failed');return s.value;}}}
 /** Back up configuration once per experiment; never replace an earlier original with test settings. */
 function backup(){for(const [name,path] of [['data.json',join(target.pluginDir,'data.json')],['community-plugins.json',join(target.config,'community-plugins.json')]]){const destination=join(output,'original-'+name);if(!existsSync(destination))copyFileSync(path,destination);}}
+
+/** Capture at most one short diagnostic sample in each relevant phase using the existing CLI/CDP owner. */
+function observeCpuWindow(sample){
+  if(!process.env.KPLEX_PROFILE_IDENTITY_DIR||report.cpuProfileError)return;
+  try{
+    if(cpuWindow&&Date.now()-cpuWindow.startedAt>=cpuSampleMilliseconds)finishCpuWindow();
+    const phase=sample.startup?.progress?.source?.phase;
+    if(!cpuWindow&&report.previousTimeOrigin!==undefined&&sample.timeOrigin!==report.previousTimeOrigin
+      &&['host-metadata-comparison','source-reconciliation'].includes(phase)&&!cpuPhases.has(phase)){
+      if(!report.cpuDebuggerBefore){report.cpuDebuggerBefore=evaluate("JSON.stringify((()=>{const w=require('@electron/remote').getCurrentWindow();return{attached:w.webContents.debugger.isAttached(),devtools:w.webContents.isDevToolsOpened()}})())");if(report.cpuDebuggerBefore.devtools)throw Error('Competing native debugger owner');}
+      cli('dev:cdp','method=Profiler.enable');cli('dev:cdp','method=Profiler.start');
+      cpuWindow={phase,startedAt:Date.now(),path:join(process.env.KPLEX_PROFILE_IDENTITY_DIR,'cpu-'+label+'-'+phase+'.json')};cpuPhases.add(phase);
+    }
+  }catch{report.cpuProfileError='Native diagnostic CPU sample unavailable';}
+}
+/** Stop only this driver's successfully started sample; profiler work is outside primary counts runs. */
+function finishCpuWindow(){
+  if(!cpuWindow)return;const capture=cpuWindow;cpuWindow=null;
+  try{
+    const raw=JSON.parse(cli('dev:cdp','method=Profiler.stop'));
+    if(!raw.profile)throw Error('Missing CPU sample');
+    writeFileSync(capture.path,JSON.stringify(raw.profile),{flag:'wx'});
+    const summary=summarizeCpuCapture({available:true,path:capture.path,samplingIntervalMicroseconds:null});
+    cpuWindows.push({phase:capture.phase,elapsedMs:Date.now()-capture.startedAt,...summary});report.cpuProfileWindows=cpuWindows;
+  }finally{cli('dev:cdp','method=Profiler.disable');}
+}
+
+/** Summarize a diagnostic V8 capture into disjoint fixed categories, omitting frame names/URLs. */
+function summarizeCpuCapture(capture){
+  const directory=process.env.KPLEX_PROFILE_IDENTITY_DIR;
+  if(!capture?.available||!directory||realpathSync(resolve(directory))!==realpathSync(resolve(capture.path,'..')))throw Error('Diagnostic CPU capture/identity unavailable: '+(capture?.reason??'missing'));
+  const identity=JSON.parse(readFileSync(join(directory,'identity.json'),'utf8'));
+  if(!identity.cpuProfile||identity.mode!=='detailed'||identity.sha256!==(report.installedMain??report.artifacts['main.js']))throw Error('CPU map does not describe the measured executable');
+  const mapPayload=JSON.parse(readFileSync(join(directory,'main.js.map'),'utf8')),map=new SourceMap(mapPayload),
+    profile=JSON.parse(readFileSync(capture.path,'utf8')),nodes=new Map(profile.nodes.map(node=>[node.id,node])),categories=new Map(),kinds=new Map();
+  if(!Array.isArray(profile.samples)||profile.samples.length!==profile.timeDeltas?.length)throw Error('Incomplete diagnostic CPU capture');
+  const sources=new Map();
+  /** Locate actual owner methods in the exact source-map input, including injected diagnostic main. */
+  function methodAt(source,line,column){
+    const wanted=source.endsWith('src/index/SourceRepository.ts')?'src/index/SourceRepository.ts':'src/main.ts';
+    const key=mapPayload.sources.findIndex(path=>path.replaceAll('\\','/').endsWith(wanted));
+    if(key<0)return '';
+    let record=sources.get(key);
+    if(!record){
+      const file=ts.createSourceFile(mapPayload.sources[key],mapPayload.sourcesContent[key],ts.ScriptTarget.Latest,true),ranges=[];
+      /** Retain static source ranges only; no runtime input or arbitrary name is exported. */
+      const visit=node=>{if(ts.isMethodDeclaration(node)||ts.isFunctionDeclaration(node))ranges.push({start:node.getStart(file),end:node.end,name:node.name?.getText(file)??''});ts.forEachChild(node,visit)};visit(file);
+      record={file,ranges};sources.set(key,record);
+    }
+    const position=record.file.getPositionOfLineAndCharacter(line,column);
+    return record.ranges.find(range=>position>=range.start&&position<range.end)?.name??'';
+  }
+  /** Map each profile node once; leaf samples are never counted again in parent categories. */
+  function category(node){
+    if(!node)return 'unknown-runtime';const frame=node.callFrame;
+    if(frame.functionName==='(idle)')return 'idle';if(frame.functionName==='(garbage collector)')return 'garbage-collector';
+    if(frame.url!=='plugin:k-plex'&&!frame.url?.replaceAll('\\','/').endsWith('/k-plex/main.js'))return 'host-runtime';
+    if(frame.lineNumber<0||frame.columnNumber<0)return 'unmapped-plugin';
+    let column=frame.columnNumber;
+    for(const edit of identity.hardeningEdits??[])if(edit.line===frame.lineNumber&&frame.columnNumber>=edit.afterColumn)column-=edit.delta;
+    const entry=map.findEntry(frame.lineNumber,column),source=entry?.originalSource?.replaceAll('\\','/');
+    if(!source)return 'unmapped-plugin';
+    if(source.endsWith('scripts/testing/obsidian/startupResources.mjs'))return 'resource-observer';
+    if(source.endsWith('src/adapters/obsidian/startupDiagnostics.ts'))return 'progress-reporting';
+    if(source.endsWith('src/index/SourceRepository.ts')){
+      const method=methodAt(source,entry.originalLine,entry.originalColumn);
+      if(['transaction','pin','releaseLeases','unpin','selectionReason','validateSelections','readSelected'].includes(method))return 'repository-lifetime';
+      if(['unknownValue','complete'].includes(method))return 'repository-request-adapter';
+      if(['visitFamily','familyContentDigest','readBody','readChunk','reserveDecode','releaseDecode'].includes(method))return 'repository-family';
+      return 'repository-other';
+    }
+    if(source.endsWith('src/index/SourceFacts.ts'))return 'source-codec';
+    if(source.endsWith('src/adapters/obsidian/sourceAcquisition.ts'))return 'source-acquisition';
+    if(source.includes('/src/core/graph/'))return 'graph-core';
+    if(source.endsWith('src/index/GraphBuilder.ts'))return 'graph-builder';
+    if(source.endsWith('src/main.ts')&&['notifyStartupProgress','getIndexStatus','getStartupDiagnostics'].includes(methodAt(source,entry.originalLine,entry.originalColumn)))return 'progress-reporting';
+    return 'other-plugin';
+  }
+  for(let i=0;i<profile.samples.length;i++){
+    const id=profile.samples[i];let kind=kinds.get(id);if(!kind){kind=category(nodes.get(id));kinds.set(id,kind);}
+    const row=categories.get(kind)??{samples:0,sampledMicroseconds:0};row.samples++;row.sampledMicroseconds+=profile.timeDeltas[i];categories.set(kind,row);
+  }
+  return{samples:profile.samples.length,samplingIntervalMicroseconds:capture.samplingIntervalMicroseconds,
+    profileSha256:hash(capture.path),sourceMapSha256:hash(join(directory,'main.js.map')),categories:Object.fromEntries(categories),
+    semantics:'Disjoint V8 leaf sampled time includes wall-clock sampling/idle and is not native cumulative CPU, exclusive disk time or complete attribution. Native renderer CPU is reported separately. Diagnostic profiler/observer overhead is unisolated; primary counts runs do not enable it.'};
+}
 
 /** Observe the existing native reload once; staged variants do no initialization before this boundary. */
 async function restartAndObserve(before){
@@ -261,6 +356,11 @@ try{
   report.status='passed';
 }catch(error){if(reloading)recordReloadOutcome(report.previousTimeOrigin);report.status='failed';report.error=error.message;process.exitCode=1;}
 finally{
+  if(process.env.KPLEX_PROFILE_IDENTITY_DIR){
+    try{finishCpuWindow();if(report.cpuProfileError||!cpuWindows.length)throw Error('No complete diagnostic CPU windows');}
+    catch(error){report.cpuProfileError=error.message;report.status='failed';process.exitCode=1;}
+    if(report.cpuDebuggerBefore?.attached===false){try{cli('dev:debug','off');report.cpuDebuggerRestored=true;}catch{report.cpuDebuggerRestored=false;report.status='failed';process.exitCode=1;}}
+  }
   if(stagedUnloaded){
     try{
       const restored=evaluate("(/** A failed staging observation must leave the selected test plugin loaded where possible. */ async()=>{if(!app.plugins.plugins['k-plex'])await app.plugins.enablePlugin('k-plex');return JSON.stringify({loaded:!!app.plugins.plugins['k-plex']})})()");

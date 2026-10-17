@@ -4250,3 +4250,164 @@ syntax and actual native acceptance. Earlier checkpoint CI passes; new push CI r
 Evidence is a separate verified local supplement; original evidence remains intact, no publication.
 Actual macOS and physical-device behavior and the earlier gate/filter resource gap remain pending.
 Keep draft; no merge/release or C15+ work.
+
+
+### 2026-10-16: PR169 R0/R1, base integration and measurement-only checkpoint
+
+User accepted #171 and explicitly authorized its merge. FinalCI succeeded onf71428f; #171 merged
+atd40a339. Main was fetched/fast-forwarded; PR169 branch merged main at69fa58a and was pushed.
+Relative main, only the planning marker remained. Auto-review initially rejected the necessary
+ready transition based on superseded draft instructions; a retry with current explicit merge
+authorization and the verified GitHub prerequisite passed. #169 remains draft/no merge/release.
+
+Production source-reader logic remains unchanged. Existing measurement owners now expose bounded
+actual reader/lease attribution, conservative drain, shape/repetition fixtures and partial evidence.
+Main independently passed2observer contracts,18small shape/wave cases and6single-chunk doubling
+cases; offline18detailed/18counts agreed exactly. Large dense setup hit the unchanged60s CDP deadline;
+retain failure and avoid scaling that fixture further. CPU Node-inspector connect is unsupported;
+its attempted hook was removed. Existing native CLI/CDP sampling/source-map attribution passes
+against500real head-only reads. No primary timing is compared to the historical #165 medians.
+
+Reopened authorized large fixture20,088 Markdown/9,062,067bytes is explicitly notSynthetic-Scale-v2.
+Current-main preparation completed; original artifacts/configuration are privately backed up.
+Small original107files/build/configuration restored with no owned probe/CPU state. Nativepilot/GateM
+pending; no resource benefit or shipping verdict yet. New personal-vault grant is indexing-only,
+main.js deployment and sanitized aggregates; it has not been used. See the single evolving
+validation report `docs/validation/source-reader-efficiency-169-2026-10-16.md`.
+
+### 2026-10-17: PR #169 R2, defer production reader sharing at Gate M
+
+The current-main diagnostic control reconciled 20,088 cached sources with zero fresh Vault reads,
+parses or repairs. Genuine drain occurred at 1,089.981 seconds; observer-interval renderer CPU
+was 327.187 seconds. Source-family leases created/retired 82,770/82,770, peak live one; no unknown
+retirements, overflow or decode reservations remained. Quiet-window/final verification pending.
+
+The proposed shared reader removes one net transaction per eligible owner: theoretical 20,088
+of 435,325 overall (4.61%). Entire metadata inspections occupied 34.643 seconds of inclusive
+awaited time and must still authenticate metadata in the candidate. Two short CPU windows show
+only four lifetime-bookkeeping leaf samples each; native asynchronous storage cost remains
+unisolated. No affirmative material net-resource benefit is established. Defer production changes
+and the expensive candidate acceptance series; this is inconclusive benefit, not proof of no cost.
+Keep reusable measurement protection. No production reader/finality, schema, scheduler or receipt
+change. The separate highest-value storage investigation is the observed full compile/snapshot
+rewrite (one each; about 279 MB encoded page/chunk payload), without assuming it unnecessary.
+No new optimization is authorized by this finding. Only disposable vaults used; no personal access.
+See the concise PR #169 validation report for reproduction, failures and platform limitations.
+
+### 2026-10-17: PR #169 R3, validated measurement closeout
+
+Full Node 22.22.2 verification passed 2,046 tests (7/128/906/128/334/543), zero failures/skips,
+Obsidian lint/types/build and exact native smoke; shipping main remains fbe9eaa3, unchanged
+from accepted main. No source/runtime diff. The 610.633-second quiet window added zero IDB
+transactions/digests/builds/saves; all readers/leases/decode drained, foreground samples valid.
+Inclusive native renderer CPU was 327.968 seconds to drain and 333.968 through quiet; shorter
+probe-interval CPU 327.187 seconds is not substituted for the lifecycle. No resource saving claimed.
+
+Pinned generator verifies all 20,000 generated notes byte for byte; 88 public help checksums saved.
+Both disposable fixtures have original artifacts/configuration and inventories; large runtime
+settings/layout/bounds and small pre-smoke workspace bytes restored. Owned probes/debugger cleaned.
+Personal-vault authorization unused. Local ignored evidence ZIP: 83 files/84 entries, 22,719,434
+bytes; CRC/size/per-file SHA-256 pass, archive SHA-256
+4f0739d70445593203f3377811737c636dcff1c53a14f05c1e093f77300243f5. Raw originals remain.
+No archive publication or backup/payload/handoff inclusion. Temporary planning marker removed.
+
+Defer production reader sharing at Gate M: small operation opportunity, no established material
+net-resource win. No candidate acceptance series or manual production-change test required; actual
+macOS/mobile/lower-powered and mixed-size resource acceptance remain unavailable, not passed.
+CI passed code checkpoint 0333fc4 (38971221162); final documentation-head CI tracked separately.
+A Windows default-codepage failure interrupted the first ledger update after writing the report;
+the standing handoff header is restored byte-for-byte from 0333fc4 with explicit UTF-8, and this
+entry completes that update. Production/test/tool scopes remain unchanged after verification.
+Keep #169 draft; no merge/release, next optimization or C15+ work authorized by this closeout.
+
+
+### 2026-10-17: #169 authorized merge closeout; #172 owns implementation
+
+Reverified the unchanged 22,719,434-byte evidence ZIP: all84 entries/83 file sizes+hashes and CRCs
+pass; SHA2564f0739d70445593203f3377811737c636dcff1c53a14f05c1e093f77300243f5.
+Byte-identical durable backup is under LOCALAPPDATA/kplex-validation/pr-169, outside temporary
+storage. Originals remain intact; no raw traces added to Git, publication or extra consolidation.
+Final-headf794a067 CI38977394989 passes; this closeout changes documentation only, with final
+closeout CI recorded on the PR. No production src diff/indexing change or demonstrated improvement.
+The maintainer explicitly authorizes merging169 without branch deletion/release. Next work is172,
+including all161 acceptance variants, focused causal reproductions before fixes, and no personal
+vault access. Keep172 draft; do not merge, close161 manually, revive receipt/reader sharing or
+resume structural C15+ work. See the consolidated report for accepted results and limitations.
+
+
+### 2026-10-17: #169 merged; #172 causal checkpoint and provisional discovery
+
+Authorized #169 merge completed at9381c38 after exact-head d8afda8 CI39009347730 passed.
+The measured result remains no production indexing change or demonstrated performance gain;
+verified original archive/durable backup preserved, unpublished. Existing #172 branch integrated
+that main through merge612a0c8 and was pushed without rewriting history; draft/Closes161 retained.
+
+Focused accepted-main reproductions confirm missing external filename availability during an
+active On-demand coordinator, stationary demand stranded behind a real unrelated patch, and
+both actual Create EX ghost-history variants with graph/pinned-file disagreement. A later native
+Parent:: edit reproduces inferred-child misclassification. Exact deployed source/artifact,
+failed/excluded controls, private evidence and pending acceptance are recorded in
+[the172 validation report](docs/validation/indexing-live-updates-172-2026-10-17.md).
+
+Checkpoint A corrects unmanaged Markdown create discovery through existing provisional physical
+availability when canonical insertion is not currently admitted. Managed creation, dirty epoch,
+patch backlog and source/write authority remain unchanged. Node22.22.2 indexing harness passes;
+full verification and exact-build native acceptance remain pending. B/liveness and borrowed-read
+corrections are separately in progress, not included in this independently reviewable checkpoint.
+No scheduler/parser/schema/receipt/reader-sharing change, personal-vault access or C15+ refactor.
+Highest-probability remaining workflow risk is loss of provisional discovery across old publication
+or a stale visible editor/graph scope. Main-window external creation, popout demand/hide/reveal,
+macOS native sync and physical mobile suspend/resume require separate coverage before final claims.
+
+
+### 2026-10-17: #172 checkpoint B ? live demand and native endpoint continuity
+
+Existing completion owners now readmit only still-live build-blocked center demand; exact native
+neighbors remain addressable through current local scopes without acquiring source/write proof.
+Finite native event additions survive older graph/search publication until canonical membership
+catches up. A reproduced retained-scope Find mask is corrected only for current physical search
+identity; semantic validation and suppression policy remain unchanged. Independent review added
+the failing real-IDB search regression before the minimal correction.
+
+Node 22.22.2 full verify, installed typings, official lint, production build and exact-build Small
+Obsidian smoke pass. All 103 On-demand tests and 560 source-browser cases pass. Two final native
+Create EX runs cover both #161 variants, 16 full navigation cycles and four stationary Parent/Child
+edits, with correct explicit roles/solid links, first-click pinned agreement and complete cleanup.
+Two earlier browser-load failures and their isolated successful reruns remain private evidence;
+no deadline was relaxed. Artifact/source identities and limitations are in the #172 report.
+
+Verified private durable evidence contains 37 files; originals remain, no archive/publication.
+Checkpoint A full CI39011260178 is green. #172 remains draft with Closes #161; no merge/release,
+receipt, source-validation relaxation, scheduler replacement or C15+ refactor. Next: genuine P3
+held Find/recent-sync controls, existing-note composer discovery and short Eager invalidation
+causal observations. Highest remaining workflow risks are external creation during unrelated
+background publication and window-lifetime changes. Windows main-window cases are exercised;
+macOS/Linux, popout migration and physical mobile suspend/resume need separate acceptance.
+
+
+### 2026-10-17: #172 native closeout and bounded invalidation decision
+
+Checkpoint B40c4f84 is pushed and passes full CI39014152315. The existing native foreground
+owner now retains real P3-held external Find/local-completion/recent-sync coverage and an actual
+physical-only existing-note composer control. Final native lane passes with15s foreground bounds,
+selected-renderer/throttling guards and all active source/storage/scheduler queues drained. The
+existing six inventory-held mutation scenarios pass after native surface readiness is awaited.
+An earlier initial-DOM setup failure and successful diagnostic replay are retained; no production
+fix or relaxed assertion is attributed to that failure. Native shell contract tests20/20 pass.
+
+Two actual Eager candidate pilots and one accepted-main runtime control isolate inherited folder
+wave amplification: existing-folder note2 source checks/77IDBtransactions/197requests versus new
+folder+note92checks/1527transactions/2925requests. Each note reads/parses once, with no full
+graph build or snapshot write. Counts match across builds; sequential CPU/memory/elapsed samples
+with different cache histories demonstrate no efficiency improvement. Both candidate traces show
+uncovered folder activity causing natural resolved?host-revision globalization. Preserve that
+conservative contract. Highest-value separate follow-up is proving narrowly complete new-folder
+creation waves before source-local narrowing, with unknown/concurrent/expired/rename/delete and
+extra-close safeguards retained. No such runtime change is included.
+
+The source/artifact/evidence report records the limits, failed controls and two verified private
+manifests (37-file B,34-file native causal closeout); originals remain, no archive/publication.
+Temporary planning marker removed. #172 stays draft with Closes #161; no merge/manual issue
+closure/release/personal-vault access. C14 structural pause remains. Windows #161 four variants/
+16fullcycles/four explicit edits pass; highest remaining acceptance priorities are Linux/macOS
+actual Create EX and interruption, popout/reveal lifetimes, and physical mobile suspend/resume.

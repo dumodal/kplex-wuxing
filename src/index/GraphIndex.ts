@@ -460,13 +460,15 @@ export class GraphIndex {
   private onDemandPartialState = false;
   private onDemandBaselineTask: Promise<boolean> | null = null;
   private onDemandTasks = new Map<string, Promise<void>>();
+  /** Only actual build-blocked demands wait for that owner's completion; no timer or retry loop. */
+  private onDemandBuildWaiters = new Map<string, number>();
   private onDemandIndexed = new Map<string, { file: TFile; mtime: number; size: number; policyRevision: number }>();
   /** Bounded fresh snapshot acceleration remains presentation-only until its owners are canonicalized. */
   private onDemandCachedScopes = new Map<string, ReturnType<typeof createGraphState>>();
   /** Host-known frontmatter overrides cover all direct host contributors, independently of body-owner caps. */
   private onDemandHostScopes = new Map<string, ReturnType<typeof createGraphState>>();
   /** Existing local read certificates survive strategy transfer, never authorizing source-backed writes. */
-  private localScopeCertificates = new WeakMap<ReturnType<typeof createGraphState>, Readonly<{ sourceRevision: number; policyRevision: number; files: readonly Readonly<{ file: TFile; revision: FileRevision }>[] }>>();
+  private localScopeCertificates = new WeakMap<ReturnType<typeof createGraphState>, Readonly<{ sourceRevision: number; policyRevision: number; files: ReadonlyMap<TFile, FileRevision> }>>();
   private retainedLocalScopes = new Map<string, Readonly<{ state: ReturnType<typeof createGraphState>; sourceRevision: number; policyRevision: number; cached: boolean }>>();
   private localHandoverStarts = 0;
   private localHandoverCompletions = 0;
@@ -556,6 +558,8 @@ export class GraphIndex {
   private searchEntries: SearchEntry[] = [];
   /** Physical search facets cover files outside a bounded startup preview, without semantic relations. */
   private physicalSearchEntries = new Map<string, SearchEntry>();
+  /** Finite native event additions can outlive an older captured graph/search publication. */
+  private physicalSearchUpdatedPaths = new Set<string>();
   private physicalSearchMerge: { base: SearchEntry[]; physical: Map<string, SearchEntry>; entries: SearchEntry[] } | null = null;
   private searchEntryByPath = new Map<string, SearchEntry>();
   private searchCandidateCache = new Map<string, SearchEntry[]>();
@@ -744,6 +748,7 @@ export class GraphIndex {
     this.snapshotHydrationRun += 1;
     this.sourceAcquisition.close();
     this.onDemandIndexed.clear();
+    this.onDemandBuildWaiters.clear();
     this.urlAliasFacets.clear();
     return this.indexedDb.purgeAndClose();
   }
@@ -843,8 +848,13 @@ export class GraphIndex {
             && token.policyRevision === policy) continue;
           const revision = captureFileRevision(file);
           if (this.building) {
+            this.onDemandBuildWaiters.set(centerPath, demand);
             await this.ensureSemanticScope(centerPath); return;
           }
+          // A selected file may exist only in the just-published local scope. The ordinary patch
+          // compiler needs physical canonical membership; existing admission adds no source proof.
+          if (this.state.pages.get(path)?.file !== file) this.insertCreatedFile(file);
+          if (!current() || this.app.vault.getFileByPath(path) !== file || !fileRevisionMatches(file, revision)) return;
           const result = await this.patchMarkdownPaths([path], {
             useDurableCache: true, forceRecompile: token?.policyRevision !== policy, isCurrent: current,
           });
@@ -867,12 +877,31 @@ export class GraphIndex {
       await patch;
     })().finally(() => {
       if (this.onDemandTasks.get(centerPath) === task) this.onDemandTasks.delete(centerPath);
+      this.retryBuildBlockedOnDemandCenters();
       this.emitPresentation();
       if (!current() && !this.diagnosticsClosed && !this.persistentCachePurged
         && this.semanticDemandCounts.has(centerPath)) void this.ensureOnDemandCenter(centerPath);
     });
     this.onDemandTasks.set(centerPath, task);
     return task;
+  }
+
+  /** Readmit finite unmet demand when its real build owner settles, without awaiting that owner.
+   * A policy/baseline change takes fresh tokens on admission; only the original live demand owns
+   * this notification. Keep a marker while its older task retires so either completion order wakes
+   * the center once. Missing/corrupt sources without a build dependency never enter this owner. */
+  private retryBuildBlockedOnDemandCenters(): void {
+    if (this.building) return;
+    for (const [path, demandRevision] of this.onDemandBuildWaiters) {
+      if (this.diagnosticsClosed || this.persistentCachePurged || !this.usesLocalForeground()
+        || !this.semanticDemandCounts.has(path) || this.semanticDemandRevision.get(path) !== demandRevision) {
+        this.onDemandBuildWaiters.delete(path);
+        continue;
+      }
+      if (this.onDemandTasks.has(path)) continue;
+      this.onDemandBuildWaiters.delete(path);
+      void this.ensureOnDemandCenter(path);
+    }
   }
 
   /** Supply exact known canonical identity for nonphysical host covers without path-prefix inference. */
@@ -913,9 +942,9 @@ export class GraphIndex {
     }
     this.onDemandUnavailableCounts.delete(centerPath);
     this.onDemandHostScopes.set(centerPath, scope.state);
-    this.localScopeCertificates.set(scope.state, { sourceRevision: source, policyRevision: this.semanticPolicyRevision,
-      files: [...scope.state.pages.values()].flatMap(page => page.file ? [{ file: page.file,
-        revision: captureFileRevision(page.file) }] : []) });
+    const files = new Map<TFile, FileRevision>();
+    for (const page of scope.state.pages.values()) if (page.file) files.set(page.file, captureFileRevision(page.file));
+    this.localScopeCertificates.set(scope.state, { sourceRevision: source, policyRevision: this.semanticPolicyRevision, files });
     for (const page of scope.state.pages.values()) this.hostPreviewSettings.set(page, scope.settings);
     this.relationViewCache = new WeakMap();
     this.emitPresentation();
@@ -1700,7 +1729,8 @@ export class GraphIndex {
 
   /** True while the requested semantic policy has no coherent prepared publication for active demand. */
   hasPendingSemanticPreparation(): boolean {
-    if (this.usesLocalForeground()) return this.onDemandBaselineTask !== null || this.onDemandTasks.size > 0 || this.onDemandGateTasks.size > 0;
+    if (this.usesLocalForeground()) return this.onDemandBaselineTask !== null || this.onDemandTasks.size > 0
+      || this.onDemandGateTasks.size > 0 || this.onDemandBuildWaiters.size > 0;
     if (this.pendingStructuralTasks > 0) return true;
     const maintenanceRevision = this.sourceAcquisition.getMaintenanceRevision();
     if (this.fullSemanticPolicyRevision === this.semanticPolicyRevision
@@ -1850,6 +1880,7 @@ export class GraphIndex {
       const count = Math.max(0, (this.semanticDemandCounts.get(path) ?? 1) - 1);
       if (count === 0) {
         this.semanticDemandCounts.delete(path);
+        this.onDemandBuildWaiters.delete(path);
         this.onDemandHostScopes.delete(path); this.retainedLocalScopes.delete(path);
         this.hostPreviewScopes.delete(path);
         this.hostPreviewRequests.set(path, (this.hostPreviewRequests.get(path) ?? 0) + 1);
@@ -2424,8 +2455,9 @@ export class GraphIndex {
       }
       if (this.onDemandHostScopes.get(path) !== retained.state) return undefined;
       const certificate = this.localScopeCertificates.get(retained.state);
-      if (!certificate || !certificate.files.every(token => this.app.vault.getFileByPath(token.file.path) === token.file
-        && fileRevisionMatches(token.file, token.revision))) return undefined;
+      if (!certificate) return undefined;
+      for (const [file, revision] of certificate.files) if (this.app.vault.getFileByPath(file.path) !== file
+        || !fileRevisionMatches(file, revision)) return undefined;
       if (retained.state.pages.has(path)) return retained.state;
     }
     return undefined;
@@ -2463,6 +2495,15 @@ export class GraphIndex {
     }
     for (const scope of this.semanticScopes.values()) if (scope.maintenanceRevision === maintenanceRevision
       && scope.policyRevision === this.semanticPolicyRevision && scope.sourceRevision === currentSourceRevision && scope.suppressedPaths.has(path)) return undefined;
+    // A known native create can replace a same-path unresolved or obsolete cached identity.
+    // Prefer its current scope when present; filename availability alone owns no old incidence.
+    const physical = this.physicalSearchUpdatedPaths.has(path) ? this.currentPhysicalSearchPage(path) : undefined;
+    if (physical && this.state.pages.get(path)?.file !== physical.file) {
+      const local = this.onDemandHostScopes.get(path)?.pages.get(path) ?? this.borrowedLocalFilePage(path);
+      if (local?.file === physical.file) return this.mergeOnDemandCachedPage(local);
+      const preview = this.hostPreviewScopes.get(path)?.pages.get(path);
+      return preview?.file === physical.file ? preview : physical;
+    }
     // Rename closes source/count proof, while even sparse physical facets can be newer than the
     // warm full graph. Prefer those coherent reads until a current scope above replaces them.
     for (const scope of this.semanticScopes.values()) if (scope.retainedAfterRename
@@ -2503,7 +2544,25 @@ export class GraphIndex {
       const page = scope.pages.get(path);
       if (page) return page;
     }
-    return canonical ?? this.physicalSearchEntries.get(path)?.page;
+    return canonical ?? this.borrowedLocalFilePage(path) ?? this.physicalSearchEntries.get(path)?.page;
+  }
+
+  /** Resolve a rendered native neighbor from its finite current local owner without granting
+   * complete-center or write authority. Direct/current canonical owners retain precedence; the
+   * endpoint's captured native identity and full stat revision fence unnotified replacement/edit.
+   * Constant-time token lookup avoids walking every contributor for each displayed neighbor. */
+  private borrowedLocalFilePage(path: string): GraphPage | undefined {
+    if (!this.usesLocalForeground()) return undefined;
+    const sourceRevision = this.plugin.getIndexSourceRevision();
+    for (const [center, scope] of this.onDemandHostScopes) {
+      if (!this.semanticDemandCounts.has(center)) continue;
+      const page = scope.pages.get(path), file = page?.file;
+      if (!page || !file || page.path !== file.path || this.app.vault.getFileByPath(path) !== file) continue;
+      const certificate = this.localScopeCertificates.get(scope), revision = certificate?.files.get(file);
+      if (certificate?.sourceRevision === sourceRevision && certificate.policyRevision === this.semanticPolicyRevision
+        && revision && fileRevisionMatches(file, revision)) return this.mergeOnDemandCachedPage(page);
+    }
+    return undefined;
   }
 
   get pages(): Map<string, GraphPage> { return this.state.pages; }
@@ -3817,6 +3876,7 @@ export class GraphIndex {
     this.onDemandHostScopes.clear();
     this.onDemandIndexed.clear();
     this.onDemandTasks.clear();
+    this.onDemandBuildWaiters.clear();
     this.onDemandGateTasks.clear();
     this.onDemandGateCounts = new WeakMap();
     this.onDemandGateRevisions.clear();
@@ -3861,6 +3921,7 @@ export class GraphIndex {
     for (const waiter of this.urlReadWaiters.splice(0)) waiter.ready(false);
     this.searchEntries = [];
     this.physicalSearchEntries.clear();
+    this.physicalSearchUpdatedPaths.clear();
     this.physicalSearchMerge = null;
     this.fieldCache.clear();
     this.nodeVisualCache.clear();
@@ -3922,8 +3983,7 @@ export class GraphIndex {
     if (authoritativeSemantics) this.hostPreviewScopes.clear();
     if (authoritativeSemantics || this.sourceNodeVocabularyPublished) {
       // These publications contain every captured physical endpoint; preview facets can retire.
-      this.physicalSearchEntries.clear();
-      this.physicalSearchMerge = null;
+      this.retireCoveredPhysicalSearchEntries();
     }
     this.publicationRevision += 1;
     this.snapshotPublicationCause = "snapshot";
@@ -4359,8 +4419,7 @@ export class GraphIndex {
       }
       if (!isCheckpoint) {
         // Exact physical membership was already compared above. Full search now owns every file.
-        this.physicalSearchEntries.clear();
-        this.physicalSearchMerge = null;
+        this.retireCoveredPhysicalSearchEntries();
         this.searchCandidateCache.clear();
       }
       if (!isCheckpoint) this.enableGlobalSourceInventoryIfConfigured();
@@ -5109,6 +5168,7 @@ export class GraphIndex {
         return { reconciled: true, patched: files.length };
       } finally {
         this.building = false;
+        this.retryBuildBlockedOnDemandCenters();
       }
 
 } finally { releaseWork(); }
@@ -5170,6 +5230,7 @@ export class GraphIndex {
       return { outcome: "patched", count: files.length };
     } finally {
       this.building = false;
+      this.retryBuildBlockedOnDemandCenters();
       this.retrySourceNodeImpacts();
     }
   }
@@ -5718,8 +5779,7 @@ export class GraphIndex {
       this.urlAliasFacetVersion = URL_ALIAS_FACET_VERSION;
       this.urlAliasUpgradeFailure = null;
       this.sourceBackedStartup = false;
-      this.physicalSearchEntries.clear();
-      this.physicalSearchMerge = null;
+      this.retireCoveredPhysicalSearchEntries();
       this.fullSemanticPolicyRevision = this.semanticPolicyRevision;
       this.fullSemanticMaintenanceRevision = this.sourceAcquisition.getMaintenanceRevision();
       // Only the captured observation is certified. Events arriving during ingestion remain in
@@ -5746,6 +5806,7 @@ export class GraphIndex {
       releaseWork();
       this.building = false;
       this.rebuildQueued = false;
+      this.retryBuildBlockedOnDemandCenters();
     }
   }
 
@@ -5805,8 +5866,7 @@ export class GraphIndex {
         this.urlAliasFacetVersion = URL_ALIAS_FACET_VERSION;
         this.urlAliasUpgradeFailure = null;
         this.sourceBackedStartup = false;
-        this.physicalSearchEntries.clear();
-        this.physicalSearchMerge = null;
+        this.retireCoveredPhysicalSearchEntries();
         this.fullSemanticPolicyRevision = this.semanticPolicyRevision;
         this.fullSemanticMaintenanceRevision = this.sourceAcquisition.getMaintenanceRevision();
         // Preserve events that arrived during the build as unacknowledged host observations.
@@ -5834,6 +5894,7 @@ export class GraphIndex {
         this.sourceAcquisition.resumeInventory(resumeInventory);
         this.building = false;
         this.rebuildQueued = false;
+        this.retryBuildBlockedOnDemandCenters();
       }
 
 } finally { releaseWork(); }
@@ -5886,6 +5947,13 @@ export class GraphIndex {
     const removed = new Set<string>();
     const uniquePaths: Iterable<string> = paths instanceof Set ? paths : new Set(paths);
     for (const path of uniquePaths) {
+      if (this.physicalSearchUpdatedPaths.has(path)) {
+        const physical = this.physicalSearchEntries.get(path)?.page;
+        if (physical?.file && this.state.pages.get(path)?.file === physical.file) {
+          this.physicalSearchEntries.delete(path);
+          this.physicalSearchUpdatedPaths.delete(path);
+        }
+      }
       const catalog = urlCatalogPublished ? this.urlSearchEntries.get(path) : undefined;
       if (catalog) {
         const canonical = this.state.pages.get(path);
@@ -6310,6 +6378,7 @@ export class GraphIndex {
       this.hostPreviewRequests.set(center, (this.hostPreviewRequests.get(center) ?? 0) + 1);
     }
     changed = this.physicalSearchEntries.delete(path) || changed;
+    this.physicalSearchUpdatedPaths.delete(path);
     if (replacement && this.app.vault.getFileByPath(replacement.path) === replacement) {
       const page: GraphPage = {
         path: replacement.path, file: replacement, name: replacement.basename, url: null, isFolder: false,
@@ -6317,6 +6386,7 @@ export class GraphIndex {
         primaryStyleTag: null, styleTags: [], maxLabelLength: 0, neighbours: new Map(),
       };
       this.physicalSearchEntries.set(page.path, { page, name: page.name.toLowerCase(), aliases: [], path: page.path.toLowerCase() });
+      this.physicalSearchUpdatedPaths.add(page.path);
       changed = true;
     }
     if (changed) {
@@ -7780,6 +7850,12 @@ export class GraphIndex {
         }
       }
       if (!inventoryCurrent()) return false;
+      // A managed native create may not advance the coordinator revision before this host slice
+      // resumes. Preserve only its exact event-owned identity, without another Vault inventory.
+      for (const path of this.physicalSearchUpdatedPaths) {
+        const entry = this.physicalSearchEntries.get(path), file = entry?.page.file;
+        if (entry && file?.path === path && this.app.vault.getFileByPath(path) === file) next.set(path, entry);
+      }
       this.physicalSearchEntries = next;
       this.physicalSearchMerge = null;
       this.searchCandidateCache.clear();
@@ -7788,16 +7864,45 @@ export class GraphIndex {
 } finally { releaseWork(); }
   }
 
+  /** Retire captured filename acceleration while retaining only newer native event additions.
+   * Graph publication may cover an earlier source epoch. Inspect the finite event set, never the
+   * Vault or original full catalog; prune deleted/moved/replaced or now-covered identities. These
+   * physical entries remain presentation-only and carry no relationship/source certificate. */
+  private retireCoveredPhysicalSearchEntries(): void {
+    const retained = new Map<string, SearchEntry>();
+    for (const path of this.physicalSearchUpdatedPaths) {
+      const entry = this.physicalSearchEntries.get(path), file = entry?.page.file;
+      if (!entry || !file || file.path !== path || this.app.vault.getFileByPath(path) !== file
+        || this.state.pages.get(path)?.file === file) this.physicalSearchUpdatedPaths.delete(path);
+      else retained.set(path, entry);
+    }
+    this.physicalSearchEntries = retained;
+    this.physicalSearchMerge = null;
+    this.searchCandidateCache.clear();
+  }
+
   /** Reuse one merged search array until graph search or the captured physical inventory changes. */
   private completePhysicalSearchEntries(): SearchEntry[] {
     if (!this.physicalSearchEntries.size && !this.urlSearchEntries.size && !this.retiredUrlTargets.size) return this.searchEntries;
     const cached = this.physicalSearchMerge;
     if (cached?.base === this.searchEntries && cached.physical === this.physicalSearchEntries) return cached.entries;
-    const entries = this.searchEntries.filter(entry => !this.urlSearchEntries.has(entry.page.path) && !this.retiredUrlTargets.has(entry.page.path));
+    const entries = this.searchEntries.filter(entry => {
+      if (this.urlSearchEntries.has(entry.page.path) || this.retiredUrlTargets.has(entry.page.path)) return false;
+      const current = this.physicalSearchUpdatedPaths.has(entry.page.path) ? this.currentPhysicalSearchPage(entry.page.path) : undefined;
+      return !current || current.file === entry.page.file;
+    });
     entries.push(...this.urlSearchEntries.values());
-    for (const [path, entry] of this.physicalSearchEntries) if (!this.searchEntryByPath.has(path)) entries.push(entry);
+    for (const [path, entry] of this.physicalSearchEntries) if (!this.searchEntryByPath.has(path)
+      || this.physicalSearchUpdatedPaths.has(path) && this.searchEntryByPath.get(path)?.page.file !== entry.page.file) entries.push(entry);
     this.physicalSearchMerge = { base: this.searchEntries, physical: this.physicalSearchEntries, entries };
     return entries;
+  }
+
+  /** Read only a still-current exact native filename owner; stale event/restore entries never
+   * replace a canonical identity, and this availability grants no relationship/write proof. */
+  private currentPhysicalSearchPage(path: string): GraphPage | undefined {
+    const page = this.physicalSearchEntries.get(path)?.page, file = page?.file;
+    return file && file.path === path && this.app.vault.getFileByPath(path) === file ? page : undefined;
   }
 
   /** Resolve a filename-only F4 hit without claiming that its relationship scope has been prepared. */
@@ -7805,8 +7910,7 @@ export class GraphIndex {
     const canonical = this.get(path);
     if (canonical) return canonical.file && (canonical.path !== canonical.file.path
       || this.app.vault.getFileByPath(canonical.path) !== canonical.file) ? undefined : canonical;
-    const page = this.physicalSearchEntries.get(path)?.page;
-    return page?.file && this.app.vault.getFileByPath(path) === page.file ? page : undefined;
+    return this.currentPhysicalSearchPage(path);
   }
 
   /** Merge current bounded semantic publications into the immutable full search catalog. */
@@ -7843,6 +7947,12 @@ export class GraphIndex {
     };
     for (const entry of entries) {
       const replacement = overrides.get(entry.page.path);
+      // Retained semantic scopes may precede a native create/replacement. Vault filename search
+      // keeps that exact current event identity; it does not inherit the old scope's suppression
+      // or incidence. A matching semantic identity still supplies its current name and aliases.
+      const physical = includePhysicalFiles && this.physicalSearchUpdatedPaths.has(entry.page.path)
+        ? this.currentPhysicalSearchPage(entry.page.path) : undefined;
+      if (physical && replacement?.file !== physical.file) { add(physical); continue; }
       if (replacement) add(replacement);
       else if (!suppressed.has(entry.page.path)) { output.push(entry); emitted.add(entry.page.path); }
     }

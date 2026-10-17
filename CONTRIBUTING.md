@@ -96,6 +96,16 @@ variables and a fresh report directory; the driver owns no note fixtures and res
 
 After exact-build staging, run the interaction checks serially with the same three vault variables and a fresh `KPLEX_HOST_REPORT_DIR` per command: `npm run verify:obsidian:interaction-touch`, `npm run verify:obsidian:interaction-gates`, and `npm run verify:obsidian:interaction-excalidraw`. The touch lane delivers trusted native range gestures, checks actual pane bounds and bounded scrolling, and verifies saved preferences after reload. The gate lane uses the unchanged compatibility fixture; set `KPLEX_GATE_USE_EXISTING_FIXTURE=true` when its eleven root Markdown fixtures already exist byte for byte, so they are only read and never deleted. It checks Quick lens Keep/Reflow and cross-links against semantic gate sets, with acquisition measured after setup. The Excalidraw lane requires the enabled companion and checks native command/shortcut routing, linked-tab and Sidecar representation, and embedded initial Markdown modes and explicit toggles. These drivers restore their owned state and check artifact hashes. Desktop touch emulation and Electron key delivery do not replace physical Android/iOS or Windows acceptance. The touch driver needs exclusive CDP debugger access: close DevTools and stop an idle CLI-owned console capture with `obsidian "vault=kplex-test-small" dev:debug off` before running it. Never detach a competing live test/debugger owner. Restore the previous CLI capture state afterward. Gate fixture setup binds every owned Markdown file through the existing idempotent insertion owner, because a readable foreground page alone does not prove canonical patch membership.
 
+Set `KPLEX_EXCALIDRAW_SCENARIO=issue161` on the existing Excalidraw interaction command to run
+the external materialization regressions. Use an actual On-demand session with background URLs
+and Responsive pacing; changing the strategy setting alone does not restart the session. This
+scenario follows the installed companion's Create EX dialog, checks both prior-ghost-navigation
+variants, a fixed pinned document, four complete navigation cycles, and a stationary drawing
+Parent/Child edit with explicit roles and solid links. It uses trusted Electron pointer input and
+never substitutes direct K-Plex materialization for external creation. The driver removes its
+drawings and restores settings, workspace and configuration bytes even on failure. Run it serially
+after exact-build staging; Linux, macOS and physical-device acceptance remain separate.
+
 After exact-build staging, `npm run verify:obsidian:hover-highlight` checks the actual **Plex behavior** Settings toggle, durable saves, trusted mouse/modifier activation on nodes, gates and connectors in main/popout windows, and restored default delayed hover in `kplex-test-small`. Use the same three explicit vault variables and a fresh report directory. The lane owns two temporary notes, restores settings/workspace/configuration bytes and releases listeners/controllers. It counts body reads/parses/acquisitions and semantic/search calls during the tested Settings/hover intervals; fixture and popout initialization are recorded separately. Windows Electron input does not replace macOS Option/menu or physical-device acceptance. Run native drivers serially.
 
 `npm run verify:obsidian:interaction-updates` uses the same exact-build prerequisites and explicit Small-vault variables. It checks the actual area-outline Settings toggle, stationary Alt transitions, scroll transparency, gate-to-gate draft geometry, sibling additions through the relationship composer, actual Bases link dragstart/drop, placeholder materialization during a held build, and native File properties following and overlap recovery in main/popout windows. It owns a bounded synthetic folder, restores workspace/settings/window geometry and checks the original file inventory. Setup rebuilds are excluded from presentation-only resource claims. Run this lane serially; desktop input does not establish physical mobile or macOS acceptance.
@@ -798,6 +808,17 @@ source closure. It owns one fixture folder, removes wrappers/controller/notes, a
 settings and enabled-list bytes. Measurements are inclusive native API/DOM completion, not actual
 paint, trusted pointer latency or physical-mobile acceptance. An unsuccessful cleanup is a failed run.
 The report refuses installed/build hash mismatches.
+
+Set `KPLEX_FOREGROUND_SCENARIO=live-updates` on that command for the external-discovery and
+stationary-completion regression. Use an actual On-demand session with background URLs and
+Responsive pacing in `kplex-test-small`. The lane holds a real unrelated P3 URL body read across
+visible Find selection, local explicit relationships and the public recent-tab sync action, then
+checks active-work drain and navigation continuity after release. Optional
+`KPLEX_FOREGROUND_COMPOSER=1` also creates a native file with Plex hidden and selects the
+physical-only target through the actual Add child composer without submitting a write. A target
+that becomes canonical before query is recorded as a setup exclusion, not a composer pass.
+The lane records bounded milestone/resource aggregates, checks foreground ownership and restores
+its fixture files, wrappers, workspace, preferences and exact configuration bytes.
 
 ### Fullscreen and Zen acceptance
 
