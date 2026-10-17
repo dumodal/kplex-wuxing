@@ -14,20 +14,35 @@ Return uncommitted changes and actual results for main-agent review unless the m
 
 Obsidian is the production host; preserve the established portable semantic, identity/source, publication/revision, localization and environment boundaries.
 
+
 ---
 
-# Main closeout #169; offline analysis preparation for #172
+# PR #172 ? checkpoint B validated; focused native controls next
 
-Main owns169 archive verification/durable backup, docs-only closeout, final CI and authorized
-merge without branch deletion/release. Current169 headf794a067; base/main d40a339. Runtime,
-reusable tools and regression tests are unchanged. No new evidence consolidation or experiments.
+Existing branch: 2026-10-17-indexing-live-updates. #169 merged9381c38; integrated main612a0c8
+without history rewriting. A7f2f2f2 pushed, full CI39011260178 passes. B production source is
+frozen and validated; main is committing/pushing it now. No personal-vault access. Keep draft
+and Closes #161. Do not merge172, close161 manually, release or reopen receipt/reader sharing.
 
-Offline materialization_trace may prepare READ-ONLY source analysis for172 while169 CI runs:
-read current PR description captured at TEMP/kplex-172-work/pr-172.md and issue-161.md, plus
-main/runtime owners. No implementation, tests, Git mutation, native/browser/vault access yet.
-Map discovery, stationary requested-center completion and all161 navigation/materialization/
-pinned-tab/relationship variants to precise causal candidates and focused reproduction hooks.
-Do not claim source leads prove reported causes. Main will integrate resulting accepted main into
-172 existing branch without rewriting history before implementation. No personal-vault access,
-rejected receipt/reader sharing, new scheduler/schema or broad benchmark/architecture campaign.
-172 remains draft; preserve Closes161; no merge/release/manual issue closure.
+Full Node22.22.2 verify + exact-build Small staging/smoke PASS. Native final issue161 lane2/2:
+both ghost-history variants,16 full cycles,4 later Parent/Child edits; first-click graph/pinned
+agreement, exact identities, roles/solid links, fixed-pin/tab-reveal/disabled-follow and cleanup PASS.
+Artifact c720a9f6e678fd35f2c1bec3b6218f9d62216c4b12ca0982805e961c844f9006.
+103 On-demand tests /560 source-browser cases PASS. Two prior Chromium-load full-run failures
+and successful isolated reruns retained, no weakened timeouts. 37-file private durable checkpoint
+at %LOCALAPPDATA%/kplex-validation/pr-172/checkpoint-b/MANIFEST.json verified. Do not archive
+this handoff, publish evidence or delete originals. Durable report/ledger carry accepted results.
+
+Next main-only serial native probes, all in authorized kplex-test-small:
+1. TEMP/kplex-172-work/native-p3-proof.mjs ? UNEXECUTED real P3 cachedRead hold with visible
+   Find selection/local completion and explicit recent-tab sync before release; cleanup independently.
+2. handoff/validation/kplex-172-small-change-causal-probe.mjs ? UNEXECUTED short Eager three-arm
+   source-globalization pilot; exact-artifact guards, private config backups, natural events only.
+   No quiet-window/efficiency claim. Inspect failures before extending anything.
+3. Existing-note composer source lead: NewRelatedNoteModal uses semantic search while Find uses
+   vault-files. Native proof required; production fix not yet selected. Actual command
+   k-plex:kplex-add-child; scoped portaled suggestions use tracked dialog.suggestionOwnerId.
+
+No other production change is authorized by an unproved performance hypothesis. C remains
+unproven; folder/uncovered resolver conservatism must not be suppressed. Missing Linux/macOS/
+physical-device acceptance remains explicit. Use agents only offline, native/browser lanes serial.

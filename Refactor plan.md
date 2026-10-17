@@ -4358,3 +4358,28 @@ No scheduler/parser/schema/receipt/reader-sharing change, personal-vault access 
 Highest-probability remaining workflow risk is loss of provisional discovery across old publication
 or a stale visible editor/graph scope. Main-window external creation, popout demand/hide/reveal,
 macOS native sync and physical mobile suspend/resume require separate coverage before final claims.
+
+
+### 2026-10-17: #172 checkpoint B ? live demand and native endpoint continuity
+
+Existing completion owners now readmit only still-live build-blocked center demand; exact native
+neighbors remain addressable through current local scopes without acquiring source/write proof.
+Finite native event additions survive older graph/search publication until canonical membership
+catches up. A reproduced retained-scope Find mask is corrected only for current physical search
+identity; semantic validation and suppression policy remain unchanged. Independent review added
+the failing real-IDB search regression before the minimal correction.
+
+Node 22.22.2 full verify, installed typings, official lint, production build and exact-build Small
+Obsidian smoke pass. All 103 On-demand tests and 560 source-browser cases pass. Two final native
+Create EX runs cover both #161 variants, 16 full navigation cycles and four stationary Parent/Child
+edits, with correct explicit roles/solid links, first-click pinned agreement and complete cleanup.
+Two earlier browser-load failures and their isolated successful reruns remain private evidence;
+no deadline was relaxed. Artifact/source identities and limitations are in the #172 report.
+
+Verified private durable evidence contains 37 files; originals remain, no archive/publication.
+Checkpoint A full CI39011260178 is green. #172 remains draft with Closes #161; no merge/release,
+receipt, source-validation relaxation, scheduler replacement or C15+ refactor. Next: genuine P3
+held Find/recent-sync controls, existing-note composer discovery and short Eager invalidation
+causal observations. Highest remaining workflow risks are external creation during unrelated
+background publication and window-lifetime changes. Windows main-window cases are exercised;
+macOS/Linux, popout migration and physical mobile suspend/resume need separate acceptance.
