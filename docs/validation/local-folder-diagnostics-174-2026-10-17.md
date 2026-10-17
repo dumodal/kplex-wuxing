@@ -1,6 +1,6 @@
 # Local folder updates and session diagnostics — PR #174
 
-Implementation and focused Windows validation are complete through `d6be473`. **F: ship for independent review within its stated eligibility. D: revise acceptance before field distribution**: its cost/privacy/retention tests pass, but a required real two-hour foreground soak has not completed. Folder savings do not fund diagnostic overhead. Keep the PR draft; do not merge or release.
+Implementation and focused Windows validation are complete through `d6be473`. **F: ship within its stated eligibility. D: ship with the platform limitations below.** These are independent review recommendations: the real two-hour Windows soak and aged-session Settings/report checks now pass. Folder savings do not fund diagnostic overhead. Keep the PR draft; do not merge or release.
 
 ## Scope and architecture
 
@@ -132,6 +132,7 @@ physical disk, paint, continuous execution or device sleep.
   official lint, production build and exact-artifact native smoke pass. Main SHA-256:
   `d46b370199b0a2b06347266308e539f3a71a9e83459d50934be4b38bbc067ebc`.
   Runtime checkpoint `d6be473` also passes [GitHub CI](https://github.com/zsviczian/kplex/actions/runs/39042221823/job/117423843294) in 26m52s with the same suite counts and zero failures/skips. The 128-test suite is the portable core lane; the separate indexing-fixture runner also passes.
+  Documentation checkpoint `c12c369` also passes [CI](https://github.com/zsviczian/kplex/actions/runs/39044729431/job/117431082810) in 32m8s; runtime/tooling are unchanged.
   The earlier 20-minute outer wrapper expires while its owned child later passes 598 browser tests.
   The clean rerun uses a 35-minute aggregate limit; individual large-case 14-minute and native CLI
   30-second deadlines remain unchanged. The failed wrapper is preserved and is not called a pass.
@@ -140,6 +141,7 @@ physical disk, paint, continuous execution or device sleep.
   exactly one owned capture and the expected distinct writer, wrong-owner writes: 0; raw state,
   readiness and guarded effects remain unchanged. Summaries are 4,669 bytes; full index reports are 6,334 bytes.
   The final-artifact repeat completes with 23 recorded cases, 4,677-byte summaries and 6,342-byte index reports. Its optional real clipboard write remains pending to preserve existing non-plain-text formats; distinct-owner intercepted commands still pass. Programmatic native command dispatch is not trusted-keyboard acceptance.
+  After the two-hour soak, the same aged session passes 23 recorded cases again: summaries are 4,758 bytes and index reports 6,438 bytes. Actual Settings, main/popout ownership, one capture/write per command, zero wrong-owner writes and reader-only effect checks pass. The optional real write remains pending for the same rich-format preservation reason. All cleanup/configuration checks pass.
 - Earlier report controls fail an unowned-debugger assumption and a test comparison that invokes
   Obsidian's forwarding clipboard getter, overwriting interception. The corrected driver uses
   reversible real-window resizing and the original main clipboard capability; supported-format
@@ -148,24 +150,67 @@ physical disk, paint, continuous execution or device sleep.
   result/exclusions. #161 passes 28 cases: both ghost-history variants, repeated navigation, pinned
   control and subsequent Parent/Child edits. One setup retry first opens the documented visible
   Plex prerequisite; the original failed preflight remains.
-- Final integrated 610-second quiet, ordinary Markdown, real Excalidraw and rapid rename acceptance pass with exact fixture/configuration restoration. An earlier final-artifact quiet attempt loses foreground focus; it is cancelled through its owned timer, excluded and preserved with successful restoration. Two real two-hour soak attempts fail before completion: one synchronous native-focus preflight before fixtures/captures; then a setup-only three-second focus-settlement variant reaches one ordinary edit/capture and two unchanged-idle controls before losing foreground focus. Both restore fixtures, settings, actual mode and configuration. No failing foreground oracle is removed or refocused away. Process-only checks identify pre-existing, Explorer-owned Chrome as the foreground process; no window titles, command lines, other-vault contents or actual input are read. The maintainer confirms the machine is in use and instructs leaving the long foreground test pending. The required two-hour gate remains unproven; no further foreground takeover is attempted. The durable private evidence copy and independent re-read pass; see the manifest below. Accelerated 24/48-hour retention, reset/privacy/overflow/disposal
-  and storm tests pass; they are not 24 hours of native use. Real 24-hour, macOS and physical Android/
-  iOS suspend/resume, memory and clipboard acceptance remain unrun.
+- Final integrated 610-second quiet, ordinary Markdown, real Excalidraw and rapid rename acceptance pass with exact fixture/configuration restoration. A focus-lost quiet attempt is excluded and preserved with successful cleanup.
+- Accelerated 24/48-hour retention, reset/privacy/overflow/disposal and storm tests pass. These are not a day of native use. Actual 24-hour, macOS and physical Android/iOS acceptance remain unrun.
+
+## Real two-hour Windows session
+
+On the unchanged final artifact, a 120.34-minute On-demand session passes five natural semantic
+edits to owned disposable notes at 0/30/60/90/120 minutes. The stationary center, actual selected
+mode, background URL policy, Responsive pacing and original background throttling remain intact.
+Each edit publishes and reaches actual requested-work/source/cache/lease drain before capture;
+dormant disabled On-demand inventory debt is reported separately and never forcibly drained.
+
+| Scheduled minute | Edit, publication and drain completed at | Summary bytes | Active rows |
+| --- | ---: | ---: | ---: |
+| 0 | 1.585 s | 4,705 | 0 |
+| 30 | 1,801.595 s | 4,705 | 0 |
+| 60 | 3,601.611 s | 4,731 | 0 |
+| 90 | 5,401.634 s | 4,731 | 0 |
+| 120 | 7,201.581 s | 4,758 | 0 |
+
+All five captures preserve startup milestones, retained cells and privacy, with one diagnostic
+clock read per explicit capture. All 240 passive foreground samples pass; 235 unchanged-idle
+controls show zero recorder clock reads and unchanged retained state, excluding explicit captures.
+Four controls observe the scheduled later edits. Actual arrays remain 1,024 cells, 8 totals and
+2 pass/phase slots. No active pass/phase remains at drain; omissions stay zero. Hour rows grow
+from 2 to 4 within the preexisting session; 25-hour rotation is covered separately by accelerated tests.
+
+This tests low-activity ordinary On-demand use, not a native pass storm or all modes. Per-note
+On-demand patches deliberately have no hot-loop diagnostic history: current source checks advance
+from 24 to 32 between first/last captures, while recorded coarse-pass totals remain unchanged. No full
+build, catalog build or snapshot save occurs. The approximately 1.6-second edit-to-capture intervals
+include native metadata and drain settlement; they are not isolated indexing time or paint latency.
+Between first/last passive samples (7,191.592 s), inclusive renderer CPU is 2,329 ms. Sampled heap
+is 372,175,496 initially and 376,962,596 bytes finally; maximum sampled RSS is 775,634,944 bytes. Host, tooling and
+unrelated work are included, no control arm is matched, and sampling misses peaks. These do not
+establish diagnostic CPU/memory savings, exact allocation or absence of leaks.
+
+Earlier focus failures remain failures: an initial focus preflight; a setup-settled attempt after
+one capture/two idle controls while the machine was in use; and a newly authorized retry after
+one capture/28 idle controls. The last loses focus around 15 minutes despite no recent user input;
+the existing AC display timeout is 900 seconds. The accepted retry owns an Electron
+[display-awake lease](https://www.electronjs.org/docs/latest/api/power-save-blocker), released and
+verified in cleanup. No OS setting, simulated input, throttle override, foreground assertion or
+production code changes. No periodic refocus occurs. Foreground is sampled, not continuously proven;
+sleep/suspend semantics remain untested. Every attempt restores fixtures, original mode/settings
+and configuration bytes. The accepted run also releases its clock wrapper, controller and wake lease.
+The archived private driver/source hashes bind these different conditions; failed trials are not pooled.
 
 ## Remaining acceptance and component decision
 
-F is suitable for independent review: eligible wave work is reduced and conservative/finality
-counterexamples remain protected. This is not authorization to merge #174 or a claim that all folder
-operations become local. D's implementation is complete and bounded-cost/privacy tests pass, but
-field-distribution acceptance remains open until a real uninterrupted two-hour run succeeds.
-An active desktop cannot be made a valid control by suppressing focus-loss assertions. No further
-code/performance expansion is proposed to work around this environment limitation.
+**F: ship.** Eligible wave work is reduced and conservative/finality counterexamples remain protected.
+This does not make every folder operation local. **D: ship.** Independent cost/privacy/boundedness,
+real two-hour Windows idle/edit/capture and aged native Settings/main/popout acceptance pass.
+These are recommendations for independent review, not authorization to merge or release #174.
+No native diagnostic resource saving is claimed and no further code/performance expansion is proposed.
 
-Priorities: (1) finish the unchanged two-hour Windows soak in an available foreground window, then
-collect real 24-hour ordinary-use reports; (2) macOS popout/copy and interrupted folder waves;
-(3) physical Android/iOS suspend/resume, clipboard and memory. The expected result is retained
-startup/lifetime facts with bounded, truthful recent detail, correct native ownership and no work
-admitted by copying. Accelerated retention and desktop automation do not establish those devices.
+Three remaining platform priorities: (1) actual 24-hour ordinary Windows use with before/after
+reports; (2) macOS popout/copy and interrupted folder waves; (3) physical Android/iOS suspend/resume,
+clipboard and memory. Expect retained startup/lifetime facts with bounded, truthful recent detail,
+correct ownership and no work admitted by copying. Desktop automation and accelerated retention
+do not establish those devices. The final repeat intentionally leaves real clipboard writing
+pending where existing rich formats cannot be safely restored; the earlier plain-text control passes.
 
 ## Reproduction and evidence
 
@@ -194,3 +239,13 @@ SHA-256 is `a52fe34a0be2f1ed658be6d12a7194c2c257f840e983f349d7316d528e094e78`;
 the exact verified artifact was built at `ebe26cc` with that patch and its static dirty build ID.
 Final documentation records the verification after the manifest is made; no runtime changes follow.
 Do not publish configuration backups/local metadata, delete originals, or add raw traces to Git.
+
+A second immutable private copy adds the completed soak, its failed predecessor and aged report:
+`%LOCALAPPDATA%/KplexValidation/pr-174-2026-10-17/final-evidence-soak-complete`.
+All 1,748 files / 105,424,389 bytes pass copy verification and an independent fresh-process
+re-read; 1,745 original files also match at 2026-10-17 17:57:54 UTC. Manifest SHA-256:
+`d32a6e8df72e67d322966bc2fe817ec3a8bd87f67acd6e3b33e20d249eafb077`.
+The original 1,716-entry archive is separately reverified unchanged. Adjacent private verifier/
+receipts remain outside Git. Final result/checksum text necessarily follows source-snapshot creation;
+no runtime/tooling changes follow. Accepted display-awake driver SHA-256:
+`b936e3feddb4a7771b220f13f8fc83702aca5fe57a9e4e4b609985d126afe0c1`.

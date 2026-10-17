@@ -4567,3 +4567,33 @@ dependency junctions are excluded. The planning marker is removed after verifica
 Prioritized remaining checks: uninterrupted Windows two-hour then actual 24-hour use; macOS
 popout/copy/interrupted folder waves; physical Android/iOS suspend/resume, clipboard and memory.
 Runtime D2 CI also passes in 26m52s with the same zero-failure/skip suite counts. The 128-test lane is portable core; labels above are corrected. The maintainer confirms the machine is in use and explicitly defers the long foreground test; no further native takeover is authorized by this checkpoint.
+
+### 2026-10-17 — #174 final V: real two-hour foreground acceptance
+
+The maintainer makes foreground available. A preserved retry passes one edit/capture and 28 idle
+controls, then loses focus around the host's existing 900-second display timeout without recent
+user input. A separately pinned test-only driver owns a temporary Electron display-awake lease;
+no OS settings, simulated input, production policy or foreground assertion changes.
+
+The exact unchanged d46b3701 artifact passes 120.34 real minutes in the actual On-demand session:
+five natural semantic edits/publications/drains/captures at 0/30/60/90/120 minutes, 240 foreground
+samples and 235 unchanged-idle controls. Startup facts, capacity, reader purity and privacy pass;
+summary bytes are 4,705–4,758. Fixed capacities remain unchanged, no active pass/phase at drain.
+This low-activity native case does not replace accelerated rollover/storm tests or prove 24-hour use.
+All fixture/settings/configuration restoration and clock/controller/display-lease release pass.
+The same aged session then passes the actual Settings/main/popout support lane's 23 recorded
+cases: 4,758-byte summaries, 6,438-byte index reports, one owned capture/write, zero wrong-owner
+writes and no guarded effects. Optional real writing remains pending to preserve rich formats.
+
+F: ship within documented eligibility. D: ship with documented platform limitations, independently
+of F's savings. The consolidated report preserves all failures, costs, source/build identities and
+inclusive native resource limitations. Full runtime verification and D2/current documentation CI
+pass; these final report edits change no runtime/tooling. Keep #174 draft; C14 remains paused.
+Remaining priorities: actual 24-hour Windows reports; macOS copy/popout/interrupted folder wave;
+physical Android/iOS suspend/resume, clipboard and memory. No merge/release or personal-vault access.
+
+The separate final-evidence-soak-complete private copy verifies 1,748 files / 105,424,389 bytes;
+independent re-read checks every entry and 1,745 source originals. Manifest SHA-256:
+d32a6e8df72e67d322966bc2fe817ec3a8bd87f67acd6e3b33e20d249eafb077.
+The original 1,716-file archive is independently reverified unchanged. Neither copy nor originals
+are published/deleted; temporary handoffs and dependency junctions remain excluded.

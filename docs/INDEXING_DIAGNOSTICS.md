@@ -139,4 +139,13 @@ Treat these other states explicitly:
 
 ## Validation gates
 
-Accelerated 24/48-hour tests cover retention, rollover, idle gaps, overlap, cancellation, privacy, saturation, disposal and event storms. They do not establish 24 hours of real-device use. Windows native copy/report acceptance and the separate amplified overhead measurements have passed; the required real two-hour native soak remains unproven after foreground-prerequisite failures. Those failed controls are preserved with successful cleanup; no focus oracle is weakened. Actual 24-hour, macOS and physical-mobile acceptance remain unrun. Folder-wave resource gains cannot pay for diagnostic overhead. See [the PR validation report](validation/local-folder-diagnostics-174-2026-10-17.md) for measured results and remaining platform checks.
+Accelerated 24/48-hour tests cover retention, rollover, idle gaps, overlap, cancellation, privacy,
+saturation, disposal and event storms. They do not establish 24 hours of real-device use. A real
+120.34-minute Windows On-demand session now passes five natural edit/drain/capture checkpoints,
+240 foreground samples and 235 unchanged-idle controls. A temporary test-owned display-awake
+lease prevents the existing host timeout and is released during cleanup; failed focus controls
+remain preserved. The aged-session actual Settings/main/popout report lane also passes.
+Independent amplified overhead measurements remain separate from native timing observations.
+Actual 24-hour, macOS and physical-mobile acceptance remain unrun. Folder-wave resource gains
+cannot pay for diagnostic overhead. See [the PR validation report](validation/local-folder-diagnostics-174-2026-10-17.md)
+for measured results, exact conditions and remaining platform checks.
