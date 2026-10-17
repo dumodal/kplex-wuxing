@@ -4529,7 +4529,7 @@ resolved at build time. All eight locale disclosures are updated. Source review 
 ownership, fixed retention, exception isolation, owner-window clipboard behavior and unchanged
 semantic policy; C14 remains paused.
 
-Final combined `verify:obsidian` passes on Node 22.22.2: architecture 7, indexing 128, main 960,
+Final combined `verify:obsidian` passes on Node 22.22.2: architecture 7, core 128, main 960,
 UI 131, sources 334, browser sources 598; zero failures/skips, actual types/core/lint/build and exact
 Windows native smoke pass. The 20-minute aggregate-wrapper failure is retained; the clean 35-minute
 run leaves all individual test deadlines unchanged. Final integrated 610-second quiet and native
@@ -4566,3 +4566,4 @@ manifest checksum and source identities. Nothing is published/deleted; transient
 dependency junctions are excluded. The planning marker is removed after verification.
 Prioritized remaining checks: uninterrupted Windows two-hour then actual 24-hour use; macOS
 popout/copy/interrupted folder waves; physical Android/iOS suspend/resume, clipboard and memory.
+Runtime D2 CI also passes in 26m52s with the same zero-failure/skip suite counts. The 128-test lane is portable core; labels above are corrected. The maintainer confirms the machine is in use and explicitly defers the long foreground test; no further native takeover is authorized by this checkpoint.

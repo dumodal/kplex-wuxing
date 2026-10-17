@@ -22,7 +22,7 @@ Obsidian is the production host; preserve the established portable semantic, ide
 # PR #174 — returned for independent review; long-session gate open
 
 State: main-agent implementation/review is complete through pushed runtime checkpoint `d6be473`;
-final documentation/link/whitespace/diff checks pass for this closeout checkpoint. No active native/resource lane remains. GitHub CI is tracked separately; an unfinished run is not a pass.
+final documentation/link/whitespace/diff checks pass for this closeout checkpoint. No active native/resource lane remains. Runtime checkpoint D2 passes GitHub CI (26m52s, all suites, zero failures/skips); final documentation-head CI is tracked separately. An unfinished run is not a pass.
 Branch: `2026-10-17-local-folder-diagnostics`. Main/#173 was merged at `23aa44e` and integrated
 without rewriting history at `d4d65cd`. #164 is closed with the requested comment. Independent
 checkpoints: D0 `786e91c`, F2 `b4bb401`, F3 `ebe26cc`, D2 `d6be473`.
@@ -35,7 +35,7 @@ O(1) health, public static build identity and eight-locale disclosure. Canonical
 privacy, retention, exception isolation, reuse, comments and owner-window behavior were reviewed.
 No receipt, schema, parser/compiler or scheduler redesign; C14 remains paused.
 
-Actual Node 22.22.2 `verify:obsidian` passes: architecture 7, indexing 128, main 960, UI 131,
+Actual Node 22.22.2 `verify:obsidian` passes: architecture 7, core 128, main 960, UI 131,
 sources 334, browser sources 598; zero failures/skips, installed types/core/lint/build and exact
 Windows smoke. Main SHA-256 `d46b370199b0a2b06347266308e539f3a71a9e83459d50934be4b38bbc067ebc`
 is the verified precommit artifact at `ebe26cc` plus the archived D2 patch; runtime files match D2.
@@ -53,8 +53,8 @@ The real two-hour foreground soak remains unproven: one native-focus preflight f
 fixtures/captures; a setup-only bounded focus-settlement variant reaches one edit/capture and two
 unchanged-idle controls before losing focus. Both restore exactly. Pre-existing Explorer-owned
 Chrome is foreground; no titles, other-vault data or actual input are read, and no other application
-is closed. No focus oracle is weakened/refocused away. Native foreground availability is unresolved.
-Next action, when an uninterrupted foreground window is available: run the archived setup-settled
+is closed. No focus oracle is weakened/refocused away. The maintainer confirms the machine is in use and explicitly instructs leaving the long foreground test pending.
+Next action, only after the maintainer makes a new test window available: run the archived setup-settled
 soak driver on the exact reviewed build, unchanged actual mode/policy, for two real hours; preserve
 all results and cleanup. Do not call failed/accelerated evidence a native multi-hour pass.
 

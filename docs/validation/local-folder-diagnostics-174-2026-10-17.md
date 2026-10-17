@@ -127,10 +127,11 @@ physical disk, paint, continuous execution or device sleep.
 - Final focused F3 browser/real-IDB 38 / 38, actual main/indexing fixtures, installed types, official
   lint and production build pass. Repeated missing-head/native replacement/held-concurrency,
   hydration/build/purge/unload and conservative cases remain regression protected.
-- Final combined `verify:obsidian` passes on Node 22.22.2: architecture 7, indexing 128, main 960,
+- Final combined `verify:obsidian` passes on Node 22.22.2: architecture 7, core 128, main 960,
   UI 131, sources 334 and browser sources 598, zero failures/skips; installed types, core boundaries,
   official lint, production build and exact-artifact native smoke pass. Main SHA-256:
   `d46b370199b0a2b06347266308e539f3a71a9e83459d50934be4b38bbc067ebc`.
+  Runtime checkpoint `d6be473` also passes [GitHub CI](https://github.com/zsviczian/kplex/actions/runs/39042221823/job/117423843294) in 26m52s with the same suite counts and zero failures/skips. The 128-test suite is the portable core lane; the separate indexing-fixture runner also passes.
   The earlier 20-minute outer wrapper expires while its owned child later passes 598 browser tests.
   The clean rerun uses a 35-minute aggregate limit; individual large-case 14-minute and native CLI
   30-second deadlines remain unchanged. The failed wrapper is preserved and is not called a pass.
@@ -147,7 +148,7 @@ physical disk, paint, continuous execution or device sleep.
   result/exclusions. #161 passes 28 cases: both ghost-history variants, repeated navigation, pinned
   control and subsequent Parent/Child edits. One setup retry first opens the documented visible
   Plex prerequisite; the original failed preflight remains.
-- Final integrated 610-second quiet, ordinary Markdown, real Excalidraw and rapid rename acceptance pass with exact fixture/configuration restoration. An earlier final-artifact quiet attempt loses foreground focus; it is cancelled through its owned timer, excluded and preserved with successful restoration. Two real two-hour soak attempts fail before completion: one synchronous native-focus preflight before fixtures/captures; then a setup-only three-second focus-settlement variant reaches one ordinary edit/capture and two unchanged-idle controls before losing foreground focus. Both restore fixtures, settings, actual mode and configuration. No failing foreground oracle is removed or refocused away. Process-only checks identify pre-existing, Explorer-owned Chrome as the foreground process; no window titles, command lines, other-vault contents or actual input are read. The required two-hour gate remains unproven. The durable private evidence copy and independent re-read pass; see the manifest below. Accelerated 24/48-hour retention, reset/privacy/overflow/disposal
+- Final integrated 610-second quiet, ordinary Markdown, real Excalidraw and rapid rename acceptance pass with exact fixture/configuration restoration. An earlier final-artifact quiet attempt loses foreground focus; it is cancelled through its owned timer, excluded and preserved with successful restoration. Two real two-hour soak attempts fail before completion: one synchronous native-focus preflight before fixtures/captures; then a setup-only three-second focus-settlement variant reaches one ordinary edit/capture and two unchanged-idle controls before losing foreground focus. Both restore fixtures, settings, actual mode and configuration. No failing foreground oracle is removed or refocused away. Process-only checks identify pre-existing, Explorer-owned Chrome as the foreground process; no window titles, command lines, other-vault contents or actual input are read. The maintainer confirms the machine is in use and instructs leaving the long foreground test pending. The required two-hour gate remains unproven; no further foreground takeover is attempted. The durable private evidence copy and independent re-read pass; see the manifest below. Accelerated 24/48-hour retention, reset/privacy/overflow/disposal
   and storm tests pass; they are not 24 hours of native use. Real 24-hour, macOS and physical Android/
   iOS suspend/resume, memory and clipboard acceptance remain unrun.
 
