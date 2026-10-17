@@ -19,28 +19,47 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR #173 - implementation returned for draft review
+# PR #174 — final validation return
 
-Branch: `2026-10-17-issue-164-safe-plex-folding`. #172 merged at `ef301dc07fa6a8754455a6aeb94ae871d2aacd75`; #161 closed with the requested comment referencing #172. Main integrated without rewriting history at `2735550a28b7ad16a68da1df2a0cac4ad9845217`. Animation prerequisite checkpoint `75ac2ab` pushed. Feature checkpoint `5e53eb6` committed and pushed; keep #173 draft and #164 open. No merge/release/branch deletion/personal-vault access.
+Main-agent implementation/review is complete through runtime D2 d6be473; documentation head
+before final V is c12c369. Branch: 2026-10-17-local-folder-diagnostics. #173 merged at 23aa44e,
+#164 closed with the requested comment; main integrated without history rewrite at d4d65cd.
+D0 786e91c / F2 b4bb401 / F3 ebe26cc / D2 d6be473 are independently reviewable.
+Keep #174 draft. No merge/release, personal-vault access, branch deletion or raw publication.
 
-## Returned implementation and review
+Full Node 22.22.2 verify:obsidian passes: architecture 7, core 128, main 960, UI 131, sources 334,
+browser sources 598, zero failures/skips; installed types, core boundaries, official lint,
+production build and exact Windows smoke. Runtime D2 CI passes in 26m52s and c12c369 CI in 32m8s.
+Final documentation needs only content/link/whitespace/diff checks and final pushed-head CI.
+Exact main SHA-256: d46b370199b0a2b06347266308e539f3a71a9e83459d50934be4b38bbc067ebc,
+built at ebe26cc plus archived D2 patch a52fe34a0be2f1ed658be6d12a7194c2c257f840e983f349d7316d528e094e78.
+Runtime/tooling remain unchanged; final CI is recorded in the PR after completion.
 
-Stable fold action/command now toggles a graph-independent captured native pair. Existing Sidecar/fold maps remain sole ownership inventories. Exact generation/revision/window/group/ancestry fences, finite native picker, complete-group recovery, restore-before-release/reveal/migration, four edges, overlap/disjoint ownership and a proven late-startup-adoption race are covered. New folds deliberately require two direct native groups in an isolated split; unsafe layouts stay expanded. Native model/flex/dimensions are untouched. All eight locales and user documentation updated. No index/source/parser/settings/schema/scheduler changes; C14 structural refactoring remains paused.
+F2 reduces the eligible frozen combined wave from 92 to 2 source checks, 1,526/2,920 to 78/202
+transactions/requests, 1,499 to 58 digests; both read/parse once, with zero full/catalog builds or
+snapshot saves. Inclusive CPU/drain improve in that observation, sampled memory is higher and no
+universal speedup/memory saving is claimed. Exact membership/identity/epoch/CAS/finality and
+conservative fallback remain. F3 fixes absent-head retirement without erasing newer rename intent.
+D adds bounded coarse accounting/shared safe exports/O(1) health/eight-locale disclosure. Independent
+amplified cost is ~0.55 microseconds/pass pair; observed diagnostic data-root cut 16,816 bytes.
+No receipt/schema/parser/compiler/scheduler redesign, per-file hot instrumentation or idle resource.
 
-Offline agent source review and independent main review found no additional concrete source blocker. Runtime tests exercise production owners, and UI tests compile real components. Main reviewed ownership, async fencing, architectural seams, lifecycle/document cleanup, native types, localization/accessibility and paint-versus-semantic boundaries. Automated verification supplements rather than replaces that review.
+38 focused real-IDB cases, #172 held-P3 and #161's 28 variants pass. Final 610-second quiet,
+ordinary Markdown, actual Excalidraw and create/fill/rename pass with exact cleanup.
+The maintainer-authorized real two-hour retry now passes 120.34 minutes, five natural edit/drain/
+capture checkpoints and 235 unchanged-idle controls/240 foreground samples. It owns and releases
+a temporary display-awake lease to prevent the existing 15-minute host timeout; no settings,
+simulated input, throttle or focus oracle changes. All earlier failed controls remain evidence.
+Startup retention/privacy/capacity/capture purity and exact restoration pass. Same aged session
+then passes 23 actual Settings/main/popout report cases; summaries 4,758 bytes, index reports 6,438.
+Optional real clipboard writing remains pending to preserve rich formats; controlled distinct-owner
+commands and earlier plain-text native control pass. No active native/resource lane remains.
 
-## Actual evidence
-
-Only authorized disposable Small (107 files / 88 Markdown), Windows 10.0.26200 / Obsidian 1.14.4 / Electron 43.3.0 / Excalidraw 2.29.0; Node22.22.2. Final artifact SHA-256 `8d20bf308e935f353a9eea24256d44838b33863cd6d99d7b00ed056e7459e8c1` matches strict staging.
-
-Full `npm run verify:obsidian` passes: 937 portable, 131 general Chromium, 334 source-contract and 560 source-browser tests; architecture/core, installed types, official scanner, production build and strict native staging. Persistence passes all five checks including trusted asymmetric native divider drag, live disable, enabled/disabled reload, and actual selected-renderer interruption with a new PID followed by disabled startup. Both groups remain reachable at the same native share. Configuration/runtime and note inventory restore, no errors. Full application/OS restart is separate.
-
-The final-artifact matrix passes 36 functional checks, but runs nine/ten/eleven capture Obsidian's zoom-status exception during companion popout close. Simple no-fold controls and a matched matrix omitting the preceding fold are clean: this does not prove the exception unrelated. The helper-only control removing diagnostic child-realm remote proxies still passes all36 functional checks and reproduces the same zoom-status exception; exact closed-window and native-leaf-removal assertions remain. Do not suppress the error or claim native overall acceptance unless the final lane is clean.
-
-Existing display-mode lane passes after correcting its proven Mac-only chrome assertion for Windows. Sidecar navigation passes38 samples. Existing broader action lane's semantic Mod transport was corrected for Windows; 13 groups pass before explicit F1 recorder assertion fails. Relationship workflow stops at Wrong child target/storage on both final and merged-#172 baseline; final artifact restored afterward. These partial lanes remain explicit, not accepted passes.
-
-## Evidence and next owner
-
-Curated source/artifact/driver/results/limits: `docs/validation/safe-plex-folding-173-2026-10-17.md`. Raw originals and failed controls retained in `%TEMP%/kplex-173-*`; verified private backup is `%LOCALAPPDATA%/KplexValidation/pr-173-2026-10-17/final-evidence/`, manifest SHA-256 `8c5461f9f5b18f30de8a34df295fa2c458326ea303a0af10ec37017306efbd26`; all749 files plus patch independently verified. Implementation CI39023891312 is running; prerequisite75ac CI passed. Native-runner20 contracts pass. Do not publish private configuration/raw evidence or delete originals. All native drivers run serially with the three explicit disposable-vault variables. No active portable/native suite should overlap another.
-
-Remaining acceptance: settle native popout-close error and broad action recorder gap; physical desktop group dragging/multi-monitor; full application interruption/restart and macOS/Linux/physical tablet lifecycle/touch. Never infer physical-device or perceived-paint coverage from Electron automation. Native repository management remains root-owned. Commit/push checkpoints within standing user authorization, update #173 with real outcomes, keep draft/#164 open. Do not resume receipts/reader optimizations or C15+ refactoring.
+F: ship within eligibility. D: ship with platform limitations, for independent review. Actual 24-hour
+Windows use, macOS popout/copy/interrupted folder waves and physical Android/iOS suspend/resume,
+clipboard/memory remain unrun. Next action is maintainer review, not more optimization.
+See docs/validation/local-folder-diagnostics-174-2026-10-17.md and docs/INDEXING_DIAGNOSTICS.md.
+The original verified private evidence remains immutable; the separately verified final-evidence-soak-complete copy
+preserves the completed soak and aged report (1,748 files / 105,424,389 bytes; all entries and
+1,745 source originals independently rechecked). Manifest SHA-256:
+d32a6e8df72e67d322966bc2fe817ec3a8bd87f67acd6e3b33e20d249eafb077. No originals are deleted; never archive handoffs.
