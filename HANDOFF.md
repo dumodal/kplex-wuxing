@@ -18,34 +18,35 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR #172 ? validated Windows closeout, draft review only
 
-Existing branch2026-10-17-indexing-live-updates; main9381c38 integrated without rewrite612a0c8.
-#169 merged with verified durable private raw archive; no runtime indexing change/improvement.
-A7f2f2f2 andB40c4f84 are pushed, full CI39011260178 and39014152315 PASS. Main is committing
-tooling/report closeout now. Production source remains exactly B; artifact c720a9f6e678fd35f2c1bec3b6218f9d62216c4b12ca0982805e961c844f9006.
+# PR #174 — local folder waves and day-long indexing diagnostics
 
-Full Node22.22.2 verify+exact-build native smoke PASS. #161 final2/2 native runs cover both prior
-ghost-history variants,16fullcycles,4later Parent/Child edits, exact identities/roles/solid links,
-first-click pinned agreement and cleanup. Real held-P3 Find/stationary semantics/recent-sync and
-physical-only existing-note composer PASS. Existing inventory-held mutation lane six scenarios
-PASS, foreground broadflush0; one initial-DOM setup failure/replay retained. Driver awaits existing
-surface readiness. Native shell contract tests20/20, source/script syntax and diff checks PASS.
+Assignment prepared by Zsolt's Codex Agent, 2026-10-17.
+Branch: `2026-10-17-local-folder-diagnostics`; starting main: `ef301dc07fa6a8754455a6aeb94ae871d2aacd75` (includes merged #172).
+Draft: https://github.com/zsviczian/kplex/pull/174
 
-C investigation complete at bounded causal scope: two B Eager pilots plus one M control show
-identical counts: existing-folder note2checks/77tx/197requests; folder+note92checks/1527tx/2925
-requests,1read/parse each, no fullbuild/snapshot. Natural uncovered-folder resolverclose advances
-host revision and causes whole-source cached validation. No efficiency gain claimed; cache-image
-history differs. Do not suppress folder uncertainty. Future work is a separate bounded causal-proof
-task for new-folder creation waves, not an approved automatic optimization.
+**Status:** Plan/assignment only. No runtime correction, diagnostic implementation or measured benefit yet. Read the latest PR description, current branch/source, AGENTS.md, CONTRIBUTING.md and docs/AGENT_WORKFLOW.md before work. Prior #172/#161 fixes are accepted baseline. Do not modify main or assume other branches merged.
 
-All current disposable fixtures/config/session modes/wrappers restored;107files. Durable private
-evidence: %LOCALAPPDATA%/kplex-validation/pr-172/checkpoint-b/ andcheckpoint-c-native/, manifests
-verified (37/34files), raw originals retained, no archives published. Exact sources/failed controls
-and limits in docs/validation/indexing-live-updates-172-2026-10-17.md and Refactor plan.md.
+## Two separable checkpoints
 
-Keep172draft andCloses #161; do not merge/release/close161 manually. Linux/macOS/physicalmobile,
-popout interruption and large-vault long quiet-window acceptance remain unrun. No personal-vault
-access, receipt, reader-sharing, new scheduler/schema or C15+ structural work. Stop further runtime
-changes unless review establishes a specific remaining cause; final-head tooling CI can be tracked
-from the PR checks after closeout push. Do not archive this transient handoff.
+**F — qualify a new-empty-folder + note creation wave.** Existing sourceAcquisition event coverage must prove a safe local pathway, preserving all ambiguous/unknown, nested, concurrent, expired, rename/delete and extra-resolved fallbacks. Measure unchanged versus qualified/fallback source visits, digests, IndexedDB transactions, CPU and true drain using equal inputs. Do not suppress folder uncertainty without a correctness proof.
+
+**D — shared indexing activity summary** for *Copy Index Diagnostics* and *Report bug*, retaining session totals and bounded hour-level / recent-pass cause summaries through at least 24 hours of one plugin lifetime. No detailed profiling by default. Privacy: fixed allowlisted reasons/counters only; never retain or export private names, paths, content, URLs, raw errors, queries or durable IDs. Local, session-only, voluntary sharing; no upload or persistent trace. Both reports must share the same sanitized projection and obey the existing 32 KiB final-output budget.
+
+## Diagnostic overhead — revised maintainer decision, superseding PR #174's former 0.5% ceiling
+
+**Do not treat 0.5% (or any percentage) as a permitted performance budget.** Diagnostic bookkeeping should be effectively free in idle and absent from indexing hot paths. The old `<0.5% cumulative CPU` criterion has been withdrawn.
+
+- Idle: **no new activity whatsoever** — no timers, polling, watchers, OS sampling, I/O or wakeups.
+- **No new per-file, per-link, per-evidence-record or per-IDB-operation instrumentation**. Reuse counters already computed by existing code. Do not add timestamps, strings, allocations, serialization, owner sets or hashes in those loops.
+- Only fixed-size scalar counter/slot updates at coarse pass, phase, invalidation and completion boundaries; reuse existing timestamps where possible. Avoid callbacks, logging, scheduling or presentation notifications owned by diagnostics.
+- Keep state bounded across 24h+/event storms; do not allow long history, private IDs or copied graph/source objects. Retain startup totals and first-global-invalidating reason without turning on detailed owner/overlap tracing.
+- Build, sanitize and serialize the report **only when the user explicitly copies** it; benchmark copy latency separately. Report generation must be passive: no vault enumeration, metadata acquisition, DB access, work admission, mutation or freeze/reset.
+- Demonstrate cost by **amplifying the exact boundary-update implementation** against a no-op on the same runtime, reporting **absolute additional CPU time, allocations, retained memory, and actual update-call frequency** on realistic scenarios. Use a low-instrumentation native sanity control to check no added reads/parses/IDB work/builds/saves, no change to scheduler or foreground behavior. Native timing noise alone is not proof of negligible overhead.
+- Any unexpectedly material cost must be explained and removed or diagnostic scope reduced. Do not let an indexing saving from F mask cost added by D. No numerical allowance is a target to spend.
+
+## Delivery and validation
+
+Follow PR checkpoints D0 (minimal safety schema and measured passive observer), F1 (proven narrow local path), D2 (24-hour bounded reports), V (separate resource/privacy/correctness judgments). Present independent **ship / revise / defer** recommendations for F and D. Document coverage gaps honestly: accelerated clock tests are not 24 hours of actual native use.
+
+Run required Node 22.22.2 `npm run verify`, installed Obsidian typing/lint/build, relevant real IndexedDB and exact-build native tests. Use only approved disposable vaults; do not access the personal vault, contact users, merge, release or mark ready. Keep the current branch and draft PR. Preserve this standing header; replace this assignment section during the next agent handoff. Remove only the temporary `docs/agent-handoffs/local-folder-diagnostics.md` plan marker at PR closeout; never delete root HANDOFF.md.
