@@ -14,31 +14,20 @@ Return uncommitted changes and actual results for main-agent review unless the m
 
 Obsidian is the production host; preserve the established portable semantic, identity/source, publication/revision, localization and environment boundaries.
 
-
-
-
-
-
-
 ---
 
-# Node tooltip follow-up: returned for review, inactive
+# Main closeout #169; offline analysis preparation for #172
 
-Draft PR171 on `2026-10-16-plex-interaction-updates`, parent08f620f. Scoped offline agent returned
-ThoughtNode and regressions; main independently reviewed, ran actual native verification and
-manages the authorized checkpoint/push. No further work is assigned by this inactive handoff.
+Main owns169 archive verification/durable backup, docs-only closeout, final CI and authorized
+merge without branch deletion/release. Current169 headf794a067; base/main d40a339. Runtime,
+reusable tools and regression tests are unchanged. No new evidence consolidation or experiments.
 
-Compact browser title retained, duplicate host hint removed using existing aria-labelledby/name
-pattern. Exact localized accessibility, gates, image titles and explicit previews are preserved.
-Runtime source SHA-2565a976f6698628eee6c3411c2898159e4a6b37b12e76f292bd9af1511a28cbffc;
-artifact fbe9eaa3ba01e0b9c9634ddb5b82fc62503fb3d90da27be025547560182c1c85.
-Full strict2,045/focused9/native node5/interaction14/hover7 pass. Old-runtime native rejection
-retained; complete-control lane passes12 then hits obsolete background-modal selector, so only
-explicit node scope accepted here. No assertion weakened or unrelated production fix attempted.
-See durable validation report and Refactor plan I3 for source/evidence references and limits.
-
-Original107 files/settings/layout/bounds/four configuration bytes/debugger restore, no active or
-pending work/controllers. Original110-file evidence remains unchanged; new supplement local
-only, no archive publication. Earlier checkpoint CI passes; new checkpoint CI must be checked.
-macOS/physical-device and existing gate/filter resource acceptance remain pending. PR stays draft;
-no merge/release, personal-vault access, optimization or structural refactoring authorized.
+Offline materialization_trace may prepare READ-ONLY source analysis for172 while169 CI runs:
+read current PR description captured at TEMP/kplex-172-work/pr-172.md and issue-161.md, plus
+main/runtime owners. No implementation, tests, Git mutation, native/browser/vault access yet.
+Map discovery, stationary requested-center completion and all161 navigation/materialization/
+pinned-tab/relationship variants to precise causal candidates and focused reproduction hooks.
+Do not claim source leads prove reported causes. Main will integrate resulting accepted main into
+172 existing branch without rewriting history before implementation. No personal-vault access,
+rejected receipt/reader sharing, new scheduler/schema or broad benchmark/architecture campaign.
+172 remains draft; preserve Closes161; no merge/release/manual issue closure.

@@ -4250,3 +4250,86 @@ syntax and actual native acceptance. Earlier checkpoint CI passes; new push CI r
 Evidence is a separate verified local supplement; original evidence remains intact, no publication.
 Actual macOS and physical-device behavior and the earlier gate/filter resource gap remain pending.
 Keep draft; no merge/release or C15+ work.
+
+
+### 2026-10-16: PR169 R0/R1, base integration and measurement-only checkpoint
+
+User accepted #171 and explicitly authorized its merge. FinalCI succeeded onf71428f; #171 merged
+atd40a339. Main was fetched/fast-forwarded; PR169 branch merged main at69fa58a and was pushed.
+Relative main, only the planning marker remained. Auto-review initially rejected the necessary
+ready transition based on superseded draft instructions; a retry with current explicit merge
+authorization and the verified GitHub prerequisite passed. #169 remains draft/no merge/release.
+
+Production source-reader logic remains unchanged. Existing measurement owners now expose bounded
+actual reader/lease attribution, conservative drain, shape/repetition fixtures and partial evidence.
+Main independently passed2observer contracts,18small shape/wave cases and6single-chunk doubling
+cases; offline18detailed/18counts agreed exactly. Large dense setup hit the unchanged60s CDP deadline;
+retain failure and avoid scaling that fixture further. CPU Node-inspector connect is unsupported;
+its attempted hook was removed. Existing native CLI/CDP sampling/source-map attribution passes
+against500real head-only reads. No primary timing is compared to the historical #165 medians.
+
+Reopened authorized large fixture20,088 Markdown/9,062,067bytes is explicitly notSynthetic-Scale-v2.
+Current-main preparation completed; original artifacts/configuration are privately backed up.
+Small original107files/build/configuration restored with no owned probe/CPU state. Nativepilot/GateM
+pending; no resource benefit or shipping verdict yet. New personal-vault grant is indexing-only,
+main.js deployment and sanitized aggregates; it has not been used. See the single evolving
+validation report `docs/validation/source-reader-efficiency-169-2026-10-16.md`.
+
+### 2026-10-17: PR #169 R2, defer production reader sharing at Gate M
+
+The current-main diagnostic control reconciled 20,088 cached sources with zero fresh Vault reads,
+parses or repairs. Genuine drain occurred at 1,089.981 seconds; observer-interval renderer CPU
+was 327.187 seconds. Source-family leases created/retired 82,770/82,770, peak live one; no unknown
+retirements, overflow or decode reservations remained. Quiet-window/final verification pending.
+
+The proposed shared reader removes one net transaction per eligible owner: theoretical 20,088
+of 435,325 overall (4.61%). Entire metadata inspections occupied 34.643 seconds of inclusive
+awaited time and must still authenticate metadata in the candidate. Two short CPU windows show
+only four lifetime-bookkeeping leaf samples each; native asynchronous storage cost remains
+unisolated. No affirmative material net-resource benefit is established. Defer production changes
+and the expensive candidate acceptance series; this is inconclusive benefit, not proof of no cost.
+Keep reusable measurement protection. No production reader/finality, schema, scheduler or receipt
+change. The separate highest-value storage investigation is the observed full compile/snapshot
+rewrite (one each; about 279 MB encoded page/chunk payload), without assuming it unnecessary.
+No new optimization is authorized by this finding. Only disposable vaults used; no personal access.
+See the concise PR #169 validation report for reproduction, failures and platform limitations.
+
+### 2026-10-17: PR #169 R3, validated measurement closeout
+
+Full Node 22.22.2 verification passed 2,046 tests (7/128/906/128/334/543), zero failures/skips,
+Obsidian lint/types/build and exact native smoke; shipping main remains fbe9eaa3, unchanged
+from accepted main. No source/runtime diff. The 610.633-second quiet window added zero IDB
+transactions/digests/builds/saves; all readers/leases/decode drained, foreground samples valid.
+Inclusive native renderer CPU was 327.968 seconds to drain and 333.968 through quiet; shorter
+probe-interval CPU 327.187 seconds is not substituted for the lifecycle. No resource saving claimed.
+
+Pinned generator verifies all 20,000 generated notes byte for byte; 88 public help checksums saved.
+Both disposable fixtures have original artifacts/configuration and inventories; large runtime
+settings/layout/bounds and small pre-smoke workspace bytes restored. Owned probes/debugger cleaned.
+Personal-vault authorization unused. Local ignored evidence ZIP: 83 files/84 entries, 22,719,434
+bytes; CRC/size/per-file SHA-256 pass, archive SHA-256
+4f0739d70445593203f3377811737c636dcff1c53a14f05c1e093f77300243f5. Raw originals remain.
+No archive publication or backup/payload/handoff inclusion. Temporary planning marker removed.
+
+Defer production reader sharing at Gate M: small operation opportunity, no established material
+net-resource win. No candidate acceptance series or manual production-change test required; actual
+macOS/mobile/lower-powered and mixed-size resource acceptance remain unavailable, not passed.
+CI passed code checkpoint 0333fc4 (38971221162); final documentation-head CI tracked separately.
+A Windows default-codepage failure interrupted the first ledger update after writing the report;
+the standing handoff header is restored byte-for-byte from 0333fc4 with explicit UTF-8, and this
+entry completes that update. Production/test/tool scopes remain unchanged after verification.
+Keep #169 draft; no merge/release, next optimization or C15+ work authorized by this closeout.
+
+
+### 2026-10-17: #169 authorized merge closeout; #172 owns implementation
+
+Reverified the unchanged 22,719,434-byte evidence ZIP: all84 entries/83 file sizes+hashes and CRCs
+pass; SHA2564f0739d70445593203f3377811737c636dcff1c53a14f05c1e093f77300243f5.
+Byte-identical durable backup is under LOCALAPPDATA/kplex-validation/pr-169, outside temporary
+storage. Originals remain intact; no raw traces added to Git, publication or extra consolidation.
+Final-headf794a067 CI38977394989 passes; this closeout changes documentation only, with final
+closeout CI recorded on the PR. No production src diff/indexing change or demonstrated improvement.
+The maintainer explicitly authorizes merging169 without branch deletion/release. Next work is172,
+including all161 acceptance variants, focused causal reproductions before fixes, and no personal
+vault access. Keep172 draft; do not merge, close161 manually, revive receipt/reader sharing or
+resume structural C15+ work. See the consolidated report for accepted results and limitations.
