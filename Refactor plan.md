@@ -4504,3 +4504,18 @@ claim. The 610-second genuine quiet control and exact cleanup pass. See the cons
 D2 integration and final V acceptance remain pending; #174 stays draft. Highest remaining risks:
 Windows actual report/Excalidraw flows, macOS interrupted/popout ownership, physical mobile
 suspend/resume and clipboard. C14 remains paused.
+
+### 2026-10-17 — #174 rapid absent-source rename completion
+
+Native create-empty/fill/rename exposed an existing local contract mismatch after F2 avoided the
+global recovery that masked it. Repository `absent` is successful fenced missing-head retirement;
+the adapter previously accepted only `activated`, stranding source/count/referrer completion.
+Accept both only for the current pass, matching old-path intent and continued native absence.
+No new scheduler, retry policy or weaker source proof. All38 focused real-IDB tests, actual
+main/indexing fixtures, types/lint/build and the formerly failing native pattern pass. A held
+second rename cannot lose its newer retirement intent. Normal Markdown and real Excalidraw
+acceptance and exact cleanup pass. D2 public reports also pass24 native cases after correcting
+test-only debugger and host-forwarding clipboard assumptions; final combined verification/quiet
+and bounded two-hour soak remain pending. Preserve failed controls; keep #174 draft and C14 paused.
+Remaining platform risks: Windows final lifecycle, macOS popout/interrupted waves and physical
+mobile suspend/resume, touch and clipboard. No merge, release or personal-vault access.

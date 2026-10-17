@@ -9,8 +9,8 @@ import {contributorBrowserBundle, contributorBrowserInitialize} from './support/
 import {chromiumHarness} from './support/browserTypeScript.mjs';
 import {centerGateSettings} from './support/requestedCenterGateFixture.mjs';
 
-/** Preserve main's production external-create owner without loading plugin startup or a native app. */
-function externalCreateSource() {
+/** Preserve only the actual native create/rename owner, without plugin startup or a native app. */
+function externalVaultEventSource(event,factoryName) {
   const source=ts.createSourceFile('main.ts',readFileSync(new URL('../src/main.ts',import.meta.url),'utf8'),ts.ScriptTarget.Latest,true);
   let callback;
   /** The registered reactive owner is distinct from the pre-restore availability listener. */
@@ -18,13 +18,13 @@ function externalCreateSource() {
     if(ts.isMethodDeclaration(node)&&node.name.getText(source)==='registerReactiveIndexListeners'){
       const find=child=>{
         if(ts.isCallExpression(child)&&child.expression.getText(source)==='this.app.vault.on'
-          &&child.arguments[0]?.getText(source)==='"create"')callback=child.arguments[1].getText(source);
+          &&child.arguments[0]?.getText(source)===JSON.stringify(event))callback=child.arguments[1].getText(source);
         ts.forEachChild(child,find);
       };find(node);
     }
     ts.forEachChild(node,visit);
-  };visit(source);assert(callback,'Production reactive Vault:create owner is required');
-  return ts.transpileModule(`const makeExternalCreate=function(){return ${callback};};`,{
+  };visit(source);assert(callback,'Production reactive Vault:'+event+' owner is required');
+  return ts.transpileModule(`const ${factoryName}=function(){return ${callback};};`,{
     compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.None},
   }).outputText;
 }
@@ -32,7 +32,8 @@ function externalCreateSource() {
 const bundle=await contributorBrowserBundle(['src/index/GraphIndex.ts','src/index/GraphBuilder.ts']);
 const initialize=`(()=>{
   const M=sourceModules,TFile=window.ContributorFile,TFolder=window.ContributorFolder;
-  ${externalCreateSource()}
+  ${externalVaultEventSource('create','makeExternalCreate')}
+  ${externalVaultEventSource('rename','makeExternalRename')}
   let sequence=0;
   /** Extend only the native tree ports: the shared fixture otherwise flattens getRoot on each read. */
   window.folderWaveFixture=async(options={})=>{
@@ -55,6 +56,7 @@ const initialize=`(()=>{
     let revision=0,wholePasses=0;const plugin={app:f.app,settings,getIndexSourceRevision:()=>revision,
       startupDiagnostics:{mark(){},count(){},phase(){},processed(){},recordWork(key){if(key==='sourceInventoryPasses')wholePasses++;}},
       dirtyMarkdownPaths:new Set(),deletedMarkdownFiles:new WeakSet(),managedCreatedPaths:new Map(),initialIndexComplete:true,rebuildTask:null,
+      renameMetadataSuppressions:new Map(),remapNavigationPaths(){return false;},
       pruneManagedMetadataWrites(){},adjustCachedMarkdownFileCount(){},notifyIndexStatus(){},hasVisibleKplexSurface:()=>true,scheduleRebuild(){}};
     f.app.vault.getName=()=>name;
     let parseCalls=0;
@@ -93,6 +95,7 @@ const initialize=`(()=>{
       heldHydration={release,restoring,task,done};
     }
     if(!mainRef)mainRef=register();
+    const renameRef=options.nativeRename?f.app.vault.on('rename',makeExternalRename.call(plugin)):null;
     const repo=index.sourceAcquisition.repository,work={inspections:[],visits:[],writes:[],headPages:0};
     for(const key of ['inspect','visit','replace','tombstone','headPage']){const original=repo[key];repo[key]=function(...args){
       if(key==='inspect')work.inspections.push(args[0]);else if(key==='visit')work.visits.push(args[0]+':'+args[1]);
@@ -104,12 +107,16 @@ const initialize=`(()=>{
     const settle=async()=>{for(let n=0;n<6;n++)if(await index.sourceAcquisition.flush())return true;return false;};
     const createFolder=(item)=>{revision++;f.app.vault.trigger('create',item);};
     const createFile=(item,metadata=true)=>{revision++;f.app.vault.trigger('create',item);if(metadata)f.app.metadataCache.trigger('changed',item);};
+    /** Move the exact native fixture identity, then deliver the real source and main rename owners. */
+    const rename=(file,path)=>{const old=file.path,metadata=f.metadata.get(old),text=f.texts.get(old);f.files.delete(old);f.metadata.delete(old);f.texts.delete(old);
+      file.path=path;file.name=path.split('/').pop();file.basename=file.name.replace(/\\.[^.]+$/,'');
+      f.files.set(path,file);f.metadata.set(path,metadata);f.texts.set(path,text);revision++;f.app.vault.trigger('rename',file,old);};
     const target=(parent=folders.get('Journal/Date'))=>{const file=add(parent.path+'/Note.md','',{aliases:['Alias174']});aliases.set('Alias174',file.path);
       f.app.metadataCache.resolvedLinks[ref.path]={'Note.md':1,[file.path]:2};f.app.metadataCache.unresolvedLinks[ref.path]={};return file;};
     const closeWave=()=>{const before=index.sourceAcquisition.getMaintenanceRevision();f.app.metadataCache.trigger('resolved');return index.sourceAcquisition.getMaintenanceRevision()-before;};
-    return {f,index,plugin,root,folders,established,folder,add,ref,old,other,repo,work,target,createFolder,createFile,closeWave,settle,reset,heldHydration,
+    return {f,index,plugin,root,folders,established,folder,add,ref,old,other,repo,work,target,createFolder,createFile,rename,closeWave,settle,reset,heldHydration,
       get wholePasses(){return wholePasses;},get summary(){return {wholePasses,markdownEnumerations:f.work.markdownEnumerations,headPages:work.headPages,reads:[...f.reads],parses:parseCalls};},
-      close(){f.app.vault.offref(mainRef);index.destroy();f.close();}};
+      close(){f.app.vault.offref(mainRef);if(renameRef)f.app.vault.offref(renameRef);index.destroy();f.close();}};
   };
   /** Inspect only one authenticated source's exact lexical bindings after ordinary event maintenance. */
   window.folderResolution=async(f,path)=>{const rows=[];equal(await f.repo.visit(path,'resolution',records=>{rows.push(...records);return true;}),'ready','Current stored resolution');return rows.filter(record=>record.kind==='reference-resolution').map(record=>({raw:record.rawTarget,target:record.target?.entity?.id,kind:record.target?.entity?.kind}));};
@@ -155,6 +162,54 @@ test('folder creation wave uses complete physical ownership and real source-loca
           counts.push({inspections:f.work.inspections.length,visits:f.work.visits.length,writes:f.work.writes.length,headPages:f.work.headPages,reads:f.summary.reads.length,parses:f.summary.parses});
         }finally{f.close();}}return counts;
       })()`);assert.deepEqual(result[1],result[0]);
+    });
+
+    await t.test('rapid native create fill rename closes an authoritative absent old source locally',async()=>{
+      assert.equal(await browser.evaluate(`(async()=>{
+        const f=await folderWaveFixture({nativeRename:true}),tombstone=f.repo.tombstone,outcomes=[];try{
+          const folder=f.folder('Journal/Date',f.established),oldPath=folder.path+'/Untitled.md',path=folder.path+'/Filled.md';
+          const builds=f.index.getSemanticPreparationDiagnostics().fullBuilds;
+          f.repo.tombstone=async function(...args){const result=await tombstone.apply(this,args);if(args[0]===oldPath)outcomes.push(result.outcome);return result;};
+          f.createFolder(folder);const file=f.add(oldPath,'');f.createFile(file,false);equal(f.closeWave(),0,'Qualified folder and empty native create close without acquisition');
+          // All edits/rename remain in this synchronous burst; the old path is never acquired.
+          const text='Friends:: [[Note]]';f.f.texts.set(oldPath,text);file.stat={...file.stat,mtime:file.stat.mtime+1,size:text.length};
+          f.f.app.vault.trigger('modify',file);f.f.app.metadataCache.trigger('changed',file);f.rename(file,path);equal(f.closeWave(),0,'Known modify/rename close stays local');
+          const db=await f.index.indexedDb.open();ok(db,'Real source database remains available');
+          equal(await value(db.transaction('sourceHeads').objectStore('sourceHeads').get(oldPath)),undefined,'Old native path has no durable head');
+          ok(await f.settle(),'Absent old source allows current source/count/fan-out closure');ok(outcomes.includes('absent'),'Actual repository transaction returns authoritative absence');
+          equal(f.index.sourceAcquisition.states.get(file).oldPath,undefined,'Completed old-path intent is retired');
+          ok(f.index.sourceAcquisition.hasSemanticDependencies(),'Current local source authority is ready');equal(f.index.sourceAcquisition.pendingKnownFiles.size,0,'No stranded source');
+          equal(f.index.sourceAcquisition.pendingResolutionKeys.size,0,'Deferred referrers close');equal(f.index.sourceAcquisition.localInventoryCompletionPending,false,'Count completion closes');
+          const patched=await f.index.patchMarkdownPaths([path],{useDurableCache:true});equal(patched.outcome,'patched','Normal saved-source patch publishes authored relation');
+          ok(f.index.get(path)?.file===file&&!f.index.get(oldPath)?.file,'Canonical navigation owns only the renamed native endpoint');
+          ok(f.index.get(path).neighbours.has('Note.md'),'Authored link is present in the canonical graph');
+          ok(f.index.evidenceBetween(path,'Note.md').some(row=>row.declaredByPath===path&&row.fieldName?.toLowerCase()==='friends'),'Authored field evidence belongs to the current path');
+          equal(f.wholePasses,0,'No global recovery masks absent-source completion');equal(f.work.headPages,0,'No whole-head inventory');
+          equal(f.index.getSemanticPreparationDiagnostics().fullBuilds,builds,'No extra full graph build');ok(!f.work.writes.includes('replace:'+oldPath),'Old source was never acquired');return true;
+        }finally{f.repo.tombstone=tombstone;f.close();}
+      })()`),true);
+    });
+
+    await t.test('older absent-source completion cannot clear a concurrently newer native rename',async()=>{
+      assert.equal(await browser.evaluate(`(async()=>{
+        const f=await folderWaveFixture({nativeRename:true}),a=f.index.sourceAcquisition,tombstone=f.repo.tombstone;let release,pass;
+        try{
+          const folder=f.folder('Journal/Date',f.established),oldPath=folder.path+'/Untitled.md',middle=folder.path+'/Filled.md',path=folder.path+'/Final.md';
+          let entered;const held=new Promise(resolve=>{entered=resolve}),gate=new Promise(resolve=>{release=resolve});let first=true;
+          /** Hold the real local retirement result after its transaction, before adapter acceptance. */
+          f.repo.tombstone=async function(...args){const result=await tombstone.apply(this,args);if(first&&args[0]===oldPath&&args.length===3){first=false;equal(result.outcome,'absent','Held local result is genuine missing-head proof');entered();await gate;}return result;};
+          f.createFolder(folder);const file=f.add(oldPath,'');f.createFile(file,false);equal(f.closeWave(),0,'Initial known folder/file close');
+          const text='Friends:: [[Note]]';f.f.texts.set(oldPath,text);file.stat={...file.stat,mtime:file.stat.mtime+1,size:text.length};
+          f.f.app.vault.trigger('modify',file);f.f.app.metadataCache.trigger('changed',file);f.rename(file,middle);equal(f.closeWave(),0,'Initial rename remains known');
+          pass=a.reconcile();await Promise.race([held,pass.then(()=>{throw new Error('Actual local owner ended before the held absent-source boundary');})]);
+          f.rename(file,path);equal(f.closeWave(),0,'Concurrent second rename remains a known native wave');
+          equal(a.states.get(file).oldPath,middle,'Actual newer source event owns its prior path');release();equal(await pass,false,'Older inventory cannot certify a newer source revision');
+          equal(a.states.get(file).oldPath,middle,'Old absence completion preserves the newer rename intent');f.repo.tombstone=tombstone;
+          ok(await f.settle(),'Newer native path and its count journal converge');equal(a.states.get(file).oldPath,undefined,'Only successful current retirement clears intent');
+          ok(a.hasSemanticDependencies(),'Latest source state is ready');ok(f.index.get(path)?.file===file&&!f.index.get(middle)?.file&&!f.index.get(oldPath)?.file,'Canonical native identity follows both actual main rename callbacks');
+          equal(f.wholePasses,0,'Concurrent rename needs no global recovery');return true;
+        }finally{release?.();if(pass)await pass;f.repo.tombstone=tombstone;f.close();}
+      })()`),true);
     });
 
     await t.test('actual source-backed Eager physical ownership is independent of partial semantics',async()=>{

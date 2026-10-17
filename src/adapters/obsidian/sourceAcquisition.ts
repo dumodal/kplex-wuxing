@@ -911,8 +911,13 @@ export class ObsidianSourceAcquisition {
           if (state.oldPath) {
             const oldPath = state.oldPath;
             const tombstone = await this.repository.tombstone(oldPath, () => current() && !this.app.vault.getFileByPath(oldPath), true);
-            complete &&= tombstone.outcome === "activated";
-            if (tombstone.outcome === "activated") state.oldPath = undefined;
+            // A rapid create/fill/rename may never have persisted the old path. The repository's
+            // exact missing-head transaction proves that absence without inventing a tombstone.
+            // Neither successful outcome may clear a newer rename observed during this await.
+            const retired = current() && state.oldPath === oldPath && !this.app.vault.getFileByPath(oldPath)
+              && (tombstone.outcome === "activated" || tombstone.outcome === "absent");
+            complete &&= retired;
+            if (retired) state.oldPath = undefined;
             else this.pendingKnownFiles.add(file);
           }
         }

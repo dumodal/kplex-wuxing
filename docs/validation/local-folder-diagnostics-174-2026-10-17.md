@@ -188,8 +188,53 @@ One bounded repetition with the same frozen driver again stays local: two checks
 58 source digests, 77 transactions/197 requests, 406 ms inclusive CPU and 1,689.9 ms drain. Exact
 fixture/configuration restoration passes; the earlier dedicated quiet trial is not repeated here.
 The integrated D2 native lanes, complete verification and two-hour soak remain pending.
+The native count-only probe does not enable detailed family/lease/decode instrumentation. Its
+default zero decode-peak field is unavailable evidence, not proof of zero decoding/allocation.
+Source-check, digest and transaction counts show avoided validation work; exclusive family CPU,
+physical disk bytes and complete allocation totals remain unmeasured.
+
+### Rapid rename acceptance correction
+
+The first integrated native ordinary-note and real Excalidraw checks pass, but rapid
+create-empty → fill → rename fails the existing 90-second genuine-drain deadline. The source
+owner is inactive with one pending file, 14 resolution keys and count completion pending;
+readers/writers/scheduler are idle. Exact fixture/configuration cleanup passes. The same driver
+on frozen diagnostics-only D0 passes, because its conservative global pass masks the local failure.
+
+The confirmed cause is an existing contract mismatch: local retirement accepts only `activated`,
+while the repository correctly returns `absent` after a fenced missing-head transaction when the
+old filename was never persisted. F3 accepts either successful outcome only while the pass remains
+current, the exact old-path intent still matches and that native path remains absent. A newer
+rename cannot be cleared by an older result. No retry/scheduler/source-validation rule is weakened.
+The 38 focused real-IDB tests, actual main/indexing fixtures, installed types, affected official
+lint and production build pass, including missing-head completion and held A → B → C retirement.
+Native revalidation of the same previously failing pattern now passes, alongside ordinary Markdown
+and a valid drawing loaded in the real Excalidraw view. Owned inventory and exact configuration
+restoration pass. This fixes local completion rather than requesting an extra global recovery.
 
 ## Predeclared remaining acceptance
+
+The integrated D2 recorder was remeasured before native acceptance with the same amplified
+Node 22.22.2 seven-repetition protocol. Added CPU is 545.7 ns per begin/end pair and 826.4 ns per
+combined cause/phase/pass/stop sequence. Fresh owner observations are 8,898–8,916 bytes; the filled
+fixture is 9,017–9,031 bytes. The V8 diagnostic data-root cut, including the expanded current-health
+dictionary and bounded admission tables, is **16,816 bytes**. The whole-module limitation above
+still applies. No new clock reads/state changes occur at the driver-owned idle yield.
+
+The final 6,428-byte capture costs approximately **0.141 ms CPU**; serialization costs 0.031 ms.
+Projection is below that amplified CPU counter's resolution. Sampling observes 1.62–1.79 MB for
+50,000 pass pairs, 39.9–42.7 MB for 1,000 explicit captures and 6.24–6.54 MB for 1,000 serializations;
+no-op observations are separate and owner-frame allocation attribution remains unavailable.
+These are nonzero transient process allocation estimates, not exact allocations or retained state.
+They are not combined with F's savings. Native integrated export/behavior acceptance remains pending.
+
+The new health getters read only existing sizes, flags and lifetime counters at explicit capture.
+Shared deeply frozen captures pass separately to both formatters; a JSON roundtrip cannot become
+trusted activity. Copy readers do not record readiness. Build identity is static at build time.
+Coarse lifecycle observations are exception-isolated and do not feed indexing decisions. A catalog
+`complete` outcome means its compiler work finished before later presentation/publication checks;
+source pass timing begins after admission/known-fan-out waiting. Neither is time to genuine idle.
+Current queue facts, interval overlap and finality limitations remain explicit in the dictionary.
 
 1. Freeze and verify diagnostics-only D0, then compare unchanged native operation counts and actual
    coarse-call frequency against main. Amplify the exact owner against a no-op; report absolute CPU,
