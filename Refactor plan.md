@@ -4333,3 +4333,28 @@ The maintainer explicitly authorizes merging169 without branch deletion/release.
 including all161 acceptance variants, focused causal reproductions before fixes, and no personal
 vault access. Keep172 draft; do not merge, close161 manually, revive receipt/reader sharing or
 resume structural C15+ work. See the consolidated report for accepted results and limitations.
+
+
+### 2026-10-17: #169 merged; #172 causal checkpoint and provisional discovery
+
+Authorized #169 merge completed at9381c38 after exact-head d8afda8 CI39009347730 passed.
+The measured result remains no production indexing change or demonstrated performance gain;
+verified original archive/durable backup preserved, unpublished. Existing #172 branch integrated
+that main through merge612a0c8 and was pushed without rewriting history; draft/Closes161 retained.
+
+Focused accepted-main reproductions confirm missing external filename availability during an
+active On-demand coordinator, stationary demand stranded behind a real unrelated patch, and
+both actual Create EX ghost-history variants with graph/pinned-file disagreement. A later native
+Parent:: edit reproduces inferred-child misclassification. Exact deployed source/artifact,
+failed/excluded controls, private evidence and pending acceptance are recorded in
+[the172 validation report](docs/validation/indexing-live-updates-172-2026-10-17.md).
+
+Checkpoint A corrects unmanaged Markdown create discovery through existing provisional physical
+availability when canonical insertion is not currently admitted. Managed creation, dirty epoch,
+patch backlog and source/write authority remain unchanged. Node22.22.2 indexing harness passes;
+full verification and exact-build native acceptance remain pending. B/liveness and borrowed-read
+corrections are separately in progress, not included in this independently reviewable checkpoint.
+No scheduler/parser/schema/receipt/reader-sharing change, personal-vault access or C15+ refactor.
+Highest-probability remaining workflow risk is loss of provisional discovery across old publication
+or a stale visible editor/graph scope. Main-window external creation, popout demand/hide/reveal,
+macOS native sync and physical mobile suspend/resume require separate coverage before final claims.
