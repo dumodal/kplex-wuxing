@@ -19,51 +19,34 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR181 complete; pause for maintainer testing
+# PR182 completed; paused for maintainer testing
 
-Maintainer merged180 into main e95d3db. Existing181 branch
-2026-10-18-alt-hover-crosslinks integrated main through7d0a014 without rewriting;
-PR181 retargeted main, remains draft. Latest instruction: finish/push181 then pause.
-Do not start147 or another PR; do not merge181 or release. No subagents, personal
-vault or comparative performance. Only authorized Small.
+181 mergedmainc0cd100. Current182branch2026-10-18-live-settings-sync remainsdraft;
+main integrated8b0fdbd. Runtime dbe531732bfd76b1e7c1a10c20b3a56ac5128554 fully
+verified; native-tooling checkpointf7424d808f87cd051987f105f7cf330df475b4e7.
+Closeout afterthat is documentation only. Do not merge/release/start141/147 or
+resume C14 structural work. No active assignment or background benchmark.
 
-Implemented shared HoverHighlight optional trusted mouse candidate, stationary/
-held Alt in both hover modes and original ordinary deadline restoration. Focused
-appendVisibleCrossLinks uses eligible displayed persistent adjacency, earlier
-reciprocal orientation, same edge/style/dedup owner and actual physical gates.
-Existing lens/paint/highlight SVG; zero opacity and Find supported. Passive extra
-hits; no source/settings work, layout/camera or gate-count change. Existing
-lifecycle clears preview. Expanded minis retain their existing separate policy.
+Full verify PASS Node22.22.2:architecture7/core130/main1061/UI162/sources334/browser623,
+zero failures/skips, official lint and actual build/types.16 focused production
+settings scenarios and2 failing negative controls. Exact Windows1.14.4 Small:
+external actualcallback6cases each in on-demand/eager;styleOperations15;native
+migration6. Presentation receipt1settingsread,0note/source/semantic/build/saves.
+Genuine ontology updated stationary rendered parents with native editor identity,
+leaf/caret retained. Failed trials preserved, including focus-oracle setup error
+(actual cursor4 before/after, not requested0). No runtime changes after full verify.
 
-Actual Node22.22.2 checks:60 hover/layout/UI,2 Eager/On-demand source-backed,
-23 gate/tooltip/motion,7architecture/130core/full lint/real build pass. Two source
-controls reject missing projection/Find highlight; runtime restored byte-for-byte.
-Initial59/60 fixture failure corrected with explicit null peek input; failed logs
-retained. Full verify/native combined matrix intentionally deferred.
+Small opening settings/workspace/config byte-exact, originalon-demand,107files/88md,
+no controllers/dialogs/pendingadoption/debugger. Exact main.js
+75177091ce58f6e70a214954fb33224767e75208ea8defa32bf8bcc9af48e425 installed.
+Private durable evidence outsideTemp:
+%LOCALAPPDATA%/KplexValidation/live-settings-sync-182-20261018-1792354136115
+98files/12419738bytes,2source ZIP CRC/entry SHA checks and copied file verification;
+MANIFEST SHA2564151640803f1ddf7641a1e3305ada346df8f78ed14b253486b5e401090ca970c.
+Originals retained, none published; HANDOFF and scripts containing it excluded.
+Final report docs/validation/live-settings-sync-182-2026-10-18.md contains identities,
+actual results, deliberate conflict policy, costs, failures and reproduction.
 
-Exact native build1792348138137; hover1792348226865 passes11, actual Settings,
-trusted four gates/incoming/node, both modes, zero opacity/dedup, independent main/
-popout and blur. Guarded reads/parses/acquisitions/semantic/search/settingswrites0;
-fixture setup20reads/13acquisitions/2semantic refreshes explicitly excluded.
-Sanity1792348322853 confirms107files/88Markdown/no controllers/dialogs, original
-config/workspace, desktop/captureoff. Native Windows11 Obsidian1.14.4. Installed
-main dd01303b8b00cf001090e816af5d0dcbb32a5099dfd0ed7cc1fae3e587622d8f.
-
-Report docs/validation/alt-hover-crosslinks-181-2026-10-18.md records exact scope,
-checks and pending native lens/section/scroll, Eager/drag/paint/platform matrix.
-Separate179 Settings-close freeze and broader20 remain outside181. No active test/
-controller. Preserve private evidence/originals; no raw publication. Commit/push
-authorized. Pause after final PR description/evidence pins, leaving staged Small
-build for maintainer testing.
-
-Runtime/tests/report committed and pushed e8e8814744ebc8eb1beb43a8674a5951b91be9be.
-Private backup1792348500765 verified38files/8645196bytes; sourceZIP545entries
-CRC/per-file SHA pass, HANDOFF excluded. Manifest381e9879634ca0a01b5f04df9bf08af2b39bb4fa7aad8d98188a9321931d95c8.
-No raw publication/original deletion. Final docs pin only; staged runtime unchanged.
-
-Child-gate tooltip follow-up: shared owner honors existing top preference, with
-viewport fallback.8tooltip browser/8native main-popout-return, lint/build/stage
-pass. Receipts stage1792349032305/native1792349051302/sanity1792349085739. New
-staged main f40ff506c3a8990c98493d46b77ef1e4cebdb219085ed3a278812d0f1bc19a0d;
-CSS/manifest unchanged. Prior crosslink matrix historical, not rerun. Still pause
-for maintainer testing/merge. No next PR/merge/release. Raw follow-up receipts Temp.
+Remaining manual acceptance:real macOS-WindowsSync,minimum1.13/configoverride,
+physical mobile/tablet. CI not awaited; PR staysdraft. Maintainer requestedpause
+after182; no personal-vault access or comparative performance permitted.
