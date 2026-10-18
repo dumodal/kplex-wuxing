@@ -19,27 +19,29 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR148 release metadata — accepted, inactive
+# PR147 accepted closeout; next PR179
 
-Maintainer authorizes implementation/immediate merge148 after183, no GitHub CI
-wait, then main+fetch. Branch2026-10-12-issue-129-release-metadata includes main28dbdbf
-at integration42fe00d3fade0ef0dcdd1693e86e68879de68c01. All code work is complete;
-main validator owns only final authorized Git publication/merge. C14 remains paused.
+Maintainer authorizes completing/merging147 with intervening main, then179/149/176
+in sequence, each validated checkpoint committed/pushed and completed PR merged.
+No CI wait, release, branch deletion, personal vault, receipt/reader-sharing work
+or comparative performance under competing encoding load. Native/browser serial;
+Node22.22.2. No subagents used; root performs implementation/review/host validation.
 
-- [x] Root package/lock version0.1.3 and AGPL-3.0-only; explicit README grant.
-  Obsidian1.13.0 retained. LICENSE and all341 dependency records unchanged.
-- [x] Restore nine historical version-map entries from actual published/tagged
-  manifests, all minimum1.13.0; remove unsupported1.0.0 and plan-only marker.
-- [x] Shared metadata owner/CLI used by verify and release before attestation,
-  with strict stable/v/prerelease selection and exact shipped-manifest validation.
-- [x] Independent architecture/TSDoc/workflow/source review and focused58/58 tests.
-  Trailing-newline and implicit GitHub-output writes corrected before input freeze.
-- [x] Full Node22.22.2 npm run verify via shared helper passes7/130/1127/165/334/632
-  groups, zero failures/skips/cancellation, official lint/real typings/build.
-- [x] Actual built-artifact no-publish stable/beta and wrong-tag/no-write checks pass.
-  All565 inputs frozen, canonical digest560c3bd41bc3a66d2768673dc814001d5dd82d18f559a8e79f66a01a5e0b564d.
+147 runtime af31fc9 integrated main183 at1137fc1: full verify7/130/1069/180/334/632
+plus lint/build pass. Native ontology7 each actual On-demand/Eager, external6,
+style15, migration6, Markdown4 pass. Gate readiness helper b392d14 passes native11
+and runner20 with original strict oracles/deadlines. Gate revision guard remains
+failed (10 combined incremental publications); old touch geometry gap retained.
+Not a reproduced whole-renderer freeze. Report records all limits and private
+verified backups; no raw evidence published/deleted. Small107/88, exact config,
+workspace/follow owners restored; no owned controllers/dialogs/debugger/mobile.
 
-Durable source/artifact identity, public historical provenance, actual commands and
-limits: docs/validation/release-metadata-129-2026-10-18.md. Private evidence under
-/private/tmp/kplex148-release-evidence/. No native/vault mutation or release/tag.
-No manual test needed for this scope. No further implementation/refactoring queued.
+New main148 metadata integrated atb794bff, no production source change; metadata58,
+check and realbuild pass. Built JS differs from native1137 only in public build ID,
+byte equality after normalization verified. Both package test inventories kept.
+Finish docs/review/push, fresh main guard, ready/authorized147merge without CIwait.
+Then switch main/fetch179 existing2026-10-18-settings-save-liveness, integrate main
+without rewrite/retarget as needed. Read actual PR: causal production-owner traces
+before liveness hardening; bounded source/presentation ownership, no new scheduler.
+Then149 label sharpness and176 warm-start rebuilds, each causal gated. Neither has
+implementation yet; do not claim freeze/sharpness/performance fixes without proof.

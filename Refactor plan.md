@@ -5152,6 +5152,44 @@ Manual gaps real macOS-WindowsSync, minimum1.13/configoverride andphysicalmobile
 C14 refactoring remains paused.
 
 
+### PR147 ontology input checkpoint - 2026-10-18
+
+182merged658793f;147branchintegrated183a948/pushed withoutrewrite. NativeSmall
+baseline14trustedinputscause12writes/semanticinvalidations/refreshes,35acquisitions,
+0parses; no Macfreeze orcomparative resourceclaim. Seven nativefields reusebounded
+750msidle/blur draftmodel and finite atomic field writer on182 settingsqueue.
+Persistbeforelivepolicy; actualsemanticrefresh outsidequeue, noindexschedulerchange.
+13focusedproduction-boundaryChromium cases pass; affected94beforefinal3edgecases,
+latestontology/localization36 pass. Realbuild/types/officiallint pass after sandbox
+retry and typedMap correction. Negativeidle/fieldguards controls failcorrectly and
+restoreexactsource. Reusablenative lane added, NOTyetexecuted; fullverify pending.
+Report docs/validation/ontology-input-147-2026-10-18.md; keepdraft/no merge/release.
+Manualgaps actualMaclarge-vault/contention,physicaltouch/IME/minimumhost. C14paused.
+
+
+### PR147 unchanged read-back correction - 2026-10-18
+
+Checkpoint3743bfb nativeSmall showed22trustedinputs with0drafttime graph/storage
+work,1idlewrite/semanticrefresh and3acquisitions,stationaryParent3views andcaret
+retained; close/reopenpassed. ExplicitRetryfailed. Redrepro provedunchanged
+failed-write readback normalized anacceptedorderedlist andmanufactured remote
+ownerchange. NarrowSettingsReconciliation guard skipsthat reinterpretation while
+preserving genuinecaptureddataduringfailedwrite.14ontology+17external=31tests
+green, actualbuild/types/lintpass. Nativefailedtrialandredreproretainedprivate.
+Repeatexactnativelane/fullverify next; no CPUimprovementclaim or indexingrefactor.
+Keepdraft/no merge/release/personalvault. C14paused; platformgaps unchanged.
+
+
+### PR147 native acceptance checkpoint (2026-10-18)
+
+Corrected runtime af31fc9 passes seven actual Settings cases in both On-demand and Eager sessions: trusted typing/caret, stationary parents in three views, page exit, failed storage Retry, composition, refresh-pending, no-view persistence and plugin restart. Counts exclude restart. Reusable lane now owns actual mode selection/restoration and reload. Removed temporary issue144 marker. Full verification and combined Windows regression lanes remain pending; Mac/physical IME/minimum-host acceptance remains separate. No indexing/compiler/scheduler or performance campaign.
+
+
+### PR147 final acceptance (2026-10-18)
+
+Runtime af31fc9/tooling c7cd196: full verify architecture7/core130/main1061/UI177/sources334/browser623 plus real build and Obsidian lint pass. Actual native ontology7cases per On-demand/Eager, external6/style15/migration6/Markdown4 pass. Functional22-character burst commits once, zero draft-time policy/source work; no comparative resource/latency or Mac-freeze claim. Native broader hover is blocked by missing resolved-link fixture facts, touch9+reload pass but320px geometry reaches317.5px, Gate first case passes then source/semantic guard fails with incremental publication traces. Retain these unresolved failures; no weakened oracles/deadlines or unrelated runtime patch. All8locales/native controls/queue/core owners preserved; TSDoc and full diff reviewed. Private durable evidence169base+6supplement verified with source ZIP CRC/SHA; HANDOFFexcluded, originalsretained, no publication. Small107/88/config/workspace/follow owners restored, no controllers/dialogs/debugcapture. Maintainer now authorizes147merge then179/149/176 sequentially; no CI waiting/release/branchdelete/personalvault/comparative performance under load. Mac reporter/background, physical IME/touch, minimum-host/window-migration remain separate. See validation report.
+
+
 ### 2026-10-18 — PR183 stationary current-center startup
 
 C14 remains accepted and structural refactoring paused. The maintainer authorized
@@ -5218,6 +5256,10 @@ Personal prior deployed build is not replaced during reconciliation. No new
 full-process/mobile or timing claim; C14 remains paused. Git merge identity is on183.
 
 
+### PR147 integrated main183 and native-input readiness (2026-10-19)
+
+Integrated main28dbdbf without rewrite at1137fc1; preserved both package test inventories and append-only ledgers. Full combined7/130/1069/180/334/632 plus realbuild/lint pass. Native ownontology7permode/external6/style15/migration6/Markdown4 pass on exact96ae2f09... artifact. Hover native transport exposed previous-node preview before queued gate input; first private incoming-only control failed earlier gate, then both settled-set waits pass11. Promoted two readiness predicates in shared native helper, preserving exact independent edge/orientation/geometry/no-work assertions and deadlines; actual repository lane11 and20 runner tests pass. No production source changed after1137. Gate revision failure remains unresolved with incremental patch traces; old touch317.5px geometry gap retained. Record these limits, do not call them reproduced whole-app freezes. Final private backup/docs and authorized147merge next, then179/149/176.
+
 ### 2026-10-18 — PR148 release metadata accepted
 
 After183 merged at28dbdbf, maintainer authorizes completing/immediately merging148
@@ -5235,3 +5277,8 @@ See docs/validation/release-metadata-129-2026-10-18.md for public provenance, ar
 hashes and limits. No native/vault work, release/tag or manual test needed for this
 scope. Hosted attestation/publication unexercised; C14 remains paused. Git identity
 belongs to148; no further feature/refactoring work queued.
+
+
+### PR147 final evidence and main148 integration (2026-10-19)
+
+Combined full verification at1137fc1 and exact native acceptance are recorded in docs/validation/ontology-input-147-2026-10-18.md. Private durable combined backup256files/14,944,140bytes with555-entry source ZIP CRC/member SHA passes; originals retained, no publication, HANDOFF excluded. Main148 integrated atb794bff without production-source change; metadata58/check/build pass and bundle equality after public build-ID normalization verified. Both package inventories preserved. Native ontology7permode/external6/style15/migration6/Markdown4/hover11 pass; runner20 pass. Gate revision guard and historical touch geometry remain explicit gaps, not reproduced whole-renderer freeze. User authorizes147 merge then179/149/176 sequentially; no CIwait/release/personalvault or broad refactoring. Remaining manual acceptance: reporter macOS/background contention; physical IME/touch; minimum-host Settings window migration. C14 remains paused.
