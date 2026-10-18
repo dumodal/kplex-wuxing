@@ -19,34 +19,23 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR182 completed; paused for maintainer testing
+# PR183 main reconciliation — accepted, inactive
 
-181 mergedmainc0cd100. Current182branch2026-10-18-live-settings-sync remainsdraft;
-main integrated8b0fdbd. Runtime dbe531732bfd76b1e7c1a10c20b3a56ac5128554 fully
-verified; native-tooling checkpointf7424d808f87cd051987f105f7cf330df475b4e7.
-Closeout afterthat is documentation only. Do not merge/release/start141/147 or
-resume C14 structural work. No active assignment or background benchmark.
+Implementation e847a50; combined integration e2e391ffe895c2ce6ae3bf7aafea1a247930adc9
+includes main658793f (#181/#182). Maintainer authorizes immediate PR183 merge after
+local checks without waiting GitHub CI, then main+fetch. All code work is complete.
+No refactoring or new feature is queued; C14 remains paused.
 
-Full verify PASS Node22.22.2:architecture7/core130/main1061/UI162/sources334/browser623,
-zero failures/skips, official lint and actual build/types.16 focused production
-settings scenarios and2 failing negative controls. Exact Windows1.14.4 Small:
-external actualcallback6cases each in on-demand/eager;styleOperations15;native
-migration6. Presentation receipt1settingsread,0note/source/semantic/build/saves.
-Genuine ontology updated stationary rendered parents with native editor identity,
-leaf/caret retained. Failed trials preserved, including focus-oracle setup error
-(actual cursor4 before/after, not requested0). No runtime changes after full verify.
+- [x] Preserve both feature/test/ledger histories and independently review lifetimes.
+- [x] Full npm run verify on Node22.22.2 passes7/130/1069/165/334/632 groups,
+  zero failures/skips, real build/types and official lint.
+- [x] Exact combined-build Small command/render/error smoke passes. Fresh original
+  settings/workspace/enabled bytes restored and all78 content files unchanged.
+- [x] All558 verified inputs unchanged at independent closeout audit; deployed
+  Small main a709657e06d8f893d185fbc933967266e50007424ccbab751e1410c8c286ff68.
 
-Small opening settings/workspace/config byte-exact, originalon-demand,107files/88md,
-no controllers/dialogs/pendingadoption/debugger. Exact main.js
-75177091ce58f6e70a214954fb33224767e75208ea8defa32bf8bcc9af48e425 installed.
-Private durable evidence outsideTemp:
-%LOCALAPPDATA%/KplexValidation/live-settings-sync-182-20261018-1792354136115
-98files/12419738bytes,2source ZIP CRC/entry SHA checks and copied file verification;
-MANIFEST SHA2564151640803f1ddf7641a1e3305ada346df8f78ed14b253486b5e401090ca970c.
-Originals retained, none published; HANDOFF and scripts containing it excluded.
-Final report docs/validation/live-settings-sync-182-2026-10-18.md contains identities,
-actual results, deliberate conflict policy, costs, failures and reproduction.
-
-Remaining manual acceptance:real macOS-WindowsSync,minimum1.13/configoverride,
-physical mobile/tablet. CI not awaited; PR staysdraft. Maintainer requestedpause
-after182; no personal-vault access or comparative performance permitted.
+Main validator owns only authorized Git publication/merge and the newly assigned
+PR148 metadata work after PR183 completes. Final Git identity belongs to PR183.
+Durable results and prior personal-vault/native limitations are in
+[the validation report](docs/validation/startup-center-investigation-2026-10-18.md).
+No personal deployment in this reconciliation; no note edits or screenshots.
