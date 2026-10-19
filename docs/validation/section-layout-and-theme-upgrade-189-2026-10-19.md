@@ -16,9 +16,10 @@ not change runtime behavior. The final PR description records the delivered head
 | One-sided layout | Friends and challengers share one continuous left list, scroll position, count and filter. Semantic roles, connector styles and section provenance remain unchanged. Moving an existing challenger within that list does not relink it as a friend. |
 | Parent tooltip | Top/parent gates prefer below; bottom/child gates prefer above. Existing delay, Alt/Option gating and edge fallback remain. |
 
-The release version remains 0.1.3 in this feature branch. Adoption is gated on 0.2.0 or later;
-this PR neither publishes a release nor changes release metadata. All eight locales and
-`docs/APPEARANCE.md` are updated.
+The release version remains 0.1.3 in this feature branch. The follow-up below removes the
+original running-version gate: the migration's durable marker owns completion, including for
+development builds still labeled 0.1.3. This PR neither publishes a release nor changes release
+metadata. All eight locales and `docs/APPEARANCE.md` are updated.
 
 Validation performed:
 
@@ -43,8 +44,8 @@ Validation performed:
   interval recorded **0 Markdown reads, 0 parses and 0 index rebuilds**.
 - Exact-build native `themeUpgrade.mjs`: **4 cases pass**, using actual Visual styling controls:
   one-write adoption, selection/dismissal, later-version retention and fresh Default-only behavior
-  without popup or visible migration row. Tests exercise the production queue with prospective
-  release versions; they do not misrepresent the installed 0.1.3 manifest as a released 0.2.0.
+  without popup or visible migration row. Initial tests supplied prospective release versions;
+  the follow-up verifies an actual plugin startup over 0.1.3 data, without a release-version gate.
 
 The native large-label failure measured a 23px line box against 26px content. Removing the
 specific override gives a 27px line box in the same fixture. Earlier failed probes are retained:
@@ -64,3 +65,37 @@ were not tested. Ctrl and Cmd wheel routing used native DOM events on Windows. P
 ownership retains the existing browser/owning-document coverage; the new native acceptance ran
 in the main window. Recheck large glyphs under other fonts/themes and native hover popovers on
 those platforms during hands-on acceptance.
+
+## Follow-up: stationary preview, font ink and 0.1.3-data migration
+
+Ctrl/Cmd now works after the pointer enters a node, including expanded mini rows. One
+surface-owned preview intent retains the exact occurrence and current pointer coordinates;
+it reuses the existing native hover path and heading anchors. Repeat keys do not reopen it.
+Leave, pointer-down/drag, blur, hiding, navigation and teardown retire the candidate. Keyboard
+shortcuts retain propagation and focus; popouts use their actual owning window.
+
+The remaining cutoff reproduced with Segoe UI even after correcting line-height. Its font
+bounds crossed the text span's own overflow clip. The span now has 0.2em padding above/below
+its content; normal, wrapped and scaled-sibling geometry reserves that same ink clearance.
+Ellipsis and the two-line limit remain. The stricter real React/CSS test checks text-range bounds
+inside the clip rectangle across Arial, Georgia, Segoe UI and system fonts, font sizes, borders
+and wrapping. It fails before this correction and passes afterward without the earlier one-pixel
+overflow allowance.
+
+The native-base initializer requests adoption whenever this implementation is present; only
+the durable completion marker decides whether it runs. It no longer waits for the running
+manifest to say 0.2.0. The original first-install notification distinction is unchanged.
+
+Follow-up checks: 106 migration/legacy/layout cases and 51 theme/hover/React cases pass; the
+final owner-window preview suite passes 10 cases. Real build and configured Obsidian scanning
+pass. A real plugin reload over the restored Small-vault 0.1.3 data verifies native-base selection,
+the persisted marker, visible migration notice, unchanged semantic appearance and preserved
+prior themes. This is an actual startup path, not merely a simulated version argument.
+
+The updated native section probe passes 12 cases, including stationary Ctrl/Cmd routing and an
+actual Electron mouse-then-Control gesture that displays Obsidian's native preview popover.
+The large-font native text span now measures 36px client/scroll height with font bounds wholly
+inside its clip rectangle (previously 27px client / 28px scroll). Its presentation-only interval
+still records zero reads, parses and rebuilds. The native Settings probe passes four cases on
+the actual 0.1.3 manifest, including silent fresh installs and preservation on subsequent startup.
+Final delivery head, restoration and private evidence identities are recorded in the PR.

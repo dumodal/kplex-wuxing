@@ -112,6 +112,19 @@ async function scenario(app, c) {
       stationaryPreviews.push(key);window.dispatchEvent(new KeyboardEvent('keyup',{key}));
       heading.dispatchEvent(new PointerEvent('pointerout',{bubbles:true,pointerType:'mouse'}));
     }
+    // The actual Electron pointer/key path must show a native popover, not only emit hover-link.
+    win.webContents.sendInputEvent({type:'mouseMove',x:2,y:2});await wait(150);
+    const headingRect=heading.getBoundingClientRect();
+    win.webContents.sendInputEvent({type:'mouseMove',x:Math.round(headingRect.x+headingRect.width/2),y:Math.round(headingRect.y+headingRect.height/2),modifiers:[]});
+    await until(()=>heading.matches(':hover'),'Native pointer did not reach the section heading');
+    try {
+      win.webContents.sendInputEvent({type:'keyDown',keyCode:'Control',modifiers:['control']});
+      await until(()=>p.hoverParent.hoverPopover?.hoverEl.isConnected&&p.hoverParent.hoverPopover.hoverEl.getClientRects().length,'Stationary native Ctrl did not show the actual preview popover');
+      stationaryPreviews.push('native Control popover');
+    } finally {
+      win.webContents.sendInputEvent({type:'keyUp',keyCode:'Control',modifiers:[]});
+      win.webContents.sendInputEvent({type:'mouseMove',x:2,y:2});
+    }
 
     // Large-label layout uses the same actual node and stylesheet, rather than another text model.
     const priorFont = p.settings.baseFontSize;

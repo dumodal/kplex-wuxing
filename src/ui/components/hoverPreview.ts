@@ -21,8 +21,6 @@ export class HoverPreview {
     const candidate = this.candidate;
     if (!candidate) return;
     if (!candidate.element.isConnected || candidate.element.ownerDocument.visibilityState === "hidden") {this.clear(); return;}
-    const target = event.target as Element | null;
-    if (target?.closest?.("input, textarea, select, [contenteditable=true], .modal-container, .kplex-central-editor-content")) {this.clear(); return;}
     const modified = event.ctrlKey || event.metaKey;
     if (!modified) {candidate.modified = false; return;}
     if (event.type !== "keydown" || event.repeat || candidate.modified || (event.key !== "Control" && event.key !== "Meta")) return;

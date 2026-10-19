@@ -21,11 +21,11 @@ test('stationary Ctrl/Cmd previews reuse pointer coordinates, suppress repeats, 
  assert.deepEqual(result,{ordinary:0,first:{ctrl:true,meta:false,x:30,y:40,mouse:true},repeat:1,cmd:{ctrl:false,meta:true,x:30,y:40,mouse:true},left:2,held:3,drag:3,blurred:3,touch:3,removed:3,final:3});
 });
 
-test('preview keys stay in their owning window and editing native inputs cannot activate a retained node',async()=>{
+test('preview keys stay in their owning window and preserve the focused input and native shortcut propagation',async()=>{
  const result=await host.evaluate(`(async()=>{const frame=document.createElement('iframe');document.body.append(frame);const owner=frame.contentWindow,root=owner.document.createElement('div'),node=owner.document.createElement('div'),input=owner.document.createElement('input');root.append(node,input);owner.document.body.append(root);const h=new sourceModules.HoverPreview(),release=sourceModules.bindHoverPreview(root,h),seen=[];
  const enter=()=>h.enter(node,new owner.PointerEvent('pointerover',{pointerType:'mouse'}),event=>seen.push(event instanceof owner.MouseEvent));enter();window.dispatchEvent(new KeyboardEvent('keydown',{key:'Control',ctrlKey:true}));const foreign=seen.length;owner.dispatchEvent(new owner.KeyboardEvent('keydown',{key:'Meta',metaKey:true}));const local=seen.length;
- enter();input.dispatchEvent(new owner.KeyboardEvent('keydown',{bubbles:true,key:'Control',ctrlKey:true}));owner.dispatchEvent(new owner.KeyboardEvent('keydown',{key:'Control',ctrlKey:true}));const editing=seen.length;release();frame.remove();return{foreign,local,editing,seen}})()`);
- assert.deepEqual(result,{foreign:0,local:1,editing:1,seen:[true]});
+ enter();input.focus();const key=new owner.KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'Control',ctrlKey:true});input.dispatchEvent(key);owner.dispatchEvent(new owner.KeyboardEvent('keydown',{key:'Control',ctrlKey:true}));const editing=seen.length,focused=owner.document.activeElement===input,prevented=key.defaultPrevented;release();frame.remove();return{foreign,local,editing,focused,prevented,seen}})()`);
+ assert.deepEqual(result,{foreign:0,local:1,editing:2,focused:true,prevented:false,seen:[true,true]});
 });
 
 test('unmodified connection mode retains the 750ms delay and cancels crossing, leaving and teardown',async()=>{
