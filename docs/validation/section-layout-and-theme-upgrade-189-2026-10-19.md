@@ -1,8 +1,9 @@
 # Section layout and native-base upgrade — PR #189
 
-The implementation follows merged #149 (`a8e0efa`). Runtime checkpoint `0048964`
-contains the final large-font correction; subsequent native-harness/documentation changes do
-not change runtime behavior. The final PR description records the delivered head and artifacts.
+The implementation follows merged #149 (`a8e0efa`). Initial runtime checkpoint `0048964`
+corrects canvas line-height; the follow-ups below add font-ink clearance, stationary modifier
+previews, marker-driven startup adoption and its native notification modal. The final PR
+description records the delivered head and artifacts.
 
 | Request | Implemented behavior |
 | --- | --- |
@@ -99,3 +100,32 @@ inside its clip rectangle (previously 27px client / 28px scroll). Its presentati
 still records zero reads, parses and rebuilds. The native Settings probe passes four cases on
 the actual 0.1.3 manifest, including silent fresh installs and preservation on subsequent startup.
 Final delivery head, restoration and private evidence identities are recorded in the PR.
+
+## Follow-up: persistent notification dialog
+
+Runtime checkpoint `87ef06c` replaces the short-lived migration Notice with a reusable
+`NotificationModal`, using Obsidian's native modal, title, paragraph and CTA styling. It explains
+the native base colors, preserved previous appearance and Visual styling location. Done, Escape
+or native close queue acknowledgment through the existing library metadata action. Plugin
+teardown does not acknowledge it, failed storage leaves acknowledgment pending, and duplicate
+initialization cannot stack dialogs. No user acknowledgment is awaited inside the disk queue.
+
+Previously migrated libraries with an undismissed message receive this modal without reapplying
+colors or changing selection. Already acknowledged migrations, genuine fresh installations,
+first-run ExcaliBrain imports and unsupported future appearance data do not display it. This
+reuses the existing migration-message state; it adds no settings schema or alternate writer.
+
+Focused theme/editor and external-settings browser checks pass **35 / 35**. Migration, legacy
+import and layout checks pass **106 / 106**, and localization checks pass **23 / 23**.
+Build and the configured Obsidian scanner pass.
+Actual plugin startup over the restored 0.1.3 Small-vault data shows the modal and persists its
+acknowledgment while preserving prior themes and semantic appearance. The updated native
+Settings lane passes **six cases**, including single-dialog ownership, durable dismissal,
+selection and later startup, and a silent fresh installation. An initial assertion expected a
+dismissed Settings row to be removed; the corrected harness checks that the existing native
+row is hidden. Its original failure remains in private evidence.
+
+The previous final-stage attempt encountered the existing external-settings ownership fence
+after a probe restored raw configuration. It was stopped before staging. The final modal stage
+uses the restored original fixture and a real plugin reload, preserving that production fence.
+No unrelated browser/storage lane or comparative performance experiment was run.
