@@ -7,17 +7,20 @@ import {runControlledProbe} from './controlledProbe.mjs';
 async function scenario(app,c) {
   const p=app.plugins.plugins['k-plex'];
   if(!p||app.setting.isOpen)throw Error('Clean native Settings owner required');
-  const settings=structuredClone(p.settings),policy=p.savedSettingsPolicy;
+  const settings=structuredClone(p.settings),policy=p.savedSettingsPolicy,external=p.externalSettingsReceived;
   const native=require('@electron/remote').getCurrentWindow(),bounds=native.getBounds(),maximized=native.isMaximized();
   const wait=ms=>new Promise(resolve=>window.setTimeout(resolve,ms));
   const check=(value,message)=>{if(!value)throw Error(message)};
   /** Native page replacement and queue publication are independently asynchronous. */
   const until=async(predicate,message)=>{const end=Date.now()+15000;while(!predicate()){check(!c.closed&&Date.now()<end,message);await wait(30)}};
-  let originalSave;
+  let originalSave,originalMount;
   try {
     await until(()=>!p.isStartupInitializing(),'Startup did not settle');
     const remote=require('@electron/remote');remote.app.show?.();remote.app.focus({steal:true});native.restore();native.show();native.focus();
     check(p.settings.appearanceThemes&&!p.settings.appearanceThemesFuture,'Supported native library required');
+    // This probe simulates startup on the installed instance after other probes restored raw data.
+    // Preserve the external-adoption fence; an actual startup never reopens it after remote adoption.
+    p.externalSettingsReceived=false;
     p.settings.appearanceThemes=structuredClone(p.settings.appearanceThemes);
     delete p.settings.appearanceThemes.nativeBaseMigration;
     const previous=structuredClone(p.settings.appearanceThemes),previousId=previous.selectedId;
@@ -25,17 +28,21 @@ async function scenario(app,c) {
     let writes=0;originalSave=p.saveData;
     p.saveData=function(...args){writes++;return originalSave.apply(this,args)};
     await p.updateStyleSettings(()=>{},p.captureAppearanceOwner(),{initializeThemes:{existing:true,version:'0.2.0',notifyMigration:true}});
+    c.progress={phase:'upgrade',writes,marker:p.settings.appearanceThemes.nativeBaseMigration,external:p.externalSettingsReceived};
     check(writes===1&&p.settings.appearanceThemes.nativeBaseMigration===1,'Upgrade did not use one durable operation');
     check(p.settings.standardStyleDefaults==='native'&&p.settings.appearanceThemes.selectedId!=='default','Native base not selected');
     check(JSON.stringify(p.settings.appearanceThemes.themes.slice(0,previous.themes.length))===JSON.stringify(previous.themes),'Prior theme was overwritten');
     check(JSON.stringify([p.settings.noteTypeStyles,p.settings.tagNodeStyles,p.settings.tagStyleList,p.settings.hierarchyLinkStyles,p.settings.colorPreferences,p.settings.graphLenses])===semantics,'Semantic appearance changed');
     check([...document.querySelectorAll('.notice')].some(el=>el.textContent.includes(p.translator('themes.nativeBaseAdopted'))),'Committed upgrade notice missing');
+    const tab=p.settingsTab;originalMount=tab.mountThemeControls;
+    tab.mountThemeControls=function(setting){c.themeRow=setting;return originalMount.call(this,setting)};
     p.openSettings();await until(()=>p.settingsTab.containerEl.isConnected,'Native Settings missing');
     check(p.settingsTab.openSettingsPage(p.translator('settings.ui.visual.styling')),'Visual styling page missing');
-    const row=()=>[...document.querySelectorAll('.setting-item')].find(el=>el.querySelector('.setting-item-name')?.textContent===p.translator('themes.label')&&el.getClientRects().length);
+    const row=()=>c.themeRow?.settingEl.isConnected ? c.themeRow.settingEl : null;
     await until(()=>row()?.querySelector('select'),'Native theme selection missing');
     const select=row().querySelector('select');check(select.value===p.settings.appearanceThemes.selectedId,'Native selector displays old theme');
-    const dismiss=document.querySelector('button[aria-label="'+p.translator('themes.dismissMigration')+'"]');check(dismiss,'Dismissible upgrade explanation missing');dismiss.click();
+    const settingsDoc=row().ownerDocument;
+    const dismiss=settingsDoc.querySelector('[aria-label="'+p.translator('themes.dismissMigration')+'"]');check(dismiss,'Dismissible upgrade explanation missing');dismiss.click();
     await until(()=>!p.settings.appearanceThemes.migrationNotice,'Native dismissal did not persist');
     select.value=previousId;select.dispatchEvent(new Event('change',{bubbles:true}));
     await until(()=>p.settings.appearanceThemes.selectedId===previousId,'Native theme selection did not persist');
@@ -51,12 +58,13 @@ async function scenario(app,c) {
     check([...document.querySelectorAll('.notice')].filter(el=>el.textContent.includes(p.translator('themes.nativeBaseAdopted'))).length<=notices,'Fresh install displayed an upgrade popup');
     p.openSettings();await until(()=>p.settingsTab.containerEl.isConnected,'Fresh Settings missing');p.settingsTab.openSettingsPage(p.translator('settings.ui.visual.styling'));
     await until(()=>row()?.querySelector('select'),'Fresh theme row missing');
-    check(![...document.querySelectorAll('.setting-item')].some(el=>el.getClientRects().length&&el.querySelector('.setting-item-name')?.textContent===p.translator('themes.nativeBaseAdopted')),'Fresh Settings displayed migration row');
+    check(![...row().ownerDocument.querySelectorAll('.setting-item')].some(el=>el.getClientRects().length&&el.querySelector('.setting-item-name')?.textContent===p.translator('themes.nativeBaseAdopted')),'Fresh Settings displayed migration row');
     return {cases:['atomic existing-user adoption','native Visual styling selection and dismissal','later version preserves manual selection','fresh Default-only installation without popup or Settings message'],writes};
   } finally {
     if(app.setting.isOpen)app.setting.close();await p.settingsWriteQueue;
     if(originalSave)p.saveData=originalSave;
-    p.settings=settings;p.savedSettingsPolicy=policy;
+    if(originalMount)p.settingsTab.mountThemeControls=originalMount;
+    p.settings=settings;p.savedSettingsPolicy=policy;p.externalSettingsReceived=external;
     await wait(300);await app.vault.adapter.write(p.manifest.dir+'/data.json',c.originalData);
     native.setBounds(bounds);if(maximized)native.maximize();
   }
