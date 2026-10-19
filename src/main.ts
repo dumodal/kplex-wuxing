@@ -162,7 +162,7 @@ type RecentIndexedNavigationTarget = {
 };
 
 /** Finite appearance intents cross the same settings queue; initialization/import never add another writer. */
-type StyleCommitOptions = Readonly<{themeAction?: appearanceThemes.AppearanceThemeAction; legacyImport?: unknown; initializeThemes?: {existing: boolean; version?: string; notifyMigration?: boolean};
+type StyleCommitOptions = Readonly<{themeAction?: appearanceThemes.AppearanceThemeAction; legacyImport?: unknown; initializeThemes?: {existing: boolean; adoptNativeBase?: boolean; notifyMigration?: boolean};
   /** Imperative compatibility callers may replace a coherent root/library pair that still differs from disk. */
   persistExistingChanges?: boolean}>;
 
@@ -463,7 +463,7 @@ export default class KplexPlugin extends Plugin {
         // First-use migration follows the actual loaded-data/import state. Never persist pristine
         // factory presets before a running ExcaliBrain appearance has had its existing import path.
         try {await this.updateStyleSettings(/** Initialization captures effective migrated appearance without editing it. */ () => {}, this.captureAppearanceOwner(), {
-          initializeThemes: {existing: hasOwnData || legacySettings !== null, version: this.manifest.version, notifyMigration: hasOwnData},
+          initializeThemes: {existing: hasOwnData || legacySettings !== null, adoptNativeBase: true, notifyMigration: hasOwnData},
           ...(legacySettings === null ? {} : {legacyImport: legacySettings}),
         });} catch (error) {if (!this.externalSettingsReceived) throw error;}
         if (legacySettings !== null && !this.externalSettingsReceived) new Notice(this.translator("notice.excaliBrainSettingsImported"), 2600);
@@ -2064,8 +2064,8 @@ export default class KplexPlugin extends Plugin {
         initializedExistingAppearance ||= changedBeforeInitialization;
         library = appearanceThemes.createAppearanceThemes(draft, DEFAULT_SETTINGS, initializedExistingAppearance, this.appearanceThemeNames(), options.initializeThemes.notifyMigration ?? options.initializeThemes.existing);
       }
-      if (options.initializeThemes && library && source.appearanceThemesFuture === undefined && source.colorPreferencesFuture === undefined && source.graphLensesColorFuture === undefined) {
-        const upgraded = appearanceThemes.adoptNativeBaseOnUpgrade(library, draft, options.initializeThemes.version ?? "0.0.0", initializedExistingAppearance, this.appearanceThemeNames(), options.initializeThemes.notifyMigration ?? options.initializeThemes.existing);
+      if (options.initializeThemes?.adoptNativeBase && library && source.appearanceThemesFuture === undefined && source.colorPreferencesFuture === undefined && source.graphLensesColorFuture === undefined) {
+        const upgraded = appearanceThemes.adoptNativeBaseOnUpgrade(library, draft, initializedExistingAppearance, this.appearanceThemeNames(), options.initializeThemes.notifyMigration ?? options.initializeThemes.existing);
         adoptedNativeBase = upgraded !== library && initializedExistingAppearance;
         library = upgraded;
         if (adoptedNativeBase) {

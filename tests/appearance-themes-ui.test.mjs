@@ -6,7 +6,8 @@ import {colorEditorScenario as scenario} from "./support/colorEditorBrowser.mjs"
 test("0.2.0 upgrade persists appearance, selection and marker together; failure and restart never replace the backup", async () => {
  assert.equal(await scenario(`(async()=>{
   const p=await createAppearanceHost({backgroundColor:'#123456',noteTypeStyles:{Project:{textColor:'#abcdef',fontSize:25}}}),before=structuredClone(p.settings),backup=structuredClone(p.settings.appearanceThemes.themes),store=p.saveData;
-  const upgrade=()=>p.updateStyleSettings(()=>{},p.captureAppearanceOwner(),{initializeThemes:{existing:true,version:'0.2.0'}});
+  p.manifest={version:'0.1.3'};
+  const upgrade=()=>p.updateStyleSettings(()=>{},p.captureAppearanceOwner(),{initializeThemes:{existing:true,adoptNativeBase:true}});
   p.saveData=async()=>{throw Error('Expected migration disk failure')};let failed=false;
   try{await upgrade()}catch{failed=true}
   if(!failed||JSON.stringify(p.settings)!==JSON.stringify(before))throw Error('Failed migration published appearance or completion');
@@ -16,17 +17,18 @@ test("0.2.0 upgrade persists appearance, selection and marker together; failure 
   if(JSON.stringify(library.themes)!==JSON.stringify(backup))throw Error('Original themes overwritten');
   if(window.notices.length!==notices+1||window.notices.at(-1)!==p.translator('themes.nativeBaseAdopted'))throw Error('Missing committed migration notice');
   await p.updateAppearanceThemes({kind:'select',id:'user'});const restarted=await createAppearanceHost(p.writes.at(-1)),writes=restarted.writes.length;
-  await restarted.updateStyleSettings(()=>{},restarted.captureAppearanceOwner(),{initializeThemes:{existing:true,version:'0.3.0'}});
+  restarted.manifest={version:'0.3.0'};
+  await restarted.updateStyleSettings(()=>{},restarted.captureAppearanceOwner(),{initializeThemes:{existing:true,adoptNativeBase:true}});
   if(restarted.settings.appearanceThemes.selectedId!=='user'||restarted.settings.backgroundColor!=='#123456'||restarted.writes.length!==writes)throw Error('Later restart reset selected appearance');
-  const fresh=await createAppearanceHost({},false),noticeCount=window.notices.length;await fresh.updateStyleSettings(()=>{},fresh.captureAppearanceOwner(),{initializeThemes:{existing:false,version:'0.2.0',notifyMigration:false}});
+  const fresh=await createAppearanceHost({},false),noticeCount=window.notices.length;await fresh.updateStyleSettings(()=>{},fresh.captureAppearanceOwner(),{initializeThemes:{existing:false,adoptNativeBase:true,notifyMigration:false}});
   if(fresh.settings.appearanceThemes.themes.length!==1||fresh.settings.appearanceThemes.selectedId!=='default'||fresh.settings.appearanceThemes.nativeBaseMigration!==1||fresh.settings.appearanceThemes.migrationNotice||window.notices.length!==noticeCount)throw Error('Fresh factory installation misrepresented or notified');
   const imported=await createAppearanceHost({noteTypeStyles:{Project:{fontSize:27}}});delete imported.settings.appearanceThemes;
-  await imported.updateStyleSettings(()=>{},imported.captureAppearanceOwner(),{initializeThemes:{existing:true,version:'0.1.3',notifyMigration:false}});
+  await imported.updateStyleSettings(()=>{},imported.captureAppearanceOwner(),{initializeThemes:{existing:true,notifyMigration:false}});
   if(imported.settings.appearanceThemes.migrationNotice||window.notices.length!==noticeCount)throw Error('First-run import displayed the earlier migration message');
-  await imported.updateStyleSettings(()=>{},imported.captureAppearanceOwner(),{initializeThemes:{existing:true,version:'0.2.0',notifyMigration:false}});
+  await imported.updateStyleSettings(()=>{},imported.captureAppearanceOwner(),{initializeThemes:{existing:true,adoptNativeBase:true,notifyMigration:false}});
   if(imported.settings.appearanceThemes.migrationNotice||window.notices.length!==noticeCount||imported.settings.noteTypeStyles.Project.fontSize!==27)throw Error('First-run import lost appearance or displayed an upgrade notice');
   const future=await createAppearanceHost({appearanceThemes:{version:999,opaque:['keep']}}),raw=JSON.stringify(future.settings.appearanceThemesFuture);
-  await future.updateStyleSettings(()=>{},future.captureAppearanceOwner(),{initializeThemes:{existing:true,version:'0.2.0'}});
+  await future.updateStyleSettings(()=>{},future.captureAppearanceOwner(),{initializeThemes:{existing:true,adoptNativeBase:true}});
   if(JSON.stringify(future.settings.appearanceThemesFuture)!==raw||future.settings.appearanceThemes)throw Error('Future data migrated lossily');
   return true;
  })()`),true);

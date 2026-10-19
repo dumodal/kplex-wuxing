@@ -53,15 +53,14 @@ test("migration creates three detached choices and fresh installation only facto
 
 test("0.2.0 adopts native base once, reusing only an exact migration copy and retaining every prior theme", () => {
   const current = fixture(), library = m.createAppearanceThemes(current, factory(), true, names), before = structuredClone(library);
-  for (const version of ["0.1.99", "garbage", ""]) assert.equal(m.adoptNativeBaseOnUpgrade(library, current, version, true, names), library);
-  const migrated = m.adoptNativeBaseOnUpgrade(library, current, "0.2.0", true, names);
+  const migrated = m.adoptNativeBaseOnUpgrade(library, current, true, names);
   assert.equal(migrated.selectedId, "native-base"); assert.equal(migrated.nativeBaseMigration, 1);
   assert.deepEqual(migrated.themes, before.themes); assert.deepEqual(library, before);
   assert.deepEqual(m.readAppearanceThemes(JSON.parse(JSON.stringify(migrated))), migrated);
   const returned = m.selectAppearanceTheme(migrated, "user");
-  for (const version of ["0.2.0", "0.2.1", "1.0.0"]) assert.equal(m.adoptNativeBaseOnUpgrade(returned, current, version, true, names), returned);
+  assert.equal(m.adoptNativeBaseOnUpgrade(returned, current, true, names), returned);
   current.noteTypeStyles.Concept.fontSize = 31;
-  const updated = m.adoptNativeBaseOnUpgrade(library, current, "0.2.0", true, names);
+  const updated = m.adoptNativeBaseOnUpgrade(library, current, true, names);
   assert.notEqual(updated.selectedId, "native-base"); assert.equal(updated.themes.length, 4);
   assert.deepEqual(updated.themes.slice(0, 3), before.themes, "Never replace a saved native-base theme with newer semantics");
   const selected = updated.themes.find(t => t.id === updated.selectedId);
@@ -74,13 +73,13 @@ test("0.2.0 adopts native base once, reusing only an exact migration copy and re
 
 test("0.2.0 fresh installs retain Default only; imported appearance is backed up before adoption", () => {
   const current = factory(), fresh = m.createAppearanceThemes(current, current, false, names);
-  const migrated = m.adoptNativeBaseOnUpgrade(fresh, current, "0.2.0", false, names);
+  const migrated = m.adoptNativeBaseOnUpgrade(fresh, current, false, names);
   assert.equal(migrated.nativeBaseMigration, 1); assert.equal(migrated.selectedId, "default"); assert.equal(migrated.themes.length, 1);
   assert.equal(migrated.migrationNotice, false);
   const imported = fixture(), original = m.captureThemeAppearance(imported);
   const firstImport = m.createAppearanceThemes(imported, current, true, names, false);
   assert.equal(firstImport.migrationNotice, false, "A first install suppresses even the earlier migration explanation");
-  const library = m.adoptNativeBaseOnUpgrade(m.createAppearanceThemes(imported, current, true, names), imported, "0.2.0", true, names, false);
+  const library = m.adoptNativeBaseOnUpgrade(m.createAppearanceThemes(imported, current, true, names), imported, true, names, false);
   assert.deepEqual(library.themes.find(t => t.id === "user").appearance, original);
   assert.deepEqual(library.themes.find(t => t.id === library.selectedId).appearance.semantic, original.semantic);
   assert.equal(library.migrationNotice, false, "First K-Plex install never receives an upgrade notice, even with a legacy import");

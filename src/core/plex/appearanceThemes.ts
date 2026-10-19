@@ -92,16 +92,14 @@ export function createAppearanceThemes(current: ThemeAppearanceInput, factory: T
     {id: "native-base", name: names.nativeBase, appearance: captureThemeAppearance(native)}, defaults]};
 }
 
-/** Prepare the 0.2.0 adoption once; the caller commits selection, appearance and marker atomically.
+/** Prepare native-base adoption once; the caller commits selection, appearance and marker atomically.
  * Existing themes are never overwritten. A previously prepared native-base copy is reused only
  * when it exactly matches today's active semantic appearance and supported non-color styles.
  * Fresh factory installations only record completion. Successful legacy imports retain backups,
  * but first K-Plex installations suppress the upgrade notice based on actual loaded-data state.
  */
-export function adoptNativeBaseOnUpgrade(library: AppearanceThemeLibrary, current: ThemeAppearanceInput, version: string, existing: boolean, names: ThemeNames, notifyMigration = existing): AppearanceThemeLibrary {
-  const release = /^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/.exec(version);
-  if (library.nativeBaseMigration === 1 || !release || (Number(release[1]) === 0 && Number(release[2]) < 2)
-    || !canCaptureThemeAppearance(current)) return library;
+export function adoptNativeBaseOnUpgrade(library: AppearanceThemeLibrary, current: ThemeAppearanceInput, existing: boolean, names: ThemeNames, notifyMigration = existing): AppearanceThemeLibrary {
+  if (library.nativeBaseMigration === 1 || !canCaptureThemeAppearance(current)) return library;
   if (!existing) return {...library, nativeBaseMigration: 1};
   const adopted = copyThemeValue(current);
   adoptStandardThemeColors(adopted);

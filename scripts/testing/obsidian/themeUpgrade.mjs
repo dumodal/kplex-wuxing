@@ -1,4 +1,4 @@
-/** Native Settings acceptance for the one-time 0.2.0 upgrade; no notes or release metadata change. */
+/** Native Settings acceptance for marker-owned native-base adoption; no notes or release metadata change. */
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {runControlledProbe} from './controlledProbe.mjs';
@@ -27,7 +27,7 @@ async function scenario(app,c) {
     const semantics=JSON.stringify([p.settings.noteTypeStyles,p.settings.tagNodeStyles,p.settings.tagStyleList,p.settings.hierarchyLinkStyles,p.settings.colorPreferences,p.settings.graphLenses]);
     let writes=0;originalSave=p.saveData;
     p.saveData=function(...args){writes++;return originalSave.apply(this,args)};
-    await p.updateStyleSettings(()=>{},p.captureAppearanceOwner(),{initializeThemes:{existing:true,version:'0.2.0',notifyMigration:true}});
+    await p.updateStyleSettings(()=>{},p.captureAppearanceOwner(),{initializeThemes:{existing:true,adoptNativeBase:true,notifyMigration:true}});
     c.progress={phase:'upgrade',writes,marker:p.settings.appearanceThemes.nativeBaseMigration,external:p.externalSettingsReceived};
     check(writes===1&&p.settings.appearanceThemes.nativeBaseMigration===1,'Upgrade did not use one durable operation');
     check(p.settings.standardStyleDefaults==='native'&&p.settings.appearanceThemes.selectedId!=='default','Native base not selected');
@@ -47,19 +47,19 @@ async function scenario(app,c) {
     select.value=previousId;select.dispatchEvent(new Event('change',{bubbles:true}));
     await until(()=>p.settings.appearanceThemes.selectedId===previousId,'Native theme selection did not persist');
     app.setting.close();await p.settingsWriteQueue;const before=writes;
-    await p.updateStyleSettings(()=>{},p.captureAppearanceOwner(),{initializeThemes:{existing:true,version:'0.3.0',notifyMigration:true}});
+    await p.updateStyleSettings(()=>{},p.captureAppearanceOwner(),{initializeThemes:{existing:true,adoptNativeBase:true,notifyMigration:true}});
     check(writes===before&&p.settings.appearanceThemes.selectedId===previousId,'Later version reset the user selection');
     // A first installation is represented by its actual absence of prior K-Plex data, not version absence.
     await p.updateAppearanceThemes({kind:'select',id:'default'});
     p.settings.appearanceThemes={version:1,migrationComplete:true,selectedId:'default',themes:p.settings.appearanceThemes.themes.filter(theme=>theme.id==='default'),migrationNotice:false};
     const notices=[...document.querySelectorAll('.notice')].filter(el=>el.textContent.includes(p.translator('themes.nativeBaseAdopted'))).length;
-    await p.updateStyleSettings(()=>{},p.captureAppearanceOwner(),{initializeThemes:{existing:false,version:'0.2.0',notifyMigration:false}});
+    await p.updateStyleSettings(()=>{},p.captureAppearanceOwner(),{initializeThemes:{existing:false,adoptNativeBase:true,notifyMigration:false}});
     check(p.settings.appearanceThemes.themes.length===1&&!p.settings.appearanceThemes.migrationNotice,'Fresh install acquired an upgrade theme/message');
     check([...document.querySelectorAll('.notice')].filter(el=>el.textContent.includes(p.translator('themes.nativeBaseAdopted'))).length<=notices,'Fresh install displayed an upgrade popup');
     p.openSettings();await until(()=>p.settingsTab.containerEl.isConnected,'Fresh Settings missing');p.settingsTab.openSettingsPage(p.translator('settings.ui.visual.styling'));
     await until(()=>row()?.querySelector('select'),'Fresh theme row missing');
     check(![...row().ownerDocument.querySelectorAll('.setting-item')].some(el=>el.getClientRects().length&&el.querySelector('.setting-item-name')?.textContent===p.translator('themes.nativeBaseAdopted')),'Fresh Settings displayed migration row');
-    return {cases:['atomic existing-user adoption','native Visual styling selection and dismissal','later version preserves manual selection','fresh Default-only installation without popup or Settings message'],writes};
+    return {cases:['atomic existing-user adoption','native Visual styling selection and dismissal','later startup preserves manual selection','fresh Default-only installation without popup or Settings message'],version:p.manifest.version,writes};
   } finally {
     if(app.setting.isOpen)app.setting.close();await p.settingsWriteQueue;
     if(originalSave)p.saveData=originalSave;
