@@ -19,25 +19,10 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR179 validated closeout; sequential work remains authorized
+# Sequential work closeout
 
-Main/root agent implements/reviews/validates; no delegation.147 merged60d2239.
-179 main integration3bc489c, runtimef2fef82, full-testedbe7247a. User authorizes
-merge179, then149 then176 sequentially, no CI wait/release/personal vault.
-No comparative performance under encoding load, receipt/reader-sharing revival,
-source-proof weakening or broad architecture. Preserve private originals.
+147 merged60d2239;179 mergedb4c144a.149 native investigation saved850da4e:24main+26popout visual samples/44focused tests, no persistent idle blur, remains draft/115open. Needs affected device/version/DPI/zoom and idle recording, no speculative rendering patch.
 
-Full verify passes7/130/1127/184/334/638 plus lint/build. Native exact2c6dce74
-bundle staged/smoke passed. Native matrix results and all failures in concise
-report docs/validation/settings-save-liveness-179-2026-10-19.md. Main/Sidecar
-controlled Save closes after1durablewrite while optional work held. Whole-renderer
-freeze remains unproved. On-demand drawing/radius stricter fixture drain refuses
-pendingKnown1 despite no active work; earlier8pass is not repeatability proof.
-Eager quiet15, radius8, final real-drawing+Properties overlap5pass. Config/workspace
-107/88 and originalmode restored, no controllers, CLIdebug capture released.
-Final native helper syntax/20runner pass. Only native tooling/docs changed since
-full-testedbe724. Private verified durable copy141files/8210671B, manifestSHA in
-report, originals retained/no publication. Next finalize authorized179merge,
-switch/fetch main, integrate149branch normally; cause-first visual probe. If no
-confirmed defect, precise no-go rather than speculative rendering hack.176 Gate1
-causal checkpoint follows, no broad benchmark or new persistent protocol.
+176 main integration22a19d3, bounded Gate1/test checkpointfc227c1, Node fixture correction8e94ed8; final clean full/native468d27c passes architecture7/core130/main1127/UI184/sources334/browser639, lint/build/native smoke. CI468green. Later closeout docs only. Native Small107/88:0fullbuild/0snapshotwrite/freshread/parse/repair on prepared complete warm cache, observed drain16.783s, no comparative improvement claimed. Ordered untimed canonical oracle differs in page/evidence order and8combinedlabel fields despite equal215/1568counts; no count/sorted shortcut. No production change/receipt/readersharing/schema/scheduler work.43real-IDB reuse guards pass; Node fixture sources retired/paused/joined through real owners with all strict spies preserved,24settings/stronger1second control pass.
+
+Final artifact23b25a1bf7bb4873563769986828fc2efe6e51d17cf44020f2bf0a456950f54e remains installedSmall. Original config/workspace/followowners and On-demand mode restored aftersmoke;0controllers/pending settings, CLIdebuggeroff. Private67file/15784852B backup verified, originals retained, no publication; report docs/validation/warm-start-rebuilds-176-2026-10-19.md pins manifest/full-log/artifact hashes and all limits. Source frozen after468; final docs push/authorized176merge next, then main/fetch. No release/branchdeletion/personalvault. Stop Gate1 no-go; further production optimization requires a current causal reproduction/new scope.
