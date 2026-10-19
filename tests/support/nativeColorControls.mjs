@@ -10,6 +10,7 @@ export class Notice {constructor(message){window.notices.push(message)}}
 export class Modal {
  static instances=[];
  constructor(app){Modal.instances.push(this);this.app=app;this.modalEl=createDiv();this.containerEl=this.modalEl;this.titleEl=this.modalEl.createDiv();this.contentEl=this.modalEl.createDiv();}
+ setTitle(value){this.titleEl.textContent=value;return this;}
  open(){document.body.append(this.modalEl);this.onOpen?.();}
  close(){this.onClose?.();this.modalEl.remove();}
 }

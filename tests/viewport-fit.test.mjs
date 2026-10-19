@@ -30,7 +30,7 @@ function graphFixture() {
     centralEditorOverlayElement:{current:null},cameraWritePending:{current:false},compassCenter:{current:null},compassSync:{current:()=>false},requestCameraFrame:()=>{},
     cameraFrame:{current:1},cameraElement:{current:null},syncCentralEditorOverlay:()=>{},
     scene:{nodes:[{role:'center',page:{path:'Center.md'},x:30,y:-20,width:200,height:100}],zoneViewports:{}},
-    centralEditorMaximized:false,Platform:{isIosApp:false},IOS_MAX_ZOOM:2,MAX_ZOOM:5,ZONES:['child'],zoneForRole:role=>role==='child'?'child':null,
+    centralEditorMaximized:false,Platform:{isIosApp:false},IOS_MAX_ZOOM:2,MAX_ZOOM:5,ZONES:['child'],scrollZoneForRole:role=>role==='child'?'child':null,
     centeredViewportFit,sameFitCamera,sceneMotion:{cancelAll(){}},preserveCameraOnNextLayout:{current:false},displayResizeLayout:{current:false},
     centralEditorAvailabilityRef:{current:false},centralEditorAvailable:false,centralEditorSize:null,centralEditorSizeKeyRef:{current:''},
     previousNodeRects:{current:new Map([['prior',{}]])},pathChangedThisRender:true,navigationOrigin:'user',settings:{allowAutozoom:true,animationSpeed:0},incomingCenter:{current:null}};
@@ -40,6 +40,23 @@ function graphFixture() {
   ctx.render=()=>{ctx.applyCamera=callback('applyCamera',ctx);ctx.flushCameraTransform=callback('flushCameraTransform',ctx);ctx.fit=callback('fit',ctx);ctx.layout=callback('layout',ctx);};
   ctx.render();return ctx;
 }
+
+test('Ctrl or Cmd wheel zooms over both bounded list types while native editor and modal scrolling remain native', () => {
+  for (const surface of ['.kplex-zone-scroll', '.kplex-expanded-scroll', '.kplex-central-editor-content', '.modal-container', 'canvas'])
+    for (const modifier of [null, 'ctrlKey', 'metaKey']) {
+    const ctx = graphFixture();let prevented = false;
+    Object.assign(ctx, {el:ctx.viewport.current, panDrag:{current:null}});
+    const wheel = callback('wheel', ctx);
+    wheel({target:{closest:selector=>selector.split(', ').includes(surface) ? {} : null},ctrlKey:modifier==='ctrlKey',metaKey:modifier==='metaKey',clientX:200,clientY:150,deltaY:-100,preventDefault(){prevented=true}});
+    const zoom = surface==='canvas' || !!modifier && (surface==='.kplex-zone-scroll'||surface==='.kplex-expanded-scroll');
+    assert.equal(prevented, zoom, surface+'/'+modifier);
+    assert.equal(ctx.camera.current.scale > 1, zoom);
+    if (zoom) {
+      assert(Math.abs((200-ctx.camera.current.x)/ctx.camera.current.scale-200)<1e-8);
+      assert(Math.abs((150-ctx.camera.current.y)/ctx.camera.current.scale-150)<1e-8);
+    }
+  }
+});
 
 test('passive follow cancels existing motion and suppresses immediate and late-layout arrivals while deliberate navigation still animates', /** Run the production preparation/layout owners with positive animation speed and inspect actual emitted frames. */ () => {
   const ctx=graphFixture(),plays=[],classes=['kplex-role-center'];

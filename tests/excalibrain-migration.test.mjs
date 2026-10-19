@@ -1187,7 +1187,8 @@ test("long labels and fixed two-line rows clear the center and neighboring zones
     const regular = scene.nodes.filter(n => n.role !== "center" && n.role !== "sibling");
     assert(regular.some(n => n.width > 286), "Long-label controls did not permit wider nodes");
     assert.equal(new Set(regular.map(n => n.height)).size, 1, "Short and long labels must reserve identical regular-row heights");
-    assert(wrapNodeLabels ? regular[0].height > 26 : regular[0].height === 26, "Two-line mode must reserve a taller fixed row");
+    const singleHeight = buildScene(neighborhood, index, {...settings, wrapNodeLabels:false}, false, centerSize).nodes.find(n=>n.role==='child').height;
+    assert(wrapNodeLabels ? regular[0].height > singleHeight : regular[0].height >= 26, "Rows must reserve glyph clearance and two-line mode must remain taller");
     assert.equal(Math.abs(scene.nodes.find(n => n.role === "left").x), scene.nodes.find(n => n.role === "right").x, "Lateral zones must stay symmetrical");
   }
 });
