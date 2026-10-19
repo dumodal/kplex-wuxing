@@ -45,9 +45,10 @@ to the available physical label. Disabled labels and irrelevant pairs do not
 request caption-specific explanations. Reverse creation uses the configured
 counterpart; reverse unlink still removes the actual original property.
 
-No Markdown/YAML grammar, semantic compiler algorithm, source record, evidence
-DTO, snapshot codec, acquisition scheduler or inverse metadata was added or
-changed. Real source/role changes retain normal processing. All eight locales and
+Pairing changes no Markdown/YAML grammar, semantic compiler algorithm, source
+record, evidence DTO, snapshot codec or inverse metadata. A separately authorized
+startup fix below changes admission of visible edits within the existing writer.
+Real source/role changes retain normal processing. All eight locales and
 the [user guide](../ONTOLOGY_PAIRS.md) are maintained.
 
 ## Automated evidence
@@ -122,14 +123,35 @@ Pairing an already configured field changes no effective role and correctly does
 not bypass this source gap by forcing reindexing.
 
 The ordinary retained-backlog patch, once admitted after the build, publishes
-the Defined Child and original Parent field to the same stationary demand. A
-new regression covers that publication without navigation; the existing late
-progressive-ontology cases cover newly processed sources before the build ends.
-The **immediate discovery gap itself remains unresolved**. Failed main/candidate
-reproductions and minimized inputs are preserved privately for a separately
-scoped indexing fix; #190 does not claim to fix this report or establish every
-possible cause of the maintainer's original large-vault observation. No source
-reader-sharing, receipt or startup scheduling experiment was reopened.
+the Defined Child and original Parent field to the same stationary demand. The
+maintainer subsequently authorized fixing this confirmed defect in #190, in a
+separate checkpoint. Failed main/candidate reproductions and minimized inputs
+are preserved privately.
+
+The fix lets the **same progressive writer**, between complete source
+transactions, drain at most 64 coalesced visible-file edits before continuing its
+existing cursor. It uses normal GraphBuilder patches and the existing atomic
+publisher. No private staging or native read is interrupted, no independent
+writer is introduced, and completed unrelated sources are not restarted. The
+ordinary no-edit path retains its original batch, notification and yield
+behavior; an empty admission check creates no Promise or task yield. Early
+visible sources are skipped when their original queued position is reached.
+Native identity, current demand, generation and all normal patch fences remain
+in force. Overflow stays in the coordinator's existing durable edit backlog.
+
+The updated real-browser regression holds Pause after the cursor passed A/B,
+delivers actual host observations plus visible refreshes, then releases only
+Pause. A must display the Defined Child from B's Parent declaration while an
+unrelated Tail remains held, with the same central demand and exactly one new
+body read per edited owner. Same-stat edits, repeated notifications, released
+demand and cancellation are covered. Existing late progressive-ontology cases
+retain coverage of newly processed sources before build completion.
+
+This fixes the reproduced progressive-ingestion path at its next safe source
+boundary. It does not establish every possible cause of the original large-vault
+observation or preempt an already-running native read. Warm source-authority and
+whole-application restart variants remain separate acceptance; no rejected source
+reader-sharing, receipt or broad startup optimization experiment was reopened.
 
 ## Retained failures and baseline correction
 

@@ -1589,41 +1589,50 @@ for (const progressive of [false, true]) for(const lateEvent of [false,true]) te
 })()`));
 
 
-test('ordinary inverse ontology replaces removed YAML Child when the startup edit backlog publishes without navigation', async()=>scenario(`(async()=>{
+for(const variant of ['ordinary','same-stat','released','cancelled']) test('visible inverse ontology edits behind the startup cursor publish before the unrelated tail without navigation ('+variant+')', async()=>scenario(`(async()=>{
+  const variant=${JSON.stringify(variant)};
   const M=sourceModules,o=await onDemandFixture('ordinary-ontology-edit-held-tail',{indexingMode:'eager'}),{f,index}=o;
-  let release,unblockTail,building;
+  let release,unblockPause,unblockTail,building;
   const read=f.app.vault.read,cachedRead=f.app.vault.cachedRead;
   try{
     delete index.sourceAcquisition.enableInventory;
     const a=f.add('A.md','',{Child:'[[B]]'}),b=f.add('B.md','');
-    for(let n=0;n<9;n++)f.add('Idle'+n+'.md','');f.add('Tail.md','');
+    for(let n=0;n<9;n++)f.add('Idle'+n+'.md','');f.add('Pause.md','');f.add('Tail.md','');
     f.app.metadataCache.resolvedLinks={'A.md':{'B.md':1},'B.md':{}};
-    let tailEntered;const tailReady=new Promise(resolve=>tailEntered=resolve),tailGate=new Promise(resolve=>unblockTail=resolve);
-    const heldRead=original=>async file=>{if(file.path==='Tail.md'){tailEntered();await tailGate;}return original.call(f.app.vault,file);};
+    let pauseEntered,tailEntered;const pauseReady=new Promise(resolve=>pauseEntered=resolve),pauseGate=new Promise(resolve=>unblockPause=resolve);
+    const tailReady=new Promise(resolve=>tailEntered=resolve),tailGate=new Promise(resolve=>unblockTail=resolve);
+    const heldRead=original=>async file=>{if(file.path==='Pause.md'){pauseEntered();await pauseGate;}if(file.path==='Tail.md'){tailEntered();await tailGate;}return original.call(f.app.vault,file);};
     f.app.vault.read=heldRead(read);f.app.vault.cachedRead=heldRead(cachedRead);
     ok(await index.initializeOnDemandBaseline(['A.md']),'Real startup baseline');
-    building=index.rebuildProgressively(['A.md']);await tailReady;
+    building=index.rebuildProgressively(['A.md']);await pauseReady;
     release=index.acquireSemanticDemand('A.md');await settleDemand(index);
     const relation=()=>{const n=index.getNeighborhood('A.md');return [...n.parents,...n.children,...n.leftFriends,...n.rightFriends].find(row=>row.page.path==='B.md');};
     equal(relation()?.role,'child','Initial YAML Child is displayed');
     // Both sources have passed the actual progressive cursor. Deliver normal host observations,
     // then use the existing visible refresh owner while unrelated source ingestion stays held.
-    f.texts.set('B.md','Parent:: [[A]]');b.stat.mtime++;f.app.metadataCache.resolvedLinks['B.md']={'A.md':1};
+    f.texts.set('B.md','Parent:: [[A]]');if(variant!=='same-stat')b.stat.mtime++;f.app.metadataCache.resolvedLinks['B.md']={'A.md':1};
     f.app.vault.trigger('modify',b);f.app.metadataCache.trigger('changed',b);o.bump();index.refreshVisibleHostMetadataPreviews('B.md',0);
-    f.metadata.set('A.md',{frontmatter:{},links:[]});a.stat.mtime++;f.app.metadataCache.resolvedLinks['A.md']={};
+    f.metadata.set('A.md',{frontmatter:{},links:[]});if(variant!=='same-stat')a.stat.mtime++;f.app.metadataCache.resolvedLinks['A.md']={};
     f.app.vault.trigger('modify',a);f.app.metadataCache.trigger('changed',a);o.bump();index.refreshVisibleHostMetadataPreviews('A.md',1);
     await index.refreshVisibleMarkdownPath('B.md');await index.refreshVisibleMarkdownPath('A.md');await settleDemand(index);
+    await index.refreshVisibleMarkdownPath('B.md');await index.refreshVisibleMarkdownPath('B.md');await settleDemand(index);
     ok(index.building,'Unrelated background tail remains pending');
-    // The startup coordinator retains edits made behind the cursor in its ordinary file backlog.
-    // This checks real publication after that writer becomes available, not immediate discovery
-    // during a held build. The separate main/candidate reproduction records that existing gap.
-    unblockTail();await building;equal((await index.patchMarkdownPaths(['B.md','A.md'])).outcome,'patched','Actual retained source backlog commits');
+    if(variant==='released'){release();release=null;}
+    if(variant==='cancelled'){index.cancelRebuild();unblockPause();ok(!(await building),'Cancelled producer cannot continue');equal(f.reads.filter(path=>['A.md','B.md'].includes(path)).length,2,'Cancellation reads no queued edit');ok(!index.progressiveVisibleRefresh,'Cancelled producer releases admission');return true;}
+    // Finish only the already-admitted unrelated source. The same progressive writer must patch
+    // the queued visible owners at its next transaction boundary, before starting the held tail.
+    unblockPause();await tailReady;
     await settleDemand(index);
+    if(variant==='released'){equal(f.reads.filter(path=>['A.md','B.md'].includes(path)).length,2,'Released views do not acquire queued bodies');return true;}
     equal(relation()?.relationType,M.RelationType.DEFINED,'Committed ordinary inverse field must not remain inferred');
     equal(relation()?.role,'child','B Parent A is A Child B without a pair declaration');
     equal(relation()?.typeDefinition,'parent','Current authored field replaces the removed YAML declaration');
+    ok(index.building,'Unrelated tail is still held');
+    equal(f.reads.filter(path=>path==='A.md').length,2,'Only the initial and changed center bodies are read');
+    equal(f.reads.filter(path=>path==='B.md').length,2,'Only the initial and changed inverse-owner bodies are read');
+    for(let n=0;n<9;n++)equal(f.reads.filter(path=>path==='Idle'+n+'.md').length,1,'Completed unrelated sources are not restarted');
     equal(index.semanticDemandCounts.get('A.md'),1,'No navigation was needed to adopt committed ontology');return true;
-  }finally{f.app.vault.read=read;f.app.vault.cachedRead=cachedRead;unblockTail?.();release?.();index.destroy();await building?.catch(()=>{});f.close();}
+  }finally{f.app.vault.read=read;f.app.vault.cachedRead=cachedRead;unblockPause?.();unblockTail?.();release?.();index.destroy();await building?.catch(()=>{});f.close();}
 })()`));
 
 for(const reciprocal of [false,true]) test('stationary local center adopts late ontology before the progressive indexing tail completes ('+(reciprocal?'changed role':'same role')+')', async()=>scenario(`(async()=>{
@@ -1640,8 +1649,9 @@ for(const reciprocal of [false,true]) test('stationary local center adopts late 
     const backgroundReady=new Promise(resolve=>backgroundEntered=resolve),backgroundGate=new Promise(resolve=>unblockBackground=resolve);
     const tailReady=new Promise(resolve=>tailEntered=resolve),tailGate=new Promise(resolve=>unblockTail=resolve);
     // Keep the real first publication, per-file commits and ten-file notification batching.
+    let firstBackground=true;
     prototype.patchMarkdownFiles=async function(state,files,options){
-      if(options?.publishFileCommit&&files.some(file=>file.path==='Tail.md')){backgroundEntered();await backgroundGate;}
+      if(options?.publishFileCommit&&firstBackground){firstBackground=false;backgroundEntered();await backgroundGate;}
       return patch.call(this,state,files,options);
     };
     const heldRead=original=>async file=>{if(file.path==='Tail.md'){tailReached=true;tailEntered();await tailGate;}return original.call(f.app.vault,file);};

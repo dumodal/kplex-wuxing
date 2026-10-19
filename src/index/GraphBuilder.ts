@@ -1471,6 +1471,9 @@ export class GraphBuilder {
       discoveryMode?: "patch" | "rebuild";
       /** Reinterpret unchanged neutral source facts after a demanded semantic policy change. */
       forceRecompile?: boolean;
+      /** The owning progressive writer may service visible edits before private source staging.
+       * Synchronous no-work/skip decisions add no task yield; a failed nested patch cancels this pass. */
+      beforeFile?: (file: TFile) => Promise<"skip" | "cancel" | undefined> | "skip" | undefined;
     } = {},
   ): Promise<PatchMarkdownResult> {
     const touchedPagePaths = new Set<string>();
@@ -1482,6 +1485,10 @@ export class GraphBuilder {
 
     for (const file of files) {
       if (!this.isCurrent()) return { ok: false, cancelled: true, rebuildRequired: false, touchedPagePaths, semanticChanges, semanticNoops };
+      const admitted = options.beforeFile?.(file);
+      const decision = admitted && typeof admitted !== "string" ? await admitted : admitted;
+      if (decision === "skip") continue;
+      if (decision === "cancel" || !this.isCurrent()) return { ok: false, cancelled: true, rebuildRequired: false, touchedPagePaths, semanticChanges, semanticNoops };
       const revision = this.captureFileRevision(file);
       const sourcePath = revision.path;
       const fileTouchedPagePaths = new Set<string>();

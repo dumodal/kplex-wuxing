@@ -482,6 +482,8 @@ export class GraphIndex {
   private onDemandPartialState = false;
   private onDemandBaselineTask: Promise<boolean> | null = null;
   private onDemandTasks = new Map<string, Promise<void>>();
+  /** Only the active progressive writer may admit visible edits between its source transactions. */
+  private progressiveVisibleRefresh: ((file: TFile) => void) | null = null;
   /** Finite P1 presentation phases can finish/restart independently of their canonical task's broad waits. */
   private onDemandPreviewTasks = new Map<string, Promise<void>>();
   /** Only actual build-blocked demands wait for that owner's completion; no timer or retry loop. */
@@ -1251,8 +1253,12 @@ export class GraphIndex {
     if (previous) previous.dirty = true;
   }
 
-  /** Canonicalize one visible source ahead of unrelated dirty files; background builds retain their progress. */
+  /** Canonicalize one visible source ahead of unrelated dirty files; a progressive writer services
+   * these edits at its next complete source boundary while retaining its existing cursor. */
   refreshVisibleMarkdownPath(path: string): Promise<void> {
+    const selected = this.app.vault.getFileByPath(path);
+    if (this.progressiveVisibleRefresh && selected?.extension === "md" && [...this.semanticDemandCounts.keys()]
+      .some(center => center === path || this.hasReadableNeighbour(center, path))) this.progressiveVisibleRefresh?.(selected);
     if (this.usesLocalForeground()) {
       this.markOnDemandSourceDirty(path);
       for (const center of this.semanticDemandCounts.keys()) if (center === path || this.hasReadableNeighbour(center, path)) {
@@ -6114,6 +6120,11 @@ export class GraphIndex {
     let activityOutcome: ActivityOutcome = "incomplete";
     let workPriority: IndexWorkPriority = INDEX_WORK_PRIORITY.background;
     let releaseWork = this.workScheduler.begin(workPriority);
+    const visibleEdits = new Map<string, TFile>();
+    /** Keep current native identities only; excess work remains in the coordinator's normal backlog. */
+    const requestVisibleEdit = (file: TFile): void => {
+      if (isCurrent() && (visibleEdits.has(file.path) || visibleEdits.size < 64)) visibleEdits.set(file.path, file);
+    };
     /** Completed progressive phases relinquish their lane before the next lane is retained. */
     const enterBuildPriority = (priority: IndexWorkPriority): void => {
       releaseWork(); workPriority = priority; releaseWork = this.workScheduler.begin(priority);
@@ -6239,6 +6250,7 @@ export class GraphIndex {
         this.emit();
       }
 
+      this.progressiveVisibleRefresh = requestVisibleEdit;
       enterBuildPriority(INDEX_WORK_PRIORITY.background);
       await this.workScheduler.checkpoint(workPriority);
       if (!isCurrent()) return false;
@@ -6264,10 +6276,38 @@ export class GraphIndex {
 
       const notifyEvery = Platform.isIosApp ? 3 : Platform.isMobile ? 5 : 10;
       let commitsSinceNotify = 0;
+      /** Drain a finite visible batch only between complete source transactions of this writer.
+       * No independent compiler/writer runs beside a staged source or an unfinished native read. */
+      const drainVisibleEdits = async (): Promise<boolean> => {
+        const admitted = [...visibleEdits];
+        for (const [path, file] of admitted) {
+          if (visibleEdits.get(path) === file) visibleEdits.delete(path);
+          if (!isCurrent()) return false;
+          if (this.app.vault.getFileByPath(path) !== file || file.path !== path || !this.state.pages.has(path)
+            || ![...this.semanticDemandCounts.keys()].some(center => center === path || this.hasReadableNeighbour(center, path))) continue;
+          enterBuildPriority(INDEX_WORK_PRIORITY.visibleNeighborhood);
+          try {
+            const result = await builder.patchMarkdownFiles(this.state, [file], {
+              useDurableCache: true, awaitBodyWrite: false,
+              discoveryMode: indexedPaths.has(path) ? "patch" : "rebuild",
+              publishFileCommit: (commit, publishPreparedState): void => {
+                this.publishIncrementalFile(commit, publishPreparedState); indexedPaths.add(commit.sourcePath);
+              },
+            });
+            if (!result.ok || !isCurrent()) return false;
+          } finally { enterBuildPriority(INDEX_WORK_PRIORITY.background); }
+        }
+        return isCurrent();
+      };
       const result = await builder.patchMarkdownFiles(this.state, remaining, {
         useDurableCache: true,
         awaitBodyWrite: false,
         discoveryMode: "rebuild",
+        beforeFile: /** Preserve the original no-edit ingestion path without extra promises or host yields. */ file => {
+          if (!visibleEdits.size) return indexedPaths.has(file.path) ? "skip" : undefined;
+          return drainVisibleEdits().then(/** An early visible commit replaces its later original queue entry. */ ready =>
+            !ready ? "cancel" : indexedPaths.has(file.path) ? "skip" : undefined);
+        },
         publishFileCommit: (commit, publishPreparedState) => {
           this.commitPreparedFile(commit, publishPreparedState);
           indexedPaths.add(commit.sourcePath);
@@ -6276,9 +6316,8 @@ export class GraphIndex {
           commitsSinceNotify = 0;
           this.emit();
         },
-
       });
-      if (!result.ok || !isCurrent()) return false;
+      if (!result.ok || !isCurrent() || visibleEdits.size && !(await drainVisibleEdits())) return false;
       if (commitsSinceNotify > 0) this.emit();
 
       // The bounded startup search intentionally grows from per-file commits. Rebuild it once at
@@ -6317,6 +6356,8 @@ export class GraphIndex {
       return true;
     } catch (error) { activityOutcome = "failed"; throw error;
     } finally {
+      if (this.progressiveVisibleRefresh === requestVisibleEdit) this.progressiveVisibleRefresh = null;
+      visibleEdits.clear();
       this.endIndexActivity(activity, activityOutcome === "incomplete" && !isCurrent() ? "cancelled" : activityOutcome);
       releaseWork();
       this.building = false;
