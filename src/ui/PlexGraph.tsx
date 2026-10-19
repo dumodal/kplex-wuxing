@@ -22,6 +22,7 @@ import { isNoteTypeTagConnection } from "../core/graph/presentation";
 import { DEFAULT_RENDERED_LINK_WIDTH } from "../index/style";
 import { subscribeAppearanceSources } from "../adapters/obsidian/colorChanges";
 import {HoverHighlight, bindHoverHighlight} from "./components/hoverHighlight";
+import {HoverPreview, bindHoverPreview} from "./components/hoverPreview";
 import {compassPolygons} from "../core/plex/compassBackground";
 import {COMPASS_DIRECTIONS, COMPASS_COLOR_VARIABLES, COMPASS_SEMANTIC_SLOTS, compassIntensity} from "../core/plex/colorPreferences";
 import {colorValueCss, semanticColorCss} from "../adapters/obsidian/colorPresentation";
@@ -46,7 +47,7 @@ import type { GateRole, GateSide, GraphPage, Neighbour, Neighborhood, NodeStyle,
 import { LinkDirection, RelationType } from "../types";
 import { alphaHexToCss, resolveLinkStyle, resolveNodeStyle, currentNodeColorStyle, nodePaint, nodePaintFallbacks, NATIVE_CANVAS_FILL, NATIVE_LINK_STROKE, NATIVE_LINK_TEXT, NATIVE_LINK_LABEL_FILL } from "../index/style";
 import { TYPOGRAPHY_FIELDS, TYPOGRAPHY_LIMITS, type TypographyValues } from "../core/plex/typographyPreferences";
-import { buildScene, sceneLayoutPolicyKey, neighborhoodSceneKey, bindSceneNeighborhood, buildSectionExpandedScene, appendVisibleCrossLinks, projectNodeCounts, rowIntersectsViewport, effectiveLabelLimit, expandedChildReserve, expandedNodeWidth, expandedMiniLayout, horizontalDensity, layoutColumns, spacingPolicy, gateDiameter, siblingScale, withAreaHeightOverrides, type CenterNodeSize, type ZoneViewport, type ZoneAreaBounds } from "./layout";
+import { buildScene, sceneLayoutPolicyKey, neighborhoodSceneKey, bindSceneNeighborhood, buildSectionExpandedScene, appendVisibleCrossLinks, presentationPage, projectNodeCounts, scrollZoneForRole, rowIntersectsViewport, effectiveLabelLimit, expandedChildReserve, expandedNodeWidth, expandedMiniLayout, horizontalDensity, layoutColumns, spacingPolicy, gateDiameter, siblingScale, withAreaHeightOverrides, type CenterNodeSize, type ZoneViewport, type ZoneAreaBounds } from "./layout";
 import { LayoutSlider } from "./components/LayoutSlider";
 import { centeredViewportFit, sameFitCamera, type FitCamera } from "./components/viewportFit";
 import { projectFilteredGateCounts } from "./filteredGateCounts";
@@ -344,19 +345,6 @@ function normalizedRole(role: Role | "center"): GateRole | null {
   return null;
 }
 
-function zoneForRole(role: Role | "center"): ScrollZone | null {
-  switch (role) {
-    case "parent": return "parent";
-    case "child": return "child";
-    case "left":
-    case "previous": return "left";
-    case "right":
-    case "next": return "right";
-    case "sibling": return "sibling";
-    case "center": return null;
-  }
-}
-
 function oppositeGate(gate: GateSide): GateSide {
   if (gate === "top") return "bottom";
   if (gate === "bottom") return "top";
@@ -428,10 +416,10 @@ function markerFor(head?: string): string | undefined {
 }
 
 /** Translate the displayed zone heading while preserving semantic role and layout classification. */
-function zoneTitle(zone: ScrollZone, translate: Translator): string {
+function zoneTitle(zone: ScrollZone, translate: Translator, arrangement: KplexSettings["lateralArrangement"]): string {
   if (zone === "parent") return translate("graph.zoneParents");
   if (zone === "child") return translate("graph.zoneChildren");
-  if (zone === "left") return translate("graph.zoneFriendsPrevious");
+  if (zone === "left") return translate(arrangement === "left" ? "graph.zoneFriendsChallengers" : "graph.zoneFriendsPrevious");
   if (zone === "right") return translate("graph.zoneChallengersNext");
   return translate("graph.zoneSiblings");
 }
@@ -1066,6 +1054,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   const [hover, setHover] = useState<HoverState>(null);
   const [crossLinkPeek, setCrossLinkPeek] = useState<Exclude<HoverState, { kind: "edge" }>>(null);
   const hoverHighlight = useRef<HoverHighlight<Exclude<HoverState, null>> | null>(null);
+  const hoverPreview = useRef<HoverPreview | null>(null);
   const edgeTooltipTimer = useRef<number | null>(null);
   const edgeTooltipPoint = useRef<Point>({ x: 0, y: 0 });
   const [edgeHoverTooltip, setEdgeHoverTooltip] = useState<EdgeHoverTooltip>(null);
@@ -1186,10 +1175,23 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   };
 
   const clearHoverIntent = (clearActive = false) => {
+    hoverPreview.current?.clear();
     hoverHighlight.current?.clear(clearActive);
     clearEdgeTooltip();
     if (clearActive) setHover(null);
   };
+
+  useEffect(/** Native previews share one owner across regular thoughts and expanded rows. */ () => {
+    const element = viewport.current;
+    if (!element) return;
+    const intent = new HoverPreview();
+    hoverPreview.current = intent;
+    const release = bindHoverPreview(element, intent);
+    const releaseVisibility = plugin.subscribeKplexVisibility(/** Background native leaves cannot retain preview candidates. */ () => {
+      if (!plugin.isKplexLeafVisible(hostLeaf)) intent.clear();
+    });
+    return () => {releaseVisibility(); release(); if (hoverPreview.current === intent) hoverPreview.current = null;};
+  }, [plugin, hostLeaf, activePath, Boolean(neighborhood)]);
 
   useEffect(/** Each rendered graph owns its modifier listeners and delayed activation. */ () => {
     const element = viewport.current;
@@ -1598,7 +1600,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     };
 
     for (const node of scene.nodes) {
-      const zone = zoneForRole(node.role);
+      const zone = scrollZoneForRole(node.role, settings.lateralArrangement);
       if (zone && scene.zoneViewports[zone]) continue;
       includeRect(node.x - node.width / 2 - 14, node.y - node.height / 2 - 14, node.x + node.width / 2 + 14, node.y + node.height / 2 + 14);
     }
@@ -1843,7 +1845,8 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       const target = e.target as Element | null;
       // Native wheel scrolling is retained only inside bounded thought lists. Everywhere else
       // the wheel zooms, regardless of whether the wheel/middle button is currently pressed.
-      if (target?.closest?.(".kplex-central-editor-content, .kplex-zone-scroll, .kplex-expanded-scroll, .modal-container")) return;
+      if (target?.closest?.(".kplex-central-editor-content, .modal-container")) return;
+      if (!e.ctrlKey && !e.metaKey && target?.closest?.(".kplex-zone-scroll, .kplex-expanded-scroll")) return;
       e.preventDefault();
       if (centralEditorMaximized) return;
       const rect = el.getBoundingClientRect();
@@ -1957,7 +1960,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     for (const zone of ZONES) {
       const panel = scene.zoneViewports[zone];
       if (!panel) continue;
-      const nodes = scene.nodes.filter((node) => zoneForRole(node.role) === zone && filterMatchedNodePaths.has(node.page.path));
+      const nodes = scene.nodes.filter((node) => scrollZoneForRole(node.role, settings.lateralArrangement) === zone && filterMatchedNodePaths.has(node.page.path));
       const layout = buildZoneDisplayLayout(zone, panel, nodes, zoneFilters[zone] ?? "", settings, index, neighborhood?.center.path ?? activePath);
       layouts[zone] = layout;
     }
@@ -1967,7 +1970,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   const renderedNodeMap = useMemo(() => {
     const map = new Map<string, PositionedNode>();
     for (const node of scene.nodes) {
-      const zone = zoneForRole(node.role);
+      const zone = scrollZoneForRole(node.role, settings.lateralArrangement);
       const panel = zone ? scene.zoneViewports[zone] : undefined;
       const local = zone ? zoneDisplayLayouts[zone]?.localPositions.get(node.page.path) : undefined;
       let rendered = panel && zone && local
@@ -2001,7 +2004,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       }, 3600);
     };
 
-    const zone = zoneForRole(targetNode.role);
+    const zone = scrollZoneForRole(targetNode.role, settings.lateralArrangement);
     const panel = zone ? scene.zoneViewports[zone] : undefined;
     if (zone && panel) {
       const layout = zoneDisplayLayouts[zone];
@@ -2062,7 +2065,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
         paths.add(node.page.path);
         continue;
       }
-      const zone = zoneForRole(node.role);
+      const zone = scrollZoneForRole(node.role, settings.lateralArrangement);
       const panel = zone ? scene.zoneViewports[zone] : undefined;
       if (!zone || !panel) {
         paths.add(node.page.path);
@@ -2122,7 +2125,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       const metrics = expandedMiniLayout(settings, parent.width, relations.length, miniScale);
       const { width, columns, rowHeight, contentHeight, columnGap, topGap } = metrics;
       const top = parent.y + parent.height / 2 + topGap;
-      const zone = zoneForRole(baseNode.role);
+      const zone = scrollZoneForRole(baseNode.role, settings.lateralArrangement);
       const bounds = zone ? scene.zoneViewports[zone] ?? scene.zoneAreas[zone] : undefined;
       // Child boxes are rendered above the camera as siblings of scrollers. Clip their actual
       // viewport to their owning band's bottom so they cannot leak into the child region.
@@ -2179,18 +2182,22 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   /** Retain exact visible page membership across unrelated scene renders; new page incarnations still repair. */
   const presentationDemandPages = useMemo(() => {
     const pages = new Set<GraphPage>();
-    for (const node of scene.nodes) if (visibleNodePaths.has(node.page.path)) pages.add(node.page);
+    for (const node of scene.nodes) if (visibleNodePaths.has(node.page.path)) {
+      const page = presentationPage(node.page, index);
+      if (page) pages.add(page);
+    }
     for (const cluster of expandedClusters) for (const child of cluster.children) {
       const y = cluster.top + child.localY - cluster.scrollTop;
       if (y - child.height / 2 >= cluster.top && y + child.height / 2 <= cluster.top + cluster.viewportHeight) {
-        pages.add(child.relation.page);
+        const page = presentationPage(child.relation.page, index);
+        if (page) pages.add(page);
       }
     }
     const retained = retainedPresentationDemand.current;
     if (retained.size === pages.size && [...pages].every(page => retained.has(page))) return retained;
     retainedPresentationDemand.current = pages;
     return pages;
-  }, [scene.nodes, visibleNodePaths, expandedClusters]);
+  }, [scene.nodes, visibleNodePaths, expandedClusters, index]);
   useEffect(() => {
     let release: (() => void) | null = null;
     /** Hidden Obsidian leaves stay mounted; release optional work until this surface is revealed. */
@@ -2244,7 +2251,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   // Global lenses and area filters exclude candidates; camera clipping does not.
   const findNodePaths = new Set<string>();
   for (const node of scene.nodes) {
-    const zone = zoneForRole(node.role);
+    const zone = scrollZoneForRole(node.role, settings.lateralArrangement);
     if (!filterMatchedNodePaths.has(node.page.path)) continue;
     if (zone && scene.zoneViewports[zone] && !zoneDisplayLayouts[zone]?.localPositions.has(node.page.path)) continue;
     if (matchesFindNode(findQuery, node.label, node.page.path, findIncludePath)) findNodePaths.add(node.page.path);
@@ -2282,7 +2289,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     const nodes: PlexKeyboardNode[] = [];
     for (const node of scene.nodes) {
       if (!filterMatchedNodePaths.has(node.page.path)) continue;
-      const zone = zoneForRole(node.role);
+      const zone = scrollZoneForRole(node.role, settings.lateralArrangement);
       const panel = zone ? scene.zoneViewports[zone] : undefined;
       const local = zone ? zoneDisplayLayouts[zone]?.localPositions.get(node.page.path) : undefined;
       if (panel && !local) continue;
@@ -2293,7 +2300,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
         sectionY: area ? area.top + area.height / 2 : node.y });
     }
     for (const cluster of expandedClusters) for (const child of cluster.children) {
-      const zone = zoneForRole(cluster.parent.role);
+      const zone = scrollZoneForRole(cluster.parent.role, settings.lateralArrangement);
       const area = zone ? scene.zoneAreas[zone] : undefined;
       nodes.push({ id: child.key, path: child.relation.page.path, label: child.label, section: zone ?? "center",
         x: cluster.left + child.localX, y: cluster.top + child.localY - cluster.scrollTop,
@@ -3126,6 +3133,8 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   const commitNodeAreaDrop = (original: PositionedNode, nextRole: GateRole): void => {
     const center = neighborhood?.center;
     const currentRole = normalizedRole(original.role);
+    // Moving within the shared list never turns an existing challenger into a friend.
+    if (settings.lateralArrangement === "left" && nextRole === "left" && currentRole === "right") return;
     if (!center || nextRole === currentRole || !relationshipDropRoles(center, original.page, nextRole).includes(nextRole)) return;
     const current = captureSurfaceContinuation(() => viewport.current, () => plugin.actionManager.readSnapshot(actionSurfaceId));
     const commitRoot = viewport.current, commitDocument = commitRoot?.ownerDocument;
@@ -4038,7 +4047,8 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       onHoverGate={(_, gate, event) => { if (!connectDrag && !nodeDrag) scheduleHoverIntent({ kind: "gate", path: baseNode.page.path, gate }, event); }}
       onHoverEnd={() => { if (!connectDrag && !nodeDrag) clearHoverIntent(true); }}
       onHoverPreview={(_, targetEl, event) => {
-        if (!connectDrag && !nodeDrag) plugin.triggerHoverPreview(baseNode.page, targetEl, event, neighborhood.center.file?.path ?? "");
+        if (!connectDrag && !nodeDrag) hoverPreview.current?.enter(targetEl, event,
+          /** Keep native heading anchors and source-relative previews with their existing host owner. */ previewEvent => plugin.triggerHoverPreview(baseNode.page, targetEl, previewEvent, neighborhood.center.file?.path ?? ""));
       }}
       onGatePointerDown={(_, gate, event) => startGateDrag(baseNode, gate, event)}
       onNodePointerDown={(_, event) => startNodeDrag(baseNode, event)}
@@ -4071,7 +4081,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   };
 
   const standardNodes = scene.nodes.filter((node) => {
-    const zone = zoneForRole(node.role);
+    const zone = scrollZoneForRole(node.role, settings.lateralArrangement);
     return !zone || !scene.zoneViewports[zone];
   });
   const draggedBaseNode = nodeDrag ? scene.nodes.find((node) => node.page.path === nodeDrag.path) ?? null : null;
@@ -4115,14 +4125,14 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       key={zone}
       className={`kplex-area-frame kplex-area-${zone} is-edge-${area.resizeEdge}${areaSettingsMode ? " is-settings-mode" : ""}${edgeActive ? " is-active" : ""}${resizingArea === zone ? " is-resizing" : ""}`}
       left={area.left} top={area.top} width={area.width} height={area.height}
-      edge={area.resizeEdge} editing={areaSettingsMode} label={zoneTitle(zone, translate)}
+      edge={area.resizeEdge} editing={areaSettingsMode} label={zoneTitle(zone, translate, settings.lateralArrangement)}
       value={plugin.settings[config.key]} min={config.min} max={config.max}
       onHeightChange={/** Persist keyboard height edits through the same presentation-only path as pointer edits. */ (height) => { if (setAreaHeight(zone, height)) void plugin.saveSettings(false); }}
     />;
   };
 
   const renderScrollZone = (zone: ScrollZone, panel: ZoneViewport) => {
-    const allNodes = scene.nodes.filter((node) => zoneForRole(node.role) === zone && nodeDrag?.path !== node.page.path);
+    const allNodes = scene.nodes.filter((node) => scrollZoneForRole(node.role, settings.lateralArrangement) === zone && nodeDrag?.path !== node.page.path);
     const filter = zoneFilters[zone] ?? "";
     const layout = zoneDisplayLayouts[zone] ?? buildZoneDisplayLayout(zone, panel, allNodes, filter, settings, index, neighborhood?.center.path ?? activePath);
     const displayedNodes = layout.nodes.filter((node) => nodeDrag?.path !== node.page.path);
@@ -4136,8 +4146,8 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
           className="kplex-zone-filter-input"
           type="text"
           value={filter}
-          placeholder={translate("graph.filterZonePlaceholder", { zone: zoneTitle(zone, translate).toLowerCase() })}
-          aria-label={translate("graph.filterZone", { zone: zoneTitle(zone, translate) })}
+          placeholder={translate("graph.filterZonePlaceholder", { zone: zoneTitle(zone, translate, settings.lateralArrangement).toLowerCase() })}
+          aria-label={translate("graph.filterZone", { zone: zoneTitle(zone, translate, settings.lateralArrangement) })}
           onChange={(event: ChangeEvent<HTMLInputElement>) => {
             const value = event.currentTarget.value;
             setZoneFilters((current) => ({ ...current, [zone]: value }));
@@ -4149,12 +4159,12 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
           autoFocus
         />}
         <span className={`kplex-zone-filter-control${flairFilterZone === zone ? " is-new-flair" : ""}`}>
-          <span className="kplex-zone-count" aria-label={translate("graph.zoneCount", { count: layout.count, zone: zoneTitle(zone, translate).toLowerCase() })}>{layout.count}</span>
+          <span className="kplex-zone-count" aria-label={translate("graph.zoneCount", { count: layout.count, zone: zoneTitle(zone, translate, settings.lateralArrangement).toLowerCase() })}>{layout.count}</span>
           <button
             type="button"
             className={`kplex-zone-filter-button${zoneFilterOpen[zone] ? " is-on" : ""}`}
             aria-pressed={Boolean(zoneFilterOpen[zone])}
-            aria-label={translate("graph.filterZone", { zone: zoneTitle(zone, translate) })}
+            aria-label={translate("graph.filterZone", { zone: zoneTitle(zone, translate, settings.lateralArrangement) })}
             onPointerDown={(event: PointerEvent<HTMLButtonElement>) => event.stopPropagation()}
             onClick={(event: MouseEvent<HTMLButtonElement>) => {
               event.stopPropagation();
@@ -4247,10 +4257,12 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
                 event.preventDefault(); event.stopPropagation(); runNodeAction("node.context-menu", child.relation.page, child.key);
               }}
               onPointerEnter={(event: PointerEvent<HTMLDivElement>) => {
-                if (event.nativeEvent.ctrlKey || event.nativeEvent.metaKey) {
-                  plugin.triggerHoverPreview(child.relation.page, event.currentTarget, event.nativeEvent, neighborhood?.center.file?.path ?? "");
-                }
+                if (connectDrag || nodeDrag) return;
+                const target = event.currentTarget;
+                hoverPreview.current?.enter(target, event.nativeEvent,
+                  /** Expanded rows use the same modifier transitions and native preview path as full nodes. */ previewEvent => plugin.triggerHoverPreview(child.relation.page, target, previewEvent, neighborhood?.center.file?.path ?? ""));
               }}
+              onPointerLeave={/** Retire the exact mini-row before another graph can receive a modifier. */ () => hoverPreview.current?.clear()}
             >
               <span className="kplex-expanded-mini-gate" />
               {child.style.icon && <ObsidianIcon name={child.style.icon} size={cluster.parent.role === "sibling" ? 8 * siblingScale(settings) : 8} className="kplex-expanded-mini-icon" />}

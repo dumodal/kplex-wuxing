@@ -263,6 +263,14 @@ test("rendered count projection reads current numbers without changing geometry 
   const transient = { ...node, page: { ...node.page, transient: { kind: "section", sourcePath: "Center.md", actualPath: "Center.md", sectionId: "section" } },
     gateStats: { top: { visibleCount: 13, hasAny: true } } };
   calls.length = 0;assert.equal(geometry.projectNodeCounts(transient, live), transient);assert.equal(calls.length, 0);
+  const target = { ...node, page: { ...node.page, path: "section-target:one", transient: { kind: "section-target", actualPath: node.page.path, sourcePath: "Center.md", sectionId: "section" } } };
+  let canonical = { ...node.page };
+  const current = { ...live, get: path => path === node.page.path ? canonical : undefined };
+  assert.equal(geometry.presentationPage(target.page, current), canonical);
+  assert.equal(geometry.projectNodeCounts(target, current).gateStats.top.visibleCount, 9);
+  assert.deepEqual(calls, [node.page.path], "Never query the synthetic occurrence path");
+  canonical = undefined;
+  assert.equal(geometry.projectNodeCounts(target, current), target, "A removed canonical target remains unavailable");
 });
 
 test("viewport count selection includes partially clipped rows and excludes rows touching outside edges", () => {
@@ -388,6 +396,29 @@ test("section headings and clusters obey both density axes, spacing targets and 
   assert(nested(spaced).y - heading(spaced).y > nested(base).y - heading(base).y);
 });
 
+test("section relation whitespace responds to density without enlarging the empty inter-section gutter", () => {
+  const expansion = sectionFixture();
+  const scene = density => geometry.buildSectionExpandedScene(expansion, index, {...defaults, horizontalCompactingFactor:density, compactingFactor:density}, new Set(["root"]), false);
+  const loose = scene(1), dense = scene(4);
+  const firstCluster = s => {
+    const start = s.nodes.findIndex(n=>n.page.path==="Heading.md");
+    // Section relation occurrences are appended before their heading; use edge provenance to select them.
+    const paths = new Set(s.edges.filter(e=>e.id.startsWith('section-edge:')&&e.sourcePath==='Heading.md').map(e=>e.targetPath));
+    const ordinaryCount = geometry.buildScene(expansion.centerNeighborhood,index,defaults,false).nodes.length;
+    return s.nodes.filter((n,i)=>i>=ordinaryCount&&i<=start&&(paths.has(n.page.path)||n.page.path==='Heading.md'));
+  };
+  const row = s => firstCluster(s).filter(n=>n.role==='child').sort((a,b)=>a.y-b.y||a.x-b.x);
+  assert(gap(row(loose)[0],row(loose)[1],'x')>=gap(row(dense)[0],row(dense)[1],'x')+25);
+  assert(gap(row(loose)[0],row(loose)[4],'y')>=gap(row(dense)[0],row(dense)[4],'y')+10);
+  for (const [density,s] of [[1,loose],[4,dense]]) {
+    const first = firstCluster(s), start = Math.min(...first.map(n=>n.y-n.height/2));
+    const last = Math.max(...first.map(n=>n.y+n.height/2));
+    const later = s.nodes.filter(n=>n.y-n.height/2>=last-1e-8&&!first.includes(n));
+    const next = Math.min(...later.map(n=>n.y-n.height/2));
+    assert(start<last); assert(Math.abs(next-last-(density===1?48:20)*geometry.spacingPolicy(defaults).spacing)<1e-7);
+  }
+});
+
 test("independent dense/sparse axes keep zone-clipped thoughts and expanded boxes separate", () => {
   const n = neighborhood(15);
   const children = neighborhood(9).children;
@@ -406,7 +437,7 @@ test("independent dense/sparse axes keep zone-clipped thoughts and expanded boxe
         y: node.y + node.height / 2 + box.topGap + box.viewportHeight / 2 });
     }
     const clipped = occupied.flatMap(node => {
-      const panel = scene.zoneViewports[node.role];
+      const panel = scene.zoneViewports[geometry.scrollZoneForRole(node.role, settings.lateralArrangement)];
       if (!panel) return [node];
       const top = Math.max(node.y - node.height / 2, panel.top), bottom = Math.min(node.y + node.height / 2, panel.top + panel.height);
       return bottom > top ? [{ ...node, y: (top + bottom) / 2, height: bottom - top }] : [];
@@ -471,7 +502,7 @@ test("issue 175 keeps Challenger and Sibling areas disjoint at dense layout sett
   }
 });
 
-test("simplified layout shares the left side without merging roles, scroll areas or semantic edges", () => {
+test("one-sided layout shares one left scroll area without merging roles or semantic edges", () => {
   const n = neighborhood(30);
   n.leftFriends = n.children.map((relation, i) => ({ ...relation, page: page(`LF${i}`), role: "left" }));
   n.rightFriends = n.children.map((relation, i) => ({ ...relation, page: page(`RC${i}`), role: "right" }));
@@ -483,15 +514,15 @@ test("simplified layout shares the left side without merging roles, scroll areas
     const settings = { ...defaults, graphDepth, horizontalCompactingFactor: h, compactingFactor: v,
       lateralArrangement: "left", friendMaxHeight, wrapNodeLabels };
     const scene = geometry.buildScene(n, expandedIndex, settings, false, editor ? { width: 900, height: 600 } : undefined);
-    const [friends, challengers] = [scene.zoneAreas.left, scene.zoneAreas.right];
-    assert.equal(friends.left, challengers.left); assert.equal(friends.width, challengers.width);
+    const friends = scene.zoneAreas.left;
+    assert.equal(scene.zoneAreas.right, undefined);
     assert(friends.left + friends.width <= scene.zoneAreas.parent.left + 1e-8,
       "The shared left strip must not overlap the parent area");
-    assert(friends.top + friends.height + 24 <= challengers.top + 1e-8);
-    assert(friends.height >= 72 && challengers.height >= 72);
-    assert.equal(friends.height + challengers.height + 24, Math.max(168, friendMaxHeight));
-    assert(scene.zoneViewports.left && scene.zoneViewports.right, "Both long groups keep independent overflow owners");
-    assert(scene.zoneViewports.left.top + scene.zoneViewports.left.height <= scene.zoneViewports.right.top - 24 + 1e-8);
+    assert.equal(friends.height, Math.max(120, friendMaxHeight));
+    assert(scene.zoneViewports.left, "Both groups share the bounded overflow owner");
+    assert.equal(scene.zoneViewports.right, undefined);
+    assert.equal(geometry.scrollZoneForRole("right", "left"), "left");
+    assert.equal(geometry.scrollZoneForRole("next", "left"), "left");
     assert(scene.nodes.filter(node => node.role === "left" || node.role === "right").every(node => node.x < 0));
     assert(scene.nodes.filter(node => node.role === "sibling").every(node => node.x > 0));
     const split = geometry.buildScene(n, expandedIndex, { ...settings, lateralArrangement: "split" }, false,
@@ -505,7 +536,7 @@ test("simplified layout shares the left side without merging roles, scroll areas
         y: node.y + node.height / 2 + box.topGap + box.viewportHeight / 2 });
     }
     const clipped = occupied.flatMap(node => {
-      const panel = scene.zoneViewports[node.role];
+      const panel = scene.zoneViewports[geometry.scrollZoneForRole(node.role, settings.lateralArrangement)];
       if (!panel) return [node];
       const top = Math.max(node.y - node.height / 2, panel.top), bottom = Math.min(node.y + node.height / 2, panel.top + panel.height);
       return bottom > top ? [{ ...node, y: (top + bottom) / 2, height: bottom - top }] : [];

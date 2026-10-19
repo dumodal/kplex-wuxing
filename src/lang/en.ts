@@ -54,6 +54,8 @@ export const englishCatalog = {
   "themes.staleDraft": {"message": "This unsaved draft belongs to {name}. A different theme was selected. Discard this draft and reopen the editor.", "context": "Named K-Plex appearance theme: migration, automatic private copy and stale editor ownership.", "params": ["name"], "referenceParams": ["name"]},
   "themes.discardDraft": {"message": "Discard draft", "context": "Named K-Plex appearance theme: migration, automatic private copy and stale editor ownership.", "params": [], "referenceParams": []},
   "themes.unavailable": {"message": "This appearance uses a newer or unsupported format. Theme changes are unavailable.", "context": "Named K-Plex appearance theme: migration, automatic private copy and stale editor ownership.", "params": [], "referenceParams": []},
+  "themes.nativeBaseTitle": {"message":"K-Plex now follows your Obsidian theme","context":"Title of the one-time native-base theme migration notification modal.","params":[],"referenceParams":[]},
+  "themes.nativeBaseAdopted": {"message":"K-Plex now uses Obsidian's base colors while keeping your semantic styles. Your previous theme is preserved. Find themes under Visual styling in K-Plex settings.","context":"One-time 0.2.0 native-base adoption notice; previous themes remain available.","params":[],"referenceParams":[]},
   "themes.migrationMessage": {"message": "Your previous appearance is saved as ‘User theme’. Choose ‘Default base + my semantic colors’ to use Obsidian’s colors while keeping your custom styles.", "context": "Named K-Plex appearance theme: migration, automatic private copy and stale editor ownership.", "params": [], "referenceParams": []},
   "colors.colorsPage": {"message": "Colors", "context": "Paired color settings and relationship direction labels. Stable semantic IDs are unchanged.", "params": []},
   "colors.labelsPage": {"message": "Labels", "context": "Paired color settings and relationship direction labels. Stable semantic IDs are unchanged.", "params": []},
@@ -3123,6 +3125,7 @@ export const englishCatalog = {
     context: "Plex graph controls, menus, relationship evidence, and accessibility copy.",
     params: [],
   },
+  "graph.zoneFriendsChallengers": {"message":"Friends / Challengers","context":"Shared left relationship area in one-sided layout.","params":[],"referenceParams":[]},
   "graph.zoneFriendsPrevious": {
     message: "Friends / Previous",
     context: "Plex graph controls, menus, relationship evidence, and accessibility copy.",

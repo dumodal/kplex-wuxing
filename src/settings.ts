@@ -2040,7 +2040,7 @@ export class KplexSettingTab extends PluginSettingTab {
   private appearanceThemeDefinitions(): SettingDefinitionItem<DeclarativeSettingKey>[] {
     const t = this.kplexPlugin.translator;
     return [{name: t("themes.label"), desc: t("themes.help"), render: /** Mount native controls only on the displayed page/search result. */ setting => this.mountThemeControls(setting)},
-      {name: t("themes.migrationMessage"), visible: /** The durable marker makes this one dismissible migration message. */ () => this.kplexPlugin.settings.appearanceThemes?.migrationNotice === true,
+      {name: t(this.kplexPlugin.settings.appearanceThemes?.nativeBaseMigration === 1 ? "themes.nativeBaseAdopted" : "themes.migrationMessage"), visible: /** The durable marker makes this one dismissible migration message. */ () => this.kplexPlugin.settings.appearanceThemes?.migrationNotice === true,
         render: /** Native teardown releases the exact message row, including popout settings. */ setting => {
           let active = true, pending = false; const plugin = this.kplexPlugin;
           setting.addExtraButton(/** Persist dismissal as library metadata without any graph work. */ button => {

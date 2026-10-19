@@ -11,7 +11,7 @@ import ts from "typescript";
 export function styleSettingsHostSource(root) {
   const source = ts.createSourceFile("main.ts", readFileSync(new URL("src/main.ts", root), "utf8"), ts.ScriptTarget.Latest, true);
   const names = new Set(["updateStyleSettings", "saveSettings", "enqueueSettingsWrite", "settingsSnapshotForPersistence", "persistSettingsSnapshot", "setGraphLenses",
-    "captureAppearanceOwner", "isAppearanceOwnerCurrent", "subscribeAppearanceThemes", "bindAppearanceEditor", "appearanceThemeNames", "updateAppearanceThemes",
+    "captureAppearanceOwner", "isAppearanceOwnerCurrent", "subscribeAppearanceThemes", "bindAppearanceEditor", "appearanceThemeNames", "updateAppearanceThemes", "showAppearanceMigrationNotification",
     "createAppearanceTheme", "resetAppearanceThemeColors", "importLegacyAppearance", "settingsForWrite", "writeSettingsSnapshot", "updateOntologyField", "refreshSavedSettings",
     "initializeSettingsReconciliation", "onExternalSettingsChange", "queueExternalSettingsAdoption", "reportExternalSettingsFailure", "installExternalSettings", "updateActionPreferences", "receivedSettingsOwner", "receivedSettingsRevision"]);
   const methods = [];
@@ -31,10 +31,11 @@ export function styleSettingsHostSource(root) {
     import {readObsidianPresentationEnvironment} from "./src/adapters/obsidian/presentationEnvironment";
     import {migrateActionPreferences,sanitizeActionPreferences,compileActionBindings} from "./src/core/plex/actionPreferences";
     import {Notice} from "obsidian";
+    import {NotificationModal} from "./src/ui/NotificationModal";
     import {mergeGraphLensDefinitions} from "./src/lens/GraphLens";
     import {requireNamedColor} from "./src/core/plex/colorEditing";
     import {appearanceColorReferences,STYLE_SETTINGS_KEYS} from "./src/core/contracts/appearance";
     import {cyclicSemanticColorSlots,migrateColorPreferences} from "./src/core/plex/colorPreferences";
     import {captureSettingsPolicy,classifySettingsChange,isStyleOnlySettingsChange} from "./src/core/graph/settingsPolicy";
-    export class StyleSettingsHost {${methods.join("\n")}}`;
+    export class StyleSettingsHost {actionDialogs = new Map(); ${methods.join("\n")}}`;
 }

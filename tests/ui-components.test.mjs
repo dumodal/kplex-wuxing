@@ -1326,8 +1326,9 @@ import React, { useId, useMemo } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { alphaHexToCss, resolveNodeStyle, currentNodeColorStyle, nodePaint, nodePaintFallbacks } from ${JSON.stringify(join(root, "src/index/style.ts"))};
-import { effectiveLabelLimit, nodeLabelFontSize, gateDiameter, projectNodeCounts, expandedMiniLayout, siblingScale } from ${JSON.stringify(join(root, "src/ui/layout.ts"))};
+import { effectiveLabelLimit, nodeLabelFontSize, gateDiameter, projectNodeCounts, scrollZoneForRole, expandedMiniLayout, siblingScale } from ${JSON.stringify(join(root, "src/ui/layout.ts"))};
 import { physicalPositionLabel } from ${JSON.stringify(join(root, "src/ui/features/positionPresentation.ts"))};
+import { HoverPreview, bindHoverPreview } from ${JSON.stringify(join(root, "src/ui/components/hoverPreview.ts"))};
 
 const result = document.querySelector("#result");
 const check = (condition, message) => { if (!condition) throw new Error(message); };
@@ -1340,6 +1341,7 @@ ${uiDefinitions("src/ui/ThoughtNode.tsx", ["GATES", "ThoughtNode"])}
 const settings = { horizontalCompactingFactor: 2, compactingFactor: 2, baseFontSize: 12.4, wrapNodeLabels: false, showNeighborCount: true, graphDepth: 2, minLinkLength: 18, childColumns: 2, maxItemCount: 100, siblingRelativeSize: 85 };
 const translate = (key) => key;
 const interaction = { gates: new Set(), nodePaths: new Set() }, connectDrag = null, nodeDrag = null;
+const hoverPreview = {current:new HoverPreview()};
 // The production unfiltered projection is absent; rename reconciliation must not invent a filtered read.
 const globalFiltering = false, filteredGateCounts = null, nodeVisuals = new Map();
 const predicate = null, lenses = { lenses: [] }, paintLenses = lenses, predicateEngine = {}, predicateRevision = 0, layoutRevision = 0;
@@ -1359,7 +1361,8 @@ const Keymap={isModEvent:event=>event.ctrlKey||event.metaKey},openNode=(...args)
 const runNodeAction=(...args)=>activated.push(args);
 ${uiDefinitions("src/ui/PlexGraph.tsx", ["isPlaceholderFolderGesture", "activateNode"])}
 const manager={draggable:null,dragLink:(event,linktext,sourcePath,title,source)=>({type:"link",linktext,sourcePath,title,source}),onDragStart(event,value){this.draggable=value},onDragEnd(){this.draggable=null}};
-const plugin={actionManager:{dispatch:request=>materialized.push(request)},app:{dragManager:manager,vault:{getFileByPath:path=>[centerPage,attachmentPage,placeholderPage,sentinelPage,miniPage].find(page=>page.file?.path===path)?.file??null}}};
+const previewed=[];
+const plugin={triggerHoverPreview:(page,target,event)=>previewed.push({page,target,ctrl:event.ctrlKey}),actionManager:{dispatch:request=>materialized.push(request)},app:{dragManager:manager,vault:{getFileByPath:path=>[centerPage,attachmentPage,placeholderPage,sentinelPage,miniPage].find(page=>page.file?.path===path)?.file??null}}};
 // The production center renderer publishes already-rendered local gate coverage for readiness.
 const renderedCenterGates = { current: null };
 const gates = Object.fromEntries(["top", "bottom", "left", "right"].map((gate) => [gate, { visibleCount: 0, hasAny: false, complete: true }]));
@@ -1372,7 +1375,7 @@ function Scene({ scene: sourceScene, expanded }) {
   const sectionExpansion = null, expandedScrollTop = useMemo(() => ({}), []);
   const visibleNodePaths = useMemo(() => new Set(scene.nodes.map((item) => item.page.path)), [scene.nodes]);
   const renderedNodeMap = useMemo(() => new Map(scene.nodes.map((item) => [item.page.path, { ...item }])), [scene.nodes]);
-  ${uiDefinitions("src/ui/PlexGraph.tsx", ["paintedNodeStyles", "sceneNodeKeys", "expandedClusters", "beginNativeNodeDrag", "endNativeNodeDrag", "renderNode", "renderExpandedCluster", "zoneForRole"])}
+  ${uiDefinitions("src/ui/PlexGraph.tsx", ["paintedNodeStyles", "sceneNodeKeys", "expandedClusters", "beginNativeNodeDrag", "endNativeNodeDrag", "renderNode", "renderExpandedCluster"])}
   const miniKeys = expandedClusters.flatMap((cluster) => cluster.children.map((child) => child.key));
   check(new Set(miniKeys).size === miniKeys.length, "expanded connector keys collide during rename");
   return <><div className="kplex-nodes">{scene.nodes.map((item) => renderNode(item, { ...item }))}</div><div>{expandedClusters.map(renderExpandedCluster)}</div></>;
@@ -1406,6 +1409,13 @@ try {
   flushSync(()=>real.dispatchEvent(new MouseEvent('click',{bubbles:true,ctrlKey:true})));
   check(activated.length===beforeActivations+2,'Modified real-file click was incorrectly reserved for placeholder creation');
   const mini=container.querySelector(".kplex-expanded-mini-thought"),transfer=new DataTransfer();
+  const releasePreview=bindHoverPreview(container,hoverPreview.current),beforePreviews=previewed.length;
+  flushSync(()=>mini.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse'})));
+  window.dispatchEvent(new KeyboardEvent('keydown',{key:'Control',ctrlKey:true}));
+  check(previewed.length===beforePreviews+1&&previewed.at(-1).page===miniPage&&previewed.at(-1).target===mini&&previewed.at(-1).ctrl,'Stationary expanded-row preview lost its exact occurrence');
+  flushSync(()=>mini.dispatchEvent(new PointerEvent('pointerout',{bubbles:true,pointerType:'mouse'})));
+  window.dispatchEvent(new KeyboardEvent('keyup',{key:'Control'}));window.dispatchEvent(new KeyboardEvent('keydown',{key:'Control',ctrlKey:true}));
+  check(previewed.length===beforePreviews+1,'Expanded row retained preview after leave');releasePreview();
   check(mini.draggable,"Expanded descendants do not expose native dragging");
   flushSync(()=>mini.dispatchEvent(new DragEvent("dragstart",{bubbles:true,cancelable:true,dataTransfer:transfer})));
   check(manager.draggable?.linktext===miniPage.path&&manager.draggable?.source.owner===mini,"Expanded drag did not retain its endpoint and distinct occurrence authority");
@@ -2129,6 +2139,7 @@ import {effectiveLabelLimit,nodeLabelFontSize,gateDiameter} from ${JSON.stringif
 import {physicalPositionLabel} from ${JSON.stringify(join(root,'src/ui/features/positionPresentation.ts'))};
 import {canDisplayNodeImage} from ${JSON.stringify(join(root,'src/core/plex/nodeImagePolicy.ts'))};
 import {createTranslator} from ${JSON.stringify(join(root,'src/lang/index.ts'))};
+import {HoverPreview,bindHoverPreview} from ${JSON.stringify(join(root,'src/ui/components/hoverPreview.ts'))};
 const ObsidianIcon=()=>null;
 ${uiDefinitions('src/ui/ThoughtNode.tsx',['GATES','ThoughtNode'])}
 const result=document.querySelector('#result'),container=document.body.appendChild(document.createElement('div')),root=createRoot(container);
@@ -2136,7 +2147,8 @@ const check=(condition,message)=>{if(!condition)throw Error(message)},translate=
 const label='A long meaningful note name',page={path:'Folder/Original.md',name:label},gates=Object.fromEntries(['top','bottom','left','right'].map(gate=>[gate,{visibleCount:0,complete:true,hasAny:false}]));
 const node={page,label,role:'child',style:{prefix:'@ ',maxLabelLength:8},x:0,y:0,width:180,height:40,gateStats:gates},settings={baseFontSize:12.4,showNeighborCount:false};
 const events={preview:0,node:0,gate:0,end:0};
-const props={node,settings,selected:false,highlighted:false,dimmed:false,highlightedGates:new Set(),translate,onActivate:noop,onOpen:noop,onHoverNode:()=>events.node++,onHoverGate:()=>events.gate++,onHoverEnd:()=>events.end++,onHoverPreview:()=>events.preview++,onGatePointerDown:noop,onNodePointerDown:noop};
+const preview=new HoverPreview(),releasePreview=bindHoverPreview(container,preview);
+const props={node,settings,selected:false,highlighted:false,dimmed:false,highlightedGates:new Set(),translate,onActivate:noop,onOpen:noop,onHoverNode:()=>events.node++,onHoverGate:()=>events.gate++,onHoverEnd:()=>{events.end++;preview.clear()},onHoverPreview:(_,target,event)=>preview.enter(target,event,()=>events.preview++),onGatePointerDown:noop,onNodePointerDown:noop};
 try{
  let firstNameId;
  for(const mode of [null,'thumbnail','replace']){
@@ -2155,9 +2167,17 @@ try{
  const element=container.querySelector('.kplex-thought');
  element.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse'}));
  check(events.node===1&&events.preview===0,'Unmodified pointer unexpectedly opened page preview');
+ window.dispatchEvent(new KeyboardEvent('keydown',{key:'Control',ctrlKey:true}));
+ check(events.preview===1,'Stationary Ctrl did not open preview');
+ window.dispatchEvent(new KeyboardEvent('keydown',{key:'Control',ctrlKey:true,repeat:true}));
+ check(events.preview===1,'Held Ctrl repeated the preview');
+ window.dispatchEvent(new KeyboardEvent('keyup',{key:'Control'}));
+ window.dispatchEvent(new KeyboardEvent('keydown',{key:'Meta',metaKey:true}));
+ check(events.preview===2,'Stationary Cmd did not reopen preview');
+ window.dispatchEvent(new KeyboardEvent('keyup',{key:'Meta'}));
  element.dispatchEvent(new PointerEvent('pointerout',{bubbles:true,pointerType:'mouse'}));
  element.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse',ctrlKey:true}));
- check(events.preview===1&&events.node===2,'Explicit page preview stopped forwarding');
+ check(events.preview===3&&events.node===2,'Explicit page preview stopped forwarding');
  const gate=container.querySelector('.kplex-gate');
  element.dispatchEvent(new PointerEvent('pointerout',{bubbles:true,pointerType:'mouse',relatedTarget:gate}));
  gate.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse',relatedTarget:element}));
@@ -2166,7 +2186,7 @@ try{
  const ids=[...container.querySelectorAll('.kplex-thought')].map(node=>node.getAttribute('aria-labelledby'));
  check(ids.length===2&&new Set(ids).size===2&&ids.every(id=>document.getElementById(id)),'Repeated node occurrences share accessible-name IDs');
  result.dataset.status='passed';result.textContent='Node tooltip ownership passed';
-}catch(error){result.dataset.status='failed';result.textContent=String(error?.stack??error)}finally{flushSync(()=>root.unmount());container.remove()}
+}catch(error){result.dataset.status='failed';result.textContent=String(error?.stack??error)}finally{releasePreview();flushSync(()=>root.unmount());container.remove()}
 `;
 }
 
@@ -2236,6 +2256,19 @@ try{
   check(text.textContent===label,"Short center label was character-truncated");
   check(text.scrollWidth<=text.clientWidth,"Short center label was CSS-clipped at font "+baseFontSize+", density "+density+": "+text.scrollWidth+">"+text.clientWidth);
   check(size.width<=style.maxWidth,"Center sizing ignored its explicit width cap");
+ }
+ for(const font of ["Arial, sans-serif","Georgia, serif","Segoe UI, sans-serif","system-ui"])for(const role of ["child","center"])for(const baseFontSize of [12.4,20,28])for(const strokeWidth of [0,1,4,8])for(const wrapNodeLabels of [false,true]){
+  container.style.fontFamily=font;
+  const label="Typography gyjpq",settings={baseFontSize,wrapNodeLabels,showNeighborCount:false};
+  const style={fontSize:25,maxLabelLength:120,maxWidth:800,strokeWidth};
+  const size=nodeSize(label,25,settings,role==="center",120,800,strokeWidth),node={page:{path:"Glyph.md",file:{extension:"md"}},label,role,x:0,y:0,...size,style,gateStats:gates,neighbourCount:0};
+  flushSync(()=>root.render(<ThoughtNode node={node} settings={settings} selected={false} highlighted={false} dimmed={false} highlightedGates={new Set()}
+   translate={key=>key} onActivate={noop} onOpen={noop} onHoverNode={noop} onHoverGate={noop} onHoverEnd={noop} onHoverPreview={noop} onGatePointerDown={noop} onNodePointerDown={noop}/>));
+  const text=container.querySelector(".kplex-thought-text"),box=text.parentElement;
+  check(text.scrollHeight<=text.clientHeight+1,"Glyph line clipped: "+role+"/font"+baseFontSize+"/border"+strokeWidth+"/wrap"+wrapNodeLabels);
+  check(box.scrollHeight<=box.clientHeight+1,"Label flex box clipped");
+  const range=document.createRange();range.selectNodeContents(text);const ink=range.getBoundingClientRect(),clip=text.getBoundingClientRect();
+  check(ink.top>=clip.top&&ink.bottom<=clip.bottom,"Font metrics cross the text clip boundary: "+font+"/"+role+"/font"+baseFontSize+"/border"+strokeWidth+"/wrap"+wrapNodeLabels+JSON.stringify({ink:{top:ink.top,bottom:ink.bottom},clip:{top:clip.top,bottom:clip.bottom},padding:getComputedStyle(text).padding,line:getComputedStyle(text).lineHeight,font:getComputedStyle(text).fontSize}));
  }
  flushSync(()=>root.unmount());check(container.childElementCount===0,"Typography test retained nodes");
  result.dataset.status="passed";result.textContent="Density-independent rendered typography passed";
@@ -2330,7 +2363,7 @@ const listeners=new Set(),plugin={visible:true,subscribeKplexVisibility(fn){list
 let fixture;
 class PeekBoundary extends React.Component{state={error:null};static getDerivedStateFromError(error){return{error:String(error.stack||error)}}render(){return this.state.error?<pre data-peek-error>{this.state.error}</pre>:this.props.children}}
 function Graph(){
- const viewport=useRef(null),hoverHighlight=useRef(null),[hover,setHover]=useState(null),[crossLinkPeek,setCrossLinkPeek]=useState(null),[required,setRequired]=useState(true),[showCrossLinks,setShown]=useState(false),[hidden,setHidden]=useState([]);
+ const viewport=useRef(null),hoverHighlight=useRef(null),hoverPreview=useRef(null),[hover,setHover]=useState(null),[crossLinkPeek,setCrossLinkPeek]=useState(null),[required,setRequired]=useState(true),[showCrossLinks,setShown]=useState(false),[hidden,setHidden]=useState([]);
  const viewSettings={hoverHighlightRequiresAlt:required},clearEdgeTooltip=()=>{};
  ${uiDefinitions('src/ui/PlexGraph.tsx',['scenePolicyKey','sceneGeometryKey','sceneGeometry','scene','clearHoverIntent','scheduleHoverIntent'])}
  const visibleNodePaths=useMemo(()=>new Set(scene.nodes.filter(node=>!hidden.includes(node.page.path)).map(node=>node.page.path)),[scene.nodes,hidden]);

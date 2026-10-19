@@ -1,5 +1,5 @@
 /**
- * Exact-build native section grouping and stationary inbound-edit acceptance in Small.
+ * Exact-build native section grouping, counts, preview anchors and stationary inbound edits in Small.
  * Reuses bounded CLI transport/config guards, owns four notes and one native Plex, and restores
  * its settings/workspace on every exit. Counts presentation operations, never comparative timings.
  */
@@ -34,15 +34,15 @@ async function scenario(app, c) {
     restoreWindow = () => { win.setBounds(bounds); if (maximized) win.maximize(); if (minimized) win.minimize(); };
     remote.app.show?.(); remote.app.focus({steal:true}); win.restore(); win.show(); win.focus();
     createdFolder = await app.vault.createFolder(folder);
-    for (const name of ["Preamble", "B", "C", "Center"]) {
-      const body = name === "Center" ? `[[${folder}/Preamble]]\n# First\n[[${folder}/B]]\n[[${folder}/B]]\n# Second\n[[${folder}/C]]\n` : "A disposable section fixture.\n";
+    for (const name of ["Preamble", "B", "C", "L1", "L2", "R1", "R2", "Center"]) {
+      const body = name === "Center" ? `---\n${JSON.stringify(p.settings.hierarchy.leftFriends[0])}:\n  - "[[${folder}/L1]]"\n  - "[[${folder}/L2]]"\n${JSON.stringify(p.settings.hierarchy.rightFriends[0])}:\n  - "[[${folder}/R1]]"\n  - "[[${folder}/R2]]"\n---\n[[${folder}/Preamble]]\n# First\n[[${folder}/B]]\n[[${folder}/B]]\n# Second\n[[${folder}/C]]\n` : name === 'B' ? '---\naliases:\n  - "Typography gyjpq"\n---\nA disposable section fixture.\n' : "A disposable section fixture.\n";
       const file = await app.vault.create(path(name), body); owned.push(file);
     }
     await until(() => owned.every(file => app.metadataCache.getFileCache(file)), "Native fixture metadata absent");
     Object.assign(p.settings, { documentSyncMode: "off", sidecarOpen: false, followActiveFile: false,
       autoOpenCentralDocument: false, embedCentralNode: false, showInferredNodes: true,
       showPageNodes: true, showFolderNodes: false, showTagNodes: false, graphDepth: 1,
-      renderSiblings: false, graphLenses: [], applyPowerFilter: false, animationSpeed: 0, lastActivePath: path("Center") });
+      renderSiblings: false, renderAlias: true, nameFields: 'aliases', graphLenses: [], applyPowerFilter: false, animationSpeed: 0, lastActivePath: path("Center") });
     for (const file of owned) { p.index.insertCreatedFile(file); releases.push(p.index.acquireSemanticDemand(file.path)); }
     await until(() => !p.index.hasPendingSemanticPreparation(), "Fixture semantic preparation pending");
     leaf = app.workspace.getLeaf("tab");
@@ -51,11 +51,94 @@ async function scenario(app, c) {
     await until(() => [...p.actionSurfaceHosts.values()].some(registration => registration.leaf === leaf), "Owned action surface absent");
     p.notifyNavigation(path("Center"), leaf);
     await until(() => direct("Center"), "Owned center did not render");
+    const root = leaf.view.contentEl;
+    const profileKey = 'desktop:leaf', priorProfile = p.settings.layoutProfiles[profileKey];
+    const priorHeight = p.settings.friendMaxHeight;
+    p.settings.layoutProfiles = {...p.settings.layoutProfiles, [profileKey]:{compactingFactor:2,parentColumns:2,childColumns:4,...priorProfile,lateralArrangement:'left'}};
+    p.settings.friendMaxHeight = 120; p.index.notifyPresentation();
+    await until(() => root.querySelector('.kplex-zone-left .kplex-role-left') && root.querySelector('.kplex-zone-left .kplex-role-right'), 'Shared list omitted a semantic lateral group');
+    check(!root.querySelector('.kplex-zone-right'), 'One-sided mode retained a second lateral panel');
+    const panel = root.querySelector('.kplex-zone-left'), scroll = panel.querySelector('.kplex-zone-scroll');
+    check(panel.querySelector('.kplex-zone-count').textContent === '4', 'Shared list count omitted challengers');
+    check(scroll.scrollHeight > scroll.clientHeight, 'Combined native list did not overflow');
+    const camera = root.querySelector('.kplex-camera');
+    const wheelChecks = [];
+    for (const modifier of [null,'ctrlKey','metaKey']) {
+      const before = camera.style.transform, bounds = scroll.getBoundingClientRect();
+      const event = new WheelEvent('wheel',{bubbles:true,cancelable:true,deltaY:-100,clientX:bounds.x+20,clientY:bounds.y+20,ctrlKey:modifier==='ctrlKey',metaKey:modifier==='metaKey'});
+      scroll.dispatchEvent(event); await wait(100);
+      const changed = before !== camera.style.transform;
+      check(changed === !!modifier && event.defaultPrevented === !!modifier, 'Bounded wheel modifier routing failed: '+modifier);
+      wheelChecks.push({modifier,zoomed:changed,prevented:event.defaultPrevented});
+    }
+    panel.querySelector('.kplex-zone-filter-button').click();
+    await until(() => panel.querySelector('.kplex-zone-filter-input'), 'Shared filter did not open');
+    const filter = panel.querySelector('.kplex-zone-filter-input');
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(filter,'R2');
+    filter.dispatchEvent(new Event('input',{bubbles:true}));
+    await until(() => panel.querySelector('.kplex-zone-count').textContent === '1', 'Shared filter did not search challengers');
+    check(panel.querySelector('.kplex-role-right') && !panel.querySelector('.kplex-role-left'), 'Filtered shared list changed semantic role');
+    panel.querySelector('.kplex-zone-filter-button').click();
+    p.settings.layoutProfiles = {...p.settings.layoutProfiles, [profileKey]:priorProfile};
+    p.settings.friendMaxHeight = priorHeight; p.index.notifyPresentation();
     const fold = leaf.view.contentEl.querySelector(".kplex-role-center .kplex-section-fold-handle");
     check(fold, "Central outline fold control missing"); fold.click();
     await until(() => section("B") && section("C"), "Ordinary links not grouped under headings");
     check(direct("Preamble") && !direct("B") && !direct("C"), "Preamble/body partition incorrect");
     check(nodes().filter(node => node.dataset.kplexPath.endsWith(":" + path("B"))).length === 1, "Repeated links duplicated the section target");
+    const sectionTarget = () => nodes().find(node => node.dataset.kplexPath.endsWith(":" + path("B")));
+    await until(() => sectionTarget() && [...sectionTarget().querySelectorAll('.kplex-gate-count')].some(label => /\d/.test(label.textContent))
+      && ![...sectionTarget().querySelectorAll('.kplex-gate-count')].some(label => label.textContent === '…'), "Section target retained unavailable counts");
+    const counts = [...sectionTarget().querySelectorAll('.kplex-gate-count')].map(label => label.textContent);
+    check(sectionTarget().querySelector('[data-kplex-gate="top"]').dataset.tooltipPosition === 'bottom', 'Parent gate does not prefer below');
+    check(sectionTarget().querySelector('[data-kplex-gate="bottom"]').dataset.tooltipPosition === 'top', 'Child gate lost above preference');
+    const previewEvents = [];
+    const previewRef = app.workspace.on('hover-link', event => { if (event.source === 'k-plex-react-view') previewEvents.push(event.linktext); });
+    restores.push(() => app.workspace.offref(previewRef));
+    const heading = nodes().find(node => node.dataset.kplexPath.startsWith('kplex-section:'));
+    check(heading, 'Rendered heading absent');
+    heading.dispatchEvent(new PointerEvent('pointerover', {bubbles:true,pointerType:'mouse',ctrlKey:true}));
+    await until(() => previewEvents.some(link => link === path('Center')+'#First'), 'Modified heading hover omitted the heading anchor');
+    heading.dispatchEvent(new PointerEvent('pointerout',{bubbles:true,pointerType:'mouse'}));
+    const stationaryPreviews = [];
+    for (const key of ['Control','Meta']) {
+      const before = previewEvents.length;
+      heading.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse'}));
+      window.dispatchEvent(new KeyboardEvent('keydown',{key,ctrlKey:key==='Control',metaKey:key==='Meta'}));
+      await until(()=>previewEvents.length===before+1,'Stationary '+key+' hover did not preview');
+      check(previewEvents.at(-1)===path('Center')+'#First','Stationary preview lost its section anchor');
+      window.dispatchEvent(new KeyboardEvent('keydown',{key,ctrlKey:key==='Control',metaKey:key==='Meta',repeat:true}));
+      check(previewEvents.length===before+1,'Held modifier repeated native preview');
+      stationaryPreviews.push(key);window.dispatchEvent(new KeyboardEvent('keyup',{key}));
+      heading.dispatchEvent(new PointerEvent('pointerout',{bubbles:true,pointerType:'mouse'}));
+    }
+    // The actual Electron pointer/key path must show a native popover, not only emit hover-link.
+    win.webContents.sendInputEvent({type:'mouseMove',x:2,y:2});await wait(150);
+    const headingRect=heading.getBoundingClientRect();
+    win.webContents.sendInputEvent({type:'mouseMove',x:Math.round(headingRect.x+headingRect.width/2),y:Math.round(headingRect.y+headingRect.height/2),modifiers:[]});
+    await until(()=>heading.matches(':hover'),'Native pointer did not reach the section heading');
+    try {
+      win.webContents.sendInputEvent({type:'keyDown',keyCode:'Control',modifiers:['control']});
+      await until(()=>p.hoverParent.hoverPopover?.hoverEl.isConnected&&p.hoverParent.hoverPopover.hoverEl.getClientRects().length,'Stationary native Ctrl did not show the actual preview popover');
+      stationaryPreviews.push('native Control popover');
+    } finally {
+      win.webContents.sendInputEvent({type:'keyUp',keyCode:'Control',modifiers:[]});
+      win.webContents.sendInputEvent({type:'mouseMove',x:2,y:2});
+    }
+
+    // Large-label layout uses the same actual node and stylesheet, rather than another text model.
+    const priorFont = p.settings.baseFontSize;
+    p.settings.baseFontSize = 28; p.index.notifyPresentation();
+    await until(() => sectionTarget() && parseFloat(getComputedStyle(sectionTarget()).fontSize) > 20, 'Large label setting did not render');
+    await wait(100);
+    const text = sectionTarget().querySelector('.kplex-thought-text'), label = text?.parentElement;
+    const range = text?.ownerDocument.createRange();range?.selectNodeContents(text);
+    const ink = range?.getBoundingClientRect(),clip = text?.getBoundingClientRect();
+    const fontMetrics = text && label ? {font:getComputedStyle(text).fontSize,lineHeight:getComputedStyle(text).lineHeight,textHeight:text.clientHeight,textScroll:text.scrollHeight,labelHeight:label.clientHeight,labelScroll:label.scrollHeight,nodeHeight:sectionTarget().clientHeight,nodeBox:getComputedStyle(sectionTarget()).height,nodeLineHeight:getComputedStyle(sectionTarget()).lineHeight,padding:getComputedStyle(sectionTarget()).padding,border:getComputedStyle(sectionTarget()).borderWidth} : null;
+    c.progress = {phase:'large label',fontMetrics,wheelChecks,counts,previewEvents};
+    check(text && label && text.scrollHeight <= text.clientHeight + 1 && label.scrollHeight <= label.clientHeight + 1, 'Large label line box clipped');
+    check(ink && clip && ink.top>=clip.top && ink.bottom<=clip.bottom,'Large glyph crosses its own clipping boundary');
+    p.settings.baseFontSize = priorFont; p.index.notifyPresentation();
     const centerMtime = app.vault.getFileByPath(path("Center")).stat.mtime;
     const b = app.vault.getFileByPath(path("B"));
     c.progress = { phase: "inbound-add" };
@@ -83,7 +166,7 @@ async function scenario(app, c) {
     await wait(300);
     for (const [key, value] of Object.entries(work)) check(value === 0, "Presentation performed " + key);
     check(direct("Center") && app.vault.getFileByPath(path("Center")).stat.mtime === centerMtime, "Stationary center changed");
-    c.progress = { phase: "complete", cases: ["native fold grouping", "preamble and repeated links", "stationary inbound add", "stationary inbound removal", "visibility round trip"], work };
+    c.progress = { phase: "complete", cases: ["shared lateral list and challenger filter", "modified wheel over overflow", "native fold grouping", "preamble and repeated links", "canonical section target counts", "modified heading preview anchor", "stationary Ctrl/Cmd preview", "large label ink boundary", "parent below and child above tooltip preference", "stationary inbound add", "stationary inbound removal", "visibility round trip"], stationaryPreviews,wheelChecks, counts, previewEvents, fontMetrics, work };
     return c.progress;
   } catch (error) {
     failure = error;

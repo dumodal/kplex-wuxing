@@ -9,6 +9,8 @@
  * pending native work neither replays disk writes nor accumulates one task per settings edit.
  * Appearance identities use that same queue. Unsupported color containers persist verbatim and
  * remain read-only; palette validation and semantic-cycle checks precede any durable write.
+ * Committed base-color upgrades use a native notification modal; acknowledgment shares the
+ * library metadata queue and unload preserves undismissed notifications for the next startup.
  * Unsuccessful source-backed startup adoption reports incomplete coverage rather than implying
  * that index preparation is still running; it never grants semantic write authority.
  * File deletion captures its ontology-cleanup preference before consent; settings navigation
@@ -44,6 +46,7 @@ import { appearanceColorReferences } from "./core/contracts/appearance";
 import { requireNamedColor } from "./core/plex/colorEditing";
 import * as appearanceThemes from "./core/plex/appearanceThemes";
 import type {StyleEditorModal} from "./ui/StyleEditorModal";
+import {NotificationModal} from "./ui/NotificationModal";
 
 import { FileView, ItemView, MarkdownView, Menu, Notice, Platform, Plugin, TFile, TFolder, apiVersion, getLanguage, getAllTags, normalizePath, type Editor, type HoverParent, type WorkspaceLeaf } from "obsidian";
 import { captureSettingsPolicy, classifySettingsChange, isStyleOnlySettingsChange, type SettingsPolicy } from "./core/graph/settingsPolicy";
@@ -162,7 +165,7 @@ type RecentIndexedNavigationTarget = {
 };
 
 /** Finite appearance intents cross the same settings queue; initialization/import never add another writer. */
-type StyleCommitOptions = Readonly<{themeAction?: appearanceThemes.AppearanceThemeAction; legacyImport?: unknown; initializeThemes?: {existing: boolean};
+type StyleCommitOptions = Readonly<{themeAction?: appearanceThemes.AppearanceThemeAction; legacyImport?: unknown; initializeThemes?: {existing: boolean; adoptNativeBase?: boolean; notifyMigration?: boolean};
   /** Imperative compatibility callers may replace a coherent root/library pair that still differs from disk. */
   persistExistingChanges?: boolean}>;
 
@@ -179,6 +182,7 @@ export default class KplexPlugin extends Plugin {
   private actionInvocationSequence = 0;
   private readonly actionEditors = new Map<string, Editor>();
   private readonly actionDialogs = new Map<{ close(): void }, { surfaceId?: string; generation?: number }>();
+  private appearanceMigrationDialog: NotificationModal | null = null;
   /** The host owns Settings navigation; the tab owns rendered shortcut controls and cleanup. */
   private settingsTab: KplexSettingTab | null = null;
   private actionPreferenceQueue: Promise<void> = Promise.resolve();
@@ -463,7 +467,7 @@ export default class KplexPlugin extends Plugin {
         // First-use migration follows the actual loaded-data/import state. Never persist pristine
         // factory presets before a running ExcaliBrain appearance has had its existing import path.
         try {await this.updateStyleSettings(/** Initialization captures effective migrated appearance without editing it. */ () => {}, this.captureAppearanceOwner(), {
-          initializeThemes: {existing: hasOwnData || legacySettings !== null},
+          initializeThemes: {existing: hasOwnData || legacySettings !== null, adoptNativeBase: true, notifyMigration: hasOwnData},
           ...(legacySettings === null ? {} : {legacyImport: legacySettings}),
         });} catch (error) {if (!this.externalSettingsReceived) throw error;}
         if (legacySettings !== null && !this.externalSettingsReceived) new Notice(this.translator("notice.excaliBrainSettingsImported"), 2600);
@@ -2056,10 +2060,23 @@ export default class KplexPlugin extends Plugin {
       ))) as StyleSettingsDraft;
       edit(draft);
       let library = source.appearanceThemes;
+      let initializedExistingAppearance = options.initializeThemes?.existing ?? false;
+      let adoptedNativeBase = false;
       if (options.initializeThemes && !library && source.appearanceThemesFuture === undefined && source.colorPreferencesFuture === undefined && source.graphLensesColorFuture === undefined
         && appearanceThemes.canCaptureThemeAppearance(draft)) {
         const changedBeforeInitialization = !appearanceThemes.themeValuesEqual(appearanceThemes.captureThemeAppearance(draft), appearanceThemes.captureThemeAppearance(DEFAULT_SETTINGS));
-        library = appearanceThemes.createAppearanceThemes(draft, DEFAULT_SETTINGS, options.initializeThemes.existing || changedBeforeInitialization, this.appearanceThemeNames());
+        initializedExistingAppearance ||= changedBeforeInitialization;
+        library = appearanceThemes.createAppearanceThemes(draft, DEFAULT_SETTINGS, initializedExistingAppearance, this.appearanceThemeNames(), options.initializeThemes.notifyMigration ?? options.initializeThemes.existing);
+      }
+      if (options.initializeThemes?.adoptNativeBase && library && source.appearanceThemesFuture === undefined && source.colorPreferencesFuture === undefined && source.graphLensesColorFuture === undefined) {
+        const upgraded = appearanceThemes.adoptNativeBaseOnUpgrade(library, draft, initializedExistingAppearance, this.appearanceThemeNames(), options.initializeThemes.notifyMigration ?? options.initializeThemes.existing);
+        adoptedNativeBase = upgraded !== library && initializedExistingAppearance;
+        library = upgraded;
+        if (adoptedNativeBase) {
+          const selected = upgraded.themes.find(/** Apply only the prepared upgrade selection. */ theme => theme.id === upgraded.selectedId);
+          if (!selected) throw new Error("Selected theme no longer exists");
+          appearanceThemes.applyThemeAppearance(draft, selected.appearance);
+        }
       }
       if (options.themeAction) {
         if (!library) throw new Error("Appearance themes are unavailable");
@@ -2112,7 +2129,7 @@ export default class KplexPlugin extends Plugin {
         if (previous !== library.selectedId) this.appearanceThemeActivation = (this.appearanceThemeActivation ?? 0) + 1;
         // Snapshot listeners: native page replacement may synchronously release/re-register rows.
         for (const listener of [...(this.appearanceThemeListeners ?? [])]) try {listener();} catch (error) {console.error("K-Plex saved theme notification failed", error); refreshPending = true;}
-        if (previous === appearanceThemes.DEFAULT_THEME_ID && library.selectedId !== previous && !options.themeAction) {
+        if (previous === appearanceThemes.DEFAULT_THEME_ID && library.selectedId !== previous && !options.themeAction && !options.initializeThemes) {
           const selected = library.themes.find(/** Name the new committed custom theme, never a stale editor label. */ theme => theme.id === library.selectedId);
           try {new Notice(this.translator("themes.customSaved", {name: selected?.name ?? this.appearanceThemeNames().custom}));}
           catch (error) {console.error("K-Plex custom theme notice failed", error); refreshPending = true;}
@@ -2126,9 +2143,41 @@ export default class KplexPlugin extends Plugin {
       if (!persisted) throw error instanceof Error ? error : new Error(String(error));
       console.error("K-Plex saved style publication failed", error); return {refreshPending: true};
     }
+    if (options.initializeThemes?.adoptNativeBase && options.initializeThemes.notifyMigration !== false) {
+      try {this.showAppearanceMigrationNotification();}
+      catch (error) {console.error("K-Plex native base migration notification failed", error); refreshPending = true;}
+    }
     if (this.unloading || !refresh) return {refreshPending};
     const completion = await this.refreshSavedSettings(semantic);
     return {refreshPending: refreshPending || completion.refreshPending};
+  }
+
+  /** Explain committed native-base adoption once, including an earlier undismissed brief notice.
+   * Dismissal uses the existing metadata queue; teardown preserves pending acknowledgment and
+   * a failed write leaves it eligible next startup. The modal never blocks the startup/disk queue. */
+  private showAppearanceMigrationNotification(): void {
+    const library = this.settings.appearanceThemes;
+    if (this.unloading || this.appearanceMigrationDialog || !library?.migrationNotice || library.nativeBaseMigration !== 1
+      || this.settings.appearanceThemesFuture !== undefined || this.settings.colorPreferencesFuture !== undefined
+      || this.settings.graphLensesColorFuture !== undefined) return;
+    const dialog = new NotificationModal(this.app, this.translator("themes.nativeBaseTitle"),
+      this.translator("themes.nativeBaseAdopted"), this.translator("common.done"),
+      /** Close releases the exact native owner before queuing acknowledgment; accepted writes survive UI retirement. */ () => {
+        this.actionDialogs.delete(dialog);
+        this.appearanceMigrationDialog = null;
+        if (this.unloading) return;
+        void this.updateAppearanceThemes({kind: "dismiss-migration"}).catch(/** Keep a failed acknowledgment pending without hiding storage failure. */ error => {
+          console.error("K-Plex migration acknowledgment failed", error);
+          if (!this.unloading) new Notice(this.translator("styles.operation.notSaved"));
+        });
+      });
+    this.appearanceMigrationDialog = dialog;
+    this.actionDialogs.set(dialog, {});
+    try {dialog.open();} catch (error) {
+      this.actionDialogs.delete(dialog);
+      this.appearanceMigrationDialog = null;
+      throw error;
+    }
   }
 
   /** Navigate to the declarative shortcut page, including when optional commands are unpublished. */
@@ -4866,6 +4915,7 @@ export default class KplexPlugin extends Plugin {
     modal.open(); return modal;
   }
 
+  /** Use the native heading subpath when previewing an expanded document section. */
   triggerHoverPreview(page: GraphPage, targetEl: HTMLElement, event: MouseEvent | PointerEvent, sourcePath = ""): void {
     if (!page.file) return;
     this.app.workspace.trigger("hover-link", {
@@ -4873,7 +4923,7 @@ export default class KplexPlugin extends Plugin {
       source: KPLEX_VIEW_TYPE,
       hoverParent: this.hoverParent,
       targetEl,
-      linktext: page.file.path,
+      linktext: page.file.path + (page.transient?.kind === "section" ? page.transient.subpath ?? "" : ""),
       sourcePath,
     });
   }
