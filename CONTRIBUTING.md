@@ -1090,8 +1090,19 @@ notes/dialogs/leaves and restores preferences/configuration bytes. Run native/br
 serially. This is functional Windows host evidence, not a comparative performance, physical
 mobile or actual-paint result. Run `npm run verify:obsidian:ontology-pair-reload` separately with
 a fresh report directory for persisted raw pairs, signature stability and original YAML evidence
-after disabling/enabling the plugin. That lane restores the native layout and exact configuration
+after disabling/enabling the plugin and explicitly reopening its unloaded view. That lane restores the native layout and exact configuration
 bytes; it does not claim a whole-application restart or warm-snapshot throughput result.
+
+`npm run verify:obsidian:ontology-startup-updates` uses the same exact build and explicit Small
+variables. It temporarily selects Eager through a real plugin reload, creates five owned notes,
+and admits a controlled progressive startup with the tested note as its saved center. Normal
+foreground leases hold continuations at actual atomic source commits, following native Vault
+enumeration rather than assuming name/creation order. Vault/FileManager edits ordinary YAML/inline
+ontology; both changed owners must commit before the remaining source, with the stationary SVG
+already updated while startup remains held. It restores the original strategy through reload,
+native layout/preferences/configuration and owned fixtures. Independent readers are untouched;
+holds retire before teardown. This is controlled startup admission, not an application restart
+or benchmark.
 
 After exact-build staging, `npm run verify:obsidian:ontology-input` uses the three explicit
 Small-vault variables and a fresh report directory. It observes trusted native Settings typing,

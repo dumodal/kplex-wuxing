@@ -53,13 +53,36 @@ the [user guide](../ONTOLOGY_PAIRS.md) are maintained.
 
 ## Automated evidence
 
-Final verification results and exact build identity are recorded below when the
-serial portable and native lanes finish. Environment: Windows, Node **22.22.3**,
+Final verification and exact-artifact native checks completed on Windows, Node **22.22.3**,
 real installed dependencies/Obsidian typings. The requested exact **22.22.2**
 runtime is not installed; this patch-version difference remains explicit.
 
+`npm.cmd run verify` completed with **exit 1**, retaining one browser bootstrap
+failure. No tests were skipped and that failed case was not rerun:
+
+| Lane | Actual result |
+| --- | --- |
+| Release metadata, architecture, core types/contracts | Passed; 7 architecture and 130 core cases |
+| Official Obsidian scanner | Passed |
+| Finite indexing fixture/settings independence | Passed, including 27 production scenarios and seven watchdog phases |
+| Primary tests | 1,220 passed |
+| UI/browser components | 206 passed |
+| Portable source tests | 334 passed |
+| Chromium source/storage/lifecycle | 645 passed, 1 bootstrap failure, 0 skips |
+| Explicit final `npm.cmd run build` | Passed against installed Obsidian declarations |
+
+The final build was staged with this limitation disclosed, **not** as a green
+full-verification gate. Runtime source checkpoint: `a52aa24` (pairing checkpoint
+`819b8c3`, initial implementation `50d7424`). Build identity:
+
+```text
+main.js       df6be536d08d76ba2c769b4afbf503e94dfca2fc592ab437fef36b41d31de9e4
+styles.css    265b5e4a2c235111968d7f5ba1f44169c8a73ad897d28a61b119af477e0bd0b7
+manifest.json 19d9ecce5557733e0ff0f2e27155e635c30158c3cfa6fbca0f11c16e4dedfd2c
+```
+
 Focused checks before the final full run passed: configuration/caption/compiler
-and import regressions (145), production native-row/modal regressions (22),
+and import regressions (145), production native-row/modal regressions (24),
 indexing fixture plus 27 real-owner settings-independence scenarios, extracted
 host/presentation regressions (149), actual SVG caption and crosslink rendering,
 architecture, official Obsidian scanner and production build. Subsequent finite
@@ -90,14 +113,39 @@ counters were **zero**: Vault reads, parses, full builds, semantic invalidations
 preparations, acquisitions, publications and snapshot persistence calls. This is
 a functional work-count observation, not an indexing-speed or paint measurement.
 
-Final section/reload results and restoration checks remain pending until their
-drivers complete. Plugin reload is distinct from whole-application restart.
+The final artifact passed the same **12-case** native pairing workflow, including
+both role summaries in actual Settings and all eight zero-work counters above.
+It also passed ordinary YAML pairing persistence/signature/original-evidence
+checks after actual plugin disable/enable and **explicit view reopening**: plugin
+unload deliberately detaches its leaves. This is not automatic leaf resurrection
+or whole-application restart acceptance.
 
 The section workflow subsequently passed all 12 cases, including actual
 transient and folded captions. Earlier folded-section failures clicked the old
 center before navigation had rendered: the captured dispatch targeted B while
 the probe expected A. Waiting for the actual central DOM path corrected the
 probe; no runtime caption workaround was added.
+
+The separately scoped startup probe also passed on the final artifact. It selects
+Eager through a real plugin reload, saves A as the actual startup seed, admits a
+controlled progressive graph construction with existing caches retained, and observes its real synchronous source
+publisher. Five owned notes include three unrelated sources in the Vault's
+actual enumeration order. Normal foreground leases hold source continuations;
+independent URL/cache readers remain untouched. Native Vault/FileManager edits
+add B's Parent field and remove A's old YAML Child.
+
+Observed source commits were **Spacer, Tail, B, A, Pause**. The existing writer
+therefore committed both edits before the remaining Pause source, with A still
+central, the new physical Parent caption rendered and original B provenance
+intact, while startup remained held. The already-admitted Tail source was allowed
+to finish; private work/native reads were never interrupted. Original indexing
+strategy, configuration and workspace were restored after the test.
+
+Final independent restoration passed: original **107 files / 88 Markdown files**,
+original main/sidebar/floating layout, **zero Plex views**, no test controllers,
+exact original data/enablement/workspace/appearance bytes after delayed recheck,
+and no captured native JavaScript errors. Native runtime: Obsidian 1.14.4,
+Electron 43.3.0 / Chromium 150.0.7871.212. Only owned fixture notes were written.
 
 ## Pre-existing startup ontology defect
 
@@ -161,6 +209,34 @@ production invariants and mutation assertions are retained. Early parser/parity
 fixtures also needed the real resolved-target lookup and lossless literal-name
 oracle. These failures are preserved privately.
 
+One full-run attempt reached 1,220 primary, 205 UI and 334 portable-source passes,
+then failed 13 mutation-browser cases because their finite extracted-method
+harness omitted the newly imported configuration owner. Supplying that actual
+module corrected all 55 cases in the affected file. A later finite watchdog
+attempt assumed a stalled I/O phase began within 24 microtasks; the test now
+awaits admission of the actual held operation under a separate real deadline.
+Inactivity-window and cleanup assertions remain intact. An intermediate startup
+candidate added per-file scheduling yields and failed the existing checkpoint
+timing guard; it was rejected. The retained implementation uses a synchronous
+empty admission hook inside the original batch instead.
+
+The final full run also retained a browser bootstrap timeout in the root/nested
+folder publication case. Its captured test page remained `loading`, with no
+completed script resources and no bundle exception, before the scenario began.
+The next two cases in that same file loaded the **same shared bundle** and
+passed. This is no demonstrated runtime regression; the failed case was not
+rerun to erase the result. The full-command exit status remains explicit above.
+
+Native startup-probe failures are retained separately. They exposed a saved mode
+that had not been applied through reload, missing startup admission reason,
+unrelated-reader holds, unspecified native file order and a saved startup seed
+different from the visible leaf. One misordered hold required retiring that
+failed index so its cleanup and strategy reload could complete. The final probe
+verifies actual strategy/center/demand, supplies the normal startup reason, follows
+the captured native source order, allows an already-admitted source to finish,
+and retires future holds before cleanup. No failed attempt counts as a pass and
+no additional runtime workaround was added for those probe setup errors.
+
 The archived scene golden predates main #189's font-ink padding. Independent
 isolated **main `f3c2260`** and **candidate `50d7424`** controls, with assertions
 intact, failed the same old geometry values and produced **identical canonical
@@ -179,9 +255,18 @@ rejected it. Both failures remain evidence; the successful run began after the
 controller and owned-file inventory were verified clear. Subsequent native and
 browser-bearing lanes are serialized.
 
-Raw logs, baseline configuration, failed observations and isolated controls stay
-private; their final durable backup/checksum is recorded after restoration. No
-raw traces are committed or published.
+Raw logs, baseline configuration, failed observations and isolated controls remain
+private; originals were retained. Verified durable backup outside temporary
+storage: `%LOCALAPPDATA%/KplexValidation/paired-ontology-190-1792444883440`.
+Its 1,049 files / 32,455,030 bytes include exact source/artifact inputs and native
+restoration receipts; transient HANDOFF documents are excluded. Every copied
+file was SHA-256 compared with its original. Manifest SHA-256:
+
+```text
+03dbbe981db94df824f11df541ac4f13ac2fa8dd87d4233b4bff5b6f8044d499
+```
+
+No raw traces or archive were committed or published.
 
 ## Remaining acceptance
 
