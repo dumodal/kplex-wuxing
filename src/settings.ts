@@ -27,6 +27,7 @@
  * typing/composition never publishes transient hierarchy values or queues per-character graph work.
  */
 import { readObsidianPresentationEnvironment } from "./adapters/obsidian/presentationEnvironment";
+import {ontologyConfiguration, escapeLegacyOntology, escapeOntologyField} from "./core/contracts/ontologyConfiguration";
 import { formatShortcut } from "./core/plex/shortcutPresentation";
 import {AppearanceThemesManagerModal} from "./ui/AppearanceThemesModal";
 import {StyleManagerList} from "./ui/StyleManagerList";
@@ -213,6 +214,8 @@ export interface KplexSettings {
   /** Live background scheduling policy, independent of semantic settings and cached source facts. */
   indexingThrottle: IndexingThrottle;
   hierarchy: Hierarchy;
+  /** Versioned settings grammar; pre-syntax literal slashes/backslashes are escaped losslessly. */
+  ontologyPairingVersion: 1;
   inferAllLinksAsFriends: boolean;
   inverseInfer: boolean;
   /** Fallback native Date role; configured field ontology always takes precedence. */
@@ -378,6 +381,7 @@ const LEGACY_DEFAULT_SETTINGS: KplexSettings = {
   urlIndexingMode: "background",
   indexingThrottle: "responsive",
   hierarchy: DEFAULT_HIERARCHY_DEFINITION,
+  ontologyPairingVersion: 1,
   inferAllLinksAsFriends: false,
   inverseInfer: false,
   datePropertyRelations: "parent",
@@ -547,12 +551,13 @@ export function importExcaliBrainGraphSettings(raw: unknown, current?: KplexSett
   // Normalize only supplied foreign standard records against their historical missing-field defaults.
   for (const key of [...STANDARD_NODE_COLOR_STYLES, ...STANDARD_LINK_COLOR_STYLES]) if (isSettingsRecord(imported[key]))
     imported[key] = {...LEGACY_DEFAULT_SETTINGS[key], ...imported[key]};
-  const hierarchy = isSettingsRecord(imported.hierarchy) ? imported.hierarchy : {};
+  const hierarchy = isSettingsRecord(imported.hierarchy) ? Object.fromEntries(Object.entries(imported.hierarchy).map(/** Foreign properties never opt into K-Plex pairing syntax. */ ([group, fields]) => [group, Array.isArray(fields) ? fields.map(/** Preserve each imported literal name. */ field => escapeOntologyField(String(field))) : fields])) : {};
   // A legacy friends-only field must replace the local leftFriends default, not be masked by it.
   const leftFriends = hierarchy.leftFriends ?? hierarchy.friends ?? current?.hierarchy.leftFriends;
   const settings = migrateAndMergeSettings({
     ...current,
     ...imported,
+    ontologyPairingVersion: 1,
     // Foreign appearance must be normalized before the selected local theme is synchronized by
     // the existing writer. Applying that old theme here would silently undo the imported paint.
     appearanceThemes: undefined,
@@ -607,7 +612,9 @@ export function migrateAndMergeSettings(raw: unknown): KplexSettings {
     hierarchy.rightFriends = ["Challenger", ...hierarchy.rightFriends];
   }
 
-  // Mirror classic initializeHierarchy() precedence rules.
+  // Preserve classic initialization only for pre-syntax settings. Current textarea order is
+  // meaningful and must survive queued rebase, import and restart without a global rewrite.
+  if (old.ontologyPairingVersion === undefined) {
   const sortFields = (items: string[]) => [...items].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
   const normalized = (items: string[]) => items.map(norm);
   hierarchy.hidden = sortFields(hierarchy.hidden);
@@ -624,6 +631,9 @@ export function migrateAndMergeSettings(raw: unknown): KplexSettings {
   hierarchy.previous = lowerPriority(hierarchy.previous);
   hierarchy.next = lowerPriority(hierarchy.next);
   hierarchy.exclusions = sortFields(hierarchy.exclusions.filter((item) => !master.includes(norm(item))));
+  Object.assign(hierarchy, escapeLegacyOntology(hierarchy));
+  }
+  ontologyConfiguration({hierarchy, ontologyPairingVersion: old.ontologyPairingVersion ?? 1});
 
   const finite = (value: unknown, fallback: number): number => {
     const parsed = Number(value);
@@ -671,6 +681,7 @@ export function migrateAndMergeSettings(raw: unknown): KplexSettings {
     indexingThrottle: sanitizeIndexingThrottle(old.indexingThrottle),
     datePropertyRelations: sanitizeDatePropertyRelations(old.datePropertyRelations),
     hierarchy,
+    ontologyPairingVersion: 1,
     baseNodeStyle: { ...defaults.baseNodeStyle, ...(old.baseNodeStyle ?? {}) },
     baseLinkStyle: { ...defaults.baseLinkStyle, ...(old.baseLinkStyle ?? {}) },
     centralNodeStyle: { ...defaults.centralNodeStyle, ...(old.centralNodeStyle ?? {}) },
@@ -1762,7 +1773,7 @@ export class KplexSettingTab extends PluginSettingTab {
         const timer = window.setTimeout(run, 750); return /** Cancel the exact model-owned idle task. */ () => window.clearTimeout(timer);
       },
       failed: /** Feedback contains no private values and never schedules a retry. */ kind => {
-        new Notice(plugin.translator(kind === "conflict" ? "settings.ontology.conflict" : kind === "refresh" ? "settingsSync.refreshPending" : "settings.ontology.saveFailed"));
+        new Notice(plugin.translator(kind === "conflict" ? "settings.ontology.conflict" : kind === "refresh" ? "settingsSync.refreshPending" : kind === "validation" ? "ontology.pairInvalid" : "settings.ontology.saveFailed"));
       },
     });
     const control = new OntologyFieldControl(draft, plugin.translator, captureOwner); fields.set(field, control); return control;
@@ -2240,13 +2251,14 @@ export class KplexSettingTab extends PluginSettingTab {
 
   /** Build style-manager entries from configured ontology fields, preserving field values and localizing fallback role captions. */
   private ontologyStyleFields(): OntologyStyleField[] {
-    const roleGroups: [Role, string[]][] = [
-      ["parent", this.kplexPlugin.settings.hierarchy.parents],
-      ["child", this.kplexPlugin.settings.hierarchy.children],
-      ["left", this.kplexPlugin.settings.hierarchy.leftFriends],
-      ["right", this.kplexPlugin.settings.hierarchy.rightFriends],
-      ["previous", this.kplexPlugin.settings.hierarchy.previous],
-      ["next", this.kplexPlugin.settings.hierarchy.next],
+    const hierarchy = ontologyConfiguration(this.kplexPlugin.settings).hierarchy;
+    const roleGroups: [Role, readonly string[]][] = [
+      ["parent", hierarchy.parents],
+      ["child", hierarchy.children],
+      ["left", hierarchy.leftFriends],
+      ["right", hierarchy.rightFriends],
+      ["previous", hierarchy.previous],
+      ["next", hierarchy.next],
     ];
     const fields = new Map<string, OntologyStyleField>();
     for (const [role, names] of roleGroups) {
@@ -2487,7 +2499,7 @@ export class KplexSettingTab extends PluginSettingTab {
                   { name: translate("settings.ui.child.fields"), control: { type: "textarea", key: "hierarchy.children", rows: 3 } },
                   { name: translate("settings.ui.left.friend.jump.fields"), control: { type: "textarea", key: "hierarchy.leftFriends", rows: 3 } },
                   { name: translate("settings.ui.right.friend.challenger.fields"), control: { type: "textarea", key: "hierarchy.rightFriends", rows: 3 } },
-                  { name: translate("settings.ui.previous.fields"), control: { type: "textarea", key: "hierarchy.previous", rows: 3 } },
+                  { name: translate("settings.ui.previous.fields"), desc: translate("ontology.manualPairHelp"), control: { type: "textarea", key: "hierarchy.previous", rows: 3 } },
                   { name: translate("settings.ui.next.fields"), control: { type: "textarea", key: "hierarchy.next", rows: 3 } },
                   { name: translate("settings.ui.hidden.fields"), desc: translate("settings.ui.relationships.stored.in.these.properties.stay.out.of.the"), control: { type: "textarea", key: "hierarchy.hidden", rows: 3 } },
                 ],

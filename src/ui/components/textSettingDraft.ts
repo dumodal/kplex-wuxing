@@ -3,14 +3,14 @@
  * durable writer synchronously; one submitted operation and the newest draft are retained. The
  * caller owns the idle clock, persistence/currentness, feedback and rendered subscriptions.
  */
-export type TextDraftState = Readonly<{value: string; busy: boolean; dirty: boolean; error: "storage" | "conflict" | null}>;
+export type TextDraftState = Readonly<{value: string; busy: boolean; dirty: boolean; error: "storage" | "conflict" | "validation" | null}>;
 type DraftPorts = Readonly<{
   read: () => string;
   normalize: (value: string) => string;
   captureOwner: () => () => boolean;
   commit: (value: string, expected: string, current: () => boolean) => Promise<{refreshPending: boolean}>;
   idle: (run: () => void) => () => void;
-  failed: (kind: "storage" | "conflict" | "refresh") => void;
+  failed: (kind: "storage" | "conflict" | "refresh" | "validation") => void;
 }>;
 
 /** Retains a field's recoverable draft across native row replacement; dispose only at host teardown. */
@@ -107,7 +107,7 @@ export class TextSettingDraft {
       }, /** Storage failure retains the complete latest draft, with no autonomous retry loop. */ error => {
         if (this.closed) return;
         if (!owner() || error instanceof Error && error.name === "SettingsConflictError") this.conflict();
-        else {this.error = "storage"; this.ports.failed("storage");}
+        else {this.error = error instanceof Error && error.name === "SettingsValidationError" ? "validation" : "storage"; this.ports.failed(this.error);}
       }).finally(/** Only explicit exit or an elapsed idle task can immediately submit a newer draft. */ () => {
         this.pending = null;
         if (this.closed) return;

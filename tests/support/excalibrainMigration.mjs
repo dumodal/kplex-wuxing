@@ -36,6 +36,11 @@ export function assertRestoredKplexAppearance(actual, expected) {
 
 /** Compare complete imported dictionaries and local preferences without masking changed fields. */
 export function assertMigratedExcaliBrainSettings(actual, fixture, current) {
+  // This independent oracle compares physical names. Version 1 only escapes literal foreign
+  // slashes/backslashes; the fixture must not acquire a directional pair during import.
+  const hierarchy = actual.ontologyPairingVersion === 1 ? Object.fromEntries(Object.entries(actual.hierarchy).map(
+    /** Decode the two documented literal escapes, independently of the production projector. */ ([group, fields]) => [group, fields.map(
+      /** Foreign input never opts into a pair; preserve its exact property spelling. */ value => value.replace(/\\([\\/])/g, "$1"))])) : actual.hierarchy;
   assert.equal(Object.hasOwn(actual, "excalibrainFilepath"), false,
     "Transient ExcaliBrain drawing path must not become K-Plex state");
   for (const key of ["tagNodeStyles", "tagStyleList", "hierarchyLinkStyles", "excludeFilepaths"])
@@ -66,11 +71,11 @@ export function assertMigratedExcaliBrainSettings(actual, fixture, current) {
   owner.set("challenger", "rightFriends");
   for (const [field, role] of owner) {
     if (!field) continue; // Classic settings retain blank role placeholders.
-    assert(actual.hierarchy[role].some(value => value.trim().toLowerCase().replaceAll(" ", "-") === field), `Ontology ${field} missing from ${role}`);
+    assert(hierarchy[role].some(value => value.trim().toLowerCase().replaceAll(" ", "-") === field), `Ontology ${field} missing from ${role}`);
     for (const other of roles) if (other !== role)
-      assert(!actual.hierarchy[other].some(value => value.trim().toLowerCase().replaceAll(" ", "-") === field), `Ontology ${field} duplicated into ${other}`);
+      assert(!hierarchy[other].some(value => value.trim().toLowerCase().replaceAll(" ", "-") === field), `Ontology ${field} duplicated into ${other}`);
   }
-  assert.deepEqual(actual.hierarchy.exclusions.slice().sort(), fixture.hierarchy.exclusions.filter(value => !owner.has(value.trim().toLowerCase().replaceAll(" ", "-"))).sort());
+  assert.deepEqual(hierarchy.exclusions.slice().sort(), fixture.hierarchy.exclusions.filter(value => !owner.has(value.trim().toLowerCase().replaceAll(" ", "-"))).sort());
   assert.equal(actual.primaryTagFieldLowerCase, "note-type");
   assert.equal(actual.noteTypeField, current.noteTypeField ?? "Note type");
   assert.equal(actual.connectorStyle, current.connectorStyle ?? "bezier");

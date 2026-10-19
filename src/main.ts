@@ -45,6 +45,7 @@ import { mergeGraphLensDefinitions } from "./lens/GraphLens";
 import { appearanceColorReferences } from "./core/contracts/appearance";
 import { requireNamedColor } from "./core/plex/colorEditing";
 import * as appearanceThemes from "./core/plex/appearanceThemes";
+import {ontologyConfiguration, assignOntologyField, editOntologyEntries, type OntologyConfiguration} from './core/contracts/ontologyConfiguration';
 import type {StyleEditorModal} from "./ui/StyleEditorModal";
 import {NotificationModal} from "./ui/NotificationModal";
 
@@ -1855,47 +1856,38 @@ export default class KplexPlugin extends Plugin {
    * at the existing queue boundary; already accepted saves may finish after their native row closes.
    */
   async updateOntologyField(field: EditableHierarchyKey, value: readonly string[], expected: readonly string[], current: () => boolean): Promise<StyleCommitResult> {
-    const submitted = [...value], opening = [...expected];
-    let persisted = false, changed = false;
-    try {
-      await this.enqueueSettingsWrite(/** Prepare from the latest accepted snapshot, not a stale textarea's whole hierarchy. */ async () => {
-        const source = this.settingsForWrite();
-        // Own migration may sort/resolve ontology precedence in its effective view. A finite edit
-        // must compare and retain the actual accepted lists, not rewrite other roles as a side effect.
-        // This internal snapshot has already crossed own-settings validation/serialization.
-        const hierarchy = this.settingsWriteContext && this.settingsReconciliation
-          ? this.settingsReconciliation.view(this.settingsWriteContext.intent).hierarchy as KplexSettings["hierarchy"] : source.hierarchy;
-        if (this.unloading || !current() || !appearanceThemes.themeValuesEqual(hierarchy[field], opening)) {
-          const error = new Error(this.translator("settings.ontology.conflict")); error.name = "SettingsConflictError"; throw error;
-        }
-        if (appearanceThemes.themeValuesEqual(opening, submitted)) return;
-        const next = {...source, hierarchy: {...hierarchy, [field]: submitted}};
-        const policy = captureSettingsPolicy(next);
-        await this.writeSettingsSnapshot(this.settingsSnapshotForPersistence(source.actionPreferencesFuture ?? source.actionPreferences, next));
-        persisted = true;
-        if (this.unloading) return;
-        // A newer imperative caller may already hold a submitted edit to this same field. Preserve
-        // its live value; its captured queue intent still owns its subsequent persistence.
-        if (appearanceThemes.themeValuesEqual(this.settings.hierarchy[field], hierarchy[field]))
-          this.settings.hierarchy = {...this.settings.hierarchy, [field]: [...submitted]};
-        const key = `hierarchy.${field}` as const;
-        this.savedSettingsPolicy = {values: {...(this.savedSettingsPolicy ?? captureSettingsPolicy(this.settings)).values, [key]: policy.values[key]}};
-        this.index?.invalidateSemanticPolicy(); changed = true;
-      });
-    } catch (error) {
-      if (!persisted) {
-        // The shared preflight also refuses missing/torn data. An unchanged opening field/owner
-        // makes that a retryable storage refusal, not permission to discard a user's valid draft.
-        if (error instanceof Error && error.name === "SettingsConflictError" && current()
-          && appearanceThemes.themeValuesEqual(this.settings.hierarchy[field], opening)) {
-          const unavailable = new Error(error.message); unavailable.name = "SettingsStorageError"; throw unavailable;
-        }
-        throw error instanceof Error ? error : new Error(String(error));
+    const submitted=[...value],opening=[...expected];
+    try {return await this.updateOntologyConfiguration(/** Revalidate only this textarea's opening field; unrelated saves remain mergeable. */ source=>{
+      if(!appearanceThemes.themeValuesEqual(source.hierarchy[field],opening)){const error=new Error(this.translator('settings.ontology.conflict'));error.name='SettingsConflictError';throw error;}
+      return editOntologyEntries(source,field,submitted);
+    },current);}catch(error){
+      if(error instanceof Error&&error.name==='SettingsConflictError'&&current()&&appearanceThemes.themeValuesEqual(this.settings.hierarchy[field],opening)){
+        const unavailable=new Error(error.message);unavailable.name='SettingsStorageError';throw unavailable;
       }
-      console.error("K-Plex saved ontology publication failed", error); return {refreshPending: true};
+      throw error;
     }
-    if (this.unloading || !changed || !this.index) return {refreshPending: false};
-    return this.refreshSavedSettings(true);
+  }
+
+  /** Both manual configuration and pair-aware modal edits share one queued, validated writer.
+   * Compare effective policy separately from pairing; caption-only saves never invalidate semantics.
+   * Failed storage publishes neither raw configuration nor presentation. Accepted storage survives dismissal. */
+  private async updateOntologyConfiguration(edit:(source:KplexSettings)=>KplexSettings['hierarchy'],current:()=>boolean):Promise<StyleCommitResult> {
+    let persisted=false,changed=false,semantic=false;
+    try {await this.enqueueSettingsWrite(/** Prepare against latest accepted settings, including concurrent partner assignments. */ async()=>{
+      if(this.unloading||!current()){const error=new Error(this.translator('settings.ontology.conflict'));error.name='SettingsConflictError';throw error;}
+      const source=this.settingsForWrite(),hierarchy=edit(source),next={...source,hierarchy};
+      ontologyConfiguration(next);
+      if(appearanceThemes.themeValuesEqual(source.hierarchy,hierarchy))return;
+      const before=captureSettingsPolicy(source),policy=captureSettingsPolicy(next),effects=classifySettingsChange(before,policy);
+      await this.writeSettingsSnapshot(this.settingsSnapshotForPersistence(source.actionPreferencesFuture??source.actionPreferences,next));persisted=true;
+      if(this.unloading)return;
+      if(appearanceThemes.themeValuesEqual(this.settings.hierarchy,source.hierarchy))this.settings.hierarchy=hierarchy;
+      const values={...(this.savedSettingsPolicy??captureSettingsPolicy(this.settings)).values};
+      for(const key of effects.changedKeys)values[key]=policy.values[key];this.savedSettingsPolicy={values};
+      semantic=effects.semanticInvalidation;changed=effects.render;
+      if(semantic)this.index?.invalidateSemanticPolicy();
+    });}catch(error){if(!persisted)throw error instanceof Error?error:new Error(String(error));console.error('K-Plex saved ontology publication failed',error);return {refreshPending:true};}
+    if(this.unloading||!changed||!this.index)return {refreshPending:false};return this.refreshSavedSettings(semantic);
   }
 
   /** Serialize valid workflow preferences including overlaps; failed storage never installs a draft or touches indexing. */
@@ -4720,28 +4712,21 @@ export default class KplexPlugin extends Plugin {
     dialog.open(); return dialog;
   }
 
-  async assignFieldToOntology(field: string, role: OntologyAssignmentRole): Promise<void> {
-    const normalized = normalizeFieldName(field);
-    const h = this.settings.hierarchy;
-    const remove = (items: string[]) => items.filter((item) => normalizeFieldName(item) !== normalized);
-    h.hidden = remove(h.hidden);
-    h.parents = remove(h.parents);
-    h.children = remove(h.children);
-    h.leftFriends = remove(h.leftFriends);
-    h.rightFriends = remove(h.rightFriends);
-    h.previous = remove(h.previous);
-    h.next = remove(h.next);
-    h.exclusions = remove(h.exclusions);
-    const target = role === "parent" ? h.parents
-      : role === "child" ? h.children
-      : role === "left" ? h.leftFriends
-      : role === "right" ? h.rightFriends
-      : role === "previous" ? h.previous
-      : role === "next" ? h.next
-      : role === "hidden" ? h.hidden : h.exclusions;
-    target.push(field.trim());
-    target.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
-    await this.saveSettings(true);
+  /** Assign a physical field and optional partner atomically, retaining independent unrelated settings.
+   * The opening field and chosen partner are compared again inside the existing queue; an old
+   * modal cannot steal a newly paired field or silently move its counterpart to another role. */
+  async assignFieldToOntology(field:string,role:OntologyAssignmentRole,partner?:string|null,
+    expected:OntologyConfiguration=ontologyConfiguration(this.settings),current:()=>boolean=this.receivedSettingsOwner('hierarchy')):Promise<void> {
+    const normalized=normalizeFieldName(field),openingPair=expected.pairs.get(normalized);
+    const selected=partner===undefined?openingPair?.partner??null:partner;
+    await this.updateOntologyConfiguration(/** Validate both edited endpoints against the latest committed projection. */ source=>{
+      const latest=ontologyConfiguration(source);
+      for(const endpoint of [field,...(selected?[selected]:[])]){
+        const key=normalizeFieldName(endpoint);
+        if(expected.roles.get(key)!==latest.roles.get(key)||!appearanceThemes.themeValuesEqual(expected.pairs.get(key),latest.pairs.get(key))){const error=new Error(this.translator('settings.ontology.conflict'));error.name='SettingsConflictError';throw error;}
+      }
+      return assignOntologyField(source,field,role,selected);
+    },current);
   }
 
   private fieldAtEditorCursor(editor: Editor): string | null {
@@ -4929,7 +4914,7 @@ export default class KplexPlugin extends Plugin {
   }
 
   ontologyFieldsForRole(role: RelationshipRole): string[] {
-    const h = this.settings.hierarchy;
+    const h = ontologyConfiguration(this.settings).hierarchy;
     switch (role) {
       case "parent": return [...h.parents];
       case "child": return [...h.children];
@@ -4956,8 +4941,8 @@ export default class KplexPlugin extends Plugin {
 
   ontologyRoleForField(field: string): OntologyAssignmentRole | null {
     const normalized = normalizeFieldName(field);
-    const h = this.settings.hierarchy;
-    const has = (items: string[]) => items.some((item) => normalizeFieldName(item) === normalized);
+    const h = ontologyConfiguration(this.settings).hierarchy;
+    const has = (items: readonly string[]) => items.some((item) => normalizeFieldName(item) === normalized);
     if (has(h.hidden)) return "hidden";
     if (has(h.parents)) return "parent";
     if (has(h.children)) return "child";
@@ -4970,8 +4955,10 @@ export default class KplexPlugin extends Plugin {
   }
 
   inverseOntologyField(field: string, semanticRole: RelationshipRole): string {
+    const paired = ontologyConfiguration(this.settings).pairs.get(normalizeFieldName(field));
+    if (paired) return paired.partner;
     const group = this.ontologyRoleForField(field);
-    const h = this.settings.hierarchy;
+    const h = ontologyConfiguration(this.settings).hierarchy;
     switch (group) {
       case "parent": return this.defaultOntologyField("child");
       case "child": return this.defaultOntologyField("parent");
@@ -5012,41 +4999,16 @@ export default class KplexPlugin extends Plugin {
     if (!trimmed) return this.defaultOntologyField(role);
     const normalized = normalizeFieldName(trimmed);
     const existing = this.ontologyFieldsForRole(role).find((field) => normalizeFieldName(field) === normalized);
-    let canonical = existing ?? trimmed;
-    let hierarchyChanged = false;
+    const canonical=existing??trimmed;
+    if(!existing)await this.assignFieldToOntology(canonical,role);
+    if(this.settings.relationDefaultFields[role]!==canonical){this.settings.relationDefaultFields={...this.settings.relationDefaultFields,[role]:canonical};await this.saveSettings(false,false);}
 
-    if (!existing) {
-      // A field typed into a relationship role is an explicit ontology assignment. Keep ontology
-      // membership unambiguous by moving an identically named field out of another hierarchy list
-      // before assigning it to this role. Previous/next are already offered by the matching lateral
-      // role suggester, so they are preserved when selected from that role's own result list.
-      const h = this.settings.hierarchy;
-      const lists = [h.hidden, h.parents, h.children, h.leftFriends, h.rightFriends, h.previous, h.next, h.exclusions];
-      for (const list of lists) {
-        const match = list.find((field) => normalizeFieldName(field) === normalized);
-        if (match) canonical = match;
-      }
-      for (const list of lists) {
-        const next = list.filter((field) => normalizeFieldName(field) !== normalized);
-        if (next.length !== list.length) { list.splice(0, list.length, ...next); hierarchyChanged = true; }
-      }
-      const target = role === "parent" ? h.parents : role === "child" ? h.children : role === "left" ? h.leftFriends : role === "right" ? h.rightFriends : role === "previous" ? h.previous : h.next;
-      target.push(canonical);
-      hierarchyChanged = true;
-    }
-
-    if (this.settings.relationDefaultFields[role] !== canonical) {
-      this.settings.relationDefaultFields[role] = canonical;
-      await this.saveSettings(hierarchyChanged, false);
-    } else if (hierarchyChanged) {
-      await this.saveSettings(true, false);
-    }
     return canonical;
   }
 
   /** Enumerate selectable relationship fields while preserving their configured direction. */
   allOntologyFields(): string[] {
-    const h = this.settings.hierarchy;
+    const h = ontologyConfiguration(this.settings).hierarchy;
     return [...h.parents, ...h.children, ...h.leftFriends, ...h.rightFriends, ...h.previous, ...h.next];
   }
 
@@ -5622,7 +5584,7 @@ export default class KplexPlugin extends Plugin {
 
   /** Capture bounded discovered property/body references and exact resolved spellings before trash retires target resolution. */
   async captureDeleteNodePreview(target: GraphPage): Promise<DeleteNodePreview> {
-    const hiddenFields = [...new Set(this.settings.hierarchy.hidden.filter(/** Empty keys cannot form properties. */ field => field.trim()))];
+    const hiddenFields = [...new Set(ontologyConfiguration(this.settings).hierarchy.hidden.filter(/** Empty keys cannot form properties. */ field => field.trim()))];
     const ontology = new Set([...this.allOntologyFields(), ...hiddenFields].map(normalizeFieldName));
     const removeOntologyLinksOnDelete = this.settings.removeOntologyLinksOnDelete !== false;
     const preview: DeleteNodePreview = {sources: [], hiddenFields, hiddenField: hiddenFields[0] ?? "", removeOntologyLinksOnDelete};
@@ -5683,7 +5645,7 @@ export default class KplexPlugin extends Plugin {
   /** Add configured Hidden evidence; exact deletion coordinates must not collapse distinct opaque IDs. */
   private appendHiddenReference(frontmatter: Record<string,unknown>, storage: TFile, target: GraphPage, field: string, reference: string, exactCoordinates?: readonly string[]): void {
     const wanted = normalizeFieldName(field);
-    if (!this.settings.hierarchy.hidden.some(/** Consent cannot outlive actual Hidden configuration. */ key => normalizeFieldName(key) === wanted)) throw new Error(this.translator("hide.noField"));
+    if (!ontologyConfiguration(this.settings).hierarchy.hidden.some(/** Consent cannot outlive actual Hidden configuration. */ key => normalizeFieldName(key) === wanted)) throw new Error(this.translator("hide.noField"));
     const keys = Object.keys(frontmatter).filter(/** Preserve physical YAML spelling and reject ambiguity. */ key => normalizeFieldName(key) === wanted);
     if (keys.length > 1) throw new Error(this.translator("explain.removeSourceChanged"));
     const key = keys[0] ?? field, value = frontmatter[key];
@@ -5812,7 +5774,7 @@ export default class KplexPlugin extends Plugin {
   /** Suggest only names absent from the native cached registry, configured roles and discovered inline/document fields. */
   private suggestHiddenOntologyField(): string | null {
     const reserved = [
-      ...Object.values(this.settings.hierarchy).flatMap(/** Optional legacy role lists contribute names only when present. */ fields => fields ?? []),
+      ...Object.values(ontologyConfiguration(this.settings).hierarchy).flatMap(/** Optional legacy role lists contribute names only when present. */ fields => fields ?? []),
       ...this.index.discoveredFields().map(/** Discovery supplies cached inline fields without reading sources. */ field => field.name),
       this.settings.noteTypeField, this.settings.primaryTagField, this.settings.thumbnailProperty, this.settings.nodeImageProperty,
       ...this.settings.nameFields.split(",").map(/** Title-property configuration is CSV; reserve full property names rather than individual characters. */ name => name.trim()).filter(Boolean),
@@ -5826,7 +5788,7 @@ export default class KplexPlugin extends Plugin {
     try {
       await this.enqueueSettingsWrite(/** Recheck collisions and current consent when this configuration owns persistence. */ async () => {
         if (this.unloading || !isCurrent()) return;
-        if (this.settings.hierarchy.hidden.some(/** Concurrent explicit setup can supply the needed capability without another assignment. */ name => name.trim())) {
+        if (ontologyConfiguration(this.settings).hierarchy.hidden.some(/** Concurrent explicit setup can supply the needed capability without another assignment. */ name => name.trim())) {
           configured = true;
           return;
         }
@@ -5841,7 +5803,7 @@ export default class KplexPlugin extends Plugin {
         if (JSON.stringify(this.settings.hierarchy) !== hierarchyBefore || this.suggestHiddenOntologyField() !== field) {
           throw new Error("Hidden field configuration changed after persistence");
         }
-        this.settings.hierarchy.hidden = next.hierarchy.hidden;
+        this.settings.hierarchy = {...this.settings.hierarchy, hidden: next.hierarchy.hidden};
         const policy = captureSettingsPolicy(this.settings);
         this.savedSettingsPolicy = { values: { ...(this.savedSettingsPolicy ?? policy).values,
           "hierarchy.hidden": policy.values["hierarchy.hidden"] } };
@@ -5866,7 +5828,7 @@ export default class KplexPlugin extends Plugin {
   async hideRelationship(sourcePath: string, targetPath: string, beforeMutation?: () => boolean,
     ownConfirmation?: (modal: { close(): void } | null) => void): Promise<ActionOutcome> {
     const source = this.index.get(sourcePath), target = this.index.get(targetPath);
-    const fields = [...new Set(this.settings.hierarchy.hidden.filter(/** Blank configured keys are not writable choices. */ field => field.trim()))];
+    const fields = [...new Set(ontologyConfiguration(this.settings).hierarchy.hidden.filter(/** Blank configured keys are not writable choices. */ field => field.trim()))];
     if (!source || !target || source.isFolder || source.isTag || target.isFolder || target.isTag
       || source.file?.extension !== "md" && target.file?.extension !== "md") {
       return {status:"unavailable",reasonKey:"actions.target-unavailable"};

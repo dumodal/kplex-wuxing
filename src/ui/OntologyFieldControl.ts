@@ -42,7 +42,7 @@ export class OntologyFieldControl {
         input.readOnly = state.error === "conflict";
         input.setAttribute("aria-busy", String(state.busy));
         if (state.error) input.setAttribute("aria-invalid", "true"); else input.removeAttribute("aria-invalid");
-        feedback.setText(state.error === "conflict" ? this.translate("settings.ontology.conflict") : state.error === "storage" ? this.translate("settings.ontology.saveFailed") : "");
+        feedback.setText(state.error === "conflict" ? this.translate("settings.ontology.conflict") : state.error === "storage" ? this.translate("settings.ontology.saveFailed") : state.error === "validation" ? this.translate("ontology.pairInvalid") : "");
         if (state.error && !discard) setting.addButton(/** Explicit discard refreshes the draft from the current accepted field. */ button => {
           discard = button; button.setButtonText(this.translate("settings.ontology.discard")).onClick(/** A submitted write must settle before its draft can be discarded. */ () => {if (live) this.draft.discard();});
         });

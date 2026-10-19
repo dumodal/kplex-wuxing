@@ -10,6 +10,7 @@ import type { GraphSearchRead } from "../../core/graph/read";
 import { nodeId, type GraphNodeKind, type GraphNodeView } from "../../core/graph/model";
 import type { GraphCompilerSettings } from "../../core/graph/compiler";
 import { sanitizeDatePropertyRelations, type SemanticIndexSettings } from "../../core/graph/settings";
+import {ontologyConfiguration} from "../../core/contracts/ontologyConfiguration";
 
 /** Read the explicit host node facets without inferring kind or case rules from its opaque ID. */
 export function graphNodeKindFromLegacy(page: GraphPage): GraphNodeKind {
@@ -54,7 +55,7 @@ export function graphNodeViewFromLegacy(page: GraphPage): GraphNodeView {
 
 /** Capture the exact finite compiler policy used by both full builds and cached semantic preparation. */
 export function graphCompilerSettingsFromLegacy(settings: KplexSettings): GraphCompilerSettings {
-  const hierarchy = settings.hierarchy;
+  const hierarchy = ontologyConfiguration(settings).hierarchy;
   return {
     hierarchy: {
       hidden: [...hierarchy.hidden],
@@ -79,7 +80,7 @@ export function graphCompilerSettingsFromLegacy(settings: KplexSettings): GraphC
 /** Map persisted host settings to the semantic subset used by the portable graph. */
 export function semanticIndexSettingsFromLegacy(settings: KplexSettings): SemanticIndexSettings {
   return {
-    hierarchy: settings.hierarchy,
+    hierarchy: ontologyConfiguration(settings).hierarchy,
     inferAllLinksAsFriends: settings.inferAllLinksAsFriends,
     inverseInfer: settings.inverseInfer,
     datePropertyRelations: sanitizeDatePropertyRelations(settings.datePropertyRelations),

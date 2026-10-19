@@ -15,6 +15,7 @@
  * lookup acceleration during the existing physical inventory pass; selected tag covers reuse actual
  * structural facts and the compiler, without waiting for unrelated semantic source acquisition.
  */
+import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
 import { getAllTags, TFile, TFolder, type App } from "obsidian";
 import { NormalizedGraphCompiler, type GraphCompilerRuntime, type GraphCompilerSettings, type PortableGraphCompilation } from "../core/graph/compiler";
 import { estimateReferenceRecordBytes, sourceGeneration, sourceRevision, sourceSnapshotRevision, type NormalizedSourceBatch, type NormalizedSourceRecord, type SourceEntityFact, type SourceEntityRef } from "../core/graph/source";
@@ -307,7 +308,7 @@ export class HostMetadataPreview {
       if (size === null) return null;
       bytes += size;
     }
-    const hierarchy = this.settings().hierarchy;
+    const hierarchy = ontologyConfiguration(this.settings()).hierarchy;
     // Alias changes can re-resolve owners outside this source's outgoing incidence. Date widgets
     // interpret plain values through host Daily Notes policy. Neither fan-out is proved by links.
     if (priorAliases) {

@@ -91,6 +91,7 @@
  * Node imagery remains lazy presentation data. Live consent and a visual epoch fence cache reads,
  * pending durable-body results and mounted consumers without changing graph semantics or sources.
  */
+import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
 import { canonicalWebUrl } from "../adapters/obsidian/urlIdentity";
 import { remapGraphEndpoint } from "./remapGraphEndpoint";
 import { isRemoteNodeImageSource } from "../core/plex/nodeImagePolicy";
@@ -3520,7 +3521,7 @@ export class GraphIndex {
   }
 
   unassignedOntologyFields(): Array<{ normalized: string; name: string; count: number }> {
-    const h = this.plugin.settings.hierarchy;
+    const h = ontologyConfiguration(this.plugin.settings).hierarchy;
     const assigned = new Set([
       ...h.hidden, ...h.parents, ...h.children, ...h.leftFriends, ...h.rightFriends, ...h.previous, ...h.next, ...h.exclusions,
       this.plugin.settings.noteTypeField, this.plugin.settings.primaryTagField,

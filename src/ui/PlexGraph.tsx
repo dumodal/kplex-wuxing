@@ -15,6 +15,8 @@
  * Explicit primary-modifier placeholder opening delegates folder choice to the native creation owner.
  * Startup recovery remains eligible across visibility changes until its current check completes.
  */
+import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
+import {hasDirectionalCaption,directionalRelationCaption} from "../core/plex/directionalRelationCaption";
 import { connectionActionAllowed, tagMembershipPair } from "./structuralConnectionActions";
 import { graphTagValue } from "../adapters/obsidian/tagMembership";
 import { structuralDropKind, structuralAreaDrop } from "./StructuralNodeDropActions";
@@ -31,7 +33,7 @@ import { ColorScope } from "../adapters/obsidian/colorScope";
 import {centerRelationCounts} from "../core/contracts/centerRecovery";
 import {startCenterWatchdog} from "./components/centerWatchdog";
 import { appearanceColorReferences, STYLE_SETTINGS_KEYS } from "../core/contracts/appearance";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent, type RefObject, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent, type RefObject, type ReactNode } from "react";
 import { createPlexContextMenu } from "./plexContextMenu";
 import { ColorSourceModal } from "./ColorSourceModal";
 import { Keymap, Menu, Notice, Platform, type WorkspaceLeaf } from "obsidian";
@@ -666,7 +668,7 @@ function Edge({
   const baseWidth = style.strokeWidth ?? DEFAULT_RENDERED_LINK_WIDTH;
   const strokeWidth = highlighted ? Math.max(baseWidth + 1.7, 2.8) : baseWidth;
   const stroke = alphaHexToCss(style.strokeColor, NATIVE_LINK_STROKE);
-  const label = style.showLabel ? relationLabel(edge.typeDefinition) : null;
+  const label = style.showLabel ? relationLabel(edge.caption ?? edge.typeDefinition) : null;
   const fontSize = style.fontSize ?? 10;
   const labelWidth = label ? Math.max(20, label.length * fontSize * 0.58 + 10) : 0;
   const labelHeight = fontSize + 6;
@@ -2178,6 +2180,20 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     return clusters;
   }, [sectionExpansion, settings.graphDepth, settings.compactingFactor, settings.horizontalCompactingFactor, settings.compactView, settings.minLinkLength, settings.childColumns, settings.maxItemCount, settings.siblingRelativeSize, neighborhood, scene.nodes, sceneNodeKeys, visibleNodePaths, renderedNodeMap, expandedScrollTop, index, layoutRevision, predicate, lenses, predicateRevision, predicateEngine]);
 
+  /** Pair wording consumes only existing exact-pair explanations; physical definitions remain
+   * authoritative for filtering, styles and source mutations. Transient occurrences retain their
+   * real document endpoints even when their section has folded out of the visible scene. */
+  const connectionCaption = useCallback((definition:string|undefined,show:boolean|undefined,sourcePath:string,targetPath:string,
+    sourcePage?:GraphPage,targetPage?:GraphPage):string|undefined=>{
+    const pairs=ontologyConfiguration(settings).pairs;
+    if(!show||!hasDirectionalCaption(definition,pairs))return definition;
+    const explanation=sectionExpansion?.explanations.get(sourcePath+'\u0000'+targetPath)??index.explainRelationship(sourcePath,targetPath);
+    const source=sourcePage??sectionExpansion?.sections.find(/** Folded section sources still carry their original document identity. */ section=>section.page.path===sourcePath)?.page;
+    const physicalSource=source?.transient?.kind==='section'?source.transient.sourcePath:source?.transient?.actualPath??source?.path??sourcePath;
+    const physicalTarget=targetPage?.transient?.kind==='section'?targetPage.transient.sourcePath:targetPage?.transient?.actualPath??targetPage?.path??targetPath;
+    return directionalRelationCaption(definition,pairs,physicalSource,physicalTarget,explanation?.decisions);
+  },[index,sectionExpansion,settings.hierarchy,settings.ontologyPairingVersion]);
+
   const retainedPresentationDemand = useRef<Set<GraphPage>>(new Set());
   /** Retain exact visible page membership across unrelated scene renders; new page incarnations still repair. */
   const presentationDemandPages = useMemo(() => {
@@ -2234,7 +2250,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
         const reverse = child.relation.linkDirection === (settings.inverseArrowDirection ? LinkDirection.TO : LinkDirection.FROM);
         connectors.push({
           key: child.key,
-          definition: child.relation.typeDefinition,
+          definition: connectionCaption(child.relation.typeDefinition,style.showLabel,cluster.parent.page.path,child.relation.page.path,cluster.parent.page,child.relation.page),
           d: geometry.d,
           stroke: alphaHexToCss(style.strokeColor, NATIVE_LINK_STROKE),
           width: Math.max(0.65, (style.strokeWidth ?? DEFAULT_RENDERED_LINK_WIDTH) * 0.75),
@@ -2245,7 +2261,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       }
     }
     return connectors;
-  }, [expandedClusters, settings.graphDepth, settings.connectorStyle, settings.inverseArrowDirection, settings.baseLinkStyle, settings.hierarchyLinkStyles, neighborhood, predicateEngine, index, paintLenses, predicateRevision]);
+  }, [expandedClusters, settings.graphDepth, settings.connectorStyle, settings.inverseArrowDirection, settings.baseLinkStyle, settings.hierarchyLinkStyles, neighborhood, predicateEngine, index, paintLenses, predicateRevision, connectionCaption]);
 
   // Find uses this surface's projection, including overflow rows and expanded children.
   // Global lenses and area filters exclude candidates; camera clipping does not.
@@ -2440,8 +2456,11 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     const layered = graphLensEdgeStyle(predicateEngine, index, paintLenses, {page: target.page, label: target.label, center: neighborhood.center,
       edge: {role: edge.role, relationType: edge.relationType, definition: edge.typeDefinition, linkDirection: edge.direction,
         sourcePath: edge.explanationSourcePath ?? edge.sourcePath, targetPath: edge.explanationTargetPath ?? edge.targetPath}});
-    return {...edge, style: {...edge.style, strokeColor: current.strokeColor, textColor: current.textColor, ...layered}};
-  }), [visibleEdges, renderedNodeMap, neighborhood, paintSettings, predicateEngine, index, paintLenses]);
+    const style={...edge.style,strokeColor:current.strokeColor,textColor:current.textColor,...layered};
+    const sourcePath=edge.explanationSourcePath??edge.sourcePath,targetPath=edge.explanationTargetPath??edge.targetPath;
+    return {...edge,style,caption:connectionCaption(edge.typeDefinition,style.showLabel,sourcePath,targetPath,
+      (renderedNodeMap.get(sourcePath)??renderedNodeMap.get(edge.sourcePath))?.page,(renderedNodeMap.get(targetPath)??renderedNodeMap.get(edge.targetPath))?.page)};
+  }), [visibleEdges, renderedNodeMap, neighborhood, paintSettings, predicateEngine, index, paintLenses, connectionCaption, renderRevision, semanticRevision]);
 
   const interaction = useMemo(() => {
     const edgeIds = new Set<string>();
