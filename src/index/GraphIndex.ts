@@ -3525,7 +3525,7 @@ export class GraphIndex {
     const assigned = new Set([
       ...h.hidden, ...h.parents, ...h.children, ...h.leftFriends, ...h.rightFriends, ...h.previous, ...h.next, ...h.exclusions,
       this.plugin.settings.noteTypeField, this.plugin.settings.primaryTagField,
-    ].map((name) => name.toLowerCase().replaceAll(" ", "-").trim()));
+    ].map(normalizeFieldName));
     return this.discoveredFields().filter((field) => !assigned.has(field.normalized));
   }
 

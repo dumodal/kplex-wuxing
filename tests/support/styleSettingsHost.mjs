@@ -31,7 +31,7 @@ export function styleSettingsHostSource(root) {
     import {readObsidianPresentationEnvironment} from "./src/adapters/obsidian/presentationEnvironment";
     import {migrateActionPreferences,sanitizeActionPreferences,compileActionBindings} from "./src/core/plex/actionPreferences";
     import {Notice} from "obsidian";
-    import {ontologyConfiguration,assignOntologyField,editOntologyEntries} from './src/core/contracts/ontologyConfiguration';
+    import {ontologyConfiguration,assignOntologyField,editOntologyEntries,ONTOLOGY_GROUPS} from './src/core/contracts/ontologyConfiguration';
     export * from './src/core/contracts/ontologyConfiguration';
     export {AddToOntologyModal} from './src/ui/AddToOntologyModal';
     import {normalizeFieldName} from './src/core/contracts/fieldName';

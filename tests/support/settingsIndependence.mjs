@@ -29,6 +29,9 @@ export async function runSettingsIndependence(c) {
   }));
   const alive = [];
   function owner(next = structuredClone(settings), signature = computeIndexSettingsSignature(settings), kind = "active") {
+    // This historical fixture constructs pre-startup settings directly. Establish the same
+    // lossless syntax boundary as production loading while preserving its exact field order.
+    if(next.ontologyPairingVersion===undefined)next={...next,ontologyPairingVersion:1,hierarchy:c.ontologyGrammar.escapeLegacyOntology(next.hierarchy)};
     next.pinnedNodes ??= []; next.lastActivePath ??= "";
     const p = new KplexPlugin();
     p.app = app; p.settings = next; p.savedSettingsPolicy = policy.captureSettingsPolicy(next);
@@ -91,6 +94,28 @@ export async function runSettingsIndependence(c) {
   const baselineInventoryEnabled = index.sourceAcquisition.pauseInventory();
   if (index.sourceAcquisition.inventory) await index.sourceAcquisition.inventory;
   try {
+    await scenario("pairing-only settings preserve declarations, fingerprints and semantic work", async () => {
+      const p=owner();await restore(p);
+      const parent=p.ontologyFieldsForRole("parent").find(field=>field.trim()),child=p.ontologyFieldsForRole("child").find(field=>field.trim());
+      assert(parent&&child);
+      const signature=computeIndexSettingsSignature(p.settings),graph=canonicalGraph(p.index),fingerprints=[...p.index.semanticFingerprints],revision=p.index.getSemanticPreparationDiagnostics().policyRevision;
+      await zeroSemanticWork(p,async()=>{
+        await p.assignFieldToOntology(parent,"parent",child);
+        assert.equal(computeIndexSettingsSignature(p.settings),signature);
+        assert.equal(p.index.getSemanticPreparationDiagnostics().policyRevision,revision);
+        assert.deepEqual(canonicalGraph(p.index),graph);assert.deepEqual([...p.index.semanticFingerprints],fingerprints);
+        await p.assignFieldToOntology(parent,"parent",null);
+        assert.equal(computeIndexSettingsSignature(p.settings),signature);
+        assert.deepEqual(canonicalGraph(p.index),graph);assert.deepEqual([...p.index.semanticFingerprints],fingerprints);
+      });
+    });
+    for(const kind of ["active","checkpoint"])await scenario("paired display settings reuse ordinary physical-field "+kind+" snapshot",async()=>{
+      const next=structuredClone(settings),source=owner(next),parent=source.ontologyFieldsForRole("parent").find(field=>field.trim()),child=source.ontologyFieldsForRole("child").find(field=>field.trim());
+      assert(parent&&child);await source.assignFieldToOntology(parent,"parent",child);
+      assert.equal(computeIndexSettingsSignature(source.settings),warmRecord.meta.settingsSignature);
+      const restored=owner(structuredClone(source.settings),warmRecord.meta.settingsSignature,kind);
+      await zeroSemanticWork(restored,async()=>{assert.equal((await restore(restored)).restored,true);assert.deepEqual(canonicalGraph(restored.index),canonicalGraph(index));});
+    });
     await scenario("immutable classifier and signature-only semantics", async () => {
       const original = structuredClone(settings), before = policy.captureSettingsPolicy(original);
       original.tagStyleList.reverse(); original.baseNodeStyle.maxLabelLength = 11;

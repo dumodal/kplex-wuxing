@@ -7,7 +7,7 @@ export const ONTOLOGY_GROUPS = ['hidden','parents','children','leftFriends','rig
 export type OntologyGroup = typeof ONTOLOGY_GROUPS[number];
 export type OntologyHierarchy = Readonly<Record<OntologyGroup, readonly string[]>> & Readonly<{friends?: readonly string[]}>;
 export type OntologyRole = 'parent'|'child'|'left'|'right'|'previous'|'next'|'hidden'|'excluded';
-export const ONTOLOGY_ROLE_GROUP: Readonly<Record<OntologyRole,OntologyGroup>> = {parent:'parents',child:'children',left:'leftFriends',right:'rightFriends',previous:'previous',next:'next',hidden:'hidden',excluded:'exclusions'};
+export const ONTOLOGY_ROLE_GROUP: Readonly<Record<OntologyRole,OntologyGroup>> = {hidden:'hidden',parent:'parents',child:'children',left:'leftFriends',right:'rightFriends',previous:'previous',next:'next',excluded:'exclusions'};
 export const ONTOLOGY_RECIPROCAL: Readonly<Partial<Record<OntologyRole,OntologyRole>>> = {parent:'child',child:'parent',left:'left',right:'right',previous:'next',next:'previous'};
 export type OntologyPair = Readonly<{field:string;partner:string;role:OntologyRole;partnerRole:OntologyRole}>;
 export type OntologyConfiguration = Readonly<{hierarchy:OntologyHierarchy;pairs:ReadonlyMap<string,OntologyPair>;roles:ReadonlyMap<string,OntologyRole>}>;
@@ -18,14 +18,15 @@ export class OntologyConfigurationError extends Error {
   /** Retain a localized-feedback key without leaking field names into generic logs. */
   constructor(readonly issue:OntologyIssue){super('Invalid ontology configuration: '+issue);this.name='SettingsValidationError';}
 }
-const projected=new WeakMap<OntologyHierarchy,OntologyConfiguration>();
+const projected=new WeakMap<OntologyHierarchy,Readonly<{configuration:OntologyConfiguration;lists:readonly Readonly<{fields:readonly string[];count:number}>[]}>>();
 /** Escape only settings syntax; the resulting effective field is exactly the original property name. */
 export function escapeOntologyField(field:string):string {return field.replace(/\\/g,'\\\\').replace(/\//g,'\\/');}
 /** Recognize one unescaped separator and explicit slash/backslash escapes without touching note grammar. */
 function entryParts(entry:string):string[] {
   const parts=[''];let escaped=false;
   for(const char of entry){if(escaped){if(char!=='/'&&char!=='\\')throw new OntologyConfigurationError('malformed');parts[parts.length-1]+=char;escaped=false;}else if(char==='\\')escaped=true;else if(char==='/')parts.push('');else parts[parts.length-1]+=char;}
-  if(escaped||parts.length>2||parts.some(part=>!normalizeFieldName(part)))throw new OntologyConfigurationError('malformed');
+  if(!escaped&&parts.length===1&&!parts[0].trim())return parts;
+  if(escaped||parts.length>2||parts.some(/** Both pair names must be nonempty before normalization. */ part=>!part.trim()||!normalizeFieldName(part.trim())))throw new OntologyConfigurationError('malformed');
   return parts.length===1?parts:parts.map(/** Surrounding pair syntax whitespace is not part of a physical property. */ part=>part.trim());
 }
 /** Expand once per immutable committed hierarchy identity; legacy callers retain literal slash semantics. */
@@ -33,12 +34,15 @@ export function ontologyConfiguration(input:OntologyConfigurationInput, captureM
   if(input.ontologyPairingVersion!==undefined&&input.ontologyPairingVersion!==1)throw new OntologyConfigurationError('unsupported');
   if(input.ontologyPairingVersion!==1)return {hierarchy:input.hierarchy,pairs:new Map(),roles:rolesFor(input.hierarchy)};
   if(captureMutation)projected.delete(input.hierarchy);
-  const cached=projected.get(input.hierarchy);if(cached)return cached;
+  const cached=projected.get(input.hierarchy);
+  // Legacy controls can replace/push a list before committing. Check only eight array identities
+  // and lengths, never scan/compare field contents on a rendering or compiler read. saveSettings
+  // explicitly captures rarer same-length in-place changes; immutable field edits need no reset.
+  if(cached&&cached.lists.every(/** Constant-size role metadata detects legacy list replacement without reparsing unchanged settings. */ (list,index)=>list.fields===input.hierarchy[ONTOLOGY_GROUPS[index]]&&list.count===list.fields.length))return cached.configuration;
   const fields=Object.fromEntries(ONTOLOGY_GROUPS.map(/** New arrays never share mutable state with the editable settings. */ group=>[group,[] as string[]])) as Record<OntologyGroup,string[]>;
   const pairs=new Map<string,OntologyPair>();
   for(const [role,group] of Object.entries(ONTOLOGY_ROLE_GROUP) as [OntologyRole,OntologyGroup][]){
     for(const entry of input.hierarchy[group]){
-      if(!entry.trim())continue;
       const parts=entryParts(entry);fields[group].push(parts[0]);
       if(parts.length===1)continue;
       const inverse=ONTOLOGY_RECIPROCAL[role];if(!inverse)throw new OntologyConfigurationError('role');
@@ -57,7 +61,8 @@ export function ontologyConfiguration(input:OntologyConfigurationInput, captureM
     // redundant assignments; genuine multiplicity of every unrelated field remains untouched.
     let seen=false;fields[group]=fields[group].filter(/** Keep the first physical assignment's position and spelling. */ field=>{if(normalizeFieldName(field)!==normalized)return true;if(seen)return false;seen=true;return true;});
   }
-  const result={hierarchy:fields,pairs,roles:rolesFor(fields)};projected.set(input.hierarchy,result);return result;
+  const result={hierarchy:fields,pairs,roles:rolesFor(fields)};
+  projected.set(input.hierarchy,{configuration:result,lists:ONTOLOGY_GROUPS.map(/** Retain only this root's finite list metadata. */ group=>({fields:input.hierarchy[group],count:input.hierarchy[group].length}))});return result;
 }
 /** Retain established group precedence for ordinary unpaired field lookup. */
 function rolesFor(hierarchy:OntologyHierarchy):Map<string,OntologyRole> {
@@ -71,12 +76,20 @@ export function escapeLegacyOntology(hierarchy:OntologyHierarchy):Record<Ontolog
 /** A textarea owns its primary assignments, not an implicitly assigned former counterpart.
  * Removing/replacing a pair preserves that counterpart as an ordinary field in its old role. */
 export function editOntologyEntries(input:OntologyConfigurationInput, group:OntologyGroup, entries:readonly string[]):Record<OntologyGroup,string[]> {
-  const previous=ontologyConfiguration(input),next={...input.hierarchy,[group]:[...entries]} as Record<OntologyGroup,string[]>;
+  return retainOntologyCounterparts(input,{...input.hierarchy,[group]:[...entries]} as Record<OntologyGroup,string[]>);
+}
+
+/** Preserve former implicit counterparts unless a complete imported role explicitly replaces them.
+ * Manual field edits and partial foreign imports share this reconciliation and validator; a full
+ * imported role remains authoritative rather than restoring fields it deliberately replaced. */
+export function retainOntologyCounterparts(input:OntologyConfigurationInput,next:Record<OntologyGroup,string[]>,replacedGroups:readonly OntologyGroup[]=[]):Record<OntologyGroup,string[]> {
+  const previous=ontologyConfiguration(input);
   const projected=ontologyConfiguration({...input,hierarchy:next});
-  for(const entry of input.hierarchy[group]){
+  for(const group of ONTOLOGY_GROUPS)for(const entry of input.hierarchy[group]){
     const parts=input.ontologyPairingVersion===1?entryParts(entry):[entry];if(parts.length!==2)continue;
     const key=normalizeFieldName(parts[1]);if(projected.roles.has(key))continue;
     const role=previous.roles.get(key)!;const counterpartGroup=ONTOLOGY_ROLE_GROUP[role];
+    if(replacedGroups.includes(counterpartGroup))continue;
     next[counterpartGroup]=[...next[counterpartGroup],escapeOntologyField(parts[1])];
   }
   ontologyConfiguration({...input,hierarchy:next},true);return next;
@@ -88,6 +101,7 @@ export function eligibleOntologyPartners(configuration:OntologyConfiguration, fi
   const reciprocal=ONTOLOGY_RECIPROCAL[role];if(!reciprocal)return [];
   const normalized=normalizeFieldName(field),seen=new Set<string>();
   return configuration.hierarchy[ONTOLOGY_ROLE_GROUP[reciprocal]].filter(/** One physical field can have at most one current partner, including across other roles. */ candidate=>{
+    if(!candidate.trim())return false;
     const key=normalizeFieldName(candidate),paired=configuration.pairs.get(key);
     if(key===normalized||seen.has(key)||paired&&normalizeFieldName(paired.partner)!==normalized)return false;
     seen.add(key);return true;
@@ -108,8 +122,8 @@ export function assignOntologyField(input:OntologyConfigurationInput, field:stri
     const other=configuration.pairs.get(partnerKey);if(other&&normalizeFieldName(other.partner)!==normalized)throw new OntologyConfigurationError('duplicate');
   }
   if(configuration.roles.get(normalized)===role&&(paired?normalizeFieldName(paired.partner):null)===partnerKey)
-    return Object.fromEntries(ONTOLOGY_GROUPS.map(/** An unchanged Save must not rewrite the pair's original declaration side. */ group=>[group,[...input.hierarchy[group]]])) as Record<OntologyGroup,string[]>;
-  const result=Object.fromEntries(ONTOLOGY_GROUPS.map(/** Work only on independent settings arrays. */ group=>[group,[...input.hierarchy[group]]])) as Record<OntologyGroup,string[]>;
+    return {...input.hierarchy,...Object.fromEntries(ONTOLOGY_GROUPS.map(/** An unchanged Save must not rewrite the pair's original declaration side or retained legacy keys. */ group=>[group,[...input.hierarchy[group]]]))} as Record<OntologyGroup,string[]>;
+  const result={...input.hierarchy,...Object.fromEntries(ONTOLOGY_GROUPS.map(/** Work only on independent settings arrays, preserving unrelated retained legacy configuration. */ group=>[group,[...input.hierarchy[group]]]))} as Record<OntologyGroup,string[]>;
   if(paired){
     for(const group of ONTOLOGY_GROUPS)result[group]=result[group].map(/** Detach just this pair, preserving its declaration-side assignment. */ entry=>{
       const parts=input.ontologyPairingVersion===1?entryParts(entry):[entry];return parts.length===2&&parts.some(/** Either endpoint owns the same declaration. */ part=>normalizeFieldName(part)===normalized)?escapeOntologyField(parts[0]):entry;

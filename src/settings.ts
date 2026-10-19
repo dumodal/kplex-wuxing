@@ -27,7 +27,7 @@
  * typing/composition never publishes transient hierarchy values or queues per-character graph work.
  */
 import { readObsidianPresentationEnvironment } from "./adapters/obsidian/presentationEnvironment";
-import {ontologyConfiguration, escapeLegacyOntology, escapeOntologyField} from "./core/contracts/ontologyConfiguration";
+import {ontologyConfiguration, escapeLegacyOntology, escapeOntologyField, retainOntologyCounterparts, ONTOLOGY_GROUPS, ONTOLOGY_ROLE_GROUP} from "./core/contracts/ontologyConfiguration";
 import { formatShortcut } from "./core/plex/shortcutPresentation";
 import {AppearanceThemesManagerModal} from "./ui/AppearanceThemesModal";
 import {StyleManagerList} from "./ui/StyleManagerList";
@@ -554,6 +554,12 @@ export function importExcaliBrainGraphSettings(raw: unknown, current?: KplexSett
   const hierarchy = isSettingsRecord(imported.hierarchy) ? Object.fromEntries(Object.entries(imported.hierarchy).map(/** Foreign properties never opt into K-Plex pairing syntax. */ ([group, fields]) => [group, Array.isArray(fields) ? fields.map(/** Preserve each imported literal name. */ field => escapeOntologyField(String(field))) : fields])) : {};
   // A legacy friends-only field must replace the local leftFriends default, not be masked by it.
   const leftFriends = hierarchy.leftFriends ?? hierarchy.friends ?? current?.hierarchy.leftFriends;
+  const importedHierarchy = {
+    ...DEFAULT_HIERARCHY_DEFINITION, ...current?.hierarchy, ...hierarchy,
+    ...(leftFriends === undefined ? {} : {leftFriends}),
+  } as Hierarchy;
+  const reconciledHierarchy = current ? retainOntologyCounterparts(current, importedHierarchy,
+    ONTOLOGY_GROUPS.filter(/** Only explicitly supplied foreign role lists own wholesale replacement. */ group => Array.isArray(hierarchy[group]) || group === "leftFriends" && Array.isArray(hierarchy.friends))) : importedHierarchy;
   const settings = migrateAndMergeSettings({
     ...current,
     ...imported,
@@ -567,11 +573,7 @@ export function importExcaliBrainGraphSettings(raw: unknown, current?: KplexSett
     colorPreferences: current?.colorPreferencesFuture !== undefined ? current.colorPreferencesFuture
       : current?.colorPreferences ?? DEFAULT_SETTINGS.colorPreferences,
     horizontalCompactingFactor: imported.compactingFactor ?? current?.horizontalCompactingFactor,
-    hierarchy: {
-      ...current?.hierarchy,
-      ...hierarchy,
-      ...(leftFriends === undefined ? {} : { leftFriends }),
-    },
+    hierarchy: reconciledHierarchy,
   });
   delete settings.appearanceThemes;
   if (current?.appearanceThemes) settings.appearanceThemes = structuredClone(current.appearanceThemes);
@@ -1776,7 +1778,24 @@ export class KplexSettingTab extends PluginSettingTab {
         new Notice(plugin.translator(kind === "conflict" ? "settings.ontology.conflict" : kind === "refresh" ? "settingsSync.refreshPending" : kind === "validation" ? "ontology.pairInvalid" : "settings.ontology.saveFailed"));
       },
     });
-    const control = new OntologyFieldControl(draft, plugin.translator, captureOwner); fields.set(field, control); return control;
+    const control = new OntologyFieldControl(draft, plugin.translator, captureOwner, {
+      read: /** Both role lists explain the same saved pair, even when only one contains its declaration. */ () => this.ontologyPairSummary(field),
+      subscribe: /** Reuse presentation notifications; row disposal retires this description-only listener. */ update => plugin.index?.subscribePresentation(update) ?? (() => {}),
+    }); fields.set(field, control); return control;
+  }
+
+  /** Bound reciprocal-field summaries beside raw authoritative textareas, without another editor or registry. */
+  private ontologyPairSummary(field: EditableHierarchyKey): string {
+    const seen = new Set<string>(), pairs: string[] = [];
+    for (const pair of ontologyConfiguration(this.kplexPlugin.settings).pairs.values()) {
+      if (ONTOLOGY_ROLE_GROUP[pair.role] !== field) continue;
+      const key = [pair.field, pair.partner].sort().join("\u0000");
+      if (seen.has(key)) continue;
+      seen.add(key); pairs.push(`${pair.field} ↔ ${pair.partner}`);
+    }
+    if (!pairs.length) return "";
+    const page = collectionWindow(pairs, 3, 3);
+    return this.kplexPlugin.translator("ontology.pairedFieldsSummary", {count: page.total, pairs: page.visible.join(", ") + (page.remaining ? "…" : "")});
   }
 
   /** Activate the visible native page entry inside this tab after the host opens its root. */

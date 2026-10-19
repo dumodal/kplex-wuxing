@@ -14,6 +14,7 @@ const spanishTranslations = {
   "settings.hoverHighlight.name": "Exigir modificador para resaltar al pasar el cursor",
   "settings.hoverHighlight.help": "Mantén {key} al pasar el cursor sobre un nodo, una puerta o un conector para resaltar sus conexiones de inmediato. Si se desactiva, basta con pasar el cursor y esperar un momento.",
   "settings.hoverHighlight.modifier": "la tecla modificadora alternativa",
+  "ontology.pairedFieldsSummary": "Campos emparejados ({count}): {pairs}. Cada par se guarda en una sola lista.",
   "ontology.pairWith": "Emparejar con",
   "ontology.pairOptionalHelp": "Opcional. Elige un campo existente en la dirección recíproca.",
   "ontology.pairNone": "Sin pareja",

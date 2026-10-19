@@ -1,7 +1,7 @@
 ﻿/** Native role/pair editor over the shared configuration validator and queued ontology writer.
  * The shell owns only optional partner selection, busy/generation fences and recoverable feedback;
  * fields, roles and persistence remain with the plugin and settings-only projection. */
-import {Modal,Setting,type ButtonComponent,type DropdownComponent,type TextComponent} from 'obsidian';
+import {Modal,Notice,Setting,type ButtonComponent,type DropdownComponent,type TextComponent} from 'obsidian';
 import type KplexPlugin from '../main';
 import {normalizeFieldName} from '../core/contracts/fieldName';
 import {ontologyConfiguration,eligibleOntologyPartners,ONTOLOGY_RECIPROCAL,type OntologyRole,type OntologyConfiguration} from '../core/contracts/ontologyConfiguration';
@@ -12,6 +12,7 @@ export type OntologyAssignmentRole=OntologyRole;
 export class AddToOntologyModal extends Modal {
   private opened=false;
   private busy=false;
+  private committed=false;
   private generation=0;
   private selected:OntologyAssignmentRole='child';
   private partner='';
@@ -30,7 +31,7 @@ export class AddToOntologyModal extends Modal {
 
   /** Render the existing direction/Save/Cancel flow with one optional reciprocal-field input. */
   onOpen():void {
-    this.opened=true;this.generation++;
+    this.opened=true;this.committed=false;this.generation++;
     const translate=this.plugin.translator;this.opening=ontologyConfiguration(this.plugin.settings);
     this.current=this.plugin.receivedSettingsOwner('hierarchy');
     this.selected=this.plugin.ontologyRoleForField(this.fieldName)??'child';
@@ -67,22 +68,25 @@ export class AddToOntologyModal extends Modal {
     const valid=this.valid(),pairable=Boolean(ONTOLOGY_RECIPROCAL[this.selected]);
     this.partnerRow?.settingEl.toggle(pairable);
     this.resolutionRow?.settingEl.toggle(!valid);
-    if(this.feedback)this.feedback.setText(valid?'':this.plugin.translator('ontology.pairIncompatible'));
-    this.saveButton?.setDisabled(this.busy||!valid);
+    if(this.feedback){this.feedback.setText(valid?'':this.plugin.translator('ontology.pairIncompatible'));this.feedback.toggle(!valid);}
+    this.saveButton?.setDisabled(this.busy||this.committed||!valid);
     this.roleControl?.setDisabled(this.busy);this.partnerControl?.setDisabled(this.busy);
   }
 
   /** Revalidate both fields inside the common queue; stale/failed saves keep this draft recoverable. */
   private async save():Promise<void> {
-    if(!this.opened||this.busy||!this.valid()||!this.opening)return;
+    if(!this.opened||this.busy||this.committed||!this.opening)return;
+    if(!this.valid()){this.refresh();return;}
     this.busy=true;this.refresh();const generation=this.generation;
     try {
-      await this.plugin.assignFieldToOntology(this.fieldName,this.selected,this.partner.trim()||null,this.opening,this.current);
+      const result=await this.plugin.assignFieldToOntology(this.fieldName,this.selected,this.partner.trim()||null,this.opening,this.current);
       if(!this.opened||this.generation!==generation)return;
+      this.committed=true;
+      if(result?.refreshPending)new Notice(this.plugin.translator('styles.operation.savedRefreshPending'));
       this.onSaved?.();this.close();
     }catch(error){
-      if(this.opened&&this.generation===generation&&this.feedback)this.feedback.setText(this.plugin.translator(error instanceof Error&&error.name==='SettingsValidationError'?'ontology.pairInvalid':error instanceof Error&&error.name==='SettingsConflictError'?'settings.ontology.conflict':'styles.operation.notSaved'));
-    }finally{this.busy=false;if(this.opened&&this.generation===generation){this.saveButton?.setDisabled(!this.valid());this.roleControl?.setDisabled(false);this.partnerControl?.setDisabled(false);}}
+      if(this.opened&&this.generation===generation&&this.feedback){this.feedback.setText(this.plugin.translator(this.committed?'styles.operation.savedRefreshPending':error instanceof Error&&error.name==='SettingsValidationError'?'ontology.pairInvalid':error instanceof Error&&error.name==='SettingsConflictError'?'settings.ontology.conflict':'styles.operation.notSaved'));this.feedback.toggle(true);}
+    }finally{this.busy=false;if(this.opened&&this.generation===generation){this.saveButton?.setDisabled(this.committed||!this.valid());this.roleControl?.setDisabled(this.committed);this.partnerControl?.setDisabled(this.committed);}}
   }
 
   /** Retire suggestions and exact invocation once; an accepted disk operation remains accepted. */

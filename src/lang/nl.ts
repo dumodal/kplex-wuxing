@@ -14,6 +14,7 @@ const dutchTranslations = {
   "settings.hoverHighlight.name": "Toets vereisen voor markering bij aanwijzen",
   "settings.hoverHighlight.help": "Houd {key} ingedrukt terwijl je een knooppunt, poort of verbinding aanwijst om gerelateerde verbindingen direct te markeren. Uitgeschakeld begint de markering bij aanwijzen na een korte vertraging.",
   "settings.hoverHighlight.modifier": "de alternatieve modificatietoets",
+  "ontology.pairedFieldsSummary": "Gekoppelde velden ({count}): {pairs}. Elk paar wordt in ??n lijst opgeslagen.",
   "ontology.pairWith": "Koppelen aan",
   "ontology.pairOptionalHelp": "Optioneel. Kies een bestaand veld in de tegengestelde richting.",
   "ontology.pairNone": "Geen koppeling",

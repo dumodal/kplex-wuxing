@@ -669,9 +669,6 @@ function Edge({
   const strokeWidth = highlighted ? Math.max(baseWidth + 1.7, 2.8) : baseWidth;
   const stroke = alphaHexToCss(style.strokeColor, NATIVE_LINK_STROKE);
   const label = style.showLabel ? relationLabel(edge.caption ?? edge.typeDefinition) : null;
-  const fontSize = style.fontSize ?? 10;
-  const labelWidth = label ? Math.max(20, label.length * fontSize * 0.58 + 10) : 0;
-  const labelHeight = fontSize + 6;
 
   const resolvedCrossLinkOpacity = edge.isCrossLink && !highlighted ? crossLinkOpacity : undefined;
 
@@ -701,26 +698,34 @@ function Edge({
       onPointerLeave={onLeave}
       onContextMenu={onContextMenu}
     />
-    {label && <g className="kplex-edge-label-wrap" pointerEvents="none" opacity={resolvedCrossLinkOpacity}>
+    <EdgeLabel label={label} midpoint={geometry.midpoint} style={style} background={labelBackground} opacity={resolvedCrossLinkOpacity} />
+  </g>;
+}
+
+/** Shared SVG label presentation for ordinary and expanded-descendant connectors. Caption text
+ * is already projected; this component preserves existing generic suppression, fonts and colors. */
+function EdgeLabel({label,midpoint,style,background,opacity}:{label:string|null;midpoint:Point;style:PositionedEdge['style'];background:string;opacity?:number}){
+  if(!label)return null;
+  const fontSize=style.fontSize??10,labelWidth=Math.max(20,label.length*fontSize*.58+10),labelHeight=fontSize+6;
+  return <g className="kplex-edge-label-wrap" pointerEvents="none" opacity={opacity}>
       <rect
-        x={geometry.midpoint.x - labelWidth / 2}
-        y={geometry.midpoint.y - labelHeight / 2}
+        x={midpoint.x - labelWidth / 2}
+        y={midpoint.y - labelHeight / 2}
         width={labelWidth}
         height={labelHeight}
         rx={3}
-        fill={labelBackground}
+        fill={background}
       />
       <text
         className="kplex-edge-label"
-        x={geometry.midpoint.x}
-        y={geometry.midpoint.y}
+        x={midpoint.x}
+        y={midpoint.y}
         textAnchor="middle"
         dominantBaseline="central"
         fill={alphaHexToCss(style.textColor, NATIVE_LINK_TEXT)}
         fontSize={fontSize}
       >{label}</text>
-    </g>}
-  </g>;
+    </g>;
 }
 
 /** Compose the deterministic Plex scene; native-follow layouts land immediately while explicit navigation retains motion and central Open uses a main tab. */
@@ -2228,8 +2233,8 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   }, [plugin, hostLeaf, index, presentationDemandPages]);
 
   const expandedConnectors = useMemo(() => {
-    if (settings.graphDepth !== 2) return [] as Array<{ key: string; d: string; stroke: string; width: number; dash?: string; markerStart?: string; markerEnd?: string; definition?: string }>;
-    const connectors: Array<{ key: string; d: string; stroke: string; width: number; dash?: string; markerStart?: string; markerEnd?: string; definition?: string }> = [];
+    if (settings.graphDepth !== 2) return [] as Array<{ key:string;d:string;stroke:string;width:number;dash?:string;markerStart?:string;markerEnd?:string;definition?:string;caption?:string;midpoint:Point;style:PositionedEdge['style'] }>;
+    const connectors: Array<{ key:string;d:string;stroke:string;width:number;dash?:string;markerStart?:string;markerEnd?:string;definition?:string;caption?:string;midpoint:Point;style:PositionedEdge['style'] }> = [];
     for (const cluster of expandedClusters) {
       const source = gatePoint(cluster.parent, "bottom");
       for (const child of cluster.children) {
@@ -2250,7 +2255,9 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
         const reverse = child.relation.linkDirection === (settings.inverseArrowDirection ? LinkDirection.TO : LinkDirection.FROM);
         connectors.push({
           key: child.key,
-          definition: connectionCaption(child.relation.typeDefinition,style.showLabel,cluster.parent.page.path,child.relation.page.path,cluster.parent.page,child.relation.page),
+          definition: child.relation.typeDefinition,
+          caption: connectionCaption(child.relation.typeDefinition,style.showLabel,cluster.parent.page.path,child.relation.page.path,cluster.parent.page,child.relation.page),
+          midpoint: geometry.midpoint, style,
           d: geometry.d,
           stroke: alphaHexToCss(style.strokeColor, NATIVE_LINK_STROKE),
           width: Math.max(0.65, (style.strokeWidth ?? DEFAULT_RENDERED_LINK_WIDTH) * 0.75),
@@ -4518,8 +4525,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
             showEdgeContextMenuAt(edge, event.clientX, event.clientY);
           }}
         />)}
-        {expandedConnectors.map((connector) => <path
-          key={`expanded-edge:${connector.key}`}
+        {expandedConnectors.map((connector) => <g key={`expanded-edge:${connector.key}`} className="kplex-expanded-connector"><path
           className="kplex-expanded-edge"
           d={connector.d}
           fill="none"
@@ -4529,7 +4535,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
           markerStart={connector.markerStart}
           markerEnd={connector.markerEnd}
           vectorEffect="non-scaling-stroke"
-        />)}
+        /><EdgeLabel label={connector.style.showLabel?relationLabel(connector.caption??connector.definition):null} midpoint={connector.midpoint} style={connector.style} background={NATIVE_LINK_LABEL_FILL} /></g>)}
         {dragPath && <path className="kplex-drag-connector" d={dragPath} fill="none" vectorEffect="non-scaling-stroke" />}
       </svg>
 

@@ -95,9 +95,7 @@ function semanticValues(settings: SettingsPolicyInput): Record<string, unknown> 
 /** Capture before the next mutation. The caller may continue mutating its original settings. */
 export function captureSettingsPolicy(settings: SettingsPolicyInput): SettingsPolicy {
   const values: Partial<Record<SettingDiagnosticKey, string>> = {};
-  // Historical imperative controls may mutate arrays before saveSettings. This explicit policy
-  // capture is their revision boundary; scene/style consumers use the prepared cached result.
-  const configuration = ontologyConfiguration(settings, true);
+  const configuration = ontologyConfiguration(settings);
   for (const role of HIERARCHY_ROLES) values[`hierarchy.${role}`] = encode(configuration.hierarchy[role]);
   values.ontologyPairs = encode([...configuration.pairs].sort(/** Pair declaration position does not change the bidirectional caption lookup. */ ([first], [second]) => first.localeCompare(second)));
   const semantic = semanticValues(settings);

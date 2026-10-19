@@ -14,6 +14,7 @@ const traditionalChineseTranslations = {
   "settings.hoverHighlight.name": "懸停強調顯示需要修飾鍵",
   "settings.hoverHighlight.help": "將游標停在節點、閘門或連線上時，按住 {key} 即可立即強調顯示相關連線。停用時會在短暫延遲後顯示。",
   "settings.hoverHighlight.modifier": "替代修飾鍵",
+  "ontology.pairedFieldsSummary": "?????{count}??{pairs}???????????????",
   "ontology.pairWith": "配對欄位",
   "ontology.pairOptionalHelp": "選填。選擇對應方向中已存在的欄位。",
   "ontology.pairNone": "不配對",

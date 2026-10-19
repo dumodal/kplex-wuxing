@@ -45,7 +45,7 @@ import { mergeGraphLensDefinitions } from "./lens/GraphLens";
 import { appearanceColorReferences } from "./core/contracts/appearance";
 import { requireNamedColor } from "./core/plex/colorEditing";
 import * as appearanceThemes from "./core/plex/appearanceThemes";
-import {ontologyConfiguration, assignOntologyField, editOntologyEntries, type OntologyConfiguration} from './core/contracts/ontologyConfiguration';
+import {ontologyConfiguration, assignOntologyField, editOntologyEntries, ONTOLOGY_GROUPS, type OntologyConfiguration} from './core/contracts/ontologyConfiguration';
 import type {StyleEditorModal} from "./ui/StyleEditorModal";
 import {NotificationModal} from "./ui/NotificationModal";
 
@@ -1881,7 +1881,11 @@ export default class KplexPlugin extends Plugin {
       const before=captureSettingsPolicy(source),policy=captureSettingsPolicy(next),effects=classifySettingsChange(before,policy);
       await this.writeSettingsSnapshot(this.settingsSnapshotForPersistence(source.actionPreferencesFuture??source.actionPreferences,next));persisted=true;
       if(this.unloading)return;
-      if(appearanceThemes.themeValuesEqual(this.settings.hierarchy,source.hierarchy))this.settings.hierarchy=hierarchy;
+      const groups=ONTOLOGY_GROUPS.filter(/** Publish this edit's finite role changes without dropping a later unrelated imperative draft. */ group=>!appearanceThemes.themeValuesEqual(source.hierarchy[group],hierarchy[group]));
+      if(groups.every(/** A pair is one atomic edit; a later draft on either affected role retains ownership. */ group=>appearanceThemes.themeValuesEqual(this.settings.hierarchy[group],source.hierarchy[group]))){
+        const live={...this.settings.hierarchy};for(const group of groups)live[group]=hierarchy[group];
+        ontologyConfiguration({...this.settings,hierarchy:live});this.settings.hierarchy=live;
+      }
       const values={...(this.savedSettingsPolicy??captureSettingsPolicy(this.settings)).values};
       for(const key of effects.changedKeys)values[key]=policy.values[key];this.savedSettingsPolicy={values};
       semantic=effects.semanticInvalidation;changed=effects.render;
@@ -2385,6 +2389,9 @@ export default class KplexPlugin extends Plugin {
    * change never acquires or recompiles semantic scopes.
    */
   async saveSettings(_reindex = false, notifyIndex = true): Promise<void> {
+    // Capture historical same-length in-place ontology mutations once at their save boundary.
+    // Ordinary immutable field edits and subsequent scene/compiler reads reuse the prepared lookup.
+    ontologyConfiguration(this.settings, true);
     this.settings.primaryTagFieldLowerCase = this.settings.primaryTagField.toLowerCase().replaceAll(" ", "-");
     const next = captureSettingsPolicy(this.settings);
     const previousPolicy = this.savedSettingsPolicy;
@@ -4716,10 +4723,10 @@ export default class KplexPlugin extends Plugin {
    * The opening field and chosen partner are compared again inside the existing queue; an old
    * modal cannot steal a newly paired field or silently move its counterpart to another role. */
   async assignFieldToOntology(field:string,role:OntologyAssignmentRole,partner?:string|null,
-    expected:OntologyConfiguration=ontologyConfiguration(this.settings),current:()=>boolean=this.receivedSettingsOwner('hierarchy')):Promise<void> {
+    expected:OntologyConfiguration=ontologyConfiguration(this.settings),current:()=>boolean=this.receivedSettingsOwner('hierarchy')):Promise<StyleCommitResult> {
     const normalized=normalizeFieldName(field),openingPair=expected.pairs.get(normalized);
     const selected=partner===undefined?openingPair?.partner??null:partner;
-    await this.updateOntologyConfiguration(/** Validate both edited endpoints against the latest committed projection. */ source=>{
+    return this.updateOntologyConfiguration(/** Validate both edited endpoints against the latest committed projection. */ source=>{
       const latest=ontologyConfiguration(source);
       for(const endpoint of [field,...(selected?[selected]:[])]){
         const key=normalizeFieldName(endpoint);

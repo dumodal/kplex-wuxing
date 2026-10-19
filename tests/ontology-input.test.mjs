@@ -21,6 +21,27 @@ const receive=async value=>{disk=copy(value);p.onExternalSettingsChange();await 
 /** Execute one isolated production-boundary case and tear down model clocks even after assertion failures. */
 const scenario=body=>colorEditorScenario(`(async()=>{${initialize}try{${body};return true}finally{tab.disposeOntologySettings();for(const row of rows)row.release()}})()`);
 
+test('both native role lists explain one saved pair without mirroring syntax or moving defaults',async()=>{
+ assert.equal(await scenario(`await p.assignFieldToOntology('Child','child','Parent');const listeners=new Set();p.index.subscribePresentation=update=>{listeners.add(update);return()=>listeners.delete(update)};
+ const refresh=p.index.refreshPresentationSettings;p.index.refreshPresentationSettings=async()=>{await refresh();for(const update of listeners)update()};
+ const parent=mount('parents'),child=mount('children');check(parent.input.value==='Parent'&&child.input.value==='Child/Parent','Pair was duplicated or default order changed');
+ check(parent.setting.descEl.textContent.includes('Parent ↔ Child')&&child.setting.descEl.textContent.includes('Child ↔ Parent'),'Counterpart list did not explain shared pairing');
+ check(parent.setting.descEl.textContent.includes('one list only'),'Single stored declaration not explained');
+ type(child,'Child');child.input.dispatchEvent(new FocusEvent('blur'));await settled();check(!parent.setting.descEl.textContent.includes('↔')&&!child.setting.descEl.textContent.includes('↔'),'Other role retained an obsolete pair summary');
+ parent.release();child.release();check(listeners.size===0,'Pair summaries retained disposed native rows');`),true);
+});
+
+test('accepted pairing publishes affected roles without overwriting a later unrelated imperative draft',async()=>{
+ assert.equal(await scenario(`let release,entered;const hold=new Promise(r=>release=r),began=new Promise(r=>entered=r),store=p.saveData;p.saveData=async value=>{entered();await hold;await store(value)};
+ const accepted=p.updateOntologyField('previous',['Previous/Next'],['Previous'],p.receivedSettingsOwner('hierarchy'));await began;
+ p.settings.hierarchy={...p.settings.hierarchy,parents:['Later imperative parent']};const later=p.saveSettings(false);
+ release();await accepted;await later;check(p.settings.hierarchy.previous[0]==='Previous/Next'&&p.settings.hierarchy.parents[0]==='Later imperative parent','Independent live role was lost or blocked pairing publication');
+ check(p.writes[0].hierarchy.previous[0]==='Previous/Next','Accepted pairing was not durable');
+ // Legacy imperative saves own the whole hierarchy root and can correctly refuse a stale root.
+ // Retrying its retained live value after that conflict must include the accepted pair as well.
+ await p.saveSettings(false);check(disk.hierarchy.previous[0]==='Previous/Next'&&disk.hierarchy.parents[0]==='Later imperative parent','Explicit root retry lost accepted pair or retained draft');`),true);
+});
+
 test('actual native rows keep burst text/caret local and commit one final ontology after real idle',async()=>{
  assert.equal(await scenario(`const row=mount(),node=row.input;node.focus();
  for(const value of ['Parent, A','Parent, An','Parent, Anc','Parent, Ancestor'])type(row,value);

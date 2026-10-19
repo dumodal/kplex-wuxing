@@ -14,6 +14,7 @@ const frenchTranslations = {
   "settings.hoverHighlight.name": "Exiger une touche pour la surbrillance au survol",
   "settings.hoverHighlight.help": "Maintenez {key} en survolant un nœud, une porte ou un connecteur pour surligner immédiatement les connexions liées. Si désactivé, le survol seul déclenche la surbrillance après un bref délai.",
   "settings.hoverHighlight.modifier": "la touche de modification alternative",
+  "ontology.pairedFieldsSummary": "Champs appari?s ({count}) : {pairs}. Chaque paire est enregistr?e dans une seule liste.",
   "ontology.pairWith": "Associer à",
   "ontology.pairOptionalHelp": "Facultatif. Choisissez un champ existant dans la direction réciproque.",
   "ontology.pairNone": "Aucune association",

@@ -10,12 +10,12 @@ import { build } from 'esbuild';
 
 const temporary = mkdtempSync(join(tmpdir(), 'kplex-action-host-'));
 process.on('exit', () => rmSync(temporary, { recursive: true, force: true }));
-await build({ stdin: { contents: 'export * from "./src/ui/KplexDocumentSession"; export * from "./src/core/plex/actionPreferences"; export * from "./src/adapters/obsidian/actionNode"; export * from "./src/application/ActionManager"; export * from "./src/adapters/obsidian/relationshipMetadataWrite"; export * from "./src/core/parser/metadata"; export * from "./src/index/ForegroundWorkScheduler"; export * from "./src/adapters/obsidian/settingsNavigation";', resolveDir: fileURLToPath(new URL('..', import.meta.url)) }, outfile: join(temporary, 'contracts.mjs'), bundle: true, platform: 'node', format: 'esm' });
+await build({ stdin: { contents: 'export * from "./src/core/contracts/ontologyConfiguration"; export * from "./src/ui/KplexDocumentSession"; export * from "./src/core/plex/actionPreferences"; export * from "./src/adapters/obsidian/actionNode"; export * from "./src/application/ActionManager"; export * from "./src/adapters/obsidian/relationshipMetadataWrite"; export * from "./src/core/parser/metadata"; export * from "./src/index/ForegroundWorkScheduler"; export * from "./src/adapters/obsidian/settingsNavigation";', resolveDir: fileURLToPath(new URL('..', import.meta.url)) }, outfile: join(temporary, 'contracts.mjs'), bundle: true, platform: 'node', format: 'esm' });
 const contracts = await import(pathToFileURL(join(temporary, 'contracts.mjs')));
 
 /** Extract the real callback with its sync/async contract intact, excluding native startup. */
 function method(name, dependencies = {}) {
-  dependencies={nativeLeafId:contracts.nativeLeafId,...dependencies};
+  dependencies={nativeLeafId:contracts.nativeLeafId,ontologyConfiguration:contracts.ontologyConfiguration,...dependencies};
   const source = ts.createSourceFile('src/main.ts', readFileSync(new URL('../src/main.ts', import.meta.url), 'utf8'), ts.ScriptTarget.Latest, true);
   let expression;
   function visit(node) {

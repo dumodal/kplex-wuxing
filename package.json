@@ -59,7 +59,9 @@
     "verify:obsidian:sidecar-folding": "node scripts/testing/obsidian/sidecarFolding.mjs",
     "verify:obsidian:sidecar-folding-persistence": "node scripts/testing/obsidian/sidecarFoldingPersistence.mjs",
     "verify:obsidian:delete-cleanup": "node scripts/testing/obsidian/deleteCleanup.mjs",
-    "verify:obsidian:ontology-input": "node scripts/testing/obsidian/ontologyInput.mjs"
+    "verify:obsidian:ontology-input": "node scripts/testing/obsidian/ontologyInput.mjs",
+    "verify:obsidian:ontology-pairs": "node scripts/testing/obsidian/ontologyPairs.mjs",
+    "verify:obsidian:ontology-pair-reload": "node scripts/testing/obsidian/ontologyPairReload.mjs"
   },
   "engines": {
     "node": ">=22.22.2 <23"

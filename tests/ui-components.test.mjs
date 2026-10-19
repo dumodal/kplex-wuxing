@@ -2341,20 +2341,23 @@ function crosslinkPeekBrowserEntry(){
    ts.forEachChild(node,visit)};visit(source);assert.equal(effects.length,2);assert.equal(edgeHighlights.length,1);
  const effectCode=ts.transpileModule(effects.join('\n'),{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
  return `
-import React,{useState,useMemo,useRef,useEffect} from 'react';import{flushSync}from'react-dom';import{createRoot}from'react-dom/client';
+import React,{useCallback,useState,useMemo,useRef,useEffect} from 'react';import{flushSync}from'react-dom';import{createRoot}from'react-dom/client';
+import{ontologyConfiguration}from ${JSON.stringify(join(root,"src/core/contracts/ontologyConfiguration.ts"))};
+import{hasDirectionalCaption,directionalRelationCaption}from ${JSON.stringify(join(root,"src/core/plex/directionalRelationCaption.ts"))};
 import{HoverHighlight,bindHoverHighlight}from ${JSON.stringify(join(root,'src/ui/components/hoverHighlight.ts'))};
 import{LinkDirection}from ${JSON.stringify(join(root,'src/types.ts'))};
 import{buildScene as realBuildScene,sceneLayoutPolicyKey,neighborhoodSceneKey,bindSceneNeighborhood,appendVisibleCrossLinks,gateDiameter}from ${JSON.stringify(join(root,'src/ui/layout.ts'))};
 import{alphaHexToCss,resolveLinkStyle,DEFAULT_RENDERED_LINK_WIDTH,NATIVE_LINK_STROKE,NATIVE_LINK_TEXT,NATIVE_LINK_LABEL_FILL}from ${JSON.stringify(join(root,'src/index/style.ts'))};
 const result=document.querySelector('#result'),check=(value,message)=>{if(!value)throw Error(message)};
 const css=document.createElement('style');css.textContent=${JSON.stringify(readFileSync('styles.css','utf8'))};document.head.append(css);
-${uiDefinitions('src/ui/PlexGraph.tsx',['GATE_GAP','GENERIC_RELATION_LABELS','gateKey','gatesForEdge','gatePoint','gateVector','cubicPoint','edgeGeometry','relationLabel','markerFor','Edge'])}
+${uiDefinitions('src/ui/PlexGraph.tsx',['GATE_GAP','GENERIC_RELATION_LABELS','gateKey','gatesForEdge','gatePoint','gateVector','cubicPoint','edgeGeometry','relationLabel','markerFor','Edge','EdgeLabel'])}
 const page=path=>({path,name:path,file:{path,extension:'md'},aliases:[],tags:[],styleTags:[],neighbours:new Map()});
 const pages=new Map(['Center','A','B','C','D','E'].map(name=>[name,page(name)]));
 const pairs={A:[['B','child','ab'],['C','parent','ac'],['D','left','ad'],['E','right','ae']],B:[['A','parent','ab'],['C','left','unrelated']],C:[['A','child','ac'],['B','right','unrelated']],D:[['A','right','ad']],E:[['A','left','ae']]};
 const counters={layout:0,adjacency:0},buildScene=(...args)=>{counters.layout++;return realBuildScene(...args)};
 const index={titleFor:p=>p.name,neighbourCount:()=>0,gateStats:()=>({}),neighbours:()=>[],visibleRelationshipsWithin(source,targets){counters.adjacency++;return(pairs[source.path]??[]).filter(([path])=>targets.has(path)).map(([path,role,typeDefinition])=>({page:pages.get(path),role,typeDefinition,relationType:1,linkDirection:1}))}};
-const settings={baseNodeStyle:{fontSize:18},centralNodeStyle:{fontSize:30},baseLinkStyle:{},hierarchyLinkStyles:{ab:{showLabel:true,fontSize:12,strokeWidth:3}},noteTypeStyles:{},tagNodeStyles:{},tagStyleList:[],compactingFactor:2,horizontalCompactingFactor:2,graphDepth:1,baseFontSize:12.4,maxItemCount:100,parentColumns:2,childColumns:5,parentMaxHeight:300,childMaxHeight:400,friendMaxHeight:350,siblingMaxHeight:250,siblingRelativeSize:50,minLinkLength:18};
+const renderRevision=0,sectionExpansion=null;
+const settings={ontologyPairingVersion:1,hierarchy:{hidden:[],parents:[],children:[],leftFriends:[],rightFriends:[],previous:[],next:[],exclusions:[]},baseNodeStyle:{fontSize:18},centralNodeStyle:{fontSize:30},baseLinkStyle:{},hierarchyLinkStyles:{ab:{showLabel:true,fontSize:12,strokeWidth:3}},noteTypeStyles:{},tagNodeStyles:{},tagStyleList:[],compactingFactor:2,horizontalCompactingFactor:2,graphDepth:1,baseFontSize:12.4,maxItemCount:100,parentColumns:2,childColumns:5,parentMaxHeight:300,childMaxHeight:400,friendMaxHeight:350,siblingMaxHeight:250,siblingRelativeSize:50,minLinkLength:18};
 const layoutNeighborhood={center:pages.get('Center'),parents:[],children:['A','B','C','D','E'].map(path=>({page:pages.get(path),role:'child',relationType:1})),leftFriends:[],rightFriends:[],siblings:[]};
 const layoutSectionExpansion=null,expandedSectionIds=new Set(),layoutRevision=0,globalFiltering=false,centralEditorSize=undefined,neighborhood=layoutNeighborhood,activePath='Center',hostLeaf={};let semanticRevision=0;
 const predicateEngine={},lenses={},paintLenses=lenses,paintSettings=settings,predicateRevision=0,graphLensEdgeStyle=()=>({}),connectDrag=null,nodeDrag=null,resizingArea=false,areaSettingsMode=false;
@@ -2368,7 +2371,7 @@ function Graph(){
  ${uiDefinitions('src/ui/PlexGraph.tsx',['scenePolicyKey','sceneGeometryKey','sceneGeometry','scene','clearHoverIntent','scheduleHoverIntent'])}
  const visibleNodePaths=useMemo(()=>new Set(scene.nodes.filter(node=>!hidden.includes(node.page.path)).map(node=>node.page.path)),[scene.nodes,hidden]);
  const renderedNodeMap=useMemo(()=>new Map(scene.nodes.map(node=>[node.page.path,node])),[scene.nodes]);
- ${uiDefinitions('src/ui/PlexGraph.tsx',['visibleEdges','paintedEdges','interaction'])}
+ ${uiDefinitions('src/ui/PlexGraph.tsx',['connectionCaption','visibleEdges','paintedEdges','interaction'])}
  ${effectCode}
  fixture={enter(path,gate,alt=false){scheduleHoverIntent(gate?{kind:'gate',path,gate}:{kind:'node',path},{pointerType:'mouse',isTrusted:true,altKey:alt})},key:alt=>hoverHighlight.current.modifier(alt,true),leave:()=>clearHoverIntent(true),setRequired,setShown,setHidden,scene,interaction};
  return <div ref={viewport} className='kplex-plex' style={{width:1000,height:800}}><input defaultValue='unsaved editor'/><svg width='1000' height='800'>{paintedEdges.map(edge=><Edge key={edge.id} edge={edge} nodes={renderedNodeMap} inverseArrowDirection={true} connectorStyle='bezier' labelBackground={NATIVE_LINK_LABEL_FILL} crossLinkOpacity={0} highlighted={${edgeHighlights[0]}} dimmed={false} passive={Boolean(crossLinkPeek&&!showCrossLinks&&edge.isCrossLink)} onHover={()=>{}} onMove={()=>{}} onLeave={()=>{}} onContextMenu={()=>{}}/>)}</svg>{scene.nodes.map(node=><div key={node.page.path} data-node={node.page.path}>{node.label}</div>)}</div>;
@@ -2394,3 +2397,37 @@ try{
 }
 
 test('transient crosslink paint uses mounted projection/highlight/SVG owners without scene, focus or visibility changes',()=>runBrowserDom(crosslinkPeekBrowserEntry(),'Transient crosslink paint passed'));
+
+/** Render the actual caption callback and shared SVG labels for ordinary and transient endpoints. */
+function directionalCaptionBrowserEntry(){return `
+import React,{useCallback}from'react';import{flushSync}from'react-dom';import{createRoot}from'react-dom/client';
+import{ontologyConfiguration}from ${JSON.stringify(join(root,'src/core/contracts/ontologyConfiguration.ts'))};
+import{hasDirectionalCaption,directionalRelationCaption}from ${JSON.stringify(join(root,'src/core/plex/directionalRelationCaption.ts'))};
+import{gateDiameter}from ${JSON.stringify(join(root,"src/ui/layout.ts"))};
+import{LinkDirection}from ${JSON.stringify(join(root,'src/types.ts'))};
+import{alphaHexToCss,DEFAULT_RENDERED_LINK_WIDTH,NATIVE_LINK_STROKE,NATIVE_LINK_TEXT}from ${JSON.stringify(join(root,'src/index/style.ts'))};
+${uiDefinitions('src/ui/PlexGraph.tsx',['GATE_GAP','GENERIC_RELATION_LABELS','gateKey','gatesForEdge','gatePoint','gateVector','cubicPoint','edgeGeometry','relationLabel','markerFor','Edge','EdgeLabel'])}
+const result=document.querySelector('#result'),check=(value,message)=>{if(!value)throw Error(message)},page=path=>({path,style:{},x:path==='A'?0:200,y:0,width:100,height:40,page:{path}});
+let reads=0;const decisions=[{active:true,evidence:{fieldName:'replies to',definition:'replies to',declaredByPath:'B',declaredTargetPath:'A'}}],index={explainRelationship(){reads++;return{decisions}}};
+function App({reverse=false,show=true,paired=true,transient=false,folded=false,definition='replies to',mini=false}){
+ const settings={ontologyPairingVersion:1,hierarchy:{hidden:[],parents:[],children:[],leftFriends:[],rightFriends:[],previous:paired?['replies to/replied by']:['replies to'],next:paired?[]:['replied by'],exclusions:[]}};
+ const sourcePath=transient?'section A':reverse?'B':'A',targetPath=transient?'target B':reverse?'A':'B';
+ const sectionPage={path:'section A',transient:{kind:'section',sourcePath:'A'}},targetPage={path:'target B',transient:{kind:'section-target',sourcePath:'A',actualPath:'B'}};
+ const sectionExpansion=transient?{sections:[{page:sectionPage}],explanations:new Map([[sourcePath+'\\u0000'+targetPath,{decisions}]])}:null;
+ ${uiDefinitions('src/ui/PlexGraph.tsx',['connectionCaption'])}
+ const style={showLabel:show,fontSize:12,strokeWidth:3},caption=connectionCaption(definition,show,sourcePath,targetPath,transient?(folded?undefined:sectionPage):{path:sourcePath},transient?targetPage:{path:targetPath});
+ const nodes=new Map([[sourcePath,{...page('A'),page:{path:sourcePath}}],[targetPath,{...page('B'),page:{path:targetPath}}]]),edge={id:'pair',sourcePath,targetPath,role:'previous',relationType:1,typeDefinition:definition,caption,direction:1,style};
+ return <svg>{mini?<EdgeLabel label={show?relationLabel(caption):null} midpoint={{x:100,y:50}} style={style} background='none'/>:<Edge edge={edge} nodes={nodes} inverseArrowDirection={true} connectorStyle='bezier' labelBackground='none' crossLinkOpacity={1} highlighted={false} dimmed={false}/>}</svg>;
+}
+try{const container=document.createElement('div');document.body.append(container);const root=createRoot(container),label=()=>container.querySelector('.kplex-edge-label')?.textContent;
+ flushSync(()=>root.render(<App paired={false}/>));check(label()==='replies to'&&reads===0,'Unpaired caption requested evidence or changed wording');
+ flushSync(()=>root.render(<App/>));check(label()==='replied by'&&reads===1,'Stationary inverse perspective did not render');check(container.querySelector('.kplex-edge-visible').getAttribute('stroke-width')==='3','Caption changed physical-field styling');
+ flushSync(()=>root.render(<App reverse/>));check(label()==='replies to','Declaring perspective followed arrow inversion');let before=reads;
+ flushSync(()=>root.render(<App show={false}/>));check(!label()&&reads===before,'Disabled labels requested extra evidence');
+ flushSync(()=>root.render(<App definition='Unpaired field'/>));check(label()==='Unpaired field'&&reads===before,'Irrelevant definition requested pair evidence');
+ flushSync(()=>root.render(<App transient/>));check(label()==='replied by'&&reads===before,'Transient preview ignored its existing decisions');
+ flushSync(()=>root.render(<App transient folded/>));check(label()==='replied by'&&reads===before,'Folded section lost physical source perspective');
+ flushSync(()=>root.render(<App mini/>));check(label()==='replied by','Expanded descendant shared label differs');flushSync(()=>root.unmount());result.dataset.status='passed';result.textContent='Directional caption rendering passed';
+}catch(error){result.dataset.status='failed';result.textContent=String(error.stack||error)}
+`;}
+test('directional captions reuse actual endpoint provenance, physical styles and shared expanded labels with bounded evidence reads',()=>runBrowserDom(directionalCaptionBrowserEntry(),'Directional caption rendering passed'));

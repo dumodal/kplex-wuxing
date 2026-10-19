@@ -8,7 +8,7 @@ import { chromiumHarness } from './support/browserTypeScript.mjs';
 import { centerGateSettings } from './support/requestedCenterGateFixture.mjs';
 
 const bundle = await contributorBrowserBundle(['src/index/GraphIndex.ts', 'src/index/GraphBuilder.ts', 'src/index/GraphState.ts', 'src/index/IndexSnapshot.ts',
-  'src/core/graph/settingsPolicy.ts', 'src/core/graph/relations.ts', 'src/core/plex/typographyPreferences.ts', 'src/core/contracts/appearance.ts', 'src/core/plex/colorPreferences.ts', 'src/core/plex/appearanceThemes.ts', 'src/ui/layout.ts', 'src/adapters/obsidian/savedSettingsRefresh.ts']);
+  'src/core/graph/settingsPolicy.ts', 'src/core/contracts/ontologyConfiguration.ts', 'src/core/graph/relations.ts', 'src/core/plex/typographyPreferences.ts', 'src/core/contracts/appearance.ts', 'src/core/plex/colorPreferences.ts', 'src/core/plex/appearanceThemes.ts', 'src/ui/layout.ts', 'src/adapters/obsidian/savedSettingsRefresh.ts']);
 
 /** Keep the actual settings classifier, save queue and typography writers without plugin startup. */
 function typographyHostSource() {
@@ -38,7 +38,7 @@ const initialize = `(() => {
   window.settleDemand=async(index)=>{while(index.onDemandTasks.size)await Promise.all([...index.onDemandTasks.values()]);};
   window.typographyHost=o=>{
     const appearanceThemes=sourceModules;
-    const {SavedSettingsRefresh,STYLE_SETTINGS_KEYS,cyclicSemanticColorSlots,migrateColorPreferences,captureSettingsPolicy,classifySettingsChange,isStyleOnlySettingsChange,mergeTypographyOverride,resetTypographyOverride:resetDeviceTypography}=sourceModules;
+    const {ontologyConfiguration,SavedSettingsRefresh,STYLE_SETTINGS_KEYS,cyclicSemanticColorSlots,migrateColorPreferences,captureSettingsPolicy,classifySettingsChange,isStyleOnlySettingsChange,mergeTypographyOverride,resetTypographyOverride:resetDeviceTypography}=sourceModules;
     class Notice {constructor(message){throw new Error('Unexpected settings failure: '+message);}}
     ${typographyHostSource()}
     const host=new TypographyHost();host.settings=o.settings;host.index=o.index;host.settingsWriteQueue=Promise.resolve();
@@ -1588,6 +1588,43 @@ for (const progressive of [false, true]) for(const lateEvent of [false,true]) te
   }finally{restoreBuild?.();o.close();}
 })()`));
 
+
+test('ordinary inverse ontology replaces removed YAML Child when the startup edit backlog publishes without navigation', async()=>scenario(`(async()=>{
+  const M=sourceModules,o=await onDemandFixture('ordinary-ontology-edit-held-tail',{indexingMode:'eager'}),{f,index}=o;
+  let release,unblockTail,building;
+  const read=f.app.vault.read,cachedRead=f.app.vault.cachedRead;
+  try{
+    delete index.sourceAcquisition.enableInventory;
+    const a=f.add('A.md','',{Child:'[[B]]'}),b=f.add('B.md','');
+    for(let n=0;n<9;n++)f.add('Idle'+n+'.md','');f.add('Tail.md','');
+    f.app.metadataCache.resolvedLinks={'A.md':{'B.md':1},'B.md':{}};
+    let tailEntered;const tailReady=new Promise(resolve=>tailEntered=resolve),tailGate=new Promise(resolve=>unblockTail=resolve);
+    const heldRead=original=>async file=>{if(file.path==='Tail.md'){tailEntered();await tailGate;}return original.call(f.app.vault,file);};
+    f.app.vault.read=heldRead(read);f.app.vault.cachedRead=heldRead(cachedRead);
+    ok(await index.initializeOnDemandBaseline(['A.md']),'Real startup baseline');
+    building=index.rebuildProgressively(['A.md']);await tailReady;
+    release=index.acquireSemanticDemand('A.md');await settleDemand(index);
+    const relation=()=>{const n=index.getNeighborhood('A.md');return [...n.parents,...n.children,...n.leftFriends,...n.rightFriends].find(row=>row.page.path==='B.md');};
+    equal(relation()?.role,'child','Initial YAML Child is displayed');
+    // Both sources have passed the actual progressive cursor. Deliver normal host observations,
+    // then use the existing visible refresh owner while unrelated source ingestion stays held.
+    f.texts.set('B.md','Parent:: [[A]]');b.stat.mtime++;f.app.metadataCache.resolvedLinks['B.md']={'A.md':1};
+    f.app.vault.trigger('modify',b);f.app.metadataCache.trigger('changed',b);o.bump();index.refreshVisibleHostMetadataPreviews('B.md',0);
+    f.metadata.set('A.md',{frontmatter:{},links:[]});a.stat.mtime++;f.app.metadataCache.resolvedLinks['A.md']={};
+    f.app.vault.trigger('modify',a);f.app.metadataCache.trigger('changed',a);o.bump();index.refreshVisibleHostMetadataPreviews('A.md',1);
+    await index.refreshVisibleMarkdownPath('B.md');await index.refreshVisibleMarkdownPath('A.md');await settleDemand(index);
+    ok(index.building,'Unrelated background tail remains pending');
+    // The startup coordinator retains edits made behind the cursor in its ordinary file backlog.
+    // This checks real publication after that writer becomes available, not immediate discovery
+    // during a held build. The separate main/candidate reproduction records that existing gap.
+    unblockTail();await building;equal((await index.patchMarkdownPaths(['B.md','A.md'])).outcome,'patched','Actual retained source backlog commits');
+    await settleDemand(index);
+    equal(relation()?.relationType,M.RelationType.DEFINED,'Committed ordinary inverse field must not remain inferred');
+    equal(relation()?.role,'child','B Parent A is A Child B without a pair declaration');
+    equal(relation()?.typeDefinition,'parent','Current authored field replaces the removed YAML declaration');
+    equal(index.semanticDemandCounts.get('A.md'),1,'No navigation was needed to adopt committed ontology');return true;
+  }finally{f.app.vault.read=read;f.app.vault.cachedRead=cachedRead;unblockTail?.();release?.();index.destroy();await building?.catch(()=>{});f.close();}
+})()`));
 
 for(const reciprocal of [false,true]) test('stationary local center adopts late ontology before the progressive indexing tail completes ('+(reciprocal?'changed role':'same role')+')', async()=>scenario(`(async()=>{
   const M=sourceModules,o=await onDemandFixture('late-progressive-ontology-'+${JSON.stringify(reciprocal)},{indexingMode:'eager'}),{f,index}=o;

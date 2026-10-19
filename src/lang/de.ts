@@ -14,6 +14,7 @@ const germanTranslations = {
   "settings.hoverHighlight.name": "Hervorheben beim Zeigen nur mit Zusatztaste",
   "settings.hoverHighlight.help": "Halte {key} beim Zeigen auf einen Knoten, ein Tor oder eine Verbindung gedrückt, um zugehörige Verbindungen sofort hervorzuheben. Wenn deaktiviert, genügt Zeigen nach einer kurzen Verzögerung.",
   "settings.hoverHighlight.modifier": "die zusätzliche Zusatztaste",
+  "ontology.pairedFieldsSummary": "Gepaarte Felder ({count}): {pairs}. Jedes Paar wird nur in einer Liste gespeichert.",
   "ontology.pairWith": "Koppeln mit",
   "ontology.pairOptionalHelp": "Optional. Wähle ein vorhandenes Feld mit passender Gegenrichtung.",
   "ontology.pairNone": "Keine Kopplung",
