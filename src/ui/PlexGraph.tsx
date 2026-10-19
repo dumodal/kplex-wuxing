@@ -22,6 +22,7 @@ import { isNoteTypeTagConnection } from "../core/graph/presentation";
 import { DEFAULT_RENDERED_LINK_WIDTH } from "../index/style";
 import { subscribeAppearanceSources } from "../adapters/obsidian/colorChanges";
 import {HoverHighlight, bindHoverHighlight} from "./components/hoverHighlight";
+import {HoverPreview, bindHoverPreview} from "./components/hoverPreview";
 import {compassPolygons} from "../core/plex/compassBackground";
 import {COMPASS_DIRECTIONS, COMPASS_COLOR_VARIABLES, COMPASS_SEMANTIC_SLOTS, compassIntensity} from "../core/plex/colorPreferences";
 import {colorValueCss, semanticColorCss} from "../adapters/obsidian/colorPresentation";
@@ -1053,6 +1054,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   const [hover, setHover] = useState<HoverState>(null);
   const [crossLinkPeek, setCrossLinkPeek] = useState<Exclude<HoverState, { kind: "edge" }>>(null);
   const hoverHighlight = useRef<HoverHighlight<Exclude<HoverState, null>> | null>(null);
+  const hoverPreview = useRef<HoverPreview | null>(null);
   const edgeTooltipTimer = useRef<number | null>(null);
   const edgeTooltipPoint = useRef<Point>({ x: 0, y: 0 });
   const [edgeHoverTooltip, setEdgeHoverTooltip] = useState<EdgeHoverTooltip>(null);
@@ -1173,10 +1175,23 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   };
 
   const clearHoverIntent = (clearActive = false) => {
+    hoverPreview.current?.clear();
     hoverHighlight.current?.clear(clearActive);
     clearEdgeTooltip();
     if (clearActive) setHover(null);
   };
+
+  useEffect(/** Native previews share one owner across regular thoughts and expanded rows. */ () => {
+    const element = viewport.current;
+    if (!element) return;
+    const intent = new HoverPreview();
+    hoverPreview.current = intent;
+    const release = bindHoverPreview(element, intent);
+    const releaseVisibility = plugin.subscribeKplexVisibility(/** Background native leaves cannot retain preview candidates. */ () => {
+      if (!plugin.isKplexLeafVisible(hostLeaf)) intent.clear();
+    });
+    return () => {releaseVisibility(); release(); if (hoverPreview.current === intent) hoverPreview.current = null;};
+  }, [plugin, hostLeaf, activePath, Boolean(neighborhood)]);
 
   useEffect(/** Each rendered graph owns its modifier listeners and delayed activation. */ () => {
     const element = viewport.current;
@@ -4032,7 +4047,8 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       onHoverGate={(_, gate, event) => { if (!connectDrag && !nodeDrag) scheduleHoverIntent({ kind: "gate", path: baseNode.page.path, gate }, event); }}
       onHoverEnd={() => { if (!connectDrag && !nodeDrag) clearHoverIntent(true); }}
       onHoverPreview={(_, targetEl, event) => {
-        if (!connectDrag && !nodeDrag) plugin.triggerHoverPreview(baseNode.page, targetEl, event, neighborhood.center.file?.path ?? "");
+        if (!connectDrag && !nodeDrag) hoverPreview.current?.enter(targetEl, event,
+          /** Keep native heading anchors and source-relative previews with their existing host owner. */ previewEvent => plugin.triggerHoverPreview(baseNode.page, targetEl, previewEvent, neighborhood.center.file?.path ?? ""));
       }}
       onGatePointerDown={(_, gate, event) => startGateDrag(baseNode, gate, event)}
       onNodePointerDown={(_, event) => startNodeDrag(baseNode, event)}
@@ -4241,10 +4257,12 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
                 event.preventDefault(); event.stopPropagation(); runNodeAction("node.context-menu", child.relation.page, child.key);
               }}
               onPointerEnter={(event: PointerEvent<HTMLDivElement>) => {
-                if (event.nativeEvent.ctrlKey || event.nativeEvent.metaKey) {
-                  plugin.triggerHoverPreview(child.relation.page, event.currentTarget, event.nativeEvent, neighborhood?.center.file?.path ?? "");
-                }
+                if (connectDrag || nodeDrag) return;
+                const target = event.currentTarget;
+                hoverPreview.current?.enter(target, event.nativeEvent,
+                  /** Expanded rows use the same modifier transitions and native preview path as full nodes. */ previewEvent => plugin.triggerHoverPreview(child.relation.page, target, previewEvent, neighborhood?.center.file?.path ?? ""));
               }}
+              onPointerLeave={/** Retire the exact mini-row before another graph can receive a modifier. */ () => hoverPreview.current?.clear()}
             >
               <span className="kplex-expanded-mini-gate" />
               {child.style.icon && <ObsidianIcon name={child.style.icon} size={cluster.parent.role === "sibling" ? 8 * siblingScale(settings) : 8} className="kplex-expanded-mini-icon" />}

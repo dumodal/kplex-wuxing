@@ -100,6 +100,18 @@ async function scenario(app, c) {
     heading.dispatchEvent(new PointerEvent('pointerover', {bubbles:true,pointerType:'mouse',ctrlKey:true}));
     await until(() => previewEvents.some(link => link === path('Center')+'#First'), 'Modified heading hover omitted the heading anchor');
     heading.dispatchEvent(new PointerEvent('pointerout',{bubbles:true,pointerType:'mouse'}));
+    const stationaryPreviews = [];
+    for (const key of ['Control','Meta']) {
+      const before = previewEvents.length;
+      heading.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse'}));
+      window.dispatchEvent(new KeyboardEvent('keydown',{key,ctrlKey:key==='Control',metaKey:key==='Meta'}));
+      await until(()=>previewEvents.length===before+1,'Stationary '+key+' hover did not preview');
+      check(previewEvents.at(-1)===path('Center')+'#First','Stationary preview lost its section anchor');
+      window.dispatchEvent(new KeyboardEvent('keydown',{key,ctrlKey:key==='Control',metaKey:key==='Meta',repeat:true}));
+      check(previewEvents.length===before+1,'Held modifier repeated native preview');
+      stationaryPreviews.push(key);window.dispatchEvent(new KeyboardEvent('keyup',{key}));
+      heading.dispatchEvent(new PointerEvent('pointerout',{bubbles:true,pointerType:'mouse'}));
+    }
 
     // Large-label layout uses the same actual node and stylesheet, rather than another text model.
     const priorFont = p.settings.baseFontSize;
@@ -107,9 +119,12 @@ async function scenario(app, c) {
     await until(() => sectionTarget() && parseFloat(getComputedStyle(sectionTarget()).fontSize) > 20, 'Large label setting did not render');
     await wait(100);
     const text = sectionTarget().querySelector('.kplex-thought-text'), label = text?.parentElement;
+    const range = text?.ownerDocument.createRange();range?.selectNodeContents(text);
+    const ink = range?.getBoundingClientRect(),clip = text?.getBoundingClientRect();
     const fontMetrics = text && label ? {font:getComputedStyle(text).fontSize,lineHeight:getComputedStyle(text).lineHeight,textHeight:text.clientHeight,textScroll:text.scrollHeight,labelHeight:label.clientHeight,labelScroll:label.scrollHeight,nodeHeight:sectionTarget().clientHeight,nodeBox:getComputedStyle(sectionTarget()).height,nodeLineHeight:getComputedStyle(sectionTarget()).lineHeight,padding:getComputedStyle(sectionTarget()).padding,border:getComputedStyle(sectionTarget()).borderWidth} : null;
     c.progress = {phase:'large label',fontMetrics,wheelChecks,counts,previewEvents};
     check(text && label && text.scrollHeight <= text.clientHeight + 1 && label.scrollHeight <= label.clientHeight + 1, 'Large label line box clipped');
+    check(ink && clip && ink.top>=clip.top && ink.bottom<=clip.bottom,'Large glyph crosses its own clipping boundary');
     p.settings.baseFontSize = priorFont; p.index.notifyPresentation();
     const centerMtime = app.vault.getFileByPath(path("Center")).stat.mtime;
     const b = app.vault.getFileByPath(path("B"));
@@ -138,7 +153,7 @@ async function scenario(app, c) {
     await wait(300);
     for (const [key, value] of Object.entries(work)) check(value === 0, "Presentation performed " + key);
     check(direct("Center") && app.vault.getFileByPath(path("Center")).stat.mtime === centerMtime, "Stationary center changed");
-    c.progress = { phase: "complete", cases: ["shared lateral list and challenger filter", "modified wheel over overflow", "native fold grouping", "preamble and repeated links", "canonical section target counts", "modified heading preview anchor", "large label line box", "parent below and child above tooltip preference", "stationary inbound add", "stationary inbound removal", "visibility round trip"], wheelChecks, counts, previewEvents, fontMetrics, work };
+    c.progress = { phase: "complete", cases: ["shared lateral list and challenger filter", "modified wheel over overflow", "native fold grouping", "preamble and repeated links", "canonical section target counts", "modified heading preview anchor", "stationary Ctrl/Cmd preview", "large label ink boundary", "parent below and child above tooltip preference", "stationary inbound add", "stationary inbound removal", "visibility round trip"], stationaryPreviews,wheelChecks, counts, previewEvents, fontMetrics, work };
     return c.progress;
   } catch (error) {
     failure = error;

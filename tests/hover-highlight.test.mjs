@@ -4,10 +4,29 @@ import {build} from 'esbuild';
 import {readFileSync} from 'node:fs';
 import {after,before,test} from 'node:test';
 import {chromiumHarness} from './support/browserTypeScript.mjs';
-const bundle=await build({entryPoints:['src/ui/components/hoverHighlight.ts'],write:false,bundle:true,format:'iife',globalName:'sourceModules',platform:'browser'});
+const bundle=await build({stdin:{resolveDir:process.cwd(),contents:"export * from './src/ui/components/hoverHighlight';export * from './src/ui/components/hoverPreview';"},write:false,bundle:true,format:'iife',globalName:'sourceModules',platform:'browser'});
 let host;
 before(async()=>{host=await chromiumHarness(bundle.outputFiles[0].text)});
 after(async()=>{await host?.cleanup()});
+
+test('stationary Ctrl/Cmd previews reuse pointer coordinates, suppress repeats, and retire on leave, drag, blur and teardown',async()=>{
+ const result=await host.evaluate(`(()=>{const {HoverPreview,bindHoverPreview}=sourceModules,root=document.createElement('div'),node=document.createElement('div');root.append(node);document.body.append(root);const intent=new HoverPreview(),release=bindHoverPreview(root,intent),seen=[];
+ const enter=(extra={})=>intent.enter(node,new PointerEvent('pointerover',{pointerType:'mouse',clientX:10,clientY:20,...extra}),event=>seen.push({ctrl:event.ctrlKey,meta:event.metaKey,x:event.clientX,y:event.clientY,mouse:event instanceof MouseEvent}));
+ const key=(type,key,extra={})=>{const event=new KeyboardEvent(type,{key,cancelable:true,...extra});window.dispatchEvent(event);if(event.defaultPrevented)throw Error('Preview consumed host shortcut')};
+ enter();const ordinary=seen.length;root.dispatchEvent(new PointerEvent('pointermove',{clientX:30,clientY:40}));key('keydown','Control',{ctrlKey:true});const first=seen[0];key('keydown','Control',{ctrlKey:true,repeat:true});key('keydown','c',{ctrlKey:true});const repeat=seen.length;
+ key('keyup','Control');key('keydown','Meta',{metaKey:true});const cmd=seen[1];key('keyup','Meta');intent.clear();key('keydown','Control',{ctrlKey:true});const left=seen.length;
+ enter({ctrlKey:true});const held=seen.length;root.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));key('keyup','Control');key('keydown','Meta',{metaKey:true});const drag=seen.length;
+ enter();window.dispatchEvent(new Event('blur'));key('keydown','Control',{ctrlKey:true});const blurred=seen.length;enter({pointerType:'touch',ctrlKey:true});key('keydown','Control',{ctrlKey:true});const touch=seen.length;
+ enter();node.remove();key('keydown','Control',{ctrlKey:true});const removed=seen.length;root.append(node);enter();release();key('keydown','Control',{ctrlKey:true});root.remove();return{ordinary,first,repeat,cmd,left,held,drag,blurred,touch,removed,final:seen.length}})()`);
+ assert.deepEqual(result,{ordinary:0,first:{ctrl:true,meta:false,x:30,y:40,mouse:true},repeat:1,cmd:{ctrl:false,meta:true,x:30,y:40,mouse:true},left:2,held:3,drag:3,blurred:3,touch:3,removed:3,final:3});
+});
+
+test('preview keys stay in their owning window and editing native inputs cannot activate a retained node',async()=>{
+ const result=await host.evaluate(`(async()=>{const frame=document.createElement('iframe');document.body.append(frame);const owner=frame.contentWindow,root=owner.document.createElement('div'),node=owner.document.createElement('div'),input=owner.document.createElement('input');root.append(node,input);owner.document.body.append(root);const h=new sourceModules.HoverPreview(),release=sourceModules.bindHoverPreview(root,h),seen=[];
+ const enter=()=>h.enter(node,new owner.PointerEvent('pointerover',{pointerType:'mouse'}),event=>seen.push(event instanceof owner.MouseEvent));enter();window.dispatchEvent(new KeyboardEvent('keydown',{key:'Control',ctrlKey:true}));const foreign=seen.length;owner.dispatchEvent(new owner.KeyboardEvent('keydown',{key:'Meta',metaKey:true}));const local=seen.length;
+ enter();input.dispatchEvent(new owner.KeyboardEvent('keydown',{bubbles:true,key:'Control',ctrlKey:true}));owner.dispatchEvent(new owner.KeyboardEvent('keydown',{key:'Control',ctrlKey:true}));const editing=seen.length;release();frame.remove();return{foreign,local,editing,seen}})()`);
+ assert.deepEqual(result,{foreign:0,local:1,editing:1,seen:[true]});
+});
 
 test('unmodified connection mode retains the 750ms delay and cancels crossing, leaving and teardown',async()=>{
  const result=await host.evaluate(`(async()=>{const {HoverHighlight}=sourceModules,seen=[],intent=new HoverHighlight(window,false,value=>seen.push(value));const wait=ms=>new Promise(r=>setTimeout(r,ms));intent.enter('node',{altKey:false,pointerType:'mouse'});await wait(120);const early=[...seen];intent.enter('gate',{altKey:true,pointerType:'mouse'});await wait(820);const settled=[...seen];intent.enter('edge',{altKey:false,pointerType:'mouse'});intent.clear();await wait(820);return{early,settled,final:seen}})()`);

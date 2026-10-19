@@ -186,11 +186,12 @@ function nodeSize(
   const characterWidth = center ? nodeLabelFontSize(fontSize, true, settings.baseFontSize) * 0.55 : fontSize * fontScale * 0.29;
   const width = clamp(70 + visibleLength * Math.max(4.8, characterWidth), minWidth, maxWidth);
 
-  // Two-line mode reserves the full two line boxes plus the node's vertical padding. Keep the
-  // compact single-line defaults unchanged when wrapping is disabled.
+  // Both modes reserve the font's ink padding as well as the node's own padding and border.
   const verticalInsets = (center ? 16 : 8) + 2 * Math.max(0, strokeWidth);
-  const singleLineHeight = Math.max(center ? 48 : 26, Math.ceil(nodeLabelFontSize(fontSize, center, settings.baseFontSize) * 1.2 + verticalInsets));
-  const twoLineHeight = Math.ceil(Math.max(fontSize * fontScale, nodeLabelFontSize(fontSize, center, settings.baseFontSize)) * 2.4 + verticalInsets);
+  const renderedFont = nodeLabelFontSize(fontSize, center, settings.baseFontSize);
+  // Match the text span's 1.2em lines plus 0.2em ink padding at each edge, including wrapped text.
+  const singleLineHeight = Math.max(center ? 48 : 26, Math.ceil(renderedFont * 1.6 + verticalInsets));
+  const twoLineHeight = Math.ceil(Math.max(fontSize * fontScale, renderedFont) * 2.4 + renderedFont * 0.4 + verticalInsets);
   return { width, height: settings.wrapNodeLabels ? Math.max(singleLineHeight, twoLineHeight) : singleLineHeight };
 }
 
@@ -211,7 +212,10 @@ function makeNode(
   };
   const label = index.titleFor(n.page);
   const baseSize = nodeSize(`${resolved.prefix ?? ""}${label}`, resolved.fontSize ?? 18, settings, false, resolved.maxLabelLength ?? 30, resolved.maxWidth ?? settings.baseNodeStyle.maxWidth, resolved.strokeWidth);
-  const size = scale === 1 ? baseSize : { width: baseSize.width * scale, height: baseSize.height * scale };
+  const size = scale === 1 ? baseSize : { width: baseSize.width * scale,
+    // Sibling scaling keeps its width/proportions but cannot shrink the actual font's clip box.
+    height: Math.max(baseSize.height * scale, Math.ceil(nodeLabelFontSize(style.fontSize ?? 18, false, settings.baseFontSize)
+      * (settings.wrapNodeLabels ? 2.8 : 1.6) + 8 + 2 * Math.max(0, style.strokeWidth ?? 1))) };
   return {
     page: n.page,
     role,

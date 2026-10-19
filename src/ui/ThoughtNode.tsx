@@ -161,10 +161,8 @@ export function ThoughtNode({
     onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { onNodePointerDown(node, e); }}
     onPointerEnter={(e: ReactPointerEvent<HTMLDivElement>) => {
       onHoverNode(node, e);
-      // Obsidian-style page preview is intentionally explicit: hold Ctrl/Cmd while entering
-      // a thought. Without the modifier no preview is scheduled at all, which avoids timer
-      // churn while moving across a dense Plex.
-      if (e.nativeEvent.ctrlKey || e.nativeEvent.metaKey) onHoverPreview(node, e.currentTarget, e.nativeEvent);
+      // The surface retains this occurrence so Ctrl/Cmd also works after the pointer stops.
+      onHoverPreview(node, e.currentTarget, e.nativeEvent);
     }}
     onPointerLeave={() => { onHoverEnd(); }}
     onClick={click}
