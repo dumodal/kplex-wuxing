@@ -5282,3 +5282,33 @@ belongs to148; no further feature/refactoring work queued.
 ### PR147 final evidence and main148 integration (2026-10-19)
 
 Combined full verification at1137fc1 and exact native acceptance are recorded in docs/validation/ontology-input-147-2026-10-18.md. Private durable combined backup256files/14,944,140bytes with555-entry source ZIP CRC/member SHA passes; originals retained, no publication, HANDOFF excluded. Main148 integrated atb794bff without production-source change; metadata58/check/build pass and bundle equality after public build-ID normalization verified. Both package inventories preserved. Native ontology7permode/external6/style15/migration6/Markdown4/hover11 pass; runner20 pass. Gate revision guard and historical touch geometry remain explicit gaps, not reproduced whole-renderer freeze. User authorizes147 merge then179/149/176 sequentially; no CIwait/release/personalvault or broad refactoring. Remaining manual acceptance: reporter macOS/background contention; physical IME/touch; minimum-host Settings window migration. C14 remains paused.
+
+
+### PR179 causal checkpoint (2026-10-19)
+
+147 merged60d2239;179 main integration3bc489c preserves history and only original marker. Four actual-production-owner red regressions establish live-set repeated delivery16, nested depth4, controlled currentness rejection65 attempts, and durable-but-optional-refresh-locked editor. Native overlap with earlier actual facet/search preparation held records durable1write/editor pending/25 task heartbeats, five controls pass and config restored. First wrong-facet search prerequisite failure retained. Report docs/validation/settings-save-liveness-179-2026-10-19.md qualifies defensive reach; no reproduced original renderer freeze. Selected bounded owner safeguards only, acceptance pending. C14 structural refactoring paused; no new scheduler/schema, receipt, comparative campaign, personal vault or archive.
+
+
+### PR179 bounded candidate (2026-10-19)
+
+Four causal owner reds green;105 surrounding cases pass before final boundary/copy additions,23 locales pass, prior lint/build pass. One bounded optional completion lease preserves disk/live publication, saved-pending, late errors/unload and semantic-obligation ownership. Settings-only adaptation capped8 attempts/64ms retry window with host yields; presentation subscriber snapshots/nonrecursive keyed-strength coalescing bounded4 synchronous rounds. Source/private preparation experiment restored to baseline: null could admit missing-cache recovery. Typed settings-pending catch at sole restore caller is protected by real IDB snapshot/zero-recovery/later-retry regression;3 final boundary tests pass. No source schema/compiler scheduler/receipt or private preparation redesign. Fullfinal/native candidate acceptance pending; exact source identity inGit. Remaining manual lanes depend on native outcomes and macOS/minimum-host/physical devices; do not claim original renderer freeze fixed. C14 paused.
+
+
+### PR179 test-host correction (2026-10-19)
+
+First full941ddda stops at Node group1098pass/29fail: migration fixture crypto-only or absent window lacks native timers required by completion owner. No production fallback/clock weakening: explicit Node host now supplies real task timers; migration/runner88 pass with original assertions. Native drawing ownership acquired only after exact requested-path guard. Runtime remains941ddda; corrected full verification must run again on clean committed source. Raw failed log retained private; no archive/publication. C14 paused.
+
+
+### PR179 registration finality and complete host dependencies (2026-10-19)
+
+Second fullc814main1127 passes, UI179/183 stops4 imagery fixtures missing actual completion dependency. Imagery7 and onDemand117 corrected host cases pass, including held-consent immediate revocation. Three unchanged style/color/typography work-count oracles now await genuine owned completion outside foreground lease and pass. Actual callback-epoch red fails old revived subscription; registration identities fence replacement and stale cleanup while preserving same-function deduplication. GraphIndex/imagery31 pass. Third fullverification on clean committed source required next.200ms is a host callback timer, not paint or whole-renderer-starvation rescue. Native candidate pending; C14 paused, no new schema/source/architecture work.
+
+
+### PR179 delegated semantic guard and bounded native trace (2026-10-19)
+
+Third fullf2fef82 architecture7/core130/main1127/UI184 pass; sources333/334 stop only on old inline-await source assertion. Replacement guard checks immediate invalidation, semantic obligation delegation, presentation-before-semantic and unload/currentness fences; behavioral mixed/source oracles unchanged. Source/runner38 pass. Existing native event collector gains opaque operation IDs, queue/preparation peaks and revision tokens, capped2048 with dropped count; original promises forwarded, no note payload/new recorder. Production runtime remainsf2fef82; next clean fullverified log before exact native. No new compiler/receipt/schema/refactoring scope; C14 paused.
+
+
+## 2026-10-19 - PR179 validated bounded liveness closeout
+
+Full be7247a verify: architecture7/core130/main1127/UI184/sources334/browser638, lint/build pass. Final native tooling syntax/20runner pass. Exact staged build and serial native Settings overlap, Sidecar/drawing, Properties, storage/reload observations recorded in docs/validation/settings-save-liveness-179-2026-10-19.md. Whole-renderer freeze remains unresolved; On-demand drawing quiet prerequisite pendingKnown1 remains excluded. No source/compiler/schema change or performance claim. Private evidence durable-copy verified, originals retained. Manual priority: real incident owner trace; macOS Settings/Sidecar; physical mobile. User authorizes merge then149/176 in sequence, no CI wait.

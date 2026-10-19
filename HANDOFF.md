@@ -19,29 +19,25 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR147 accepted closeout; next PR179
+# PR179 validated closeout; sequential work remains authorized
 
-Maintainer authorizes completing/merging147 with intervening main, then179/149/176
-in sequence, each validated checkpoint committed/pushed and completed PR merged.
-No CI wait, release, branch deletion, personal vault, receipt/reader-sharing work
-or comparative performance under competing encoding load. Native/browser serial;
-Node22.22.2. No subagents used; root performs implementation/review/host validation.
+Main/root agent implements/reviews/validates; no delegation.147 merged60d2239.
+179 main integration3bc489c, runtimef2fef82, full-testedbe7247a. User authorizes
+merge179, then149 then176 sequentially, no CI wait/release/personal vault.
+No comparative performance under encoding load, receipt/reader-sharing revival,
+source-proof weakening or broad architecture. Preserve private originals.
 
-147 runtime af31fc9 integrated main183 at1137fc1: full verify7/130/1069/180/334/632
-plus lint/build pass. Native ontology7 each actual On-demand/Eager, external6,
-style15, migration6, Markdown4 pass. Gate readiness helper b392d14 passes native11
-and runner20 with original strict oracles/deadlines. Gate revision guard remains
-failed (10 combined incremental publications); old touch geometry gap retained.
-Not a reproduced whole-renderer freeze. Report records all limits and private
-verified backups; no raw evidence published/deleted. Small107/88, exact config,
-workspace/follow owners restored; no owned controllers/dialogs/debugger/mobile.
-
-New main148 metadata integrated atb794bff, no production source change; metadata58,
-check and realbuild pass. Built JS differs from native1137 only in public build ID,
-byte equality after normalization verified. Both package test inventories kept.
-Finish docs/review/push, fresh main guard, ready/authorized147merge without CIwait.
-Then switch main/fetch179 existing2026-10-18-settings-save-liveness, integrate main
-without rewrite/retarget as needed. Read actual PR: causal production-owner traces
-before liveness hardening; bounded source/presentation ownership, no new scheduler.
-Then149 label sharpness and176 warm-start rebuilds, each causal gated. Neither has
-implementation yet; do not claim freeze/sharpness/performance fixes without proof.
+Full verify passes7/130/1127/184/334/638 plus lint/build. Native exact2c6dce74
+bundle staged/smoke passed. Native matrix results and all failures in concise
+report docs/validation/settings-save-liveness-179-2026-10-19.md. Main/Sidecar
+controlled Save closes after1durablewrite while optional work held. Whole-renderer
+freeze remains unproved. On-demand drawing/radius stricter fixture drain refuses
+pendingKnown1 despite no active work; earlier8pass is not repeatability proof.
+Eager quiet15, radius8, final real-drawing+Properties overlap5pass. Config/workspace
+107/88 and originalmode restored, no controllers, CLIdebug capture released.
+Final native helper syntax/20runner pass. Only native tooling/docs changed since
+full-testedbe724. Private verified durable copy141files/8210671B, manifestSHA in
+report, originals retained/no publication. Next finalize authorized179merge,
+switch/fetch main, integrate149branch normally; cause-first visual probe. If no
+confirmed defect, precise no-go rather than speculative rendering hack.176 Gate1
+causal checkpoint follows, no broad benchmark or new persistent protocol.

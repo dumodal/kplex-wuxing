@@ -91,7 +91,7 @@ const artifacts = Object.fromEntries(
 );
 
 /** Run real style-manager operations with finite fault injection and exact native modal ownership. */
-function start(referenceOnly = false, referenceProperties = false, sidecarGateOnly = false, referenceSidecar = false) {
+function start(referenceOnly = false, referenceProperties = false, sidecarGateOnly = false, referenceSidecar = false, liveness = false, excalidrawSidecar = false) {
   const p = app.plugins.plugins["k-plex"],
     tab = p.settingsTab,
     remote = require("@electron/remote"),
@@ -118,6 +118,7 @@ function start(referenceOnly = false, referenceProperties = false, sidecarGateOn
     },
     cases: [],
     events: [],
+    trace: {next: 0, current: 0, last: 0, waiting: 0, active: 0},
     restores: [],
     modals: [],
     done: false,
@@ -133,6 +134,10 @@ function start(referenceOnly = false, referenceProperties = false, sidecarGateOn
       reads: 0,
       sourceReads: 0,
       nativeLeafReads: 0,
+      peakQueueDepth: 0,
+      peakDiskWriters: 0,
+      preparations: 0,
+      droppedTraceEvents: 0,
     },
     release: null,
   });
@@ -186,8 +191,14 @@ function start(referenceOnly = false, referenceProperties = false, sidecarGateOn
         element.textContent === p.translator(name)
     );
   /** Record separate storage/presentation/manager boundaries; times are diagnostics, not paint measurements. */
-  const record = (phase, edge) =>
-    c.events.push({ phase, edge, time: performance.now() });
+  const record = (phase, edge, operation = c.trace.current || c.trace.last) => {
+    if (c.cancelled || c.done) return;
+    if (c.events.length >= 2048) {c.counts.droppedTraceEvents++; return;}
+    const event = {phase, edge, operation, time: performance.now(), queued: c.trace.waiting,
+      sourceRevision: p.getIndexSourceRevision(), policyRevision: p.index.semanticPolicyRevision,
+      publicationRevision: p.index.publicationRevision, presentationRun: p.index.presentationRun};
+    c.events.push(event); return event;
+  };
   /** Retain an exact forwarding receiver and restore only the probe's installed method. */
   const wrap = (owner, key, replacement) => {
     const original = owner[key];
@@ -199,6 +210,33 @@ function start(referenceOnly = false, referenceProperties = false, sidecarGateOn
       }
     );
   };
+  wrap(p, "enqueueSettingsWrite", /** Observe the existing queue without changing intent capture or its returned promise. */ original => function(write) {
+    const operation = ++c.trace.next; let started = false;
+    c.trace.waiting++;
+    c.counts.peakQueueDepth = Math.max(c.counts.peakQueueDepth, c.trace.waiting + c.trace.active);
+    record("write-queue", "queued", operation);
+    const result = original.call(this, /** The existing writer still owns persistence and live-settings installation. */ async () => {
+      started = true; c.trace.waiting--; c.trace.active++; c.trace.current = operation;
+      c.counts.peakDiskWriters = Math.max(c.counts.peakDiskWriters, c.trace.active);
+      record("write-body", "start", operation);
+      try {const value = await write(); record("write-body", "complete", operation); c.trace.last = operation; return value;}
+      finally {c.trace.active--; if (c.trace.current === operation) c.trace.current = 0;}
+    });
+    void result.then(/** Refused preflight never entered the body, but must retire its observer count. */ () => {
+      if (!started) c.trace.waiting--; record("write-queue", "complete", operation);
+    }, /** Observe failure without consuming or transforming the caller's original rejection. */ () => {
+      if (!started) c.trace.waiting--; record("write-queue", "failed", operation);
+    });
+    return result;
+  });
+  wrap(p.index, "prepareSearchIndex", /** Count actual preparation without retaining graph or source payloads. */ original => function(...args) {
+    c.counts.preparations++; record("search-preparation", "start");
+    const result = original.apply(this, args);
+    void result.then(/** Retain scalar readiness only; production owns the prepared records. */ prepared => record("search-preparation", prepared ? "ready" : "rejected"),
+      /** Failure stays a rejection to the production caller. */ () => record("search-preparation", "failed"));
+    return result;
+  });
+  c.restores.push(p.index.subscribePresentation(/** Publication is distinct from preparation, callback scheduling or actual paint. */ event => record("presentation-publication", event.kind)));
   wrap(
     p,
     "saveData",
@@ -206,8 +244,9 @@ function start(referenceOnly = false, referenceProperties = false, sidecarGateOn
       original
     ) =>
       async function (...args) {
+        const operation = c.trace.current || c.trace.last;
         c.counts.writes++;
-        record("storage", "start");
+        record("storage", "start", operation);
         if (c.diskFailure)
           throw new Error("Expected native style storage fault");
         if (c.holdDisk)
@@ -219,7 +258,7 @@ function start(referenceOnly = false, referenceProperties = false, sidecarGateOn
             }
           );
         const result = await original.apply(this, args);
-        record("storage", "end");
+        record("storage", "end", operation);
         return result;
       }
   );
@@ -230,12 +269,13 @@ function start(referenceOnly = false, referenceProperties = false, sidecarGateOn
       original
     ) =>
       async function (...args) {
+        const operation = c.trace.current || c.trace.last;
         c.counts.presentations++;
-        record("presentation", "start");
+        record("presentation", "start", operation);
         if (c.presentationFailure)
           throw new Error("Expected native presentation fault");
         const result = await original.apply(this, args);
-        record("presentation", "end");
+        record("presentation", "end", operation);
         return result;
       }
   );
@@ -258,7 +298,10 @@ function start(referenceOnly = false, referenceProperties = false, sidecarGateOn
     ) =>
       function (...args) {
         c.counts.acquisitions++;
-        if(referenceOnly)c.events.push({phase:"source-acquire",edge:"start",time:performance.now(),frames:new Error().stack?.split("\n").slice(1,9).map(line=>line.match(/^\s*at ([\w.$<>]+)/)?.[1]??"anonymous")});
+        const event = record("source-acquire", "start");
+        if (event) Object.assign(event, {owner: args[0] === c.fixtureFile ? "owned-note" : args[0] === c.fixtureParentFile ? "owned-parent" : "other",
+          mtime: args[0]?.stat?.mtime, size: args[0]?.stat?.size,
+          frames: new Error().stack?.split("\n").slice(1, 9).map(/** Function names only, never paths or note contents. */ line => line.match(/^\s*at ([\w.$<>]+)/)?.[1] ?? "anonymous")});
         return original.apply(this, args);
       }
   );
@@ -455,6 +498,43 @@ function start(referenceOnly = false, referenceProperties = false, sidecarGateOn
     await current.settingsWriteQueue;
     c.cleaned = true;
   };
+  /** Create only this probe's real drawing; preserve its generated payload and opt into native Markdown display. */
+  const drawing = async path => {
+    const ex=app.plugins.plugins['obsidian-excalidraw-plugin'];
+    check(ex?.createDrawing,'Enabled real Excalidraw companion required');
+    check(!app.vault.getFileByPath(path),'Drawing fixture collision');
+    const created=await ex.createDrawing(path,'/');
+    const file=typeof created==='string'?app.vault.getFileByPath(created):created;
+    check(file?.path===path,'Companion returned a non-owned drawing');
+    c.fixtureFile=file;
+    await app.fileManager.processFrontMatter(c.fixtureFile,/** Keep generated scene data and all other drawing metadata intact. */ fm=>{fm['excalidraw-open-md']=true});
+    await until(/** Native cache must recognize both the real drawing and its selected representation. */ ()=>app.metadataCache.getFileCache(c.fixtureFile)?.frontmatter?.['excalidraw-plugin']&&app.metadataCache.getFileCache(c.fixtureFile)?.frontmatter?.['excalidraw-open-md']===true,'Drawing Markdown metadata absent');
+    p.index.insertCreatedFile(c.fixtureFile);return c.fixtureFile;
+  };
+  /** Both reported incidents used a normal central node; verify the actual per-leaf representation. */
+  const requireNormalCenter = plex => check(plex.view.getState()?.centerPresentation?.embedCentralNode === false, "A normal central node is required for this probe");
+  /** Observe actual retained work, not a startup strategy or whole-graph authority flag. */
+  const workDrained = () => {
+    const index = p.index, scheduler = index.getWorkPriorityDiagnostics();
+    const source = index.sourceAcquisition.getActivityState(), cache = index.indexedDb.getActivityState();
+    c.quietObservation = {status: p.getIndexStatus(), hydration: index.hasPendingSnapshotHydration(),
+      semantic: index.hasActiveSemanticPreparation(), tasks: index.onDemandTasks.size,
+      scheduler, source, cache, visibleTimer: Boolean(p.visibleMetadataTimer), visiblePaths: p.visibleMetadataPaths.size};
+    return p.getIndexStatus().upToDate && !index.hasPendingSnapshotHydration()
+      && !index.hasActiveSemanticPreparation() && !index.onDemandTasks.size
+      && scheduler.active.every(count => count === 0) && scheduler.waiting === 0
+      && Object.values(source).every(count => count === 0) && !cache.writerActive && cache.queuedBodies === 0
+      && !p.visibleMetadataTimer && !p.visibleMetadataPaths.size;
+  };
+  /** Require a quiet half-second within the existing finite prerequisite deadline; admit no work. */
+  const awaitQuiet = async message => {
+    let quietSince = null;
+    await until(() => {
+      if (!workDrained()) {quietSince = null; return false;}
+      quietSince ??= performance.now();
+      return performance.now() - quietSince >= 500;
+    }, message);
+  };
   /** Execute the serial no-view/active-view and fault matrix, then report facts before retiring the controller. */
   const run = async () => {
     try {
@@ -469,21 +549,23 @@ function start(referenceOnly = false, referenceProperties = false, sidecarGateOn
         "Selected test window did not foreground"
       );
       await p.activateView();
-      await until(
-        /** Let normal source-backed startup finish with visible demand before testing its absence. */ () =>
-          p.getIndexStatus().upToDate && !p.index.hasSourceBackedStartup(),
-        "Initial source startup did not settle"
-      );
+      await awaitQuiet("Initial source startup did not settle");
       if (sidecarGateOnly) {
         const plex = app.workspace.getLeavesOfType("k-plex-react-view").find(leaf => p.isKplexLeafVisible(leaf));
         check(plex, "A visible main Plex is required");
-        const page = p.index.allPages().find(page => page.file?.extension === "md");
+        requireNormalCenter(plex);
+        if(excalidrawSidecar)await drawing(key+'-'+Date.now()+'.excalidraw.md');
+        const page = excalidrawSidecar ? p.index.get(c.fixtureFile.path) : p.index.allPages().find(page => page.file?.extension === "md");
         check(page, "A physical Markdown center is required");
         app.workspace.setActiveLeaf(plex, {focus: true}); p.notifyNavigation(page.path);
         await p.openSidecar(plex, page);
         await until(() => p.isSidecarOpen(plex), "Sidecar did not open");
-        await until(() => !p.index.onDemandTasks.size && !p.index.hasActiveSemanticPreparation(), "Sidecar setup demand did not drain");
+        if(excalidrawSidecar)check(p.sidecarLeaves.get(plex)?.view.getViewType()==='markdown'&&p.sidecarLeaves.get(plex)?.view.file===c.fixtureFile,'Real drawing Sidecar must be Markdown, not drawing editor');
+        // This is the quiet radius control, separate from the deliberately held overlap lane.
+        // An empty task map alone can precede admission of a newly created drawing's center work.
+        await awaitQuiet("Sidecar setup work did not drain");
         const before = {...c.counts};
+        c.gateBaseline = {counts: before, at: performance.now(), sourceRevision: p.getIndexSourceRevision(), mtime: c.fixtureFile?.stat?.mtime, canonical: p.index.hasCurrentCanonicalCenter(page.path)};
         for (const radius of [8, 2, 6.5, 5]) {
           c.ownsSettings = true; p.openSettings();
           await until(() => tab.containerEl.isConnected, "Settings did not attach");
@@ -553,6 +635,7 @@ function start(referenceOnly = false, referenceProperties = false, sidecarGateOn
             } finally {field.removeEventListener("change", observe); c.holdDisk = false; c.release?.(); c.release = null;}
           }
         }
+        c.gateFinal = {counts: {...c.counts}, at: performance.now(), sourceRevision: p.getIndexSourceRevision(), mtime: c.fixtureFile?.stat?.mtime};
         check(c.counts.semantics === before.semantics && c.counts.acquisitions === before.acquisitions,
           "Gate radius editing requested semantic/source work");
         c.result = {status: "passed", cases: c.cases, counts: c.counts, events: c.events,
@@ -561,13 +644,16 @@ function start(referenceOnly = false, referenceProperties = false, sidecarGateOn
       }
       if(referenceOnly){
         check(p.settings.noteTypeField,'Configured style field required');
-        const path=key+'-'+Date.now()+'.md';check(!app.vault.getFileByPath(path),'Reference fixture collision');
+        const path=key+'-'+Date.now()+(excalidrawSidecar?'.excalidraw.md':'.md');check(!app.vault.getFileByPath(path),'Reference fixture collision');
         const parentPath=path.replace(/\.md$/,'-parent.md'),parentField=p.settings.hierarchy.parents[0];
         check(parentField&&parentField!==p.settings.noteTypeField&&!app.vault.getFileByPath(parentPath),'Independent Parent fixture required');
         c.fixtureParentFile=await app.vault.create(parentPath,'');
-        c.fixtureFile=await app.vault.create(path,'---\n'+JSON.stringify(p.settings.noteTypeField)+': '+JSON.stringify(key)+'\n'+JSON.stringify(parentField)+': '+JSON.stringify('[['+parentPath+']]')+'\n---\n');
+        if(excalidrawSidecar){
+          await drawing(path);
+          await app.fileManager.processFrontMatter(c.fixtureFile,/** Add the same semantic fixture fields without replacing the actual drawing. */ fm=>{fm[p.settings.noteTypeField]=key;fm[parentField]='[['+parentPath+']]'});
+        }else c.fixtureFile=await app.vault.create(path,'---\n'+JSON.stringify(p.settings.noteTypeField)+': '+JSON.stringify(key)+'\n'+JSON.stringify(parentField)+': '+JSON.stringify('[['+parentPath+']]')+'\n---\n');
         await until(()=>app.metadataCache.getFileCache(c.fixtureFile)?.frontmatter?.[p.settings.noteTypeField]===key,'Style fixture metadata absent');
-        const plex=app.workspace.getLeavesOfType('k-plex-react-view').find(l=>p.isKplexLeafVisible(l));check(plex,'Single main Plex required');
+        const plex=app.workspace.getLeavesOfType('k-plex-react-view').find(l=>p.isKplexLeafVisible(l));check(plex,'Single main Plex required');requireNormalCenter(plex);
         for(const leaf of [...app.workspace.getLeavesOfType('k-plex-react-view'),...app.workspace.getLeavesOfType('k-plex-sidepanel-view')])if(leaf!==plex)leaf.detach();
         for(const leaf of app.workspace.getLeavesOfType('file-properties'))leaf.detach();
         if(referenceProperties){c.properties=app.workspace.getLeaf('split');await c.properties.setViewState({type:'file-properties',active:false});await app.workspace.revealLeaf(c.properties);await c.properties.loadIfDeferred()}
@@ -577,8 +663,9 @@ function start(referenceOnly = false, referenceProperties = false, sidecarGateOn
           const center = p.index.get(path); check(center?.file === c.fixtureFile, "Physical Sidecar fixture center missing");
           await p.openSidecar(plex, center);
           await until(() => p.isSidecarOpen(plex), "Reference Sidecar did not open");
+          if(excalidrawSidecar)check(p.sidecarLeaves.get(plex)?.view.getViewType()==='markdown'&&p.sidecarLeaves.get(plex)?.view.file===c.fixtureFile,'Actual Excalidraw-as-Markdown Sidecar required');
         }
-        await until(()=>!p.index.onDemandTasks.size&&!p.index.hasActiveSemanticPreparation(),'Style fixture demand did not drain');
+        await awaitQuiet('Style fixture work did not drain');
         if(referenceProperties)await until(()=>c.properties.view.file===c.fixtureFile&&c.properties.view.modifyingFile===c.fixtureFile,'Native Properties did not adopt fixture');
         const body=document.body,heading='--h1-color',originalHeading=body.style.getPropertyValue(heading),priority=body.style.getPropertyPriority(heading);
         c.testHeadingToken=!getComputedStyle(body).getPropertyValue(heading).trim();
@@ -591,7 +678,7 @@ function start(referenceOnly = false, referenceProperties = false, sidecarGateOn
         const row=label.closest('.setting-item');(row.querySelector('button')??row).click();
         let root=await open('property',null,true);
         root.querySelector('input[aria-label="'+p.translator('styles.propertyValue')+'"]').value=key;
-        await until(()=>p.getIndexStatus().upToDate&&!p.index.onDemandTasks.size&&!p.index.hasActiveSemanticPreparation(),'Reference fixture index did not drain');
+        await awaitQuiet('Reference fixture work did not drain');
         const before={...c.counts};record('reference-child','start');
         root.querySelector('button[aria-label="'+p.translator('styles.border')+'"]').click();
         await until(()=>root.ownerDocument.querySelector('.kplex-color-modal'),'Reference chooser absent');
@@ -612,7 +699,26 @@ function start(referenceOnly = false, referenceProperties = false, sidecarGateOn
           const field=root.querySelector('input[aria-label="'+p.translator(label)+'"]');check(field,'Native size input absent');
           field.value=String(value);field.dispatchEvent(new field.ownerDocument.defaultView.Event('input',{bubbles:true}));
         }
-        record('reference-parent-save','start');await save(root);record('reference-parent-save','end');
+        if(liveness){
+          let releasePrevious,releaseRefresh,heartbeats=0;const beat=window.setInterval(/** Count actual task opportunities while optional work remains held. */ ()=>heartbeats++,10);
+          const search=p.index.prepareSearchIndex,refresh=p.index.refreshPresentationSettings;
+          let entered=false,held=false;
+          // Hold actual facet-changing preparation; another durable style Save must not own its disk queue.
+          p.index.prepareSearchIndex=/** Hold only the first real earlier preparation; keep its exact receiver. */ async function(...args){if(!entered){entered=true;await new Promise(/** Expose only the finite probe-owned earlier-preparation gate. */ resolve=>releasePrevious=resolve)}return search.apply(this,args)};
+          p.settings.showFullTagName=!p.settings.showFullTagName;
+          const previous=p.index.refreshPresentationSettings();
+          try{
+            await until(()=>entered,'Earlier facet-changing preparation did not enter');
+            p.index.refreshPresentationSettings=/** Model a held optional host continuation after durable Save. */ async function(...args){held=true;await new Promise(/** Cleanup releases the exact optional continuation even after a failed assertion. */ resolve=>releaseRefresh=resolve);return refresh.apply(this,args)};
+            record('overlap-parent-save','start');button(root,'common.save').click();
+            await until(()=>held,'Saved operation did not enter held optional refresh');await wait(300);
+            const observed={editorPending:root.isConnected,heartbeats,durable:Boolean((await stored()).noteTypeStyles[key]),earlierPreparationHeld:Boolean(releasePrevious),writes:c.counts.writes-before.writes};
+            check(observed.durable&&heartbeats>0,'Hold must distinguish durable Save from a starved renderer');
+            passed('controlled overlap and held optional refresh observation',observed);
+            if(liveness==='assert')check(!root.isConnected,'Durably saved editor remains trapped by optional refresh');
+          }finally{window.clearInterval(beat);releaseRefresh?.();releasePrevious?.();p.index.prepareSearchIndex=search;p.index.refreshPresentationSettings=refresh;await previous;}
+          await until(()=>!root.isConnected,'Released overlap Save did not close');record('overlap-parent-save','end');
+        }else{record('reference-parent-save','start');await save(root);record('reference-parent-save','end');}
         const expected={kind:'theme',variable:'--h1-color'};
         check(JSON.stringify(p.settings.noteTypeStyles[key]?.borderColor)===JSON.stringify(expected),'Reference did not publish');
         check(JSON.stringify((await stored()).noteTypeStyles[key]?.borderColor)===JSON.stringify(expected),'Reference did not persist');
@@ -623,7 +729,7 @@ function start(referenceOnly = false, referenceProperties = false, sidecarGateOn
         const style=p.settings.noteTypeStyles[key],durable=(await stored()).noteTypeStyles[key];
         check(style.strokeWidth===3&&style.gateRadius===8&&durable.strokeWidth===3&&durable.gateRadius===8,'Native dimensions not persisted');
         await until(()=>{const center=[...document.querySelectorAll('.kplex-role-center')].find(el=>el.dataset.kplexPath===path);return center&&getComputedStyle(center).borderWidth==='3px'&&center.style.getPropertyValue('--kplex-gate-size')==='8.4px'},'Native dimension paint absent');
-        passed('actual Settings Node styles Border h1 reference child draft and parent Save',{source:expected,dimensions,counts:{writes:c.counts.writes-before.writes,presentations:c.counts.presentations-before.presentations,semantics:c.counts.semantics-before.semantics,acquisitions:c.counts.acquisitions-before.acquisitions},properties:referenceProperties,sidecar:referenceSidecar,testOwnedHeadingToken:c.testHeadingToken,context:'Actual Visual styling / Node styling subpages'});
+        passed('actual Settings Node styles Border h1 reference child draft and parent Save',{source:expected,dimensions,counts:{writes:c.counts.writes-before.writes,presentations:c.counts.presentations-before.presentations,semantics:c.counts.semantics-before.semantics,acquisitions:c.counts.acquisitions-before.acquisitions},properties:referenceProperties,sidecar:referenceSidecar,excalidrawSidecar,companionVersion:excalidrawSidecar?app.plugins.plugins['obsidian-excalidraw-plugin']?.manifest?.version:undefined,testOwnedHeadingToken:c.testHeadingToken,context:'Actual Visual styling / Node styling subpages'});
         app.setting.close();c.ownsSettings=false;
         await until(()=>p.index.getNeighborhood(path)?.parents.some(node=>node.page.path===parentPath),'Parent fixture did not reconcile');
         const restartAt=Date.now();await app.plugins.disablePlugin('k-plex');await app.plugins.enablePlugin('k-plex');const reloaded=app.plugins.plugins['k-plex'];
@@ -901,11 +1007,7 @@ function start(referenceOnly = false, referenceProperties = false, sidecarGateOn
             ),
         "Active graph did not render"
       );
-      await until(
-        /** Source-backed startup must settle before a style-only comparison. */ () =>
-          p.getIndexStatus().upToDate && !p.index.hasSourceBackedStartup(),
-        "Source startup did not settle"
-      );
+      await awaitQuiet("Source startup did not settle");
       const pairFiles = p.index
         .allPages()
         .filter(
@@ -1111,12 +1213,12 @@ const report = {
   activation: "programmatic native manager/editor DOM",
 };
 try {
-  evaluate("JSON.stringify((" + start.toString() + ")("+JSON.stringify(process.env.KPLEX_STYLE_REFERENCE_ONLY==="true")+","+JSON.stringify(process.env.KPLEX_STYLE_REFERENCE_PROPERTIES==="true")+","+JSON.stringify(process.env.KPLEX_STYLE_SIDECAR_GATE_ONLY==="true")+","+JSON.stringify(process.env.KPLEX_STYLE_REFERENCE_SIDECAR==="true")+"))");
+  evaluate("JSON.stringify((" + start.toString() + ")("+JSON.stringify(process.env.KPLEX_STYLE_REFERENCE_ONLY==="true")+","+JSON.stringify(process.env.KPLEX_STYLE_REFERENCE_PROPERTIES==="true")+","+JSON.stringify(process.env.KPLEX_STYLE_SIDECAR_GATE_ONLY==="true")+","+JSON.stringify(process.env.KPLEX_STYLE_REFERENCE_SIDECAR==="true")+","+JSON.stringify(process.env.KPLEX_STYLE_LIVENESS||false)+","+JSON.stringify(process.env.KPLEX_STYLE_EXCALIDRAW_SIDECAR==="true")+"))");
   const end = Date.now() + 180000;
   while (true) {
     await pause(100);
     const state = evaluate(
-      "JSON.stringify((()=>{const c=window.__kplex146Styles;return {done:c?.done,error:c?.error,cleanupError:c?.cleanupError,cleaned:c?.cleaned,result:c?.result,submitted:c?.submitted,counts:c?.counts,events:c?.events,cases:c?.cases,noViewBefore:c?.noViewBefore,readFacts:c?.readFacts,failureObservation:c?.failureObservation}})())"
+      "JSON.stringify((()=>{const c=window.__kplex146Styles;return {done:c?.done,error:c?.error,cleanupError:c?.cleanupError,cleaned:c?.cleaned,result:c?.result,submitted:c?.submitted,counts:c?.counts,events:c?.events,cases:c?.cases,noViewBefore:c?.noViewBefore,readFacts:c?.readFacts,failureObservation:c?.failureObservation,gateBaseline:c?.gateBaseline,gateFinal:c?.gateFinal,quietObservation:c?.quietObservation}})())"
     );
     if (state.done) {
       Object.assign(report, state);
