@@ -11,16 +11,20 @@ test("0.2.0 upgrade persists appearance, selection and marker together; failure 
   p.saveData=async()=>{throw Error('Expected migration disk failure')};let failed=false;
   try{await upgrade()}catch{failed=true}
   if(!failed||JSON.stringify(p.settings)!==JSON.stringify(before))throw Error('Failed migration published appearance or completion');
-  p.saveData=store;const notices=window.notices.length;await upgrade();
+  p.saveData=store;const notices=window.notices.length,dialogs=sourceModules.TestModal.instances.length;await upgrade();
   const library=p.settings.appearanceThemes,stored=p.writes.at(-1);
   if(library.selectedId!=='native-base'||library.nativeBaseMigration!==1||stored.appearanceThemes.selectedId!==library.selectedId||stored.standardStyleDefaults!=='native'||p.settings.noteTypeStyles.Project.fontSize!==25)throw Error('Migration not atomic or semantics lost');
   if(JSON.stringify(library.themes)!==JSON.stringify(backup))throw Error('Original themes overwritten');
-  if(window.notices.length!==notices+1||window.notices.at(-1)!==p.translator('themes.nativeBaseAdopted'))throw Error('Missing committed migration notice');
+  const notification=sourceModules.TestModal.instances.at(-1);
+  if(sourceModules.TestModal.instances.length!==dialogs+1||!notification.modalEl.isConnected||!notification.modalEl.classList.contains('kplex-notification-modal')||notification.titleEl.textContent!==p.translator('themes.nativeBaseTitle')||!notification.contentEl.textContent.includes(p.translator('themes.nativeBaseAdopted'))||window.notices.length!==notices)throw Error('Missing native migration modal or competing brief popup');
+  await upgrade();if(sourceModules.TestModal.instances.at(-1)!==notification)throw Error('Duplicate live migration dialog');
+  notification.contentEl.querySelector('button').click();await p.settingsWriteQueue;
+  if(p.settings.appearanceThemes.migrationNotice||notification.modalEl.isConnected||p.actionDialogs.size)throw Error('Modal acknowledgment not durable or owner leaked');
   await p.updateAppearanceThemes({kind:'select',id:'user'});const restarted=await createAppearanceHost(p.writes.at(-1)),writes=restarted.writes.length;
   restarted.manifest={version:'0.3.0'};
   await restarted.updateStyleSettings(()=>{},restarted.captureAppearanceOwner(),{initializeThemes:{existing:true,adoptNativeBase:true}});
   if(restarted.settings.appearanceThemes.selectedId!=='user'||restarted.settings.backgroundColor!=='#123456'||restarted.writes.length!==writes)throw Error('Later restart reset selected appearance');
-  const fresh=await createAppearanceHost({},false),noticeCount=window.notices.length;await fresh.updateStyleSettings(()=>{},fresh.captureAppearanceOwner(),{initializeThemes:{existing:false,adoptNativeBase:true,notifyMigration:false}});
+  const fresh=await createAppearanceHost({},false),noticeCount=window.notices.length,dialogCount=sourceModules.TestModal.instances.length;await fresh.updateStyleSettings(()=>{},fresh.captureAppearanceOwner(),{initializeThemes:{existing:false,adoptNativeBase:true,notifyMigration:false}});
   if(fresh.settings.appearanceThemes.themes.length!==1||fresh.settings.appearanceThemes.selectedId!=='default'||fresh.settings.appearanceThemes.nativeBaseMigration!==1||fresh.settings.appearanceThemes.migrationNotice||window.notices.length!==noticeCount)throw Error('Fresh factory installation misrepresented or notified');
   const imported=await createAppearanceHost({noteTypeStyles:{Project:{fontSize:27}}});delete imported.settings.appearanceThemes;
   await imported.updateStyleSettings(()=>{},imported.captureAppearanceOwner(),{initializeThemes:{existing:true,notifyMigration:false}});
@@ -30,7 +34,27 @@ test("0.2.0 upgrade persists appearance, selection and marker together; failure 
   const future=await createAppearanceHost({appearanceThemes:{version:999,opaque:['keep']}}),raw=JSON.stringify(future.settings.appearanceThemesFuture);
   await future.updateStyleSettings(()=>{},future.captureAppearanceOwner(),{initializeThemes:{existing:true,adoptNativeBase:true}});
   if(JSON.stringify(future.settings.appearanceThemesFuture)!==raw||future.settings.appearanceThemes)throw Error('Future data migrated lossily');
+  if(sourceModules.TestModal.instances.length!==dialogCount)throw Error('Fresh install, first import, acknowledged restart or unsupported settings displayed notification');
   return true;
+ })()`),true);
+});
+
+test("pending upgrade notifications survive teardown and failed acknowledgment without readopting appearance",async()=>{
+ assert.equal(await scenario(`(async()=>{
+  const p=await createAppearanceHost({backgroundColor:'#234567'});
+  p.settings.appearanceThemes.nativeBaseMigration=1;
+  const selected=p.settings.appearanceThemes.selectedId,base=p.settings.backgroundColor,before=p.writes.length;
+  const startup=()=>p.updateStyleSettings(()=>{},p.captureAppearanceOwner(),{initializeThemes:{existing:true,adoptNativeBase:true}});
+  await startup();let modal=sourceModules.TestModal.instances.at(-1);
+  if(!modal.modalEl.isConnected||p.writes.length!==before||p.settings.backgroundColor!==base||p.settings.appearanceThemes.selectedId!==selected)throw Error('Pending notice reapplied migration');
+  p.unloading=true;modal.close();modal.close();await p.settingsWriteQueue;
+  if(!p.settings.appearanceThemes.migrationNotice||p.actionDialogs.size||p.writes.length!==before)throw Error('Teardown acknowledged unseen notification');
+  p.unloading=false;await startup();modal=sourceModules.TestModal.instances.at(-1);
+  const store=p.saveData;p.saveData=async()=>{throw Error('Expected acknowledgment failure')};modal.close();await p.settingsWriteQueue;await new Promise(r=>setTimeout(r,0));
+  if(!p.settings.appearanceThemes.migrationNotice||p.writes.length!==before||p.actionDialogs.size)throw Error('Failed acknowledgment published');
+  p.saveData=store;await startup();modal=sourceModules.TestModal.instances.at(-1);modal.close();await p.settingsWriteQueue;
+  if(p.settings.appearanceThemes.migrationNotice||p.settings.backgroundColor!==base||p.settings.appearanceThemes.selectedId!==selected||p.writes.length!==before+1||p.actionDialogs.size)throw Error('Acknowledgment changed appearance or did not persist');
+  const count=sourceModules.TestModal.instances.length;await startup();if(sourceModules.TestModal.instances.length!==count)throw Error('Acknowledged modal reappeared');return true;
  })()`),true);
 });
 

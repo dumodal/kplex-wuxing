@@ -54,6 +54,7 @@ const spanishTranslations = {
   "themes.staleDraft": "Este borrador sin guardar pertenece a {name}. Se seleccionó otro tema. Descarta el borrador y vuelve a abrir el editor.",
   "themes.discardDraft": "Descartar borrador",
   "themes.unavailable": "Esta apariencia usa un formato más reciente o no compatible. No se pueden cambiar los temas.",
+  "themes.nativeBaseTitle": "K-Plex ahora usa tu tema de Obsidian",
   "themes.nativeBaseAdopted": "K-Plex ahora usa los colores base de Obsidian y conserva tus estilos semánticos. Tu tema anterior se mantiene. Encontrarás los temas en Estilo visual, en los ajustes de K-Plex.",
   "themes.migrationMessage": "Tu apariencia anterior se guardó como «Tema del usuario». Elige «Base predeterminada + mis colores semánticos» para usar los colores de Obsidian y conservar tus estilos personalizados.",
   "colors.colorsPage": "Colores",

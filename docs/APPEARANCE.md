@@ -19,9 +19,9 @@ Ontology, label sources, device typography profiles, layout/navigation, image pe
 
 A fresh installation starts with **Default theme**. This theme follows Obsidian’s live native colors and cannot be renamed, deleted or reset. The first saved appearance change creates and selects **Custom theme**. Opening, cancelling or saving unchanged creates nothing.
 
-Existing appearances are saved once as **User theme**. The first startup with native-base migration selects **Default base + my semantic colors**: an independent copy of the current semantic styling and non-color styles, with native base colors. Existing saved themes are preserved. A notice points to **Visual styling**, where you can switch back or select another theme. This migration runs once, including when upgrading from 0.1.3; later restarts and upgrades keep your selected theme. A fresh installation still starts with **Default theme**. Successful first-run ExcaliBrain import receives the same User-theme protection before adopting native base colors. The migration message can be dismissed.
+Existing appearances are saved once as **User theme**. The first startup with native-base migration selects **Default base + my semantic colors**: an independent copy of the current semantic styling and non-color styles, with native base colors. Existing saved themes are preserved. A notification dialog explains the change and points to **Visual styling**, where you can switch back or select another theme. Dismiss it with **Done**, Escape or the close button; acknowledgment is saved so it does not reappear. This migration runs once, including when upgrading from 0.1.3; later restarts and upgrades keep your selected theme. A fresh installation still starts with **Default theme**. Successful first-run ExcaliBrain import receives the same User-theme protection before adopting native base colors.
 
-Brand-new K-Plex installations do not show the upgrade notice, including when importing an existing ExcaliBrain appearance on first use.
+Brand-new K-Plex installations do not show the upgrade dialog, including when importing an existing ExcaliBrain appearance on first use.
 
 Deleting the active theme asks for confirmation and switches to **Default theme** in the same save. Failed storage leaves the theme and selection intact. Deleting another theme preserves the active appearance.
 

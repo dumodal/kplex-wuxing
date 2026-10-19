@@ -54,6 +54,7 @@ const germanTranslations = {
   "themes.staleDraft": "Dieser ungespeicherte Entwurf gehört zu {name}. Ein anderes Thema wurde ausgewählt. Verwirf den Entwurf und öffne den Editor erneut.",
   "themes.discardDraft": "Entwurf verwerfen",
   "themes.unavailable": "Dieses Erscheinungsbild verwendet ein neueres oder nicht unterstütztes Format. Themenänderungen sind nicht verfügbar.",
+  "themes.nativeBaseTitle": "K-Plex folgt jetzt deinem Obsidian-Theme",
   "themes.nativeBaseAdopted": "K-Plex verwendet jetzt die Basisfarben von Obsidian und behält deine semantischen Stile bei. Dein vorheriges Theme bleibt erhalten. Themes findest du unter „Visuelle Gestaltung“ in den K-Plex-Einstellungen.",
   "themes.migrationMessage": "Dein bisheriges Erscheinungsbild ist als „Benutzerthema“ gespeichert. Wähle „Standardbasis + meine semantischen Farben“, um Obsidians Farben zu verwenden und deine eigenen Stile zu behalten.",
   "colors.colorsPage": "Farben",

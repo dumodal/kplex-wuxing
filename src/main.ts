@@ -9,6 +9,8 @@
  * pending native work neither replays disk writes nor accumulates one task per settings edit.
  * Appearance identities use that same queue. Unsupported color containers persist verbatim and
  * remain read-only; palette validation and semantic-cycle checks precede any durable write.
+ * Committed base-color upgrades use a native notification modal; acknowledgment shares the
+ * library metadata queue and unload preserves undismissed notifications for the next startup.
  * Unsuccessful source-backed startup adoption reports incomplete coverage rather than implying
  * that index preparation is still running; it never grants semantic write authority.
  * File deletion captures its ontology-cleanup preference before consent; settings navigation
@@ -44,6 +46,7 @@ import { appearanceColorReferences } from "./core/contracts/appearance";
 import { requireNamedColor } from "./core/plex/colorEditing";
 import * as appearanceThemes from "./core/plex/appearanceThemes";
 import type {StyleEditorModal} from "./ui/StyleEditorModal";
+import {NotificationModal} from "./ui/NotificationModal";
 
 import { FileView, ItemView, MarkdownView, Menu, Notice, Platform, Plugin, TFile, TFolder, apiVersion, getLanguage, getAllTags, normalizePath, type Editor, type HoverParent, type WorkspaceLeaf } from "obsidian";
 import { captureSettingsPolicy, classifySettingsChange, isStyleOnlySettingsChange, type SettingsPolicy } from "./core/graph/settingsPolicy";
@@ -179,6 +182,7 @@ export default class KplexPlugin extends Plugin {
   private actionInvocationSequence = 0;
   private readonly actionEditors = new Map<string, Editor>();
   private readonly actionDialogs = new Map<{ close(): void }, { surfaceId?: string; generation?: number }>();
+  private appearanceMigrationDialog: NotificationModal | null = null;
   /** The host owns Settings navigation; the tab owns rendered shortcut controls and cleanup. */
   private settingsTab: KplexSettingTab | null = null;
   private actionPreferenceQueue: Promise<void> = Promise.resolve();
@@ -2131,10 +2135,6 @@ export default class KplexPlugin extends Plugin {
           catch (error) {console.error("K-Plex custom theme notice failed", error); refreshPending = true;}
         }
       }
-      if (adoptedNativeBase && library?.migrationNotice) {
-        try {new Notice(this.translator("themes.nativeBaseAdopted"), 10000);}
-        catch (error) {console.error("K-Plex native base migration notice failed", error); refreshPending = true;}
-      }
       if (effects.changedKeys.includes("graphLenses")) for (const listener of [...(this.graphLensListeners ?? [])]) try {listener(this.settings.graphLenses);} catch (error) {console.error("K-Plex saved lens notification failed", error); refreshPending = true;}
       semantic = effects.semanticInvalidation;
       if (semantic) this.index.invalidateSemanticPolicy();
@@ -2143,9 +2143,41 @@ export default class KplexPlugin extends Plugin {
       if (!persisted) throw error instanceof Error ? error : new Error(String(error));
       console.error("K-Plex saved style publication failed", error); return {refreshPending: true};
     }
+    if (options.initializeThemes?.adoptNativeBase && options.initializeThemes.notifyMigration !== false) {
+      try {this.showAppearanceMigrationNotification();}
+      catch (error) {console.error("K-Plex native base migration notification failed", error); refreshPending = true;}
+    }
     if (this.unloading || !refresh) return {refreshPending};
     const completion = await this.refreshSavedSettings(semantic);
     return {refreshPending: refreshPending || completion.refreshPending};
+  }
+
+  /** Explain committed native-base adoption once, including an earlier undismissed brief notice.
+   * Dismissal uses the existing metadata queue; teardown preserves pending acknowledgment and
+   * a failed write leaves it eligible next startup. The modal never blocks the startup/disk queue. */
+  private showAppearanceMigrationNotification(): void {
+    const library = this.settings.appearanceThemes;
+    if (this.unloading || this.appearanceMigrationDialog || !library?.migrationNotice || library.nativeBaseMigration !== 1
+      || this.settings.appearanceThemesFuture !== undefined || this.settings.colorPreferencesFuture !== undefined
+      || this.settings.graphLensesColorFuture !== undefined) return;
+    const dialog = new NotificationModal(this.app, this.translator("themes.nativeBaseTitle"),
+      this.translator("themes.nativeBaseAdopted"), this.translator("common.done"),
+      /** Close releases the exact native owner before queuing acknowledgment; accepted writes survive UI retirement. */ () => {
+        this.actionDialogs.delete(dialog);
+        this.appearanceMigrationDialog = null;
+        if (this.unloading) return;
+        void this.updateAppearanceThemes({kind: "dismiss-migration"}).catch(/** Keep a failed acknowledgment pending without hiding storage failure. */ error => {
+          console.error("K-Plex migration acknowledgment failed", error);
+          if (!this.unloading) new Notice(this.translator("styles.operation.notSaved"));
+        });
+      });
+    this.appearanceMigrationDialog = dialog;
+    this.actionDialogs.set(dialog, {});
+    try {dialog.open();} catch (error) {
+      this.actionDialogs.delete(dialog);
+      this.appearanceMigrationDialog = null;
+      throw error;
+    }
   }
 
   /** Navigate to the declarative shortcut page, including when optional commands are unpublished. */

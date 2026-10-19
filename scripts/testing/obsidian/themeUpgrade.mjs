@@ -33,7 +33,15 @@ async function scenario(app,c) {
     check(p.settings.standardStyleDefaults==='native'&&p.settings.appearanceThemes.selectedId!=='default','Native base not selected');
     check(JSON.stringify(p.settings.appearanceThemes.themes.slice(0,previous.themes.length))===JSON.stringify(previous.themes),'Prior theme was overwritten');
     check(JSON.stringify([p.settings.noteTypeStyles,p.settings.tagNodeStyles,p.settings.tagStyleList,p.settings.hierarchyLinkStyles,p.settings.colorPreferences,p.settings.graphLenses])===semantics,'Semantic appearance changed');
-    check([...document.querySelectorAll('.notice')].some(el=>el.textContent.includes(p.translator('themes.nativeBaseAdopted'))),'Committed upgrade notice missing');
+    const notification=document.querySelector('.kplex-notification-modal');
+    check(notification?.getClientRects().length&&notification.textContent.includes(p.translator('themes.nativeBaseAdopted'))&&notification.querySelector('.modal-title')?.textContent===p.translator('themes.nativeBaseTitle'),'Committed upgrade notification modal missing');
+    check(![...document.querySelectorAll('.notice')].some(el=>el.textContent.includes(p.translator('themes.nativeBaseAdopted'))),'Competing brief upgrade popup displayed');
+    await p.updateStyleSettings(()=>{},p.captureAppearanceOwner(),{initializeThemes:{existing:true,adoptNativeBase:true,notifyMigration:true}});
+    check(document.querySelectorAll('.kplex-notification-modal').length===1,'Duplicate live upgrade modal');
+    const done=[...notification.querySelectorAll('button')].find(button=>button.textContent===p.translator('common.done'));
+    check(done,'Native notification acknowledgment missing');done.click();
+    await until(()=>!p.settings.appearanceThemes.migrationNotice,'Modal acknowledgment did not persist');
+    check(!notification.isConnected&&!p.appearanceMigrationDialog,'Notification owner retained after acknowledgment');
     const tab=p.settingsTab;originalMount=tab.mountThemeControls;
     tab.mountThemeControls=function(setting){c.themeRow=setting;return originalMount.call(this,setting)};
     p.openSettings();await until(()=>p.settingsTab.containerEl.isConnected,'Native Settings missing');
@@ -41,26 +49,25 @@ async function scenario(app,c) {
     const row=()=>c.themeRow?.settingEl.isConnected ? c.themeRow.settingEl : null;
     await until(()=>row()?.querySelector('select'),'Native theme selection missing');
     const select=row().querySelector('select');check(select.value===p.settings.appearanceThemes.selectedId,'Native selector displays old theme');
-    const settingsDoc=row().ownerDocument;
-    const dismiss=settingsDoc.querySelector('[aria-label="'+p.translator('themes.dismissMigration')+'"]');check(dismiss,'Dismissible upgrade explanation missing');dismiss.click();
-    await until(()=>!p.settings.appearanceThemes.migrationNotice,'Native dismissal did not persist');
+    check(![...row().ownerDocument.querySelectorAll('[aria-label="'+p.translator('themes.dismissMigration')+'"]')].some(button=>button.getClientRects().length),'Acknowledged migration row remains visible');
     select.value=previousId;select.dispatchEvent(new Event('change',{bubbles:true}));
     await until(()=>p.settings.appearanceThemes.selectedId===previousId,'Native theme selection did not persist');
     app.setting.close();await p.settingsWriteQueue;const before=writes;
     await p.updateStyleSettings(()=>{},p.captureAppearanceOwner(),{initializeThemes:{existing:true,adoptNativeBase:true,notifyMigration:true}});
     check(writes===before&&p.settings.appearanceThemes.selectedId===previousId,'Later version reset the user selection');
+    check(!document.querySelector('.kplex-notification-modal'),'Acknowledged modal reappeared on later startup');
     // A first installation is represented by its actual absence of prior K-Plex data, not version absence.
     await p.updateAppearanceThemes({kind:'select',id:'default'});
     p.settings.appearanceThemes={version:1,migrationComplete:true,selectedId:'default',themes:p.settings.appearanceThemes.themes.filter(theme=>theme.id==='default'),migrationNotice:false};
-    const notices=[...document.querySelectorAll('.notice')].filter(el=>el.textContent.includes(p.translator('themes.nativeBaseAdopted'))).length;
     await p.updateStyleSettings(()=>{},p.captureAppearanceOwner(),{initializeThemes:{existing:false,adoptNativeBase:true,notifyMigration:false}});
     check(p.settings.appearanceThemes.themes.length===1&&!p.settings.appearanceThemes.migrationNotice,'Fresh install acquired an upgrade theme/message');
-    check([...document.querySelectorAll('.notice')].filter(el=>el.textContent.includes(p.translator('themes.nativeBaseAdopted'))).length<=notices,'Fresh install displayed an upgrade popup');
+    check(!document.querySelector('.kplex-notification-modal'),'Fresh install displayed an upgrade modal');
     p.openSettings();await until(()=>p.settingsTab.containerEl.isConnected,'Fresh Settings missing');p.settingsTab.openSettingsPage(p.translator('settings.ui.visual.styling'));
     await until(()=>row()?.querySelector('select'),'Fresh theme row missing');
     check(![...row().ownerDocument.querySelectorAll('.setting-item')].some(el=>el.getClientRects().length&&el.querySelector('.setting-item-name')?.textContent===p.translator('themes.nativeBaseAdopted')),'Fresh Settings displayed migration row');
-    return {cases:['atomic existing-user adoption','native Visual styling selection and dismissal','later startup preserves manual selection','fresh Default-only installation without popup or Settings message'],version:p.manifest.version,writes};
+    return {cases:['atomic existing-user adoption','native notification content and single-modal ownership','durable modal acknowledgment','native Visual styling selection','later startup preserves manual selection without notification','fresh Default-only installation without modal or Settings message'],version:p.manifest.version,writes};
   } finally {
+    if(p.appearanceMigrationDialog)p.appearanceMigrationDialog.close();
     if(app.setting.isOpen)app.setting.close();await p.settingsWriteQueue;
     if(originalSave)p.saveData=originalSave;
     if(originalMount)p.settingsTab.mountThemeControls=originalMount;
@@ -72,4 +79,4 @@ async function scenario(app,c) {
 
 if(process.env.KPLEX_TEST_VAULT_NAME!=='kplex-test-small')throw Error('Theme upgrade requires the explicit Small fixture');
 const data=readFileSync(join(process.env.KPLEX_TEST_CONFIG_DIR,'plugins/k-plex/data.json'),'utf8');
-await runControlledProbe('theme-upgrade-020',scenario,'c.originalData='+JSON.stringify(data)+';',['src/main.ts','src/settings.ts','src/core/plex/appearanceThemes.ts']);
+await runControlledProbe('theme-upgrade-020',scenario,'c.originalData='+JSON.stringify(data)+';',['src/main.ts','src/settings.ts','src/core/plex/appearanceThemes.ts','src/ui/NotificationModal.ts']);

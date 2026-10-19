@@ -54,6 +54,7 @@ const dutchTranslations = {
   "themes.staleDraft": "Dit niet-opgeslagen concept hoort bij {name}. Er is een ander thema geselecteerd. Verwerp dit concept en open de editor opnieuw.",
   "themes.discardDraft": "Concept verwerpen",
   "themes.unavailable": "Deze weergave gebruikt een nieuwer of niet-ondersteund formaat. Themawijzigingen zijn niet beschikbaar.",
+  "themes.nativeBaseTitle": "K-Plex volgt nu je Obsidian-thema",
   "themes.nativeBaseAdopted": "K-Plex gebruikt nu de basiskleuren van Obsidian en behoudt je semantische stijlen. Je vorige thema blijft bewaard. Je vindt thema’s onder Visuele stijl in de K-Plex-instellingen.",
   "themes.migrationMessage": "Je vorige weergave is opgeslagen als ‘Gebruikersthema’. Kies ‘Standaardbasis + mijn semantische kleuren’ om de kleuren van Obsidian te gebruiken en je eigen stijlen te behouden.",
   "colors.colorsPage": "Kleuren",
