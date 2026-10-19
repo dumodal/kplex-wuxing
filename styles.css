@@ -1233,7 +1233,6 @@ button.kplex-sidecar-unfold-plex,
 /* Performance/UI pass: tighter thought chrome and professional micro controls. */
 .kplex-view-host .kplex-thought {
   padding: 1px 8px;
-  line-height: 1.02;
 }
 .kplex-view-host .kplex-role-center {
   padding: 2px 10px;

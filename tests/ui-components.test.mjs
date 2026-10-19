@@ -2237,6 +2237,16 @@ try{
   check(text.scrollWidth<=text.clientWidth,"Short center label was CSS-clipped at font "+baseFontSize+", density "+density+": "+text.scrollWidth+">"+text.clientWidth);
   check(size.width<=style.maxWidth,"Center sizing ignored its explicit width cap");
  }
+ for(const role of ["child","center"])for(const baseFontSize of [12.4,20,28])for(const strokeWidth of [0,1,4,8])for(const wrapNodeLabels of [false,true]){
+  const label="Typography gyjpq",settings={baseFontSize,wrapNodeLabels,showNeighborCount:false};
+  const style={fontSize:25,maxLabelLength:120,maxWidth:800,strokeWidth};
+  const size=nodeSize(label,25,settings,role==="center",120,800,strokeWidth),node={page:{path:"Glyph.md",file:{extension:"md"}},label,role,x:0,y:0,...size,style,gateStats:gates,neighbourCount:0};
+  flushSync(()=>root.render(<ThoughtNode node={node} settings={settings} selected={false} highlighted={false} dimmed={false} highlightedGates={new Set()}
+   translate={key=>key} onActivate={noop} onOpen={noop} onHoverNode={noop} onHoverGate={noop} onHoverEnd={noop} onHoverPreview={noop} onGatePointerDown={noop} onNodePointerDown={noop}/>));
+  const text=container.querySelector(".kplex-thought-text"),box=text.parentElement;
+  check(text.scrollHeight<=text.clientHeight+1,"Glyph line clipped: "+role+"/font"+baseFontSize+"/border"+strokeWidth+"/wrap"+wrapNodeLabels);
+  check(box.scrollHeight<=box.clientHeight+1,"Label flex box clipped");
+ }
  flushSync(()=>root.unmount());check(container.childElementCount===0,"Typography test retained nodes");
  result.dataset.status="passed";result.textContent="Density-independent rendered typography passed";
 }catch(error){result.dataset.status="failed";result.textContent=String(error?.stack??error)}finally{container.remove();css.remove()}

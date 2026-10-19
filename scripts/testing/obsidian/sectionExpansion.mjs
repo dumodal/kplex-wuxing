@@ -107,8 +107,9 @@ async function scenario(app, c) {
     await until(() => sectionTarget() && parseFloat(getComputedStyle(sectionTarget()).fontSize) > 20, 'Large label setting did not render');
     await wait(100);
     const text = sectionTarget().querySelector('.kplex-thought-text'), label = text?.parentElement;
+    const fontMetrics = text && label ? {font:getComputedStyle(text).fontSize,lineHeight:getComputedStyle(text).lineHeight,textHeight:text.clientHeight,textScroll:text.scrollHeight,labelHeight:label.clientHeight,labelScroll:label.scrollHeight,nodeHeight:sectionTarget().clientHeight,nodeBox:getComputedStyle(sectionTarget()).height,nodeLineHeight:getComputedStyle(sectionTarget()).lineHeight,padding:getComputedStyle(sectionTarget()).padding,border:getComputedStyle(sectionTarget()).borderWidth} : null;
+    c.progress = {phase:'large label',fontMetrics,wheelChecks,counts,previewEvents};
     check(text && label && text.scrollHeight <= text.clientHeight + 1 && label.scrollHeight <= label.clientHeight + 1, 'Large label line box clipped');
-    const fontMetrics = {font:getComputedStyle(text).fontSize,lineHeight:getComputedStyle(text).lineHeight,textHeight:text.clientHeight,labelHeight:label.clientHeight};
     p.settings.baseFontSize = priorFont; p.index.notifyPresentation();
     const centerMtime = app.vault.getFileByPath(path("Center")).stat.mtime;
     const b = app.vault.getFileByPath(path("B"));
