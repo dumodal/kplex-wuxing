@@ -7,8 +7,8 @@
  * Parent width owns lateral x anchors; density three touches area edges and four permits bounded
  * margin overlap, while child-column/row controls cannot push those anchors. Optional deferred counts
  * keep offscreen geometry independent of incidence queries; rendered rows acquire current counts.
- * Simplified arrangement stacks independent friend/challenger zones on the left without changing
- * roles or edges; independent Challenger/Sibling scroll areas never share compacted margins.
+ * One-sided arrangement shares one friend/challenger strip without changing roles or edges;
+ * independent lateral/Sibling scroll areas never share compacted margins.
  * Callers own interaction, settings persistence and camera transforms.
  */
 import type { KplexSettings } from "../settings";
@@ -24,6 +24,14 @@ const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(ma
 /** Use the selected horizontal axis, retaining old unmerged settings' shared density fallback. */
 export function horizontalDensity(settings: Pick<KplexSettings, "compactingFactor" | "horizontalCompactingFactor">): number {
   return settings.horizontalCompactingFactor ?? settings.compactingFactor;
+}
+
+/** Route semantic roles to their physical scroll/filter owner without changing connector semantics. */
+export function scrollZoneForRole(role: Role | "center", arrangement: KplexSettings["lateralArrangement"]): ScrollZone | null {
+  if (role === "center") return null;
+  if (role === "previous") return "left";
+  if (role === "next" || role === "right") return arrangement === "left" ? "left" : "right";
+  return role;
 }
 
 /** Shared bounded spacing inputs; compact view changes whitespace rather than thought padding. */
@@ -165,6 +173,7 @@ function nodeSize(
   center = false,
   configuredMax = 30,
   configuredMaxWidth?: number,
+  strokeWidth = 1,
 ): { width: number; height: number } {
   const fontScale = (settings.baseFontSize ?? 12.4) / 12.4;
   const visibleLength = Math.min(label.length, effectiveLabelLimit(configuredMax, center));
@@ -179,8 +188,9 @@ function nodeSize(
 
   // Two-line mode reserves the full two line boxes plus the node's vertical padding. Keep the
   // compact single-line defaults unchanged when wrapping is disabled.
-  const singleLineHeight = Math.max(center ? 48 : 26, Math.ceil(nodeLabelFontSize(fontSize, center, settings.baseFontSize) * 1.15 + (center ? 16 : 8)));
-  const twoLineHeight = Math.ceil(Math.max(fontSize * fontScale, nodeLabelFontSize(fontSize, center, settings.baseFontSize)) * 2.3 + (center ? 16 : 8));
+  const verticalInsets = (center ? 16 : 8) + 2 * Math.max(0, strokeWidth);
+  const singleLineHeight = Math.max(center ? 48 : 26, Math.ceil(nodeLabelFontSize(fontSize, center, settings.baseFontSize) * 1.2 + verticalInsets));
+  const twoLineHeight = Math.ceil(Math.max(fontSize * fontScale, nodeLabelFontSize(fontSize, center, settings.baseFontSize)) * 2.4 + verticalInsets);
   return { width, height: settings.wrapNodeLabels ? Math.max(singleLineHeight, twoLineHeight) : singleLineHeight };
 }
 
@@ -200,7 +210,7 @@ function makeNode(
     gateRadius: (resolved.gateRadius ?? settings.baseNodeStyle.gateRadius ?? 5) * scale,
   };
   const label = index.titleFor(n.page);
-  const baseSize = nodeSize(`${resolved.prefix ?? ""}${label}`, resolved.fontSize ?? 18, settings, false, resolved.maxLabelLength ?? 30, resolved.maxWidth ?? settings.baseNodeStyle.maxWidth);
+  const baseSize = nodeSize(`${resolved.prefix ?? ""}${label}`, resolved.fontSize ?? 18, settings, false, resolved.maxLabelLength ?? 30, resolved.maxWidth ?? settings.baseNodeStyle.maxWidth, resolved.strokeWidth);
   const size = scale === 1 ? baseSize : { width: baseSize.width * scale, height: baseSize.height * scale };
   return {
     page: n.page,
@@ -228,9 +238,17 @@ function countsForLayout(page: GraphPage, index: GraphIndex, deferred: boolean):
   } };
 }
 
-/** Read displayed gate counts for a rendered regular node; preserve section gates and the unused legacy total field. */
+/** Resolve visible section targets to their live canonical page; synthetic heading gates remain section-owned. */
+export function presentationPage(page: GraphPage, index: Pick<GraphIndex, "get">): GraphPage | null {
+  if (!page.transient) return page;
+  if (page.transient.kind === "section") return null;
+  return page.transient.actualPath ? index.get(page.transient.actualPath) ?? null : null;
+}
+
+/** Read current gate counts without changing geometry, synthetic heading gates or the unused legacy total. */
 export function projectNodeCounts(node: PositionedNode, index: GraphIndex): PositionedNode {
-  return node.page.transient ? node : { ...node, gateStats: index.gateStats(node.page) };
+  const page = presentationPage(node.page, index);
+  return page ? { ...node, gateStats: index.gateStats(page) } : node;
 }
 
 /** Include partially clipped rows while excluding offscreen rows from optional count projection. */
@@ -367,7 +385,8 @@ function distributeGrid(
     if (rowIndex === 0) {
       // Parent mini-children grow back toward the center, so move only that first parent row
       // upward when it actually has expanded descendants. Child rows grow away from center.
-      y = rowDirection === -1 ? baseY - row.reserve : baseY;
+      const heightCorrection = Math.max(0, row.height - 26) / 2;
+      y = rowDirection === -1 ? baseY - row.reserve - heightCorrection : baseY + heightCorrection;
     } else if (rowDirection === 1) {
       y = previousY + previousHeight / 2 + previousReserve + rowGap + row.height / 2;
     } else {
@@ -404,10 +423,15 @@ function distributeVertical(
   deferCounts = false,
 ): PositionedNode[] {
   const nodes = items.map((n) => makeNode(n, role, index, settings, deferCounts));
-  if (!nodes.length) return nodes;
+  stackVerticalNodes(nodes, x, gap, index, settings, centerPath);
+  return nodes;
+}
 
-  const reserveScale = role === "sibling" ? siblingScale(settings) : 1;
-  const reserves = nodes.map((node) => expandedChildReserve(node.page, index, settings, centerPath) * reserveScale);
+/** Share one measured pitch and midline for existing nodes, retaining each node's semantic role. */
+function stackVerticalNodes(nodes: PositionedNode[], x: number, gap: number, index: GraphIndex, settings: KplexSettings, centerPath: string): void {
+  if (!nodes.length) return;
+
+  const reserves = nodes.map((node) => expandedChildReserve(node.page, index, settings, centerPath) * (node.role === "sibling" ? siblingScale(settings) : 1));
   nodes[0].x = x;
   nodes[0].y = 0;
   for (let i = 1; i < nodes.length; i += 1) {
@@ -423,7 +447,6 @@ function distributeVertical(
   const bottom = nodes[lastIndex].y + nodes[lastIndex].height / 2 + reserves[lastIndex];
   const shift = -(top + bottom) / 2;
   for (const node of nodes) node.y += shift;
-  return nodes;
 }
 
 /** Fit occupied thought/expanded-box height within a zone while preserving its chosen alignment. */
@@ -562,7 +585,7 @@ export function buildScene(
 ): PlexScene {
   const centerStyle = resolveNodeStyle(neighborhood.center, null, "center", settings);
   const centerLabel = index.titleFor(neighborhood.center);
-  const normalCenterSize = nodeSize(`${centerStyle.prefix ?? ""}${centerLabel}`, centerStyle.fontSize ?? 30, settings, true, centerStyle.maxLabelLength ?? 30, centerStyle.maxWidth ?? settings.centralNodeStyle.maxWidth ?? settings.baseNodeStyle.maxWidth);
+  const normalCenterSize = nodeSize(`${centerStyle.prefix ?? ""}${centerLabel}`, centerStyle.fontSize ?? 30, settings, true, centerStyle.maxLabelLength ?? 30, centerStyle.maxWidth ?? settings.centralNodeStyle.maxWidth ?? settings.baseNodeStyle.maxWidth, centerStyle.strokeWidth);
   const centerSize = centerSizeOverride
     ? { width: Math.max(180, centerSizeOverride.width), height: Math.max(48, centerSizeOverride.height) }
     : normalCenterSize;
@@ -598,6 +621,8 @@ export function buildScene(
   const left = distributeVertical(neighborhood.leftFriends, -sideX, sideGap, index, settings, "left", neighborhood.center.path, deferCounts);
   const onLeft = settings.lateralArrangement === "left";
   const right = distributeVertical(neighborhood.rightFriends, onLeft ? -sideX : sideX, sideGap, index, settings, "right", neighborhood.center.path, deferCounts);
+  const sharedLateral = onLeft ? [...left, ...right] : left;
+  if (onLeft) stackVerticalNodes(sharedLateral, -sideX, sideGap, index, settings, neighborhood.center.path);
   const hasRightStrip = !onLeft && right.length > 0;
 
   const rightExtent = hasRightStrip ? Math.max(...right.map((n) => n.x + n.width / 2)) : maxCenterHalfWidth;
@@ -619,9 +644,8 @@ export function buildScene(
     ? Math.min(...children.map((node) => node.y - node.height / 2))
     : center.height / 2 + centerGap + childExtraGap + 12;
   const sideToChildrenGap = Math.max(30, 36 * vertical * legacySpacing);
-  // Simplified mode shares one bounded lateral band, keeping two independent semantic areas.
-  // Each still needs the renderer's minimum 72px viewport and a visible gap between controls.
-  const friendBandHeight = Math.max(onLeft ? 168 : 120, settings.friendMaxHeight);
+  // Both semantic groups share one physical list, height, filter and scroll position in one-sided mode.
+  const friendBandHeight = Math.max(120, settings.friendMaxHeight);
   const siblingBandHeight = Math.max(120, settings.siblingMaxHeight);
   // A large embedded editor changes the visual center of gravity. Keep lateral relationship
   // strips centered beside the editor rather than deriving their band from the much lower child
@@ -634,11 +658,11 @@ export function buildScene(
   // one node sits level with the center, two straddle it evenly, and larger lists grow
   // outward in both directions. Only shift the strip when it reaches the zone bounds.
   const leftTop = sideTop;
-  const leftBottom = onLeft ? sideTop + (friendBandHeight - 24) / 2 : sideBottom;
-  const rightTop = onLeft ? leftBottom + 24 : sideTop;
+  const leftBottom = sideBottom;
+  const rightTop = sideTop;
   const rightBottom = sideBottom;
-  fitVerticalStrip(left, leftTop, leftBottom, index, settings, neighborhood.center.path, "midline");
-  fitVerticalStrip(right, rightTop, rightBottom, index, settings, neighborhood.center.path, "midline");
+  fitVerticalStrip(sharedLateral, leftTop, leftBottom, index, settings, neighborhood.center.path, "midline");
+  if (!onLeft) fitVerticalStrip(right, rightTop, rightBottom, index, settings, neighborhood.center.path, "midline");
 
   const siblingLift = Math.max(58, 72 * vertical * legacySpacing);
   const siblingBottom = centerSizeOverride ? siblingBandHeight / 2 : sideBottom - siblingLift;
@@ -687,8 +711,8 @@ export function buildScene(
   // extents so the same finite column footprint fits when a zone filter later repacks that row.
   const occupiedParents = occupiedNodes(parents, index, settings, neighborhood.center.path);
   const occupiedChildren = occupiedNodes(children, index, settings, neighborhood.center.path);
-  const occupiedLeft = occupiedNodes(left, index, settings, neighborhood.center.path);
-  const occupiedRight = occupiedNodes(right, index, settings, neighborhood.center.path);
+  const occupiedLeft = occupiedNodes(sharedLateral, index, settings, neighborhood.center.path);
+  const occupiedRight = occupiedNodes(onLeft ? [] : right, index, settings, neighborhood.center.path);
   const occupiedSiblings = occupiedNodes(siblings, index, settings, neighborhood.center.path);
   const zoneViewports: Partial<Record<ScrollZone, ZoneViewport>> = {};
   const parentViewport = viewportFor("parent", occupiedParents, settings.parentMaxHeight, "bottom");
@@ -717,7 +741,7 @@ export function buildScene(
   zoneAreas.parent = areaBoundsFor("parent", occupiedParents, settings.parentMaxHeight, "top", { centerX: 0, width: parentAreaHalfWidth * 2, fixedEdgeY: parentAreaBottom });
   zoneAreas.child = areaBoundsFor("child", occupiedChildren, settings.childMaxHeight, "bottom", { centerX: 0, width: 440, fixedEdgeY: childAreaTop });
   zoneAreas.left = areaBoundsFor("left", occupiedLeft, settings.friendMaxHeight, "top", { centerX: -sideX, width: lateralAreaHalfWidth * 2, fixedEdgeY: leftBottom }, leftBottom, leftTop);
-  zoneAreas.right = areaBoundsFor("right", occupiedRight, settings.friendMaxHeight, "top", { centerX: onLeft ? -sideX : sideX, width: lateralAreaHalfWidth * 2, fixedEdgeY: rightBottom }, rightBottom, rightTop);
+  if (!onLeft) zoneAreas.right = areaBoundsFor("right", occupiedRight, settings.friendMaxHeight, "top", { centerX: sideX, width: lateralAreaHalfWidth * 2, fixedEdgeY: rightBottom }, rightBottom, rightTop);
   zoneAreas.sibling = areaBoundsFor("sibling", occupiedSiblings, settings.siblingMaxHeight, "top", { centerX: siblingCenterX, width: siblingAreaHalfWidth * 2, fixedEdgeY: siblingBottom }, siblingBottom, siblingTop);
 
   const nodes = [center, ...parents, ...children, ...left, ...right, ...siblings];
@@ -942,20 +966,22 @@ export function buildSectionExpandedScene(
   const { spacing } = spacingPolicy(settings);
   const compact = settings.compactView ? 0.82 : 1;
   /** Preserve each established section curve while applying the selected axis and spacing target. */
-  const mix = (lo: number, hi: number, axis: "horizontal" | "vertical" = "vertical", relation = false): number => {
-    const progress = (axis === "horizontal" ? horizontalDensityT : verticalDensityT) * (relation ? 5 / 12 : 1);
+  const mix = (lo: number, hi: number, axis: "horizontal" | "vertical" = "vertical"): number => {
+    const progress = axis === "horizontal" ? horizontalDensityT : verticalDensityT;
     return (lo + (hi - lo) * progress) * spacing * compact;
   };
 
   const sectionStartGap = mix(78, 26);
   const depthIndent = mix(92, 28, "horizontal");
   const verticalGap = mix(48, 20);
-  const relationHorizontalGap = mix(60, 24, "horizontal", true);
-  const relationLateralStep = mix(36, 22, "vertical", true);
-  const relationVerticalGap = mix(66, 38, "vertical", true);
-  const relationRowStep = mix(38, 22, "vertical", true);
-  const relationMinHorizontalGap = mix(8, 4, "horizontal", true);
-  const relationMinVerticalGap = mix(8, 4, "vertical", true);
+  // Keep the previous maximum-density endpoints, but give related pills meaningful whitespace
+  // below that density. The inter-section gutter above remains independently unchanged.
+  const relationHorizontalGap = mix(90, 60 + (24 - 60) * 5 / 12, "horizontal");
+  const relationLateralStep = mix(60, 36 + (22 - 36) * 5 / 12);
+  const relationVerticalGap = mix(90, 66 + (38 - 66) * 5 / 12);
+  const relationRowStep = mix(60, 38 + (22 - 38) * 5 / 12);
+  const relationMinHorizontalGap = mix(36, 8 + (4 - 8) * 5 / 12, "horizontal");
+  const relationMinVerticalGap = mix(22, 8 + (4 - 8) * 5 / 12);
   const startY = normalBottom + sectionStartGap;
   const centerNode = scene.nodes.find((node) => node.role === "center");
   const centerStructuralX = centerNode ? centerNode.x - centerNode.width / 2 + 20 : -80;
@@ -970,7 +996,7 @@ export function buildSectionExpandedScene(
     const node = makeNode(pseudo, "child", index, settings, deferCounts);
     const maxSectionWidth = Math.max(172, node.style.maxWidth ?? settings.baseNodeStyle.maxWidth ?? 286);
     node.width = Math.max(172, Math.min(maxSectionWidth, node.width + (16 + (2 - 16) * horizontalDensityT)));
-    node.height = Math.max(32, node.height + (3 + (-1 - 3) * verticalDensityT));
+    node.height = Math.max(32, node.height + 3 * (1 - verticalDensityT));
     // x is the card centre; rootLeft is the left edge of the first heading card.
     node.x = rootLeft + node.width / 2 + depth * depthIndent;
     node.gateStats = {
@@ -1056,15 +1082,14 @@ export function buildSectionExpandedScene(
     if (settings.lateralArrangement === "left") {
       const friends = cluster.filter(/** Preserve distinct roles while sharing one physical side. */ item => item.role === "left");
       const challengers = cluster.filter(/** Only section-owned challengers move; ordinary scene zones are already placed. */ item => item.role === "right");
-      if (friends.length && challengers.length) {
-        const friendBottom = Math.max(...friends.map(/** Reserve actual wrapped thought bodies. */ item => item.y + item.height / 2));
-        const challengerTop = Math.min(...challengers.map(/** Retain each group's existing vertical pitch. */ item => item.y - item.height / 2));
-        for (const item of challengers) item.y += friendBottom + relationLateralStep - challengerTop;
-        const lateral = [...friends, ...challengers];
-        const midline = (Math.min(...lateral.map(/** Find the occupied shared strip start. */ item => item.y - item.height / 2))
-          + Math.max(...lateral.map(/** Find the occupied shared strip end. */ item => item.y + item.height / 2))) / 2;
-        for (const item of lateral) item.y -= midline;
+      const lateral = [...friends, ...challengers];
+      let bottom = 0;
+      for (const item of lateral) {
+        item.y = bottom + item.height / 2;
+        bottom += item.height + relationMinVerticalGap;
       }
+      const midline = (bottom - relationMinVerticalGap) / 2;
+      for (const item of lateral) item.y -= midline;
     }
     for (const lateral of cluster) {
       if (lateral.role !== "left" && lateral.role !== "right") continue;

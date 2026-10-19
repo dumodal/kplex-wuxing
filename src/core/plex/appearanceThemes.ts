@@ -18,7 +18,7 @@ export type ThemeSemantic = {noteTypeStyles: Record<string, StyleRecord>; tagNod
   tagStyleList: string[]; hierarchyLinkStyles: Record<string, StyleRecord>; colorPreferences: ColorPreferencesV1; lensColors: Record<string, LensColors>};
 export type ThemeAppearance = {base: ThemeBase; semantic: ThemeSemantic};
 export type AppearanceTheme = {id: string; name: string; appearance: ThemeAppearance};
-export type AppearanceThemeLibrary = {version: 1; migrationComplete: true; selectedId: string; themes: AppearanceTheme[]; migrationNotice: boolean};
+export type AppearanceThemeLibrary = {version: 1; migrationComplete: true; selectedId: string; themes: AppearanceTheme[]; migrationNotice: boolean; nativeBaseMigration?: 1};
 export type ThemeAppearanceInput = ThemeBase & Omit<ThemeSemantic, "lensColors"> & {graphLenses: Array<{id: string; style?: {node?: StyleRecord; edge?: StyleRecord}}>};
 export type ThemeNames = {default: string; user: string; nativeBase: string; custom: string};
 export type ColorResetScope = "base" | "semantic" | "all";
@@ -92,10 +92,42 @@ export function createAppearanceThemes(current: ThemeAppearanceInput, factory: T
     {id: "native-base", name: names.nativeBase, appearance: captureThemeAppearance(native)}, defaults]};
 }
 
+/** Prepare the 0.2.0 adoption once; the caller commits selection, appearance and marker atomically.
+ * Existing themes are never overwritten. A previously prepared native-base copy is reused only
+ * when it exactly matches today's active semantic appearance and supported non-color styles.
+ * Fresh factory installations only record completion. Successful legacy imports retain backups,
+ * but first K-Plex installations suppress the upgrade notice based on actual loaded-data state.
+ */
+export function adoptNativeBaseOnUpgrade(library: AppearanceThemeLibrary, current: ThemeAppearanceInput, version: string, existing: boolean, names: ThemeNames, notifyMigration = existing): AppearanceThemeLibrary {
+  const release = /^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/.exec(version);
+  if (library.nativeBaseMigration === 1 || !release || (Number(release[1]) === 0 && Number(release[2]) < 2)
+    || !canCaptureThemeAppearance(current)) return library;
+  if (!existing) return {...library, nativeBaseMigration: 1};
+  const adopted = copyThemeValue(current);
+  adoptStandardThemeColors(adopted);
+  const appearance = captureThemeAppearance(adopted);
+  const reusable = library.themes.find(/** Never activate an old migration copy whose semantic appearance differs. */ theme => theme.id === "native-base" && themeValuesEqual(theme.appearance, appearance));
+  const next = copyThemeValue(library);
+  if (reusable) next.selectedId = reusable.id;
+  else {
+    // Capacity failure leaves the entire migration uncommitted and retryable, rather than deleting
+    // a user theme or certifying a backup that was never stored.
+    if (next.themes.length >= MAX_APPEARANCE_THEMES) throw new Error("Theme library is full");
+    let id = "native-base-020", suffix = 2;
+    while (next.themes.some(/** Reserve a fresh deterministic identity without changing any existing entry. */ theme => theme.id === id)) id = `native-base-020-${suffix++}`;
+    next.themes.push({id, name: uniqueThemeName(next, names.nativeBase), appearance});
+    next.selectedId = id;
+  }
+  next.nativeBaseMigration = 1;
+  next.migrationNotice = notifyMigration;
+  return next;
+}
+
 /** Reject lossy/future containers as a whole; the host preserves the untouched raw field read-only. */
 export function readAppearanceThemes(raw: unknown): AppearanceThemeLibrary | undefined {
   if (!record(raw) || raw.version !== 1 || raw.migrationComplete !== true || !Array.isArray(raw.themes) || !raw.themes.length
-    || raw.themes.length > MAX_APPEARANCE_THEMES || typeof raw.selectedId !== "string" || typeof raw.migrationNotice !== "boolean") return undefined;
+    || raw.themes.length > MAX_APPEARANCE_THEMES || typeof raw.selectedId !== "string" || typeof raw.migrationNotice !== "boolean"
+    || (raw.nativeBaseMigration !== undefined && raw.nativeBaseMigration !== 1)) return undefined;
   const ids = new Set<string>(), names = new Set<string>();
   for (const entry of raw.themes) {
     if (!record(entry) || typeof entry.id !== "string" || !entry.id || entry.id.length > 100 || ids.has(entry.id)

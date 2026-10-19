@@ -1326,7 +1326,7 @@ import React, { useId, useMemo } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { alphaHexToCss, resolveNodeStyle, currentNodeColorStyle, nodePaint, nodePaintFallbacks } from ${JSON.stringify(join(root, "src/index/style.ts"))};
-import { effectiveLabelLimit, nodeLabelFontSize, gateDiameter, projectNodeCounts, expandedMiniLayout, siblingScale } from ${JSON.stringify(join(root, "src/ui/layout.ts"))};
+import { effectiveLabelLimit, nodeLabelFontSize, gateDiameter, projectNodeCounts, scrollZoneForRole, expandedMiniLayout, siblingScale } from ${JSON.stringify(join(root, "src/ui/layout.ts"))};
 import { physicalPositionLabel } from ${JSON.stringify(join(root, "src/ui/features/positionPresentation.ts"))};
 
 const result = document.querySelector("#result");
@@ -1372,7 +1372,7 @@ function Scene({ scene: sourceScene, expanded }) {
   const sectionExpansion = null, expandedScrollTop = useMemo(() => ({}), []);
   const visibleNodePaths = useMemo(() => new Set(scene.nodes.map((item) => item.page.path)), [scene.nodes]);
   const renderedNodeMap = useMemo(() => new Map(scene.nodes.map((item) => [item.page.path, { ...item }])), [scene.nodes]);
-  ${uiDefinitions("src/ui/PlexGraph.tsx", ["paintedNodeStyles", "sceneNodeKeys", "expandedClusters", "beginNativeNodeDrag", "endNativeNodeDrag", "renderNode", "renderExpandedCluster", "zoneForRole"])}
+  ${uiDefinitions("src/ui/PlexGraph.tsx", ["paintedNodeStyles", "sceneNodeKeys", "expandedClusters", "beginNativeNodeDrag", "endNativeNodeDrag", "renderNode", "renderExpandedCluster"])}
   const miniKeys = expandedClusters.flatMap((cluster) => cluster.children.map((child) => child.key));
   check(new Set(miniKeys).size === miniKeys.length, "expanded connector keys collide during rename");
   return <><div className="kplex-nodes">{scene.nodes.map((item) => renderNode(item, { ...item }))}</div><div>{expandedClusters.map(renderExpandedCluster)}</div></>;

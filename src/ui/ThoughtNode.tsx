@@ -257,7 +257,7 @@ export function ThoughtNode({
           aria-label={gateTitle}
           data-kplex-control-tooltip
           data-kplex-tooltip-requires-alt={settings.gateTooltipRequiresAlt !== false ? "true" : undefined}
-          data-tooltip-position="top"
+          data-tooltip-position={gate === "top" ? "bottom" : "top"}
         />
         {settings.showNeighborCount && (stat.visibleCount > 0 || stat.complete === false) && <span className="kplex-gate-count">{
           stat.countUnavailable ? "…" : stat.complete === false && stat.coverage !== "local" && stat.coverage !== "cached"

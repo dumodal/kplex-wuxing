@@ -330,7 +330,7 @@ button.kplex-sidecar-unfold-plex:hover,
   padding: 4px 10px;
   box-sizing: border-box;
   text-align: center;
-  line-height: 1.08;
+  line-height: 1.2;
   box-shadow: var(--kplex-node-shadow, var(--shadow-s));
   cursor: pointer;
   transition: filter .11s ease, box-shadow .11s ease, opacity .11s ease;
@@ -3348,8 +3348,8 @@ button.kplex-style-manager-row { height: fit-content; }
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   white-space: normal;
-  line-height: 1.15;
-  max-height: 2.3em;
+  line-height: 1.2;
+  max-height: 2.4em;
   overflow: hidden;
   text-overflow: ellipsis;
 }

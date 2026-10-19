@@ -3,6 +3,32 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {colorEditorScenario as scenario} from "./support/colorEditorBrowser.mjs";
 
+test("0.2.0 upgrade persists appearance, selection and marker together; failure and restart never replace the backup", async () => {
+ assert.equal(await scenario(`(async()=>{
+  const p=await createAppearanceHost({backgroundColor:'#123456',noteTypeStyles:{Project:{textColor:'#abcdef',fontSize:25}}}),before=structuredClone(p.settings),backup=structuredClone(p.settings.appearanceThemes.themes),store=p.saveData;
+  const upgrade=()=>p.updateStyleSettings(()=>{},p.captureAppearanceOwner(),{initializeThemes:{existing:true,version:'0.2.0'}});
+  p.saveData=async()=>{throw Error('Expected migration disk failure')};let failed=false;
+  try{await upgrade()}catch{failed=true}
+  if(!failed||JSON.stringify(p.settings)!==JSON.stringify(before))throw Error('Failed migration published appearance or completion');
+  p.saveData=store;const notices=window.notices.length;await upgrade();
+  const library=p.settings.appearanceThemes,stored=p.writes.at(-1);
+  if(library.selectedId!=='native-base'||library.nativeBaseMigration!==1||stored.appearanceThemes.selectedId!==library.selectedId||stored.standardStyleDefaults!=='native'||p.settings.noteTypeStyles.Project.fontSize!==25)throw Error('Migration not atomic or semantics lost');
+  if(JSON.stringify(library.themes)!==JSON.stringify(backup))throw Error('Original themes overwritten');
+  if(window.notices.length!==notices+1||window.notices.at(-1)!==p.translator('themes.nativeBaseAdopted'))throw Error('Missing committed migration notice');
+  await p.updateAppearanceThemes({kind:'select',id:'user'});const restarted=await createAppearanceHost(p.writes.at(-1)),writes=restarted.writes.length;
+  await restarted.updateStyleSettings(()=>{},restarted.captureAppearanceOwner(),{initializeThemes:{existing:true,version:'0.3.0'}});
+  if(restarted.settings.appearanceThemes.selectedId!=='user'||restarted.settings.backgroundColor!=='#123456'||restarted.writes.length!==writes)throw Error('Later restart reset selected appearance');
+  const fresh=await createAppearanceHost({},false),noticeCount=window.notices.length;await fresh.updateStyleSettings(()=>{},fresh.captureAppearanceOwner(),{initializeThemes:{existing:false,version:'0.2.0',notifyMigration:false}});
+  if(fresh.settings.appearanceThemes.themes.length!==1||fresh.settings.appearanceThemes.selectedId!=='default'||fresh.settings.appearanceThemes.nativeBaseMigration!==1||fresh.settings.appearanceThemes.migrationNotice||window.notices.length!==noticeCount)throw Error('Fresh factory installation misrepresented or notified');
+  const imported=await createAppearanceHost({noteTypeStyles:{Project:{fontSize:27}}});await imported.updateStyleSettings(()=>{},imported.captureAppearanceOwner(),{initializeThemes:{existing:true,version:'0.2.0',notifyMigration:false}});
+  if(imported.settings.appearanceThemes.migrationNotice||window.notices.length!==noticeCount||imported.settings.noteTypeStyles.Project.fontSize!==27)throw Error('First-run import lost appearance or displayed an upgrade notice');
+  const future=await createAppearanceHost({appearanceThemes:{version:999,opaque:['keep']}}),raw=JSON.stringify(future.settings.appearanceThemesFuture);
+  await future.updateStyleSettings(()=>{},future.captureAppearanceOwner(),{initializeThemes:{existing:true,version:'0.2.0'}});
+  if(JSON.stringify(future.settings.appearanceThemesFuture)!==raw||future.settings.appearanceThemes)throw Error('Future data migrated lossily');
+  return true;
+ })()`),true);
+});
+
 test("node-style dimensions inherit, clear, merge concurrently, preserve legacy values and survive failed storage",async()=>{
  assert.equal(await scenario(`(async()=>{
   const p=await createAppearanceHost({baseNodeStyle:{strokeWidth:2,gateRadius:6},noteTypeStyles:{Project:{borderColor:{kind:'theme',variable:'--text-normal'},icon:'star',strokeWidth:1.25,gateRadius:12}}}),t=p.translator;

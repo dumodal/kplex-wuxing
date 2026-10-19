@@ -1,5 +1,5 @@
 /**
- * Exact-build native section grouping and stationary inbound-edit acceptance in Small.
+ * Exact-build native section grouping, counts, preview anchors and stationary inbound edits in Small.
  * Reuses bounded CLI transport/config guards, owns four notes and one native Plex, and restores
  * its settings/workspace on every exit. Counts presentation operations, never comparative timings.
  */
@@ -56,6 +56,30 @@ async function scenario(app, c) {
     await until(() => section("B") && section("C"), "Ordinary links not grouped under headings");
     check(direct("Preamble") && !direct("B") && !direct("C"), "Preamble/body partition incorrect");
     check(nodes().filter(node => node.dataset.kplexPath.endsWith(":" + path("B"))).length === 1, "Repeated links duplicated the section target");
+    const sectionTarget = () => nodes().find(node => node.dataset.kplexPath.endsWith(":" + path("B")));
+    await until(() => sectionTarget() && [...sectionTarget().querySelectorAll('.kplex-gate-count')].some(label => /\d/.test(label.textContent))
+      && ![...sectionTarget().querySelectorAll('.kplex-gate-count')].some(label => label.textContent === '…'), "Section target retained unavailable counts");
+    const counts = [...sectionTarget().querySelectorAll('.kplex-gate-count')].map(label => label.textContent);
+    check(sectionTarget().querySelector('[data-kplex-gate="top"]').dataset.tooltipPosition === 'bottom', 'Parent gate does not prefer below');
+    check(sectionTarget().querySelector('[data-kplex-gate="bottom"]').dataset.tooltipPosition === 'top', 'Child gate lost above preference');
+    const previewEvents = [];
+    const previewRef = app.workspace.on('hover-link', event => { if (event.source === 'k-plex-react-view') previewEvents.push(event.linktext); });
+    restores.push(() => app.workspace.offref(previewRef));
+    const heading = nodes().find(node => node.dataset.kplexPath.startsWith('kplex-section:'));
+    check(heading, 'Rendered heading absent');
+    heading.dispatchEvent(new PointerEvent('pointerover', {bubbles:true,pointerType:'mouse',ctrlKey:true}));
+    await until(() => previewEvents.some(link => link === path('Center')+'#First'), 'Modified heading hover omitted the heading anchor');
+    app.workspace.trigger('hover-link', {source:'k-plex-react-view',hoverParent:p.hoverParent,targetEl:heading,linktext:'',event:new MouseEvent('mouseout')});
+
+    // Large-label layout uses the same actual node and stylesheet, rather than another text model.
+    const priorFont = p.settings.baseFontSize;
+    p.settings.baseFontSize = 28; p.index.notifyPresentation();
+    await until(() => sectionTarget() && parseFloat(getComputedStyle(sectionTarget()).fontSize) > 20, 'Large label setting did not render');
+    await wait(100);
+    const text = sectionTarget().querySelector('.kplex-thought-text'), label = text?.parentElement;
+    check(text && label && text.scrollHeight <= text.clientHeight + 1 && label.scrollHeight <= label.clientHeight + 1, 'Large label line box clipped');
+    const fontMetrics = {font:getComputedStyle(text).fontSize,lineHeight:getComputedStyle(text).lineHeight,textHeight:text.clientHeight,labelHeight:label.clientHeight};
+    p.settings.baseFontSize = priorFont; p.index.notifyPresentation();
     const centerMtime = app.vault.getFileByPath(path("Center")).stat.mtime;
     const b = app.vault.getFileByPath(path("B"));
     c.progress = { phase: "inbound-add" };
@@ -83,7 +107,7 @@ async function scenario(app, c) {
     await wait(300);
     for (const [key, value] of Object.entries(work)) check(value === 0, "Presentation performed " + key);
     check(direct("Center") && app.vault.getFileByPath(path("Center")).stat.mtime === centerMtime, "Stationary center changed");
-    c.progress = { phase: "complete", cases: ["native fold grouping", "preamble and repeated links", "stationary inbound add", "stationary inbound removal", "visibility round trip"], work };
+    c.progress = { phase: "complete", cases: ["native fold grouping", "preamble and repeated links", "canonical section target counts", "modified heading preview anchor", "large label line box", "parent below and child above tooltip preference", "stationary inbound add", "stationary inbound removal", "visibility round trip"], counts, previewEvents, fontMetrics, work };
     return c.progress;
   } catch (error) {
     failure = error;

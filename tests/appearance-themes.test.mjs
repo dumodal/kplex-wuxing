@@ -51,6 +51,40 @@ test("migration creates three detached choices and fresh installation only facto
   assert.deepEqual(fresh.themes[0].appearance.semantic.noteTypeStyles, {}); assert.deepEqual(fresh.themes[0].appearance.semantic.colorPreferences.palette, []);
 });
 
+test("0.2.0 adopts native base once, reusing only an exact migration copy and retaining every prior theme", () => {
+  const current = fixture(), library = m.createAppearanceThemes(current, factory(), true, names), before = structuredClone(library);
+  for (const version of ["0.1.99", "garbage", ""]) assert.equal(m.adoptNativeBaseOnUpgrade(library, current, version, true, names), library);
+  const migrated = m.adoptNativeBaseOnUpgrade(library, current, "0.2.0", true, names);
+  assert.equal(migrated.selectedId, "native-base"); assert.equal(migrated.nativeBaseMigration, 1);
+  assert.deepEqual(migrated.themes, before.themes); assert.deepEqual(library, before);
+  assert.deepEqual(m.readAppearanceThemes(JSON.parse(JSON.stringify(migrated))), migrated);
+  const returned = m.selectAppearanceTheme(migrated, "user");
+  for (const version of ["0.2.0", "0.2.1", "1.0.0"]) assert.equal(m.adoptNativeBaseOnUpgrade(returned, current, version, true, names), returned);
+  current.noteTypeStyles.Concept.fontSize = 31;
+  const updated = m.adoptNativeBaseOnUpgrade(library, current, "0.2.0", true, names);
+  assert.notEqual(updated.selectedId, "native-base"); assert.equal(updated.themes.length, 4);
+  assert.deepEqual(updated.themes.slice(0, 3), before.themes, "Never replace a saved native-base theme with newer semantics");
+  const selected = updated.themes.find(t => t.id === updated.selectedId);
+  assert.deepEqual(selected.appearance.semantic, m.captureThemeAppearance(current).semantic);
+  assert.equal(selected.appearance.base.standardStyleDefaults, "native");
+  selected.appearance.semantic.noteTypeStyles.Concept.fontSize = 99;
+  assert.equal(current.noteTypeStyles.Concept.fontSize, 31);
+  assert.equal(before.themes[0].appearance.semantic.noteTypeStyles.Concept.fontSize, 22);
+});
+
+test("0.2.0 fresh installs retain Default only; imported appearance is backed up before adoption", () => {
+  const current = factory(), fresh = m.createAppearanceThemes(current, current, false, names);
+  const migrated = m.adoptNativeBaseOnUpgrade(fresh, current, "0.2.0", false, names);
+  assert.equal(migrated.nativeBaseMigration, 1); assert.equal(migrated.selectedId, "default"); assert.equal(migrated.themes.length, 1);
+  assert.equal(migrated.migrationNotice, false);
+  const imported = fixture(), original = m.captureThemeAppearance(imported);
+  const library = m.adoptNativeBaseOnUpgrade(m.createAppearanceThemes(imported, current, true, names), imported, "0.2.0", true, names, false);
+  assert.deepEqual(library.themes.find(t => t.id === "user").appearance, original);
+  assert.deepEqual(library.themes.find(t => t.id === library.selectedId).appearance.semantic, original.semantic);
+  assert.equal(library.migrationNotice, false, "First K-Plex install never receives an upgrade notice, even with a legacy import");
+  assert.equal(m.readAppearanceThemes({...library, nativeBaseMigration: 999}), undefined);
+});
+
 test("theme capture/apply copies complete styles and only lens colors, never behavior or deleted lenses", () => {
   const current = fixture(), appearance = m.captureThemeAppearance(current), target = fixture();
   assert.deepEqual(Object.keys(appearance).sort(), ["base", "semantic"]);

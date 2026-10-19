@@ -162,7 +162,7 @@ type RecentIndexedNavigationTarget = {
 };
 
 /** Finite appearance intents cross the same settings queue; initialization/import never add another writer. */
-type StyleCommitOptions = Readonly<{themeAction?: appearanceThemes.AppearanceThemeAction; legacyImport?: unknown; initializeThemes?: {existing: boolean};
+type StyleCommitOptions = Readonly<{themeAction?: appearanceThemes.AppearanceThemeAction; legacyImport?: unknown; initializeThemes?: {existing: boolean; version?: string; notifyMigration?: boolean};
   /** Imperative compatibility callers may replace a coherent root/library pair that still differs from disk. */
   persistExistingChanges?: boolean}>;
 
@@ -463,7 +463,7 @@ export default class KplexPlugin extends Plugin {
         // First-use migration follows the actual loaded-data/import state. Never persist pristine
         // factory presets before a running ExcaliBrain appearance has had its existing import path.
         try {await this.updateStyleSettings(/** Initialization captures effective migrated appearance without editing it. */ () => {}, this.captureAppearanceOwner(), {
-          initializeThemes: {existing: hasOwnData || legacySettings !== null},
+          initializeThemes: {existing: hasOwnData || legacySettings !== null, version: this.manifest.version, notifyMigration: hasOwnData},
           ...(legacySettings === null ? {} : {legacyImport: legacySettings}),
         });} catch (error) {if (!this.externalSettingsReceived) throw error;}
         if (legacySettings !== null && !this.externalSettingsReceived) new Notice(this.translator("notice.excaliBrainSettingsImported"), 2600);
@@ -2056,10 +2056,23 @@ export default class KplexPlugin extends Plugin {
       ))) as StyleSettingsDraft;
       edit(draft);
       let library = source.appearanceThemes;
+      let initializedExistingAppearance = options.initializeThemes?.existing ?? false;
+      let adoptedNativeBase = false;
       if (options.initializeThemes && !library && source.appearanceThemesFuture === undefined && source.colorPreferencesFuture === undefined && source.graphLensesColorFuture === undefined
         && appearanceThemes.canCaptureThemeAppearance(draft)) {
         const changedBeforeInitialization = !appearanceThemes.themeValuesEqual(appearanceThemes.captureThemeAppearance(draft), appearanceThemes.captureThemeAppearance(DEFAULT_SETTINGS));
-        library = appearanceThemes.createAppearanceThemes(draft, DEFAULT_SETTINGS, options.initializeThemes.existing || changedBeforeInitialization, this.appearanceThemeNames());
+        initializedExistingAppearance ||= changedBeforeInitialization;
+        library = appearanceThemes.createAppearanceThemes(draft, DEFAULT_SETTINGS, initializedExistingAppearance, this.appearanceThemeNames());
+      }
+      if (options.initializeThemes && library && source.appearanceThemesFuture === undefined && source.colorPreferencesFuture === undefined && source.graphLensesColorFuture === undefined) {
+        const upgraded = appearanceThemes.adoptNativeBaseOnUpgrade(library, draft, options.initializeThemes.version ?? "0.0.0", initializedExistingAppearance, this.appearanceThemeNames(), options.initializeThemes.notifyMigration ?? options.initializeThemes.existing);
+        adoptedNativeBase = upgraded !== library && initializedExistingAppearance;
+        library = upgraded;
+        if (adoptedNativeBase) {
+          const selected = upgraded.themes.find(/** Apply only the prepared upgrade selection. */ theme => theme.id === upgraded.selectedId);
+          if (!selected) throw new Error("Selected theme no longer exists");
+          appearanceThemes.applyThemeAppearance(draft, selected.appearance);
+        }
       }
       if (options.themeAction) {
         if (!library) throw new Error("Appearance themes are unavailable");
@@ -2112,11 +2125,15 @@ export default class KplexPlugin extends Plugin {
         if (previous !== library.selectedId) this.appearanceThemeActivation = (this.appearanceThemeActivation ?? 0) + 1;
         // Snapshot listeners: native page replacement may synchronously release/re-register rows.
         for (const listener of [...(this.appearanceThemeListeners ?? [])]) try {listener();} catch (error) {console.error("K-Plex saved theme notification failed", error); refreshPending = true;}
-        if (previous === appearanceThemes.DEFAULT_THEME_ID && library.selectedId !== previous && !options.themeAction) {
+        if (previous === appearanceThemes.DEFAULT_THEME_ID && library.selectedId !== previous && !options.themeAction && !options.initializeThemes) {
           const selected = library.themes.find(/** Name the new committed custom theme, never a stale editor label. */ theme => theme.id === library.selectedId);
           try {new Notice(this.translator("themes.customSaved", {name: selected?.name ?? this.appearanceThemeNames().custom}));}
           catch (error) {console.error("K-Plex custom theme notice failed", error); refreshPending = true;}
         }
+      }
+      if (adoptedNativeBase && library?.migrationNotice) {
+        try {new Notice(this.translator("themes.nativeBaseAdopted"), 10000);}
+        catch (error) {console.error("K-Plex native base migration notice failed", error); refreshPending = true;}
       }
       if (effects.changedKeys.includes("graphLenses")) for (const listener of [...(this.graphLensListeners ?? [])]) try {listener(this.settings.graphLenses);} catch (error) {console.error("K-Plex saved lens notification failed", error); refreshPending = true;}
       semantic = effects.semanticInvalidation;
@@ -4866,6 +4883,7 @@ export default class KplexPlugin extends Plugin {
     modal.open(); return modal;
   }
 
+  /** Use the native heading subpath when previewing an expanded document section. */
   triggerHoverPreview(page: GraphPage, targetEl: HTMLElement, event: MouseEvent | PointerEvent, sourcePath = ""): void {
     if (!page.file) return;
     this.app.workspace.trigger("hover-link", {
@@ -4873,7 +4891,7 @@ export default class KplexPlugin extends Plugin {
       source: KPLEX_VIEW_TYPE,
       hoverParent: this.hoverParent,
       targetEl,
-      linktext: page.file.path,
+      linktext: page.file.path + (page.transient?.kind === "section" ? page.transient.subpath ?? "" : ""),
       sourcePath,
     });
   }
