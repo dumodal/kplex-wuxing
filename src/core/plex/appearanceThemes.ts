@@ -83,11 +83,11 @@ export function applyThemeAppearance(target: ThemeAppearanceInput, appearance: T
 }
 
 /** Build deterministic migration choices once; imported appearance follows the existing-user path. */
-export function createAppearanceThemes(current: ThemeAppearanceInput, factory: ThemeAppearanceInput, existing: boolean, names: ThemeNames): AppearanceThemeLibrary {
+export function createAppearanceThemes(current: ThemeAppearanceInput, factory: ThemeAppearanceInput, existing: boolean, names: ThemeNames, notifyMigration = existing): AppearanceThemeLibrary {
   const defaults: AppearanceTheme = {id: DEFAULT_THEME_ID, name: names.default, appearance: captureThemeAppearance(factory)};
   if (!existing) return {version: 1, migrationComplete: true, selectedId: DEFAULT_THEME_ID, themes: [defaults], migrationNotice: false};
   const native = copyThemeValue(current); adoptStandardThemeColors(native);
-  return {version: 1, migrationComplete: true, selectedId: "user", migrationNotice: true, themes: [
+  return {version: 1, migrationComplete: true, selectedId: "user", migrationNotice: notifyMigration, themes: [
     {id: "user", name: names.user, appearance: captureThemeAppearance(current)},
     {id: "native-base", name: names.nativeBase, appearance: captureThemeAppearance(native)}, defaults]};
 }

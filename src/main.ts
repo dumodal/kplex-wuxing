@@ -2062,7 +2062,7 @@ export default class KplexPlugin extends Plugin {
         && appearanceThemes.canCaptureThemeAppearance(draft)) {
         const changedBeforeInitialization = !appearanceThemes.themeValuesEqual(appearanceThemes.captureThemeAppearance(draft), appearanceThemes.captureThemeAppearance(DEFAULT_SETTINGS));
         initializedExistingAppearance ||= changedBeforeInitialization;
-        library = appearanceThemes.createAppearanceThemes(draft, DEFAULT_SETTINGS, initializedExistingAppearance, this.appearanceThemeNames());
+        library = appearanceThemes.createAppearanceThemes(draft, DEFAULT_SETTINGS, initializedExistingAppearance, this.appearanceThemeNames(), options.initializeThemes.notifyMigration ?? options.initializeThemes.existing);
       }
       if (options.initializeThemes && library && source.appearanceThemesFuture === undefined && source.colorPreferencesFuture === undefined && source.graphLensesColorFuture === undefined) {
         const upgraded = appearanceThemes.adoptNativeBaseOnUpgrade(library, draft, options.initializeThemes.version ?? "0.0.0", initializedExistingAppearance, this.appearanceThemeNames(), options.initializeThemes.notifyMigration ?? options.initializeThemes.existing);

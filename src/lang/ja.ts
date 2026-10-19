@@ -54,7 +54,7 @@ const japaneseTranslations = {
   "themes.staleDraft": "この未保存の下書きは {name} のものです。別のテーマが選択されました。下書きを破棄して編集画面を開き直してください。",
   "themes.discardDraft": "下書きを破棄",
   "themes.unavailable": "この外観は新しい形式または未対応の形式です。テーマは変更できません。",
-  "themes.nativeBaseAdopted": "Obsidian の基本色を適用し、セマンティックスタイルは維持しました。以前のテーマも保存されています。テーマは K-Plex 設定の「外観スタイル」で選べます。",
+  "themes.nativeBaseAdopted": "Obsidian の基本色を適用し、セマンティックスタイルは維持しました。以前のテーマも保存されています。テーマは K-Plex 設定の「ビジュアルスタイル」で選べます。",
   "themes.migrationMessage": "以前の外観は「ユーザーテーマ」として保存されています。「既定の基本色＋自分の意味別の色」を選択すると、独自のスタイルを残したまま Obsidian の色を使用できます。",
   "colors.colorsPage": "色",
   "colors.labelsPage": "ラベル",

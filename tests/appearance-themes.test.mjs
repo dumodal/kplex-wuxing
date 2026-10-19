@@ -78,6 +78,8 @@ test("0.2.0 fresh installs retain Default only; imported appearance is backed up
   assert.equal(migrated.nativeBaseMigration, 1); assert.equal(migrated.selectedId, "default"); assert.equal(migrated.themes.length, 1);
   assert.equal(migrated.migrationNotice, false);
   const imported = fixture(), original = m.captureThemeAppearance(imported);
+  const firstImport = m.createAppearanceThemes(imported, current, true, names, false);
+  assert.equal(firstImport.migrationNotice, false, "A first install suppresses even the earlier migration explanation");
   const library = m.adoptNativeBaseOnUpgrade(m.createAppearanceThemes(imported, current, true, names), imported, "0.2.0", true, names, false);
   assert.deepEqual(library.themes.find(t => t.id === "user").appearance, original);
   assert.deepEqual(library.themes.find(t => t.id === library.selectedId).appearance.semantic, original.semantic);

@@ -21,6 +21,8 @@ A fresh installation starts with **Default theme**. This theme follows Obsidianâ
 
 Existing appearances are saved once as **User theme**. Starting with **0.2.0**, the first upgrade selects **Default base + my semantic colors**: an independent copy of the current semantic styling and non-color styles, with native base colors. Existing saved themes are preserved. A notice points to **Visual styling**, where you can switch back or select another theme. This migration runs once; later restarts and upgrades keep your selected theme. A fresh installation still starts with **Default theme**. Successful first-run ExcaliBrain import receives the same User-theme protection before adopting native base colors. The migration message can be dismissed.
 
+Brand-new K-Plex installations do not show the upgrade notice, including when importing an existing ExcaliBrain appearance on first use.
+
 Deleting the active theme asks for confirmation and switches to **Default theme** in the same save. Failed storage leaves the theme and selection intact. Deleting another theme preserves the active appearance.
 
 An editor belongs to the theme that opened it. After switching themes, an old draft remains read-only for **Discard draft**, including after switching back. A Save already accepted ahead of the switch finishes in order.

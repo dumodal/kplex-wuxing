@@ -20,7 +20,10 @@ test("0.2.0 upgrade persists appearance, selection and marker together; failure 
   if(restarted.settings.appearanceThemes.selectedId!=='user'||restarted.settings.backgroundColor!=='#123456'||restarted.writes.length!==writes)throw Error('Later restart reset selected appearance');
   const fresh=await createAppearanceHost({},false),noticeCount=window.notices.length;await fresh.updateStyleSettings(()=>{},fresh.captureAppearanceOwner(),{initializeThemes:{existing:false,version:'0.2.0',notifyMigration:false}});
   if(fresh.settings.appearanceThemes.themes.length!==1||fresh.settings.appearanceThemes.selectedId!=='default'||fresh.settings.appearanceThemes.nativeBaseMigration!==1||fresh.settings.appearanceThemes.migrationNotice||window.notices.length!==noticeCount)throw Error('Fresh factory installation misrepresented or notified');
-  const imported=await createAppearanceHost({noteTypeStyles:{Project:{fontSize:27}}});await imported.updateStyleSettings(()=>{},imported.captureAppearanceOwner(),{initializeThemes:{existing:true,version:'0.2.0',notifyMigration:false}});
+  const imported=await createAppearanceHost({noteTypeStyles:{Project:{fontSize:27}}});delete imported.settings.appearanceThemes;
+  await imported.updateStyleSettings(()=>{},imported.captureAppearanceOwner(),{initializeThemes:{existing:true,version:'0.1.3',notifyMigration:false}});
+  if(imported.settings.appearanceThemes.migrationNotice||window.notices.length!==noticeCount)throw Error('First-run import displayed the earlier migration message');
+  await imported.updateStyleSettings(()=>{},imported.captureAppearanceOwner(),{initializeThemes:{existing:true,version:'0.2.0',notifyMigration:false}});
   if(imported.settings.appearanceThemes.migrationNotice||window.notices.length!==noticeCount||imported.settings.noteTypeStyles.Project.fontSize!==27)throw Error('First-run import lost appearance or displayed an upgrade notice');
   const future=await createAppearanceHost({appearanceThemes:{version:999,opaque:['keep']}}),raw=JSON.stringify(future.settings.appearanceThemesFuture);
   await future.updateStyleSettings(()=>{},future.captureAppearanceOwner(),{initializeThemes:{existing:true,version:'0.2.0'}});
