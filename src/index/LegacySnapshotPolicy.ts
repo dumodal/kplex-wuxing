@@ -6,6 +6,7 @@
  * Retired-policy reconciliation releases completed host metadata batches through event tasks
  * before rechecking captured file identity and the caller-owned source lifetime.
  */
+import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
 import { yieldToHostTask } from "../adapters/obsidian/yieldToHostTask";
 import { normalizePath, type App, type TFile } from "obsidian";
 import type { KplexSettings } from "../settings";
@@ -30,7 +31,7 @@ export async function planRetiredExclusionReconciliation(
   const canonical = (path: string): string => normalizePath(path).replace(/\.md$/i, "").toLowerCase();
   const target = canonical(retiredPath);
   const matches = (path: string): boolean => canonical(path) === target;
-  const fields = new Set(HIERARCHY_ROLES.flatMap((role) => [...settings.hierarchy[role]]).map(normalizeFieldName));
+  const fields = new Set(HIERARCHY_ROLES.flatMap((role) => [...ontologyConfiguration(settings).hierarchy[role]]).map(normalizeFieldName));
   const host = createObsidianMetadataSourceHost(app);
   const affected = new Set<string>();
   const files = app.vault.getMarkdownFiles();

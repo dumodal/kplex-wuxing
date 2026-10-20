@@ -415,6 +415,7 @@ for (const file of [
   "src/core/plex/nodeImagePolicy.ts",
   "src/core/plex/shortcutPresentation.ts",
   "src/core/contracts/fieldName.ts",
+  "src/core/contracts/ontologyConfiguration.ts",
   "src/core/graph/model.ts",
   "src/core/parser/metadata.ts",
   "src/core/parser/referenceValues.ts",
@@ -469,6 +470,7 @@ for (const file of [
   "src/adapters/obsidian/settingsInput.ts",
   "src/adapters/obsidian/hiddenPropertyName.ts",
   "src/ui/StyleEditorModal.ts",
+  "src/ui/NotificationModal.ts",
     "src/ui/OntologyFieldControl.ts",
     "src/ui/components/textSettingDraft.ts",
   "src/ui/ColorSourceModal.ts",
@@ -1939,6 +1941,58 @@ try {
   };
   applyTypographySceneDelta("width", typographyWidths);
   applyTypographySceneDelta("x", typographyPositions);
+  // Merged #189 adds font-ink padding. Independent f3c2260 and 50d7424 controls
+  // produce exactly the same graph, evidence and scene; the archived pre-#189 golden
+  // differs only in these finite pill heights and dependent row positions. Keep every
+  // other field exact and check the archived scalar before applying this accepted delta.
+  applyTypographySceneDelta("height", [
+    ["Note A.md",48,53],
+    ["folder:/",26,30],
+    ["tag:body-tag",26,30],
+    ["Note B.md",26,30],
+    ["tag:fixture",26,30],
+    ["tag:project",26,30],
+    ["https://source.com/ontology-full-line",26,30],
+    ["https://source.com/ontology-inline",26,30],
+    ["tag:taxonomy/body/leaf",26,30],
+    ["https://youtu.be/excalibrain-fixture-video",26,30],
+    ["Note C.md",26,30],
+    ["Note F.md",26,30],
+    ["Note Y.md",26,30],
+    ["https://source.com/inferred",26,30],
+    ["Note D.md",26,30],
+    ["Note G.md",26,30],
+    ["Note H.md",26,30],
+    ["Note X.md",26,30],
+    ["Note E.md",26,30],
+    ["Daily/2026/09/20260918.md",22.099999999999998,27],
+    ["Daily/2026/09/20260919.md",22.099999999999998,27],
+    ["folder:Daily",22.099999999999998,27],
+    ["Section Tree.md",22.099999999999998,27]
+  ]);
+  applyTypographySceneDelta("y", [
+    ["folder:/",-81.55000000000001,-86.05000000000001],
+    ["tag:body-tag",-81.55000000000001,-86.05000000000001],
+    ["Note B.md",-131.85000000000002,-140.35000000000002],
+    ["tag:fixture",-131.85000000000002,-140.35000000000002],
+    ["tag:project",-182.15000000000003,-194.65000000000003],
+    ["https://source.com/ontology-full-line",-182.15000000000003,-194.65000000000003],
+    ["https://source.com/ontology-inline",-232.45000000000005,-248.95000000000005],
+    ["tag:taxonomy/body/leaf",-232.45000000000005,-248.95000000000005],
+    ["https://youtu.be/excalibrain-fixture-video",123.55000000000001,128.05],
+    ["Note C.md",123.55000000000001,128.05],
+    ["Note F.md",123.55000000000001,128.05],
+    ["Note Y.md",123.55000000000001,128.05],
+    ["https://source.com/inferred",123.55000000000001,128.05],
+    ["Note D.md",-57.225,-63.224999999999994],
+    ["Note G.md",-19.075000000000003,-21.074999999999996],
+    ["Note H.md",19.074999999999996,21.075000000000003],
+    ["Note X.md",57.225,63.22500000000001],
+    ["Daily/2026/09/20260918.md",-153.825,-158.67499999999998],
+    ["Daily/2026/09/20260919.md",-119.575,-119.52499999999998],
+    ["folder:Daily",-85.325,-80.37499999999999],
+    ["Section Tree.md",-51.075,-41.22499999999998]
+  ]);
   // Explicit product change: only the two archived tag-backed Note Type connectors double width.
   // All indexed facts, evidence, classification, search results and other scene fields stay exact.
   for (const [source, target] of [["Note A.md", "tag:project"], ["tag:project", "Note C.md"]]) {
@@ -1964,6 +2018,7 @@ try {
   await runSettingsIndependence({
     GraphIndex, GraphBuilder, KplexPlugin, settingsModule: require(join(temp, "src/settingsUnderTest.js")),
     policy: require(join(temp, "src/core/graph/settingsPolicy.js")),
+    ontologyGrammar: require(join(temp, "src/core/contracts/ontologyConfiguration.js")),
     sanitize: require(join(temp, "src/index/IndexedDbCache.js")).sanitizeIndexDiagnostics,
     ReferenceCollector: require(join(temp, "src/adapters/obsidian/ontologySourceCollector.js")).ObsidianReferenceSourceCollector,
     mergeFileMetadata: require(join(temp, "src/index/fieldParser.js")).mergeFileMetadata, parseBodyMetadata,
@@ -3427,9 +3482,18 @@ try {
       const owner = phase === "source-authority" ? stalled.sourceAcquisition
         : phase === "preview-search" || phase === "requested-semantics" ? stalled : stalled.indexedDb;
       const original = owner[method];
-      owner[method] = async (...args) => { await blocked; return original.apply(owner, args); };
+      let entered;
+      const admitted = new Promise(resolve => { entered = resolve; });
+      owner[method] = async (...args) => { entered(); await blocked; return original.apply(owner, args); };
       const start = stalled.restoreIndexedDbSnapshot(["Note A.md"]);
-      await settle();
+      // Observe the actual held I/O phase rather than assuming it starts within 24 microtasks.
+      // The real deadline is independent of the controlled inactivity clock below.
+      let admissionDeadline;
+      try {
+        await Promise.race([admitted, new Promise((_, reject) => {
+          admissionDeadline = realSetTimeout(() => reject(Error(`Restore did not admit ${phase}`)), 10000);
+        })]);
+      } finally { realClearTimeout(admissionDeadline); }
       assert.equal(stalled.getSnapshotHydrationDiagnostics().phase, phase);
       if (phase === "source-authority") {
         await advanceWatchdog(60000);

@@ -15,6 +15,8 @@
  * Explicit primary-modifier placeholder opening delegates folder choice to the native creation owner.
  * Startup recovery remains eligible across visibility changes until its current check completes.
  */
+import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
+import {hasDirectionalCaption,directionalRelationCaption} from "../core/plex/directionalRelationCaption";
 import { connectionActionAllowed, tagMembershipPair } from "./structuralConnectionActions";
 import { graphTagValue } from "../adapters/obsidian/tagMembership";
 import { structuralDropKind, structuralAreaDrop } from "./StructuralNodeDropActions";
@@ -31,7 +33,7 @@ import { ColorScope } from "../adapters/obsidian/colorScope";
 import {centerRelationCounts} from "../core/contracts/centerRecovery";
 import {startCenterWatchdog} from "./components/centerWatchdog";
 import { appearanceColorReferences, STYLE_SETTINGS_KEYS } from "../core/contracts/appearance";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent, type RefObject, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent, type RefObject, type ReactNode } from "react";
 import { createPlexContextMenu } from "./plexContextMenu";
 import { ColorSourceModal } from "./ColorSourceModal";
 import { Keymap, Menu, Notice, Platform, type WorkspaceLeaf } from "obsidian";
@@ -666,10 +668,7 @@ function Edge({
   const baseWidth = style.strokeWidth ?? DEFAULT_RENDERED_LINK_WIDTH;
   const strokeWidth = highlighted ? Math.max(baseWidth + 1.7, 2.8) : baseWidth;
   const stroke = alphaHexToCss(style.strokeColor, NATIVE_LINK_STROKE);
-  const label = style.showLabel ? relationLabel(edge.typeDefinition) : null;
-  const fontSize = style.fontSize ?? 10;
-  const labelWidth = label ? Math.max(20, label.length * fontSize * 0.58 + 10) : 0;
-  const labelHeight = fontSize + 6;
+  const label = style.showLabel ? relationLabel(edge.caption ?? edge.typeDefinition) : null;
 
   const resolvedCrossLinkOpacity = edge.isCrossLink && !highlighted ? crossLinkOpacity : undefined;
 
@@ -699,26 +698,34 @@ function Edge({
       onPointerLeave={onLeave}
       onContextMenu={onContextMenu}
     />
-    {label && <g className="kplex-edge-label-wrap" pointerEvents="none" opacity={resolvedCrossLinkOpacity}>
+    <EdgeLabel label={label} midpoint={geometry.midpoint} style={style} background={labelBackground} opacity={resolvedCrossLinkOpacity} />
+  </g>;
+}
+
+/** Shared SVG label presentation for ordinary and expanded-descendant connectors. Caption text
+ * is already projected; this component preserves existing generic suppression, fonts and colors. */
+function EdgeLabel({label,midpoint,style,background,opacity}:{label:string|null;midpoint:Point;style:PositionedEdge['style'];background:string;opacity?:number}){
+  if(!label)return null;
+  const fontSize=style.fontSize??10,labelWidth=Math.max(20,label.length*fontSize*.58+10),labelHeight=fontSize+6;
+  return <g className="kplex-edge-label-wrap" pointerEvents="none" opacity={opacity}>
       <rect
-        x={geometry.midpoint.x - labelWidth / 2}
-        y={geometry.midpoint.y - labelHeight / 2}
+        x={midpoint.x - labelWidth / 2}
+        y={midpoint.y - labelHeight / 2}
         width={labelWidth}
         height={labelHeight}
         rx={3}
-        fill={labelBackground}
+        fill={background}
       />
       <text
         className="kplex-edge-label"
-        x={geometry.midpoint.x}
-        y={geometry.midpoint.y}
+        x={midpoint.x}
+        y={midpoint.y}
         textAnchor="middle"
         dominantBaseline="central"
         fill={alphaHexToCss(style.textColor, NATIVE_LINK_TEXT)}
         fontSize={fontSize}
       >{label}</text>
-    </g>}
-  </g>;
+    </g>;
 }
 
 /** Compose the deterministic Plex scene; native-follow layouts land immediately while explicit navigation retains motion and central Open uses a main tab. */
@@ -2178,6 +2185,20 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     return clusters;
   }, [sectionExpansion, settings.graphDepth, settings.compactingFactor, settings.horizontalCompactingFactor, settings.compactView, settings.minLinkLength, settings.childColumns, settings.maxItemCount, settings.siblingRelativeSize, neighborhood, scene.nodes, sceneNodeKeys, visibleNodePaths, renderedNodeMap, expandedScrollTop, index, layoutRevision, predicate, lenses, predicateRevision, predicateEngine]);
 
+  /** Pair wording consumes only existing exact-pair explanations; physical definitions remain
+   * authoritative for filtering, styles and source mutations. Transient occurrences retain their
+   * real document endpoints even when their section has folded out of the visible scene. */
+  const connectionCaption = useCallback((definition:string|undefined,show:boolean|undefined,sourcePath:string,targetPath:string,
+    sourcePage?:GraphPage,targetPage?:GraphPage):string|undefined=>{
+    const pairs=ontologyConfiguration(settings).pairs;
+    if(!show||!hasDirectionalCaption(definition,pairs))return definition;
+    const explanation=sectionExpansion?.explanations.get(sourcePath+'\u0000'+targetPath)??index.explainRelationship(sourcePath,targetPath);
+    const source=sourcePage??sectionExpansion?.sections.find(/** Folded section sources still carry their original document identity. */ section=>section.page.path===sourcePath)?.page;
+    const physicalSource=source?.transient?.kind==='section'?source.transient.sourcePath:source?.transient?.actualPath??source?.path??sourcePath;
+    const physicalTarget=targetPage?.transient?.kind==='section'?targetPage.transient.sourcePath:targetPage?.transient?.actualPath??targetPage?.path??targetPath;
+    return directionalRelationCaption(definition,pairs,physicalSource,physicalTarget,explanation?.decisions);
+  },[index,sectionExpansion,settings.hierarchy,settings.ontologyPairingVersion]);
+
   const retainedPresentationDemand = useRef<Set<GraphPage>>(new Set());
   /** Retain exact visible page membership across unrelated scene renders; new page incarnations still repair. */
   const presentationDemandPages = useMemo(() => {
@@ -2212,8 +2233,8 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   }, [plugin, hostLeaf, index, presentationDemandPages]);
 
   const expandedConnectors = useMemo(() => {
-    if (settings.graphDepth !== 2) return [] as Array<{ key: string; d: string; stroke: string; width: number; dash?: string; markerStart?: string; markerEnd?: string; definition?: string }>;
-    const connectors: Array<{ key: string; d: string; stroke: string; width: number; dash?: string; markerStart?: string; markerEnd?: string; definition?: string }> = [];
+    if (settings.graphDepth !== 2) return [] as Array<{ key:string;d:string;stroke:string;width:number;dash?:string;markerStart?:string;markerEnd?:string;definition?:string;caption?:string;midpoint:Point;style:PositionedEdge['style'] }>;
+    const connectors: Array<{ key:string;d:string;stroke:string;width:number;dash?:string;markerStart?:string;markerEnd?:string;definition?:string;caption?:string;midpoint:Point;style:PositionedEdge['style'] }> = [];
     for (const cluster of expandedClusters) {
       const source = gatePoint(cluster.parent, "bottom");
       for (const child of cluster.children) {
@@ -2235,6 +2256,8 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
         connectors.push({
           key: child.key,
           definition: child.relation.typeDefinition,
+          caption: connectionCaption(child.relation.typeDefinition,style.showLabel,cluster.parent.page.path,child.relation.page.path,cluster.parent.page,child.relation.page),
+          midpoint: geometry.midpoint, style,
           d: geometry.d,
           stroke: alphaHexToCss(style.strokeColor, NATIVE_LINK_STROKE),
           width: Math.max(0.65, (style.strokeWidth ?? DEFAULT_RENDERED_LINK_WIDTH) * 0.75),
@@ -2245,7 +2268,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       }
     }
     return connectors;
-  }, [expandedClusters, settings.graphDepth, settings.connectorStyle, settings.inverseArrowDirection, settings.baseLinkStyle, settings.hierarchyLinkStyles, neighborhood, predicateEngine, index, paintLenses, predicateRevision]);
+  }, [expandedClusters, settings.graphDepth, settings.connectorStyle, settings.inverseArrowDirection, settings.baseLinkStyle, settings.hierarchyLinkStyles, neighborhood, predicateEngine, index, paintLenses, predicateRevision, connectionCaption]);
 
   // Find uses this surface's projection, including overflow rows and expanded children.
   // Global lenses and area filters exclude candidates; camera clipping does not.
@@ -2440,8 +2463,11 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     const layered = graphLensEdgeStyle(predicateEngine, index, paintLenses, {page: target.page, label: target.label, center: neighborhood.center,
       edge: {role: edge.role, relationType: edge.relationType, definition: edge.typeDefinition, linkDirection: edge.direction,
         sourcePath: edge.explanationSourcePath ?? edge.sourcePath, targetPath: edge.explanationTargetPath ?? edge.targetPath}});
-    return {...edge, style: {...edge.style, strokeColor: current.strokeColor, textColor: current.textColor, ...layered}};
-  }), [visibleEdges, renderedNodeMap, neighborhood, paintSettings, predicateEngine, index, paintLenses]);
+    const style={...edge.style,strokeColor:current.strokeColor,textColor:current.textColor,...layered};
+    const sourcePath=edge.explanationSourcePath??edge.sourcePath,targetPath=edge.explanationTargetPath??edge.targetPath;
+    return {...edge,style,caption:connectionCaption(edge.typeDefinition,style.showLabel,sourcePath,targetPath,
+      (renderedNodeMap.get(sourcePath)??renderedNodeMap.get(edge.sourcePath))?.page,(renderedNodeMap.get(targetPath)??renderedNodeMap.get(edge.targetPath))?.page)};
+  }), [visibleEdges, renderedNodeMap, neighborhood, paintSettings, predicateEngine, index, paintLenses, connectionCaption, renderRevision, semanticRevision]);
 
   const interaction = useMemo(() => {
     const edgeIds = new Set<string>();
@@ -4499,8 +4525,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
             showEdgeContextMenuAt(edge, event.clientX, event.clientY);
           }}
         />)}
-        {expandedConnectors.map((connector) => <path
-          key={`expanded-edge:${connector.key}`}
+        {expandedConnectors.map((connector) => <g key={`expanded-edge:${connector.key}`} className="kplex-expanded-connector"><path
           className="kplex-expanded-edge"
           d={connector.d}
           fill="none"
@@ -4510,7 +4535,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
           markerStart={connector.markerStart}
           markerEnd={connector.markerEnd}
           vectorEffect="non-scaling-stroke"
-        />)}
+        /><EdgeLabel label={connector.style.showLabel?relationLabel(connector.caption??connector.definition):null} midpoint={connector.midpoint} style={connector.style} background={NATIVE_LINK_LABEL_FILL} /></g>)}
         {dragPath && <path className="kplex-drag-connector" d={dragPath} fill="none" vectorEffect="non-scaling-stroke" />}
       </svg>
 

@@ -8,13 +8,14 @@ import {TextSettingDraft} from "./components/textSettingDraft";
 import type {Translator} from "../lang";
 
 let nextRowId = 0;
+type PairingHint = Readonly<{read(): string; subscribe(update: () => void): () => void}>;
 
 /** One field model shared by its native page/search rows, never a second settings writer. */
 export class OntologyFieldControl {
   private readonly releases = new Set<() => void>();
 
   /** The containing Settings tab retains the model until plugin teardown, including failed drafts. */
-  constructor(readonly draft: TextSettingDraft, private readonly translate: Translator, private readonly captureOwner: () => () => boolean) {}
+  constructor(readonly draft: TextSettingDraft, private readonly translate: Translator, private readonly captureOwner: () => () => boolean, private readonly pairing?: PairingHint) {}
 
   /** Mount a native field without initial writes; row replacement cannot redirect an old callback. */
   mount(setting: Setting, rows: number): () => void {
@@ -23,6 +24,14 @@ export class OntologyFieldControl {
     let live = true, retry: ButtonComponent | undefined, discard: ButtonComponent | undefined;
     let releaseRow = /** No resources exist until the native component callback mounts. */ (): void => {};
     const feedback = setting.descEl.createDiv({attr: {role: "status", "aria-live": "polite"}});
+    const pairHint = setting.descEl.createDiv({cls: "setting-item-description"});
+    /** Show saved reciprocal assignments beside either role without duplicating editable syntax. */
+    const refreshPairing = (): void => {
+      if (!live) return;
+      const value = this.pairing?.read() ?? "";
+      if (pairHint.textContent !== value) pairHint.setText(value);
+      pairHint.toggle(Boolean(value));
+    };
     setting.addTextArea(/** Initial native value is installed before registering actual user changes. */ text => {
       text.inputEl.rows = rows; text.setValue(this.draft.state().value);
       const input = text.inputEl;
@@ -38,11 +47,12 @@ export class OntologyFieldControl {
       const refresh = (): void => {
         if (!live) return;
         const state = this.draft.state();
+        refreshPairing();
         if (input.value !== state.value) text.setValue(state.value);
         input.readOnly = state.error === "conflict";
         input.setAttribute("aria-busy", String(state.busy));
         if (state.error) input.setAttribute("aria-invalid", "true"); else input.removeAttribute("aria-invalid");
-        feedback.setText(state.error === "conflict" ? this.translate("settings.ontology.conflict") : state.error === "storage" ? this.translate("settings.ontology.saveFailed") : "");
+        feedback.setText(state.error === "conflict" ? this.translate("settings.ontology.conflict") : state.error === "storage" ? this.translate("settings.ontology.saveFailed") : state.error === "validation" ? this.translate("ontology.pairInvalid") : "");
         if (state.error && !discard) setting.addButton(/** Explicit discard refreshes the draft from the current accepted field. */ button => {
           discard = button; button.setButtonText(this.translate("settings.ontology.discard")).onClick(/** A submitted write must settle before its draft can be discarded. */ () => {if (live) this.draft.discard();});
         });
@@ -54,6 +64,7 @@ export class OntologyFieldControl {
         discard?.setDisabled(state.busy); retry?.setDisabled(state.busy);
       };
       const unsubscribe = this.draft.subscribe(refresh);
+      const unsubscribePairing = this.pairing?.subscribe(refreshPairing);
       /** Native composition cannot publish transient preedit or overwrite its current selection. */
       const start = (): void => {if (editable()) this.draft.compositionStart();};
       /** Final composition text becomes eligible for idle/explicit exit submission. */
@@ -72,7 +83,7 @@ export class OntologyFieldControl {
       const migrated = setting.settingEl.onWindowMigrated?.(/** Same-document notifications preserve the draft/caret. */ () => {if (live && input.ownerDocument.defaultView !== boundWindow) follow();});
       /** Render cleanup is idempotent and cannot cancel an operation already accepted by storage. */
       const release = (): void => {
-        if (!live) return; live = false; unsubscribe(); migrated?.(); boundWindow?.removeEventListener("pagehide", closed);
+        if (!live) return; live = false; unsubscribe(); unsubscribePairing?.(); migrated?.(); boundWindow?.removeEventListener("pagehide", closed);
         input.removeEventListener("compositionstart", start); input.removeEventListener("compositionend", end); input.removeEventListener("blur", blur);
         this.releases.delete(release); this.draft.leave();
       };

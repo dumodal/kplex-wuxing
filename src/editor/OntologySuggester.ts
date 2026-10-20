@@ -4,6 +4,7 @@
  * value. Literal linear-time trigger matching keeps native editor updates responsive even when
  * K-Plex is hidden; no parser/index work, timers or retained editor text cross this boundary.
  */
+import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
 import {
   EditorSuggest,
   type Editor,
@@ -99,14 +100,14 @@ export class OntologySuggester extends EditorSuggest<string> {
 
   /** Read the chosen role’s fields; the all-role picker retains its established sorted order. */
   private keys(): string[] {
-    const h = this.plugin.settings.hierarchy;
+    const h = ontologyConfiguration(this.plugin.settings).hierarchy;
     switch (this.suggestType) {
-      case "parent": return h.parents;
-      case "child": return h.children;
-      case "leftFriend": return h.leftFriends;
-      case "rightFriend": return h.rightFriends;
-      case "previous": return h.previous;
-      case "next": return h.next;
+      case "parent": return [...h.parents];
+      case "child": return [...h.children];
+      case "leftFriend": return [...h.leftFriends];
+      case "rightFriend": return [...h.rightFriends];
+      case "previous": return [...h.previous];
+      case "next": return [...h.next];
       case "all": return [...h.hidden, ...h.parents, ...h.children, ...h.leftFriends, ...h.rightFriends, ...h.previous, ...h.next, this.plugin.settings.primaryTagField]
         .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
     }

@@ -1080,6 +1080,30 @@ physical touch or perceived paint.
 camera/layout callbacks. `tests/embedded-markdown-default.test.mjs` checks native-controller wiring
 and cleanup with finite host doubles; native lanes remain authoritative for real geometry.
 
+After exact-build staging, `npm run verify:obsidian:ontology-pairs` uses the three explicit
+Small-vault variables and a fresh `KPLEX_HOST_REPORT_DIR`. It exercises the actual Settings
+textarea and optional native pairing editor, stationary directional captions, independent
+main/split/popout perspectives, physical-field styling and original-source reverse creation/unlink.
+It also checks transient/folded section captions. Source/semantic/snapshot counters start only
+after controlled readiness; the pair-only interval must do no such work. The driver owns its
+notes/dialogs/leaves and restores preferences/configuration bytes. Run native/browser lanes
+serially. This is functional Windows host evidence, not a comparative performance, physical
+mobile or actual-paint result. Run `npm run verify:obsidian:ontology-pair-reload` separately with
+a fresh report directory for persisted raw pairs, signature stability and original YAML evidence
+after disabling/enabling the plugin and explicitly reopening its unloaded view. That lane restores the native layout and exact configuration
+bytes; it does not claim a whole-application restart or warm-snapshot throughput result.
+
+`npm run verify:obsidian:ontology-startup-updates` uses the same exact build and explicit Small
+variables. It temporarily selects Eager through a real plugin reload, creates five owned notes,
+and admits a controlled progressive startup with the tested note as its saved center. Normal
+foreground leases hold continuations at actual atomic source commits, following native Vault
+enumeration rather than assuming name/creation order. Vault/FileManager edits ordinary YAML/inline
+ontology; both changed owners must commit before the remaining source, with the stationary SVG
+already updated while startup remains held. It restores the original strategy through reload,
+native layout/preferences/configuration and owned fixtures. Independent readers are untouched;
+holds retire before teardown. This is controlled startup admission, not an application restart
+or benchmark.
+
 After exact-build staging, `npm run verify:obsidian:ontology-input` uses the three explicit
 Small-vault variables and a fresh report directory. It observes trusted native Settings typing,
 idle/blur/close submission, stationary ontology semantics in main/sidebar/popout, explicit

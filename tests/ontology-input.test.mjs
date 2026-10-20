@@ -21,6 +21,27 @@ const receive=async value=>{disk=copy(value);p.onExternalSettingsChange();await 
 /** Execute one isolated production-boundary case and tear down model clocks even after assertion failures. */
 const scenario=body=>colorEditorScenario(`(async()=>{${initialize}try{${body};return true}finally{tab.disposeOntologySettings();for(const row of rows)row.release()}})()`);
 
+test('both native role lists explain one saved pair without mirroring syntax or moving defaults',async()=>{
+ assert.equal(await scenario(`await p.assignFieldToOntology('Child','child','Parent');const listeners=new Set();p.index.subscribePresentation=update=>{listeners.add(update);return()=>listeners.delete(update)};
+ const refresh=p.index.refreshPresentationSettings;p.index.refreshPresentationSettings=async()=>{await refresh();for(const update of listeners)update()};
+ const parent=mount('parents'),child=mount('children');check(parent.input.value==='Parent'&&child.input.value==='Child/Parent','Pair was duplicated or default order changed');
+ check(parent.setting.descEl.textContent.includes('Parent ↔ Child')&&child.setting.descEl.textContent.includes('Child ↔ Parent'),'Counterpart list did not explain shared pairing');
+ check(parent.setting.descEl.textContent.includes('one list only'),'Single stored declaration not explained');
+ type(child,'Child');child.input.dispatchEvent(new FocusEvent('blur'));await settled();check(!parent.setting.descEl.textContent.includes('↔')&&!child.setting.descEl.textContent.includes('↔'),'Other role retained an obsolete pair summary');
+ parent.release();child.release();check(listeners.size===0,'Pair summaries retained disposed native rows');`),true);
+});
+
+test('accepted pairing publishes affected roles without overwriting a later unrelated imperative draft',async()=>{
+ assert.equal(await scenario(`let release,entered;const hold=new Promise(r=>release=r),began=new Promise(r=>entered=r),store=p.saveData;p.saveData=async value=>{entered();await hold;await store(value)};
+ const accepted=p.updateOntologyField('previous',['Previous/Next'],['Previous'],p.receivedSettingsOwner('hierarchy'));await began;
+ p.settings.hierarchy={...p.settings.hierarchy,parents:['Later imperative parent']};const later=p.saveSettings(false);
+ release();await accepted;await later;check(p.settings.hierarchy.previous[0]==='Previous/Next'&&p.settings.hierarchy.parents[0]==='Later imperative parent','Independent live role was lost or blocked pairing publication');
+ check(p.writes[0].hierarchy.previous[0]==='Previous/Next','Accepted pairing was not durable');
+ // Legacy imperative saves own the whole hierarchy root and can correctly refuse a stale root.
+ // Retrying its retained live value after that conflict must include the accepted pair as well.
+ await p.saveSettings(false);check(disk.hierarchy.previous[0]==='Previous/Next'&&disk.hierarchy.parents[0]==='Later imperative parent','Explicit root retry lost accepted pair or retained draft');`),true);
+});
+
 test('actual native rows keep burst text/caret local and commit one final ontology after real idle',async()=>{
  assert.equal(await scenario(`const row=mount(),node=row.input;node.focus();
  for(const value of ['Parent, A','Parent, An','Parent, Anc','Parent, Ancestor'])type(row,value);
@@ -127,4 +148,27 @@ test('teardown between flush and its submission microtask starts no storage work
  assert.equal(await scenario(`const old=mount();type(old,'Not yet submitted');old.input.dispatchEvent(new FocusEvent('blur'));tab.disposeOntologySettings();await wait(50);check(!p.writes.length&&!p.work.invalidations,'Unsubmitted microtask outlived teardown');
  const row=mount();row.input.value='';row.input.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'deleteContentBackward'}));check(!p.writes.length&&p.settings.hierarchy.parents[0]==='Parent','Deletion immediately published');row.input.dispatchEvent(new FocusEvent('blur'));await settled();check(disk.hierarchy.parents.length===0,'Empty final list did not persist');
  row.input.value='Z, A, A';row.input.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertFromPaste',data:'Z, A, A'}));row.input.dispatchEvent(new FocusEvent('blur'));await settled();check(disk.hierarchy.parents.join(',')==='Z,A,A','Paste changed order/multiplicity');`),true);
+});
+
+// Pairing exercises the same production row model, accepted-settings queue and effect classifier.
+test('manual pairing and unpairing keep physical assignment policy, order and metadata-only refresh',async()=>{
+ assert.equal(await scenario(`await p.updateOntologyField('previous',['Z','replies to'],['Previous'],p.receivedSettingsOwner('hierarchy'));await p.updateOntologyField('next',['Q','replied by'],['Next'],p.receivedSettingsOwner('hierarchy'));
+ const before=sourceModules.encodeIndexSettingsSignature(p.settings),row=mount('previous');p.writes=[];p.work={invalidations:0,presentation:0,semantic:0};
+ type(row,'Z, replies to/replied by');row.input.dispatchEvent(new FocusEvent('blur'));await settled();
+ check(p.writes.length===1&&p.work.invalidations===0&&p.work.semantic===0&&p.work.presentation===1,'Pairing ran semantic work');
+ check(sourceModules.encodeIndexSettingsSignature(p.settings)===before,'Pairing changed compiler policy');
+ check(sourceModules.ontologyConfiguration(p.settings).pairs.get('replies-to').partner==='replied by','Pair lookup missing');
+ type(row,'Z, replies to');row.input.dispatchEvent(new FocusEvent('blur'));await settled();
+ check(sourceModules.ontologyConfiguration(p.settings).pairs.size===0&&sourceModules.encodeIndexSettingsSignature(p.settings)===before&&p.work.invalidations===0&&p.work.semantic===0,'Unpairing removed physical field or invalidated semantics');`),true);
+});
+test('incomplete or competing manual pairs remain recoverable local drafts without writes or invalidation',async()=>{
+ assert.equal(await scenario(`const row=mount('previous');type(row,'replies to/');row.input.dispatchEvent(new FocusEvent('blur'));await settled();
+ check(!p.writes.length&&!p.work.invalidations&&row.control.draft.state().error==='validation'&&row.input.value==='replies to/','Incomplete pair published or draft lost');
+ type(row,'replies to/replied by');row.input.dispatchEvent(new FocusEvent('blur'));await settled();check(p.writes.length===1&&p.work.invalidations===1,'Corrected pair did not save normally');
+ const other=mount('next');type(other,'Other/replied by');other.input.dispatchEvent(new FocusEvent('blur'));await settled();check(p.writes.length===1&&p.work.invalidations===1&&other.control.draft.state().error==='validation','Second textarea stole paired field');`),true);
+});
+test('manual pair removal retains an implicit counterpart and two queued pair assignments cannot steal it',async()=>{
+ assert.equal(await scenario(`await p.updateOntologyField('previous',['A/B'],['Previous'],p.receivedSettingsOwner('hierarchy'));const previous=sourceModules.ontologyConfiguration(p.settings),first=p.assignFieldToOntology('C','previous','B',previous),second=p.assignFieldToOntology('D','previous','B',previous);const results=await Promise.allSettled([first,second]);
+ check(results.every(result=>result.status==='rejected'),'An already paired field was stolen');
+ await p.updateOntologyField('previous',['A'],['A/B'],p.receivedSettingsOwner('hierarchy'));check(sourceModules.ontologyConfiguration(p.settings).hierarchy.next.includes('B')&&!sourceModules.ontologyConfiguration(p.settings).pairs.size,'Manual unpair lost implicit counterpart');`),true);
 });

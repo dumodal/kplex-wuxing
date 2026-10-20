@@ -6,6 +6,7 @@
  * Cached physical link placements survive late target publication; each projection rebinds live
  * evidence/policy, with at most one native lookup per distinct lexical link and no body reads.
  */
+import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
 import type { App, CachedMetadata, TFile } from "obsidian";
 import type KplexPlugin from "../main";
 import { LinkDirection, RelationType, type GraphPage, type Neighbour, type Neighborhood, type Relation, type Role } from "../types";
@@ -128,8 +129,8 @@ function scanHeadings(content: string): HeadingRange[] {
 
 function ontologyRole(plugin: KplexPlugin, name: string): EvidenceRole | null {
   const normalized = normalizeFieldName(name);
-  const h = plugin.settings.hierarchy;
-  const includes = (values: string[]) => values.some((value) => normalizeFieldName(value) === normalized);
+  const h = ontologyConfiguration(plugin.settings).hierarchy;
+  const includes = (values: readonly string[]) => values.some((value) => normalizeFieldName(value) === normalized);
   if (includes(h.hidden)) return "hidden";
   if (includes(h.parents)) return "parent";
   if (includes(h.children)) return "child";

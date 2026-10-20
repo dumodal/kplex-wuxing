@@ -11,17 +11,8 @@ export function sanitizeDatePropertyRelations(value: unknown): DatePropertyRelat
     ? value : "parent";
 }
 
-export type SemanticHierarchy = Readonly<{
-  hidden: readonly string[];
-  parents: readonly string[];
-  children: readonly string[];
-  leftFriends: readonly string[];
-  rightFriends: readonly string[];
-  previous: readonly string[];
-  next: readonly string[];
-  exclusions: readonly string[];
-  friends?: readonly string[];
-}>;
+export type {OntologyHierarchy as SemanticHierarchy} from "../contracts/ontologyConfiguration";
+import type {OntologyHierarchy as SemanticHierarchy} from "../contracts/ontologyConfiguration";
 
 /** Historical compilation input, including prepared presentation output; not a validity signature. */
 export type SemanticIndexSettings = Readonly<{

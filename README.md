@@ -427,6 +427,8 @@ K-Plex understands configurable relationship field names for:
 
 It supports YAML/frontmatter relationships and compatible Dataview-style body fields without requiring the Dataview plugin.
 
+Pair reciprocal fields such as `replies to/replied by` in the existing relationship-field settings to show natural wording from either endpoint. Notes still use the individual property names; either note can declare the relationship. See [paired ontology fields](docs/ONTOLOGY_PAIRS.md) for configuration, authoring examples and literal-slash compatibility.
+
 If classic ExcaliBrain is installed and running, K-Plex can import its ontology and graph, node and link styling. You can also use **Import ExcaliBrain settings** manually from **Settings → K-Plex → Compatibility**. Importing does not change K-Plex's navigation, workspace, editor or keyboard preferences. Plugin CSS and command aliases are not imported; assign shortcuts to the K-Plex commands directly.
 
 K-Plex and classic ExcaliBrain can coexist while you migrate.

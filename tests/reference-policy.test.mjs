@@ -6,7 +6,7 @@ import { loadPortableModules } from "./support/portableTypeScript.mjs";
 
 const loaded = loadPortableModules([
   "src/core/graph/compiler.ts", "src/core/graph/patch.ts", "src/core/graph/source.ts",
-  "src/core/graph/resolver.ts",
+  "src/core/graph/resolver.ts", "src/core/contracts/ontologyConfiguration.ts",
   "src/core/graph/relations.ts",
   "src/core/graph/sourcePolicy.ts", "src/core/parser/metadata.ts", "src/core/parser/referenceValues.ts",
   "src/adapters/obsidian/ontologySourceCollector.ts", "src/index/SourceFingerprint.ts",
@@ -297,4 +297,25 @@ test("unassigned property URLs infer with raw provenance, configured roles and r
   const preparer = new c.NormalizedSourcePatchPreparer(source.id, policy(), runtime(), { entity: e => e.id === source.id ? fact : undefined });
   await feed(preparer, [fact, ...found.records]); const patch = await preparer.finish(); assert.equal(patch.outcome, "prepared");
   assert.deepEqual(declarations(patch.patch.compilation), declarations(inferred), "full and patch share the URL default and hierarchy owner");
+});
+
+for(const role of ['parent','child','left','right','previous','next'])for(const form of ['inline','yaml'])test(`paired ${role} ${form} settings preserve full/patch declarations and neutral source fingerprints`,async()=>{
+ const inverse=c.ONTOLOGY_RECIPROCAL[role],firstGroup=c.ONTOLOGY_ROLE_GROUP[role],secondGroup=c.ONTOLOGY_ROLE_GROUP[inverse];
+ const ordinary=Object.fromEntries(c.ONTOLOGY_GROUPS.map(group=>[group,[]]));ordinary[firstGroup].push('replies to');ordinary[secondGroup].push('replied by');
+ const baseline={hierarchy:ordinary,ontologyPairingVersion:1},paired={...baseline,hierarchy:c.assignOntologyField(baseline,'replies to',role,'replied by')};
+ const a=new TFile('Note A.md'),b=new TFile('Note B.md'),lookup=host([a,b]);
+ for(const authored of ['first','second','both']){
+  const firstMeta=authored==='second'?metadata():form==='yaml'?metadata({'replies to':'[[Note A]]'}):metadata({},'replies to:: [[Note A]]');
+  const secondMeta=authored==='first'?metadata():form==='yaml'?metadata({'replied by':'[[Note B]]'}):metadata({},'replied by:: [[Note B]]');
+  const first=await collect(firstMeta,{file:b,host:lookup}),second=await collect(secondMeta,{file:a,host:lookup});
+  const records=[entityFact(ref(a)),entityFact(ref(b)),...first.records,...second.records],sourceBefore=structuredClone(records),fingerprintBefore=c.sourceFingerprint(fingerprintInputs(firstMeta));
+  const before=policy(ordinary),after=policy(c.ontologyConfiguration(paired).hierarchy),normal=await compile(records,before),projected=await compile(records,after);
+  assert.deepEqual(canonical(projected),canonical(normal));assert.deepEqual([...projected.declarations()],[...normal.declarations()]);
+  for(const [file,sourceRecords] of [[b,first.records],[a,second.records]]){
+   const results=[];for(const settings of [before,after]){const fact=entityFact(ref(file)),preparer=new c.NormalizedSourcePatchPreparer(file.path,settings,runtime(),{entity:e=>e.id===a.path?entityFact(ref(a)):e.id===b.path?entityFact(ref(b)):undefined});await feed(preparer,[fact,...sourceRecords]);const outcome=await preparer.finish();assert.equal(outcome.outcome,'prepared');results.push(canonical(outcome.patch.compilation));}
+   assert.deepEqual(results[0],results[1]);
+  }
+  assert.deepEqual(records,sourceBefore);assert.equal(c.sourceFingerprint(fingerprintInputs(firstMeta)),fingerprintBefore);
+  assert(!JSON.stringify([...projected.declarations()]).includes('inverseDefinition'));
+ }
 });

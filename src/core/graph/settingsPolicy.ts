@@ -4,6 +4,7 @@
  * only built-in key names may cross the diagnostic boundary. Array order/multiplicity is retained for the owning policy.
  */
 import {appearanceWithoutColors,isColorAppearanceKey} from "../contracts/appearance";
+import {ontologyConfiguration} from "../contracts/ontologyConfiguration";
 import { sanitizeDatePropertyRelations, type DatePropertyRelations, type SemanticHierarchy } from "./settings";
 
 export const HIERARCHY_ROLES = ["hidden", "parents", "children", "leftFriends", "rightFriends", "previous", "next"] as const;
@@ -24,7 +25,7 @@ const VIEW_KEYS = [
   "childMaxHeight", "animationSpeed", "layoutProfiles", "typographyProfiles", "allowAutozoom", "embedCentralNode", "centerEmbedWidth", "centerEmbedHeight",
 ] as const;
 export const SETTING_DIAGNOSTIC_KEYS = [
-  ...HIERARCHY_ROLES.map((role) => `hierarchy.${role}` as const), ...SEMANTIC_KEYS,
+  ...HIERARCHY_ROLES.map((role) => `hierarchy.${role}` as const), ...SEMANTIC_KEYS, "ontologyPairs",
   ...PRESENTATION_KEYS, "baseNodeStyle.maxLabelLength", ...VIEW_KEYS,
 ] as const;
 export type SettingDiagnosticKey = typeof SETTING_DIAGNOSTIC_KEYS[number];
@@ -32,6 +33,7 @@ export type SettingDiagnosticKey = typeof SETTING_DIAGNOSTIC_KEYS[number];
 /** Narrow structural input: K-Plex supplies these fields without leaking its host-owned type. */
 export type SettingsPolicyInput = Readonly<{
   hierarchy: SemanticHierarchy;
+  ontologyPairingVersion?: number;
   inferAllLinksAsFriends: boolean;
   inverseInfer: boolean;
   datePropertyRelations?: DatePropertyRelations;
@@ -81,7 +83,7 @@ function encode(value: unknown): string {
 /** Pick only semantic roles and suppression inputs; discovery exclusions are not compiled policy. */
 function semanticValues(settings: SettingsPolicyInput): Record<string, unknown> {
   return {
-    hierarchy: Object.fromEntries(HIERARCHY_ROLES.map((role) => [role, [...settings.hierarchy[role]]])),
+    hierarchy: Object.fromEntries(HIERARCHY_ROLES.map((role) => [role, [...ontologyConfiguration(settings).hierarchy[role]]])),
     inferAllLinksAsFriends: settings.inferAllLinksAsFriends,
     inverseInfer: settings.inverseInfer,
     datePropertyRelations: sanitizeDatePropertyRelations(settings.datePropertyRelations),
@@ -93,14 +95,16 @@ function semanticValues(settings: SettingsPolicyInput): Record<string, unknown> 
 /** Capture before the next mutation. The caller may continue mutating its original settings. */
 export function captureSettingsPolicy(settings: SettingsPolicyInput): SettingsPolicy {
   const values: Partial<Record<SettingDiagnosticKey, string>> = {};
-  for (const role of HIERARCHY_ROLES) values[`hierarchy.${role}`] = encode(settings.hierarchy[role]);
+  const configuration = ontologyConfiguration(settings);
+  for (const role of HIERARCHY_ROLES) values[`hierarchy.${role}`] = encode(configuration.hierarchy[role]);
+  values.ontologyPairs = encode([...configuration.pairs].sort(/** Pair declaration position does not change the bidirectional caption lookup. */ ([first], [second]) => first.localeCompare(second)));
   const semantic = semanticValues(settings);
   for (const key of SEMANTIC_KEYS) values[key] = encode(semantic[key]);
   for (const key of PRESENTATION_KEYS) values[key] = encode(settings[key]);
   values["baseNodeStyle.maxLabelLength"] = encode(settings.baseNodeStyle.maxLabelLength ?? 30);
   const record: object = settings;
   for (const key of VIEW_KEYS) {
-    values[key] = encode(key === "hierarchy.exclusions" ? settings.hierarchy.exclusions :
+    values[key] = encode(key === "hierarchy.exclusions" ? configuration.hierarchy.exclusions :
       Object.prototype.hasOwnProperty.call(record, key) ? Reflect.get(record, key) : undefined);
   }
   return { values };

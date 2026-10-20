@@ -162,6 +162,8 @@ export type PositionedNode = {
 };
 
 export type PositionedEdge = {
+  /** Display-only directional wording; physical typeDefinition remains the style/filter/mutation key. */
+  caption?: string;
   id: string;
   sourcePath: string;
   targetPath: string;
