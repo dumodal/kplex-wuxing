@@ -13,6 +13,7 @@
  * Exact-pair preparation fences its full compiler presentation input until publication; retained
  * source/write authority thereafter follows the canonical semantic signature independently of styles.
  * Explicit ontology-use lists query existing neutral-source postings without acquisition or new indices.
+ * Startup admission defers catalog/cache/source work without discarding live demand or native edit fences.
  * Published graph repository for K-Plex. Eager sessions retain global source adoption; on-demand
  * sessions publish a body-free host baseline, then canonicalize bounded direct owners without global
  * inventory. Host-only count covers separate available local numbers from semantic/write authority;
@@ -92,6 +93,7 @@
  * Node imagery remains lazy presentation data. Live consent and a visual epoch fence cache reads,
  * pending durable-body results and mounted consumers without changing graph semantics or sources.
  */
+import type {TAbstractFile} from 'obsidian';
 import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
 import { canonicalWebUrl } from "../adapters/obsidian/urlIdentity";
 import { remapGraphEndpoint } from "./remapGraphEndpoint";
@@ -687,7 +689,9 @@ export class GraphIndex {
   private activeSnapshotGeneration: string | null = null;
   private nodeVisualCache = new Map<string, { signature: string; visual: NodeVisual | null }>();
   private nodeVisualRevision = 0;
-  constructor(private plugin: KplexPlugin, private app: App = plugin.app) {
+  /** Construct lifecycle-owned caches without admitting broad work. Production supplies its captured
+   * device strategy; legacy direct consumers retain the explicit settings strategy as a default. */
+  constructor(private plugin: KplexPlugin, private app: App = plugin.app, private preparationDeferred = false, mode = plugin.settings.indexingMode) {
     this.workScheduler = new ForegroundWorkScheduler({
       /** The plugin-global index and storage belong to the main application window. */
       now: () => window.performance.now(),
@@ -698,7 +702,8 @@ export class GraphIndex {
       /** Settings changes are scheduling-only and take effect at the next safe checkpoint. */
       throttle: () => plugin.settings.indexingThrottle,
     });
-    this.indexingMode = plugin.settings.indexingMode ?? "on-demand";
+    // Production passes its captured device strategy; direct legacy callers retain their supplied preference.
+    this.indexingMode = mode ?? "on-demand";
     this.presentationSettings = capturePresentationSettings(plugin.settings);
     this.fullSemanticSettings = graphCompilerSettingsFromLegacy(plugin.settings);
     this.indexedDb = new KplexIndexedDbCache(app.vault.getName(), () => this.workScheduler.checkpoint(INDEX_WORK_PRIORITY.background),
@@ -730,6 +735,36 @@ export class GraphIndex {
     // Remove the old parsed-body localStorage payload. IndexedDB is now the only durable index
     // cache; localStorage is a poor fit for large vaults because serialization duplicates memory.
     void this.indexedDb.clearLegacyLocalStorage(app);
+  }
+
+  /** Lightweight dormant invalidation reuses the source owner's coalesced native observations. */
+  observeDeferredHostChange(item: TAbstractFile, bodyChanged = true, oldPath?: string): void {
+    if (this.preparationDeferred && !this.diagnosticsClosed) {
+      this.sourceAcquisition.observeBeforeStart(item instanceof TFile ? item : undefined, bodyChanged, oldPath);
+      if (!(item instanceof TFile)) for (const path of this.urlOwnerEvents.keys()) {
+        if (!this.app.vault.getFileByPath(path)) this.urlOwnerEvents.delete(path);
+      }
+    }
+  }
+
+  /** The lifecycle owner grants this once, after layout/settings readiness or explicit view demand. */
+  admitPreparation(): void {
+    if (!this.preparationDeferred || this.diagnosticsClosed || this.persistentCachePurged) return;
+    this.preparationDeferred = false;
+    // Settings may have changed while dormant; no stale constructor policy becomes effective.
+    this.presentationSettings = capturePresentationSettings(this.plugin.settings);
+    this.fullSemanticSettings = graphCompilerSettingsFromLegacy(this.plugin.settings);
+    this.sourceAcquisition.start();
+    for (const path of this.semanticDemandCounts.keys()) this.startSemanticDemand(path);
+  }
+
+  /** A live view can register before layout-ready; admission later starts only its current demands. */
+  private startSemanticDemand(path: string): void {
+    if (this.preparationDeferred) return;
+    void this.withForegroundPriority(() => this.publishHostMetadataPreview(path), 1);
+    const maintenanceRevision = this.sourceAcquisition.getMaintenanceRevision();
+    if (this.usesLocalForeground()) void this.ensureOnDemandCenter(path);
+    else if (this.fullSemanticPolicyRevision !== this.semanticPolicyRevision || this.fullSemanticMaintenanceRevision !== maintenanceRevision) void this.ensureSemanticScope(path);
   }
 
   /** Session strategy, independent of restart-required setting edits. */
@@ -816,6 +851,7 @@ export class GraphIndex {
    * policy replacement retires that owner, and unchanged failures never create a retry timer.
    */
   initializeOnDemandBaseline(seedPaths: readonly string[] = []): Promise<boolean> {
+    if (this.preparationDeferred || this.diagnosticsClosed || this.persistentCachePurged) return Promise.resolve(false);
     if (this.onDemandBaselineReady) return Promise.resolve(true);
     if (this.onDemandBaselineTask) return this.onDemandBaselineTask;
     this.onDemandPartialState = true;
@@ -886,6 +922,7 @@ export class GraphIndex {
   /** Prepare finite readonly center incidence before joining broad startup work, then canonicalize
    * the center and at most 63 direct host candidates through the ordinary patch owner. */
   private ensureOnDemandCenter(centerPath: string): Promise<void> {
+    if (this.preparationDeferred) return Promise.resolve();
     if (!this.usesLocalForeground() || this.diagnosticsClosed || this.persistentCachePurged) return Promise.resolve();
     // A canonical owner may still await global startup work when a new native observation arrives.
     // Coalesce its finite presentation phase independently, before joining that broad promise.
@@ -1341,6 +1378,7 @@ export class GraphIndex {
 
   /** Prime native files/folders and loaded tag metadata once after layout-ready, without durable/body work. */
   async primePhysicalSearchCatalog(): Promise<void> {
+    if (this.preparationDeferred || this.diagnosticsClosed || this.persistentCachePurged) return;
     const inventory = this.app.vault.getAllLoadedFiles?.() ?? this.app.vault.getFiles();
     const files = new Map<string, TFile>(), folders: TFolder[] = [];
     for (const entry of inventory) {
@@ -1355,6 +1393,7 @@ export class GraphIndex {
   /** Publish a provisional host scope separately from every authoritative graph/evidence owner. */
   async publishHostMetadataPreview(centerPath: string,
     workPriority: IndexWorkPriority = INDEX_WORK_PRIORITY.currentNode): Promise<void> {
+    if (this.preparationDeferred || this.diagnosticsClosed || this.persistentCachePurged) return;
     const publication = this.publicationRevision;
     const sourceRevision = this.plugin.getIndexSourceRevision();
     const folder = centerPath.startsWith("folder:"), tag = this.hostPreview.hasTag(centerPath), structuralRevision = this.hostStructuralRevision;
@@ -1402,6 +1441,7 @@ export class GraphIndex {
     this.navigableSnapshotSourceRevision = null;
     this.folderGateInfo = new WeakMap();
     this.relationViewCache = new WeakMap();
+    if (this.preparationDeferred) return;
     // Run after the synchronous Vault listener has applied its delta/source revision. Recounting
     // before that boundary could certify a cover which the listener immediately supersedes.
     void Promise.resolve().then(/** Refresh only currently demanded folder centers after synchronous host reconciliation. */ async () => {
@@ -2230,10 +2270,7 @@ export class GraphIndex {
     this.semanticDemandCounts.set(path, previous + 1);
     this.releasedSemanticScopePaths.delete(path);
     if (previous === 0) this.semanticDemandRevision.set(path, (this.semanticDemandRevision.get(path) ?? 0) + 1);
-    void this.withForegroundPriority(() => this.publishHostMetadataPreview(path), 1);
-    const maintenanceRevision = this.sourceAcquisition.getMaintenanceRevision();
-    if (this.usesLocalForeground()) void this.ensureOnDemandCenter(path);
-    else if (this.fullSemanticPolicyRevision !== this.semanticPolicyRevision || this.fullSemanticMaintenanceRevision !== maintenanceRevision) void this.ensureSemanticScope(path);
+    this.startSemanticDemand(path);
     let released = false;
     return () => {
       if (released) return;
@@ -2282,6 +2319,7 @@ export class GraphIndex {
 
   /** Prepare all active centers for the current policy; no full/source rebuild is scheduled here. */
   async refreshSemanticSettings(): Promise<void> {
+    if (this.preparationDeferred) {this.fullSemanticSettings = graphCompilerSettingsFromLegacy(this.plugin.settings); return;}
     if (this.usesLocalForeground()) {
       this.fullSemanticSettings = graphCompilerSettingsFromLegacy(this.plugin.settings);
       this.onDemandIndexed.clear();
@@ -2725,6 +2763,7 @@ export class GraphIndex {
 
   /** Coalesce one center/revision request and reject stale completion through the captured demand token. */
   private ensureSemanticScope(centerPath: string): Promise<void> {
+    if (this.preparationDeferred) return Promise.resolve();
     if (this.pendingStructuralTasks > 0) return Promise.resolve();
     // A complete current publication already owns aliases, outgoing relationships and search.
     // Do not replace it with a narrower source projection on navigation or a stale task's retry.
@@ -3052,6 +3091,7 @@ export class GraphIndex {
    * supersession can retry only an event already coalesced while this task was running.
    */
   refreshVisiblePresentation(path: string): Promise<void> {
+    if (this.preparationDeferred) return Promise.resolve();
     const entry = this.visiblePresentation.get(path);
     if (!entry || this.diagnosticsClosed || this.persistentCachePurged) return Promise.resolve();
     entry.revision += 1;
@@ -3214,6 +3254,7 @@ export class GraphIndex {
    * only meaningful facet/search changes supersede that work. Source publication/unload still fence it.
    */
   async refreshPresentationSettings(): Promise<void> {
+    if (this.preparationDeferred) {this.presentationSettings = capturePresentationSettings(this.plugin.settings); return;}
     const run = ++this.presentationRun;
     const alive = (): boolean => !this.diagnosticsClosed && run === this.presentationRun;
     const started = performance.now();
@@ -4081,6 +4122,7 @@ export class GraphIndex {
 
   /** Always scan missing/modified owners with bounded parallel native reads and the canonical parser. */
   startBackgroundUrlIndex(): Promise<boolean> {
+    if (this.preparationDeferred) return Promise.resolve(false);
     if (this.persistentCachePurged || this.diagnosticsClosed) return Promise.resolve(false);
     if (this.urlBackgroundTask) return this.urlBackgroundTask;
     this.urlDiscoveryRunning = true;
@@ -4116,7 +4158,7 @@ export class GraphIndex {
           if (bytes >= byteBudget) break;
         }
         await Promise.all(group.map(/** Native I/O overlaps; parser and canonical publication remain bounded by this wave. */
-          file => this.refreshUrlOwner(file.path, false, fileRevisionMatches(file, cachedRevisions.get(file)!)
+          file => this.refreshUrlOwner(file.path, false, !(this.urlOwnerEvents.get(file.path) ?? 0) && fileRevisionMatches(file, cachedRevisions.get(file)!)
             ? cachedBodies.get(file.path) : undefined, undefined, true)));
         this.urlDiscoveryProcessed += group.length;
       }
@@ -4214,6 +4256,13 @@ export class GraphIndex {
   refreshUrlOwner(path: string, changed = true, cachedBody?: ParsedBodyMetadata, acquired?: Readonly<{ body: ParsedBodyMetadata; file: TFile; revision: FileRevision; frontmatter?: Record<string, unknown> }>, background = false,
     releaseSourcePublicationTurn = false): Promise<void> {
     if (this.diagnosticsClosed || this.persistentCachePurged) return Promise.resolve();
+    if (this.preparationDeferred) {
+      if (changed) {
+        if (this.app.vault.getFileByPath(path)) this.urlOwnerEvents.set(path, (this.urlOwnerEvents.get(path) ?? 0) + 1);
+        else this.urlOwnerEvents.delete(path);
+      }
+      return Promise.resolve();
+    }
     if (!background) this.foregroundUrlOwners.add(path);
     if (changed) {
       this.urlDiscoveryComplete = false; this.publishedUrlComplete = false;
@@ -5823,6 +5872,7 @@ export class GraphIndex {
    * wait; URL and graph owners keep their separate watchdogs, cancellation and late-result fences.
    */
   async restorePersistedSnapshot(seedPaths: readonly string[] = []): Promise<{ restored: boolean; fresh: boolean; createdAt: number | null; partial?: boolean }> {
+    if (this.preparationDeferred) return {restored: false, fresh: false, createdAt: null};
     this.cancelSnapshotRestoreWait?.();
     const request = ++this.snapshotRestoreRequest;
     if (this.diagnosticsClosed || this.persistentCachePurged) return { restored: false, fresh: false, createdAt: null };

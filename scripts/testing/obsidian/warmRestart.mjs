@@ -72,7 +72,7 @@ const sampleCode=String.raw`(/** Read existing aggregate diagnostics without acq
    centerKey:require('node:crypto').createHash('sha256').update(p.settings.lastActivePath??'').digest('hex'),
    expectedCenter:${JSON.stringify(process.env.KPLEX_RESTART_CENTER??null)}===null?null:p.settings.lastActivePath===${JSON.stringify(process.env.KPLEX_RESTART_CENTER??null)},
    expectedDemand:${JSON.stringify(process.env.KPLEX_RESTART_CENTER??null)}===null?null:i.semanticDemandCounts.size>0&&[...i.semanticDemandCounts.keys()].every(/** Validate actual visible demand without exporting source identities. */ path=>path===${JSON.stringify(process.env.KPLEX_RESTART_CENTER??null)})},
-  mode:{indexing:p.settings.indexingMode,urls:p.settings.urlIndexingMode,throttle:p.settings.indexingThrottle,updateIntervalMs:p.settings.indexUpdateInterval},
+  mode:{indexing:p.index.isOnDemandMode()?'on-demand':'eager',urls:p.settings.urlIndexingMode,throttle:p.settings.indexingThrottle,updateIntervalMs:p.settings.indexUpdateInterval},
   graph:{nodes:i.size,fingerprints:i.indexedMarkdownFileCount(),full:i.isFullSnapshotHydrated(),navigable:!!i.warmSourceRecoveryAvailable||i.isFullSnapshotHydrated(),fresh:!!i.fullSnapshotFresh,sourceSemantics:!!i.sourceBackedSemantics,sourceBacked:!!i.sourceBackedStartup,vocabulary:!!i.sourceNodeVocabularyPublished,
    declarations:i.state.evidence.declarationCount},hydration:h,startup:d,source:i.getSourceAcquisitionCounters(),url:i.getUrlIndexProgress(),
   sourceRepository:Object.fromEntries(['activated','unsaved','empty','chunksWritten','bytesWritten','readFailures','sequenceMin','sequenceMax','peakDecodeBytes'].map(/** Export fixed aggregate fields only. */ key=>[key,Number.isFinite(repository[key])?repository[key]:null])),
@@ -304,7 +304,7 @@ try{
     backup();
     evaluate("(/** Retire live preferences before the owned disposable configuration change. */ async()=>{await app.plugins.disablePlugin('k-plex');return JSON.stringify({disabled:!app.plugins.plugins['k-plex']})})()");
     const path=join(target.pluginDir,'data.json'),data=JSON.parse(readFileSync(path,'utf8'));
-    data.indexingMode='eager';if(process.env.KPLEX_RESTART_CENTER)data.lastActivePath=process.env.KPLEX_RESTART_CENTER;
+    data.indexingModeDesktop='eager';data.indexingMode='eager';if(process.env.KPLEX_RESTART_CENTER)data.lastActivePath=process.env.KPLEX_RESTART_CENTER;
     writeFileSync(path,JSON.stringify(data,null,2));
     startTask("await app.plugins.enablePlugin('k-plex');return {enabled:!!app.plugins.plugins['k-plex']}");await taskDone();await settled();
     startTask("const p=app.plugins.plugins['k-plex'],i=p.index;const alreadyCompiled=i.isFullSnapshotHydrated()&&!i.sourceBackedSemantics&&i.indexedMarkdownFileCount()===app.vault.getMarkdownFiles().length;const built=alreadyCompiled?false:await i.rebuild();if(!alreadyCompiled&&!built)throw Error('Full build rejected');i.cancelPendingPersistence();const saved=await i.persistIndexedDbSnapshot(i.snapshotPersistGeneration);if(!saved)throw Error('Complete save rejected');return {built,alreadyCompiled,saved}");

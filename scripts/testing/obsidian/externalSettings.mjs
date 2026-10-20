@@ -66,7 +66,7 @@ function start(){
  c.checkReceipt=()=>{
   check(c.counts.callbacks>0,'Native host callback absent');check(p.settings.baseNodeStyle.borderColor==='#12ab34'&&p.settings.hoverHighlightRequiresAlt===false,'Live settings not adopted');
   check(!p.isActionPublished('search.focus'),'Received action publication remained stale');
-  check((p.index.isOnDemandMode()?'on-demand':'eager')===c.initialMode&&p.settings.indexingMode!==c.initialMode,'Received stored mode changed the active session');
+  check((p.index.isOnDemandMode()?'on-demand':'eager')===c.initialMode&&p.settings.indexingModeDesktop!==c.initialMode,'Received stored mode changed the active session');
   check(c.nodes.every((node,i)=>node===center(rootOf(c.leaves[i]))&&node.isConnected),'Color-only receipt replaced graph DOM/center');
   for(const node of c.nodes)check(node.ownerDocument.defaultView.getComputedStyle(node).borderTopColor==='rgb(18, 171, 52)','An open Plex retained old paint');
   check(!row().querySelector('.checkbox-container').classList.contains('is-enabled'),'Actual Settings row did not refresh');
@@ -118,14 +118,14 @@ function start(){
 
 const report={status:'running',node:process.version,startedAt:new Date().toISOString(),artifacts,requestedMode:requestedMode??'existing',scope:'real external settings file replacement; functional counts, not comparative performance'};
 try{
- if(requestedMode){const data=JSON.parse(readFileSync(dataFile,'utf8'));data.indexingMode=requestedMode;writeFileSync(dataFile,JSON.stringify(data,null,2));cli('plugin:disable','id=k-plex');cli('plugin:enable','id=k-plex');await until('Boolean(app.plugins.plugins["k-plex"]?.settingsReconciliation&&!app.plugins.plugins["k-plex"].isStartupInitializing())','Requested session reload deadline');}
+ if(requestedMode){const data=JSON.parse(readFileSync(dataFile,'utf8'));data.indexingModeDesktop=requestedMode;data.indexingMode=requestedMode;writeFileSync(dataFile,JSON.stringify(data,null,2));cli('plugin:disable','id=k-plex');cli('plugin:enable','id=k-plex');await until('Boolean(app.plugins.plugins["k-plex"]?.settingsReconciliation&&!app.plugins.plugins["k-plex"].isStartupInitializing())','Requested session reload deadline');}
  report.obsidian=cli('version');evaluate('('+start.toString()+')()');
  await until('Boolean(window.__kplexSettingsProbe?.phase==="ready"||window.__kplexSettingsProbe?.error)','Fixture setup deadline');assert.equal(evaluate('window.__kplexSettingsProbe.error??null'),null);
  report.sessionMode=evaluate('window.__kplexSettingsProbe.initialMode');if(requestedMode)assert.equal(report.sessionMode,requestedMode,'Requested session mode was not established');
  const incoming=JSON.parse(readFileSync(dataFile,'utf8')),theme=incoming.appearanceThemes.themes.find(theme=>theme.id===incoming.appearanceThemes.selectedId);
  theme.appearance.base.baseNodeStyle.borderColor='#12ab34';theme.appearance.base.centralNodeStyle.borderColor='#12ab34';incoming.baseNodeStyle.borderColor='#12ab34';incoming.centralNodeStyle.borderColor='#12ab34';incoming.hoverHighlightRequiresAlt=false;
  incoming.actionPreferences.publishedCommands['search.focus']=false;
- incoming.indexingMode=evaluate('window.__kplexSettingsProbe.initialMode')==='eager'?'on-demand':'eager';
+ incoming.indexingModeDesktop=evaluate('window.__kplexSettingsProbe.initialMode')==='eager'?'on-demand':'eager';
  writeFileSync(dataFile,JSON.stringify(incoming,null,2));
  await until('Boolean(window.__kplexSettingsProbe?.counts.callbacks>0&&app.plugins.plugins["k-plex"].settings.baseNodeStyle.borderColor==="#12ab34"&&!app.plugins.plugins["k-plex"].externalSettingsQueued)','Real onExternalSettingsChange delivery deadline');
  await wait(400);evaluate('window.__kplexSettingsProbe.checkReceipt()');evaluate('window.__kplexSettingsProbe.localEdit()');

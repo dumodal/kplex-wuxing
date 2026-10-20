@@ -115,7 +115,7 @@ function installProbe(mode) {
     // requiring startup readiness rather than waiting on an unopened surface.
     await p.activateView();
     await until(() => document.hasFocus() && !document.hidden && !p.isStartupInitializing(), "Foreground/startup prerequisites missing");
-    check(p.settings.indexingMode === mode, "Wrong real indexing mode");
+    check((p.settings.indexingModeDesktop??p.settings.indexingMode) === mode, "Wrong real indexing mode");
     await app.vault.createFolder(folder); c.owned = true;
     await app.vault.createFolder(folder + "/Nested"); await app.vault.createFolder(folder + "/Other");
     c.a = folder + "/Origin.md"; c.b = await app.vault.create(folder + "/Old.md", "# Original\n");
@@ -255,7 +255,7 @@ try {
   }
   settings = evaluate("JSON.stringify(app.plugins.plugins['k-plex'].settings)");
   for (const mode of ["on-demand", "eager"]) {
-    evaluate(`JSON.stringify((()=>{const p=app.plugins.plugins['k-plex'];p.settings.indexingMode=${JSON.stringify(mode)};p.saveSettings(false,false);return true})())`);
+    evaluate(`JSON.stringify((()=>{const p=app.plugins.plugins['k-plex'];p.settings.indexingModeDesktop=${JSON.stringify(mode)};p.settings.indexingMode=${JSON.stringify(mode)};p.saveSettings(false,false);return true})())`);
     evaluate("JSON.stringify((()=>{window.__kplexRenameSaved=false;app.plugins.plugins['k-plex'].settingsWriteQueue.then(()=>window.__kplexRenameSaved=true);return true})())");
     const end = Date.now() + 30_000;
     while (!evaluate("JSON.stringify(window.__kplexRenameSaved)")) { assert(Date.now() < end); await delay(100); }

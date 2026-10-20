@@ -100,7 +100,7 @@ function install(resourceFactory){
 /** Observe exact native scalar owners; never call getIndexStatus(), inventory, source flush or scan. */
 function launch(quietSeconds){
  const c=window.__kplex174SmallChange,p=app.plugins.plugins['k-plex'],i=p.index,a=i.sourceAcquisition,r=a.repository,cache=i.indexedDb;
- if(i.isOnDemandMode()||p.settings.indexingMode!=='eager')throw Error('Actual Eager session required after plugin restart');
+ if(i.isOnDemandMode()||(p.settings.indexingModeDesktop??p.settings.indexingMode)!=='eager')throw Error('Actual Eager session required after plugin restart');
  c.p=p;c.index=i;
  /** Read only existing bounded tokens/scalars; the granted callback itself reads graph scalars. */
  c.folderProof=()=>{
@@ -170,7 +170,7 @@ function launch(quietSeconds){
   app.workspace.setActiveLeaf(c.host,{focus:true});c.focus();p.notifyNavigation(c.folder+'/Anchor.md');
   await c.until(()=>c.host.view.contentEl.querySelector('.kplex-role-center')?.dataset.kplexPath===c.folder+'/Anchor.md','Fixed center missing');
   await c.drain('Initial Eager source/graph/cache drain missing');observeEvents();
-  c.mode={actual:i.isOnDemandMode()?'on-demand':'eager',settings:p.settings.indexingMode,urls:p.settings.urlIndexingMode,throttle:p.settings.indexingThrottle,intervalMs:p.settings.indexUpdateInterval};
+  c.mode={actual:i.isOnDemandMode()?'on-demand':'eager',settings:p.settings.indexingModeDesktop??p.settings.indexingMode,urls:p.settings.urlIndexingMode,throttle:p.settings.indexingThrottle,intervalMs:p.settings.indexUpdateInterval};
   /** One interval ends after all genuine queues/leases have drained; no forced work or synthetic close. */
   const interval=async(label,action)=>{
    if(c.cancelled)throw Error('Native probe cancelled');
@@ -258,8 +258,8 @@ try{
  const baseline=evaluate(`(${install.toString()})(${createStartupResourceProbe.toString()})`);installed=true;
  save('private/runtime.json',baseline);
  report.preflight={inventoryCount:baseline.inventoryCount,originalActualMode:baseline.originalActualMode,ownedFolder:baseline.folder,host:baseline.host,foreground:baseline.foreground};
- assert.equal(baseline.originalActualMode,baseline.settings.indexingMode??'on-demand','Resolve a pre-existing pending strategy change before this pilot');
- evaluate(`(async()=>{const c=window.__kplex174SmallChange,p=app.plugins.plugins['k-plex'];Object.assign(p.settings,{indexingMode:'eager',followActiveFile:false,documentSyncMode:'off',embedCentralNode:false});await p.saveSettings(false,false);await p.settingsWriteQueue;return JSON.stringify({saved:true})})()`);modeChanged=true;
+ assert.equal(baseline.originalActualMode,baseline.settings.indexingModeDesktop??baseline.settings.indexingMode??'on-demand','Resolve a pre-existing pending strategy change before this pilot');
+ evaluate(`(async()=>{const c=window.__kplex174SmallChange,p=app.plugins.plugins['k-plex'];Object.assign(p.settings,{indexingModeDesktop:'eager',indexingMode:'eager',followActiveFile:false,documentSyncMode:'off',embedCentralNode:false});await p.saveSettings(false,false);await p.settingsWriteQueue;return JSON.stringify({saved:true})})()`);modeChanged=true;
  cli('plugin:disable','id=k-plex');
  report.setup=evaluate(`(async()=>{const c=window.__kplex174SmallChange;if(app.vault.getFolderByPath(c.folder))throw Error('Owned fixture collision');await app.vault.createFolder(c.folder);c.ownsFolder=true;await app.vault.createFolder(c.folder+'/Existing');await app.vault.create(c.folder+'/Anchor.md','Causal anchor.\\n');return JSON.stringify({created:true})})()`);
  cli('plugin:enable','id=k-plex');

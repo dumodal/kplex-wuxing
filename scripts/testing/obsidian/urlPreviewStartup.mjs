@@ -32,7 +32,7 @@ async function scenario(app,c){
     await until(/** Native metadata and independent URL persistence settle before baseline seeding. */ ()=>app.metadataCache.getFileCache(file)&&p.getIndexStatus().upToDate,'Owned note readiness');
     await p.index.refreshUrlOwner(path,false);await p.index.persistUrlOwner(path);
     for(const mode of ['eager','on-demand']){
-      p=app.plugins.plugins['k-plex'];p.settings.indexingMode=mode;p.settings.lastActivePath=path;p.settings.sidecarOpen=false;p.settings.documentSyncMode='off';await p.saveSettings(false,false);
+      p=app.plugins.plugins['k-plex'];p.settings.indexingModeDesktop=mode;p.settings.indexingMode=mode;p.settings.lastActivePath=path;p.settings.sidecarOpen=false;p.settings.documentSyncMode='off';await p.saveSettings(false,false);
       const plugin={app,settings:{...structuredClone(p.settings),indexingMode:'eager'},manifest:{...p.manifest,dir:undefined},getIndexSourceRevision:/** Preserve native event revision fences. */ ()=>p.getIndexSourceRevision(),notifyStartupProgress:/** Seeding is outside the actual measured bootstrap. */ ()=>undefined};
       seed=new p.index.constructor(plugin,app);
       const physical={mtime:file.stat.mtime,size:file.stat.size,ctime:file.stat.ctime};

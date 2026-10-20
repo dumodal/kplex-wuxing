@@ -33,9 +33,12 @@
  * indexing; current host metadata drives subsequent graph reconciliation and editor completion.
  * Creation dialogs choose vault-relative destinations from folder metadata; explicit placeholder
  * relocation approves bounded native reference occurrences and retains partial-write recovery locally.
+ * Device-specific startup admission and strategy are captured once; actual views and explicit work
+ * share the existing initialization owners. Dormant native changes retain coalesced validity fences.
  * Ontology text drafts persist one guarded field through the existing settings queue before live
  * semantic publication; slow refresh remains outside the disk queue and cannot replay failed saves.
  */
+import {startupIndexPolicy} from './core/plex/startupIndexPreferences';
 import { tagMembershipPair } from "./ui/structuralConnectionActions";
 import {SettingsReconciliation, type SettingsSnapshot, type SettingsWriteIntent} from "./adapters/obsidian/settingsReconciliation";
 import {assertExternalSettingsRecord} from "./adapters/obsidian/settingsInput";
@@ -220,7 +223,15 @@ export default class KplexPlugin extends Plugin {
   private readonly preRestoreMarkdownPaths = new Map<string, number>();
   private preRestoreListenerCleanup: (() => void) | null = null;
   private openKplexViews = 0;
+  private indexViewOpened = false;
   private layoutReady = false;
+  private startupIndexPolicy: ReturnType<typeof startupIndexPolicy> = {device: "desktop", beforeView: true, mode: "eager"};
+  private indexPreparationTask: Promise<void> | null = null;
+  private indexPreparationAdmitted = false;
+  private explicitIndexPreparationRequested = false;
+  private indexSearchPrimed = false;
+  private preRestoreDormantChanges = false;
+  private readonly layoutReadyWaiters = new Set<() => void>();
   private metadataStabilized = false;
   private metadataStabilityPromise: Promise<number> | null = null;
   private readonly indexBacklogReasons = new Set<string>();
@@ -333,6 +344,7 @@ export default class KplexPlugin extends Plugin {
     // A persisted record is an existing installation even when newer fields/old flags are absent.
     const alreadyKplex = hasOwnData;
     this.settings = migrateAndMergeSettings(ownData);
+    this.startupIndexPolicy = startupIndexPolicy(this.settings, readObsidianPresentationEnvironment().device);
     const actionMigration = migrateActionPreferences(ownData, readObsidianPresentationEnvironment().keyConvention);
     this.settings.actionPreferences = actionMigration.preferences;
     this.actionPreferenceUnsupportedVersion = actionMigration.unsupportedVersion;
@@ -349,14 +361,15 @@ export default class KplexPlugin extends Plugin {
     }
 
     this.startupDiagnostics.mark("settings-loaded");
-    this.index = new GraphIndex(this);
+    this.index = new GraphIndex(this, this.app, true, this.startupIndexPolicy.mode);
+    this.installPreRestoreChangeFence();
     this.index.primeSavedNavigation([this.settings.lastActivePath, ...this.settings.navigationHistory.slice(-14), ...this.settings.pinnedNodes]);
     this.registerMarkdownZoomPreferenceListeners();
     // URL acquisition is independent of MetadataCache, local graph preparation and full Eager inventory.
     this.registerEvent(this.app.vault.on("modify", /** Retire exact URL facts on content edits, including equal-stat writes. */
       file => { if (file instanceof TFile && file.extension === "md") void this.index.refreshUrlOwner(file.path); }));
     this.registerEvent(this.app.vault.on("create", /** New Markdown owners join the independent URL cache. */
-      file => { if (file instanceof TFile && file.extension === "md" && this.layoutReady) void this.index.refreshUrlOwner(file.path); }));
+      file => { if (file instanceof TFile && file.extension === "md") void this.index.refreshUrlOwner(file.path); }));
     this.registerEvent(this.app.vault.on("delete", /** Deleted owners cannot retain URL reference counts. */
       file => { if (file instanceof TFile && file.extension === "md") void this.index.refreshUrlOwner(file.path); }));
     this.registerEvent(this.app.vault.on("rename", /** Old URL source coordinates retire before the renamed owner publishes. */
@@ -475,12 +488,11 @@ export default class KplexPlugin extends Plugin {
 
         if (this.unloading) return;
         this.layoutReady = true;
-        void this.index.startBackgroundUrlIndex();
+        for (const resolve of this.layoutReadyWaiters) resolve();
+        this.layoutReadyWaiters.clear();
         this.startupDiagnostics.mark("layout-ready");
-        await this.index.primePhysicalSearchCatalog();
-        if (this.unloading) return;
-        const hostCenter = this.startupGraphSeedPaths()[0];
-        if (hostCenter) void this.index.withForegroundPriority(() => this.index.publishHostMetadataPreview(hostCenter), 1);
+        this.registerOntologyContextMenu();
+        this.prepareIndexIfRequested();
 
         // Re-associate a persisted sidecar before normal recent-tab synchronization is allowed to
         // run. This uses only Obsidian's restored workspace geometry/view state; it must not wait
@@ -505,44 +517,6 @@ export default class KplexPlugin extends Plugin {
           this.notifySidecar();
         }, 3000);
 
-        // Restore only after Obsidian's workspace/vault layout is ready. Restoring earlier can
-        // temporarily hydrate real files as virtual nodes on mobile while the vault tree is still
-        // settling, producing the misleading "ghost then real" startup scene.
-        const startupSeedPaths = this.startupGraphSeedPaths();
-        const restoreStarted = perfNow();
-        this.supportEvents.record("cache-restore-start", { category: "cache" });
-        let restored: Awaited<ReturnType<GraphIndex["restorePersistedSnapshot"]>>;
-        try {
-          this.snapshotRestoreTask ??= this.index.restorePersistedSnapshot(startupSeedPaths);
-          restored = await this.snapshotRestoreTask;
-        } catch (error) {
-          this.supportEvents.record("cache-restore-failure", { category: "cache", outcome: "failed", durationMs: perfNow() - restoreStarted });
-          throw error; // Preserve the existing startup rejection; diagnostics do not repair or retry it.
-        }
-        if (this.unloading) return;
-        this.supportEvents.record("cache-restore-end", { category: "cache", outcome: restored.restored ? "complete" : "unavailable", durationMs: perfNow() - restoreStarted });
-        if (restored.restored) {
-          await this.refreshBookmarkedEntryPoints();
-        }
-        if (this.unloading) return;
-        this.classifyPreRestoreChanges(restored.fresh);
-        if (!restored.fresh) {
-          this.indexDirtyRevision += 1;
-          this.indexBacklogReasons.add(restored.restored ? "startup:stale-snapshot" : "startup:no-snapshot");
-        }
-
-        this.preRestoreListenerCleanup?.();
-        this.registerReactiveIndexListeners();
-        this.registerOntologyContextMenu();
-        // Prewarm exactly once per Obsidian session when it is safe to do so. A fresh persisted
-        // semantic snapshot makes this effectively free. On iOS, a first-ever large-vault cold
-        // scan is deferred until K-Plex is actually opened: repeatedly rebuilding 20k notes in a
-        // hidden WebView was responsible for a restart loop on iPad. The per-file IndexedDB body
-        // checkpoints still let an interrupted first scan resume instead of starting at file zero.
-        const noteCount = this.app.vault.getMarkdownFiles().length;
-        const largeIosExpensiveRebuild = !this.index.isOnDemandMode() && Platform.isIosApp && !restored.fresh && !this.index.hasPendingSnapshotHydration() &&
-          (!restored.restored || !this.index.hasIncrementalRestorePatch()) && noteCount > 5000;
-        if (!largeIosExpensiveRebuild) void this.finishStartupIndexPreparation();
       })();
     });
   }
@@ -602,6 +576,8 @@ export default class KplexPlugin extends Plugin {
 
   /** Release action publications, surface registrations and host resources before index teardown. */
   onunload(): void {
+    for (const resolve of this.layoutReadyWaiters) resolve();
+    this.layoutReadyWaiters.clear();
     this.unloading = true;
     this.savedSettingsRefresh?.close();
     this.settingsReconciliation?.dispose();
@@ -706,15 +682,16 @@ export default class KplexPlugin extends Plugin {
     // Keep only events that arrived while snapshot preview/hydration was loading.
     const inventoryRevision = this.index.getRestoreInventorySourceRevision();
     this.preRestoreUncoveredChanges = this.preRestoreChanged &&
-      (inventoryRevision === null || inventoryRevision !== this.indexDirtyRevision);
+      (this.preRestoreDormantChanges || inventoryRevision === null || inventoryRevision !== this.indexDirtyRevision);
     if (this.preRestoreUncoveredChanges) {
       for (const [reason, revision] of this.preRestoreReasons) {
-        if (inventoryRevision === null || revision > inventoryRevision) this.indexBacklogReasons.add(reason);
+        if (this.preRestoreDormantChanges || inventoryRevision === null || revision > inventoryRevision) this.indexBacklogReasons.add(reason);
       }
       for (const [path, revision] of this.preRestoreMarkdownPaths) {
-        if (inventoryRevision === null || revision > inventoryRevision) this.dirtyMarkdownPaths.add(path);
+        if (this.preRestoreDormantChanges || inventoryRevision === null || revision > inventoryRevision) this.dirtyMarkdownPaths.add(path);
       }
     }
+    this.preRestoreDormantChanges = false;
     this.preRestoreReasons.clear();
     this.preRestoreMarkdownPaths.clear();
     this.indexDirty = !snapshotFresh || this.preRestoreUncoveredChanges || this.indexBacklogReasons.size > 0;
@@ -725,6 +702,7 @@ export default class KplexPlugin extends Plugin {
     if (this.preRestoreListenerCleanup) return;
     const mark = (reason: string, file?: TFile): void => {
       this.preRestoreChanged = true;
+      this.preRestoreDormantChanges ||= !this.indexPreparationAdmitted;
       this.indexDirtyRevision += 1;
       this.preRestoreReasons.set(reason, this.indexDirtyRevision);
       if (file?.extension === "md") this.preRestoreMarkdownPaths.set(file.path, this.indexDirtyRevision);
@@ -733,23 +711,34 @@ export default class KplexPlugin extends Plugin {
       this.index.invalidateHostStructure();
       mark(item instanceof TFile && item.extension === "md" ? "vault:create-markdown" : "vault:create",
         item instanceof TFile ? item : undefined);
+      if (!this.indexPreparationAdmitted) {this.index.observeDeferredHostChange(item); return;}
       if (item instanceof TFile) this.index.updateHostFileAvailability(item.path, item);
       else if (item instanceof TFolder) void this.index.updateHostFolderAvailability(item.path, item);
     });
     const deleted = this.app.vault.on("delete", (item) => {
       this.index.invalidateHostStructure();
       mark("vault:delete", item instanceof TFile ? item : undefined);
+      if (!this.indexPreparationAdmitted) {
+        for (const path of this.preRestoreMarkdownPaths.keys()) {
+          if (path === item.path || item instanceof TFolder && path.startsWith(item.path + "/")) this.preRestoreMarkdownPaths.delete(path);
+        }
+        this.index.observeDeferredHostChange(item); return;
+      }
       if (item instanceof TFile) this.index.updateHostFileAvailability(item.path);
       else if (item instanceof TFolder) void this.index.updateHostFolderAvailability(item.path);
     });
     const renamed = this.app.vault.on("rename", (item, oldPath) => {
       this.index.invalidateHostStructure();
       mark("vault:rename", item instanceof TFile ? item : undefined);
+      if (!this.indexPreparationAdmitted) {
+        this.preRestoreMarkdownPaths.delete(oldPath);
+        this.index.observeDeferredHostChange(item, true, oldPath); return;
+      }
       if (item instanceof TFile) this.index.updateHostFileAvailability(oldPath, item);
       else if (item instanceof TFolder) void this.index.updateHostFolderAvailability(oldPath, item);
     });
     const resolved = this.app.metadataCache.on("resolve", (file) => {
-      if (this.app.vault.getFileByPath(file.path) === file) {
+      if (this.indexPreparationAdmitted && this.app.vault.getFileByPath(file.path) === file) {
         this.index.refreshVisibleHostMetadataPreviews(file.path);
         void this.index.refreshVisiblePresentation(file.path);
       }
@@ -758,13 +747,20 @@ export default class KplexPlugin extends Plugin {
       if (this.app.vault.getFileByPath(file.path) !== file) return;
       const previousSourceRevision = this.indexDirtyRevision;
       mark("metadata:changed", file);
+      if (!this.indexPreparationAdmitted) {this.index.observeDeferredHostChange(file, false); return;}
       void this.index.refreshVisiblePresentation(file.path);
       if (this.index.refreshVisibleHostMetadataPreviews(file.path, previousSourceRevision)) this.scheduleVisibleMetadataRefresh(file.path);
+    });
+    const modified = this.app.vault.on("modify", file => {
+      if (!(file instanceof TFile) || file.extension !== "md") return;
+      mark("metadata:changed", file);
+      if (!this.indexPreparationAdmitted) this.index.observeDeferredHostChange(file, true);
     });
     let released = false;
     const release = (): void => {
       if (released) return;
       released = true;
+      this.app.vault.offref(modified);
       this.app.vault.offref(created);
       this.app.vault.offref(deleted);
       this.app.vault.offref(renamed);
@@ -838,6 +834,10 @@ export default class KplexPlugin extends Plugin {
     if (folder) for (const path of [...this.dirtyMarkdownPaths]) {
       const next = remap(path);
       if (next !== path) { this.dirtyMarkdownPaths.delete(path); this.dirtyMarkdownPaths.add(next); }
+    }
+    for (const [path, revision] of [...this.preRestoreMarkdownPaths]) {
+      const next = remap(path);
+      if (next !== path) {this.preRestoreMarkdownPaths.delete(path);this.preRestoreMarkdownPaths.set(next, revision);}
     }
     return changed;
   }
@@ -1110,6 +1110,7 @@ export default class KplexPlugin extends Plugin {
 
   async onKplexViewOpened(hostLeaf?: WorkspaceLeaf, session?: KplexDocumentSession): Promise<void> {
     this.openKplexViews += 1;
+    this.indexViewOpened = true;
     if (!this.layoutReady) return;
     if (hostLeaf && (!session || this.documentSession(hostLeaf) === session)) void this.restorePersistedSidecar(hostLeaf);
     await this.ensureIndexReady("view-open");
@@ -1172,6 +1173,69 @@ export default class KplexPlugin extends Plugin {
     if (!this.unloading && this.initialIndexComplete && this.indexDirty && this.hasVisibleKplexSurface()) {
       this.scheduleRebuild("startup:post-initial-backlog");
     }
+  }
+
+  /** Admit the existing startup owners once; host setup and native view mounting never await it. */
+  private prepareIndexIfRequested(): void {
+    if (this.unloading || !this.layoutReady) return;
+    if (this.startupIndexPolicy.beforeView || this.indexViewOpened || this.explicitIndexPreparationRequested) {
+      void this.startIndexPreparation(!this.explicitIndexPreparationRequested).catch(error => console.error("K-Plex startup preparation failed", error));
+    }
+  }
+
+  /** Successful preparation is shared for this lifetime; incomplete initial indexing can resume. */
+  private startIndexPreparation(completeInitial = true): Promise<void> {
+    if (this.unloading || !this.layoutReady) return Promise.resolve();
+    if (this.indexPreparationTask) return this.indexPreparationTask;
+    this.indexPreparationAdmitted = true;
+    this.startupDiagnostics.mark("index-admitted");
+    const task = Promise.resolve().then(async () => {
+      if (this.unloading) return;
+      this.index.admitPreparation();
+      void this.index.startBackgroundUrlIndex();
+      if (!this.indexSearchPrimed) {
+        await this.index.primePhysicalSearchCatalog();
+        if (this.unloading) return;
+        this.indexSearchPrimed = true;
+      }
+      if (this.unloading) return;
+      const hostCenter = this.startupGraphSeedPaths()[0];
+      if (hostCenter) void this.index.withForegroundPriority(() => this.index.publishHostMetadataPreview(hostCenter), 1);
+      // Restore only after Obsidian's workspace/vault layout is ready. Restoring earlier can
+      // temporarily hydrate real files as virtual nodes on mobile while the vault tree is still
+      // settling, producing the misleading "ghost then real" startup scene.
+      const startupSeedPaths = this.startupGraphSeedPaths();
+      const restoreStarted = perfNow();
+      this.supportEvents.record("cache-restore-start", { category: "cache" });
+      let restored: Awaited<ReturnType<GraphIndex["restorePersistedSnapshot"]>>;
+      try {
+        this.snapshotRestoreTask ??= this.index.restorePersistedSnapshot(startupSeedPaths);
+        restored = await this.snapshotRestoreTask;
+      } catch (error) {
+        this.supportEvents.record("cache-restore-failure", { category: "cache", outcome: "failed", durationMs: perfNow() - restoreStarted });
+        this.snapshotRestoreTask = null;
+        throw error; // A later genuine demand may retry unavailable storage. No retry timer is added.
+      }
+      if (this.unloading) return;
+      this.supportEvents.record("cache-restore-end", { category: "cache", outcome: restored.restored ? "complete" : "unavailable", durationMs: perfNow() - restoreStarted });
+      if (restored.restored) {
+        await this.refreshBookmarkedEntryPoints();
+      }
+      if (this.unloading) return;
+      this.classifyPreRestoreChanges(restored.fresh);
+      if (!restored.fresh) {
+        this.indexDirtyRevision += 1;
+        this.indexBacklogReasons.add(restored.restored ? "startup:stale-snapshot" : "startup:no-snapshot");
+      }
+
+      this.preRestoreListenerCleanup?.();
+      this.registerReactiveIndexListeners();
+      if (completeInitial) await this.finishStartupIndexPreparation();
+    });
+    this.indexPreparationTask = task;
+    this.notifyIndexStatus();
+    void task.catch(() => {if (this.indexPreparationTask === task) this.indexPreparationTask = null;});
+    return task;
   }
 
   /** Join the existing startup authority; only a complete initial index retains the settled task. */
@@ -1304,13 +1368,28 @@ export default class KplexPlugin extends Plugin {
 
   async ensureIndexReady(reason = "view-open"): Promise<void> {
     if (!this.layoutReady) return;
+    await this.startIndexPreparation();
+    if (this.unloading) return;
     await this.ensureInitialIndex();
     if (this.unloading) return;
     await this.rebuildIndex(false, this.index.size === 0, reason);
   }
 
   async rebuildIndex(showNotice = false, force = false, reason = "direct"): Promise<void> {
+    const firstExplicit = !this.indexPreparationAdmitted && showNotice;
+    if (!this.indexPreparationAdmitted) {
+      if (!showNotice) return;
+      this.explicitIndexPreparationRequested = true;
+      if (!this.layoutReady && !this.unloading) await new Promise<void>(resolve => this.layoutReadyWaiters.add(resolve));
+      // The explicit builder supplies initial work; ordinary startup must not build it first.
+      await this.startIndexPreparation(false);
+      if (!this.indexPreparationAdmitted || this.unloading) return;
+    }
     await this.performRebuild(showNotice, force, reason, false);
+    if (firstExplicit && !this.unloading) {
+      this.initialIndexComplete = this.index.isOnDemandMode() ? this.index.hasLocalBaseline() : this.index.isFullSnapshotHydrated();
+      this.notifyIndexStatus();
+    }
   }
 
   /** Run the host rebuild workflow and report localized progress/completion while retaining the existing semantic publication and cancellation ownership. */
@@ -3512,7 +3591,7 @@ export default class KplexPlugin extends Plugin {
         surfaceKind: host?.view instanceof KplexSidepanelView ? "sidepanel" : host ? (owner === window ? "tab" : "popout") : "unavailable",
       },
       indexingPreferences: {
-        indexingMode: this.settings?.indexingMode, urlIndexingMode: this.settings?.urlIndexingMode,
+        indexingMode: this.index?.isOnDemandMode() ? "on-demand" : this.startupIndexPolicy.mode, urlIndexingMode: this.settings?.urlIndexingMode,
         indexingThrottle: this.settings?.indexingThrottle,
         excalidrawFitOnNodeOpen: this.settings?.excalidrawFitOnNodeOpen,
       },
@@ -3606,10 +3685,14 @@ export default class KplexPlugin extends Plugin {
   /** Aggregate readiness without scheduling; only product status reads may record strict readiness. */
   private computeIndexStatusFacts(totalFiles: number | null, recordReadiness = true): {
     upToDate: boolean;
-    phase: "ready" | "loading-cache" | "preparing" | "checking-cache" | "indexing" | "saving-cache" | "updating" | "incomplete";
+    phase: "ready" | "loading-cache" | "preparing" | "checking-cache" | "indexing" | "saving-cache" | "updating" | "incomplete" | "deferred";
     indexedFiles: number;
     totalFiles: number | null;
   } {
+    if (this.indexPreparationAdmitted === false) {
+      const awaitingView = !this.startupIndexPolicy.beforeView && !this.indexViewOpened && !this.explicitIndexPreparationRequested;
+      return {upToDate: false, phase: awaitingView ? "deferred" : "preparing", indexedFiles: 0, totalFiles};
+    }
     const loadingCache = this.index.hasPendingSnapshotHydration();
     const semanticPreparing = this.index.hasPendingSemanticPreparation();
     const startupIncomplete = !this.initialIndexComplete && this.initialSourceIndexIncomplete;
@@ -3654,7 +3737,7 @@ export default class KplexPlugin extends Plugin {
    */
   getIndexStatus(): {
     upToDate: boolean;
-    phase: "ready" | "loading-cache" | "preparing" | "checking-cache" | "indexing" | "saving-cache" | "updating" | "incomplete";
+    phase: "ready" | "loading-cache" | "preparing" | "checking-cache" | "indexing" | "saving-cache" | "updating" | "incomplete" | "deferred";
     label: string;
     indexedFiles: number;
     totalFiles: number;
@@ -3662,14 +3745,14 @@ export default class KplexPlugin extends Plugin {
     // Progressive publication can notify frequently in large vaults. Cache the vault-wide total
     // between lifecycle changes so status rendering remains O(1) instead of repeatedly allocating
     // the complete Markdown-file list for every published batch.
-    const totalFiles = this.cachedMarkdownFileCount ??= this.app.vault.getMarkdownFiles().length;
+    const totalFiles = this.indexPreparationAdmitted ? this.cachedMarkdownFileCount ??= this.app.vault.getMarkdownFiles().length : 0;
     const facts = this.computeIndexStatusFacts(totalFiles);
     const { phase, indexedFiles } = facts;
     const failure = phase === "incomplete" ? this.index.getSemanticPreparationFailure?.() : null;
     const searchFailure = phase === "incomplete" && !failure ? this.index.getSearchVocabularyFailure?.() : null;
     const aliasProgress = phase === "updating" ? this.index.getUrlAliasUpgradeProgress?.() : null;
     const urlProgress = this.index.getUrlIndexProgress();
-    const label = urlProgress.active
+    const label = phase === "deferred" ? this.translator("indexing.deferred") : urlProgress.active
       ? urlProgress.total === 0
         ? urlProgress.restored > 0
           ? this.translator("indexing.urlsRestoring", { restored: urlProgress.restored })
@@ -3741,6 +3824,7 @@ export default class KplexPlugin extends Plugin {
     const status = this.index ? this.computeIndexStatusFacts(this.cachedMarkdownFileCount, false) : null;
     return {
       ...this.startupDiagnostics.snapshot(),
+      admission: {...this.startupIndexPolicy, admitted: this.indexPreparationAdmitted},
       progress: { source: this.startupDiagnostics.progress("source"), hydration: this.startupDiagnostics.progress("hydration") },
       status,
       hydration: this.index?.getSnapshotHydrationDiagnostics() ?? null,

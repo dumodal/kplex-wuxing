@@ -3,7 +3,7 @@
  * managers. Foreign imports cannot change plugin workflow preferences; own persisted K-Plex keys
  * remain stable. Sparse device typography inherits shared defaults and native scope-qualified rows never write on initial render. Per-surface density preserves the legacy vertical key and migrates horizontal
  * density from the same saved value. All saves cross the plugin settings-impact classifier; the
- * injected translator owns display copy. Indexing strategy takes effect after restart; persistent
+ * injected translator owns display copy. Device indexing strategies and admission take effect after restart; persistent
  * cache estimates run only when their settings row is rendered, never during plugin startup.
  * Date fallback roles reinterpret cached facts through the semantic settings owner; absent/interim
  * preferences use Parent and foreign imports cannot overwrite the local default role.
@@ -26,6 +26,7 @@
  * Ontology text uses bounded local drafts, native row cleanup and the existing atomic field writer;
  * typing/composition never publishes transient hierarchy values or queues per-character graph work.
  */
+import {STARTUP_INDEX_DEFAULTS, sanitizeStartupIndexPreferences, type IndexingMode, type StartupIndexPreferences} from './core/plex/startupIndexPreferences';
 import { readObsidianPresentationEnvironment } from "./adapters/obsidian/presentationEnvironment";
 import {OntologyManagerModal} from "./ui/OntologyManagerModal";
 import {ontologyFieldViews,type OntologyFilter} from "./ui/features/ontologyPresentation";
@@ -144,7 +145,7 @@ export type SidecarMarkdownMode = "preview" | "source";
 export type AttachmentImageDisplay = "label" | "thumbnail-label" | "image";
 export type NewNodeType = "markdown" | "excalidraw";
 export type DocumentSyncMode = "off" | "recent" | "pinned";
-export type IndexingMode = "eager" | "on-demand";
+export type {IndexingMode} from "./core/plex/startupIndexPreferences";
 export type UrlIndexingMode = "on-demand" | "background";
 export type NodeSortOrder = "name-asc" | "name-desc" | "modified-desc" | "modified-asc" | "created-desc" | "created-asc" | "connections-desc" | "connections-asc";
 
@@ -186,7 +187,7 @@ export const DEFAULT_LAYOUT_PROFILES: Record<string, KplexLayoutProfile> = {
   "mobile:sidepanel": { compactingFactor: 2.85, horizontalCompactingFactor: 2.85, parentColumns: 1, childColumns: 2 },
 };
 
-export interface KplexSettings {
+export interface KplexSettings extends StartupIndexPreferences {
   /** Local appearance identities; foreign graph imports never replace this palette or compass preference. */
   colorPreferences: ColorPreferencesV1;
   /** Preserve an unsupported future color container verbatim while presenting read-only fallback controls. */
@@ -208,7 +209,7 @@ export interface KplexSettings {
   horizontalCompactingFactor: number;
   minLinkLength: number;
   indexUpdateInterval: number;
-  /** Acquisition policy applied at the next plugin startup, not a semantic graph setting. */
+  /** Retired global preference retained for older plugin versions; device fields own new sessions. */
   indexingMode: IndexingMode;
   /** Legacy persisted compatibility field; web links always scan independently in the background. */
   urlIndexingMode: UrlIndexingMode;
@@ -378,6 +379,7 @@ const LEGACY_DEFAULT_SETTINGS: KplexSettings = {
   horizontalCompactingFactor: 2,
   minLinkLength: 18,
   indexUpdateInterval: 60000,
+  ...STARTUP_INDEX_DEFAULTS,
   indexingMode: "on-demand",
   urlIndexingMode: "background",
   indexingThrottle: "responsive",
@@ -680,6 +682,7 @@ export function migrateAndMergeSettings(raw: unknown): KplexSettings {
     ...(colors.future !== undefined ? { colorPreferencesFuture: colors.future } : {}),
     showCrossLinks: typeof old.showCrossLinks === "boolean" ? old.showCrossLinks : DEFAULT_SETTINGS.showCrossLinks,
     indexingMode: old.indexingMode === "eager" ? "eager" : "on-demand",
+    ...sanitizeStartupIndexPreferences(old),
     urlIndexingMode: "background",
     indexingThrottle: sanitizeIndexingThrottle(old.indexingThrottle),
     datePropertyRelations: sanitizeDatePropertyRelations(old.datePropertyRelations),
@@ -2572,20 +2575,27 @@ export class KplexSettingTab extends PluginSettingTab {
         items: [
           {
             type: "group",
+            items: [
+              {name: translate("indexing.startupTitle"), desc: translate("indexing.startupHelp")},
+              {name: translate("typography.desktop"), control: {type: "toggle", key: "indexBeforeViewDesktop"}},
+              {name: translate("typography.tablet"), control: {type: "toggle", key: "indexBeforeViewTablet"}},
+              {name: translate("typography.mobile"), control: {type: "toggle", key: "indexBeforeViewMobile"}},
+            ],
+          },
+          {
+            type: "group",
             heading: translate("indexing.strategy"),
             items: [
-              {
-                name: translate("indexing.mode"),
-                desc: translate("indexing.modeHelp"),
-                control: { type: "dropdown", key: "indexingMode", defaultValue: "on-demand", options: {
+              {name: translate("indexing.mode"), desc: translate("indexing.modeHelp")},
+              ...([
+                ["typography.desktop", "indexingModeDesktop", "eager"],
+                ["typography.tablet", "indexingModeTablet", "on-demand"],
+                ["typography.mobile", "indexingModeMobile", "on-demand"],
+              ] as const).map(/** Reuse native device rows and strategy options for all three environments. */ ([label, key, defaultValue]) => ({
+                name: translate(label), control: {type: "dropdown" as const, key, defaultValue, options: {
                   eager: translate("indexing.eager"), "on-demand": translate("indexing.onDemand"),
-                } },
-              },
-              {
-                name: translate("indexing.urls"),
-                desc: translate("indexing.urlsHelp"),
-
-              },
+                }},
+              })),
               {
                 name: translate("indexing.throttle"),
                 desc: translate("indexing.throttleHelp"),
@@ -2890,6 +2900,12 @@ export class KplexSettingTab extends PluginSettingTab {
       if (scalar !== undefined) await this.kplexPlugin.updateTypographyOverride(typography.device, { [typography.field]: scalar });
       return;
     }
+    if (key === "indexBeforeViewDesktop" || key === "indexBeforeViewTablet" || key === "indexBeforeViewMobile") {
+      this.kplexPlugin.settings[key] = value === true;
+      // Restart-required admission changes neither the active session nor semantic/cache policy.
+      await this.kplexPlugin.saveSettings(false, false);
+      return;
+    }
     if (key === "indexingThrottle") {
       this.kplexPlugin.settings.indexingThrottle = sanitizeIndexingThrottle(value);
       // The scheduler reads this preference live; saving must not invalidate semantic caches.
@@ -2903,9 +2919,8 @@ export class KplexSettingTab extends PluginSettingTab {
       await this.kplexPlugin.saveSettings(false, false);
       return;
     }
-    if (key === "indexingMode" || key === "urlIndexingMode") {
-      if (key === "indexingMode") this.kplexPlugin.settings.indexingMode = value === "on-demand" ? "on-demand" : "eager";
-      else this.kplexPlugin.settings.urlIndexingMode = "background";
+    if (key === "indexingModeDesktop" || key === "indexingModeTablet" || key === "indexingModeMobile") {
+      this.kplexPlugin.settings[key] = value === "on-demand" ? "on-demand" : "eager";
       // Strategy changes apply at restart and must not trigger live semantic reconstruction.
       await this.kplexPlugin.saveSettings(false, false);
       return;

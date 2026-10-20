@@ -9,7 +9,7 @@ export const SESSION_EVENT_MAX_AGE_MS = 30 * 60 * 1000;
 export const SESSION_EVENT_CODES = ["plugin-start", "cache-restore-start", "cache-restore-end", "cache-restore-failure",
   "index-phase-change", "navigation-request", "navigation-settle", "action-failed", "view-created", "view-closed",
   "semantic-preparation-pending", "semantic-preparation-failure"] as const;
-export const SUPPORT_PHASES = ["idle", "ready", "loading-cache", "preparing", "checking-cache", "indexing", "saving-cache", "updating", "incomplete",
+export const SUPPORT_PHASES = ["idle", "deferred", "ready", "loading-cache", "preparing", "checking-cache", "indexing", "saving-cache", "updating", "incomplete",
   "metadata", "preview", "source-authority", "requested-semantics", "node-vocabulary", "pages", "file-rebind", "relations", "preview-search", "evidence",
   "resolve", "authoritative-search", "promote", "complete", "failed", "timed-out", "cancelled", "host-metadata-comparison", "host-retired-owner-check",
   "source-inventory", "source-coordinates", "source-reconciliation", "source-retired-owner-check", "dependency-completion", "resolution-reconciliation",

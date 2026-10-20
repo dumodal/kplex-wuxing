@@ -2,6 +2,14 @@
 
 PR #174 implementation reference (schema 1, capture 1; draft acceptance). Both **Copy index diagnostics** and **Report bug** include the shared, bounded `indexingActivity` summary. Explicit report capture reads retained scalar health without recording readiness or starting work. Windows native main/popout export acceptance has passed. Two foreground-soak attempts stop on failed focus prerequisites; the required real two-hour acceptance remains unproven. No actual 24-hour device run has been completed. No efficiency claim follows from the schema alone.
 
+## Deferred startup
+
+With pre-open preparation disabled and no opened Plex, status is **Waiting for K-Plex to open**
+(`deferred`), with readiness false. Passive diagnostics do not enumerate files, hydrate cache data or
+admit work. Startup diagnostics include the captured persisted device class, `beforeView` preference
+the session’s `mode` and the `admitted` flag. The `index-admitted` timing mark separates deferred time from actual preparation;
+source/hydration inactivity watchdogs start only when their existing phase begins.
+
 ## Initial-center recovery
 
 Each newly mounted visible Plex checks its initial stationary Markdown center after

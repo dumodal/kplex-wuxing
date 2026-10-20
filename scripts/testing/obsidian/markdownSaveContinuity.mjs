@@ -54,7 +54,7 @@ export async function acceptMarkdownSaveContinuity({app,p,leaf,root,files,center
      await until(()=>center.stat.mtime!==mtime,'Native autosave did not change the owned file');
      await idle();
     }
-    const details={embedded,nativeAutosave:true,mode:p.settings.indexingMode,work,beforeRoles,observations,domRetained:before.every(node=>node.isConnected),finalRoles:roles(),editorFocus:mount.contains(root.ownerDocument.activeElement)};
+    const details={embedded,nativeAutosave:true,mode:(p.index.isOnDemandMode()?'on-demand':'eager'),work,beforeRoles,observations,domRetained:before.every(node=>node.isConnected),finalRoles:roles(),editorFocus:mount.contains(root.ownerDocument.activeElement)};
     c.saveObservations??=[];c.saveObservations.push(details);
     check(details.finalRoles.some(item=>item.role==='kplex-role-parent'),'Body parent did not return');
     // Baseline observation mode preserves failing work/role evidence without pretending acceptance.

@@ -22,6 +22,38 @@ const selected=raw=>raw.appearanceThemes.themes.find(theme=>theme.id===raw.appea
 /** Keep every trial in a fresh real browser with the established native-shaped editor boundary. */
 const scenario=body=>colorEditorScenario(`(async()=>{${initialize}\n${body}\nreturn true})()`);
 
+test('startup preferences migrate independently and external device edits remain outside graph and theme policy',async()=>{
+ assert.equal(await scenario(`
+ const equal=(a,b,message)=>check(JSON.stringify(a)===JSON.stringify(b),message+' '+JSON.stringify([a,b]));
+ const fresh=await createAppearanceHost(null,false);
+ equal([fresh.settings.indexBeforeViewDesktop,fresh.settings.indexBeforeViewTablet,fresh.settings.indexBeforeViewMobile],[true,false,false],'Explicit fresh defaults');
+ equal([fresh.settings.indexingModeDesktop,fresh.settings.indexingModeTablet,fresh.settings.indexingModeMobile],['eager','on-demand','on-demand'],'Device strategy defaults');
+ const old=await createAppearanceHost({indexBeforeViewDesktop:false,indexBeforeViewTablet:true,indexBeforeViewMobile:'false',indexingMode:'on-demand',indexingModeTablet:'eager',indexingModeMobile:'invalid'});
+ equal([old.settings.indexingModeDesktop,old.settings.indexingModeTablet,old.settings.indexingModeMobile],['eager','eager','on-demand'],'Missing device fields default independently of retired global mode');
+ equal([old.settings.indexBeforeViewDesktop,old.settings.indexBeforeViewTablet,old.settings.indexBeforeViewMobile],[false,true,false],'Upgrade preserves false and validates each device');
+ const a=await create(),b=await create();const theme=JSON.stringify(a.settings.appearanceThemes);
+ a.settings.indexBeforeViewDesktop=false;a.settings.indexingModeDesktop='on-demand';await a.saveSettings(false,false);
+ b.settings.indexBeforeViewTablet=true;b.settings.indexingModeTablet='eager';await b.saveSettings(false,false);await drain(a);await receive(a,disk);
+ equal([a.settings.indexBeforeViewDesktop,a.settings.indexBeforeViewTablet],[false,true],'Different device roots merge');
+ equal([a.settings.indexingModeDesktop,a.settings.indexingModeTablet],['on-demand','eager'],'Independent strategy roots merge');
+ equal(a.work,{presentation:1,semantic:0,invalidate:0,notify:1},'Local no-op refresh plus incoming display notification; no semantic work');
+ equal(b.work.semantic,0,'Writer does not request semantic work');
+ equal(JSON.stringify(a.settings.appearanceThemes),theme,'Preferences do not edit stored appearance');
+ const again=await createAppearanceHost(disk);equal([again.settings.indexBeforeViewDesktop,again.settings.indexBeforeViewTablet],[false,true],'Restart retains both fields');
+ equal([again.settings.indexingModeDesktop,again.settings.indexingModeTablet],['on-demand','eager'],'Restart retains device modes');
+ const imported=sourceModules.importExcaliBrainGraphSettings({indexingModeDesktop:'eager',indexingModeTablet:'on-demand',indexingModeMobile:'eager',indexBeforeViewDesktop:true,indexBeforeViewTablet:false,indexBeforeViewMobile:true},a.settings);
+ equal([imported.indexBeforeViewDesktop,imported.indexBeforeViewTablet,imported.indexBeforeViewMobile],[false,true,false],'Foreign import excludes workflow preferences');
+ equal([imported.indexingModeDesktop,imported.indexingModeTablet,imported.indexingModeMobile],['on-demand','eager','on-demand'],'Foreign imports cannot replace device modes');
+ const before=sourceModules.captureSettingsPolicy(a.settings),after=sourceModules.captureSettingsPolicy({...a.settings,indexingModeDesktop:'eager',indexingModeTablet:'on-demand',indexingModeMobile:'eager',indexBeforeViewDesktop:true,indexBeforeViewTablet:false,indexBeforeViewMobile:true});
+ equal(sourceModules.classifySettingsChange(before,after).changedKeys,[],'No semantic, search, layout or paint policy changes');
+ check(!JSON.stringify(a.settings.appearanceThemes).includes('indexBeforeView')&&!JSON.stringify(a.settings.appearanceThemes).includes('indexingMode'),'Themes exclude startup policy');
+ a.settings.indexBeforeViewMobile=true;a.saveData=async()=>{throw Error('Storage unavailable')};let failed=false;
+ try{await a.saveSettings(false,false)}catch{failed=true}check(failed,'Failed preference write is reported');
+ const restart=await createAppearanceHost(disk);equal(restart.settings.indexBeforeViewMobile,false,'Failed write cannot persist the new preference');
+
+ `),true);
+});
+
 test('two running instances preserve received theme contents through unrelated writes and quiesce in both directions',async()=>{
  assert.equal(await scenario(`
  const a=await create(),b=await create();
