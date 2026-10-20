@@ -169,7 +169,8 @@ test('six-role persistence, foreign import, semantic invalidation and historical
   for(const role of ['parent','child','left','right','previous','next'])assert.equal(host.migrateAndMergeSettings({datePropertyRelations:role}).datePropertyRelations,role);
   const current=host.migrateAndMergeSettings({datePropertyRelations:'right',futureCompanion:{keep:true}});assert.deepEqual(current.futureCompanion,{keep:true});
   assert.equal(host.importExcaliBrainGraphSettings({datePropertyRelations:'child'},current).datePropertyRelations,'right');
-  const before=host.migrateAndMergeSettings({});const impact=c.classifySettingsChange(c.captureSettingsPolicy(before),c.captureSettingsPolicy(current));assert(impact.semanticInvalidation);assert(impact.changedKeys.includes('datePropertyRelations'));assert.deepEqual(c.sanitizeChangedSettingKeys(['private','datePropertyRelations']),['datePropertyRelations']);
+  // Historical signatures use the pre-pairing ontology inventory, matching the saved current fixture.
+  const before=host.migrateAndMergeSettings({datePropertyRelations:"parent"});const impact=c.classifySettingsChange(c.captureSettingsPolicy(before),c.captureSettingsPolicy(current));assert(impact.semanticInvalidation);assert(impact.changedKeys.includes('datePropertyRelations'));assert.deepEqual(c.sanitizeChangedSettingKeys(['private','datePropertyRelations']),['datePropertyRelations']);
   assert.equal(host.graphCompilerSettingsFromLegacy(current).datePropertyRelations,'right');assert.equal(host.semanticIndexSettingsFromLegacy(current).datePropertyRelations,'right');
   const signature=c.encodeIndexSettingsSignature(before),v4=JSON.parse(signature);assert.equal(v4.signatureVersion,4);
   const v3={...v4,signatureVersion:3,datePropertyRelations:'ontology'};
