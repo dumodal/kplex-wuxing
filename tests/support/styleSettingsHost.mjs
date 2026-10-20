@@ -12,7 +12,7 @@ export function styleSettingsHostSource(root) {
   const source = ts.createSourceFile("main.ts", readFileSync(new URL("src/main.ts", root), "utf8"), ts.ScriptTarget.Latest, true);
   const names = new Set(["updateStyleSettings", "saveSettings", "enqueueSettingsWrite", "settingsSnapshotForPersistence", "persistSettingsSnapshot", "setGraphLenses",
     "captureAppearanceOwner", "isAppearanceOwnerCurrent", "subscribeAppearanceThemes", "bindAppearanceEditor", "appearanceThemeNames", "updateAppearanceThemes", "showAppearanceMigrationNotification",
-    "createAppearanceTheme", "resetAppearanceThemeColors", "importLegacyAppearance", "settingsForWrite", "writeSettingsSnapshot", "updateOntologyField", "updateOntologyConfiguration", "assignFieldToOntology", "ontologyFieldsForRole", "ontologyRoleForField", "inverseOntologyField", "inverseRelationshipRole", "defaultOntologyField", "refreshSavedSettings",
+    "createAppearanceTheme", "resetAppearanceThemeColors", "importLegacyAppearance", "settingsForWrite", "writeSettingsSnapshot", "updateOntologyField", "updateOntologyConfiguration", "editOntologyConfiguration", "assignFieldToOntology", "ontologyFieldsForRole", "ontologyRoleForField", "inverseOntologyField", "inverseRelationshipRole", "defaultOntologyField", "refreshSavedSettings",
     "initializeSettingsReconciliation", "onExternalSettingsChange", "queueExternalSettingsAdoption", "reportExternalSettingsFailure", "installExternalSettings", "updateActionPreferences", "receivedSettingsOwner", "receivedSettingsRevision"]);
   const methods = [];
   /** The owning class keeps one definition for every requested method; a missing seam is an explicit failure. */
@@ -31,8 +31,10 @@ export function styleSettingsHostSource(root) {
     import {readObsidianPresentationEnvironment} from "./src/adapters/obsidian/presentationEnvironment";
     import {migrateActionPreferences,sanitizeActionPreferences,compileActionBindings} from "./src/core/plex/actionPreferences";
     import {Notice} from "obsidian";
-    import {ontologyConfiguration,assignOntologyField,editOntologyEntries,ONTOLOGY_GROUPS} from './src/core/contracts/ontologyConfiguration';
+    import {ontologyConfiguration,assignOntologyField,applyOntologyEdit,ontologyEndpointState,editOntologyEntries,ONTOLOGY_GROUPS} from './src/core/contracts/ontologyConfiguration';
     export * from './src/core/contracts/ontologyConfiguration';
+    export {OntologyUsageModal} from './src/ui/OntologyUsageModal';
+    export {OntologyManagerModal} from './src/ui/OntologyManagerModal';
     export {AddToOntologyModal} from './src/ui/AddToOntologyModal';
     import {normalizeFieldName} from './src/core/contracts/fieldName';
     import {NotificationModal} from "./src/ui/NotificationModal";

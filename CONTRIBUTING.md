@@ -1104,17 +1104,12 @@ native layout/preferences/configuration and owned fixtures. Independent readers 
 holds retire before teardown. This is controlled startup admission, not an application restart
 or benchmark.
 
-After exact-build staging, `npm run verify:obsidian:ontology-input` uses the three explicit
-Small-vault variables and a fresh report directory. It observes trusted native Settings typing,
-idle/blur/close submission, stationary ontology semantics in main/sidebar/popout, explicit
-storage recovery, synthetic composition/paste and no-view saving. Counts separate drafts from
-committed policy work; no comparative resource claim is made. The lane restores three owned
-notes, configuration/workspace and native observers. Keep backups private and run serially.
-Set `KPLEX_ONTOLOGY_INPUT_MODE=eager` or `on-demand` to repeat in an actual chosen
-session; the driver restores the original saved mode and session afterward. It
-also reloads the plugin and checks the final saved ontology and stationary Parent.
-See the [PR147 record](docs/validation/ontology-input-147-2026-10-18.md) for current results/limits.
-
+After exact-build staging, `npm run verify:obsidian:ontology-input` now routes to the unified
+manager/editor lane described below. It uses explicit Save/Cancel; the former textarea's
+idle/blur submission is retained only in compatibility tests, not exposed as a second editor.
+Set `KPLEX_ONTOLOGY_INPUT_MODE=eager` or `on-demand` to select an actual reloaded session;
+the driver restores the original saved mode/session and configuration afterward. The
+[PR147 record](docs/validation/ontology-input-147-2026-10-18.md) documents the historical textarea lane.
 
 For settings-save liveness, set `KPLEX_STYLE_REFERENCE_ONLY=true` and
 `KPLEX_STYLE_LIVENESS=assert` on `verify:obsidian:style-operations`, after staging
@@ -1132,3 +1127,42 @@ asserts this representation and records the companion version. The same drawing
 option works with `KPLEX_STYLE_SIDECAR_GATE_ONLY=true` for actual global gate-radius
 slider/Settings-close coverage. It never substitutes a plain Markdown note for
 that drawing case. All generated files remain probe-owned and are removed.
+
+### Unified ontology manager acceptance
+
+`npm run verify:obsidian:ontology-manager` (also reached by `verify:obsidian:ontology-input`)
+uses the exact staged build and the three explicit Small-vault variables above. It opens actual
+Ontology Settings and the shared native manager/editor, checks role orientation and partner search,
+symmetric pairs, Hidden/Excluded separation, Cancel with operation counters, one-write pair-wide
+role changes, pair-only unpairing, two-new-name creation, assignment removal and the Hidden deep link.
+The existing `verify:obsidian:ontology-pairs` lane uses the manager for its stationary caption/style
+and zero-semantic-work checks. Pair reload and incoming-settings lanes remain separate. Run native
+lanes serially. These are functional checks, not comparative performance or physical-device evidence.
+
+Set `KPLEX_ONTOLOGY_MANAGER_NARROW=true` for an actual 440-pixel native Settings-window
+viewport with long synthetic field names. The driver temporarily lowers that owned window's
+minimum size and restores its minimum/bounds before closing it. It waits for visible native
+owners at both initial and no-Plex openings, and detaches native geometry before reporting it.
+Its fixture restoration uses the queued settings path before restoring original file bytes.
+The incoming-settings lane also verifies a dirty ontology draft against real hierarchy receipt.
+
+`npm run verify:obsidian:ontology-usage` checks the field editor's **Show documents** extension
+against existing native source facts. It seeds two owned scalar/inline-field documents before
+observing the read-only interval, then uses actual Settings, keyword filtering, the native
+clipboard, new document tabs and ordinary Plex navigation. It asserts zero note reads, parses,
+source acquisitions/replacements and settings writes while listing/filtering/copying. Explicit
+navigation is tested separately because opening a Plex may legitimately request its neighborhood.
+The driver restores its document fixtures, layout and configuration. The real-IDB usage regression
+also verifies unchanged selected source heads and acquisition counters without a semantic graph.
+
+This lane also cleans the two fixture properties, verifies that **Show documents → Refresh**
+updates the manager while retaining an assigned zero-use field, removes that assignment and opens
+the Unassigned manager with the historical stale discovery entry. **Refresh counts** must remove
+that entry without note reads, parser work, acquisitions, source replacements or settings writes.
+The discovery rescan is fixture setup only; the tested recount never runs that operation.
+
+Set `KPLEX_ONTOLOGY_USAGE_PARTIAL_ZERO=true` to exercise the partial-zero regression. For the
+final fixture-field lookup only, the driver delegates to the real posting lookup, then reports
+incomplete coverage. Zero-result Unassigned rows must still disappear, with the same strict
+zero-source-work assertions. The wrapper is restored on every exit; no production index state
+or stored facts are altered by this fault injection.

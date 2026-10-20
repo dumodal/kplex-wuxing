@@ -27,6 +27,8 @@
  * typing/composition never publishes transient hierarchy values or queues per-character graph work.
  */
 import { readObsidianPresentationEnvironment } from "./adapters/obsidian/presentationEnvironment";
+import {OntologyManagerModal} from "./ui/OntologyManagerModal";
+import {ontologyFieldViews,type OntologyFilter} from "./ui/features/ontologyPresentation";
 import {ontologyConfiguration, escapeLegacyOntology, escapeOntologyField, retainOntologyCounterparts, ONTOLOGY_GROUPS, ONTOLOGY_ROLE_GROUP} from "./core/contracts/ontologyConfiguration";
 import { formatShortcut } from "./core/plex/shortcutPresentation";
 import {AppearanceThemesManagerModal} from "./ui/AppearanceThemesModal";
@@ -52,7 +54,6 @@ import { ColorSourceModal } from "./ui/ColorSourceModal";
 import {
   AbstractInputSuggest,
   App,
-  Modal,
   Notice,
   PluginSettingTab,
   getIconIds,
@@ -1493,130 +1494,6 @@ class NoteTypeStylesManagerModal extends StyleEditorModal {
   }
 }
 
-type UnassignedOntologyField = { normalized: string; name: string; count: number };
-
-class UnassignedOntologyManagerModal extends Modal {
-  private readonly translate = createObsidianTranslator();
-  private search = "";
-  private sortMode: "frequency" | "name" = "frequency";
-  private visibleLimit = 16;
-  private listEl: HTMLElement | null = null;
-  private statusEl: HTMLElement | null = null;
-
-  constructor(
-    app: App,
-    private getFields: () => UnassignedOntologyField[],
-    private onAssign: (fieldName: string, afterChange: () => void) => void,
-    private onRefresh: () => Promise<void>,
-  ) {
-    super(app);
-  }
-
-  /** Render the discovered, unassigned ontology-field manager with localized captions and feedback; the native Modal owns its open/close shell. */
-  onOpen(): void {
-    this.titleEl.setText(this.translate("settings.unassignedTitle"));
-    this.modalEl.addClass("kplex-style-manager-modal");
-    this.contentEl.addClass("kplex-style-manager");
-    this.contentEl.createEl("p", {
-      text: this.translate("settings.unassignedHelp"),
-    });
-
-    const controls = this.contentEl.createDiv({ cls: "kplex-style-manager-controls" });
-    const searchWrap = controls.createDiv({ cls: "search-input-container kplex-style-manager-search" });
-    const search = searchWrap.createEl("input", {
-      attr: { type: "search", placeholder: this.translate("settings.searchDiscoveredPlaceholder"), "aria-label": this.translate("settings.searchDiscoveredAria") },
-    });
-    search.addEventListener("input", () => {
-      this.search = search.value.trim().toLowerCase();
-      this.visibleLimit = 16;
-      this.renderList();
-    });
-
-    const sort = controls.createEl("select", { attr: { "aria-label": this.translate("settings.sortDiscovered") } });
-    sort.createEl("option", { text: this.translate("settings.mostUsed"), attr: { value: "frequency" } });
-    sort.createEl("option", { text: this.translate("settings.az"), attr: { value: "name" } });
-    sort.value = this.sortMode;
-    sort.addEventListener("change", () => {
-      this.sortMode = sort.value === "name" ? "name" : "frequency";
-      this.visibleLimit = 16;
-      this.renderList();
-    });
-
-    const refresh = controls.createEl("button", { text: this.translate("settings.refresh") });
-    appendIcon(refresh, "refresh-cw");
-    refresh.addEventListener("click", () => {
-      refresh.disabled = true;
-      void this.onRefresh()
-        .then(() => {
-          this.visibleLimit = 16;
-          this.renderList();
-        })
-        .finally(() => { refresh.disabled = false; });
-    });
-
-    this.statusEl = this.contentEl.createDiv({ cls: "kplex-style-manager-status" });
-    this.listEl = this.contentEl.createDiv({ cls: "kplex-style-manager-list" });
-    this.renderList();
-    window.setTimeout(() => search.focus(), 0);
-  }
-
-  /** Rebuild the discovered, unassigned ontology-field manager entries with localized status/actions while preserving actual field and style values. */
-  private renderList(): void {
-    if (!this.listEl || !this.statusEl) return;
-    this.listEl.empty();
-    const all = this.getFields();
-    const matches = all
-      .filter((field) => !this.search || field.name.toLowerCase().includes(this.search))
-      .sort((a, b) => this.sortMode === "name"
-        ? a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
-        : b.count - a.count || a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
-    const statusKey = all.length === 1
-      ? (matches.length === 1 ? "settings.unassignedStatus11" : "settings.unassignedStatus1n")
-      : (matches.length === 1 ? "settings.unassignedStatusn1" : "settings.unassignedStatusnn");
-    this.statusEl.setText(this.translate(statusKey, { count: all.length, results: matches.length }));
-
-    if (!matches.length) {
-      this.listEl.createDiv({
-        cls: "kplex-style-manager-empty",
-        text: this.translate(all.length ? "settings.noDiscoveredMatches" : "settings.allDiscoveredAssigned"),
-      });
-      return;
-    }
-
-    const windowed = collectionWindow(matches, this.visibleLimit, 24);
-    for (const field of windowed.visible) {
-      const row = this.listEl.createEl("button", { cls: "kplex-style-manager-row" });
-      row.type = "button";
-      const icon = row.createSpan({ cls: "kplex-style-manager-property-icon" });
-      appendIcon(icon, "list-tree");
-      const copy = row.createDiv({ cls: "kplex-style-manager-copy" });
-      copy.createDiv({ text: field.name, cls: "kplex-style-manager-name" });
-      copy.createDiv({
-        text: this.translate(field.count === 1 ? "settings.occurrenceOne" : "settings.occurrenceMany", { count: field.count }),
-        cls: "kplex-style-manager-summary",
-      });
-      appendIcon(row, "chevron-right");
-      row.addEventListener("click", () => this.onAssign(field.name, () => this.renderList()));
-    }
-
-    if (windowed.remaining > 0) {
-      const more = this.listEl.createEl("button", {
-        cls: "kplex-style-manager-more",
-        text: this.translate("collection.showMore", { count: windowed.nextCount }),
-      });
-      more.type = "button";
-      more.addEventListener("click", () => {
-        this.visibleLimit += 24;
-        this.renderList();
-      });
-    }
-  }
-
-  onClose(): void {
-    this.contentEl.empty();
-  }
-}
-
 /** Existing foreign-appearance chooser participates in the same durable shell and opening-theme fence. */
 class LegacySettingsImportModal extends StyleEditorModal {
   private rawText = "";
@@ -1719,6 +1596,7 @@ const arrowOptions = (translate: Translator): Record<Arrowhead, string> => ({
 
 export class KplexSettingTab extends PluginSettingTab {
   private actionSettings: ActionSettingsController | null = null;
+  private readonly ontologyManagers = new Set<OntologyManagerModal>();
   private readonly colorDialogs = new Set<StyleEditorModal>();
   private colorDialogGeneration = 0;
   private readonly colorSwatchPages = new WeakMap<HTMLElement, ColorSwatchList>();
@@ -1755,6 +1633,8 @@ export class KplexSettingTab extends PluginSettingTab {
 
   /** Plugin unload discards only unsubmitted drafts; native page cleanup must not start new saves. */
   disposeOntologySettings(): void {
+    for(const manager of this.ontologyManagers)manager.close();
+    this.ontologyManagers.clear();
     for (const field of this.ontologyFields?.values() ?? []) field.dispose();
     this.ontologyFields?.clear();
   }
@@ -2354,15 +2234,10 @@ export class KplexSettingTab extends PluginSettingTab {
     this.colorDialogs.add(dialog); dialog.open();
   }
 
-  private openUnassignedOntologyManager(): void {
-    new UnassignedOntologyManagerModal(
-      this.app,
-      () => this.kplexPlugin.index.unassignedOntologyFields(),
-      (fieldName, afterChange) => this.kplexPlugin.openAddToOntologyModal(fieldName, afterChange),
-      async () => {
-        await this.kplexPlugin.rebuildIndex(true, true, "ontology-discovery");
-      },
-    ).open();
+  /** Open one vocabulary manager; Settings disposal owns its nested editor lifetimes. */
+  openOntologyManager(filter:OntologyFilter='all'):void {
+    const dialog=new OntologyManagerModal(this.kplexPlugin,filter,()=>this.ontologyManagers.delete(dialog));
+    this.ontologyManagers.add(dialog);dialog.open();
   }
 
   private openLegacySettingsImporter(): void {
@@ -2504,27 +2379,11 @@ export class KplexSettingTab extends PluginSettingTab {
         name: translate("settings.ui.ontology"),
         desc: translate("settings.ui.define.which.note.properties.create.relationships.and.ho"),
         items: [
-          {
-            type: "page",
-            name: translate("settings.ui.relationship.fields"),
-            desc: translate("settings.ui.choose.which.properties.appear.as.parents.children.frien"),
-            items: [
-              {
-                type: "group",
-                heading: translate("settings.ui.relationship.fields"),
-                cls: "kplex-ontology-fields",
-                items: [
-                  { name: translate("settings.ui.parent.fields"), control: { type: "textarea", key: "hierarchy.parents", rows: 3 } },
-                  { name: translate("settings.ui.child.fields"), control: { type: "textarea", key: "hierarchy.children", rows: 3 } },
-                  { name: translate("settings.ui.left.friend.jump.fields"), control: { type: "textarea", key: "hierarchy.leftFriends", rows: 3 } },
-                  { name: translate("settings.ui.right.friend.challenger.fields"), control: { type: "textarea", key: "hierarchy.rightFriends", rows: 3 } },
-                  { name: translate("settings.ui.previous.fields"), desc: translate("ontology.manualPairHelp"), control: { type: "textarea", key: "hierarchy.previous", rows: 3 } },
-                  { name: translate("settings.ui.next.fields"), control: { type: "textarea", key: "hierarchy.next", rows: 3 } },
-                  { name: translate("settings.ui.hidden.fields"), desc: translate("settings.ui.relationships.stored.in.these.properties.stay.out.of.the"), control: { type: "textarea", key: "hierarchy.hidden", rows: 3 } },
-                ],
-              },
-            ],
-          },
+          {name:translate("ontology.manager.title"),desc:translate("ontology.manager.summary",{
+            fields:ontologyFieldViews(ontologyConfiguration(this.kplexPlugin.settings)).length,
+            pairs:ontologyConfiguration(this.kplexPlugin.settings).pairs.size/2,
+            unassigned:unassignedFields.length,
+          }),action:()=>this.openOntologyManager()},
           {
             type: "page",
             name: translate("settings.ui.editor.suggester"),
@@ -2562,7 +2421,7 @@ export class KplexSettingTab extends PluginSettingTab {
                     desc: unassignedFields.length
                       ? translate("settings.unassignedSummary", { count: unassignedFields.length })
                       : translate("settings.ui.all.currently.discovered.fields.are.assigned.you.can.ref"),
-                    action: () => this.openUnassignedOntologyManager(),
+                    action: () => this.openOntologyManager("unassigned"),
                   },
                   {
                     name: translate("settings.ui.refresh.discovered.fields"),

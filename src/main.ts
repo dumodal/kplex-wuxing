@@ -45,7 +45,7 @@ import { mergeGraphLensDefinitions } from "./lens/GraphLens";
 import { appearanceColorReferences } from "./core/contracts/appearance";
 import { requireNamedColor } from "./core/plex/colorEditing";
 import * as appearanceThemes from "./core/plex/appearanceThemes";
-import {ontologyConfiguration, assignOntologyField, editOntologyEntries, ONTOLOGY_GROUPS, type OntologyConfiguration} from './core/contracts/ontologyConfiguration';
+import {ontologyConfiguration, assignOntologyField, applyOntologyEdit, ontologyEndpointState, editOntologyEntries, ONTOLOGY_GROUPS, type OntologyConfiguration, type OntologyConfigurationInput, type OntologyEdit} from './core/contracts/ontologyConfiguration';
 import type {StyleEditorModal} from "./ui/StyleEditorModal";
 import {NotificationModal} from "./ui/NotificationModal";
 
@@ -2189,9 +2189,7 @@ export default class KplexPlugin extends Plugin {
 
   /** Open the actual Hidden-fields control without creating a field or approving a note write. */
   openHiddenOntologySettings(): void {
-    if (this.openSettingsPage(this.translator("settings.ui.ontology"), this.translator("settings.ui.relationship.fields"))) {
-      this.settingsTab?.focusSetting(this.translator("settings.ui.hidden.fields"));
-    }
+    if (this.openSettingsPage(this.translator("settings.ui.ontology"))) this.settingsTab?.openOntologyManager('hidden');
   }
 
   /** Reuse native page-path navigation with the existing owning-tab fallback for settings cross-links. */
@@ -4562,6 +4560,17 @@ export default class KplexPlugin extends Plugin {
     }
   }
 
+  /** Usage-list actions reuse scoped Plex navigation or the existing new-document-tab action.
+   * Multiple Plex views select the most recent native Plex leaf, then an existing main/side view.
+   * Listing itself never invokes this path; only explicit user navigation may acquire a neighborhood. */
+  async openOntologyUsageDocument(path:string,plex:boolean):Promise<void> {
+    const file=this.app.vault.getFileByPath(path);if(!file)return;
+    if(!plex){await this.openFileInNewTab(file);return;}
+    const leaves=[...this.app.workspace.getLeavesOfType(KPLEX_VIEW_TYPE),...this.app.workspace.getLeavesOfType(KPLEX_SIDEPANEL_VIEW_TYPE)];
+    const recent=this.app.workspace.getMostRecentLeaf();
+    await this.focusInKplex(file.path,leaves.find(/** Prefer exact recent native ownership when several Plexes exist. */ leaf=>leaf===recent)??leaves[0]);
+  }
+
   async focusInKplex(path: string, hostLeaf?: WorkspaceLeaf): Promise<void> {
     if (!hostLeaf) {
       if (this.app.workspace.getLeavesOfType(KPLEX_VIEW_TYPE).length + this.app.workspace.getLeavesOfType(KPLEX_SIDEPANEL_VIEW_TYPE).length > 1) return;
@@ -4733,6 +4742,21 @@ export default class KplexPlugin extends Plugin {
         if(expected.roles.get(key)!==latest.roles.get(key)||!appearanceThemes.themeValuesEqual(expected.pairs.get(key),latest.pairs.get(key))){const error=new Error(this.translator('settings.ontology.conflict'));error.name='SettingsConflictError';throw error;}
       }
       return assignOntologyField(source,field,role,selected);
+    },current);
+  }
+
+  /** Submit a finite field/pair intent through the existing settings queue, never an arbitrary UI mutation.
+   * Compare all affected raw endpoint declarations at queue acceptance; unrelated field edits merge.
+   * Once accepted, dismissal cannot cancel storage or replay an already committed operation. */
+  async editOntologyConfiguration(edit:OntologyEdit,expected:OntologyConfigurationInput,current:()=>boolean):Promise<StyleCommitResult> {
+    const opening=structuredClone(expected),submitted={...edit};
+    const previous=ontologyConfiguration(opening).pairs.get(normalizeFieldName(edit.field));
+    const endpoints=[edit.field,...(previous?[previous.partner]:[]),...(edit.kind==='assign'&&edit.partner?[edit.partner]:[])];
+    return this.updateOntologyConfiguration(/** Reauthorize affected declarations against the latest accepted durable snapshot. */ source=>{
+      for(const field of endpoints)if(!appearanceThemes.themeValuesEqual(ontologyEndpointState(opening,field),ontologyEndpointState(source,field))){
+        const error=new Error(this.translator('settings.ontology.conflict'));error.name='SettingsConflictError';throw error;
+      }
+      return applyOntologyEdit(source,submitted);
     },current);
   }
 

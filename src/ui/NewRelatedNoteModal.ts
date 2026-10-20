@@ -8,6 +8,9 @@ import { createRoot, type Root } from "react-dom/client";
 import type KplexPlugin from "../main";
 import type { GraphPage, RelationshipRole } from "../types";
 import { FuzzySearchInput, fuzzyFilterStrings } from "./FuzzySearchInput";
+import {ontologyConfiguration} from '../core/contracts/ontologyConfiguration';
+import {normalizeFieldName} from '../core/contracts/fieldName';
+import {ontologyFieldViews,ontologyFieldDetail,ontologyFuzzyMatches,ontologySelectionFields} from './features/ontologyPresentation';
 import { FolderPathInput } from "./FolderPathInput";
 import { readObsidianPresentationEnvironment } from "../adapters/obsidian/presentationEnvironment";
 import { enableDraggableDialog } from "./components/DraggableDialog";
@@ -71,6 +74,8 @@ function RelatedNoteComposer({
   hostLeaf?: WorkspaceLeaf;
   session: NewRelatedNoteModal;
 }) {
+  const [,setVocabularyRevision]=useState(0);
+  useEffect(/** Update clean selection annotations after saved configuration publications without replacing typed drafts. */ ()=>plugin.index.subscribePresentation?.(/** Bump only this composer's current rendering. */ ()=>setVocabularyRevision(value=>value+1)),[plugin]);
   const [roleFilter, setRoleFilter] = useState<RelationshipRole | "all">(initialRole);
   const [query, setQuery] = useState(/** Preselect the historical endpoint without requiring a second search. */ () => fixedTarget ? plugin.index.titleFor(fixedTarget) : "");
   const [alias, setAlias] = useState("");
@@ -115,13 +120,15 @@ function RelatedNoteComposer({
     return trimmed ? plugin.index.search(trimmed, 48, "vault-files").filter((page) => isNoteTarget(page, origin.path)).slice(0, 18) : [];
   }, [plugin, origin.path]);
 
-  const ontologyFields = roleFilter === "all" ? plugin.allOntologyFields() : plugin.ontologyFieldsForRole(role);
+  const ontologyFields = ontologySelectionFields(roleFilter === "all" ? plugin.allOntologyFields() : plugin.ontologyFieldsForRole(role));
+  const ontologyViews=ontologyFieldViews(ontologyConfiguration(plugin.settings));
+  const ontologyByKey=new Map(ontologyViews.map(/** Current annotations remain separate from physical selection values. */ field=>[field.key,field]));
   const ontologyResults = useMemo(
     /** Explicit disclosure shows every role-appropriate field; typing retains fuzzy ranking. */
     () => browseOntology
       ? fuzzyFilterStrings(ontologyFields, "", Number.MAX_SAFE_INTEGER)
       : ontologyTyped && ontology.trim()
-        ? fuzzyFilterStrings(ontologyFields, ontology, 18)
+        ? ontologyFuzzyMatches(ontologyFields,ontologyViews,ontology,fuzzyFilterStrings,18)
         : [],
     [ontologyFields, ontology, ontologyTyped, browseOntology],
   );
@@ -360,6 +367,7 @@ function RelatedNoteComposer({
     },
     getKey: (field: string) => field.toLocaleLowerCase(),
     getLabel: (field: string) => field,
+    getDetail: (field:string)=>ontologyFieldDetail(ontologyByKey.get(normalizeFieldName(field)),plugin.translator,ontologyTyped&&!fuzzyFilterStrings([field],ontology,1).length),
     placeholder: plugin.translator("addRelated.ontologyPlaceholder", { field: plugin.defaultOntologyField(role) }),
     ariaLabel: plugin.translator("addRelated.ontologyAria"),
     icon: "tags",

@@ -86,6 +86,23 @@ function start(){
   // Native frontmatter initialization can move the requested line zero before delivery.
   // Compare the actual settled cursor, editor identity and leaf, not that invalid requested position.
   check(c.foregroundBefore.same&&c.foregroundBefore.sameLeaf&&c.foregroundAfter.same&&c.foregroundAfter.sameLeaf&&JSON.stringify(c.foregroundAfter.cursor)===JSON.stringify(c.foregroundBefore.cursor)&&c.focusEvents.every(event=>event.same&&event.sameLeaf),'Receipt stole native editor focus/caret '+JSON.stringify({before:c.foregroundBefore,after:c.foregroundAfter,events:c.focusEvents}));c.cases.push({id:'real-received-ontology-reclassifies-stationary-neighbor',semanticCalls:c.counts.semantic,renderedParents:true});c.cases.push({id:'native-editor-focus-caret-and-view-centers-retained'});c.phase='semantic';return true};
+ /** A dirty shared ontology editor retains its local draft across actual file receipt, then refuses stale Save. */
+ c.openOntologyDraft=()=>{
+  p.settingsTab.openOntologyManager('parent');const manager=[...p.settingsTab.ontologyManagers][0];check(manager,'Ontology manager missing');
+  const search=manager.manager.search;search.value='Other';search.dispatchEvent(new Event('input',{bubbles:true}));
+  const row=[...manager.contentEl.querySelectorAll('.kplex-style-manager-row')].find(item=>item.querySelector('.kplex-style-manager-name')?.textContent==='Other');check(row,'Received field not visible in manager');row.click();
+  const editor=[...manager.children][0];check(editor,'Shared ontology editor missing');c.ontologyDraft=editor;c.ontologyManager=manager;
+  const partner=editor.partnerControl.inputEl;partner.value='Child';partner.dispatchEvent(new Event('input',{bubbles:true}));
+  c.restores.push(()=>{editor.close();manager.close()});return true;
+ };
+ /** Stale completion is recoverable feedback, never an echo write or a replaced local draft. */
+ c.checkOntologyDraft=()=>{c.task=(async()=>{
+  const editor=c.ontologyDraft,partner=editor.partnerControl.inputEl,writes=c.counts.writes;
+  check(partner.value==='Child','Receipt overwrote dirty ontology draft');editor.saveButton.buttonEl.click();
+  await until(()=>!editor.busy,'Stale ontology Save did not settle');
+  check(editor.modalEl.isConnected&&editor.feedback.textContent===p.translator('settings.ontology.conflict')&&partner.value==='Child','Stale editor did not retain conflict/draft');
+  check(c.counts.writes===writes,'Stale ontology Save wrote settings');editor.close();c.ontologyManager.close();c.cases.push({id:'real-received-hierarchy-retains-dirty-ontology-draft-and-fences-save'});c.phase='ontology-draft-checked';
+ })().catch(error=>{c.error=String(error.stack||error);c.phase='failed'});return true};
  c.checkInvalid=()=>{check(p.settings.baseNodeStyle.borderColor==='#12ab34'&&p.settings.hierarchy.parents[0]==='Other','Invalid receipt replaced valid state');c.cases.push({id:'torn-file-keeps-valid-state-no-echo'});return true};
  /** Restore owned workspace/configuration and source facts even if assertions fail. */
  c.cleanup=()=>{if(c.cleanupTask)return c.cleanupTask;c.cleanupTask=(async()=>{
@@ -116,6 +133,9 @@ try{
  evaluate('window.__kplexSettingsProbe.setupEditor()');await until('Boolean(window.__kplexSettingsProbe.phase==="editor-ready"||window.__kplexSettingsProbe.error)','Native editor setup deadline');assert.equal(evaluate('window.__kplexSettingsProbe.error??null'),null);
  const saved=JSON.parse(readFileSync(dataFile,'utf8'));assert.equal(saved.baseNodeStyle.borderColor,'#12ab34');assert.equal(saved.appearanceThemes.themes.find(t=>t.id===saved.appearanceThemes.selectedId).appearance.base.baseNodeStyle.borderColor,'#12ab34');
  evaluate('window.__kplexSettingsProbe.foregroundBefore=window.__kplexSettingsProbe.sampleFocus("before-receipt")');saved.hierarchy.parents=['Other'];writeFileSync(dataFile,JSON.stringify(saved,null,2));await until('window.__kplexSettingsProbe.semanticReady()','Received semantic relationship deadline');evaluate('window.__kplexSettingsProbe.checkSemantic()');
+ evaluate('window.__kplexSettingsProbe.openOntologyDraft()');saved.hierarchy.children=[...saved.hierarchy.children,'External194Child'];writeFileSync(dataFile,JSON.stringify(saved,null,2));
+ await until('Boolean(app.plugins.plugins["k-plex"].settings.hierarchy.children.includes("External194Child")&&!app.plugins.plugins["k-plex"].externalSettingsQueued)','Dirty ontology receipt deadline');
+ evaluate('window.__kplexSettingsProbe.checkOntologyDraft()');await until('Boolean(window.__kplexSettingsProbe.phase==="ontology-draft-checked"||window.__kplexSettingsProbe.error)','Dirty ontology conflict deadline');assert.equal(evaluate('window.__kplexSettingsProbe.error??null'),null);
  const writes=evaluate('window.__kplexSettingsProbe.counts.writes');writeFileSync(dataFile,'{"truncated":');
  await until('Boolean(app.plugins.plugins["k-plex"].externalSettingsFailureNotified)','Torn settings retry deadline');evaluate('window.__kplexSettingsProbe.checkInvalid()');assert.equal(evaluate('window.__kplexSettingsProbe.counts.writes'),writes);
  writeFileSync(dataFile,JSON.stringify(saved,null,2));await until('!app.plugins.plugins["k-plex"].settingsReconciliation.failedRead','Valid replacement recovery deadline');await wait(250);assert.equal(evaluate('window.__kplexSettingsProbe.counts.writes'),writes);

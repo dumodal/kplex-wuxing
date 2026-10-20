@@ -158,3 +158,11 @@ test('large native no-trigger prose and overlapping custom literal input finish 
   const result=spawnSync(process.execPath,[probe],{encoding:'utf8',timeout:8000});
   assert.equal(result.error,undefined,result.error?.message);assert.equal(result.status,0,result.stdout+result.stderr);assert.match(result.stdout,/bounded real owner passed/);
 });
+
+test('pair-aware native suggestions retain independent physical fields, roles and exact insertion',()=>{
+ const settings=migrateAndMergeSettings({ontologyPairingVersion:1,hierarchy:{parents:['based on/quoted in'],children:[],leftFriends:['supports/supported by'],rightFriends:[],previous:[],next:[],hidden:[],exclusions:[]}});
+ const owner=new OntologySuggester({app:{},settings});let info=invoke(owner,'::cbased');assert.deepEqual(owner.getSuggestions({...info}),['quoted in']);
+ info=invoke(owner,':::support');const options=owner.getSuggestions({...info});assert(options.includes('supports')&&options.includes('supported by'));
+ let replacement;owner.context={editor:{replaceRange:(...args)=>replacement=args}};owner.selectSuggestion('supported by');assert.equal(replacement[0],'supported by:: ');
+ info=invoke(owner,':::based');assert.deepEqual(owner.getSuggestions({...info}),['based on','quoted in']);
+});

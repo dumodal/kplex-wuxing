@@ -743,3 +743,30 @@ test("new drawing relationship saves during structural refresh with unavailable 
   })()`),true);
  }finally{await browser.cleanup();}
 });
+
+/** A usage dialog is a projection of existing field postings, including fields with scalar values. */
+test('ontology usage queries real stored unassigned/inline field names without acquiring, compiling or writing sources',async()=>{
+ const browser=await chromiumHarness(bundle);
+ try{
+  assert.equal(await browser.evaluate(contributorBrowserInitialize),true);await browser.evaluate(setup);
+  assert.equal(await browser.evaluate(`(async()=>{
+   const f=await makeRelationshipFixture('ontology-usage-existing-postings'),i=f.index;
+   try{
+    const file=f.add('Scalar.md','[Erroneous Property:: scalar]',{'Erroneous Property':'not a link'});
+    const acquired=await i.sourceAcquisition.acquire(file,M.parseBodyMetadata(f.texts.get(file.path)));
+    ok(acquired.current&&acquired.saved,'Seed existing neutral-source facts');
+    const before=JSON.stringify(i.sourceAcquisition.getCounters()),headsBefore=await value((await i.indexedDb.open()).transaction('sourceHeads').objectStore('sourceHeads').getAll());
+    const original=i.sourceAcquisition.acquire,replace=i.indexedDb.sources.replace;let acquisitions=0,replacements=0;
+    i.sourceAcquisition.acquire=async(...args)=>{acquisitions++;return original.apply(i.sourceAcquisition,args)};
+    i.indexedDb.sources.replace=async(...args)=>{replacements++;return replace.apply(i.indexedDb.sources,args)};
+    const result=await i.ontologyUsage('Erroneous Property',()=>true);
+    equal(result,{documents:[{path:'Scalar.md',name:'Scalar'}],partial:false},'Name-only data returns one document despite repeated surfaces');
+    equal(acquisitions,0,'Lookup never acquires sources');equal(replacements,0,'Lookup never rewrites sources');
+    equal(await value((await i.indexedDb.open()).transaction('sourceHeads').objectStore('sourceHeads').getAll()),headsBefore,'Existing selected heads unchanged');
+    equal(JSON.stringify(i.sourceAcquisition.getCounters()),before,'No acquisition counters changed');
+    const parents=await i.ontologyUsage('Parents',()=>true);equal(parents.documents,[{path:'B.md',name:'B'}],'Configured field uses physical declaration owner');
+    return true;
+   }finally{f.close();}
+  })()`),true);
+ }finally{await browser.cleanup();}
+});

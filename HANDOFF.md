@@ -27,6 +27,8 @@ Prepared by **Zsolt's Codex Agent**, 2026-10-20.
 
 **Repository:** `zsviczian/kplex`. Continue branch `2026-10-20-issue-191-startup-policy`, based on accepted `main@843e47f471f897951165b962e12a1d6a64ce089e` (merged #190). Read the actual branch head and its existing draft PR before implementation; do not create a competing branch/PR. Root HANDOFF and the temporary planning marker are the only intended planning changes. Reconcile subsequent accepted main changes normally; no history rewriting.
 
+**Current implementation base:** main merge `50346338f7caf15ff5d27a3d11ff7022c78bcd3c` after the maintainer-authorized merge of #194. The original planning baseline below remains historical; retain all accepted ontology-manager changes while implementing this startup policy.
+
 **Issue:** https://github.com/zsviczian/kplex/issues/191. Related #192 is research only and is explicitly excluded from implementation here. Follow AGENTS.md, CONTRIBUTING.md, docs/AGENT_WORKFLOW.md and docs/agent-workflows/issue-resolution.md. C14 remains accepted and structural refactoring paused.
 
 ## Outcome and scope
@@ -78,7 +80,7 @@ Commit-pinned owners to inspect and extend:
 - [Settings policy/signature](https://github.com/zsviczian/kplex/blob/843e47f471f897951165b962e12a1d6a64ce089e/src/core/graph/settingsPolicy.ts): startup preferences must not change semantic signatures or invalidate source/cache proof.
 - [Startup/URL lifetime regressions](https://github.com/zsviczian/kplex/blob/843e47f471f897951165b962e12a1d6a64ce089e/tests/startup-url-cache-lifetime.test.mjs), [foreground startup](https://github.com/zsviczian/kplex/blob/843e47f471f897951165b962e12a1d6a64ce089e/tests/foreground-startup-indexeddb.test.mjs), [On-demand tests](https://github.com/zsviczian/kplex/blob/843e47f471f897951165b962e12a1d6a64ce089e/tests/on-demand-indexing.test.mjs), and the native startup drivers documented in CONTRIBUTING.md. Extend actual owners/harnesses; do not replace them with a toy parallel startup implementation.
 
-Already merged #153/#163/#177/#183/#185/#186/#190 contain startup, source and visible-center fixes to preserve. Open #194 concerns the ontology manager, not this feature; do not absorb its implementation or overwrite its separate branch's handoff.
+Already merged #153/#163/#177/#183/#185/#186/#190 contain startup, source and visible-center fixes to preserve. #194 has now been merged with maintainer authorization and is part of the current base. Its runtime behavior must be preserved; the #195 assignment remains the active root handoff.
 
 ## Implementation approach and safety boundaries
 
