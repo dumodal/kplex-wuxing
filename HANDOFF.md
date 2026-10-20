@@ -19,202 +19,137 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Assignment: Unified ontology manager and paired-field discovery
 
-## 1. State, identity and authority
+# Implementation return: #194 unified ontology manager
 
-- **State:** Prepared implementation assignment; the planning checkpoint contains documentation only. No feature implementation or runtime validation has been performed for this assignment.
-- **Sender:** Zsolt's Codex Agent. **Next recipient:** implementing agent, then independent main validation agent under the standing workflow.
-- **Repository / branch:** `zsviczian/kplex`, `2026-10-20-ontology-manager`; target `main`. Continue the draft PR belonging to this branch, not a new competing branch or PR.
-- **Exact runtime baseline:** [843e47f471f897951165b962e12a1d6a64ce089e](https://github.com/zsviczian/kplex/commit/843e47f471f897951165b962e12a1d6a64ce089e), the merge of [PR #190](https://github.com/zsviczian/kplex/pull/190). The branch was created from this exact commit. Read its current remote head before starting; subsequent planning commits do not change the runtime baseline.
-- **Related issue:** [#151](https://github.com/zsviczian/kplex/issues/151) is already closed as completed. This is a follow-up usability enhancement, not an unfinished implementation of #151. Do not reopen or close issues automatically. No open PR was returned by the repository search during preparation; recheck before coding.
-- **Initial changes:** this handoff and the temporary `docs/agent-handoffs/ontology-manager.md` planning marker. The preparing agent did not inspect an implementing agent's local working tree. Record local dirty files and preserve unrelated work.
-- **Authority:** implement only this scoped feature when taking up the assignment. Offline-agent return is uncommitted by default. This handoff does not delegate merge, release, main-branch writes, branch deletion, or personal-vault deployment. Repository publication follows the standing authorization rules.
+## Identity and authority
 
-Read `AGENTS.md`, `CONTRIBUTING.md`, `docs/ARCHITECTURE.md`, `docs/AGENT_WORKFLOW.md` and `docs/agent-workflows/issue-resolution.md` first. C14 is accepted; structural refactoring remains paused. Follow the repository's checklist/ETA and progress protocol. Establish actual Node, installed dependencies, browser and Obsidian CLI capabilities rather than inheriting prior agents' claims.
+- Branch: `2026-10-20-ontology-manager`.
+- Local and remote planning head: `8ea700c93ebda78cdc71d6132d656c8ac682b057`.
+- Runtime baseline: `main@843e47f471f897951165b962e12a1d6a64ce089e`.
+- Maintainer reviewed the implementation and explicitly authorized publication/merge of #194, followed by work on #195. The implementation and validation identity below is the accepted local return; publication and merge status are recorded in PR #194. No release or branch deletion is authorized.
+- Exact runtime/test/tooling source manifest: private `zero-delivery-source-manifest.json`, SHA-256 `f0e9cad97e3555ea21cd7ced44e7b972eec4283e082b00681b72294d601e62aa`. It identifies 38 code/test/tooling paths independently of this transient handoff. Durable feature results: [validation report](docs/validation/ontology-manager-194-2026-10-20.md).
 
-## 2. Accepted product direction
+## Completed checklist
 
-Replace the fragmented ontology configuration experience with **one searchable, role-filtered manager**. This is the selected option: not collapsible direction groups, multiple editable lists, a quadrant diagram, or an ontology graph editor.
+- [x] Trace current configuration, queue, shared list/editor, suggesters and actual native Settings ownership.
+- [x] Replace the primary raw-list workflow and standalone discovered manager with the shared native searchable/filterable manager.
+- [x] Implement pair-aware structured editing, new fields/partners, derived roles, pair-wide Save, explicit unpairing and confirmed endpoint removal through the existing queue.
+- [x] Reuse shared physical-field/partner details in Markdown suggestions, native partner suggestions and the related-note composer.
+- [x] Add the accepted Show documents extension using existing field postings, local filtering, full filtered Markdown copy and separate native/Plex opening.
+- [x] Maintain all eight catalogs, user/contributor documentation, production-path regression tests and reusable native lanes.
+- [x] Perform real build/scanner and focused/native validation; retain failures and platform limitations accurately.
+- [x] Restore the disposable test vault, retain private evidence and remove temporary assignment/tooling files.
+- [ ] Independent main-agent acceptance, required pinned-Node/remaining-platform checks, and authorized publication.
 
-Whenever a configured field has a partner, both names must be visible without hover, memorization, opening an editor, or switching the role filter. Reuse this field-and-partner presentation in Settings first, then the Markdown ontology suggester, the related-node composer and the existing Add/change ontology editor.
+## Delivered behavior and review notes
 
-Reuse node/link/theme manager infrastructure, not just its visual appearance. Keep the ontology's configuration/validation authoritative in its existing owner. The UI presents compatible choices and the writer independently revalidates them.
+`OntologyManagerModal` reuses the actual `StyleManagerList` shell, collection disclosure and native Modal ownership. All roles, Hidden, Excluded and discovered Unassigned states are represented. Pair rows show both physical names, orient by role filter independently of query and search either partner. Counts distinguish entries/physical fields; discovery is explicitly incomplete. Opening/filtering/searching never rescans; explicit rescan uses the existing ontology-discovery owner. Existing Hidden/discovery destinations open this same manager. Manager/children close on owning-window retirement or unload.
 
-**Corrections to the conversational draft:**
+`AddToOntologyModal` remains the shared editor. Existing names cannot be renamed, either pair endpoint is selectable, compatible existing partners reuse the native suggester, and creating a new partner is explicit. Role moves show both assignments, Hidden/Excluded retain the configured partner in the preview until explicit unpairing, and removal requires confirmation of the selected name. Cancel/unchanged Save, IME, duplicate submission, failed storage, conflicts, accepted operations after dismissal and saved-refresh-pending are covered.
 
-1. The baseline has seven relationship textareas, a separate discovered/unassigned manager, and an Excluded metadata assignment supported by the ontology editor. **Unassigned and Excluded are different states.** Neither may disappear in the consolidated manager.
-2. Friend and Challenger are self-reciprocal roles, not opposites. Existing distinct-field pairs within Friend or within Challenger remain supported; for example `supports` / `supported by` can both be Friend fields. Do not auto-pair every Friend field, create self-pairs, or remove existing same-role pairs.
-3. Pair-only edits between already compatible assignments are presentation changes. Adding/removing a recognized field or changing its role is a real semantic-policy edit. Preserve the existing distinction; do not promise zero semantic work for every Save.
-4. Settings can show one row per pair. Selection surfaces must still expose **each selectable physical field**, including both fields of a same-role pair. A pair row is not itself a property name.
+The existing configuration contract adds finite `OntologyEdit` preparation and raw affected-endpoint comparison. `editOntologyConfiguration` uses the established queued writer/received-owner fence and one durable operation, merging unrelated edits while rejecting stale affected declarations. The grammar/version, escaping, ordering, defaults, physical style keys and legacy multiple-assignment precedence are preserved. No source-note rename/rewrite is performed by vocabulary edits.
 
-## 3. Settings UX specification
+`ontologyPresentation` distinguishes collapsed manager rows from independently selectable physical endpoints. Direct-name matches precede marked partner-only matches; every selection inserts/writes only its primary physical field. Composer metadata refresh preserves local drafts.
 
-### Entry and layout
+Self-review covered the full production diff, TSDoc/lifetimes, C14 dependency ownership, scanner/API discipline, actual shared-component reuse, all eight locales, raw identity/order preservation, owner-document focus and durable failure/concurrency semantics. No indexing engine, parser/compiler/resolver/evidence engine, source acquisition, snapshot schema or layout policy changed. GraphIndex only adds a seven-line read-only query facade/import/header note over existing field postings; there is no new index extension. No semantic golden, strict timing/failure guard or architecture exception was relaxed. Metadata-only compatible pair changes remain presentation-only; real membership/role edits retain required semantic refresh. No performance improvement is claimed.
 
-Keep the native declarative **Settings → K-Plex → Ontology** page. Replace the primary raw-list workflow with a compact **Manage ontology** entry and useful configured/pair/unassigned counts. It opens one native Obsidian manager modal, consistent with the existing style managers. Keep **Editor suggester** configuration separate; it configures typing behavior, not ontology membership.
+## Actual checks
 
-Unify the existing Discovered fields destination into this same manager, prefiltered to Unassigned where an existing entry point needs preservation. Do not retain another independently implemented discovered-field list. Update the Hidden-fields deep link to open this manager with Hidden selected; do not leave navigation targeting a removed textarea.
+Node: **22.22.3**; installed Obsidian types: **1.13.0**. Required Node **22.22.2** remains unvalidated. Native Windows: Obsidian **1.14.4**, installer **1.14.0**, Electron **43.3.0**, Chromium **150.0.7871.212**, embedded Node **24.18.1**.
 
-Manager controls: a search input, one **Show** dropdown, and **Add field**. The dropdown contains All, Parent, Child, Friend, Challenger, Previous, Next, Hidden, Unassigned, and Excluded metadata. Use localized role labels and a separator between directional roles and non-directional states. Default to All; it includes configured entries and currently available discovered/unassigned fields, with their states clearly labeled. It does not imply complete discovery of the vault.
+- Release metadata passed; `npm run check:architecture`: 7 tests, 0 violations; `npm run check:core`: 130 passed.
+- `npm run lint:obsidian`: passed without findings; `npm run build`: real installed-type production build passed (Windows `npm.cmd`).
+- Prior count-version focused command: **156 passed**, 0 skipped. Current narrow partial-zero correction: **45 passed**, 0 skipped (ontology presentation, actual manager/editor and localization). Exact commands are in the validation report.
+- Primary portable batch: initially 1232/1234 passed; two narrow old-writer doubles corrected without weakening dismissal/retry assertions, all 35 in that file passed and included in the final focused run. Whole primary batch not repeated.
+- Shared UI: 210 passed; portable sources: 334 passed.
+- Chromium source/storage/lifecycle: **645 passed, 1 failed**. The held-cache visible-presentation case never loaded its script resources; subsequent case loaded the same shared bundle. Failure retained, not rerun.
+- `npm run verify:obsidian`: **aggregate failed during portable verification** at an existing restore-watchdog timer-count assertion. Isolated unchanged main@843e47f also failed a timer-count assertion in that block using the same dependencies; candidate targeted runs also passed. Cause remains intermittent/unresolved, and production indexing/assertions were not altered. Later exact-build staging/native results are separate, not a green full gate.
+- Original manager native lanes passed serially on its earlier artifact `7f53817`: manager On-demand/narrow 12 cases; reloaded Eager manager 11; adapted pairs 12; actual reload; external settings 7; trusted composer/folder 12 scenarios. Includes actual Settings navigation/main and popout owners, dirty receipt conflict, no-Plex management, native width440 wrapping, physical endpoint selection and stationary graph refresh. Cold Hidden navigation separately passed before the original preview-only refinement.
+- Read-only UI and guarded composer interaction: zero additional reads/parses/acquisitions/rebuilds/semantic changes/snapshots/settings writes. Compatible pair-only edits: zero semantic/source work; genuine role/membership changes refresh once and persist once. These are functional counters, not comparative performance measurements.
 
-Use `StyleManagerList` for search chrome, row activation, action placement, status and Show more. Preserve its existing disclosure behavior rather than adding another pagination/virtualization framework. Controls wrap at narrow widths; the native modal owns one vertical scroll surface, with no horizontal scrolling or nested list scroller.
+- Extension: real Chromium IndexedDB case passed with unchanged selected heads and zero acquisition/source replacement. Existing `node scripts/run-indexing-tests.mjs` passed, including its watchdog block. The aggregate gate itself was not rerun or declared green.
+- Final artifact native usage lane: 5 workflows passed (actual Settings lookup/filter/native clipboard, new native tab, Plex navigation). Listing/filter/copy recorded **0 reads, 0 parses, 0 acquisitions, 0 source replacements, 0 settings writes**; explicit navigation is measured separately. Editor draft retained. Current native test delegates to the real lookup and injects incomplete coverage for the final fixture field only (`KPLEX_ONTOLOGY_USAGE_PARTIAL_ZERO=true`); zero-result Unassigned removal still passes. Wrapper restored on exit. Details and harness-only corrections are in the validation report.
 
-### Row contract
+## Accepted extension: existing indexed documents only
 
-Each side has its own physical field name and role. Illustrative content, not a new literal syntax:
+The field editor now opens a native document list. It reuses StyleManagerList, native Setting actions, ClipboardSession and nodeMarkdownLink. Keywords match paths/names; copying includes every filtered result beyond Show more. Separate actions use existing new-tab and scoped Plex navigation. The selected physical name is queried independently of its reciprocal partner. Parent/window teardown fences pending lookup and clipboard feedback.
 
-| First field | Partner field |
+Existing SourceFacts field postings and metadata name facts already contain unassigned scalar/inline properties and physical source paths. The adapter authenticates selected metadata families, native identity and mtime/size before returning names, without acquiring, parsing or repairing anything. Incomplete indexing/missing or changed cache inputs are disclosed; Refresh only re-reads existing data. No source/schema/index structure/scheduler extension was added. All 8 locales have 11 new strings.
+
+## Accepted cleanup follow-up: explicit counts
+
+User confirmed Show documents works, then reported stale Unassigned occurrence counts after cleaning a property. Cause traced to GraphBuilder's existing patch discovery policy, which intentionally retains historical names/counts rather than subtracting per-source contributions. No indexing policy or catalog writer was changed.
+
+Refresh counts now reads existing field postings for every physical field matching the current role/search, including undisclosed and previously hidden zero rows. It stores only a manager-local count overlay; confirmed-zero Unassigned fields disappear, configured zero-use fields stay. A returned numeric zero now hides an Unassigned field even with partial coverage, per the explicit follow-up requirement. Configured zero-use fields stay visible. A thrown lookup failure records no numeric count and keeps the historical row visible. Reuse of a field can reappear on the next explicit refresh. Checked values are labelled as document counts. Show documents/Refresh shares its already-requested result with the parent manager without another lookup or a draft save.
+
+No automatic recount on open, typing or graph publication. Filter/search/editor/close fences stale completions; overlays expire on close. Six additional strings were translated in every locale. Native cleanup reproduced the stale catalog, verified assigned-zero preservation and removed the stale Unassigned row with zero source/settings work. The prior full affected 156-test command passed; the current partial-zero policy correction passed 45 focused tests plus the real build/scanner. Prior architecture checks passed; no new imports or architectural edges were introduced by this correction. Prior aggregate/platform limitations remain unchanged.
+
+Final tested artifact SHA-256:
+
+| File | SHA-256 |
 | --- | --- |
-| based on · Parent | basis for · Child |
-| replies to · Previous | replied by · Next |
-| supports · Friend | supported by · Friend |
-| related to · Friend | No pair |
-| hidden · Hidden | Not pairable |
-| review topic · Unassigned | Not assigned |
+| main.js | 82b95d35e4178829bb2c75c0377510b66d14542700e1e55f31b9d992ad592010 |
+| styles.css | 8fd9dac8ebdafb07c38f82d74fdba5e3aa7ab3990a4348a6097c993f25d5c8a6 |
+| manifest.json | 19d9ecce5557733e0ff0f2e27155e635c30158c3cfa6fbca0f11c16e4dedfd2c |
 
-An existing Lucide pairing icon may separate the sides. It means paired labels, not that both notes contain a declaration. Use text/accessible descriptions, not color or an arrow alone, to convey meaning. Do not display the raw slash-escaped settings serialization.
+## Cleanup and evidence
 
-**All view:** one row per configured pair and one per unpaired field or discovered/unassigned name. Match normalized identities through the existing field-name contract. Do not deduplicate or sort the persisted lists as a side effect. If legacy unpaired names occur in more than one role, preserve their raw assignments and precedence; show their effective role plus a truthful multiple-assignment annotation rather than silently cleaning them up.
+Only explicitly configured `C:/Obsidian/kplex-test-small` was used. Independent final restoration passed: original **107-file inventory**, native layout and exact data/enablement/workspace/appearance bytes, rechecked after delayed native saves. Zero Plex views/managers/known test controllers remain; Settings is closed. The restored original pending migration notice may reopen. No native JavaScript errors were captured. The tested final executable remains staged in Small.
 
-**Role-filtered view:** include a pair if either endpoint has the selected role, and display that endpoint first. Under Next, `replied by · Next` precedes `replies to · Previous`. Both endpoints remain visible. Same-role pairs still occupy one row. In All and same-role views, use a deterministic presentation orientation, independent of search text, so rows do not flip while typing. Sorting is presentation-only and must not alter remembered creation defaults or stored field order.
+Private durable evidence: `%LOCALAPPDATA%/KplexValidation/ontology-manager-194`. Original manager backup: `native-baseline-1792477482962`; document-use backup: `usage-baseline-1792483111484`; recount backup: `usage-baseline-1792491707167`; current partial-zero backup/final audit: `usage-baseline-1792493313874`; original lanes: `delivery-*`; document-use extension: `usage-native-3`; recount extension: `counts-native-1`; final partial-zero correction: `partial-zero-native-1`. Original/final source snapshots/manifests and all passed/failed logs retained privately. No raw vault/configuration data or traces added to the repo. One-session staging/restoration helpers were retained privately and removed locally. Temporary planning marker removed; no handoff archive or refactor-ledger session entry created. Standing header preserved verbatim.
 
-**Search:** match either physical name and localized role/status text. Keep a role filter active when searching the partner name; a Next-filtered search for `replies` must still find the Next-oriented pair. Clear search does not reset the role filter. Preserve query, filter and sensible scroll/focus when returning from an editor. Count pairs as one displayed entry; distinguish entry counts from physical-field counts in copy.
+Native harness fixes are test-only: declarative subpage document lookup, visible/focused Settings ownership, detaching Electron geometry before owner closure, queued-save baseline restoration, and waiting for queued fixture rebuild/backlog before strict zero-work composer measurements. No generic retry or runtime workaround remains.
 
-**Activation:** a row opens the existing ontology editor adapted for an unpaired field or a pair. A pair editor shows both fields and supports choosing which endpoint to edit/remove. No nested interactive controls inside the list's button row. Show no hover-only edit or pairing affordance.
+## Remaining review and acceptance
 
-**Unassigned:** use the existing `index.unassignedOntologyFields()` inventory through a narrow host-supplied reader. This is discovered metadata, not another persisted ontology role. Recheck current configuration when displaying it so newly assigned fields leave the Unassigned view. When discovery is incomplete/unavailable, show that state instead of reporting that all fields are assigned. Preserve available occurrence counts without adding a count scan over configured fields.
+Next main-agent action: inspect this complete local diff and private source identity, validate on pinned Node and resolve/accept the recorded aggregate limitations, then perform authorized publication on this same branch. Keep PR draft meanwhile. No product decision or additional implementation is pending; independent acceptance is not claimed.
 
-Keep an explicitly named **Rescan discovered fields** action available for discovery, reusing the existing `ontology-discovery` path and its cost warning. Never invoke it on manager open, filter change, typing, Show more, or ordinary list refresh. Do not relabel a rescan as a cheap refresh.
+Prioritized physical coverage: (1) macOS native Settings/popout focus, suggestion/Escape and teardown; (2) physical phone/tablet software keyboard/IME, touch selection, long names and single-surface scrolling. Minimum Obsidian host remains untested. Windows DOM/native handlers do not prove those platforms. No duplicate Windows manual test is requested for automated workflows. No reliable ETA is assigned to unavailable devices or the unresolved aggregate watchdog/bootstrap failures.
 
-## 4. Shared field/pair editor
+## Changed-file inventory
 
-Extend `AddToOntologyModal`; do not create a separate settings-only editing workflow. The same content and validation must serve manager entry points and Markdown's Add/change ontology action. Native shells may remain distinct from portable presentation.
-
-Fields: physical property name, role, optional paired property, and read-only derived partner role. Existing physical names are identities, not free-form display captions; keep existing names read-only in this PR rather than introducing ambiguous vault-wide rename behavior. A new field has an editable name. Use **Add field**, not **Add relationship**, in Settings: this configures vocabulary and does not link two notes.
-
-Use the existing reciprocal mapping:
-
-| Selected role | Partner role |
-| --- | --- |
-| Parent | Child |
-| Child | Parent |
-| Previous | Next |
-| Next | Previous |
-| Friend | Friend |
-| Challenger | Challenger |
-| Hidden / Excluded metadata | No pair |
-
-Keep `ontologyConfiguration`, `eligibleOntologyPartners`, `assignOntologyField` and `normalizeFieldName` as the authorities. The inspected configuration tests already reject incompatible pair roles and partner stealing; the proposed Child/Challenger mismatch is **not a confirmed missing guard in #190**. Add explicit regression coverage for that example without claiming a reproduced bug.
-
-Support these operations:
-
-- Add an unpaired field or assign a discovered field to a role.
-- Pair with an existing eligible, unclaimed field. Show the partner's role in suggestions. An incompatible or already paired existing property cannot be silently moved or stolen.
-- Create both names of a new pair without requiring manual raw syntax or a preliminary saved field. Treat creation of the second property as an explicit choice, with the derived role shown. This preserves the capability currently available through a single `A/B` textarea entry. Validate both names and commit their complete candidate together.
-- Unpair explicitly, preserving both physical fields as ordinary assignments in their original roles and order. Replacing a partner also preserves the old partner's assignment.
-- Edit an existing pair's roles as one unit. Changing the first role derives the second role **in the local draft only**. Show both old/new assignments and require explicit **Save both directions**; never auto-save on dropdown change. Offer unpairing when only one endpoint should change. Hidden/Excluded requires explicit unpairing, with the unaffected field preserved.
-- Remove one named field's ontology assignment, not notes or properties in the vault. If paired, explain that the pairing is removed and the other field remains assigned. An unassigned field remains discoverable if present in the existing inventory; removing an assignment is not excluding metadata. Warn that graph interpretation may change. Do not add bulk deletion or bulk source rewriting.
-
-Save and Cancel must be explicit for this structured form. No per-keystroke persistence, role changes, or index work. Do not force a structured editor into `TextSettingDraft`'s textarea autosave policy merely to reuse its class. Preserve equivalent conflict/retry/composition protections. Invalid drafts remain local; storage errors retain the draft; saved-but-refresh-pending is not an unsaved state and must not invite duplicate writes.
-
-## 5. Shared implementation structure
-
-### Reuse map at the pinned baseline
-
-| Existing owner | Planned use |
-| --- | --- |
-| [StyleManagerList](https://github.com/zsviczian/kplex/blob/843e47f471f897951165b962e12a1d6a64ce089e/src/ui/StyleManagerList.ts) | Native manager mechanics already shared by node styles, relationship styles and themes. It does not own ontology rules, inventory or writes. |
-| [settings.ts](https://github.com/zsviczian/kplex/blob/843e47f471f897951165b962e12a1d6a64ce089e/src/settings.ts) | Declarative navigation, existing style-manager integrations, ontology summaries and discovered-field routing. Replace primary textarea destinations and duplicate discovered list. |
-| [ontologyConfiguration.ts](https://github.com/zsviczian/kplex/blob/843e47f471f897951165b962e12a1d6a64ce089e/src/core/contracts/ontologyConfiguration.ts) | Raw grammar, normalized roles, reciprocal pairing, eligible partners, lossless escaping and pure candidate edits. |
-| [AddToOntologyModal](https://github.com/zsviczian/kplex/blob/843e47f471f897951165b962e12a1d6a64ce089e/src/ui/AddToOntologyModal.ts) / [OntologyPartnerSuggest](https://github.com/zsviczian/kplex/blob/843e47f471f897951165b962e12a1d6a64ce089e/src/ui/OntologyPartnerSuggest.ts) | Shared native editor and eligible-partner suggestions. Preserve stale-owner, busy, Save/Cancel and teardown behavior. |
-| [OntologySuggester](https://github.com/zsviczian/kplex/blob/843e47f471f897951165b962e12a1d6a64ce089e/src/editor/OntologySuggester.ts) | Native Markdown trigger/query lifecycle and exact physical-field insertion. |
-| [NewRelatedNoteModal](https://github.com/zsviczian/kplex/blob/843e47f471f897951165b962e12a1d6a64ce089e/src/ui/NewRelatedNoteModal.ts) | Shared React composer for creating/linking notes and fixed-target ontology additions. `.ts` is canonical; inspect whether an old `.tsx` companion exists before applying the repository's extension-compatibility rule. |
-| [FuzzySearchInput](https://github.com/zsviczian/kplex/blob/843e47f471f897951165b962e12a1d6a64ce089e/src/ui/FuzzySearchInput.tsx) / [FuzzySuggester](https://github.com/zsviczian/kplex/blob/843e47f471f897951165b962e12a1d6a64ce089e/src/ui/components/FuzzySuggester.tsx) | Existing matching and input/portal/keyboard mechanics. `getLabel`, `getDetail` and `resultPrefix` are available; prefer these over a replacement widget. |
-| [main.ts](https://github.com/zsviczian/kplex/blob/843e47f471f897951165b962e12a1d6a64ce089e/src/main.ts) | `assignFieldToOntology`, `updateOntologyField`, private `updateOntologyConfiguration`, settings queue/reconciliation, role/default/inverse lookup, manager lifetime and Hidden-settings navigation. |
-
-Create a small **field/pair presentation model** from an already decoded `OntologyConfiguration`. Proposed names are implementation suggestions, not existing APIs. It needs stable normalized identity, physical spelling, effective role, optional partner/partner role, and state. Derive a deduplicated manager-row projection and a separate per-physical-field selection projection. Neither is a persisted registry or a graph/source DTO.
-
-Place ontology-specific presentation in the appropriate feature/presentation layer, not domain-independent `src/ui/components`. Reuse one compact display/formatting owner across consumers. Native DOM adapters and React consumers may use thin rendering adapters over the same model, localized text and CSS; do not mount a React root per native suggestion merely to claim identical components. A reusable full pair row/editor and compact field detail are distinct views of the same data, not one giant mode-switching widget.
-
-Reuse `StyleManagerList` directly in the native manager. Do not import its host-bound implementation into portable React or migrate all style managers as a prerequisite. If a small shared extension is necessary, keep node/link/theme behavior unchanged and add regression coverage.
-
-### Atomic configuration changes
-
-`updateOntologyConfiguration` is currently **private**. It already serializes edits against `settingsForWrite()`, validates, writes the durable snapshot, publishes affected groups and delegates the existing impact-based refresh. Do not call it from UI via a cast or expose arbitrary settings mutation callbacks.
-
-For new-pair creation, pair-wide role changes and removal, add a narrow typed operation entry point at the existing host/application boundary and pure candidate transformations in the existing configuration owner where needed. Name those new APIs explicitly in the implementation. Existing single-field operations can continue to delegate to `assignFieldToOntology`.
-
-Capture the opening field/pair state and `receivedSettingsOwner('hierarchy')`. Inside the one existing queue, recheck affected endpoint roles, partner ownership, required ordering anchors and source configuration. Preserve unrelated concurrent edits; refuse changed affected endpoints with recoverable conflict feedback. A stale UI row must not silently target a newly re-paired property.
-
-Build a detached candidate, apply the complete operation, validate its final configuration, and persist **once**. Do not perform two durable single-field saves for a pair edit: that would expose a transient unpairing/invalid role combination and extra semantic refresh. Do not mutate cached arrays in place. Preserve unrelated raw entries, legacy multiplicity, escape sequences, pair declaration side on unchanged Save, and ordered defaults. Round-trip existing `hierarchy` and `ontologyPairingVersion: 1`; no schema migration is required just to replace the UI.
-
-Reuse current settings notifications and exact lifetime cleanup to keep open managers/selectors current. Clean readers may refresh; a dirty editor must retain its draft or become explicitly conflicted, not be overwritten. Avoid new timers, polling, global registries, per-row listeners or coupling ontology ownership to an appearance-theme activation.
-
-## 6. Pair-aware selection outside Settings
-
-**Markdown suggester:** show the exact inserted field prominently and a secondary `Paired with: <partner> · <role>` line. Selecting inserts only the primary physical field followed by the current `:: ` syntax, including existing bold/mid-sentence behavior. Never insert a slash pair or decorative label.
-
-Search either name, with direct matches ahead of partner-only matches. Preserve existing role-trigger eligibility; matching a partner must not offer an otherwise ineligible primary role. In the all-role picker, both endpoints remain independently selectable. Mark partner-only matches clearly, so remembering the other term helps without causing an unexpected insertion. Keep the native trigger matcher and its long-line/long-paste complexity unchanged; do not invoke graph search or source discovery while typing.
-
-**Related-node composer:** reuse `FuzzySearchInput` and its detail slot for the same annotation. Keep one option per physical field, existing role/All filter, default selection, explicit empty-query disclosure and fuzzy ranking. The pair annotation remains visible for the selected value after the popup closes. Preserve name/alias/folder drafts, fixed-target flow, Link confirmation, Markdown/Excalidraw/Placeholder/URL actions, create-another completion and saved-pending/partial-file recovery.
-
-The annotation describes the selected property; it must not imply that it will always be written on the central node. The existing mutation owner may write the inverse on a Markdown target when the origin is non-Markdown. Do not change that decision or mirror a property onto both notes. Preserve current physical style keys, exact-field filters and provenance/unlink identities.
-
-Settings **All** deduplicates pairs; selector **All** does not collapse their two selectable field identities. This distinction needs an explicit test for Friend/Friend and Challenger/Challenger.
-
-## 7. Scope and resource guardrails
-
-No changes to GraphBuilder/GraphIndex scheduling, source acquisition, Markdown parsing, semantic classification, evidence schemas, graph snapshots or IndexedDB formats. No cache purge, implicit rescan, new background task, mirror writes, graph-layout change, new default ontology pairs, or general settings/style refactor. Do not absorb the startup defect or browser-bootstrap limitation recorded under #190 into this UX assignment.
-
-Opening/browsing/searching/filtering/Show more/canceling and typing unsubmitted drafts must do no additional note reads/parses, semantic preparation/publication, source acquisition, full builds, snapshot writes or settings saves attributable to those interactions. Selecting an ontology candidate alone does not write settings; explicit creation/link/save retains its existing effects. Isolate legitimate unrelated startup/discovery work in measurement rather than suppressing it or claiming that the whole application is idle.
-
-Pair/unpair between unchanged compatible assignments must retain semantic-signature equality and zero semantic/source work. Real membership/role changes use the existing settings-impact pathway. Do not bypass necessary semantic invalidation to meet a blanket zero-work assertion. An explicit discovery rescan is a separately measured, deliberate exception.
-
-Retain existing list order and remembered defaults even if the manager displays alphabetically. Retain literal slashes/backslashes through the shared escaping owner; no manual `split('/')` in UI. Preserve Hidden versus Excluded versus Unassigned meaning. Keep styling in Visual styling; do not bundle link-style editors, pair-wide style synchronization, lenses or Connection details redesign into this PR.
-
-New/changed copy belongs in all eight language catalogs. Preserve user-authored field spelling, Unicode and case/space normalization rules. Use native components, Obsidian theme variables, Lucide icons, owning-document/window lifetimes and keyboard/screen-reader names. Inspect actual installed Obsidian declarations and official documentation before using unfamiliar APIs. No scanner suppressions or weakened architecture/test gates.
-
-## 8. Implementation sequence and acceptance
-
-1. **Characterize and project:** trace remaining callers and baseline tests; add presentation-model tests for pair deduplication, oriented role filters, localized search, Unassigned/Excluded separation, legacy duplicate assignments and per-field selector identities. No changes to raw configuration on read.
-2. **Settings first:** integrate the native manager and shared editor; adapt declarative navigation, Hidden setup links and discovered-field entry points. Implement only the narrow missing pure edit operations and their one-queue host route. Validate this before adapting suggestion consumers.
-3. **Selection reuse:** enrich native Markdown suggestions, partner suggestions and the React composer through the shared model/formatting. Preserve selection/insertion/write semantics and all existing controls.
-4. **Validation and delivery:** update user-facing `docs/ONTOLOGY_PAIRS.md` and relevant README wording, all locales, and affected native drivers. Remove the temporary planning marker. Return implementation/results here for independent review; update the existing PR with actual evidence, not planned successes.
-
-Do not maintain a second advanced raw editor by default. If removing the textarea reveals an essential compatibility operation not covered above, characterize it and add the narrow manager equivalent; do not silently delete capability or invent a bulk migration.
-
-### Required automated coverage
-
-Extend actual production-path tests, not reimplemented toy logic. Start with the existing suites `tests/ontology-configuration.test.mjs`, `tests/ontology-pair-modal.test.mjs`, `tests/ontology-input.test.mjs`, `tests/ontology-suggester.test.mjs`, `tests/ui-components.test.mjs`, `tests/excalibrain-migration.test.mjs` and `tests/source-relationship-mutations-indexeddb.test.mjs`. Inspect their loaders before choosing commands. Reuse `tests/support/styleSettingsHost.mjs` for real queued-writer checks where applicable and maintain its finite module inventory. Add focused manager/presentation tests where no current suite fits.
-
-Acceptance cases:
-
-- All/each role/status, partner-name search, pairs represented once in manager views, correct role orientation and no stored reorder; same-role pair endpoints independently selectable.
-- Unassigned assignment/removal and Excluded/Hidden distinctions; no new scan on display, and explicit rescan still works through its existing owner.
-- New field, two-new-name pair, existing eligible pair, replacement, unpair, pair-wide role edit, single-endpoint removal, Cancel and unchanged Save.
-- Every allowed reciprocal role plus explicit Child/Challenger rejection; self/normalized-self, chains, reversed duplicates, reused partner, incompatible/unsupported roles and malformed entries.
-- Literal slash/backslash, Unicode and legacy imports; no invented pairing; unchanged unrelated fields/order/defaults/style keys and no source-note rewrites.
-- One durable transaction for pair edits, failing storage, saved-refresh-pending, double Save, close/unload while pending, stale row/received settings, overlapping affected edits and mergeable unrelated edits. No intermediate published state.
-- Exact editor insertion and replacement ranges, all/custom triggers, bold fields, IME, paste/long-line regression; direct versus partner-only match selection.
-- Composer existing/new/fixed-target flows, disclosure with empty query, both same-role field options, inverse-write behavior for non-Markdown origins, keyboard selection versus form submit, and retained partial-save recovery.
-- Regression checks for node/link/theme managers after any shared-shell change, including focus, counts, Show more and no new rendering on unrelated changes.
-- Operation counters for read-only UI and compatible pairing changes; required semantic updates still happen for actual role/membership edits in both indexing modes.
-
-Run `npm run verify` on required Node 22.22.2 with the real installed Obsidian type package. Record actual results and any failures; do not replace the real build with a stub check or weaken assertions. The planning checkpoint did not run these suites.
-
-### Main-agent native acceptance
-
-Use an existing explicitly configured disposable Small vault and exact staged artifacts. Run `npm run verify:obsidian`, then adapt/run relevant existing `verify:obsidian:ontology-pairs`, `verify:obsidian:ontology-pair-reload`, `verify:obsidian:ontology-input` and `verify:obsidian:external-settings` lanes. Old textarea assertions must be replaced by meaningful manager/editor assertions, not deleted merely to make a lane pass. Reuse existing composer/editor native drivers for the new selection details. Run browser/native drivers serially; no personal vault, cache reset or invented host pass.
-
-Exercise real Settings navigation and Hidden deep links; both asymmetric and symmetric pairs; a stationary Plex while saved roles/pairs change; main, Settings popout and graph popout; incoming settings while a dirty editor is open; no-Plex management; reload persistence; and a long synthetic vocabulary at narrow widths. Record exact artifact hashes, owner/focus/scroll behavior, source-work counters and fixture/configuration restoration.
-
-Up to three physical/manual checks remain separate from automation: (1) main/Settings-popout readability and pair orientation at narrow/wide sizes, (2) macOS and physical phone/tablet selection, software keyboard, focus and scrolling, and (3) end-to-end pairing from Settings followed by writing each endpoint and inspecting both graph perspectives. Only request manual work that available host automation cannot establish.
-
-## 9. Return requirements
-
-Overwrite the assignment body with the implementation return when transferring to the main reviewer; preserve the standing header. Retain durable design/results in the existing PR and appropriate feature docs before replacing this transient body. Do not create a dated handoff archive or a session report in the refactor ledger for this non-refactor task.
-
-Return exact branch/base and local diff identity; changed-file inventory; which accepted behavior is complete; real commands, Node/host versions and outcomes; source/artifact identities; architecture/component reuse/TSDoc/localization review; failed or unavailable checks; and cleanup status. Distinguish implementation from portable/browser/native/device acceptance. Explain any remaining product decision without silently expanding scope. The next main-agent action is independent full-diff review, exact-build validation and authorized publication on this same branch.
-
-Keep the PR draft. Do not merge, release, rewrite history, delete branches or mark #151 newly fixed by this plan. No runtime tests or performance improvement are claimed by the planning checkpoint.
+- `CONTRIBUTING.md`
+- `HANDOFF.md`
+- `README.md`
+- `docs/ONTOLOGY_PAIRS.md`
+- `docs/agent-handoffs/ontology-manager.md` (deleted)
+- `docs/validation/ontology-manager-194-2026-10-20.md`
+- `package.json`
+- `scripts/testing/obsidian/externalSettings.mjs`
+- `scripts/testing/obsidian/folderCreationWorkflows.mjs`
+- `scripts/testing/obsidian/ontologyInput.mjs`
+- `scripts/testing/obsidian/ontologyManager.mjs`
+- `scripts/testing/obsidian/ontologyPairs.mjs`
+- `scripts/testing/obsidian/ontologyUsage.mjs`
+- `src/adapters/obsidian/ontologyUsage.ts`
+- `src/core/contracts/ontologyConfiguration.ts`
+- `src/editor/OntologySuggester.ts`
+- `src/index/GraphIndex.ts`
+- `src/lang/de.ts`
+- `src/lang/en.ts`
+- `src/lang/es.ts`
+- `src/lang/fr.ts`
+- `src/lang/ja.ts`
+- `src/lang/nl.ts`
+- `src/lang/ru.ts`
+- `src/lang/zh-TW.ts`
+- `src/main.ts`
+- `src/settings.ts`
+- `src/ui/AddToOntologyModal.ts`
+- `src/ui/NewRelatedNoteModal.ts`
+- `src/ui/OntologyManagerModal.ts`
+- `src/ui/OntologyPartnerSuggest.ts`
+- `src/ui/OntologyUsageModal.ts`
+- `src/ui/features/ontologyPresentation.ts`
+- `styles.css`
+- `tests/action-settings.test.mjs`
+- `tests/indexing.test.mjs`
+- `tests/ontology-configuration.test.mjs`
+- `tests/ontology-pair-modal.test.mjs`
+- `tests/ontology-presentation.test.mjs`
+- `tests/ontology-suggester.test.mjs`
+- `tests/ontology-usage.test.mjs`
+- `tests/source-relationship-mutations-indexeddb.test.mjs`
+- `tests/support/styleSettingsHost.mjs`
+- `tests/ui-components.test.mjs`

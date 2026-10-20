@@ -23,11 +23,12 @@ export async function runFolderCreationWorkflows(h) {
     let live=true;c.wrappers.push(()=>{if(live){live=false;p[method]=original}});
   }
 
-  /** Keep body/source activity outside typing/cancel intervals; never flush, force a build or change policies. */
+  /** Wait for the coordinator's queued timer/backlog as well as active source work. Prior fixture
+   * mutations may not have started their refresh yet; never flush, suppress or force that work. */
   const idle=async()=>{
     await until(()=>{
       const a=p.index.sourceAcquisition,s=a.getActivityState(),cache=p.index.indexedDb.getActivityState(),active=p.index.getWorkPriorityDiagnostics().active;
-      return !p.isStartupInitializing()&&!p.index.building&&!p.rebuildTask&&!p.index.hasActiveSemanticPreparation()
+      return !p.isStartupInitializing()&&!p.index.building&&!p.rebuildTask&&p.rebuildTimer===null&&!p.indexDirty&&!p.index.hasActiveSemanticPreparation()
         &&!p.index.hasPendingSemanticPreparation()&&!s.sourceActive&&!s.knownImpactTasks&&!s.repoWrites
         &&(!a.enabled||!s.pendingKnown)&&!cache.queuedBodies&&!cache.writerActive&&p.index.snapshotPersistTimer===null
         &&Object.values(active).every(value=>value===0);
@@ -236,7 +237,7 @@ export async function runFolderCreationWorkflows(h) {
       await until(()=>owner.querySelector('.kplex-fuzzy-floating-results button'),'All ontology list missing');
       const rows=[...owner.querySelectorAll('.kplex-fuzzy-floating-results button')];
       check(new Set(rows.map(row=>row.textContent)).size===new Set(all.map(field=>field.toLocaleLowerCase())).size,'All ontology field count differs');
-      const row=rows.find(item=>item.textContent===parent);check(row,'All omitted parent field');row.click();await delay(30);
+      const row=rows.find(item=>item.querySelector('span')?.textContent===parent);check(row,'All omitted parent field');row.click();await delay(30);
       check(ontology.value===parent&&direction.value==='all','All selection changed filter or lost field');
       check(calls.length===0,'Ontology-only edits ranked note vocabulary');
       nameInput(element).focus();input(nameInput(element),'README');await delay(60);

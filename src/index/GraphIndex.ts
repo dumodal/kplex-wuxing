@@ -12,6 +12,7 @@
  * Touched canonical physical facets retire their cached exact-pair facade before selected reads.
  * Exact-pair preparation fences its full compiler presentation input until publication; retained
  * source/write authority thereafter follows the canonical semantic signature independently of styles.
+ * Explicit ontology-use lists query existing neutral-source postings without acquisition or new indices.
  * Published graph repository for K-Plex. Eager sessions retain global source adoption; on-demand
  * sessions publish a body-free host baseline, then canonicalize bounded direct owners without global
  * inventory. Host-only count covers separate available local numbers from semantic/write authority;
@@ -96,6 +97,7 @@ import { canonicalWebUrl } from "../adapters/obsidian/urlIdentity";
 import { remapGraphEndpoint } from "./remapGraphEndpoint";
 import { isRemoteNodeImageSource } from "../core/plex/nodeImagePolicy";
 import { yieldToHostTask } from "../adapters/obsidian/yieldToHostTask";
+import {readOntologyUsage,type OntologyUsageResult} from '../adapters/obsidian/ontologyUsage';
 import { ForegroundWorkScheduler, INDEX_WORK_PRIORITY, type IndexWorkPriority, type IndexingThrottle } from "./ForegroundWorkScheduler";
 import { HostMetadataPreview } from "./HostMetadataPreview";
 import { ObsidianSourceAcquisition } from "../adapters/obsidian/sourceAcquisition";
@@ -3518,6 +3520,11 @@ export class GraphIndex {
 
   evidenceBetween(sourcePath: string, targetPath: string): RelationEvidence[] {
     return this.semanticEvidence(sourcePath, targetPath).evidence;
+  }
+
+  /** Read existing field postings for the explicit usage dialog; never acquire or extend the index. */
+  ontologyUsage(field:string,current:()=>boolean):Promise<OntologyUsageResult> {
+    return readOntologyUsage(this.indexedDb.sources,field,/** Native paths come from authenticated heads, never opaque source IDs. */ path=>this.app.vault.getFileByPath(path),current);
   }
 
   discoveredFields(): Array<{ normalized: string; name: string; count: number }> {

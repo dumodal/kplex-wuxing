@@ -165,7 +165,7 @@ test("ontology assignment acquires synchronously and a dismissed durable save ha
   let release, writes = 0;
   const completion = new Promise(resolve => { release = resolve; });
   const context = { opened: true, busy: false, generation: 1, fieldName: "Topic", saveButton: { setDisabled() {} },
-    opening:{}, selected:"child", partner:"", current:()=>true, valid:()=>true, refresh(){this.saveButton.setDisabled(this.busy)}, onSaved: assert.fail, close: assert.fail, plugin: { assignFieldToOntology: async () => { writes++; await completion; } } };
+    opening:{}, operation:()=>({kind:"assign",field:"Topic",role:"child",partner:null}), modalEl:{setAttribute(){}},contentEl:{querySelectorAll:()=>[]},selected:"child", partner:"", current:()=>true, valid:()=>true, refresh(){this.saveButton.setDisabled(this.busy)}, onSaved: assert.fail, close: assert.fail, plugin: { editOntologyConfiguration: async edit => { assert.deepEqual(edit,{kind:"assign",field:"Topic",role:"child",partner:null});writes++; await completion;return {refreshPending:false}; } } };
   const save = production("save", { Notice: class { constructor() { assert.fail("late Notice"); } } }, "src/ui/AddToOntologyModal.ts").bind(context);
   const first = save("child"), duplicate = save("parent"); assert.equal(writes, 1); assert.equal(context.busy, true);
   context.opened = false; release(); await Promise.all([first, duplicate]); assert.equal(context.busy, false);
@@ -174,8 +174,8 @@ test("ontology assignment acquires synchronously and a dismissed durable save ha
 test("ontology assignment failure retains its shell and permits explicit retry without unhandled rejection", async () => {
   const notices = [], disabled = [], feedback = [];
   const context = { opened: true, busy: false, generation: 1, fieldName: "Topic", saveButton: { setDisabled: value => disabled.push(value) },
-    opening:{}, selected:"child", partner:"", current:()=>true, valid:()=>true, refresh(){this.saveButton.setDisabled(this.busy)}, feedback:{setText:value=>feedback.push(value),toggle(){}},
-    onSaved: assert.fail, close: assert.fail, plugin: { assignFieldToOntology: async () => { throw new Error("expected save failure"); }, translator: key => key } };
+    opening:{}, operation:()=>({kind:"assign",field:"Topic",role:"child",partner:null}), modalEl:{setAttribute(){}},contentEl:{querySelectorAll:()=>[]},selected:"child", partner:"", current:()=>true, valid:()=>true, refresh(){this.saveButton.setDisabled(this.busy)}, feedback:{setText:value=>feedback.push(value),toggle(){}},
+    onSaved: assert.fail, close: assert.fail, plugin: { editOntologyConfiguration: async () => { throw new Error("expected save failure"); }, translator: key => key } };
   const save = production("save", { Notice: class { constructor(message) { notices.push(message); } } }, "src/ui/AddToOntologyModal.ts").bind(context);
   await save(); assert.deepEqual(notices, []); assert.deepEqual(feedback,["styles.operation.notSaved"]); assert.deepEqual(disabled, [true, false]); assert.equal(context.busy, false);
   context.opened = false; await save(); assert.equal(notices.length, 0); assert.equal(feedback.length,1);
@@ -183,10 +183,11 @@ test("ontology assignment failure retains its shell and permits explicit retry w
 
 test("ontology shells release each native invocation exactly once", () => {
   for (const path of ["src/ui/AddToOntologyModal.ts"]) {
-    let closes = 0;
-    const context = { opened: true, recorder: null, releasePreferences: null, pendingBinding: null, contentEl: { empty() {} }, onClosed: () => closes++ };
+    let closes = 0, usageCloses = 0;
+    const context = { opened: true, usageDialogs:new Set([{close:()=>usageCloses++}]),recorder: null, releasePreferences: null, pendingBinding: null, contentEl: { empty() {} }, onClosed: () => closes++ };
     const close = production("onClose", {}, path).bind(context);
     close(); close(); assert.equal(closes, 1); context.opened = true; close(); assert.equal(closes, 2);
+    assert.equal(usageCloses,1);assert.equal(context.usageDialogs.size,0);
   }
 });
 

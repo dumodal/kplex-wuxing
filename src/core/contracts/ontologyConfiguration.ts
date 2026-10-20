@@ -1,4 +1,4 @@
-﻿/** Settings-only ontology grammar and projection. Raw textarea lists are the persisted authority;
+﻿/** Settings-only ontology grammar and projection. Raw configured lists are the persisted authority;
  * compiled consumers receive ordinary physical fields while presentation receives reciprocal pairs.
  * No source parsing, evidence classification, host work or persistence belongs to this module. */
 import {normalizeFieldName} from './fieldName';
@@ -144,4 +144,45 @@ export function assignOntologyField(input:OntologyConfigurationInput, field:stri
     result[target]=result[target].map(/** Replace precisely the retained edited-field anchor. */ entry=>normalizeFieldName(entryParts(entry)[0])===normalized?`${escapeOntologyField(field.trim())}/${escapeOntologyField(canonical)}`:entry);
   }
   ontologyConfiguration({hierarchy:result,ontologyPairingVersion:1});return result;
+}
+
+/** Finite editor intents; pair changes are prepared together before the single durable host write. */
+export type OntologyEdit = Readonly<{kind:'assign';field:string;role:OntologyRole;partner:string|null;createPartner?:boolean;movePair?:boolean}> | Readonly<{kind:'remove';field:string}>;
+
+/** Capture only an endpoint's raw assignments and pair declaration for optimistic concurrency.
+ * Unrelated local edits remain mergeable; changed spelling, multiplicity or declaration side conflicts. */
+export function ontologyEndpointState(input:OntologyConfigurationInput, field:string):readonly unknown[] {
+  const key=normalizeFieldName(field),configuration=ontologyConfiguration(input);
+  return [configuration.roles.get(key),configuration.pairs.get(key),...ONTOLOGY_GROUPS.map(/** Retain exact affected declarations without depending on unrelated list positions. */ group=>[group,input.hierarchy[group].filter(/** A pair's implicit endpoint owns its original declaration too. */ entry=>(input.ontologyPairingVersion===1?entryParts(entry):[entry]).some(/** Use established identity, never presentation spelling. */ name=>normalizeFieldName(name)===key))])];
+}
+
+/** Apply a complete editor candidate without touching source properties or unrelated raw entries.
+ * New partners and pair-wide role moves are explicit; hidden/excluded pairs must first be unpaired. */
+export function applyOntologyEdit(input:OntologyConfigurationInput, edit:OntologyEdit):Record<OntologyGroup,string[]> {
+  if(input.ontologyPairingVersion===undefined)return applyOntologyEdit({hierarchy:escapeLegacyOntology(input.hierarchy),ontologyPairingVersion:1},edit);
+  const config=ontologyConfiguration(input),key=normalizeFieldName(edit.field),oldRole=config.roles.get(key),oldPair=config.pairs.get(key);
+  if(!key||!edit.field.trim())throw new OntologyConfigurationError('malformed');
+  if(edit.kind==='remove'){
+    if(!oldRole)return {...input.hierarchy} as Record<OntologyGroup,string[]>;
+    const unpaired=oldPair?assignOntologyField(input,edit.field,oldRole,null):input.hierarchy;
+    const result={...unpaired} as Record<OntologyGroup,string[]>;
+    for(const group of ONTOLOGY_GROUPS)result[group]=unpaired[group].filter(/** Remove this name's assignments only, retaining its partner and ordering. */ entry=>normalizeFieldName(entryParts(entry)[0])!==key);
+    ontologyConfiguration({...input,hierarchy:result});return result;
+  }
+  let candidate=input;
+  const partnerKey=edit.partner===null?null:normalizeFieldName(edit.partner),reciprocal=ONTOLOGY_RECIPROCAL[edit.role];
+  if(edit.movePair){
+    if(!oldPair||partnerKey!==normalizeFieldName(oldPair.partner)||!reciprocal)throw new OntologyConfigurationError('role');
+    // An unchanged Save must retain the original declaration side and raw order.
+    if(oldRole===edit.role)return assignOntologyField(input,edit.field,edit.role,edit.partner);
+    const detached=assignOntologyField(input,edit.field,oldRole!,null);
+    const moved=assignOntologyField({...input,hierarchy:detached},oldPair.partner,reciprocal,null);
+    candidate={...input,hierarchy:moved};
+  }
+  if(edit.createPartner){
+    if(!partnerKey||partnerKey===key)throw new OntologyConfigurationError(partnerKey===key?'self':'malformed');
+    if(!reciprocal||config.roles.has(partnerKey)||config.pairs.has(partnerKey))throw new OntologyConfigurationError('role');
+    candidate={...candidate,hierarchy:assignOntologyField(candidate,edit.partner!,reciprocal,null)};
+  }
+  return assignOntologyField(candidate,edit.field,edit.role,edit.partner);
 }

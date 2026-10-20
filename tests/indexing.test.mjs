@@ -196,7 +196,10 @@ assert(settingsSource.includes('private displayScope: "custom" | "all"'), "Ontol
 assert(settingDefinitionsSource.includes('name: translate("settings.ui.discovered.fields")'), "Ontology discovery must live on a localized compact subpage");
 assert(settingDefinitionsSource.includes('name: translate("settings.ui.review.unassigned.fields")'), "Unassigned ontology fields must open in a localized searchable manager");
 assert(!settingDefinitionsSource.includes('occurrence · assign this discovered property'), "Settings must not dump every unassigned field into the page");
-assert(settingsSource.includes('class UnassignedOntologyManagerModal'), "Unassigned ontology fields need a dedicated manager");
+const ontologyManagerSource=readFileSync(join(root,"src/ui/OntologyManagerModal.ts"),"utf8");
+assert(settingsSource.includes('this.openOntologyManager("unassigned")'), "Discovered fields must route to the unified Unassigned filter");
+assert(ontologyManagerSource.includes('new StyleManagerList(')&&ontologyManagerSource.includes('unassignedOntologyFields()'), "The unified manager must reuse list mechanics and existing discovery inventory");
+assert(!ontologyPageSource.includes('type: "textarea"'), "Primary ontology configuration must use the structured shared manager/editor");
 assert(!settingsSource.includes('instead of expanding the entire collection'), "Settings UI must not contain implementation-facing copy");
 assert(settingsSource.includes('kplex-style-manager-modal'), "Style managers need bounded responsive modal styling");
 
@@ -481,6 +484,12 @@ for (const file of [
   "src/ui/ColorAdoptionModal.ts",
   "src/ui/AppearanceThemesModal.ts",
   "src/ui/StyleManagerList.ts",
+  "src/ui/OntologyManagerModal.ts",
+  "src/ui/OntologyUsageModal.ts",
+  "src/ui/nodeMarkdownLink.ts",
+  "src/adapters/obsidian/graphFolder.ts",
+  "src/adapters/obsidian/ontologyUsage.ts",
+  "src/ui/features/ontologyPresentation.ts",
   "src/ui/StyleColorControls.ts",
   "src/ui/styleNumberSlider.ts",
   "src/ui/StyleSwatchScope.ts",
