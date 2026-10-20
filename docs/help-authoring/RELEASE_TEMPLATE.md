@@ -17,6 +17,8 @@ Explains:
 ---
 # K-Plex <version> — <human-readable release theme>
 
+<Reader need and the useful outcome of this update.>
+
 > [!warning] Draft — not released
 > Remove this callout **only** after verifying the published GitHub tag.
 
@@ -38,3 +40,5 @@ Explains:
 ```
 
 Before publishing: confirm exact numeric version/tag/date and actual shipped scope, links to real help pages, image display, and whether source release text is reproduced or editorially condensed. `Explains` connects the release to the guides and real-life use cases it makes possible; individual evergreen use cases should **not** carry "shipped next release" banners. Maintain an indexed Release notes hub. Use the existing `kplex-help/release-notes` tag so styling can be applied without inventing a separate ontology.
+
+Keep original published release text intact and attributed. Add a brief reader-facing introduction before publication metadata; the introduction should help a user decide whether to read this version. Group release-to-feature links through subject hubs if direct semantic children would exceed twelve.

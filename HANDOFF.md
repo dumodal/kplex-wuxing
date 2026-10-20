@@ -19,15 +19,16 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Return: paired factory ontology defaults
+# Return: reader-first K-Plex Help review
 
-Implementation is complete on `2026-10-20-paired-ontology-defaults`, based on `f646c75bc7d2a4b8ca2f64af43cb8826a30afab9`. This is the maintainer's fresh-install defaults request, not a continuation of deferred indexing work. The maintainer subsequently authorized creating and merging the PR without waiting for GitHub CI. Release remains outside scope.
+The maintainer requested an end-user review of the whole Help vault, smaller navigation groups, rich meaningful cross-links, authentic feature screenshots and reusable authoring templates.
 
-- Fresh/no-data settings use nine natural inverse pairs through the canonical version-1 ontology grammar. Saved configurations and ExcaliBrain imports keep historical fallbacks; literal slash fields are preserved.
-- All original physical field names/roles remain. Fresh hierarchy copies are detached, and persistence/restart is covered.
-- Production changes only touch `src/settings.ts`. Three policy fixtures now compare equivalent saved ontology inventories. No semantic-policy, source acquisition, compiler, cache/schema, CSS or localization changes.
-- Final focused tests: 135 passed; build passed; release/architecture/core/lint passed. Full verification remains limited by the known hydration watchdog timer assertion (`tests/indexing.test.mjs:3433`, 1 versus 0). Native exact-build Small-vault smoke passed. Ontology browser checks: 35/36 passed, one Chromium bundle-load setup failure before scenario execution; not rerun.
-- See [validation report](docs/validation/paired-ontology-defaults-2026-10-20.md) for exact scope, commands, native evidence and limitations. Human source review checked current AGENTS/CONTRIBUTING/architecture ownership, migration compatibility, physical-field invariance and independent copies.
-- Help-vault edits from the preceding documentation task remain intact and uncommitted on their independent branch. No personal vault access.
+- Help repository: `2026-10-19-help-use-cases`, base `70127fd`. Source repository: `main`, base `873eafd`; only authoring docs and this handoff changed there. Work is uncommitted in both repositories, awaiting maintainer review; no new PR, push, merge, release or executable deployment is part of this task.
+- All 121 Help notes were reviewed/updated or added with reader needs and outcomes first. Added grouped starting/learning paths, focused tag/folder guides and genuine live examples. Existing aliases and file paths remain compatible. Published release text stays attributed; 0.2.0 remains a draft.
+- Native final validation: no YAML/local-link errors, all 54 PNGs decode, 121/121 ready, no actual Child-role list exceeds twelve. The original Excalidraw payload matches exactly. Eleven use-case classifications remain exact.
+- 33 new authentic Windows screenshots; 53/54 feature guides and all eleven use cases have screenshots. Physical phone/tablet imagery is the remaining gap, not misrepresented by desktop emulation.
+- Six native reading views and the actual illustrated controls were checked. No file move/delete/tag-writing actions were submitted. Source changes contain no runtime, CSS, dependency, indexing-schema or benchmark work; diff/whitespace checks passed.
+- Original Help settings, recent-file/workspace state, one-Plex layout, center and window geometry were restored; `.obsidian` has no final diff. Temporary tabs/controller were removed. The report action automatically copied diagnostics to the clipboard; the prior clipboard was not backed up and could not be restored. No report was sent.
+- Durable authoring review and full screenshot coverage: [READER_REVIEW_2026-10-20.md](docs/help-authoring/READER_REVIEW_2026-10-20.md). Private native receipts/config backups remain outside Git under the location recorded there. No personal vault access.
 
-Highest-probability manual check: on an actual new installation, inspect Manage ontology and verify the paired rows and reciprocal labels. Existing-install native loading passed; fresh data and restart are production-function tests. macOS and physical mobile first-install checks remain unperformed.
+Source review checked current AGENTS/CONTRIBUTING/help-authoring rules, repository separation, authentic UI evidence, owner-document capture, valid ontology and preserved source semantics. No architecture refactor was resumed. Suggested review: read Get started, create-related, tag/folder and theme guides in the Help vault; inspect the three grouped learning paths. Physical mobile screenshots remain future work.

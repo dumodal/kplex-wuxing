@@ -1,43 +1,51 @@
-# Feature guide template (copy into a Help-vault note)
+# Feature guide template
 
-This template is for a **durable** capability guide, not release announcement copy. Match the Help vault's folder/alias conventions and replace every placeholder.
+Write for someone trying to do something with their notes. Begin with the reader's situation and the outcome. Do not literally ask the template questions in the published article. Keep technical provenance, test results and implementation details in source documentation, not the Help vault.
 
 ```markdown
 ---
 aliases:
-- <Plain-language alternate title>
+- <A useful search phrase>
 tags:
 - kplex-help/how-to
 - kplex/<topic>
-Parent:
-- '[[<actual feature section>]]'
+Guide:
+- '[[<existing subject hub>]]'
 Friend:
-- '[[<actual related guide>]]'
+- '[[<a complementary workflow>]]'
+Watch out:
+- '[[<a relevant boundary or caution>]]'
 ---
 # <What the reader can do>
 
-**Why this matters:** <user problem solved in one or two sentences>.
+<Recognizable need or frustration>. <How this feature helps the reader achieve the outcome>.
 
 ## Try it
-1. <Start from a real, recognizable situation.>
-2. <Use existing K-Plex/Obsidian controls and accurate terminology.>
-3. <Show the visible outcome or change.>
 
-## Example
-<Small scenario using real notes, rather than an exhaustive control inventory.>
+1. <Start from a specific note or example in the Help vault.>
+2. <Name the actual control and action.>
+3. <Describe the visible result.>
 
-<!-- Local screenshot task: show real UI state and crop to illustrate the step.
-     Replace with ![[Assets/<real image file>]] only after capture. -->
+![[Assets/<genuine screenshot captured from the app>.png]]
 
-## Useful variations
-<Options such as keyboard, drag/drop, Sidecar, multiple Plexes or Lenses when relevant.>
+*<What to notice in this screenshot. Identify a desktop-only demonstration if relevant.>*
 
-## Boundaries and troubleshooting
-<Current limitations, permissions, safe behavior; do not invent support.>
+## Make it fit your work
 
-## Related help
-- [[<related guide>]]
-- [[<outcome-oriented use case>]]
+<Only the variations needed for a meaningful choice. Link to separate feature guides for the rest.>
+
+## If the result is different
+
+<Brief, practical boundary or recovery step. Explain when notes will be changed.>
+
+## Continue with your task
+
+- [[<related feature>|<Why to go there next>]]
+- [[<use case>|<An outcome that combines the features>]]
 ```
 
-If a feature depends on a specific minimum released version, put historical provenance in a factual link to that published release (or in the release archive), not speculative "next release" claims in enduring instructions. Verify against current source before describing controls.
+Before saving, ask: **What is the user's intent? What does this feature help achieve?** The opening must answer both. Put the opening before illustrations or availability notices. Prefer short prose and three to five steps to a control inventory. A screenshot must show the described feature; an attractive generic graph does not prove a dialog or a mobile interaction.
+
+Use the existing paired Guide/Explains and Parent/Child ontology. Each note should have at most twelve distinct semantic children, counting incoming Parent/Guide edges as well as its own Child/Explains lists. Group larger sets by reader task. Friend is a useful alternative or companion; Watch out/Challenger is a real caveat; Previous/Next is an intentional sequence. Do not add every relationship merely to fill a direction.
+
+Keep release-specific availability in the release archive and the vault's opening guidance. Do not place source revisions, CI results or authoring instructions in consumer articles. Preserve meaningful limitations, permissions, existing filenames, aliases and external-source attribution.

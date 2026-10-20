@@ -36,3 +36,13 @@ In the Help vault's current ontology, `Guide`/ `Parent` map to Parent; `Explains
 When a K-Plex release ships, update the Help vault's plugin assets only under a separately approved step; convert the version draft into a published-history page using the **actual** release and verify no features were cut. Historical release pages remain immutable in meaning: correct mistakes transparently and link to current help, not silently rewrite past shipped facts. Each release can point via `Explains` to feature pages and to the evergreen use cases it enables or improves.
 
 **Acceptance checklist:** accurate source/release status; one clear audience goal; all referenced files exist; correct YAML/ontology/Note type; no stale availability promises in use cases; screenshots genuine and appropriately captioned; no unapproved `.obsidian` or binary changes; GitHub read-back and honest visual-test report.
+
+## Reader-first review
+
+Every article opens with a reader need and the outcome it helps achieve, before illustrations and version notices. Use [FEATURE_TEMPLATE.md](FEATURE_TEMPLATE.md), [HUB_TEMPLATE.md](HUB_TEMPLATE.md), [TROUBLESHOOTING_TEMPLATE.md](TROUBLESHOOTING_TEMPLATE.md), [REFERENCE_TEMPLATE.md](REFERENCE_TEMPLATE.md), [EXAMPLE_TEMPLATE.md](EXAMPLE_TEMPLATE.md) and the existing use-case/release templates. Apply them as editorial checks, not identical headings forced onto every page.
+
+Count actual semantic children, including inverse Guide/Parent declarations: twelve is the maximum. Split larger hubs into meaningful topics and update the affected notes' parent assignments. Use Friend for useful companions, Challenger/Watch out for genuine limits, and Previous/Next for real reading sequences. Verify cross-links in Obsidian, not just with text searches.
+
+Aim for a genuine, relevant screenshot on every feature guide. Reuse a screenshot where it illustrates the same control, with a caption naming what to notice; never use unrelated screenshots as coverage. Maintain a source-side screenshot coverage record for missing physical-device or unsafe-to-capture scenarios. Keep agent instructions, validation reports, implementation details and raw evidence outside the consumer vault.
+
+Ordinary body links can become inferred Children. After grouping, inspect the actual Child role in the running Plex as well as frontmatter. Classify companion references as Friend/Related where appropriate; keep true subtopics as children. Release citations and implementation/source URLs are references, not child help topics. Preserve their original published prose and give them an explicit related role when needed.

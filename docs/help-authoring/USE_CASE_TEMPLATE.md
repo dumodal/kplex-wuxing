@@ -27,6 +27,10 @@ Friend:
 ## Try it with a real example
 <One concrete project, research or personal-life story.>
 
+![[Assets/<genuine screenshot of this example>.png]]
+
+*<What to notice and how it supports the reader's goal.>*
+
 ## Ways to make it happen
 ### <Workflow 1>
 <Simple actions using K-Plex and existing Obsidian notes.>
@@ -50,3 +54,5 @@ Rules:
 - Keep the article evergreen: **no** "Next release", unpublished-version announcements, or dated status tables in the use-case page. Release-specific history belongs in the versioned release archive, which can point back here via `Explains`.
 - Reuse existing `Parent`, `Explains`, `Friend` ontology fields and actual target paths. Preserve the landing page's structural links; avoid duplicate guidance.
 - Keep examples grounded in supported behavior. The reference example is [Never start a project with a blank page](https://github.com/zsviczian/kplex-help/blob/2026-10-19-help-use-cases/07%20Use%20cases/Never%20start%20a%20project%20with%20a%20blank%20page.md); check the newest Help branch before copying.
+
+Use a genuine, relevant screenshot for the example when possible. A shared screenshot is appropriate when it shows the same workflow, but name the example in its caption rather than implying it shows a real project or event. Keep every new example reader-facing; technical evidence and authoring TODOs stay in K-Plex source docs.
