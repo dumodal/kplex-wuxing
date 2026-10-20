@@ -1,6 +1,6 @@
 {
   "name": "k-plex",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "A TheBrain-inspired visual knowledge navigator for Obsidian, rebuilt in React.",
   "main": "dist/main.js",
   "type": "module",
