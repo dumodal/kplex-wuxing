@@ -69,7 +69,8 @@ test('fresh factory mnemonics select configured roles and replace only the captu
 test('saved historical, empty and custom triggers remain authoritative through migration and reload',
   /** Preserve deliberate saved values, live matching, disabled behavior and nonsemantic settings effects. */
   ()=>{
-    const fresh=migrateAndMergeSettings({});
+    // Both sides model persisted trigger settings, retaining historical unpaired ontology.
+    const savedDefaults=migrateAndMergeSettings({primaryTagField:"Tags"});
     for(const [friend,previous] of [['::l','::e'],['','::e'],['::l',''],['🧠+','é[.*]+'],['friend!','past?']]){
       const raw={ontologySuggesterLeftFriendTrigger:friend,ontologySuggesterPreviousTrigger:previous,hierarchy:structuredClone(defaults.hierarchy),primaryTagField:'Tags'};
       const settings=migrateAndMergeSettings(raw);
@@ -87,7 +88,7 @@ test('saved historical, empty and custom triggers remain authoritative through m
         // nonempty. Preserve that deliberate historical precedence rather than migrating it.
         assert.deepEqual(owner.getSuggestions({...info,editor:{}}),!friend&&field==='Previous'?[]:[field],JSON.stringify({friend,previous,field}));
       }
-      const effect=classifySettingsChange(captureSettingsPolicy(fresh),captureSettingsPolicy(migrateAndMergeSettings({ontologySuggesterLeftFriendTrigger:friend,ontologySuggesterPreviousTrigger:previous})));
+      const effect=classifySettingsChange(captureSettingsPolicy(savedDefaults),captureSettingsPolicy(migrateAndMergeSettings({ontologySuggesterLeftFriendTrigger:friend,ontologySuggesterPreviousTrigger:previous})));
       assert.equal(effect.semanticInvalidation,false);
       settings.allowOntologySuggester=false;
       assert.equal(owner.onTrigger({line:0,ch:0},{

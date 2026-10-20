@@ -19,63 +19,15 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Session closure: device-specific indexing — PR #195
+# Return: paired factory ontology defaults
 
-No active implementation assignment. On 2026-10-20 the maintainer requested removing the
-informational Web link indexing row, publishing/merging #195, closing #191 with a reference,
-and returning the local checkout to main followed by fetch. This is explicit publication/merge
-and issue-closure authorization following the previously disclosed validation limits.
+Implementation is complete on `2026-10-20-paired-ontology-defaults`, based on `f646c75bc7d2a4b8ca2f64af43cb8826a30afab9`. This is the maintainer's fresh-install defaults request, not a continuation of deferred indexing work. The maintainer subsequently authorized creating and merging the PR without waiting for GitHub CI. Release remains outside scope.
 
-## Delivered scope and identities
+- Fresh/no-data settings use nine natural inverse pairs through the canonical version-1 ontology grammar. Saved configurations and ExcaliBrain imports keep historical fallbacks; literal slash fields are preserved.
+- All original physical field names/roles remain. Fresh hierarchy copies are detached, and persistence/restart is covered.
+- Production changes only touch `src/settings.ts`. Three policy fixtures now compare equivalent saved ontology inventories. No semantic-policy, source acquisition, compiler, cache/schema, CSS or localization changes.
+- Final focused tests: 135 passed; build passed; release/architecture/core/lint passed. Full verification remains limited by the known hydration watchdog timer assertion (`tests/indexing.test.mjs:3433`, 1 versus 0). Native exact-build Small-vault smoke passed. Ontology browser checks: 35/36 passed, one Chromium bundle-load setup failure before scenario execution; not rerun.
+- See [validation report](docs/validation/paired-ontology-defaults-2026-10-20.md) for exact scope, commands, native evidence and limitations. Human source review checked current AGENTS/CONTRIBUTING/architecture ownership, migration compatibility, physical-field invariance and independent copies.
+- Help-vault edits from the preceding documentation task remain intact and uncommitted on their independent branch. No personal vault access.
 
-- Implementation branch: `2026-10-20-issue-191-startup-policy`.
-- Integration base: `289e10a29649a2c4bb8fbcb0439b27fbee7d3071`, retaining accepted main
-  `50346338f7caf15ff5d27a3d11ff7022c78bcd3c` and merged #194.
-- Final publication/merge identity: [PR #195](https://github.com/zsviczian/kplex/pull/195).
-  Related closure: [#191](https://github.com/zsviczian/kplex/issues/191).
-- Desktop defaults to Eager indexing at plugin startup; tablet/phone default to On demand on
-  first Plex opening. All six preferences are independent, migrate explicitly and apply at reload.
-- One startup admission owner preserves dormant invalidation, warm reuse, current native files,
-  source/write authority and early/concurrent/inactive view behavior. No parser/schema/read-API
-  replacement, receipt/reader-sharing experiment or #192 implementation was introduced.
-- Settings uses native controls, omits the Web link indexing explanation and retains restart
-  disclosure. All eight locales and existing themes/ontology/import boundaries are preserved.
-- Final main.js SHA-256: `ca7e60573a2fcb227e13f32bca4eb29cf6e43e49018b9fd6705385230fdb9b1b`.
-  Plugin version unchanged; no release or branch deletion is authorized.
-
-## Validation and remaining limits
-
-See [the durable validation report](docs/validation/startup-policy-195-2026-10-20.md) for exact
-commands, versions, source/artifact identities, failures and numerical observation limits.
-
-Final row-removal checks on checksum-verified isolated Node 22.22.2: 105 affected tests, real build,
-Obsidian scanner and actual native Indexing Settings pass. Small shows no Web link indexing row,
-all six device controls and restart disclosure. Settings/workspace/enabled-list bytes are restored;
-107 original files remain, with zero opened Plexes or Settings after the probe.
-
-Previously completed feature checks include architecture (zero violations), host-free core 130,
-58 production admission scenarios, 27 settings-independence cases, migration controls 69, external
-settings browser 18 and real IndexedDB foreground startup 51. Native admission seven cases,
-stationary progressive ontology and seven external-settings cases in each actual strategy pass.
-Their artifact identity precedes only the final informational-row removal.
-
-The final aggregate verification is not green: the existing restore-watchdog timer-count assertion
-reported 1 instead of 0 at `tests/indexing.test.mjs:3478`. Similar failures were observed on the
-baseline. An earlier full pinned run passed before the strategy extension. No assertion, timing
-bound or deadline was weakened and no additional aggregate retry was made for this row removal.
-Physical phone/tablet, macOS and full Obsidian process restart remain unrun. Plugin reload/native
-DOM checks do not establish those results. Whole-renderer observations demonstrate no performance
-improvement; the accepted result is deferred pipeline activity.
-
-The maintainer's merge request follows disclosure of those limitations; it does not turn them into
-passes. Preserve the report and private evidence rather than reopening unrelated optimization.
-
-## Private evidence and workflow
-
-`%LOCALAPPDATA%/KplexValidation/startup-policy-195` retains original backups, checksummed source
-patch/manifest, logs, failed attempts and screenshots. The final UI receipt is under
-`final-row-removal/report.json`. Do not publish private evidence or delete originals. No personal
-vault was targeted; no personal-vault files were read or written. The candidate remains in Small.
-
-The standing header is preserved byte-for-byte. The temporary planning marker was removed;
-no handoff archive is created. No next task or structural refactor is implied by this closure.
+Highest-probability manual check: on an actual new installation, inspect Manage ontology and verify the paired rows and reciprocal labels. Existing-install native loading passed; fresh data and restart are production-function tests. macOS and physical mobile first-install checks remain unperformed.

@@ -24,7 +24,7 @@ const fixture = JSON.parse(readFileSync(join(root, "tests/fixtures/excalibrain-m
 const temp = mkdtempSync(join(tmpdir(), "kplex-migration-"));
 process.on("exit", () => rmSync(temp, { recursive: true, force: true }));
 await build({
-  stdin: { contents: styleSettingsHostSource(pathToFileURL(root+"/")) + '\nexport * from "./src/settings"; export * as themeModel from "./src/core/plex/appearanceThemes"; export {adoptStandardThemeColors,deleteNamedColor} from "./src/core/plex/colorEditing"; export * from "./src/core/graph/settingsPolicy"; export * from "./src/index/style"; export * from "./src/ui/layout"; export * from "./src/ui/PurgeIndexCacheModal"; export { Modal as TestModal, Notice as TestNotice, AbstractInputSuggest as TestSuggest } from "obsidian"; export { createObsidianTranslator } from "./src/adapters/obsidian/localization";', resolveDir: root, loader: "ts" },
+  stdin: { contents: styleSettingsHostSource(pathToFileURL(root+"/")) + '\nexport * from "./src/settings"; export {ontologyConfiguration} from "./src/core/contracts/ontologyConfiguration"; export * as themeModel from "./src/core/plex/appearanceThemes"; export {adoptStandardThemeColors,deleteNamedColor} from "./src/core/plex/colorEditing"; export * from "./src/core/graph/settingsPolicy"; export * from "./src/index/style"; export * from "./src/ui/layout"; export * from "./src/ui/PurgeIndexCacheModal"; export { Modal as TestModal, Notice as TestNotice, AbstractInputSuggest as TestSuggest } from "obsidian"; export { createObsidianTranslator } from "./src/adapters/obsidian/localization";', resolveDir: root, loader: "ts" },
   outfile: join(temp, "migration.mjs"), bundle: true, platform: "node", format: "esm",
   plugins: [{ name: "obsidian-boundary-double", setup(builder) {
     // This finite non-browser form fixture has no CSS document or workspace event bus. Keep the
@@ -109,10 +109,55 @@ await build({
     `, loader: "js" }));
   } }],
 });
-const { migrateAndMergeSettings, importExcaliBrainGraphSettings, KplexSettingTab, resolveNodeStyle, resolveLinkStyle, buildScene, PurgeIndexCacheModal,
+const { ontologyConfiguration, DEFAULT_SETTINGS, DEFAULT_HIERARCHY_DEFINITION, migrateAndMergeSettings, importExcaliBrainGraphSettings, KplexSettingTab, resolveNodeStyle, resolveLinkStyle, buildScene, PurgeIndexCacheModal,
   captureSettingsPolicy, classifySettingsChange, encodeIndexSettingsSignature, TestModal, TestNotice, TestSuggest, createObsidianTranslator, StyleSettingsHost, themeModel } = await import(pathToFileURL(join(temp, "migration.mjs")));
 const defaults = migrateAndMergeSettings(undefined);
 const migrated = importExcaliBrainGraphSettings(fixture);
+
+test("fresh settings pair inverse factory fields, survive persistence and keep independent defaults", () => {
+  const expected = [["Parent", "Child"], ["Parents", "Children"], ["up", "down"], ["u", "d"], ["North", "South"],
+    ["Previous", "Next"], ["West", "East"], ["w", "e"], ["Before", "After"]];
+  for (const raw of [undefined, null, {}]) {
+    const settings = migrateAndMergeSettings(raw);
+    assert.deepEqual(settings.hierarchy, DEFAULT_SETTINGS.hierarchy);
+    assert.deepEqual(settings.hierarchy, DEFAULT_HIERARCHY_DEFINITION);
+    const configuration = ontologyConfiguration(settings);
+    for (const [field, partner] of expected) {
+      assert.equal(configuration.pairs.get(field.toLowerCase()).partner, partner);
+      assert.equal(configuration.pairs.get(partner.toLowerCase()).partner, field);
+    }
+    assert.equal(configuration.pairs.size, expected.length * 2);
+    const legacy = ontologyConfiguration(migrateAndMergeSettings({standardStyleDefaults: "native"}));
+    for (const group of Object.keys(configuration.hierarchy)) {
+      assert.deepEqual([...configuration.hierarchy[group]].sort(), [...legacy.hierarchy[group]].sort(), group);
+    }
+    assert.deepEqual(migrateAndMergeSettings(JSON.parse(JSON.stringify(settings))).hierarchy, settings.hierarchy);
+  }
+  const first = migrateAndMergeSettings(null), second = migrateAndMergeSettings(null);
+  first.hierarchy.parents.push("Only this installation");
+  first.hierarchy.leftFriends.push("Only this friend list");
+  assert(!second.hierarchy.parents.includes("Only this installation"));
+  assert(!DEFAULT_SETTINGS.hierarchy.parents.includes("Only this installation"));
+  assert(!second.hierarchy.leftFriends.includes("Only this friend list"));
+  assert(!DEFAULT_SETTINGS.hierarchy.leftFriends.includes("Only this friend list"));
+});
+
+test("paired factory defaults never opt saved or imported ontology into pairing", () => {
+  for (const raw of [{showTagNodes: true}, {standardStyleDefaults: "native"},
+    {hierarchy: {parents: ["Custom/field", "Parent"], children: ["Child"]}},
+    {ontologyPairingVersion: 1, hierarchy: {parents: ["Parent"], children: ["Child"]}}]) {
+    const settings = migrateAndMergeSettings(raw);
+    assert.equal(ontologyConfiguration(settings).pairs.size, 0);
+    assert.deepEqual(migrateAndMergeSettings(JSON.parse(JSON.stringify(settings))).hierarchy, settings.hierarchy);
+  }
+  const imported = importExcaliBrainGraphSettings({hierarchy: {parents: ["Parent"], children: ["Child"]}});
+  assert.equal(ontologyConfiguration(imported).pairs.size, 0);
+  assert.deepEqual(imported.hierarchy.parents, ["Parent"]);
+  const importedOverFresh = importExcaliBrainGraphSettings({hierarchy: {parents: ["Custom"], children: ["Custom child"]}}, defaults);
+  assert.deepEqual(importedOverFresh.hierarchy.parents, ["Custom"]);
+  assert.deepEqual(importedOverFresh.hierarchy.children, ["Custom child"]);
+  assert.equal(ontologyConfiguration(importedOverFresh).pairs.has("parent"), false);
+});
 
 /** Keep theme identities native-shaped while preserving the real queue and all source/color policy. */
 async function withThemeWindow(run) {

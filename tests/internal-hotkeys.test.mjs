@@ -44,7 +44,9 @@ test("defaults, explicit disable, partial upgrades, malformed bindings and unkno
   assert.equal(hotkeys.resolveInternalHotkey(event("ArrowUp"), saved.internalHotkeys, "macos"), null);
   assert.equal(hotkeys.resolveInternalHotkey(event("j"), saved.internalHotkeys, "macos"), "moveDown");
   assert.deepEqual(hotkeys.importExcaliBrainGraphSettings({ internalHotkeys: { moveUp: { key: "x" } } }, saved).internalHotkeys, saved.internalHotkeys);
-  const effects = hotkeys.classifySettingsChange(hotkeys.captureSettingsPolicy(defaults), hotkeys.captureSettingsPolicy(saved));
+  // Compare the same saved-settings ontology: fresh installs now deliberately start with pairs.
+  const legacyDefaults = hotkeys.migrateAndMergeSettings({internalHotkeys: {}});
+  const effects = hotkeys.classifySettingsChange(hotkeys.captureSettingsPolicy(legacyDefaults), hotkeys.captureSettingsPolicy(saved));
   assert.equal(effects.semanticInvalidation, false); assert.equal(effects.searchTerms, false); assert.equal(effects.presentationFacets, false);
 });
 

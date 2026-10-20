@@ -2,6 +2,8 @@
 
 Configure fields and pairs under **Settings → K-Plex → Ontology → Manage ontology**. A pair gives a connection a natural label from either endpoint while notes keep ordinary property names.
 
+Fresh installations pair the built-in inverse fields: Parent/Child, Parents/Children, up/down, u/d, North/South, Previous/Next, West/East, w/e and Before/After. Other aliases remain independent. Existing saved configurations and ExcaliBrain imports retain their assignments.
+
 For example, select **Add field**, enter `replies to`, choose **Previous**, and enter `replied by` in **Pair with**. If both names are new, enable **Create paired field**. The preview shows `replies to` as Previous and `replied by` as Next; Save creates both assignments together. To pair existing fields, choose an eligible property from the suggestions.
 
 The manager shows each pair once. **Show** filters by direction or state while keeping both names visible, with the selected direction first. Search matches either field name. Friend/Friend and Challenger/Challenger pairs are supported. **Unassigned** contains discovered metadata that has no ontology assignment; **Excluded metadata** and **Hidden** are separate assignments. Discovery can be incomplete. **Rescan discovered fields** explicitly scans for more metadata and can take time in a large vault; opening or searching the manager does not rescan.

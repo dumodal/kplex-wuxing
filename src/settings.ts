@@ -121,7 +121,8 @@ const LEGACY_NODE_STYLE: NodeStyle = {
 export const DEFAULT_NODE_STYLE = withoutStyleColorOverrides(LEGACY_NODE_STYLE, NODE_COLOR_FIELDS);
 export const DEFAULT_LINK_STYLE = withoutStyleColorOverrides(LEGACY_LINK_STYLE, LINK_COLOR_FIELDS);
 
-export const DEFAULT_HIERARCHY_DEFINITION: Hierarchy = {
+/** Historical unpaired fields remain the fallback for saved settings and ExcaliBrain imports. */
+const LEGACY_HIERARCHY_DEFINITION: Hierarchy = {
   exclusions: [
     "excalidraw-font", "excalidraw-font-color", "excalidraw-css", "excalidraw-plugin",
     "excalidraw-link-brackets", "excalidraw-link-prefix", "excalidraw-border-color", "excalidraw-default-mode",
@@ -135,6 +136,13 @@ export const DEFAULT_HIERARCHY_DEFINITION: Hierarchy = {
   previous: ["Previous", "Prev", "West", "w", "Before"],
   next: ["Next", "n", "East", "e", "After"],
   hidden: ["hidden"]
+};
+
+/** Fresh-install pairs preserve the physical default fields and their established ordering. */
+export const DEFAULT_HIERARCHY_DEFINITION: Hierarchy = {
+  ...structuredClone(LEGACY_HIERARCHY_DEFINITION),
+  parents: ["Parent/Child", "Parents/Children", "up/down", "u/d", "North/South", "origin", "inception", "source", "parent domain"],
+  previous: ["Previous/Next", "Prev", "West/East", "w/e", "Before/After"],
 };
 
 export type KplexViewSurface = "leaf" | "sidepanel" | "popout";
@@ -383,7 +391,7 @@ const LEGACY_DEFAULT_SETTINGS: KplexSettings = {
   indexingMode: "on-demand",
   urlIndexingMode: "background",
   indexingThrottle: "responsive",
-  hierarchy: DEFAULT_HIERARCHY_DEFINITION,
+  hierarchy: LEGACY_HIERARCHY_DEFINITION,
   ontologyPairingVersion: 1,
   inferAllLinksAsFriends: false,
   inverseInfer: false,
@@ -499,9 +507,12 @@ const LEGACY_DEFAULT_SETTINGS: KplexSettings = {
   removeOntologyLinksOnDelete: true,
 };
 
-/** Fresh installations inherit native paint while preserving established geometry and behavior. */
+/** Fresh installations inherit native paint and reciprocal ontology without rewriting saved assignments. */
 export const DEFAULT_SETTINGS: KplexSettings = (() => {
-  const settings = structuredClone(LEGACY_DEFAULT_SETTINGS); adoptStandardThemeColors(settings); return settings;
+  const settings = structuredClone(LEGACY_DEFAULT_SETTINGS);
+  settings.hierarchy = structuredClone(DEFAULT_HIERARCHY_DEFINITION);
+  adoptStandardThemeColors(settings);
+  return settings;
 })();
 
 const norm = (value: string) => value.toLowerCase().replaceAll(" ", "-").trim();
@@ -558,7 +569,7 @@ export function importExcaliBrainGraphSettings(raw: unknown, current?: KplexSett
   // A legacy friends-only field must replace the local leftFriends default, not be masked by it.
   const leftFriends = hierarchy.leftFriends ?? hierarchy.friends ?? current?.hierarchy.leftFriends;
   const importedHierarchy = {
-    ...DEFAULT_HIERARCHY_DEFINITION, ...current?.hierarchy, ...hierarchy,
+    ...LEGACY_HIERARCHY_DEFINITION, ...current?.hierarchy, ...hierarchy,
     ...(leftFriends === undefined ? {} : {leftFriends}),
   } as Hierarchy;
   const reconciledHierarchy = current ? retainOntologyCounterparts(current, importedHierarchy,
@@ -599,16 +610,20 @@ export function migrateAndMergeSettings(raw: unknown): KplexSettings {
   const colors = migrateColorPreferences(old.colorPreferences);
   const defaults = old.standardStyleDefaults === "native" || Object.keys(old).length === 0 ? DEFAULT_SETTINGS : LEGACY_DEFAULT_SETTINGS;
   const futureLensColors = appearanceHasUnsupportedColors({graphLenses: old.graphLenses});
+  // Only an empty loaded-data object receives paired factory fields. Older native-color
+  // settings still retain their historical ontology, including omitted role lists.
+  const freshInstall = Object.keys(old).length === 0;
+  const hierarchyDefaults = structuredClone(freshInstall ? DEFAULT_HIERARCHY_DEFINITION : LEGACY_HIERARCHY_DEFINITION);
   const hierarchyRaw: Partial<Hierarchy> = old.hierarchy ?? {};
   const hierarchy: Hierarchy = {
-    ...DEFAULT_HIERARCHY_DEFINITION,
+    ...hierarchyDefaults,
     ...hierarchyRaw,
-    leftFriends: hierarchyRaw.leftFriends ?? hierarchyRaw.friends ?? DEFAULT_HIERARCHY_DEFINITION.leftFriends,
-    rightFriends: hierarchyRaw.rightFriends ?? DEFAULT_HIERARCHY_DEFINITION.rightFriends,
-    previous: hierarchyRaw.previous ?? DEFAULT_HIERARCHY_DEFINITION.previous,
-    next: hierarchyRaw.next ?? DEFAULT_HIERARCHY_DEFINITION.next,
-    hidden: hierarchyRaw.hidden ?? DEFAULT_HIERARCHY_DEFINITION.hidden,
-    exclusions: hierarchyRaw.exclusions ?? DEFAULT_HIERARCHY_DEFINITION.exclusions
+    leftFriends: hierarchyRaw.leftFriends ?? hierarchyRaw.friends ?? hierarchyDefaults.leftFriends,
+    rightFriends: hierarchyRaw.rightFriends ?? hierarchyDefaults.rightFriends,
+    previous: hierarchyRaw.previous ?? hierarchyDefaults.previous,
+    next: hierarchyRaw.next ?? hierarchyDefaults.next,
+    hidden: hierarchyRaw.hidden ?? hierarchyDefaults.hidden,
+    exclusions: hierarchyRaw.exclusions ?? hierarchyDefaults.exclusions
   };
   // K-Plex adds Challenger as the canonical right-gate ontology while retaining every
   // legacy right-friend field. Existing vaults therefore gain the requested default without
@@ -619,7 +634,7 @@ export function migrateAndMergeSettings(raw: unknown): KplexSettings {
 
   // Preserve classic initialization only for pre-syntax settings. Current textarea order is
   // meaningful and must survive queued rebase, import and restart without a global rewrite.
-  if (old.ontologyPairingVersion === undefined) {
+  if (!freshInstall && old.ontologyPairingVersion === undefined) {
   const sortFields = (items: string[]) => [...items].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
   const normalized = (items: string[]) => items.map(norm);
   hierarchy.hidden = sortFields(hierarchy.hidden);
