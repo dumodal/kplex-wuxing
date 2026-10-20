@@ -39,14 +39,17 @@ async function scenario(app,c){
   const observe=(owner,key,counter)=>{const original=owner?.[key];check(typeof original==='function','Missing native work counter '+key);owner[key]=function(...args){work[counter]++;return original.apply(this,args)};restores.push(()=>{owner[key]=original});};
   observe(app.vault,'read','reads');observe(app.vault,'cachedRead','reads');observe(p.index.metadataParser,'parse','parses');observe(p.index,'rebuild','rebuilds');observe(p.index,'invalidateSemanticPolicy','invalidations');observe(p.index,'refreshSemanticSettings','preparations');observe(p.index,'persistIndexedDbSnapshot','snapshots');observe(p.index.sourceAcquisition,'parse','parses');observe(p.index.sourceAcquisition,'acquire','acquisitions');observe(p.index,'prepareSemanticScope','preparations');observe(p.index,'prepareRelationshipPairOwned','preparations');observe(p.index,'publishRestoredState','publications');observe(p.index,'publishOnDemandHostScope','publications');
   p.openSettings();await until(()=>p.settingsTab.containerEl.isConnected,'Native Settings missing');
-  check(p.settingsTab.openSettingsPage(p.translator('settings.ui.ontology')),'Ontology Settings page missing');check(p.settingsTab.openSettingsPage(p.translator('settings.ui.relationship.fields')),'Relationship field Settings missing');
-  const row=[...p.settingsTab.containerEl.ownerDocument.querySelectorAll('.setting-item')].find(el=>el.querySelector('.setting-item-name')?.textContent===p.translator('settings.ui.previous.fields')&&el.getClientRects().length);
-  check(row,'Native Previous textarea absent');const input=row.querySelector('textarea');check(input,'Native ontology input missing');
-  input.value=p.settings.hierarchy.previous.map(field=>field===forward?forward+'/'+reverse:field).join(', ');input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new FocusEvent('blur'));
-  await until(()=>p.settings.hierarchy.previous.some(field=>field===forward+'/'+reverse),'Manual pair did not persist');
-  const reciprocalRow=[...p.settingsTab.containerEl.ownerDocument.querySelectorAll('.setting-item')].find(el=>el.querySelector('.setting-item-name')?.textContent===p.translator('settings.ui.next.fields')&&el.getClientRects().length);
-  await until(()=>row.querySelector('.setting-item-description')?.textContent.includes(forward+' ↔ '+reverse)&&reciprocalRow?.querySelector('.setting-item-description')?.textContent.includes(reverse+' ↔ '+forward),'Both role lists did not explain the same saved pair');
-  check(reciprocalRow.querySelector('textarea')?.value.split(',').map(value=>value.trim()).includes(reverse),'Reciprocal standalone assignment/default was moved');
+  check(p.settingsTab.openSettingsPage(p.translator('settings.ui.ontology')),'Ontology Settings page missing');const managerEntry=[...p.settingsTab.containerEl.ownerDocument.querySelectorAll('.setting-item')].find(row=>row.querySelector('.setting-item-name')?.textContent===p.translator('ontology.manager.title')&&row.getClientRects().length);
+  check(managerEntry,'Manage ontology entry absent');(managerEntry.querySelector('button')??managerEntry).click();
+  const manager=[...p.settingsTab.ontologyManagers][0];check(manager?.contentEl.isConnected,'Native manager did not open');dialogs.push(manager);
+  const search=manager.manager.search;search.value=forward;search.dispatchEvent(new Event('input',{bubbles:true}));
+  let row=manager.contentEl.querySelector('.kplex-style-manager-row');check(row?.textContent.includes(forward),'Physical field missing from manager');row.click();
+  const editor=[...manager.children][0];dialogs.push(editor);const input=editor.partnerControl.inputEl;input.value=reverse;input.dispatchEvent(new Event('input',{bubbles:true}));
+  [...editor.contentEl.querySelectorAll('button')].find(button=>button.textContent===p.translator('common.save')).click();
+  await until(()=>!editor.modalEl.isConnected,'Manager pair Save did not close');
+  check(p.settings.hierarchy.next.includes(reverse),'Reciprocal standalone assignment/default was moved');
+  const filter=manager.contentEl.querySelector('select');filter.value='next';filter.dispatchEvent(new Event('change',{bubbles:true}));
+  row=manager.contentEl.querySelector('.kplex-style-manager-row');check(row?.textContent.includes(forward)&&row.textContent.includes(reverse)&&row.querySelector('.kplex-style-manager-name').textContent===reverse,'Manager role orientation lost partner');manager.close();
   app.setting.close();await p.settingsWriteQueue;
   await until(()=>labels(leaf).includes(reverse)&&!labels(leaf).includes(forward),'Stationary inverse caption did not update');
   check(p.inverseOntologyField(forward,'previous')===reverse&&p.ontologyRoleForField(reverse)==='next','Counterpart role/authoring lookup disagrees');check(root.querySelector('.kplex-edge-visible')?.getAttribute('stroke-width')===physicalWidth,'Caption substituted reciprocal field style');
@@ -60,7 +63,7 @@ async function scenario(app,c){
   const a=owned.find(file=>file.path===path('A')),b=owned.find(file=>file.path===path('B'));
   const evidence=p.index.explainRelationship(path('A'),path('B'));check(evidence?.decisions.some(item=>item.active&&item.evidence.fieldName===forward&&item.evidence.declaredByPath===path('B')),'Caption lost physical declaring source');
   const modal=p.openAddToOntologyModal(forward);check(modal,'Native pairing modal did not open');dialogs.push(modal);
-  const modalRoot=modal.contentEl,partner=modalRoot.querySelector('input');check(partner?.value===reverse,'Native modal current partner absent');
+  const modalRoot=modal.contentEl,partner=modal.partnerControl.inputEl;check(partner?.value===reverse,'Native modal current partner absent');
   const save=[...modalRoot.querySelectorAll('button')].find(button=>button.textContent===p.translator('common.save'));check(save,'Native Save missing');save.click();await until(()=>!modal.modalEl.isConnected,'Unchanged native Save did not close');
   // Both authored physical declarations remain; displayed wording alone deduplicates.
   await app.vault.modify(a,'# First\n'+reverse+':: [['+rootName+'/B]]\n# Second\n');
@@ -97,9 +100,9 @@ async function scenario(app,c){
   nestedFold().click();await until(()=>{c.progress={phase:'folded section caption',actions,fold:nestedFold()?.className,labels:labels(leaf),edges:[...root.querySelectorAll('.kplex-edge-hit')].map(edge=>edge.dataset.kplexEdgeId),nodes:[...root.querySelectorAll('.kplex-thought')].map(node=>node.dataset.kplexPath)};return nestedFold()?.classList.contains('is-folded')&&labels(leaf).includes(contains);},'Folded section lost physical directional caption');
   check(await app.vault.read(b)===beforeBody,'Section projection changed original physical declaration');
   // Remove the pair through the actual modal: both fields remain ordinary assignments.
-  const clear=p.openAddToOntologyModal(forward);dialogs.push(clear);const clearInput=clear.contentEl.querySelector('input');clearInput.value='';clearInput.dispatchEvent(new Event('input',{bubbles:true}));[...clear.contentEl.querySelectorAll('button')].find(button=>button.textContent===p.translator('common.save')).click();await until(()=>!clear.modalEl.isConnected,'Native unpair Save did not close');
+  const clear=p.openAddToOntologyModal(forward);dialogs.push(clear);const clearInput=clear.partnerControl.inputEl;clearInput.value='';clearInput.dispatchEvent(new Event('input',{bubbles:true}));[...clear.contentEl.querySelectorAll('button')].find(button=>button.textContent===p.translator('common.save')).click();await until(()=>!clear.modalEl.isConnected,'Native unpair Save did not close');
   check(p.ontologyRoleForField(forward)==='previous'&&p.ontologyRoleForField(reverse)==='next','Unpair lost ordinary assignments');
-  return {cases:['ordinary one-field inline discovery','actual Settings manual pair','stationary reciprocal caption with physical-field style unchanged','pair-only zero source/semantic work','independent main/split/popout perspectives','physical source evidence retained','native current-partner unchanged Save','both-authored deduplicated wording','configured counterpart creation from unresolved endpoint','reverse-view unlink of actual original property','actual transient and folded section captions','native unpair preserving roles'],pairOnly,labels:{forward,reverse},ownedNotes:owned.length};
+  return {cases:['ordinary one-field inline discovery','actual Settings manager pair','stationary reciprocal caption with physical-field style unchanged','pair-only zero source/semantic work','independent main/split/popout perspectives','physical source evidence retained','native current-partner unchanged Save','both-authored deduplicated wording','configured counterpart creation from unresolved endpoint','reverse-view unlink of actual original property','actual transient and folded section captions','native unpair preserving roles'],pairOnly,labels:{forward,reverse},ownedNotes:owned.length};
  }catch(error){failure=error;throw error;}finally{
   const errors=[];const clean=async run=>{try{await run()}catch(error){errors.push(String(error))}};
   for(const restore of restores.reverse())await clean(restore);for(const dialog of dialogs)await clean(()=>dialog.close());if(app.setting.isOpen)await clean(()=>app.setting.close());

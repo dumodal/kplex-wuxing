@@ -1,4 +1,4 @@
-﻿/** Shared settings grammar: ordinary compiler inputs, pair ownership, order and legacy compatibility. */
+/** Shared settings grammar: ordinary compiler inputs, pair ownership, order and legacy compatibility. */
 import assert from 'node:assert/strict';import test from 'node:test';import {loadPortableModules} from './support/portableTypeScript.mjs';
 const loaded=loadPortableModules(['src/core/contracts/ontologyConfiguration.ts','src/core/graph/settingsPolicy.ts']);const c=loaded.exports;
 const hierarchy=(overrides={})=>Object.fromEntries(c.ONTOLOGY_GROUPS.map(group=>[group,overrides[group]??[]]));
@@ -22,3 +22,26 @@ test('blank legacy placeholders remain in semantic signatures but are never offe
 test('ordinary legacy aliases survive unchanged and paired modal saves',()=>{const source=input({previous:['A'],next:['B']});source.hierarchy.friends=['Legacy alias'];assert.deepEqual(c.assignOntologyField(source,'A','previous',null),source.hierarchy);assert.deepEqual(c.assignOntologyField(source,'A','previous','B').friends,['Legacy alias']);});
 
 test('ordinary lookup retains existing Hidden-first precedence without changing duplicate role lists',()=>{const source=input({hidden:['Suppressed'],parents:['Suppressed','Visible'],exclusions:['Visible']});const config=c.ontologyConfiguration(source);assert.equal(config.roles.get('suppressed'),'hidden');assert.equal(config.roles.get('visible'),'parent');assert.deepEqual(config.hierarchy.parents,['Suppressed','Visible']);});
+
+for(const [role,reciprocal] of Object.entries(c.ONTOLOGY_RECIPROCAL))test(`atomic new-pair and pair-wide ${role} edits preserve old partners`,()=>{
+ const source=input({parents:['Before','A/B','After'],children:['ChildAnchor'],previous:['P/Q']});
+ const fresh=c.applyOntologyEdit(source,{kind:'assign',field:'新/field',role,partner:'New\\partner',createPartner:true});
+ const config=c.ontologyConfiguration({...source,hierarchy:fresh});assert.equal(config.roles.get('new\\partner'),reciprocal);assert.equal(config.pairs.get('新/field').partner,'New\\partner');assert.deepEqual(source.hierarchy.parents,['Before','A/B','After']);
+ const moved=c.applyOntologyEdit(source,{kind:'assign',field:'A',role,partner:'B',movePair:true});const result=c.ontologyConfiguration({...source,hierarchy:moved});assert.equal(result.roles.get('a'),role);assert.equal(result.roles.get('b'),reciprocal);assert.deepEqual(result.pairs.get('p').partner,'Q');
+});
+test('single-endpoint removal retains implicit counterpart and exact unrelated raw order',()=>{
+ const source=input({parents:['First','A/B','Last'],children:['ChildAnchor'],hidden:['kept'],leftFriends:['same','same'],exclusions:['Meta']});
+ for(const field of ['A','B']){const result=c.applyOntologyEdit(source,{kind:'remove',field}),config=c.ontologyConfiguration({...source,hierarchy:result});assert(!config.roles.has(field.toLowerCase()));assert(config.roles.has(field==='A'?'b':'a'));assert.equal(config.pairs.size,0);assert.deepEqual(result.leftFriends,['same','same']);assert.deepEqual(result.hidden,['kept']);assert.deepEqual(result.exclusions,['Meta']);}
+});
+test('atomic edits reject incompatible Child/Challenger and implicit partner creation or stealing',()=>{
+ const source=input({children:['Child'],rightFriends:['Challenger'],parents:['P/Q']});
+ assert.throws(()=>c.applyOntologyEdit(source,{kind:'assign',field:'Child',role:'child',partner:'Challenger'}),e=>e.issue==='role');
+ assert.throws(()=>c.applyOntologyEdit(source,{kind:'assign',field:'New',role:'parent',partner:'Q',createPartner:true}),e=>e.issue==='role');
+ assert.throws(()=>c.applyOntologyEdit(source,{kind:'assign',field:'P',role:'hidden',partner:'Q',movePair:true}),e=>e.issue==='role');
+});
+test('endpoint snapshots detect changed declarations but permit unrelated edits and unchanged Save',()=>{
+ const source=input({parents:['A/B','X'],children:['Y']});const before=c.ontologyEndpointState(source,'B');
+ const unrelated={...source,hierarchy:c.assignOntologyField(source,'Z','next',null)};assert.deepEqual(c.ontologyEndpointState(unrelated,'B'),before);
+ assert.deepEqual(c.applyOntologyEdit(source,{kind:'assign',field:'B',role:'child',partner:'A'}),source.hierarchy);
+ assert.notDeepEqual(c.ontologyEndpointState({...source,hierarchy:c.assignOntologyField(source,'A','parent',null)},'B'),before);
+});

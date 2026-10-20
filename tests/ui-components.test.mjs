@@ -1117,6 +1117,9 @@ import { FuzzySuggester } from ${JSON.stringify(join(root, "src/ui/components/Fu
 import { SavedRelationshipPendingError } from ${JSON.stringify(join(root, "src/adapters/obsidian/relationshipMetadataWrite.ts"))};
 import { PartialRelatedFileError } from ${JSON.stringify(join(root, "src/adapters/obsidian/relatedFileOutcome.ts"))};
 import { CreationCompletionSelect, creationCompletionValue } from ${JSON.stringify(join(root, "src/ui/features/CreationCompletionSelect.tsx"))};
+import {ontologyConfiguration} from ${JSON.stringify(join(root,"src/core/contracts/ontologyConfiguration.ts"))};
+import {normalizeFieldName} from ${JSON.stringify(join(root,"src/core/contracts/fieldName.ts"))};
+import {ontologyFieldViews,ontologyFieldDetail,ontologyFuzzyMatches,ontologySelectionFields} from ${JSON.stringify(join(root,"src/ui/features/ontologyPresentation.ts"))};
 const FuzzySearchInput = (props) => createElement(FuzzySuggester, { ...props, icon: null });
 const ObsidianIcon = ({ name }) => createElement("span", null, name);
 ${uiDefinitions("src/ui/FuzzySearchInput.tsx", ["fuzzyFilterStrings"])}
@@ -1139,7 +1142,7 @@ ${production}
   const plugin = {
    app: { vault: { on: () => ({}), offref: () => {}, getFileByPath: path => [origin, target].find(page => page.path === path)?.file,
     getAllFolders: includeRoot => { check(includeRoot === true, "folder inventory must include the vault root"); folderEnumerations++; return [{ path: "/" }, { path: "Projects" }, { path: "Projects/Ideas" }]; } } },
-   settings: { editNewNodeAfterCreate: false, newNodeDefaultType: "markdown" },
+   settings: { editNewNodeAfterCreate: false, newNodeDefaultType: "markdown",ontologyPairingVersion:1,hierarchy:{hidden:[],parents:["parent"],children:["children","review","example"],leftFriends:[],rightFriends:[],previous:[],next:[],exclusions:[]} },
    translator: (key) => key, isExcalidrawAvailable: () => false, defaultOntologyField: () => "children",
    ontologyFieldsForRole: () => ["children", "review", "example"],
    allOntologyFields: () => ["children", "review", "example", "parent"],
@@ -1214,8 +1217,8 @@ ${production}
   changeSelect('.kplex-add-related-role-select','all');
   flushSync(() => host.querySelector('.kplex-fuzzy-disclosure').click());
   let allRows=[...document.body.querySelectorAll('.kplex-fuzzy-floating-results button')];
-  check(allRows.length===4 && allRows.some(row=>row.textContent==='parent'), "All omitted another direction's configured field");
-  flushSync(() => allRows.find(row=>row.textContent==='parent').click());
+  check(allRows.length===4 && allRows.some(row=>row.querySelector('span')?.textContent==='parent'), "All omitted another direction's configured field");
+  flushSync(() => allRows.find(row=>row.querySelector('span')?.textContent==='parent').click());
   check(direction.value==='all', "choosing a field unexpectedly changed the browsing filter");
   intents.length=0;
   flushSync(() => host.querySelector('.kplex-add-related-link-button').click()); await new Promise(resolve=>setTimeout(resolve,0));

@@ -5,6 +5,8 @@
  * K-Plex is hidden; no parser/index work, timers or retained editor text cross this boundary.
  */
 import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
+import {normalizeFieldName} from '../core/contracts/fieldName';
+import {ontologyFieldViews,ontologyFieldDetail,ontologySelectionMatches} from '../ui/features/ontologyPresentation';
 import {
   EditorSuggest,
   type Editor,
@@ -115,8 +117,7 @@ export class OntologySuggester extends EditorSuggest<string> {
 
   /** Filter configured field labels using the native trigger’s query, preserving role selection. */
   getSuggestions(context: EditorSuggestContext): string[] {
-    const query = context.query.toLowerCase();
-    return this.keys().filter((candidate) => candidate.toLowerCase().includes(query));
+    return ontologySelectionMatches(this.keys(),ontologyFieldViews(ontologyConfiguration(this.plugin.settings)),context.query);
   }
 
   /** Render the native suggestion label through Obsidian’s owning-element creation helper. */
@@ -124,6 +125,8 @@ export class OntologySuggester extends EditorSuggest<string> {
     const bold = el.createEl("b");
     bold.textContent = suggestion;
     el.appendChild(bold);
+    const view=ontologyFieldViews(ontologyConfiguration(this.plugin.settings)).find(/** Annotation never changes the exact insertion value. */ field=>field.key===normalizeFieldName(suggestion));
+    if(view?.partner)el.createDiv({cls:'suggestion-note',text:ontologyFieldDetail(view,this.plugin.translator,Boolean(this.latestTriggerInfo?.query&&!suggestion.toLocaleLowerCase().includes(this.latestTriggerInfo.query.toLocaleLowerCase())))});
   }
 
   /** Replace only the captured trigger/query range, preserving inline prefixes and bold settings. */

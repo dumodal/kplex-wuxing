@@ -1,8 +1,10 @@
 ﻿# Paired ontology fields
 
-Configure pairs under **Settings → K-Plex → Ontology → Relationship fields**. A pair gives a connection a natural label from either endpoint while notes keep ordinary property names.
+Configure fields and pairs under **Settings → K-Plex → Ontology → Manage ontology**. A pair gives a connection a natural label from either endpoint while notes keep ordinary property names.
 
-For example, enter `replies to/replied by` in **Previous fields**. This assigns `replies to` to Previous and `replied by` to Next. One entry is enough; do not repeat the reversed pair in Next.
+For example, select **Add field**, enter `replies to`, choose **Previous**, and enter `replied by` in **Pair with**. If both names are new, enable **Create paired field**. The preview shows `replies to` as Previous and `replied by` as Next; Save creates both assignments together. To pair existing fields, choose an eligible property from the suggestions.
+
+The manager shows each pair once. **Show** filters by direction or state while keeping both names visible, with the selected direction first. Search matches either field name. Friend/Friend and Challenger/Challenger pairs are supported. **Unassigned** contains discovered metadata that has no ontology assignment; **Excluded metadata** and **Hidden** are separate assignments. Discovery can be incomplete. **Rescan discovered fields** explicitly scans for more metadata and can take time in a large vault; opening or searching the manager does not rescan.
 
 Either note can declare the relationship. In Note B:
 
@@ -31,13 +33,23 @@ From Note B the connection reads **replies to**; from Note A it reads **replied 
 | Friend | Friend |
 | Challenger | Challenger |
 
-Hidden and Excluded fields cannot form pairs. A field can have only one partner across all lists. Self-pairs, chains, reversed duplicates and conflicting roles are rejected. Incomplete or invalid textarea text stays local, with feedback; the last valid saved configuration remains active.
+Hidden and Excluded fields cannot form pairs. A field can have only one partner. Self-pairs, chains, reversed duplicates and conflicting roles are rejected. Invalid form changes stay local, with feedback; the last valid saved configuration remains active.
 
-You can also open **Add/change ontology** for a field and use **Pair with**. Suggestions contain existing eligible fields in the reciprocal direction. An existing pair shows its current partner. Clear the field to unpair it. Changing the direction may require explicitly clearing or replacing an incompatible partner before Save. Clearing or replacing a pair keeps the former partner as an ordinary assignment. Cancel leaves configuration unchanged.
+Manager rows and Markdown's **Add/change ontology** action open the same editor. Existing property names are read-only: changing a vocabulary assignment never renames properties in notes. For an existing pair, choose which field to edit. Changing its direction previews both old and new assignments and requires **Save both directions**. Use **Clear pairing** before moving only one endpoint, or before choosing Hidden/Excluded. Clearing or replacing a pair keeps the former partner as an ordinary assignment. Cancel leaves configuration unchanged.
 
-Both role lists show a read-only pairing summary. For example, a Child entry `quoted-in/based on` can coexist with a standalone Parent entry `based on`: they form one shared pair, and the standalone entry keeps its original position/default. The pair is saved in one list only. Do not add the reversed pair to the other list.
+**Remove assignment…** names the selected field and requires confirmation. It removes only that vocabulary assignment, retaining the other endpoint's assignment and all note properties. If the field is present in the discovered inventory, it can appear as Unassigned again. Removing an assignment can change how the graph interprets existing properties.
 
-Ordinary unpaired entries continue to work. Literal slashes in a property name must be escaped in settings: `cost\/benefit` configures the physical property `cost/benefit`. Escape a literal backslash as `\\`. Only an unescaped slash separates a pair. Notes always use the physical property name without these settings escapes.
+Markdown ontology suggestions and the related-note composer show the physical field prominently, with its partner underneath. Both fields remain independently selectable, including same-role pairs. Search can match the partner; direct-name matches come first and partner-only matches are marked. Selecting a suggestion inserts or writes only its primary physical field, never the pair's display text.
+
+In a field editor, select **Show documents** to inspect documents that use that physical property, including unassigned properties. Filter by words in the filename or folder path. **Copy as Markdown** copies every filtered result as a bulleted list of note links, including results beyond **Show more**. Each row has separate actions to open the document in K-Plex or in a new Obsidian tab. Inspecting uses does not save your ontology draft.
+
+This list reads existing indexed field names only; it does not scan or parse notes. It can be incomplete during indexing, when a source has changed, or when cached data is unavailable. Select **Refresh** to check the currently indexed results again. A paired field has its own list: reciprocal wording does not mean that both properties are authored in a document.
+
+While cleaning up properties, use **Refresh counts** in **Manage ontology** to recount indexed documents for all fields matching the current role filter and search, including entries beyond **Show more**. An unassigned field is hidden when the lookup returns zero matches, even if coverage is incomplete. Assigned fields remain visible at zero. A lookup that throws an error leaves the field visible without inventing a zero count. Visible partial counts are marked as incomplete. Checked counts are labelled as document counts, distinct from historical discovery occurrences.
+
+Refreshing **Show documents** also shares that field's count with the open manager. Counts are checked only on these explicit actions; opening the manager, typing and ordinary graph updates do not start a recount. These display-only results last for the open manager session and do not change configuration or the discovery index. Reopen **Manage ontology** and use **Refresh counts** again for a new cleanup session.
+
+Ordinary unpaired entries continue to work. Enter literal slashes and backslashes normally in the editor; K-Plex escapes its internal settings representation. Existing list ordering and defaults are retained. Notes always use ordinary physical property names.
 
 Existing K-Plex settings and ExcaliBrain imports preserve literal slash/backslash names through a versioned, lossless settings migration. They are never guessed to be pairs. The syntax version and escaped representation are saved through normal settings persistence; no notes or source grammar are changed.
 
