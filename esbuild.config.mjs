@@ -10,13 +10,14 @@ import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 
 const prod = process.argv[2] === "production";
 
-/** Resolve a public static identity at build time; archives never require Git to be available. */
+/** Keep production reproducible from source archives; only development builds include Git state. */
 async function publicBuildIdentity() {
   const manifest = JSON.parse(await readFile(new URL("./manifest.json", import.meta.url), "utf8"));
   const version = manifest.version;
   if (typeof version !== "string" || !/^\d{1,5}\.\d{1,5}\.\d{1,5}(?:-(?:alpha|beta|rc)\.\d{1,5})?$/.test(version)) {
     throw new Error("Build identity requires a supported manifest version");
   }
+  if (prod) return version;
   try {
     const options = { cwd: new URL(".", import.meta.url), encoding: "utf8", timeout: 5000, stdio: ["ignore", "pipe", "ignore"] };
     const revision = execFileSync("git", ["rev-parse", "--short=12", "HEAD"], options).trim();

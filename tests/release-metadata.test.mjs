@@ -8,6 +8,7 @@ import {fileURLToPath} from "node:url";
 import {spawnSync} from "node:child_process";
 import {validateReleaseMetadata} from "../scripts/releaseMetadata.mjs";
 import {checkReleaseRepository} from "../scripts/check-release-metadata.mjs";
+import {prepareRelease} from "../scripts/prepare-release.mjs";
 
 const cli = fileURLToPath(new URL("../scripts/check-release-metadata.mjs", import.meta.url));
 
@@ -168,6 +169,66 @@ test("failed tag, missing tag, wrong build and metadata mismatch leave all fixtu
   }
 }));
 
+test("release preparation updates all metadata, preserves dependencies/history and is idempotent", async () => fixture(async (root, data) => {
+  const before = await snapshot(root);
+  await prepareRelease("3.2.2", root);
+  for (const file of ["manifest.json", "manifest-beta.json", "package.json", "package-lock.json"]) {
+    const expected = JSON.parse(before[file]); expected.version = "3.2.2";
+    if (file === "package-lock.json") expected.packages[""].version = "3.2.2";
+    assert.deepEqual(JSON.parse(await readFile(join(root, file), "utf8")), expected);
+  }
+  assert.deepEqual(JSON.parse(await readFile(join(root, "versions.json"), "utf8")), {...data.versions, "3.2.2": "1.13.0"});
+  assert.equal(await readFile(join(root, "dist/manifest.json"), "utf8"), before["dist/manifest.json"], "A bump must not relabel an old build");
+  await checkReleaseRepository({root, tag: "3.2.2"});
+  const prepared = await snapshot(root);
+  await prepareRelease("3.2.2", root);
+  assert.deepEqual(await snapshot(root), prepared);
+}));
+
+test("release preparation repairs a partially applied npm version bump", async () => fixture(async (root, data) => {
+  data.packageJson.version = data.packageLock.version = data.packageLock.packages[""].version = "3.2.2";
+  await writeFile(join(root, "package.json"), JSON.stringify(data.packageJson));
+  await writeFile(join(root, "package-lock.json"), JSON.stringify(data.packageLock));
+  await prepareRelease("3.2.2", root);
+  await checkReleaseRepository({root, tag: "3.2.2"});
+}));
+
+for (const version of [undefined, "3.2.0", "v3.2.2", "3.2.2-beta.1", "03.2.2", "3.2.2\n", "3.2.2+build"]) {
+  test(`release preparation refuses ${JSON.stringify(version)} before writes`, async () => fixture(async root => {
+    const before = await snapshot(root);
+    await assert.rejects(prepareRelease(version, root));
+    assert.deepEqual(await snapshot(root), before);
+  }));
+}
+
+test("release preparation validates unrelated metadata and existing minimums before writes", async () => fixture(async (root, data) => {
+  data.packageLock.packages["node_modules/obsidian"].version = "1.12.0";
+  await writeFile(join(root, "package-lock.json"), JSON.stringify(data.packageLock));
+  let before = await snapshot(root);
+  await assert.rejects(prepareRelease("3.2.2", root), /Locked Obsidian version/);
+  assert.deepEqual(await snapshot(root), before);
+  data.packageLock.packages["node_modules/obsidian"].version = "1.13.0";
+  await writeFile(join(root, "package-lock.json"), JSON.stringify(data.packageLock));
+  await writeFile(join(root, "versions.json"), JSON.stringify({...data.versions, "3.2.2": "1.12.0"}));
+  before = await snapshot(root);
+  await assert.rejects(prepareRelease("3.2.2", root), /already records a different minimum/);
+  assert.deepEqual(await snapshot(root), before);
+}));
+
+test("actual preparation CLI changes only the five metadata files", async () => fixture(async root => {
+  const script = fileURLToPath(new URL("../scripts/prepare-release.mjs", import.meta.url));
+  for (const args of [[], ["3.2.2", "unexpected"]]) {
+    const before = await snapshot(root);
+    const result = spawnSync(process.execPath, [script, ...args], {cwd: root, encoding: "utf8", timeout: 10000});
+    assert.notEqual(result.status, 0);
+    assert.deepEqual(await snapshot(root), before);
+  }
+  const result = spawnSync(process.execPath, [script, "3.2.2"], {cwd: root, encoding: "utf8", timeout: 10000});
+  assert.equal(result.status, 0, result.stderr);
+  await checkReleaseRepository({root, tag: "3.2.2"});
+  assert.deepEqual((await readdir(root)).sort(), ["dist", "manifest-beta.json", "manifest.json", "package-lock.json", "package.json", "versions.json"].sort());
+}));
+
 test("release workflow delegates tag/channel preparation before existing attestation and publication", async () => {
   const workflow = await readFile(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
   const prepare = workflow.indexOf("run: node scripts/check-release-metadata.mjs --prepare-dist");
@@ -180,4 +241,6 @@ test("release workflow delegates tag/channel preparation before existing attesta
   for (const action of ["actions/checkout@v5", "actions/setup-node@v5", "actions/attest-build-provenance@v2", "softprops/action-gh-release@v2"])
     assert(workflow.includes(`uses: ${action}`));
   for (const permission of ["id-token: write", "contents: write", "attestations: write"]) assert(workflow.includes(permission));
+  assert.match(workflow, /node-version-file: '\.nvmrc'/);
+  assert.match(workflow, /node --test tests\/release-metadata\.test\.mjs tests\/release-build\.test\.mjs/);
 });

@@ -22,17 +22,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      # 2. Tell the server to install Node 22
+      # Use the same exact runtime as local acceptance checks.
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: '22'
+          node-version-file: '.nvmrc'
 
       # 3. Install dependencies and build assets
       # This naturally generates dist/manifest.json from the stable one
       - name: Install dependencies and build
         run: |
           npm ci
+          node --test tests/release-metadata.test.mjs tests/release-build.test.mjs
           npm run build 
 
       # Select and validate the actual shipped manifest before signing or publishing it.

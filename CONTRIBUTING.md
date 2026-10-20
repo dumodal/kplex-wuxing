@@ -29,13 +29,25 @@ The plugin ID is `k-plex`.
 
 ### Release metadata
 
+Prepare the next release with one command:
+
+```bash
+npm run release:prepare -- 0.2.1
+```
+
+This updates both manifests, `package.json`, the lockfile's root versions and `versions.json` together. It preserves locked dependencies and historical minimum versions. Re-running the same version is safe, including after a partially completed bump. It does not build, commit, create a tag or publish.
+
+Review and commit the changes, then push a matching tag such as `0.2.1`. The tag-driven release workflow installs the committed lockfile, builds, validates and publishes the three assets automatically. Local build/upload steps are unnecessary for publishing. Tag the release commit after preparing and committing its metadata.
+
 The project grant is **AGPL-3.0-only**. Keep `LICENSE` verbatim and preserve third-party license records. Root `package.json`, the top-level lockfile and its root package entry share the manifest's numeric release version and package name; the project license agrees between `package.json` and the lockfile's root package entry. Dependency records remain unchanged when correcting metadata. The exact Obsidian dependency and locked version match `minAppVersion` (currently `1.13.0`).
 
 Ordinary builds ship `manifest.json`. Both manifests use the same numeric `x.y.z` version and minimum; `manifest-beta.json` may have a different description. This follows [Obsidian's numeric manifest-version format](https://docs.obsidian.md/Reference/Manifest). Release tags accept one optional lowercase `v`: a tag such as `v0.1.3` selects stable, while `0.1.3-beta-1` or `v0.1.3-rc.1` selects beta. The numeric tag base must match both manifests and npm roots. Prerelease identifiers follow SemVer, including its numeric leading-zero rule; build metadata (`+...`) is unsupported. The shipped manifest keeps the numeric base, so its version agrees with the bundle identity embedded by the ordinary build.
 
-`versions.json` maps evidenced published numeric versions to their actual minimum Obsidian versions. Its nine initial entries (`0.0.1`–`0.0.5`, `0.1.0`–`0.1.3`) were checked against both public release assets and tagged manifests; all require `1.13.0`. Add the next intended release's numeric base and minimum when updating metadata; do not invent historical releases.
+`versions.json` maps published numeric versions and the next intended release to their actual minimum Obsidian versions. Its nine initial entries (`0.0.1`–`0.0.5`, `0.1.0`–`0.1.3`) were checked against both public release assets and tagged manifests; all require `1.13.0`. The preparation command adds the next intended release; do not invent historical releases.
 
-Run `npm run check:release` for a read-only consistency check (included in `npm run verify`), and `node scripts/check-release-metadata.mjs --dist` after an ordinary build to check its exact shipped manifest. For a local no-publish release check, build first, then run `node scripts/check-release-metadata.mjs --tag v0.1.3-beta-1 --prepare-dist`, substituting the intended matching tag. This validates the ordinary build before selecting beta and validates the resulting manifest; it never creates a tag or release. Rebuild before checking another channel. The release workflow uses the same owner after building and before attestation/publication, and consumes its validated prerelease output. Malformed metadata/tags or mismatched shipped manifests fail before preparation writes.
+Run `npm run check:release` for a read-only consistency check (included in `npm run verify`). Optional local packaging checks use `npm run build` followed by `node scripts/check-release-metadata.mjs --tag 0.2.1 --prepare-dist`; append a prerelease suffix to select beta. This packaging check validates existing versions and built artifacts; it does not bump versions. Rebuild before checking another channel. The release workflow runs this check before attestation/publication. Malformed metadata/tags or mismatched shipped manifests fail before preparation writes.
+
+Production bundles identify themselves by the committed manifest version. Git commit hashes and dirty-working-tree markers appear only in development builds: production output must remain identical when rebuilt from a checkout or its source archive. Release CI uses the exact Node version from `.nvmrc`, `npm ci`, and the same build/hardening path as local production builds. Release tests cover Git-state independence before publication.
 
 Do not consider a change complete until it builds against the real installed Obsidian typings. A local stub harness is useful for fast checks but is not authoritative.
 
