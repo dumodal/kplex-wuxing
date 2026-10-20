@@ -1063,7 +1063,7 @@ function start(referenceOnly = false, referenceProperties = false, sidecarGateOn
       );
       passed(
         "active on-demand graph and tag priority retain prepared editing authority without source work",
-        { indexingMode: p.settings.indexingMode }
+        { indexingMode: (p.index.isOnDemandMode()?'on-demand':'eager') }
       );
 
       root = await open("property");

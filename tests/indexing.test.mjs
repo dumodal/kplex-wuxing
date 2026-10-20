@@ -1,3 +1,4 @@
+import {runStartupAdmission} from './support/startupAdmission.mjs';
 /**
  * Exercises compiled production indexing, persistence, parser, settings and scene workflows against
  * finite Vault/Obsidian doubles. The archived compatibility oracle remains intact; only approved
@@ -508,6 +509,7 @@ for (const file of [
   "src/ui/HiddenFieldSetupModal.ts",
   "src/util/perf.ts",
   "src/main.ts",
+  "src/core/plex/startupIndexPreferences.ts",
   "src/index/fieldParser.ts",
   "src/index/MetadataParser.ts",
   "src/index/RelationEvidence.ts",
@@ -949,6 +951,7 @@ const KplexPlugin = require(join(temp, "src/main.js")).default;
   assert.equal(context.settings.sidecarLastUrl, "https://example.com");
 }
 const indexingStatusContext = {
+  indexPreparationAdmitted: true,
   computeIndexStatusFacts: KplexPlugin.prototype.computeIndexStatusFacts,
   initialIndexComplete: false,
   indexDirty: true,
@@ -1126,6 +1129,7 @@ assert.equal(indexingStatusContext.markdownFileCountReads, 1, "Progress publicat
 // O(1), including the status notification itself. Only a genuinely unknown initial count may enumerate.
 {
   const statusMembershipCoordinator = new KplexPlugin();
+  statusMembershipCoordinator.indexPreparationAdmitted = true;
   const handlers = new Map();
   let markdownEnumerations = 0;
   let structuralInvalidations = 0;
@@ -1604,6 +1608,7 @@ const plugin = { app, settings, getIndexSourceRevision: () => 0, recordDiagnosti
 }
 
 const index = new GraphIndex(plugin, app);
+console.log(`Startup admission: ${await runStartupAdmission({KplexPlugin,GraphIndex,app,settings,TFile,TFolder,fixtureEvents})} production scenarios passed.`);
 
 // Restore has a temporary event fence before the normal reactive listeners are installed.
 // Events before inventory capture are already represented there; later events must remain queued
@@ -1625,7 +1630,7 @@ for (const { inventoryRevision, fresh, remainsDirty } of [
     bootstrapSemanticDependencies: async () => true,
   };
   startup.app = app;
-  startup.layoutReady = true;
+  startup.layoutReady = true; startup.indexPreparationAdmitted = true;
   startup.metadataStabilized = true;
   startup.notifyIndexStatus = () => {};
   startup.hasVisibleKplexSurface = () => false;
@@ -1676,7 +1681,7 @@ for (const { visible, unloading, complete, dirty, expected } of [
   const startup = new KplexPlugin();
   startup.initialIndexTask = Promise.resolve();
   startup.initialIndexComplete = complete;
-  startup.layoutReady = true;
+  startup.layoutReady = true; startup.indexPreparationAdmitted = true;
   startup.indexDirty = dirty;
   startup.unloading = unloading;
   startup.hasVisibleKplexSurface = () => visible;
@@ -1702,7 +1707,7 @@ for (const adopted of [true, false]) {
     hasSourceBackedStartup: () => true, adoptStartupSources: async () => adopted,
     isFullSnapshotHydrated: () => false,
   };
-  startup.app = app; startup.layoutReady = true; startup.indexDirty = true;
+  startup.app = app; startup.layoutReady = true; startup.indexPreparationAdmitted = true; startup.indexDirty = true;
   startup.indexBacklogReasons.add("startup:no-snapshot");
   startup.notifyIndexStatus = () => {};
   startup.hasVisibleKplexSurface = () => false;
@@ -2399,7 +2404,7 @@ try {
     // the resumable lane instead of declaring the partial graph a failed preview.
     await Promise.resolve();
     const coordinator = new KplexPlugin();
-    coordinator.index = fallback; coordinator.app = app; coordinator.layoutReady = true;
+    coordinator.index = fallback; coordinator.app = app; coordinator.layoutReady = true; coordinator.indexPreparationAdmitted = true;
     coordinator.metadataStabilized = true; coordinator.indexDirty = true;
     coordinator.indexBacklogReasons.add("startup:stale-snapshot");
     let resumedBuilds = 0;
@@ -3524,7 +3529,7 @@ try {
       assert.equal(watchdogTimers.size, 0);
       owner[method] = original;
       const coordinator = new KplexPlugin();
-      coordinator.index = stalled; coordinator.app = app; coordinator.layoutReady = true;
+      coordinator.index = stalled; coordinator.app = app; coordinator.layoutReady = true; coordinator.indexPreparationAdmitted = true;
       coordinator.metadataStabilized = true; coordinator.initialIndexComplete = false;
       coordinator.refreshBookmarkedEntryPoints = async () => {};
       let rebuilds = 0;
@@ -3566,7 +3571,7 @@ try {
     await cancelled.restoreIndexedDbSnapshot(["Note A.md"]);
     const waiting = cancelled.waitForSnapshotHydration();
     const unloaded = new KplexPlugin();
-    unloaded.index = cancelled; unloaded.app = app; unloaded.layoutReady = true;
+    unloaded.index = cancelled; unloaded.app = app; unloaded.layoutReady = true; unloaded.indexPreparationAdmitted = true;
     unloaded.metadataStabilized = true;
     let unloadRebuilds = 0;
     unloaded.performRebuild = async () => { unloadRebuilds++; };
@@ -4442,6 +4447,7 @@ try {
     try {
       if (phase === "startup-handover") {
         availabilityCoordinator.register = () => {};
+        availabilityCoordinator.indexPreparationAdmitted = true;
         availabilityCoordinator.installPreRestoreChangeFence();
         files.set(beforeHandover.path, beforeHandover);
         const beforeCreate = availabilityCoordinator.getIndexSourceRevision();

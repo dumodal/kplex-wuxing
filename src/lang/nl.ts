@@ -7,6 +7,11 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const dutchTranslations = {
+  "indexing.modeHelp": "Kies een modus per apparaat. Op aanvraag indexeert de notities die je Plex nodig heeft. Direct bereidt ook de volledige index op de achtergrond voor. Wijzigingen gelden na het herstarten van Obsidian of herladen van de plug-in.",
+  "indexing.startupTitle": "Index voorbereiden voordat K-Plex wordt geopend",
+  "indexing.startupHelp": "Bereid de index bij het opstarten voor, inclusief opgeslagen gegevens. Zet dit uit om te wachten tot K-Plex opent; de eerste keer kan langer duren. Wijzigingen gelden na herstarten of herladen van de plug-in.",
+  "indexing.deferred": "Wachten tot K-Plex wordt geopend",
+
   "ontology.usage.show": "Documenten tonen",
   "ontology.usage.title": "Documenten met {field}",
   "ontology.usage.help": "Alleen al geïndexeerde documenten worden getoond. Tijdens het indexeren kunnen toepassingen ontbreken. Gekoppelde velden worden afzonderlijk vermeld.",

@@ -100,7 +100,7 @@ const baseline=evaluate("(()=>{const p=app.plugins.plugins['k-plex'];if(window.k
 for(const item of configuration)writeFileSync(join(output,item.name.replaceAll('/','-')+'.original'),item.bytes);
 let changed=false;
 try{
- if(baseline.mode){changed=true;evaluate("(async()=>{const p=app.plugins.plugins['k-plex'];p.settings.indexingMode='eager';await p.saveSettings(false,false);return JSON.stringify(true)})()");cli('plugin:disable','id=k-plex');cli('plugin:enable','id=k-plex');await ready();evaluate(`(async()=>{await app.workspace.changeLayout(${JSON.stringify(baseline.layout)});return JSON.stringify(true)})()`);}
+ if(baseline.mode){changed=true;evaluate("(async()=>{const p=app.plugins.plugins['k-plex'];p.settings.indexingModeDesktop='eager';p.settings.indexingMode='eager';await p.saveSettings(false,false);return JSON.stringify(true)})()");cli('plugin:disable','id=k-plex');cli('plugin:enable','id=k-plex');await ready();evaluate(`(async()=>{await app.workspace.changeLayout(${JSON.stringify(baseline.layout)});return JSON.stringify(true)})()`);}
  const data=readFileSync(join(target.pluginDir,'data.json'),'utf8');
  await runControlledProbe('ontology-startup-updates-190',scenario,'c.originalData='+JSON.stringify(data)+';',['src/main.ts']);
 }finally{

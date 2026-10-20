@@ -507,7 +507,7 @@ test("pre-restore file events update temporary availability while preserving bac
   class TFile { constructor(path) { this.path = path; this.extension = "md"; } }
   class TFolder { constructor(path) { this.path = path; } }
   const vaultEvents = new Map(), metadataEvents = new Map(), updates = [], cleanup = [], topology = [];
-  const context = { preRestoreListenerCleanup: null, preRestoreChanged: false, indexDirtyRevision: 0,
+  const context = { indexPreparationAdmitted: true, preRestoreListenerCleanup: null, preRestoreChanged: false, indexDirtyRevision: 0,
     preRestoreReasons: new Map(), preRestoreMarkdownPaths: new Map(),
     app: { vault: { on: (kind, callback) => { vaultEvents.set(kind, callback); return kind; }, offref: kind => vaultEvents.delete(kind) },
       metadataCache: { on: (kind, callback) => { metadataEvents.set(kind, callback); return kind; }, offref: kind => metadataEvents.delete(kind) } },

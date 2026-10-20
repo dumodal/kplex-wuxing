@@ -976,3 +976,112 @@ test('optional settings retry exhaustion cannot reject a valid hydrated snapshot
   })()`),true);
  }finally{await browser.cleanup()}
 });
+
+
+for(const mode of ['eager','on-demand'])test('deferred '+mode+' preserves a real warm graph/source cache until admission',async()=>{
+ const browser=await chromiumHarness(bundle);try{
+  assert.equal(await browser.evaluate(contributorBrowserInitialize),true);assert.equal(await browser.evaluate(initialize),true);
+  assert.equal(await browser.evaluate(`(async()=>{
+   const {f,settings}=await startupSeed('deferred-startup-${mode}');settings.indexingMode='${mode}';let index,release;
+   const reads={catalog:0,urls:0,bodies:0};
+   try{
+    index=new sourceModules.GraphIndex({app:f.app,settings,getIndexSourceRevision:()=>0},f.app,true);
+    const catalog=index.indexedDb.readSnapshotCatalog.bind(index.indexedDb);index.indexedDb.readSnapshotCatalog=async(...args)=>{reads.catalog++;return catalog(...args)};
+    const urls=index.indexedDb.readUrlOwnerPage.bind(index.indexedDb);index.indexedDb.readUrlOwnerPage=async(...args)=>{reads.urls++;return urls(...args)};
+    const baseline=JSON.stringify(f.work.snapshot()),bodyCount=f.reads.length;
+    index.primeSavedNavigation(['A.md','B.md']);
+    release=index.acquireSemanticDemand('A.md');
+    await index.primePhysicalSearchCatalog();await index.startBackgroundUrlIndex();await index.restorePersistedSnapshot(['A.md']);await index.initializeOnDemandBaseline();
+    await index.refreshPresentationSettings();await index.refreshSemanticSettings();
+    await new Promise(r=>setTimeout(r,200));
+    equal([reads.catalog,reads.urls,f.reads.length-bodyCount],[0,0,0],'No real graph/URL cache hydration or note-body read');
+    equal(JSON.stringify(f.work.snapshot()),baseline,'No source repository or native inventory activity');
+    equal(index.getSnapshotHydrationDiagnostics().phase,'idle','Dormant wait starts no hydration deadline');
+    release();release=null;index.admitPreparation();
+    const restored=await deadline(index.restorePersistedSnapshot(['A.md']),'admitted cache restoration');
+    if(index.hasPendingSnapshotHydration())await deadline(index.waitForSnapshotHydration(),'admitted hydration');
+    ok(restored.restored,'Real saved graph remains eligible for reuse');equal(reads.catalog,1,'Exactly one saved graph catalog');
+    ok(index.get('A.md'),'Saved center remains available');
+    equal(f.reads.length,bodyCount,'Unchanged warm startup does not reread Markdown bodies');
+    return true;
+   }finally{release?.();index?.destroy();f.close();}
+  })()`),true);
+ }finally{await browser.cleanup();}
+});
+
+
+test('dormant equal-stat body edits invalidate real saved URL and source facts before first use',async()=>{
+ const browser=await chromiumHarness(bundle);try{
+  assert.equal(await browser.evaluate(contributorBrowserInitialize),true);assert.equal(await browser.evaluate(initialize),true);
+  assert.equal(await browser.evaluate(`(async()=>{
+   const {f,settings}=await startupSeed('deferred-equal-stat');let index;
+   try{
+    index=new sourceModules.GraphIndex({app:f.app,settings,getIndexSourceRevision:()=>1},f.app,true);
+    const file=f.files.get('A.md'),stat={...file.stat},reads=f.reads.length;
+    f.texts.set('A.md','[Fresh URL](https://example.com/current-evidence)');
+    index.observeDeferredHostChange(file,true);await index.refreshUrlOwner(file.path);
+    equal(file.stat,stat,'Controlled equal-stat native edit');equal(f.reads.length,reads,'Dormant invalidation performs no read');
+    index.admitPreparation();ok(await deadline(index.startBackgroundUrlIndex(),'deferred URL discovery'),'URLs complete');
+    ok(index.get('https://example.com/current-evidence'),'New body is discovered');
+    ok(!index.get('https://example.com/startup-evidence'),'Old cached URL cannot survive equal-stat event');
+    ok(f.reads.length>reads,'Changed owner requires genuine native body input');
+    const body=await index.sourceAcquisition.loadBody(file,()=>true,false,true);
+    ok(body.urls.some(url=>url.url==='https://example.com/current-evidence'),'Neutral source acquisition also sees the current body');
+    return true;
+   }finally{index?.destroy();f.close();}
+  })()`),true);
+ }finally{await browser.cleanup();}
+});
+
+
+for(const mode of ['eager','on-demand'])test('deferred '+mode+' publishes current ontology after equal-stat edit and incoming policy',async()=>{
+ const browser=await chromiumHarness(bundle);try{
+  assert.equal(await browser.evaluate(contributorBrowserInitialize),true);assert.equal(await browser.evaluate(initialize),true);
+  assert.equal(await browser.evaluate(`(async()=>{
+   const {f,settings}=await startupSeed('deferred-semantics-${mode}');settings.indexingMode='${mode}';let index,release;
+   try{
+    index=new sourceModules.GraphIndex({app:f.app,settings,getIndexSourceRevision:()=>1},f.app,true);
+    const file=f.files.get('A.md'),reads=f.reads.length;
+    f.texts.set(file.path,'Friend:: [[C]]');index.observeDeferredHostChange(file,true);
+    settings.hierarchy={...settings.hierarchy,parents:[],children:['Parent']};
+    index.invalidateSemanticPolicy();await index.refreshSemanticSettings();
+    equal(f.reads.length,reads,'Dormant incoming policy and content edits do not acquire sources');
+    index.admitPreparation();
+    await deadline(index.restorePersistedSnapshot(['A.md']),'changed-policy source startup');
+    if(index.hasPendingSnapshotHydration())await deadline(index.waitForSnapshotHydration(),'changed-policy hydration');
+    release=index.acquireSemanticDemand('A.md');
+    if(index.usesLocalForeground())await deadline(index.ensureOnDemandCenter('A.md'),'current requested center');
+    else await deadline(index.ensureSemanticScope('A.md'),'current requested semantics');
+    const neighborhood=index.getNeighborhood('A.md');
+    ok(neighborhood.children.some(n=>n.page.path==='B.md'),'Latest policy reinterprets cached Parent property as Child');
+    ok(neighborhood.leftFriends.some(n=>n.page.path==='C.md'),'Equal-stat body edit contributes the new explicit ontology');
+    equal(neighborhood.parents.length,0,'No stale pre-defer classification remains');
+    return true;
+   }finally{release?.();index?.destroy();f.close();}
+  })()`),true);
+ }finally{await browser.cleanup();}
+});
+
+
+for(const mode of ['eager','on-demand'])test('deferred '+mode+' starts an actual cold cache on first demand',async()=>{
+ const browser=await chromiumHarness(bundle);try{
+  assert.equal(await browser.evaluate(contributorBrowserInitialize),true);assert.equal(await browser.evaluate(initialize),true);
+  assert.equal(await browser.evaluate(`(async()=>{
+   const {f,settings}=await startupSeed('deferred-cold-host-${mode}');let index,release;
+   try{
+    // Reuse host facts but give this index a genuinely empty, independent durable namespace.
+    f.app.vault.getName=()=> 'deferred-cold-index-${mode}';settings.indexingMode='${mode}';
+    f.texts.set('A.md','Parent:: [[B]]');f.metadata.get('A.md').frontmatter={};
+    const reads=f.reads.length;index=new sourceModules.GraphIndex({app:f.app,settings,getIndexSourceRevision:()=>0},f.app,true);
+    equal((await index.restorePersistedSnapshot(['A.md'])).restored,false,'Dormant restore does not load an empty namespace');
+    equal(f.reads.length,reads,'Cold session remains body-free before admission');index.admitPreparation();
+    equal((await deadline(index.restorePersistedSnapshot(['A.md']),'cold cache inspection')).restored,false,'Actual graph cache miss');
+    if(index.hasPendingSnapshotHydration())await deadline(index.waitForSnapshotHydration(),'cold source preparation');
+    ok(await index.initializeOnDemandBaseline(['A.md']),'Body-free first structural baseline');
+    release=index.acquireSemanticDemand('A.md');await deadline(index.ensureOnDemandCenter('A.md'),'cold requested ontology');
+    ok(index.getNeighborhood('A.md').parents.some(n=>n.page.path==='B.md'),'Body-only ontology appears without navigation away');
+    ok(f.reads.length>reads,'Cold first use acquires real native bodies');return true;
+   }finally{release?.();index?.destroy();f.close();}
+  })()`),true);
+ }finally{await browser.cleanup();}
+});

@@ -1166,3 +1166,25 @@ final fixture-field lookup only, the driver delegates to the real posting lookup
 incomplete coverage. Zero-result Unassigned rows must still disappear, with the same strict
 zero-source-work assertions. The wrapper is restored on every exit; no production index state
 or stored facts are altered by this fault injection.
+
+
+### Startup admission
+
+After exact-build staging in the explicitly configured `kplex-test-small`, run
+`npm run verify:obsidian:startup-admission`. The shared controlled-probe driver verifies artifact
+hashes and vault identity. The scenario reloads the plugin, exercises the real Indexing Settings
+switches and strategy dropdowns for all three devices, observes a ten-second dormant interval and native file/metadata edits, then opens main
+and sidebar Plexes concurrently. It checks stationary connections, close/reopen reuse, enabled
+Eager pre-open startup and a live inactive Plex. It restores original configuration/layout and
+removes its two owned notes. The retained-heap sample reuses `startupRetainedMemory.mjs` outside
+startup timing; renderer-wide memory/CPU are not plugin-exclusive costs.
+
+An explicitly staged immutable prior build can run only the matched startup observation with
+`KPLEX_STARTUP_POLICY_BASELINE=true`, `KPLEX_PROBE_ARTIFACT_DIR` and `KPLEX_PROBE_BASELINE_REF`.
+Use an identical fixture and saved settings, and label actual cache conditions. This finite native
+lane does not establish full application restart, macOS or physical phone/tablet acceptance.
+
+Native desktop drivers that request a strategy set `indexingModeDesktop`. Drivers supporting
+explicit older-build baselines also set the retired global `indexingMode`; only the device field
+owns current production startup. Reports read the actual index strategy, not a pending saved edit.
+Direct isolated GraphIndex fixtures retain their explicit legacy constructor input.

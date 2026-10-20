@@ -155,7 +155,7 @@ function install(token, originalSettings, originalLayout) {
         p.settings.inferAllLinksAsFriends=false; p.settings.inverseInfer=false;
         await step('restore-default-parent','parent','parent');
         if (!i.isOnDemandMode()) check(Object.values(c.work).every(count => count === 0), 'Prepared eager policy flip reread/reparsed/reacquired source ' + JSON.stringify(c.work));
-        c.fullBuildDelta = i.getSemanticPreparationDiagnostics().fullBuilds - c.baselineBuilds; c.measuredWork={...c.work}; c.indexingMode=p.settings.indexingMode;
+        c.fullBuildDelta = i.getSemanticPreparationDiagnostics().fullBuilds - c.baselineBuilds; c.measuredWork={...c.work}; c.indexingMode=p.index.isOnDemandMode()?'on-demand':'eager';
         check(c.fullBuildDelta === 0, 'Policy flip triggered full build');
         // The separate mutation-owner guard is outside the policy-only work measurement.
         for (const restore of c.restores.splice(0).reverse()) restore();
@@ -188,7 +188,7 @@ function restart() { const c = window.__kplexDatePolicyProbe, p = app.plugins.pl
     await new Promise(r => window.setTimeout(r, 50));
     await i.refreshSemanticSettings();
 } if ([c.meeting,c.daily,c.working].some(path=>i.onDemandTasks.has(path))) throw Error("Fixture local scope still pending"); const meeting = i.getNeighborhood(c.meeting), daily = i.getNeighborhood(c.daily); if (!meeting.parents.some(item => item.page.path === c.daily) || !daily.children.some(item => item.page.path === c.meeting))
-    throw Error('Reload default Parent/Child differs'); c.scenarios.push({ id: 'persisted-default-date-role-plugin-reload', status: 'passed', indexingMode:p.settings.indexingMode, localCoverage:i.isOnDemandMode() }); c.release(); }).then(() => { c.done = true; }, error => { c.error = String(error); c.done = true; }); return JSON.stringify({ started: true }); }
+    throw Error('Reload default Parent/Child differs'); c.scenarios.push({ id: 'persisted-default-date-role-plugin-reload', status: 'passed', indexingMode:p.index.isOnDemandMode()?'on-demand':'eager', localCoverage:i.isOnDemandMode() }); c.release(); }).then(() => { c.done = true; }, error => { c.error = String(error); c.done = true; }); return JSON.stringify({ started: true }); }
 /** Always settle owned work, restore settings and retire controller ownership before raw restoration. */
 async function cleanup() { if (!started)
     return; const launch = evaluate('(()=>{const c=window.__kplexDatePolicyProbe;if(!c)return JSON.stringify({absent:true});c.cancelled=true;c.cleanupDone=false;c.cleanupTask=Promise.resolve().then(async()=>{await c.task;await c.cleanup();c.cleanupResult={cleaned:c.cleaned,observers:c.restores.length,demands:c.releases.length,indexingMode:c.indexingMode,measuredWork:c.measuredWork,fullBuildDelta:c.fullBuildDelta,warmReadiness:c.warmReadiness}}).then(()=>{c.cleanupDone=true},error=>{c.cleanupError=String(error);c.cleanupDone=true});return JSON.stringify({started:true})})()'); if (launch.absent) {
@@ -223,13 +223,13 @@ try {
     }
     baseline = evaluate('JSON.stringify({layout:app.workspace.getLayout(),files:app.vault.getMarkdownFiles().length,settingsOpen:app.setting.isOpen,mobile:app.isMobile,hidden:document.hidden,visibility:document.visibilityState})');
     originalSettings = evaluate('JSON.stringify(app.plugins.plugins["k-plex"].settings)');
-    const requestedMode = process.env.KPLEX_DATE_POLICY_MODE || originalSettings.indexingMode;
+    const requestedMode = process.env.KPLEX_DATE_POLICY_MODE || (originalSettings.indexingModeDesktop??originalSettings.indexingMode);
     assert(['eager','on-demand'].includes(requestedMode), 'Supported test indexing mode required');
     report.indexingMode=requestedMode;
-    modeChanged=requestedMode!==originalSettings.indexingMode;
+    modeChanged=requestedMode!==(originalSettings.indexingModeDesktop??originalSettings.indexingMode);
     cli('dev:errors', 'clear');
     if(modeChanged){
-        evaluate(`(async()=>{const p=app.plugins.plugins['k-plex'];p.settings.indexingMode=${JSON.stringify(requestedMode)};await p.saveSettings(false,false);return JSON.stringify(true)})()`);
+        evaluate(`(async()=>{const p=app.plugins.plugins['k-plex'];p.settings.indexingModeDesktop=${JSON.stringify(requestedMode)};p.settings.indexingMode=${JSON.stringify(requestedMode)};await p.saveSettings(false,false);return JSON.stringify(true)})()`);
         cli('plugin:disable','id=k-plex'); cli('plugin:enable','id=k-plex'); await ready();
         evaluate(`(async()=>{await app.workspace.changeLayout(${JSON.stringify(baseline.layout)});return JSON.stringify(true)})()`);
     }

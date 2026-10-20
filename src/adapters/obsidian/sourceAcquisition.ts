@@ -204,6 +204,7 @@ export class ObsidianSourceAcquisition {
   private localInventoryCompletionPending = false;
   /** Known host events and proven referrers are the complete hot-lane acquisition set. */
   private readonly pendingKnownFiles = new Set<TFile>();
+  private preStartHostChanged = false;
   /** Synchronous event bursts share one deferred fan-out task per TFile. */
   private readonly pendingKnownImpacts = new Map<TFile, { oldPaths: Set<string>; canLookup: boolean }>();
   private readonly knownFanoutTasks = new Map<TFile, Promise<void>>();
@@ -259,11 +260,33 @@ export class ObsidianSourceAcquisition {
   }
   /** The repository independently sanitizes all persistent diagnostic fields. */
   getDiagnostics(): SourceRepositoryDiagnostics { return this.repository.getDiagnostics(); }
+  /** Record dormant changes without subscriptions, repository work, timers or body reads.
+   * Native identities and dirty parser inputs share the normal coalesced observation owner. */
+  observeBeforeStart(file?: TFile, bodyChanged = true, oldPath?: string): void {
+    if (this.started || this.closed) return;
+    this.preStartHostChanged = true;
+    if (file) {
+      // Deleted identities need only the existing global inventory fence. Do not retain every
+      // create/delete cycle until a view eventually opens; native inventory retires cached heads.
+      if (this.app.vault.getFileByPath(file.path) !== file) {this.pendingKnownFiles.delete(file); return;}
+      const state = this.state(file);
+      state.revision++; state.dirty = true; state.bodyDirty ||= bodyChanged;
+      if (oldPath) state.oldPath ??= oldPath;
+      this.pendingKnownFiles.add(file);
+    } else for (const pending of this.pendingKnownFiles) {
+      // Some hosts report a deleted folder without individual descendant delete events.
+      if (this.app.vault.getFileByPath(pending.path) !== pending) this.pendingKnownFiles.delete(pending);
+    }
+  }
   /** Subscribe before asynchronous acquisition; pure graph no-ops never suppress this fence. */
   start(): void {
     if (this.started || this.closed) return;
     this.started = true;
     this.epoch = this.repository.createIdentity();
+    if (this.preStartHostChanged) {
+      this.preStartHostChanged = false;
+      this.markContributorHostChange("resolution", true);
+    }
     /**
      * Observe each native change before ordinary acquisition/fan-out. A closing resolver event
      * consumes one proven native wave or retains the existing global uncertainty path.

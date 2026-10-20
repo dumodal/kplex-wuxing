@@ -7,6 +7,11 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const spanishTranslations = {
+  "indexing.modeHelp": "Elige un modo para cada dispositivo. Bajo demanda indexa las notas necesarias para el Plex. Inmediato también prepara el índice completo en segundo plano. Los cambios se aplican tras reiniciar Obsidian o recargar el complemento.",
+  "indexing.startupTitle": "Preparar el índice antes de abrir K-Plex",
+  "indexing.startupHelp": "Prepara el índice al iniciar, incluidos los datos guardados. Desactívalo para esperar hasta abrir K-Plex; la primera apertura puede tardar más. Los cambios se aplican al reiniciar Obsidian o recargar el complemento.",
+  "indexing.deferred": "Esperando a que se abra K-Plex",
+
   "ontology.usage.show": "Mostrar documentos",
   "ontology.usage.title": "Documentos que usan {field}",
   "ontology.usage.help": "Solo se muestran los documentos ya indexados. Pueden faltar usos durante la indexación. Los campos emparejados se muestran por separado.",

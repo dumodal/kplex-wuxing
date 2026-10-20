@@ -7,6 +7,11 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const germanTranslations = {
+  "indexing.modeHelp": "Für jedes Gerät einen Modus wählen. Bei Bedarf werden die für den Plex benötigten Notizen indiziert. Sofort bereitet zusätzlich den vollständigen Index im Hintergrund vor. Änderungen gelten nach einem Neustart oder Neuladen des Plugins.",
+  "indexing.startupTitle": "Index vor dem Öffnen von K-Plex vorbereiten",
+  "indexing.startupHelp": "Den Index beim Start vorbereiten, einschließlich gespeicherter Daten. Ausschalten, um bis zum Öffnen von K-Plex zu warten; das erste Öffnen kann länger dauern. Änderungen gelten nach einem Neustart oder Neuladen des Plugins.",
+  "indexing.deferred": "Wartet auf das Öffnen von K-Plex",
+
   "ontology.usage.show": "Dokumente anzeigen",
   "ontology.usage.title": "Dokumente mit {field}",
   "ontology.usage.help": "Nur derzeit indizierte Dokumente werden angezeigt. Während der Indizierung können Verwendungen fehlen. Zugeordnete Felder werden getrennt aufgeführt.",

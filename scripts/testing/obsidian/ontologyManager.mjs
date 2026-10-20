@@ -115,7 +115,7 @@ let modeChanged=false;
 try{
  if(requestedMode){
   cli('plugin:disable','id=k-plex');modeChanged=true;
-  const snapshot=JSON.parse(originalData);snapshot.indexingMode=requestedMode;writeFileSync(dataFile,JSON.stringify(snapshot));
+  const snapshot=JSON.parse(originalData);snapshot.indexingModeDesktop=requestedMode;snapshot.indexingMode=requestedMode;writeFileSync(dataFile,JSON.stringify(snapshot));
   cli('plugin:enable','id=k-plex');await waitNative('Boolean(app.plugins.plugins["k-plex"]?.index)','Requested session not loaded');
   assert.equal(evaluate('JSON.stringify(app.plugins.plugins["k-plex"].index.isOnDemandMode())'),requestedMode==='on-demand');
  }

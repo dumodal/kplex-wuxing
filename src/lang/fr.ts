@@ -7,6 +7,11 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const frenchTranslations = {
+  "indexing.modeHelp": "Choisissez un mode par appareil. À la demande indexe les notes nécessaires au Plex. Immédiat prépare aussi l’index complet en arrière-plan. Les changements s’appliquent après un redémarrage ou un rechargement du module.",
+  "indexing.startupTitle": "Préparer l’index avant d’ouvrir K-Plex",
+  "indexing.startupHelp": "Préparer l’index au démarrage, y compris les données enregistrées. Désactivez pour attendre l’ouverture de K-Plex ; la première ouverture peut être plus longue. Les changements s’appliquent après un redémarrage ou un rechargement du module.",
+  "indexing.deferred": "En attente de l’ouverture de K-Plex",
+
   "ontology.usage.show": "Afficher les documents",
   "ontology.usage.title": "Documents utilisant {field}",
   "ontology.usage.help": "Seuls les documents déjà indexés sont affichés. Des utilisations peuvent manquer pendant l’indexation. Les champs associés sont listés séparément.",

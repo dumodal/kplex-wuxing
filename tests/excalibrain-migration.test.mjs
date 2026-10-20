@@ -427,11 +427,15 @@ test("indexing settings persist without rebuilding and cache estimation is lazy 
   await Promise.resolve();
   assert.equal(description, detachedDescription, "a detached row must ignore late estimates");
   cleanup();
-  await tab.setControlValue("indexingMode", "on-demand");
-  await tab.setControlValue("urlIndexingMode", "background");
-  assert.equal(plugin.settings.indexingMode, "on-demand");
-  assert.equal(plugin.settings.urlIndexingMode, "background");
-  assert.deepEqual(saves, [[false, false], [false, false]], "restart-only settings must not schedule live rebuilds");
+  for (const [suffix,mode] of [["Desktop","on-demand"],["Tablet","eager"],["Mobile","eager"]]) {
+    const modeKey="indexingMode"+suffix, startupKey="indexBeforeView"+suffix;
+    assert(flatten(indexingPage.items).some(item=>item.control?.key===modeKey),"Every device has a native mode control");
+    assert(flatten(indexingPage.items).some(item=>item.control?.key===startupKey),"Every device has a native startup control");
+    await tab.setControlValue(modeKey,mode);await tab.setControlValue(startupKey,suffix!=="Desktop");
+    assert.equal(plugin.settings[modeKey],mode);assert.equal(plugin.settings[startupKey],suffix!=="Desktop");
+  }
+  assert(!flatten(indexingPage.items).some(item=>item.control?.key==="indexingMode"||item.control?.key==="urlIndexingMode"),"Retired global and URL selectors stay absent");
+  assert.deepEqual(saves, Array.from({length:6},()=>[false,false]), "restart-only settings must not schedule live rebuilds");
 });
 
 test("purge confirmation requires activation, coalesces repeated clicks and never acknowledges failed deletion", async () => {

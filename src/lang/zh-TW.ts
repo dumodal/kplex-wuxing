@@ -7,6 +7,11 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const traditionalChineseTranslations = {
+  "indexing.modeHelp": "為每種裝置選擇模式。隨需模式會索引 Plex 所需的筆記；預先模式也會在背景準備完整索引。變更會在重新啟動 Obsidian 或重新載入外掛後生效。",
+  "indexing.startupTitle": "開啟 K-Plex 前準備索引",
+  "indexing.startupHelp": "啟動時準備索引，包含載入已儲存的資料。關閉後會等到開啟 K-Plex 才開始，首次開啟可能較慢。變更會在重新啟動 Obsidian 或重新載入外掛後生效。",
+  "indexing.deferred": "等待開啟 K-Plex",
+
   "ontology.usage.show": "顯示文件",
   "ontology.usage.title": "使用 {field} 的文件",
   "ontology.usage.help": "僅列出目前已索引的文件。索引建立期間可能尚有使用處未列出。配對欄位會分別列出。",

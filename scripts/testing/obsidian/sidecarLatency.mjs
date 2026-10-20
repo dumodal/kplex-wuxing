@@ -257,7 +257,7 @@ function start() {
         c.fixture = {
           markdown: app.vault.getMarkdownFiles().length,
           sequence: files.length,
-          indexMode: p.settings.indexingMode,
+          indexMode: (p.index.isOnDemandMode()?'on-demand':'eager'),
           backgroundUrls: p.settings.urlIndexingMode,
           animationSpeed: 1,
           embedded: false,
