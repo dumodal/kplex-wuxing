@@ -9,6 +9,7 @@
  * keep offscreen geometry independent of incidence queries; rendered rows acquire current counts.
  * One-sided arrangement shares one friend/challenger strip without changing roles or edges;
  * independent lateral/Sibling scroll areas never share compacted margins.
+ * Relation groups own no semantic counts/descendants; sibling witnesses bind their real members.
  * Callers own interaction, settings persistence and camera transforms.
  */
 import type { KplexSettings } from "../settings";
@@ -120,7 +121,9 @@ export function neighborhoodSceneKey(neighborhood: Neighborhood | null, index: P
   if (!neighborhood) return "";
   const node = (page: GraphPage, relation: Neighbour | null, role: Role | "center"): unknown => [
     page.path, page.isFolder, page.isTag, Boolean(page.file), page.url, page.noteType,
-    index.titleFor(page), appearanceWithoutColors("baseNodeStyle", resolveNodeStyle(page, relation, role, settings)),
+    page.transient?.kind === "group" ? page.name : index.titleFor(page),
+    page.transient?.groupMembers?.map(member => member.page.path),
+    appearanceWithoutColors("baseNodeStyle", resolveNodeStyle(page, relation, role, settings)),
     relation?.relationType, relation?.typeDefinition, relation?.linkDirection,
   ];
   return JSON.stringify([node(neighborhood.center, null, "center"),
@@ -210,7 +213,7 @@ function makeNode(
     fontSize: (resolved.fontSize ?? 18) * scale,
     gateRadius: (resolved.gateRadius ?? settings.baseNodeStyle.gateRadius ?? 5) * scale,
   };
-  const label = index.titleFor(n.page);
+  const label = n.page.transient?.kind === "group" ? n.page.name : index.titleFor(n.page);
   const baseSize = nodeSize(`${resolved.prefix ?? ""}${label}`, resolved.fontSize ?? 18, settings, false, resolved.maxLabelLength ?? 30, resolved.maxWidth ?? settings.baseNodeStyle.maxWidth, resolved.strokeWidth);
   const size = scale === 1 ? baseSize : { width: baseSize.width * scale,
     // Sibling scaling keeps its width/proportions but cannot shrink the actual font's clip box.
@@ -233,6 +236,10 @@ function makeNode(
 
 /** Keep geometry count-free when requested; provisional zero values never certify absent edges. */
 function countsForLayout(page: GraphPage, index: GraphIndex, deferred: boolean): Pick<PositionedNode, "neighbourCount" | "gateStats"> {
+  if (page.transient?.kind === "group") return { neighbourCount: 0, gateStats: {
+    top: { visibleCount: 0, hasAny: false }, bottom: { visibleCount: 0, hasAny: false },
+    left: { visibleCount: 0, hasAny: false }, right: { visibleCount: 0, hasAny: false },
+  } };
   if (!deferred) return { neighbourCount: index.neighbourCount(page), gateStats: index.gateStats(page) };
   return { neighbourCount: 0, gateStats: {
     top: { visibleCount: 0, hasAny: false, complete: false, countUnavailable: true },
@@ -289,6 +296,7 @@ export function expandedMiniLayout(settings: KplexSettings, parentWidth: number,
 
 /** Reserve exactly the visible expanded box height, optionally scaling the full sibling-descendant strip. */
 export function expandedChildReserve(page: GraphPage, index: GraphIndex, settings: KplexSettings, centerPath: string, scale = 1): number {
+  if (page.transient?.kind === "group") return 0;
   if (settings.graphDepth !== 2) return 0;
   const childCount = index.neighbours(page, "child")
     .filter((child) => child.page.path !== centerPath)
@@ -300,6 +308,7 @@ export function expandedChildReserve(page: GraphPage, index: GraphIndex, setting
 
 /** Bound the expanded-child footprint independently from whether a renderer currently filters it. */
 function miniLayoutForNode(node: Pick<PositionedNode, "page" | "width" | "role">, index: GraphIndex, settings: KplexSettings, centerPath: string): ExpandedMiniLayout | null {
+  if (node.page.transient?.kind === "group") return null;
   if (settings.graphDepth !== 2 || node.role === "center") return null;
   const count = index.neighbours(node.page, "child").filter(child => child.page.path !== centerPath).slice(0, settings.maxItemCount).length;
   return count ? expandedMiniLayout(settings, node.width, count, node.role === "sibling" ? siblingScale(settings) : 1) : null;
@@ -783,21 +792,34 @@ function appendSiblingParentLinks(
   settings: KplexSettings,
   centerPath: string,
 ): void {
-  const siblingPaths = new Set(nodes.filter((node) => node.role === "sibling").map((node) => node.page.path));
+  const siblings = new Map<string, string>();
+  for (const node of nodes) {
+    if (node.role !== "sibling") continue;
+    for (const page of node.page.transient?.groupMembers?.map(member => member.page) ?? [node.page]) siblings.set(page.path, node.page.path);
+  }
+  const siblingPaths = new Set(siblings.keys());
   if (!siblingPaths.size) return;
+  const seen = new Set<string>();
   for (const parent of nodes) {
-    if (parent.role !== "parent" || parent.page.path === centerPath || parent.page.transient) continue;
-    for (const relation of index.visibleRelationshipsWithin(parent.page, siblingPaths)) {
+    if (parent.role !== "parent" || parent.page.path === centerPath || parent.page.transient && parent.page.transient.kind !== "group") continue;
+    const sources = parent.page.transient?.groupMembers?.map(member => member.page) ?? [parent.page];
+    for (const source of sources) for (const relation of index.visibleRelationshipsWithin(source, siblingPaths)) {
       if (relation.role !== "child") continue;
+      const targetPath = siblings.get(relation.page.path)!;
+      const id = JSON.stringify([parent.page.path, targetPath]);
+      if (seen.has(id)) continue;
+      seen.add(id);
       edges.push({
-        id: `sibling-parent:${parent.page.path}:${relation.page.path}`,
+        id: `sibling-parent:${parent.page.transient?.kind === "group" || targetPath !== relation.page.path ? id : `${parent.page.path}:${relation.page.path}`}`,
         sourcePath: parent.page.path,
-        targetPath: relation.page.path,
+        targetPath,
+        ...(parent.page.transient?.kind === "group" || targetPath !== relation.page.path
+          ? { explanationSourcePath: source.path, explanationTargetPath: relation.page.path } : {}),
         role: "child",
         relationType: relation.relationType,
         typeDefinition: relation.typeDefinition,
         direction: relation.linkDirection,
-        style: resolveLinkStyle(relation, settings, parent.page),
+        style: resolveLinkStyle(relation, settings, source),
       });
     }
   }

@@ -9,6 +9,15 @@
  * parameters remain unquoted regardless of their names. Locale catalogs inherit this classification.
  */
 export const englishCatalog = {
+  "actions.view.groups.toggle": {"message": "Group nodes by note type", "context": "Presentation-only relationship grouping. Names of note types remain user content.", "params": [], "referenceParams": []},
+  "actions.view.groups.toggle.description": {"message": "Toggle grouping by note type within each relationship area.", "context": "Presentation-only relationship grouping. Names of note types remain user content.", "params": [], "referenceParams": []},
+  "groups.notes": {"message": "Notes", "context": "Presentation-only relationship grouping. Names of note types remain user content.", "params": [], "referenceParams": []},
+  "groups.attachments": {"message": "Attachments", "context": "Presentation-only relationship grouping. Names of note types remain user content.", "params": [], "referenceParams": []},
+  "groups.links": {"message": "Links", "context": "Presentation-only relationship grouping. Names of note types remain user content.", "params": [], "referenceParams": []},
+  "groups.placeholders": {"message": "Placeholder notes", "context": "Presentation-only relationship grouping. Names of note types remain user content.", "params": [], "referenceParams": []},
+  "groups.tags": {"message": "Tags", "context": "Presentation-only relationship grouping. Names of note types remain user content.", "params": [], "referenceParams": []},
+  "groups.folders": {"message": "Folders", "context": "Presentation-only relationship grouping. Names of note types remain user content.", "params": [], "referenceParams": []},
+  "groups.unfold": {"message": "Unfold {name} ({count})", "context": "Presentation-only relationship grouping. Names of note types remain user content.", "params": ["name", "count"], "referenceParams": ["name"]},
   "ontology.usage.show": {"message": "Show documents", "context": "Read-only ontology usage list over existing field postings. Indexing coverage may be incomplete.", "params": [], "referenceParams": []},
   "ontology.usage.title": {"message": "Documents using {field}", "context": "Read-only ontology usage list over existing field postings. Indexing coverage may be incomplete.", "params": ["field"], "referenceParams": ["field"]},
   "ontology.usage.help": {"message": "Only currently indexed documents are listed. Uses may be incomplete during indexing. Paired fields are listed separately.", "context": "Read-only ontology usage list over existing field postings. Indexing coverage may be incomplete.", "params": [], "referenceParams": []},

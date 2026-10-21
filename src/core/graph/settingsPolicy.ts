@@ -19,7 +19,7 @@ const SEMANTIC_KEYS = ["inferAllLinksAsFriends", "inverseInfer", "thumbnailPrope
 const VIEW_KEYS = [
   "hierarchy.exclusions", "showFolderNodes", "showTagNodes", "showPageNodes", "showAttachments", "showURLNodes",
   "showVirtualNodes", "showInferredNodes", "renderSiblings", "showCrossLinks", "nodeSortOrder", "graphLenses", "excludeFilepaths",
-  "backgroundColor", "connectorStyle", "graphDepth", "compactingFactor", "horizontalCompactingFactor", "compactView", "maxItemCount",
+  "backgroundColor", "connectorStyle", "graphDepth", "groupRelations", "compactingFactor", "horizontalCompactingFactor", "compactView", "maxItemCount",
   "minLinkLength", "inverseArrowDirection", "showNeighborCount", "wrapNodeLabels", "baseFontSize", "siblingRelativeSize", "crossLinkOpacity",
   "applyPowerFilter", "parentColumns", "childColumns", "friendMaxHeight", "siblingMaxHeight", "parentMaxHeight",
   "childMaxHeight", "animationSpeed", "layoutProfiles", "typographyProfiles", "allowAutozoom", "embedCentralNode", "centerEmbedWidth", "centerEmbedHeight",

@@ -2,6 +2,7 @@
  * Bounded graph-reference mapping at the Obsidian action boundary. References contain plain exact
  * identities and presentation facets; resolving one reference never scans or hydrates the graph.
  * Captured references carry a host-only opaque incarnation; no path-to-file identity index is retained.
+ * Display-only group references are resolved by their owning scene, never by this canonical resolver.
  */
 import type { NodeRef } from "../../core/plex/actions";
 import type { GraphPage } from "../../types";
@@ -22,7 +23,7 @@ export function actionNodeRef(page: GraphPage): NodeRef {
     identity: page.path,
     path: page.path,
     ...(page.file ? { fileIdentity: fileIdentity(page.file) } : {}),
-    kind: page.isFolder ? "folder" : page.isTag ? "tag" : page.transient?.kind === "section" ? "section"
+    kind: page.transient?.kind === "group" ? "group" : page.isFolder ? "folder" : page.isTag ? "tag" : page.transient?.kind === "section" ? "section"
       : page.url ? "url" : page.file ? "file" : "ghost",
   };
 }

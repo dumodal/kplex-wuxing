@@ -2474,7 +2474,7 @@ export default class KplexPlugin extends Plugin {
     const previousPolicy = this.savedSettingsPolicy;
     const effects = classifySettingsChange(previousPolicy ?? next, next);
     const consentOnly = effects.changedKeys.length === 1 && effects.changedKeys[0] === "allowRemoteNodeImages";
-    const layoutOnly = effects.changedKeys.length === 1 && effects.changedKeys[0] === "layoutProfiles";
+    const layoutOnly = effects.changedKeys.length > 0 && effects.changedKeys.every(key => key === "layoutProfiles" || key === "groupRelations");
     const appearanceChanged = effects.changedKeys.some(/** Legacy imperative saves delegate appearance synchronization to the one queued owner. */ key => STYLE_SETTINGS_KEYS.some(/** This is the appearance-write inventory, not the theme schema. */ field => field === key));
     const queuedAppearance = appearanceChanged && (this.settings.appearanceThemes || this.settings.appearanceThemesFuture !== undefined);
     // The appearance queue owns its durable policy baseline. Advancing it here would make a

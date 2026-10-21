@@ -313,6 +313,7 @@ export interface KplexSettings extends StartupIndexPreferences {
   followActiveFile: boolean;
   contentPaneWidth: number;
   graphDepth: 1 | 2;
+  groupRelations: boolean;
   connectorStyle: "bezier" | "straight";
   /** Presentation-only order used within each visible Plex zone. */
   nodeSortOrder: NodeSortOrder;
@@ -465,6 +466,7 @@ const LEGACY_DEFAULT_SETTINGS: KplexSettings = {
   followActiveFile: true,
   contentPaneWidth: 38,
   graphDepth: 1,
+  groupRelations: false,
   connectorStyle: "bezier",
   nodeSortOrder: "name-asc",
   parentColumns: 2,
@@ -726,6 +728,7 @@ export function migrateAndMergeSettings(raw: unknown): KplexSettings {
     connectorStyle: old.connectorStyle === "straight" ? "straight" : "bezier",
     nodeSortOrder: sanitizeNodeSortOrder(old.nodeSortOrder),
     graphDepth: old.graphDepth === 2 ? 2 : 1,
+    groupRelations: old.groupRelations === true,
     parentColumns: legacyProfile.parentColumns,
     childColumns: legacyProfile.childColumns,
     maxItemCount: Math.max(10, Math.min(300, Number(old.maxItemCount ?? DEFAULT_SETTINGS.maxItemCount))),

@@ -7,6 +7,15 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const spanishTranslations = {
+  "actions.view.groups.toggle": "Agrupar nodos por tipo de nota",
+  "actions.view.groups.toggle.description": "Alternar la agrupaci?n por tipo de nota en cada ?rea de relaciones.",
+  "groups.notes": "Notas",
+  "groups.attachments": "Archivos adjuntos",
+  "groups.links": "Enlaces",
+  "groups.placeholders": "Notas provisionales",
+  "groups.tags": "Etiquetas",
+  "groups.folders": "Carpetas",
+  "groups.unfold": "Desplegar {name} ({count})",
   "indexing.modeHelp": "Elige un modo para cada dispositivo. Bajo demanda indexa las notas necesarias para el Plex. Inmediato también prepara el índice completo en segundo plano. Los cambios se aplican tras reiniciar Obsidian o recargar el complemento.",
   "indexing.startupTitle": "Preparar el índice antes de abrir K-Plex",
   "indexing.startupHelp": "Prepara el índice al iniciar, incluidos los datos guardados. Desactívalo para esperar hasta abrir K-Plex; la primera apertura puede tardar más. Los cambios se aplican al reiniciar Obsidian o recargar el complemento.",

@@ -7,6 +7,15 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const japaneseTranslations = {
+  "actions.view.groups.toggle": "????????????????",
+  "actions.view.groups.toggle.description": "?????????????????????????????",
+  "groups.notes": "???",
+  "groups.attachments": "??????",
+  "groups.links": "???",
+  "groups.placeholders": "???????????",
+  "groups.tags": "??",
+  "groups.folders": "?????",
+  "groups.unfold": "{name} ????{count}?",
   "indexing.modeHelp": "端末ごとにモードを選択します。オンデマンドは Plex に必要なノートを索引化します。先行は索引全体もバックグラウンドで準備します。変更は Obsidian の再起動またはプラグインの再読み込み後に適用されます。",
   "indexing.startupTitle": "K-Plexを開く前にインデックスを準備",
   "indexing.startupHelp": "起動時に保存済みデータを含めてインデックスを準備します。オフの場合はK-Plexを開くまで待機するため、初回表示に時間がかかる場合があります。変更はObsidianの再起動またはプラグインの再読み込み後に適用されます。",
