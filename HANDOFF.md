@@ -85,7 +85,7 @@ The old root handoff concerned completed #197 work. Its durable result remains i
 | Snapshot restore complete | 84.502 seconds; `full-snapshot`, one attempt, no recorded first failure |
 | Restore delta | `complete-restored`: added 0, removed 0, modified 0 |
 | Full rebuild admitted | 86.335 seconds; decision recorded 1.832 seconds after `complete-restored` |
-| Exact decision reason | `full-rebuild:startup:post-initial-backlog|vault:create|vault:create-markdown` |
+| Exact decision reason | `full-rebuild:startup:post-initial-backlog\|vault:create\|vault:create-markdown` |
 | Full rebuild complete | 115.529 seconds; elapsed 29.194 seconds |
 | User-facing readiness milestone | `strict-ready` at 115.793 seconds |
 | Second global source-inventory pass starts | 115.906 seconds |
