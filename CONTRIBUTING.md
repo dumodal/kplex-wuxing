@@ -172,6 +172,13 @@ The migration test uses the installed host's owning settings document because Se
 
 To create a reproducible large synthetic input for performance work, run `npm run fixture:large -- --out /absolute/path/to/a/new-test-vault-folder --files 20000`. The generator copies the small indexing compatibility fixture and adds 20,000 deterministic notes. About 10% of all Markdown files are exactly 950,000 bytes, mixing very long paragraphs, large fenced code and dense real links; ordinary notes add shared note hubs and URLs. A default fixture is about 1.9 GB of Markdown, so allow adequate disk space and index time. The generator refuses to replace an existing folder. Check it with `npm run fixture:large -- --verify /absolute/path/to/that-folder`. Keep generated vault contents out of Git and use the same verified fixture and settings for before/after runs. Manifest link/declaration counts describe source input; measure actual K-Plex index counts separately.
 
+For the lens color-editor stacking regression, run
+`node scripts/testing/obsidian/lensColorStacking.mjs` after staging the exact build, using the same
+three Small-vault variables and a fresh `KPLEX_HOST_REPORT_DIR`. It checks fill, border and text
+editors, native theme choosers, hit targets, Cancel/Escape and outside dismissal in main and popout
+windows. It uses native Electron input, creates no note or saved lens fixtures, and restores
+workspace/settings/enablement state. See [the #197 validation record](docs/validation/lens-color-stacking-197-2026-10-21.md).
+
 ## Documentation
 
 `README.md` is the public, end-user-facing introduction and usage guide. Keep build commands, internal architecture, performance invariants and implementation notes out of the README.
