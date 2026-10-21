@@ -7,6 +7,15 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const dutchTranslations = {
+  "actions.view.groups.toggle": "Knooppunten groeperen op notitietype",
+  "actions.view.groups.toggle.description": "Groeperen op notitietype in elk relatiegebied aan- of uitzetten.",
+  "groups.notes": "Notities",
+  "groups.attachments": "Bijlagen",
+  "groups.links": "Links",
+  "groups.placeholders": "Tijdelijke notities",
+  "groups.tags": "Tags",
+  "groups.folders": "Mappen",
+  "groups.unfold": "{name} uitvouwen ({count})",
   "indexing.modeHelp": "Kies een modus per apparaat. Op aanvraag indexeert de notities die je Plex nodig heeft. Direct bereidt ook de volledige index op de achtergrond voor. Wijzigingen gelden na het herstarten van Obsidian of herladen van de plug-in.",
   "indexing.startupTitle": "Index voorbereiden voordat K-Plex wordt geopend",
   "indexing.startupHelp": "Bereid de index bij het opstarten voor, inclusief opgeslagen gegevens. Zet dit uit om te wachten tot K-Plex opent; de eerste keer kan langer duren. Wijzigingen gelden na herstarten of herladen van de plug-in.",

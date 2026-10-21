@@ -61,6 +61,7 @@ import type { WanderDestination, WanderScene } from "../application/WanderContro
 import { ElementMotion } from "./components/ElementMotion";
 import { ResizableAreaFrame } from "./components/ResizableAreaFrame";
 import { ThoughtNode, type ConnectionDragState } from "./ThoughtNode";
+import { groupNeighborhood } from "./relationGroups";
 import { DropAreaPreview } from "./components/DropAreaPreview";
 import { DoubleTapGesture } from "./components/DoubleTapGesture";
 import { ObsidianIcon } from "./ObsidianIcon";
@@ -429,7 +430,11 @@ function zoneTitle(zone: ScrollZone, translate: Translator, arrangement: KplexSe
 function matchesZoneFilter(node: PositionedNode, filter: string): boolean {
   const q = filter.trim().toLowerCase();
   if (!q) return true;
-  return node.label.toLowerCase().includes(q) || node.page.path.toLowerCase().includes(q);
+  const members = node.page.transient?.groupMembers;
+  return node.label.toLowerCase().includes(q) || (members
+    ? members.some(member => member.page.name.toLowerCase().includes(q) || member.page.path.toLowerCase().includes(q)
+      || member.page.aliases.some(alias => alias.toLowerCase().includes(q)))
+    : node.page.path.toLowerCase().includes(q));
 }
 
 function matchesGraphPredicatePage(
@@ -891,6 +896,20 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     : projectedSectionExpansion, [projectedSectionExpansion, optimisticRelink]);
   const neighborhood = effectiveSectionExpansion?.centerNeighborhood ?? effectivePersistentNeighborhood;
   const globalFiltering = predicate !== null || lenses.lenses.some((lens) => lens.mode === "include" || lens.mode === "exclude");
+  const [unfoldedGroups, setUnfoldedGroups] = useState<{ center: string; keys: ReadonlySet<string> }>({ center: activePath, keys: new Set() });
+  useEffect(/** Navigation and disabling grouping retire only this view's unfolded buckets. */ () => {
+    setUnfoldedGroups(current => current.center === activePath && current.keys.size === 0 ? current : { center: activePath, keys: new Set() });
+  }, [activePath, settings.groupRelations]);
+  /** Project only this already admitted neighborhood, using the current view's unfolded keys. */
+  const projectGroups = (value: Neighborhood): Neighborhood => settings.groupRelations
+    ? groupNeighborhood(value, settings.lateralArrangement === "left", unfoldedGroups.center === activePath ? unfoldedGroups.keys : new Set(), translate)
+    : value;
+  /** Unfold in place without navigation, history, source acquisition or a semantic write. */
+  const unfoldGroup = (page: GraphPage): void => {
+    if (page.transient?.kind !== "group") return;
+    const key = page.transient.sectionId;
+    setUnfoldedGroups(current => ({ center: activePath, keys: new Set([...(current.center === activePath ? current.keys : []), key]) }));
+  };
 
   // Keep the optimistic role in place until the authoritative rebuilt graph actually agrees.
   // RelationModal awaits the metadata write/rebuild, but React may not have committed the new
@@ -907,21 +926,26 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     setRelationshipUpdating(false);
   }, [persistentNeighborhood, sectionExpanded, sectionExpansion, renderRevision, optimisticRelink, relationshipUpdating]);
   const layoutSectionExpansion = useMemo(() => {
-    if (!effectiveSectionExpansion || !globalFiltering || filterLayoutMode !== "reflow") return effectiveSectionExpansion;
+    if (!effectiveSectionExpansion) return null;
+    if (!settings.groupRelations && (!globalFiltering || filterLayoutMode !== "reflow")) return effectiveSectionExpansion;
     const contextCenter = effectiveSectionExpansion.centerNeighborhood.center;
+    const project = (value: Neighborhood) => projectGroups(globalFiltering && (filterLayoutMode === "reflow" || settings.groupRelations)
+      ? filterNeighborhoodForLenses(value, contextCenter, predicateEngine, index, predicate, lenses) : value);
     return {
       ...effectiveSectionExpansion,
-      centerNeighborhood: filterNeighborhoodForLenses(effectiveSectionExpansion.centerNeighborhood, contextCenter, predicateEngine, index, predicate, lenses),
+      centerNeighborhood: project(effectiveSectionExpansion.centerNeighborhood),
       sections: effectiveSectionExpansion.sections.map((section) => ({
         ...section,
-        neighborhood: filterNeighborhoodForLenses(section.neighborhood, contextCenter, predicateEngine, index, predicate, lenses),
+        neighborhood: project(section.neighborhood),
       })),
     };
-  }, [effectiveSectionExpansion, globalFiltering, filterLayoutMode, predicateEngine, index, predicate, lenses, predicateRevision]);
+  }, [effectiveSectionExpansion, globalFiltering, filterLayoutMode, predicateEngine, index, predicate, lenses, predicateRevision, settings.groupRelations, settings.lateralArrangement, unfoldedGroups, activePath, translate]);
   const layoutNeighborhood = useMemo(() => {
-    if (!neighborhood || !globalFiltering || filterLayoutMode !== "reflow" || layoutSectionExpansion) return neighborhood;
-    return filterNeighborhoodForLenses(neighborhood, neighborhood.center, predicateEngine, index, predicate, lenses);
-  }, [neighborhood, globalFiltering, filterLayoutMode, layoutSectionExpansion, predicateEngine, index, predicate, lenses, predicateRevision]);
+    if (!neighborhood) return null;
+    const filtered = globalFiltering && (filterLayoutMode === "reflow" || settings.groupRelations) && !layoutSectionExpansion
+      ? filterNeighborhoodForLenses(neighborhood, neighborhood.center, predicateEngine, index, predicate, lenses) : neighborhood;
+    return projectGroups(filtered);
+  }, [neighborhood, globalFiltering, filterLayoutMode, layoutSectionExpansion, predicateEngine, index, predicate, lenses, predicateRevision, settings.groupRelations, settings.lateralArrangement, unfoldedGroups, activePath, translate]);
   const scenePolicyKey = useMemo(/** Equivalent wrappers and paint-only updates retain the actual geometry policy. */ () => sceneLayoutPolicyKey(settings), [settings]);
   const sceneGeometryKey = useMemo(/** Compare consumed values, never mutable page identity or source clocks alone. */ () =>
     neighborhoodSceneKey(layoutNeighborhood, index, settings), [layoutNeighborhood, index, settings]);
@@ -1235,6 +1259,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   const scheduleEdgeHover = (edge: PositionedEdge, event: PointerEvent<SVGPathElement>) => {
     if (event.pointerType === "touch") return;
     scheduleHoverIntent({ kind: "edge", id: edge.id }, event);
+    if (scene.nodes.some(node => (node.page.path === edge.sourcePath || node.page.path === edge.targetPath) && node.page.transient?.kind === "group")) return;
     edgeTooltipPoint.current = edgeTooltipPosition(event.clientX, event.clientY);
     edgeTooltipTimer.current = window.setTimeout(() => {
       edgeTooltipTimer.current = null;
@@ -1948,7 +1973,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   const filterMatchedNodePaths = useMemo(() => {
     const matches = new Set<string>();
     for (const node of scene.nodes) {
-      if (!globalFiltering || node.role === "center" || (matchesGraphPredicateNode(predicateEngine, predicate, node, neighborhood?.center) && matchesVisibleLensNode(predicateEngine, index, lenses, node, neighborhood?.center))) matches.add(node.page.path);
+      if (!globalFiltering || node.role === "center" || node.page.transient?.kind === "group" || (matchesGraphPredicateNode(predicateEngine, predicate, node, neighborhood?.center) && matchesVisibleLensNode(predicateEngine, index, lenses, node, neighborhood?.center))) matches.add(node.page.path);
     }
     // Section headings are structural containers. If a section-level relationship matches the
     // global filter, retain its heading node so the matching result is not visually orphaned.
@@ -2100,7 +2125,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     const clusters: ExpandedCluster[] = [];
 
     for (const baseNode of scene.nodes) {
-      if (baseNode.role === "center" || !visibleNodePaths.has(baseNode.page.path)) continue;
+      if (baseNode.role === "center" || baseNode.page.transient?.kind === "group" || !visibleNodePaths.has(baseNode.page.path)) continue;
       if (nodeDrag?.path === baseNode.page.path) continue;
       const parent = renderedNodeMap.get(baseNode.page.path);
       if (!parent) continue;
@@ -2926,6 +2951,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   /** Complete a stationary touch synchronously; two taps open without waiting for a native dblclick. */
   const completeTouchTap = (page: GraphPage, event: PointerEvent<HTMLDivElement>): void => {
     suppressSyntheticClickUntil.current = Date.now() + 350;
+    if (page.transient?.kind === "group") { unfoldGroup(page); touchDoubleTap.current.reset(); return; }
     if (page.transient?.kind === "section") {
       touchDoubleTap.current.reset();
       runNodeAction("node.open", page);
@@ -3393,6 +3419,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     const target = context.target;
     const occurrence = scene.nodes.find(node => target.occurrenceId
       ? sceneNodeKeys.get(node) === target.occurrenceId : node.page.path === target.node.identity);
+    if (occurrence?.page.transient?.kind === "group") return ["node.activate", "node.open", "node.context-menu"].includes(context.request.id) ? occurrence.page : null;
     if (target.node.kind === "section") {
       const page = occurrence?.page;
       if (page?.transient?.kind !== "section" || target.node.fileIdentity !== undefined && actionNodeRef(page).fileIdentity !== target.node.fileIdentity) return null;
@@ -3574,6 +3601,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     "node.activate": graphAction(/** Preserve legacy Enter on the central file, with explicit activation elsewhere. */ context => {
       const page = graphActionPage(context);
       if (!page) return;
+      if (page.transient?.kind === "group") { unfoldGroup(page); return; }
       if (page.transient?.kind === "section") return plugin.openSection(page, hostLeaf);
       if (context.request.source === "local-hotkey" && page.path === activePath && page.file) return renameFrom(context);
       if (context.target.kind === "node" && context.target.occurrenceId) navigationOccurrence.current = { identity: page.path, id: context.target.occurrenceId };
@@ -3582,6 +3610,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     }, context => Boolean(graphActionPage(context))),
     "node.open": graphAction(/** Central files open beneath the sidebar; other content retains owned Sidecar and ghost materialization behavior. */ context => {
       const page = graphActionPage(context);
+      if (page?.transient?.kind === "group") { unfoldGroup(page); return; }
       if (page?.transient?.kind === "section") return plugin.openSection(page, hostLeaf);
       if (page?.file && page.path === activePath) return plugin.openFileInMainTab(page.file);
       if (page?.file || page?.url) {
@@ -3779,6 +3808,10 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
 
   /** Materialize a modified placeholder in place; ordinary clicks retain normal navigation. */
   const activateNode = (page: GraphPage, occurrenceId?: string, event?: MouseEvent<HTMLDivElement>): void => {
+    if (page.transient?.kind === "group") {
+      if (Date.now() >= Math.max(suppressActivateUntil.current, suppressSyntheticClickUntil.current)) unfoldGroup(page);
+      return;
+    }
     if (page.transient?.kind === "section") return;
     const target = persistentPageFor(page);
     if (!target || Date.now() < Math.max(suppressActivateUntil.current, suppressSyntheticClickUntil.current)) return;
@@ -3795,6 +3828,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   /** Open through mouse double-click unless a completed touch pair already performed the same action. */
   const openNode = (page: GraphPage): void => {
     if (Date.now() < suppressNativeDoubleClickUntil.current) return;
+    if (page.transient?.kind === "group") { unfoldGroup(page); return; }
     if (page.transient?.kind === "section") {
       runNodeAction("node.open", page);
       return;
@@ -3812,6 +3846,12 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     const isMarkdown = Boolean(persistent?.file?.extension === "md");
     const canExpand = canExpandCentralSections(persistent, activePath);
     const menu = new Menu();
+    if (page.transient?.kind === "group") {
+      menu.addItem(item => item.setTitle(translate("groups.unfold", { name: page.name, count: page.transient?.groupMembers?.length ?? 0 }))
+        .setIcon("ungroup").onClick(() => { unfoldGroup(page); }));
+      plugin.showKplexMenuAtPosition(menu, { x: clientX, y: clientY }, viewport.current?.ownerDocument ?? document, hostLeaf);
+      return;
+    }
     menu.addItem(/** Start/resume from the current center, independent of the clicked node. */ item => item
       .setTitle(translate("wander.fromCenter")).setIcon("shuffle")
       .onClick(/** All native entry points dispatch the same surface-owned action. */ () => void plugin.actionManager.dispatch({ id: "view.wander.start", source: "context-menu", surfaceId: actionSurfaceId })));
@@ -3960,6 +4000,8 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   /** Show connection actions; absent Hidden configuration opens explicit setup rather than disabling the action. */
   const showEdgeContextMenuAt = (edge: PositionedEdge, clientX: number, clientY: number): void => {
     touchDoubleTap.current.reset();
+    const group = scene.nodes.find(node => (node.page.path === edge.sourcePath || node.page.path === edge.targetPath) && node.page.transient?.kind === "group");
+    if (group) { showNodeContextMenuAt(group, clientX, clientY); return; }
     const menu = new Menu();
     const origin = scene.nodes.find(node => node.page.path === edge.sourcePath)?.page ?? index.get(edge.sourcePath);
     const target = scene.nodes.find(node => node.page.path === edge.targetPath)?.page ?? index.get(edge.targetPath);
@@ -4073,6 +4115,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       onHoverGate={(_, gate, event) => { if (!connectDrag && !nodeDrag) scheduleHoverIntent({ kind: "gate", path: baseNode.page.path, gate }, event); }}
       onHoverEnd={() => { if (!connectDrag && !nodeDrag) clearHoverIntent(true); }}
       onHoverPreview={(_, targetEl, event) => {
+        if (baseNode.page.transient?.kind === "group") return;
         if (!connectDrag && !nodeDrag) hoverPreview.current?.enter(targetEl, event,
           /** Keep native heading anchors and source-relative previews with their existing host owner. */ previewEvent => plugin.triggerHoverPreview(baseNode.page, targetEl, previewEvent, neighborhood.center.file?.path ?? ""));
       }}

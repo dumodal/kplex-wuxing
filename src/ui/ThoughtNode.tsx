@@ -8,6 +8,7 @@
  * A separately referenced accessible name avoids Obsidian's competing node tooltip; visible labels
  * retain the compact browser title, while gate hints and explicit page previews keep their owners.
  * Optional native body dragging preserves embedded editor input and delegates its host payload.
+ * Relation groups replace ordinary gates with an external member count and an unfold accessible name.
  */
 import { useId, type CSSProperties, type DragEvent as ReactDragEvent, type MouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import type { GateSide, NodeVisual, PositionedNode } from "../types";
@@ -98,6 +99,7 @@ export function ThoughtNode({
   if (visual && !canDisplayNodeImage(visual.path, settings.allowRemoteNodeImages)) visual = undefined;
   const style = node.style;
   const isSection = node.page.transient?.kind === "section";
+  const group = node.page.transient?.kind === "group" ? node.page.transient : null;
   const strokeStyle = style.strokeStyle === "dashed" ? "dashed" : style.strokeStyle === "dotted" ? "dotted" : "solid";
   const prefix = style.prefix ?? "";
   const label = `${prefix}${node.label}`;
@@ -136,6 +138,7 @@ export function ThoughtNode({
     connectionState !== "normal" ? `is-connect-${connectionState}` : "",
     node.page.isFolder || node.page.isTag ? "is-structural-thought" : "",
     isSection ? "is-kplex-section" : "",
+    group ? "is-relation-group" : "",
     visual ? "has-node-visual" : "",
     content ? "has-embedded-content" : "",
     visual?.mode === "replace" ? "is-node-image-only" : "",
@@ -145,6 +148,8 @@ export function ThoughtNode({
     className={classes}
     style={nodeCss}
     data-kplex-path={node.page.path}
+    role={group ? "button" : undefined}
+    aria-label={group ? translate("groups.unfold", { name: node.label, count: group.groupMembers?.length ?? 0 }) : undefined}
     data-kplex-keyboard-id={keyboardId}
     aria-current={keyboardSelected ? "true" : undefined}
     draggable={nativeDraggable}
@@ -180,9 +185,9 @@ export function ThoughtNode({
         onContextMenu(node, e);
       }
     }}
-    aria-labelledby={accessibleNameId}
+    aria-labelledby={group ? undefined : accessibleNameId}
   >
-    <span id={accessibleNameId} className="kplex-accessible-name">{translate("node.accessibleLabel", { label: node.label, path: node.page.path })}</span>
+    <span id={accessibleNameId} className="kplex-accessible-name">{group ? node.label : translate("node.accessibleLabel", { label: node.label, path: node.page.path })}</span>
     {content ? <div
       className="kplex-thought-embedded-content"
       onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => e.stopPropagation()}
@@ -227,7 +232,8 @@ export function ThoughtNode({
       onPointerDown={(e: ReactPointerEvent<HTMLButtonElement>) => { e.preventDefault(); e.stopPropagation(); }}
       onClick={(e: MouseEvent<HTMLButtonElement>) => { e.preventDefault(); e.stopPropagation(); sectionFold.onToggle(); }}
     />}
-    {GATES.map((gate) => {
+    {group && <span className="kplex-group-count" aria-hidden="true">{group.groupMembers?.length}</span>}
+    {!group && GATES.map((gate) => {
       const stat = node.gateStats[gate];
       const gateDisabled = Boolean(node.page.transient);
       const gateLabel = physicalPositionLabel(gate, translate);

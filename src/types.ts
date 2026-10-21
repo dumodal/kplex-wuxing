@@ -85,12 +85,14 @@ export type GraphPage = {
   primaryStyleTag: string | null;
   styleTags: string[];
   maxLabelLength: number;
-  /** Runtime-only visual identity used by central-section expansion. Never persisted in GraphIndex. */
+  /** Runtime-only visual identity for section expansion and relation groups. Never persisted in GraphIndex. */
   transient?: {
-    kind: "section" | "section-target";
+    kind: "section" | "section-target" | "group";
     sourcePath: string;
     actualPath?: string;
     sectionId: string;
+    /** Runtime-only relation bucket; never serialized or treated as a native endpoint. */
+    groupMembers?: readonly Neighbour[];
     heading?: string;
     level?: number;
     subpath?: string;

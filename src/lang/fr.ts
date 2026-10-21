@@ -7,6 +7,15 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const frenchTranslations = {
+  "actions.view.groups.toggle": "Regrouper les n?uds par type de note",
+  "actions.view.groups.toggle.description": "Activer ou d?sactiver le regroupement par type de note dans chaque zone de relations.",
+  "groups.notes": "Notes",
+  "groups.attachments": "Pi?ces jointes",
+  "groups.links": "Liens",
+  "groups.placeholders": "Notes r?serv?es",
+  "groups.tags": "Tags",
+  "groups.folders": "Dossiers",
+  "groups.unfold": "D?plier {name} ({count})",
   "indexing.modeHelp": "Choisissez un mode par appareil. À la demande indexe les notes nécessaires au Plex. Immédiat prépare aussi l’index complet en arrière-plan. Les changements s’appliquent après un redémarrage ou un rechargement du module.",
   "indexing.startupTitle": "Préparer l’index avant d’ouvrir K-Plex",
   "indexing.startupHelp": "Préparer l’index au démarrage, y compris les données enregistrées. Désactivez pour attendre l’ouverture de K-Plex ; la première ouverture peut être plus longue. Les changements s’appliquent après un redémarrage ou un rechargement du module.",

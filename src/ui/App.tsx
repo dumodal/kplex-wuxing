@@ -80,7 +80,7 @@ import { compilePlexFilter } from "../lens/SimplePlexFilter";
 import { compileGraphLensDefinitions, type GraphLensDefinition } from "../lens/GraphLens";
 import { installKplexLongPressTooltips, KPLEX_CONTROL_LONG_PRESS_EVENT } from "./LongPressTooltip";
 
-type BooleanToolbarSetting = PlexVisibilitySetting | "renderAlias" | "showCrossLinks";
+type BooleanToolbarSetting = PlexVisibilitySetting | "renderAlias" | "showCrossLinks" | "groupRelations";
 type IndexStatus = ReturnType<KplexPlugin["getIndexStatus"]>;
 
 /**
@@ -193,16 +193,18 @@ function IndexStatusIndicator({
 }
 
 /** Render a labeled toolbar action and pass its owning-window click event to native menu callers. */
-function ToolButton({ icon, title, on, disabled, onClick }: {
+function ToolButton({ icon, title, on, pressed, disabled, onClick }: {
   icon: string;
   title: string;
   on?: boolean;
+  pressed?: boolean;
   disabled?: boolean;
   onClick: (event: MouseEvent<HTMLButtonElement>) => void;
 }) {
   return <button
     className={`kplex-icon-button${on ? " is-on" : ""}`}
     aria-label={title}
+    aria-pressed={pressed}
     disabled={disabled}
     onClick={onClick}
   ><ObsidianIcon name={icon} size={17} /></button>;
@@ -1092,6 +1094,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     "view.wander.stop": uiAction(/** Stop restores the immutable entry Zen state. */ () => wander.stop(), () => wander.getSnapshot().phase !== "stopped"),
     "view.zen.toggle": uiAction(/** Independent session chrome visibility never changes persisted settings. */ () => displayModes.toggleZen()),
     "view.depth.toggle": uiAction(/** Reuse the established projection depth setting. */ () => toggleExpandedView()),
+    "view.groups.toggle": uiAction(/** Grouping changes presentation without rebuilding semantics. */ () => toggleToolbarSetting("groupRelations")),
     "view.connectors.toggle": uiAction(/** Camera and connector appearance remain presentation-only. */ () => toggleConnectorStyle()),
     "view.areas.toggle": uiAction(/** Area editing mode remains transient and surface-local. */ () => setAreaSettingsMode(value => !value)),
     "view.center-editor.toggle": uiAction(/** Existing embedded editor capability and cleanup remain graph-owned. */ () => setCentralNodeEditorEnabled(!centerMode.embedCentralNode)),
@@ -1377,6 +1380,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
             />
             <span className="kplex-toolbar-divider" />
             <ToolButton icon={plugin.settings.graphDepth === 2 ? "list-chevrons-down-up" : "list-chevrons-up-down"} title={translate(plugin.settings.graphDepth === 2 ? "app.singleLevelView" : "app.expandedView")} on={plugin.settings.graphDepth === 2} onClick={() => runAction("view.depth.toggle")} />
+            <ToolButton icon="group" title={translate("actions.view.groups.toggle")} on={plugin.settings.groupRelations} pressed={plugin.settings.groupRelations} onClick={() => runAction("view.groups.toggle")} />
             {isGraphTabCommandAvailable(environment) && <ToolButton icon="plus" title={translate("actions.surface.new-tab")} onClick={() => runAction("surface.new-tab")} />}
             <ToolButton icon="settings" title={translate("app.settingsMenu")} on={areaSettingsMode} onClick={showSettingsMenu} />
           </div>

@@ -20,7 +20,11 @@ export function projectFilteredGateCounts(
   index: Pick<GraphIndex, "captureSemanticGateRead">,
 ) {
   const read = index.captureSemanticGateRead();
-  const persistent = new Map(nodes.filter(/** Keep persistent semantic endpoints; section projections own a separate count contract. */ node => !node.page.transient).map(/** Bind each exact scene path to its canonical semantic page. */ node => [node.page.path, node.page]));
+  // Groups hide bodies, not semantic filter membership. Expand only their bounded current rows;
+  // section projections retain their separate provenance/count contract.
+  const endpoints = new Map(nodes.map(node => [node.page.path,
+    (node.page.transient?.groupMembers?.map(member => member.page) ?? [node.page]).filter(page => !page.transient)]));
+  const persistent = new Map(nodes.filter(node => !node.page.transient).map(node => [node.page.path, node.page]));
   const pairs = new Map<string, Set<string>>();
   /** Record one exact materialized endpoint pair, including duplicated/mirrored scene strokes. */
   const add = (source: string, target: string): void => {
@@ -29,10 +33,11 @@ export function projectFilteredGateCounts(
     pairs.set(source, targets);
   };
   for (const edge of edges) {
-    if (!persistent.has(edge.sourcePath) || !persistent.has(edge.targetPath)
-      || !matchedPaths.has(edge.sourcePath) || !matchedPaths.has(edge.targetPath)) continue;
-    add(edge.sourcePath, edge.targetPath);
-    add(edge.targetPath, edge.sourcePath);
+    if (!matchedPaths.has(edge.sourcePath) || !matchedPaths.has(edge.targetPath)) continue;
+    // Only visible persistent pills display gate numerators. Never form a Cartesian product
+    // between two groups: their hidden members have no gate UI to hydrate.
+    if (persistent.has(edge.sourcePath)) for (const target of endpoints.get(edge.targetPath) ?? []) add(edge.sourcePath, target.path);
+    if (persistent.has(edge.targetPath)) for (const source of endpoints.get(edge.sourcePath) ?? []) add(edge.targetPath, source.path);
   }
   const memberships: ShownGateMembership[] = [];
   const available = new Set(persistent.keys());

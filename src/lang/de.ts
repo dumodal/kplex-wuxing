@@ -7,6 +7,15 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const germanTranslations = {
+  "actions.view.groups.toggle": "Knoten nach Notiztyp gruppieren",
+  "actions.view.groups.toggle.description": "Gruppierung nach Notiztyp in jedem Beziehungsbereich umschalten.",
+  "groups.notes": "Notizen",
+  "groups.attachments": "Anh?nge",
+  "groups.links": "Links",
+  "groups.placeholders": "Platzhalternotizen",
+  "groups.tags": "Tags",
+  "groups.folders": "Ordner",
+  "groups.unfold": "{name} aufklappen ({count})",
   "indexing.modeHelp": "Für jedes Gerät einen Modus wählen. Bei Bedarf werden die für den Plex benötigten Notizen indiziert. Sofort bereitet zusätzlich den vollständigen Index im Hintergrund vor. Änderungen gelten nach einem Neustart oder Neuladen des Plugins.",
   "indexing.startupTitle": "Index vor dem Öffnen von K-Plex vorbereiten",
   "indexing.startupHelp": "Den Index beim Start vorbereiten, einschließlich gespeicherter Daten. Ausschalten, um bis zum Öffnen von K-Plex zu warten; das erste Öffnen kann länger dauern. Änderungen gelten nach einem Neustart oder Neuladen des Plugins.",

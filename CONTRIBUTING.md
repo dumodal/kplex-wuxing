@@ -430,6 +430,25 @@ Preserve these rules:
 - nodes with no children reserve no expanded space
 - row height is based on the largest descendant cluster in the row
 
+### Relationship grouping
+
+The toolbar's **Group nodes by note type** toggle projects the currently admitted neighborhood;
+it preserves the existing per-area node limits and never requests semantic indexing. Markdown
+nodes group by Note type; untyped notes, attachments, links, placeholders, tags and folders use
+separate classes. Singletons retain their ordinary node. Shared-left layout groups both lateral
+areas together while unfolded rows retain their original semantic roles.
+
+`tests/relation-groups.test.mjs` covers projection, exact relation restoration, filtered counts,
+gesture callbacks, real layout/React styling and external count geometry in two Chromium documents.
+After exact-build staging, run `npm run verify:obsidian:groups` with the three explicit Small-vault
+variables and a fresh report directory. It checks actual toolbar activation, classes/styles/counts,
+unfolding, navigation, shared-left layout and independent native popouts, and restores its fixtures,
+workspace and original configuration bytes. Native DOM clicks are programmatic, not physical touch.
+For manual acceptance, repeat these actions on a physical mobile device and during actual
+main-window/popout migration. Confirm that the center,
+history and linked Sidecar change only on ordinary node navigation, and all groups start folded
+on each new center. Group counts describe the admitted, filtered members, not whole-vault totals.
+
 ## Gates, lines and labels
 
 - gates sit outside node bounds
