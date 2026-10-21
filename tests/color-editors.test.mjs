@@ -260,22 +260,29 @@ test("actual style-manager swatches preserve alpha and named/theme identity in t
 
 test("nested native color modal keeps pointer and Escape ownership above the actual lens panel",async()=>{
  assert.equal(await scenario(`(async()=>{
+  const css=createEl('style',{text:${JSON.stringify(readFileSync('styles.css','utf8'))}});document.head.append(css);
+  const nativeCss=createEl('style',{text:'.modal-container{position:fixed;inset:0;z-index:var(--layer-modal);display:flex;align-items:center;justify-content:center}.modal-container>.kplex-color-modal{background:var(--background-primary);max-height:90vh;overflow:auto}'});document.head.append(nativeCss);
+  document.body.style.setProperty('--layer-popover','30');document.body.style.setProperty('--layer-modal','50');
   const t=sourceModules.createTranslator('en'),R=sourceModules.React,{flushSync}=sourceModules;let dialog=null,changed=0;
   const lenses=[{id:'nested',name:'Nested',enabled:false,scope:'node',mode:'style',expression:'node.kind == "note"',style:{node:{textColor:'#11223380'}}}];
   const index={suggestionCatalog:()=>({tags:[],noteTypes:[],folders:[],properties:[],paths:[]})};
   const onEditColor=request=>{
-    const doc=request.sourceScope.ownerDocument;
+    const doc=request.sourceScope.ownerDocument;let nativeContainer;
     const nativeEscape=event=>{if(event.key==='Escape'&&dialog?.modalEl.isConnected){event.stopPropagation();dialog.close()}};
     dialog=new sourceModules.ColorSourceModal({}, {title:request.title,initial:request.initial,target:request.target,sourceScope:scope,translate:t,preferences:()=>preferences,nodeStyle:()=>({}),linkStyle:()=>({}),background:()=>undefined,
-      onSave:async value=>{if(!request.apply(value))throw Error('Parent retired');return{refreshPending:false}},onClosed:()=>doc.removeEventListener('keydown',nativeEscape)});
-    dialog.open();doc.addEventListener('keydown',nativeEscape);
+      onSave:async value=>{if(!request.apply(value))throw Error('Parent retired');return{refreshPending:false}},onClosed:()=>{doc.removeEventListener('keydown',nativeEscape);nativeContainer?.remove()}});
+    dialog.open();nativeContainer=createDiv({cls:'modal-container'});doc.body.append(nativeContainer);nativeContainer.append(dialog.modalEl);doc.addEventListener('keydown',nativeEscape);
     return{element:dialog.modalEl,retire:()=>{doc.removeEventListener('keydown',nativeEscape);dialog.retire()}};
   };
   const props={index,revision:0,value:sourceModules.EMPTY_PLEX_FILTER,onChange:()=>{},lenses,onLensesChange:()=>{changed++;return Promise.resolve({refreshPending:false})},onEditColor,layoutMode:'keep',onLayoutModeChange:()=>{},showSiblings:false,onShowSiblingsChange:()=>{},visibility:{},onVisibilityChange:()=>{},sortOrder:'name',onSortOrderChange:()=>{},translate:t};
   const container=createDiv();document.body.append(container);const root=sourceModules.createRoot(container);flushSync(()=>root.render(R.createElement(sourceModules.PlexFilter,props)));
   flushSync(()=>container.querySelector('button').click());await waitFor(()=>document.querySelector('.kplex-lens-main'));flushSync(()=>document.querySelector('.kplex-lens-main').click());
   const buttons=[...document.querySelectorAll('.kplex-lens-style-grid button')];flushSync(()=>buttons.at(-1).click());await waitFor(()=>dialog?.modalEl.isConnected);
-  const text=dialog.contentEl.querySelector('input[type=text]');flushSync(()=>text.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,composed:true,pointerId:1,pointerType:'mouse',button:0})));
+  const text=dialog.contentEl.querySelector('input[type=text]');text.scrollIntoView({block:'center'});
+  const panel=document.querySelector('.kplex-filter-portal'),rect=text.getBoundingClientRect(),point={x:rect.left+rect.width/2,y:rect.top+rect.height/2};
+  const panelRect=panel.getBoundingClientRect();if(point.x<panelRect.left||point.x>panelRect.right||point.y<panelRect.top||point.y>panelRect.bottom)throw Error('Fixture must overlap the lens panel and native color input');
+  if(document.elementFromPoint(point.x,point.y)!==text)throw Error('Lens panel covers the native color input');
+  flushSync(()=>text.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,composed:true,pointerId:1,pointerType:'mouse',button:0})));
   if(!dialog.modalEl.isConnected||!document.querySelector('.kplex-filter-panel'))throw Error('Nested source pointer dismissed the parent');
   text.focus();flushSync(()=>text.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})));
   if(dialog.modalEl.isConnected||!document.querySelector('.kplex-lens-editor'))throw Error('Escape did not belong to native child');

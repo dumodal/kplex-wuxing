@@ -2387,7 +2387,8 @@ button.kplex-sidecar-unfold-plex,
   box-shadow: 0 0 0 1px var(--background-modifier-border);
 }
 .kplex-filter-portal {
-  z-index: 100000;
+  /* Float above workspace panes while native color dialogs and suggestions retain their layers. */
+  z-index: var(--layer-popover, 30);
   box-sizing: border-box;
   overflow: auto;
   overscroll-behavior: contain;
