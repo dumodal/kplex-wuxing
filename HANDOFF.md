@@ -42,7 +42,7 @@ The maintainer reports severe sustained Obsidian CPU load and heat after enablin
 
 Windows is suitable for proving excessive operation counts, duplicate parses, avoidable replay and restart amplification, and for controlled before/after tests of the shared code. Event timing, storage latency, OS CPU-percentage conventions and thermals can differ. A Windows improvement does not independently prove the original Mac heat is resolved. Record macOS/physical-mobile checks as unrun; they are separate later compatibility checks, not prerequisites for this investigation.
 
-**Next action:** establish the exact installed baseline in the named disposable Windows vault, capture a repeatable expensive workload and its completed-work/CPU ledger, and identify the largest measured contributor before changing its behavior. Do not spend the assignment adding diagnostics without proceeding to the highest-impact safe fix once evidence is sufficient.
+**Next action:** establish the exact installed Windows baseline, then reproduce the priority sequence in section 3.1: a fresh complete snapshot restores, a create-event backlog triggers a full rebuild, and source reconciliation continues with substantial reads/parses and no recorded body reuse. Explain the backlog admission, body-reuse rejection and unsaved-source reasons before selecting the largest measured safe fix. Do not spend the assignment adding diagnostics without proceeding to resolution once evidence is sufficient. Preserve the existing interactive graph throughout.
 
 ## 2. Maintainer requirements and non-regression boundary
 
@@ -61,7 +61,7 @@ Do not remove digest/frame/posting checks, shorten evidence, silently broaden ca
 
 ## 3. Evidence status and relevant history
 
-The prior review traced actual source, callers and tests. It did not run Obsidian, profile the maintainer's machine, or execute repository verification. Its findings establish expensive mechanisms and plausible amplification, **not their ranking in the reported incident**. Re-rank using measured Windows evidence.
+The prior review traced actual source, callers and tests. It did not run Obsidian, profile the maintainer's machine, or execute repository verification. Its findings establish expensive mechanisms and plausible amplification, **not their ranking in the reported incident**. Re-rank using measured Windows evidence. The subsequently supplied Mac report in section 3.1 now supplies the first concrete reproduction target; it is a diagnostic capture, not a CPU profile or a validation pass.
 
 Relevant context:
 
@@ -72,9 +72,81 @@ Relevant context:
 
 The old root handoff concerned completed #197 work. Its durable result remains in `docs/validation/lens-color-stacking-197-2026-10-21.md`. This assignment replaces that transient body without reopening it or copying private runtime receipts.
 
+### 3.1 Priority evidence from the maintainer's Mac report
+
+**Provenance:** maintainer-supplied `Pasted text.txt`, generated at `2026-10-21T19:21:05.837Z`, K-Plex 0.2.1, Obsidian API 1.14.4, macOS desktop, Eager / background URLs / Responsive pacing. Original attachment SHA-256: `e9b23bd7e1dfa4330f6407529861dc15898e3d4d67c4300624745074d5ddf227`. The attachment is not assumed available in the agent's checkout; the decoded observations below are self-contained. The report supplies a version, not a commit or installed-artifact hash, so do not assert exact binary equivalence to the reviewed baseline. No private vault content is needed for reproduction.
+
+#### Observed sequence and current state
+
+| Session-relative observation | Report value |
+| --- | --- |
+| Fresh snapshot classified | About 3.4 seconds; `complete-snapshot-fresh` |
+| URL background discovery complete | 53.199 seconds; ultimately 11,839 / 11,839 owners processed |
+| Snapshot restore complete | 84.502 seconds; `full-snapshot`, one attempt, no recorded first failure |
+| Restore delta | `complete-restored`: added 0, removed 0, modified 0 |
+| Full rebuild admitted | 86.335 seconds; decision recorded 1.832 seconds after `complete-restored` |
+| Exact decision reason | `full-rebuild:startup:post-initial-backlog|vault:create|vault:create-markdown` |
+| Full rebuild complete | 115.529 seconds; elapsed 29.194 seconds |
+| User-facing readiness milestone | `strict-ready` at 115.793 seconds |
+| Second global source-inventory pass starts | 115.906 seconds |
+| Capture | 1,669.396 seconds after startup (27 min 49.396 sec) |
+| Still-active source inventory | Elapsed 1,553.490 seconds (25 min 53.490 sec) |
+| Still-open phase | `source-reconciliation`, elapsed 1,410.149 seconds (23 min 30.149 sec) |
+
+At capture, status is `upToDate: true`, `phase: ready`, 11,839 / 11,839 files, and an authoritative graph of 110,464 nodes. Source acquisition is still active with one repository writer and one background scheduler owner; URL, hydration, requested-semantic and gate task indicators are inactive at that instant. **Graph readiness does not mean all source/persistence work has drained.** Preserve the usable graph while addressing the continuing work; do not solve the discrepancy by blocking readiness or interaction until global source closure.
+
+| Source-acquisition/session counter | Value |
+| --- | ---: |
+| `checked` | 10,190 |
+| `vaultReads` / `parses` | 10,191 / 10,191 |
+| `reusedBodies` / `legacyBodies` | 0 / 0 |
+| `repaired` / `resolutionRefreshes` | 10,189 / 0 |
+| `sourceInventoryPasses` / `fullBuildStarts` / `nodeCatalogStarts` | 2 / 1 / 0 |
+| `completeSnapshotSaves` | 1 |
+
+| Source-repository diagnostic | Value |
+| --- | ---: |
+| `activated` / `unsaved` | 9,468 / 722 |
+| `chunksWritten` | 37,980 |
+| `bytesWritten` | 59,459,315 (about 59.5 MB) |
+| `familiesReused` | 0 |
+| `readFailures` and all `familyFailures` | 0 |
+| `lastReason` | `cancelled` |
+
+Interpretation limits are mandatory:
+
+- Durations are await-inclusive elapsed observations, not CPU time, continuous CPU activity or proven foreground timings. Do not add overlapping phases. The open phase duration is separate from completed phase aggregates.
+- Acquisition counters are operations, not unique notes, and omit parsing performed through other callers. The current session has one cancelled source-inventory pass followed by one active pass, not evidence of a continuous restart storm. The cancellation coincides with full-build admission, whose baseline path deliberately pauses inventory; verify causality rather than treating that cancellation as another defect.
+- Older persisted `cold-progressive` / `hydration-stalled` decisions predate this session. Do not combine them with session counters as one uninterrupted execution.
+- At the reviewed baseline, `SourceRepository.getDiagnostics()` reports `activated` from `knownHeads.size` and `unsaved` from the current unsaved-source set. Neither is a lifetime success/failure count. `bytesWritten` is payload accounting, not measured physical disk traffic. Zero read failures does not prove all writes succeeded; one last-reason value cannot explain all 722 unsaved owners.
+- A complete graph snapshot does not prove that every neutral source/body cache is present or valid. Legitimate missing/old facts remain an alternative explanation for reconstruction. Zero body reuse does not prove that the same exact source revision was parsed twice.
+
+#### First three investigation and implementation priorities
+
+**P1 — Explain the post-restore rebuild admission.** Trace [`main.ts`](https://github.com/zsviczian/kplex/blob/551a3b52895484de3dd41e5c6eb2fa8c6712fec4/src/main.ts), including `finishStartupIndexPreparation()`, the pre-restore reason/path records, captured inventory revision and normal rebuild/patch selection. Correlate the create backlog with actual event type, native identity, captured snapshot membership and the event's position before/after the restore boundary. Distinguish initial file-discovery notifications or already-covered events from genuine new files/folders/attachments, replacements and changes arriving during restoration. The zero restore delta is a clue, not permission to erase the backlog. If already-covered events cause the rebuild, suppress only that proven redundant work. Preserve the existing regression that queues genuinely outstanding startup work after initialization.
+
+**P2 — Explain zero body reuse during prolonged reconstruction.** Add bounded reason counters at reuse decisions: observed body edit, `created` identity, missing/tombstoned head, physical-stat/incarnation mismatch, parser-version mismatch, missing parsed-body entry, unsaved masking, and cancellation/supersession. Trace [`sourceAcquisition.ts`](https://github.com/zsviczian/kplex/blob/551a3b52895484de3dd41e5c6eb2fa8c6712fec4/src/adapters/obsidian/sourceAcquisition.ts) (`start`, `needsBodyRead`, `readBody`, `loadBody`, `acquire`) alongside [`GraphIndex.ts`](https://github.com/zsviczian/kplex/blob/551a3b52895484de3dd41e5c6eb2fa8c6712fec4/src/index/GraphIndex.ts) (`rebuild`) and [`GraphBuilder.ts`](https://github.com/zsviczian/kplex/blob/551a3b52895484de3dd41e5c6eb2fa8c6712fec4/src/index/GraphBuilder.ts) (`collectMarkdownSources`).
+
+The baseline create handler marks sources `dirty`, `bodyDirty` and `created`, and allocates an identity. `readBody()` refuses body reuse while body-dirty, and `loadBody()` also skips the parsed-body cache then. Full graph rebuilding intentionally uses `build({ acquireSources: false })`, leaving durable acquisition to inventory. **Hypothesis to test:** current full parser output obtained during rebuilding is subsequently rejected because the source still carries dirty acquisition state, leading to repeated work. Prove duplicate work per exact file identity/event/physical revision/parser version across full-build, URL and source callers. If confirmed, share the current complete parsed input through the existing bounded owner without granting source durability, resolution readiness or semantic authority. Do not clear dirty flags merely because the graph is ready or mtime matches, and do not put per-note durable writes back on the foreground/full-build critical path.
+
+**P3 — Explain unsaved persistence and the long source-reconciliation tail.** Trace [`SourceRepository.ts`](https://github.com/zsviczian/kplex/blob/551a3b52895484de3dd41e5c6eb2fa8c6712fec4/src/index/SourceRepository.ts) diagnostics, replacement, unsaved retention, deletion, retry and dependency-completion paths. Count entry/exit reasons and retry outcomes for the current unsaved set; separate storage faults, backpressure, cancellation, pending retirement and masked/evicted inputs. Measure parsing, staging, validation/hashing, transactions, dependency work and waiting separately. Establish whether the 722 entries converge after events settle and whether they trigger redundant work or prevent closure. Do not relabel unsaved data as durable or discard masks to make the queue disappear.
+
+These priorities take precedence over a speculative adjacency/evidence redesign for this incident. The capture records one full rebuild and zero node-catalog builds; the static cold/progressive findings remain relevant to their own measured workloads. A secondary warm-start profile should retain the 81.128-second hydration operation: pages 57.369 seconds, preview-search 11.971 seconds, relations 7.399 seconds and evidence 4.242 seconds, all await-inclusive. Do not infer a CPU hotspot from those phase names alone.
+
+#### Focused reproduction and acceptance additions
+
+Use the existing disposable Windows vaults. Compare plugin reload and full-process startup with a validated fresh graph snapshot, first with valid neutral/body caches and then with deliberately incomplete test-owned source facts. Include initial create notifications, a genuine create after inventory capture, same-stat edits and replacement/rename/delete events. Capture only bounded test-owned event identities; use aggregate reasons in published reports.
+
+Required outcomes for a fix in this sequence:
+
+- A healthy unchanged warm restore with already-covered startup events does not trigger an unjustified full rebuild. Genuine uncovered changes still reconcile through the correct current route; uncertain topology retains its safe fallback.
+- A current complete parse can be reused across build/URL/source consumers when its exact lifetime is valid, while an intervening same-stat edit or recreated identity rejects it. Reuse does not certify source persistence or promote partial graph authority.
+- Unsaved-source reasons and recovery are observable and converge under a healthy, quiescent fixture. Storage-degraded cases remain explicitly non-durable with bounded retries; a permanently unavailable store is not required to claim success.
+- A benchmark continues after `strict-ready` through source/URL/persistence drain and an equal idle tail. Foreground navigation, edits, tags, folders, aliases/search and gate coverage stay correct during that tail. Report CPU and queued work at readiness and at real completion separately.
+
 ## 4. Static findings: mechanisms, qualifications and probes
 
-All source links below are pinned to the accepted baseline. Read the complete methods and current tests before editing; a method name identifies the owner, not permission to bypass its callers.
+All source links below are pinned to the accepted baseline. Read the complete methods and current tests before editing; a method name identifies the owner, not permission to bypass its callers. Section 3.1 defines the first reproduction target; these broader hypotheses remain available for subsequently measured bottlenecks.
 
 ### A. Whole-vault validation can lose progress on local events
 
@@ -181,6 +253,7 @@ Run cheap counters first; collect bounded sampling profiles on selected reproduc
 | Global pass attempts, phase and completion/cancellation causes | Separate source inventory, full graph builds, node vocabulary, URL inventory and snapshot hydration. |
 | Unique owners versus repeated unchanged-owner visits | Detect work discarded or replayed during one workload; use bounded test-only identities. |
 | All parser submissions and bytes by exact revision/caller | Include worker/fallback and URL/semantic consumers; distinguish legitimate new revisions and failed/cancelled retries. |
+| Body-reuse rejection and unsaved entry/exit reasons | Separate legitimate missing/stale input from dirty-state reuse failure; explain persistence recovery rather than relying on a last-reason scalar. |
 | Readonly/readwrite transactions, requests, leases, family visits, decoded/hashed/written bytes | Distinguish coordination from I/O latency; do not sum overlapping await-inclusive spans as CPU. |
 | Clone entries, evidence forks/full/sparse compactions, pairs/declarations traversed | Identify quadratic work and its share on real routes. |
 | Foreground action latency, first useful preview, current edit publication, tag/folder/search availability | Protect responsiveness and result completeness throughout indexing, not merely at final idle. |
@@ -192,6 +265,7 @@ The ranked result must contain: hypothesis, reproducing scenario, actual CPU/ope
 
 | Scenario | Required comparison |
 | --- | --- |
+| Priority fresh-restore sequence | Reproduce section 3.1 before broad redesign: fresh snapshot, create backlog, full-build admission and post-ready source work. Compare valid versus missing neutral/body caches and covered versus genuine later events. |
 | Unchanged warm restart | Eager and On demand separately; effective startup-before-view policy recorded; no-view and same-visible-center runs. Distinguish plugin reload from a full Obsidian process restart. |
 | Cold indexing and source-backed recovery | Empty owned cache versus valid neutral facts with absent/stale graph accelerator; URL-heavy, sparse, common-hub/tag and many-distinct-pair fixtures. Preserve coverage and early usability. |
 | Event churn during startup | Finite known edits plus metadata waves, same-stat edits, late/extra resolved closes, rename/delete/recreation and a qualified empty-folder create. Record revisited work and convergence after quiescence. |
@@ -202,8 +276,8 @@ For the selected expensive scenario, obtain at least three paired runs, preferab
 
 ## 6. Implementation sequence and decision gates
 
-- [ ] **O0 — Baseline and protection.** Verify branch/artifacts/environment, characterize current semantics and interactive behavior, capture an expensive complete run plus settled idle. Add a failing characterization/regression for the first confirmed amplification.
-- [ ] **O1 — Rank measured causes.** Produce the CPU/work ledger and identify dominant mechanisms. Starting hypotheses are A/B for warm/restarting work, C for cold/dense construction, D for duplicate acquisition; measurements may change that order.
+- [ ] **O0 — Baseline and protection.** Verify branch/artifacts/environment, characterize current semantics and interactive behavior, reproduce section 3.1's post-restore sequence and capture its post-ready work plus settled idle. Add a failing characterization/regression for the first confirmed amplification.
+- [ ] **O1 — Rank measured causes.** Produce the CPU/work ledger. Investigate post-restore rebuild admission, body-reuse rejection and unsaved-source recovery first (section 3.1 P1-P3). A/B remain broader warm/restart candidates, C cold/dense construction, and D URL parse sharing; measured evidence may change the order.
 - [ ] **R1 — Fix the largest demonstrated contributor.** Make one independently reviewable change inside its existing owner. Run its correctness/race tests and the same native A/B workload before stacking another change.
 - [ ] **R2 — Remove remaining material amplification.** Proceed to the next measured contributor only while the regression gates remain green. Count extra cache writes and memory introduced by reuse. Do not implement every hypothesis merely because it appears here.
 - [ ] **V — Complete verification.** Run pinned-runtime portable/build checks, exact-build Windows host checks, scale/idle measurements and cleanup. Independently review final diff and production instrumentation state.
@@ -244,12 +318,13 @@ Use pinned Node 22.22.2 and real installed Obsidian typings. Commands below exis
 - Core native protection, serially: `npm run verify:obsidian:foreground`, `npm run verify:obsidian:startup-admission`, `npm run verify:obsidian:ontology-startup-updates`, `npm run verify:obsidian:interaction-updates`, `npm run verify:obsidian:interaction-gates` and `npm run verify:obsidian:folder-wave`.
 - For changed source/cache/publication paths: `npm run verify:obsidian:si4`, `npm run verify:obsidian:si5` and relevant rename/date/section/Excalidraw lanes. Use `npm run verify:obsidian:rename`, `npm run verify:obsidian:date-properties`, `npm run verify:obsidian:sections`, `npm run verify:obsidian:interaction-excalidraw` where affected and prerequisites are present. Do not run destructive fault setup against the wrong vault or present a prerequisite skip as a pass.
 - Existing focused suites include `tests/source-acquisition.test.mjs`, `tests/source-startup-indexeddb.test.mjs`, `tests/source-folder-wave.test.mjs`, `tests/source-priority-indexeddb.test.mjs`, `tests/foreground-startup-indexeddb.test.mjs`, `tests/hydration-guards-indexeddb.test.mjs`, `tests/on-demand-indexing.test.mjs`, `tests/sparse-evidence-compaction.test.mjs`, `tests/private-compiler-evidence.test.mjs`, `tests/metadata-parser-priority.test.mjs`, URL evidence/adjacency/publication suites and `tests/noop-patch-publication.test.mjs`. Add workload-count regressions to appropriate owners rather than replacing behavior assertions with timing-only tests.
+- For section 3.1, extend the existing startup-backlog coverage in `tests/indexing.test.mjs` and the source/body-cache tests: already-covered startup creates versus genuine later creates, exact parsed-input reuse across a rebuild without source acquisition, same-stat invalidation, and bounded unsaved recovery. Preserve the existing outstanding-backlog test rather than deleting its scheduling expectation indiscriminately.
 
 Do not interpret earlier accepted Windows or mobile results as validation of this change. The previous handoff recorded an intermittent existing watchdog cleanup assertion and a subsequent complete pinned-runtime pass; a recurrence must be investigated/reported without weakening its assertion. Implementation changes after a run invalidate affected evidence.
 
 ## 8. Return package and current completion record
 
-Return a compact measured baseline-versus-candidate table per selected scenario: exact artifact/cache/fixture identity, CPU-seconds, elapsed-to-equivalent-completion, fixed-horizon backlog, preview/tag/folder/search readiness, interaction distribution, reads/parses/bytes, global attempts/revisits, transactions/family validation, clone/compaction counts, memory and idle tail. State which source hypotheses were confirmed, rejected or left unmeasured and why.
+Return a compact measured baseline-versus-candidate table per selected scenario: exact artifact/cache/fixture identity, CPU-seconds, elapsed-to-equivalent-completion, fixed-horizon backlog, preview/tag/folder/search readiness, interaction distribution, reads/parses/bytes, global attempts/revisits, transactions/family validation, clone/compaction counts, memory and idle tail. State which source hypotheses were confirmed, rejected or left unmeasured and why. Explicitly answer section 3.1's three questions: which events justified the post-restore rebuild, why body reuse was rejected, and what caused/recovered the unsaved-source set.
 
 Document each accepted change's owner, reason, removed work, retained invariants and real tests. Keep sanitized durable results in a focused `docs/validation/` report and link accepted architecture implications from `Refactor plan.md` when warranted. Raw personal paths/content and full profiles stay local with hashes and relevant excerpts. No release notes or broad refactor ledger claims before acceptance.
 
@@ -258,6 +333,7 @@ Current preparation evidence:
 - Repository identity/read-write access and current `main` checked; no open PR existed at preparation time.
 - Branch created from the exact baseline; prior static-review-to-baseline comparison checked, with no indexing-source changes.
 - Repository workflow, existing handoff and validation commands inspected. Static findings are hypotheses about impact, with source-confirmed mechanisms and explicitly limited prior evidence.
+- The maintainer's Mac diagnostic attachment was parsed against its embedded column definitions; the session timeline, counters and report hash in section 3.1 were checked. This changes investigation priorities, not acceptance status or proof of a root cause.
 - No runtime implementation, repository tests, Obsidian deployment, Windows profile or measured CPU reduction performed by this preparation agent. All O0-D implementation/validation boxes remain pending.
 
 The equipped agent should work through the bounded sequence with evidence checkpoints. Safe independent investigation/implementation can continue without waiting for minor clarifications. A missing environment or unresolved correctness decision must be recorded, not hidden behind a benchmark or substituted with an unrelated redesign. Keep the PR draft and return a truthful partial result if a required gate cannot be completed.
