@@ -16,6 +16,8 @@
  * event and physical coordinates only; it does not query Vault membership or grant reuse.
  * Baselines without bodyInputs report unknown. Optional cache result counts include internal peeks
  * made by getBodies; these nested requests overlap and must not be summed as distinct logical reads.
+ * The separate lightweight export counts synchronous calls/input lengths without clocks, encodings
+ * or promise observers; its caller owns completion checks and process/memory sampling cadence.
  */
 export function createIndexingCpuProbe(index, { resourceProbe = null } = {}) {
   const acquisition = index?.sourceAcquisition, repository = acquisition?.repository;
@@ -232,4 +234,41 @@ export function createIndexingCpuProbe(index, { resourceProbe = null } = {}) {
     // Parser failures are the method row's failed count; no exception object is retained.
     return probe;
   } catch (error) { probe.stop(); throw error; }
+}
+
+/**
+ * Count parser, source-storage and digest calls synchronously without clocks, encoders or promise
+ * observers. This test-only mode preserves original values/promises; completion belongs to the
+ * native driver's independent source/cache closure oracle. UTF-16 lengths are not encoded bytes.
+ * Required production owners must exist; the caller owns stop() and memory sampling cadence.
+ * Parser and hash payloads are never retained.
+ */
+export function createLightweightIndexingProbe(index) {
+  const repository = index.sourceAcquisition.repository, restores = [];
+  const parser = { calls: 0, utf16Units: 0 }, hashing = { calls: 0, utf16Units: 0 };
+  const transactions = { calls: 0, readonly: 0, readwrite: 0, other: 0 };
+  let running = true, heapMaximum = 0, rssMaximum = 0;
+  /** Count before delegation; never replace an async result or introduce a completion callback. */
+  function wrap(owner, key, count) {
+    const descriptor = Object.getOwnPropertyDescriptor(owner, key), original = owner[key];
+    /** Count the invocation synchronously, preserving the original receiver and result identity. */
+    const replacement = function (...args) { if (running) count(args); return original.apply(this, args); };
+    owner[key] = replacement;
+    restores.push(/** Restore the prior descriptor only while this probe still owns the installed method. */ () => { if (owner[key] !== replacement) return;
+      if (descriptor) Object.defineProperty(owner, key, descriptor); else delete owner[key]; });
+  }
+  wrap(index.metadataParser, 'parse', /** Count submissions and UTF-16 units without observing completion or encoding Markdown. */ args => { parser.calls++; if (typeof args[0] === 'string') parser.utf16Units += args[0].length; });
+  wrap(repository.runtime, 'digest', /** Count existing hash input lengths without a second hash or UTF-8 conversion. */ args => { hashing.calls++; if (typeof args[0] === 'string') hashing.utf16Units += args[0].length; });
+  wrap(repository, 'transaction', /** Classify the existing transaction mode; native transaction details remain unobserved. */ args => { transactions.calls++;
+    transactions[args[2] === 'readonly' || args[2] === 'readwrite' ? args[2] : 'other']++; });
+  /** Copy only fixed scalar counters, avoiding a retained per-source or payload collection. */
+  function snapshot() { return { enabled: true, mode: 'lightweight', parser: { ...parser }, hashing: { ...hashing },
+    transactions: { ...transactions }, heapMaximum, rssMaximum,
+    semantics: 'Synchronous call counts and UTF-16 input lengths only; no promise timing or encoded-byte measurement.' }; }
+  return { snapshot,
+    /** Sample renderer memory only when the caller already samples process CPU. */
+    sample(memory) { if (running) { heapMaximum = Math.max(heapMaximum, memory.heapUsed ?? 0); rssMaximum = Math.max(rssMaximum, memory.rss ?? 0); } },
+    /** Release only these exact wrappers and return a copy of the final scalar observations. */
+    stop() { running = false; for (const restore of restores.splice(0).reverse()) restore(); return snapshot(); },
+  };
 }

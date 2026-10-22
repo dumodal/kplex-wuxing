@@ -5416,3 +5416,25 @@ detached debugger, empty source/cache tasks and0unsaved with exact runtime hashe
 HANDOFF is only the transient return. No further speculative cache/proof change is accepted here.
 Next manual priorities: affected macOS original reproduction; full-process Eager/On-demand restarts
 with real startup changes; physical mobile/iOS queue/memory pressure.
+
+
+## 2026-10-22 - PR201 scoped continuation checkpoint for draft review
+
+Earlier PR201 return above is historical: the maintainer committed it as c4a656b54cfe66b686e662e4d8bbfa0536cc4149.
+The current continuation corrects SI4 owning-document accessible-name coverage, adds bounded
+test-only checkpoint/consumer/lightweight attribution and one atomic <=256-head selection
+validation correction in SourceRepository. Multi-page/late masks and final publication fences
+remain; no schema, scheduler, global proof cache or structural extraction. C14 accepted; C15+ paused.
+
+Node22.22.2 full verify2682 + exact C39native smoke pass; subsequent38tooling contracts and
+applicable exact native lanes pass. Corrected Eager Date fixture controls pass24baseline/F;
+original startup/policy overlap and earlier failures remain retained, not explained by retries.
+Five matched pairs: warm CPU12.307083->11.551398s(-6.14%); cold18.972149->18.684169s(-1.52%).
+Warm readiness earlier but background closure later; idle/horizon spikes and physical/heap
+state variability leave performance acceptance OPEN. Original50% target unmet; keep PR201draft.
+Runtime mainSHA:c39fb4876315a3348b782fe91400398faab1f98de8c0852eb9cc06bf24509a58.
+
+Review evidence: docs/validation/indexing-cpu-201-2026-10-21.md. All original Small database/config/
+inventory restored; private traces local. Remaining source validation/replay, interruption/progress,
+adjacency copying/evidence compaction and persistence/retry opportunities stay open. PR203 is
+independent Mac real-vault evidence, not awaited or modified. No merge/release/history rewrite.

@@ -85,7 +85,7 @@ function install(token, originalSettings, originalLayout) {
     const groups={parent:'parents',child:'children',left:'leftFriends',right:'rightFriends',previous:'previous',next:'next'};
     /** Clear only temporary field-role mappings, retaining the ordinary explicit Friend fixture. */
     const resetOntology = () => { for(const group of ['hidden','parents','children','leftFriends','rightFriends','previous','next']) p.settings.hierarchy[group]=group==='leftFriends'?['working on']:[]; };
-    /** Warm actual local scopes in on-demand mode; eager mode additionally requires global source authority. */
+    /** Warm actual local scopes; eager policy-only fixtures require settled startup before mutation. */
     const settle = async () => { if (!i.isOnDemandMode()) { await p.ensureIndexReady('native-date-fixture'); await until(() => { const observation={initialIndexComplete:p.initialIndexComplete,building:!!i.building,rebuildTask:!!p.rebuildTask,rebuildTimerPending:p.rebuildTimer!==null,indexDirty:p.indexDirty,status:p.getIndexStatus(),fullBuilds:i.getSemanticPreparationDiagnostics().fullBuilds}; c.lastReadiness=observation; return observation.initialIndexComplete && !observation.building && !observation.rebuildTask && !observation.rebuildTimerPending && !observation.indexDirty; }, 'Eager fixture coordinator not settled'); } await until(() => !s.inventory && s.knownImpactTasks === 0 && (i.isOnDemandMode() || s.hasSemanticDependencies() && !s.pendingKnownFiles.size && !s.pendingResolutionKeys.size), 'Source authority not ready'); await s.repository.flush(); await i.refreshSemanticSettings(); await until(() => !i.hasPendingSemanticPreparation(), 'Semantic policy publication pending'); };
     /** Save the default role and assert both native endpoint views; configured fields override it. */
     const step = async (id, fallback, expected) => {
@@ -102,7 +102,17 @@ function install(token, originalSettings, originalLayout) {
         check(evidence.length>0&&evidence.every(item=>item.sourceKind==='date-property'&&item.rawValue==='2098-11-28'&&item.declaredRole===expected),'Scalar Date provenance/assigned role differs');
         c.scenarios.push({id,status:'passed',fallback,expected,meeting,daily,working,dateEvidence:evidence.map(item=>({sourceKind:item.sourceKind,role:item.declaredRole,relationType:item.relationType})),work:{...c.work}});
     };
-    c.task = Promise.resolve().then(async () => {
+    c.task = Promise.resolve().then(/** Keep global policy mutations outside initial startup ownership. */ async () => {
+        // Plugin/action-manager existence does not imply initial indexing has finished. Saving the
+        // fixture's ontology can cancel that work, so isolate this cached-policy lane before writes.
+        if (!i.isOnDemandMode()) {
+            c.preFixtureReadiness = { initialIndexComplete:p.initialIndexComplete, initialTask:!!p.initialIndexTask,
+                hydrationPending:i.hasPendingSnapshotHydration(), building:!!i.building, indexDirty:p.indexDirty };
+            await p.activateView();
+            await settle();
+            await until(/** Initial policy fixtures require complete hydration, not a usable preview. */ () => !i.hasPendingSnapshotHydration(), 'Initial fixture hydration pending');
+            c.preFixtureReady = { initialIndexComplete:p.initialIndexComplete, sourceReady:s.hasSemanticDependencies() };
+        }
         const registry = app.metadataTypeManager, info = registry.getPropertyInfo('date'), daily = app.internalPlugins.getPluginById('daily-notes');
         check(info?.widget === 'date' && daily?.enabled, 'Existing Date property and enabled Daily Notes required; no host configuration changed');
         const options = daily.instance?.options ?? {}, iso = '2098-11-28', formatted = window.moment(iso, 'YYYY-MM-DD', true).format(options.format || 'YYYY-MM-DD');
@@ -171,7 +181,8 @@ function install(token, originalSettings, originalLayout) {
 /** Retain partial native receipts if a stage fails; do not report an unfinished controller as passed. */
 async function run() { started = true; evaluate(`(${install.toString()})(${JSON.stringify(token)},${JSON.stringify(originalSettings)},${JSON.stringify(baseline.layout)})`); const end = Date.now() + 180000; while (true) {
     await delay(250);
-    const state = evaluate('JSON.stringify({done:window.__kplexDatePolicyProbe?.done,error:window.__kplexDatePolicyProbe?.error,phase:window.__kplexDatePolicyProbe?.phase,lastObservation:window.__kplexDatePolicyProbe?.lastObservation,lastReadiness:window.__kplexDatePolicyProbe?.lastReadiness,scenarios:window.__kplexDatePolicyProbe?.scenarios})');
+    const state = evaluate('JSON.stringify({done:window.__kplexDatePolicyProbe?.done,error:window.__kplexDatePolicyProbe?.error,phase:window.__kplexDatePolicyProbe?.phase,lastObservation:window.__kplexDatePolicyProbe?.lastObservation,lastReadiness:window.__kplexDatePolicyProbe?.lastReadiness,preFixtureReadiness:window.__kplexDatePolicyProbe?.preFixtureReadiness,preFixtureReady:window.__kplexDatePolicyProbe?.preFixtureReady,scenarios:window.__kplexDatePolicyProbe?.scenarios})');
+    report.preFixtureReadiness = state.preFixtureReadiness; report.preFixtureReady = state.preFixtureReady;
     report.scenarios = state.scenarios ?? [];
     if(report.phase!==state.phase) console.log(JSON.stringify({nativePhase:state.phase,passedScenarios:report.scenarios.length})); report.phase = state.phase; report.lastObservation = state.lastObservation; report.lastReadiness = state.lastReadiness;
     if (state.done) {
@@ -181,16 +192,16 @@ async function run() { started = true; evaluate(`(${install.toString()})(${JSON.
     }
     assert(Date.now() < end, 'Native controller deadline');
 } }
-/** Acquire fresh post-reload demands using the new plugin, then verify persisted policy and roles. */
+/** Reopen the normal Eager view and join its readiness after reload before verifying persisted roles. */
 function restart() { const c = window.__kplexDatePolicyProbe, p = app.plugins.plugins['k-plex'], i = p.index; c.done = false; c.phase = 'plugin-reload'; c.task = Promise.resolve().then(async () => { await app.workspace.changeLayout(c.originalLayout); if (p.settings.datePropertyRelations !== 'parent')
     throw Error('Default Date role not persisted'); for (const path of [c.meeting, c.daily, c.working])
-    c.releases.push(i.acquireSemanticDemand(path)); await i.refreshSemanticSettings(); const end = Date.now() + 90000; while (!i.isOnDemandMode() && !i.isSemanticWriteReady(c.meeting, c.daily)) {
+    c.releases.push(i.acquireSemanticDemand(path)); c.reloadReadinessBefore={initialIndexComplete:p.initialIndexComplete,visible:p.hasVisibleKplexSurface(),hydrationPending:i.hasPendingSnapshotHydration(),indexDirty:p.indexDirty}; if(!i.isOnDemandMode()){p.settings.lastActivePath=c.meeting;await p.activateView();await p.ensureIndexReady('native-date-reload');} await i.refreshSemanticSettings(); const end = Date.now() + 90000; while (!i.isOnDemandMode() && !i.isSemanticWriteReady(c.meeting, c.daily)) {
     if (Date.now() > end)
         throw Error('Reload Date policy readiness');
     await new Promise(r => window.setTimeout(r, 50));
     await i.refreshSemanticSettings();
 } if ([c.meeting,c.daily,c.working].some(path=>i.onDemandTasks.has(path))) throw Error("Fixture local scope still pending"); const meeting = i.getNeighborhood(c.meeting), daily = i.getNeighborhood(c.daily); if (!meeting.parents.some(item => item.page.path === c.daily) || !daily.children.some(item => item.page.path === c.meeting))
-    throw Error('Reload default Parent/Child differs'); c.scenarios.push({ id: 'persisted-default-date-role-plugin-reload', status: 'passed', indexingMode:p.index.isOnDemandMode()?'on-demand':'eager', localCoverage:i.isOnDemandMode() }); c.release(); }).then(() => { c.done = true; }, error => { c.error = String(error); c.done = true; }); return JSON.stringify({ started: true }); }
+    throw Error('Reload default Parent/Child differs'); c.scenarios.push({ id: 'persisted-default-date-role-plugin-reload', status: 'passed', indexingMode:p.index.isOnDemandMode()?'on-demand':'eager', localCoverage:i.isOnDemandMode(),reloadReadinessBefore:c.reloadReadinessBefore,initialIndexComplete:p.initialIndexComplete }); c.release(); }).then(() => { c.done = true; }, error => { c.error = String(error); c.done = true; }); return JSON.stringify({ started: true }); }
 /** Always settle owned work, restore settings and retire controller ownership before raw restoration. */
 async function cleanup() { if (!started)
     return; const launch = evaluate('(()=>{const c=window.__kplexDatePolicyProbe;if(!c)return JSON.stringify({absent:true});c.cancelled=true;c.cleanupDone=false;c.cleanupTask=Promise.resolve().then(async()=>{await c.task;await c.cleanup();c.cleanupResult={cleaned:c.cleaned,observers:c.restores.length,demands:c.releases.length,indexingMode:c.indexingMode,measuredWork:c.measuredWork,fullBuildDelta:c.fullBuildDelta,warmReadiness:c.warmReadiness}}).then(()=>{c.cleanupDone=true},error=>{c.cleanupError=String(error);c.cleanupDone=true});return JSON.stringify({started:true})})()'); if (launch.absent) {

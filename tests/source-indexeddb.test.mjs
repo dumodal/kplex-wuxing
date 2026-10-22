@@ -1,4 +1,8 @@
-/** Real browser IndexedDB integration; a missing/blocked browser FAILS this lane, never counts as a skip. */
+/**
+ * Real browser IndexedDB integration; a missing/blocked browser fails this lane, never counts as a skip.
+ * Selection coordination cases exercise atomic bounded snapshots and late local masks independently
+ * of family authenticity; multi-page reads still close their original global source-sequence fence.
+ */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { browserBundle, chromiumHarness } from "./support/browserTypeScript.mjs";
@@ -551,6 +555,7 @@ test("real Chromium: version migration, atomic source heads, repair, failure rec
         equal((await r.replace(await make(r,'B',{kind:'missing'},'',large('Beta')))).outcome,'unsaved','B held unsaved');
         equal((await r.replace(await make(r,'C',{kind:'missing'},'',large('Gamma')))).outcome,'unsaved','C evicts oldest payload');
         const masked=await r.inspect('A');equal(masked.reason,'unsaved','Evicted A masks old disk head');equal(masked.head,null,'No stale head exposed');
+        equal((await r.validateSelections([{head:old.head,sequence:old.sequence,saved:old.saved}],()=>true)).reason,'unsaved','Evicted unsaved mask also rejects an older selected-head certificate');
         equal(await r.readBody('A',()=>true),null,'No stale body replay after eviction');
         r.storage.open=originalOpen;
         const leaked=[];equal(await r.querySources('literal','Old',ids=>{leaked.push(...ids);return true;}),false,'Evicted unsaved lookup is incomplete');
@@ -982,6 +987,149 @@ test("single-chunk disk family coalescing preserves bounded validation and selec
           }finally{r.storage=storage;r.prefetchSingleFamilyChunk=prefetch;}
           return true;
         }finally{owner.close();}
+      })()`),true);
+    });
+  } finally { await browser.cleanup(); }
+});
+
+/** One-page head validation removes only redundant coordination; native snapshots and masks remain authoritative. */
+test("bounded atomic selection validation preserves local masks and multi-page finality", { timeout: 180000 }, async t => {
+  const browser = await chromiumHarness(bundle);
+  try {
+    await browser.evaluate(initialize);
+    /** Count real repository transactions only after canonical durable sources have been seeded. */
+    await t.test("one atomic transaction validates a current bounded selection without changing its heads", async () => {
+      assert.equal(await browser.evaluate(`(async()=>{
+        const owner=await fresh('selection-one-page'),r=owner.sources;
+        const transaction=r.transaction,calls=[];
+        try{
+          for(const id of ['A','B'])equal((await r.replace(await make(r,id))).outcome,'activated','Seed '+id);
+          const a=await r.inspect('A',[]),b=await r.inspect('B',[]);
+          const stamps=[{head:a.head,sequence:a.sequence,saved:a.saved},{head:b.head,sequence:b.sequence,saved:b.saved}];
+          /** Forward native work unchanged while counting its declared transaction scope. */
+          r.transaction=function(...args){calls.push({stores:[...args[1]].sort(),mode:args[2]});return transaction.apply(this,args);};
+          equal((await r.validateSelections([],()=>true)).reason,'ready','Empty scope is valid');equal(calls.length,0,'Empty scope performs no storage work');
+          for(const selected of [stamps.slice(0,1),stamps]){
+            calls.length=0;equal((await r.validateSelections(selected,()=>true)).reason,'ready','Current selected heads close');
+            equal(calls,[{stores:['meta','sourceHeads'],mode:'readonly'}],'One atomic head/sequence transaction replaces three coordination transactions');
+          }
+          r.transaction=transaction;
+          equal((await r.inspect('A',[])).head,a.head,'Read preserves A');equal((await r.inspect('B',[])).head,b.head,'Read preserves B');
+          return true;
+        }finally{r.transaction=transaction;owner.close();}
+      })()`),true);
+    });
+    /** Cross-connection activation before the atomic read must invalidate the original selection. */
+    await t.test("replacement before the atomic snapshot and an actual durable tombstone reject old selections", async () => {
+      assert.equal(await browser.evaluate(`(async()=>{
+        const first=await fresh('selection-replacement'),second=await fresh('selection-replacement'),r=first.sources,other=second.sources;
+        const transaction=r.transaction;let release;
+        try{
+          equal((await r.replace(await make(r,'A'))).outcome,'activated','Seed selected owner');const before=await r.inspect('A',[]);
+          const stamp={head:before.head,sequence:before.sequence,saved:before.saved};let signal,paused=false;
+          const reached=new Promise(resolve=>signal=resolve),gate=new Promise(resolve=>release=resolve);
+          /** Pause before starting the head snapshot, without holding a native transaction open. */
+          r.transaction=async function(...args){
+            if(!paused&&args[2]==='readonly'&&args[1].includes('sourceHeads')&&args[1].includes('meta')){paused=true;signal();await gate;}
+            return transaction.apply(this,args);
+          };
+          const pending=r.validateSelections([stamp],()=>true);await reached;
+          equal((await other.replace(await make(other,'A',before.expected,'Field:: [[New]]'))).outcome,'activated','Independent writer commits before snapshot');
+          release();const stale=await pending;equal(stale.reason,'superseded','Old selected tuple rejected');
+          r.transaction=transaction;const current=await r.inspect('A',[]);
+          equal((await other.tombstone('A')).outcome,'activated','Independent owner commits actual tombstone');
+          equal((await r.validateSelections([{head:current.head,sequence:current.sequence,saved:current.saved}],()=>true)).reason,'tombstone','Retired head is not current authority');
+          return true;
+        }finally{release?.();r.transaction=transaction;first.close();second.close();}
+      })()`),true);
+    });
+    /** The sequence remains validated even though a one-page scope needs no cross-page comparison. */
+    await t.test("missing sequence retains zero semantics and malformed sequence fails closed", async () => {
+      assert.equal(await browser.evaluate(`(async()=>{
+        const owner=await fresh('selection-sequence-shape'),r=owner.sources,db=await owner.open();let sequence;
+        try{
+          equal((await r.replace(await make(r,'A'))).outcome,'activated','Seed selected owner');const selected=await r.inspect('A',[]);
+          const stamp={head:selected.head,sequence:selected.sequence,saved:selected.saved};
+          sequence=await requestValue(db.transaction('meta').objectStore('meta').get('source-sequence'));
+          await edit(db,['meta'],tx=>tx.objectStore('meta').delete('source-sequence'));
+          equal((await r.validateSelections([stamp],()=>true)).reason,'ready','Missing counter is the established zero observation');
+          await edit(db,['meta'],tx=>tx.objectStore('meta').put({key:'source-sequence',value:'invalid'}));
+          equal((await r.validateSelections([stamp],()=>true)).reason,'catalog-uncertain','Malformed sequence cannot certify a selection');
+          ok(r.getDiagnostics().storage!=='unavailable','Invalid domain data is not a native storage failure');
+          return true;
+        }finally{if(sequence)await edit(db,['meta'],tx=>tx.objectStore('meta').put(sequence));owner.close();}
+      })()`),true);
+    });
+    /** Late local changes must mask a snapshot even after its native read transaction has completed. */
+    await t.test("memory overlays, pending retirement, cancellation and close win after storage awaits", async () => {
+      assert.equal(await browser.evaluate(`(async()=>{
+        for(const mode of ['memory','retirement','cancel','close']){
+          const owner=await fresh('selection-late-'+mode),r=owner.sources,transaction=r.transaction,open=r.storage.open;
+          let release,releaseRetirement,retiring,live=true;
+          try{
+            equal((await r.replace(await make(r,'A'))).outcome,'activated','Seed '+mode);const before=await r.inspect('A',[]);
+            const stamp={head:before.head,sequence:before.sequence,saved:before.saved};let signal,paused=false;
+            const reached=new Promise(resolve=>signal=resolve),gate=new Promise(resolve=>release=resolve);
+            /** Hold only the completed result so a local change occurs before the final overlay sweep. */
+            r.transaction=async function(...args){
+              const result=await transaction.apply(this,args);
+              if(!paused&&args[2]==='readonly'&&args[1].includes('sourceHeads')&&args[1].includes('meta')){paused=true;signal();await gate;}
+              return result;
+            };
+            const pending=r.validateSelections([stamp],()=>live);await reached;
+            if(mode==='memory'){
+              r.storage.open=async()=>null;
+              equal((await r.replace(await make(r,'A',before.expected,'Field:: [[Unsaved]]'))).outcome,'unsaved','Actual unsaved replacement masks prior disk selection');
+              r.storage.open=open;
+            }else if(mode==='retirement'){
+              const prerequisite=new Promise(resolve=>releaseRetirement=resolve);
+              retiring=r.tombstone('A',()=>true,false,prerequisite);ok(r.pendingDeletes.has('A'),'Production retirement masks owner before its prerequisite');
+            }else if(mode==='cancel')live=false;
+            else owner.close();
+            release();const result=await pending;
+            equal(result.reason,mode==='memory'?'superseded':mode==='retirement'?'tombstone':'cancelled','Late '+mode+' cannot return ready');
+            if(mode==='retirement'){releaseRetirement();await retiring;}
+          }finally{release?.();releaseRetirement?.();if(retiring)await retiring;r.transaction=transaction;r.storage.open=open;owner.close();}
+        }
+        return true;
+      })()`),true);
+    });
+    /** Real distinct owners cross the batch boundary; both intermediate and closing sequence fences remain. */
+    await t.test("256 heads share one transaction while 257 retain page and final source-sequence fences", async () => {
+      assert.equal(await browser.evaluate(`(async()=>{
+        const first=await fresh('selection-page-boundary'),second=await fresh('selection-page-boundary'),r=first.sources,other=second.sources;
+        const transaction=r.transaction,stamps=[],calls=[];let phase='count',pages=0;
+        try{
+          for(let index=0;index<=sourceModules.SOURCE_MAX_BATCH_RECORDS;index++){
+            const id='Owner-'+index;equal((await r.replace(await make(r,id,{kind:'missing'},''))).outcome,'activated','Seed distinct owner '+index);
+            const selected=await r.inspect(id,[]);stamps.push({head:selected.head,sequence:selected.sequence,saved:selected.saved});
+          }
+          /** Observe actual page completion, then admit an independent writer at that real await boundary. */
+          r.transaction=async function(...args){
+            const value=await transaction.apply(this,args);calls.push({stores:[...args[1]].sort(),mode:args[2]});
+            if(args[2]==='readonly'&&args[1].includes('sourceHeads')&&args[1].includes('meta')){
+              pages++;
+              if(phase==='between'&&pages===1){
+                const before=await other.inspect('Owner-0',[]);
+                equal((await other.replace(await make(other,'Owner-0',before.expected,'Field:: [[Changed]]'))).outcome,'activated','Selected owner changes after first page');
+              }else if(phase==='closing'&&pages===2){
+                equal((await other.replace(await make(other,'Unselected',{kind:'missing'},''))).outcome,'activated','Unrelated owner advances source sequence after last page');
+              }
+            }
+            return value;
+          };
+          equal((await r.validateSelections(stamps.slice(0,sourceModules.SOURCE_MAX_BATCH_RECORDS),()=>true)).reason,'ready','Exact maximum single page validates');
+          equal(calls,[{stores:['meta','sourceHeads'],mode:'readonly'}],'Maximum eligible page still uses one atomic transaction');
+          calls.length=0;pages=0;
+          equal((await r.validateSelections(stamps,()=>true)).reason,'ready','Every distinct owner validates across pages');
+          equal(calls.length,4,'Two head pages retain separate initial and final sequence transactions');equal(pages,2,'No selected owner prefix returned');
+          for(const mode of ['between','closing']){
+            phase=mode;pages=0;const result=await r.validateSelections(stamps,()=>true);
+            equal(result.reason,'superseded','Source sequence closes '+mode+' drift');
+            if(mode==='between'){const selected=await r.inspect('Owner-0',[]);stamps[0]={head:selected.head,sequence:selected.sequence,saved:selected.saved};}
+          }
+          return true;
+        }finally{r.transaction=transaction;first.close();second.close();}
       })()`),true);
     });
   } finally { await browser.cleanup(); }
