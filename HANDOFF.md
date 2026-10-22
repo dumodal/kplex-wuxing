@@ -19,52 +19,65 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR201 checkpoint returned for review
+# PR201 Windows tail assessment returned: conclusion C
 
-Updated2026-10-22. Main validation agent to maintainer/next pinned-commit agent.
-Branch:2026-10-21-indexing-cpu-reduction. Preserved parent c4a656b54cfe66b686e662e4d8bbfa0536cc4149;
-runtime baseline551a3b52895484de3dd41e5c6eb2fa8c6712fec4. The delivered commit is recorded in PR201
-and the completion message; pin that immutable commit, not a moving branch. PR stays draft.
+Updated2026-10-22. Main validation agent to maintainer. Branch:
+2026-10-21-indexing-cpu-reduction. Entry local/remote/head clean at
+fa08e60e1a7122f8b37fcd11c943b883317b6ae8; subsequent documentation commits do not
+change that runtime candidate. Baseline551a3b52895484de3dd41e5c6eb2fa8c6712fec4.
+Candidate CI39772386240 completed/success. Keep PR201 draft; no merge or release.
 
-Final mainSHA256:c39fb4876315a3348b782fe91400398faab1f98de8c0852eb9cc06bf24509a58.
-Manifest4d2783cf09dc3f39842e9c76604cfb6b413997287d3c8a361a6994b86fc8c619;
-styles88b61aa508ede97b10fbd30c957d14ba19b257aa26f5ee9f547f13faa0f43974.
-See [durable validation](docs/validation/indexing-cpu-201-2026-10-21.md) for all arms, individual
-runs, process attribution, retained failures, hashes, scope and limitations. Older uncommitted /
-documentation-only descriptions are historical; the maintainer saved the first implementation as c4.
+Production remains frozen. Built/installed main SHA256:
+c39fb4876315a3348b782fe91400398faab1f98de8c0852eb9cc06bf24509a58.
+Startup backlog/parser-input reuse/bounded source-head validation/corrected SI4
+are unchanged. Existing exact-artifact correctness evidence is reused. PR203's
+branch, candidate, Mac investigation and instructions are unchanged and not awaited.
 
-SI4 now resolves every aria-labelledby reference in the node's owning document and checks alias
-text; no production aria-label/title restoration. Complete14-step Small runs pass baseline/c4/F.
-The only new runtime correction batches <=256 selected heads with sequence shape in one atomic
-readonly transaction. Multi-page/global and late local/source/host/policy/demand fences remain.
-Startup-backlog/parser reuse fixes remain intact. No schema/default/scheduler/global-proof change.
+[Durable report](docs/validation/indexing-cpu-201-2026-10-21.md) now leads with
+individual retained interval analysis. [Fresh-process protocol](docs/validation/indexing-cpu-201-windows-protocol.md)
+is prepared before new collection: disabled-plugin preparation/host control plus
+three alternating warm pairs, fresh Browser/renderer per arm after checkpoint
+restoration in a preparation process, same Small/profile/notes/settings/center,
+continuous timestamped process samples, normal orphan maintenance,600seconds after
+actual closure. No new tolerance, forced GC, global storage reset or optimization.
 
-Node22.22.2 real-dependency full verify2682 executions+exact native smoke pass; later38 tooling
-contracts and applicable native lanes pass on the unchanged C39runtime. Final native coverage
-includes SI5five recovery cases; held-background foreground/live edits; startup/ontology;
-interactions/gates/folder actions; both-mode rename; dates24per mode; sections/Excalidraw/node
-and popout tooltips. Corrected Eager Date controls pass24on both exact baseline/F. Their setup
-joins normal initial/reload readiness without weakening oracles/deadlines. Retain original Fsetup
-and baseline-reload failures; passing isolated controls do not resolve the stranded-startup cause.
+Expensive post-completion intervals are mainly target renderer5588:
+F3 total7.402648CPU-s/renderer6.600835; F5 total7.686786/renderer6.896267;
+baselineA4 total7.532488/renderer6.770506. Browser costs approximately0.7CPU-s.
+Observer-disabled F2 total8.302269/renderer7.450946 and A3 total2.955637/
+renderer2.071459. K-Plex remained enabled in those observer controls; there is
+NO historical disabled-plugin host control. Flat endpoint work/unsaved/debt and
+similar baseline bursts establish neither plugin independence nor a product cause.
 
-Five matched pairs per workload, same verified all-store logical checkpoint:
-warm CPU12.307083->11.551398s(-6.14%), graph-ready1.5595->.8659s, background10.2348->10.6920s;
-reconstruction CPU18.972149->18.684169s(-1.52%), background16.9642->16.8122s. Warm through-idle /
-30s medians improve, but material late spikes remain in individual pairs and disabled controls.
-Native diagnostics confirm required requested-view proof work plus repeated exact family reads;
-16warm coordination transactions are removed. Exclusive CPU contribution remains unproved.
+Old sampler discarded the individual1second series. Endpoint brackets establish
+where CPU accrued, not exact burst starts/durations/gaps/process exits. Warm oracle
+loops own no sources/hub; completion-to-idle bookkeeping/IPC costs are separately
+small. Checkpoint import duration/separation was not captured; physical DB and
+heap equivalence unproved. Five-minute orphan cleanup remained queued at all
+30second endpoints; actual invocation/settlement and ten-minute cost unmeasured.
+Private audit JSON SHA256d9c9a72ee34884a9786645da054118d0bf14cf57d18cfa696ed8015b2cb8c3cd
+and siblingMD/script live under TEMP/kplex-pr201-tail-interval-audit*; raw traces private.
 
-PERFORMANCE ACCEPTANCE OPEN: physical DB/heap state is not equivalent; late warm CPU cause is
-unresolved. No tolerance or maintainer tradeoff acceptance is invented. Keep draft; no merge,
-release, history rewrite or PR203 change. A bounded separate Windows Small fresh-process/native
-attribution follow-up is proposed; other open vaults were not terminated. The broader50% target
-and repeated validation/replay, interruption/progress, adjacency/evidence and persistence/retry
-opportunities remain open. PR203 independently ranks real-vault issues; do not duplicate it.
+New matched measurements: NONE. Native process inventory showed excalidraw-test
+and the Small session in the long-lived Obsidian instance. Required confirmation
+that all other vaults were saved/closed was requested but unavailable at checkpoint.
+No application-wide restart or substitute same-process batch was attempted.
+Prerequisite: maintainer saves/closes all other vaults and confirms only Small,
+then agent independently verifies windows and runs the seven-arm protocol.
+Allow >=70minutes observation plus preparation. Pending confirmation is not consent.
 
-Original disposable database restored/verified after a native wrong-SHA no-mutation control;
-107files/88Markdown/12folders and original settings/trust-related configuration preserved.
-Final sanity: no fixtures/controllers/debugger, zero unsaved/source/cache writer debt, exact F
-installed. Raw traces/backups stay local. Source/rules/TSDoc/portable ownership/cleanup review and
-focused/final checks recorded in the report. C14 accepted; C15+ paused. Await review; no automatic
-refactor or further speculative runtime optimization. Mac/physical-device/full-process acceptance
-remains separate; no new manual test is needed for the completed local SI4/head-batch review.
+Conclusion C: no repeatable candidate-specific regression has been established,
+but absence has not been demonstrated. Keep draft and complete that comparison;
+merging now needs explicit acceptance of unresolved tail risk. No product defect
+cause or smallest runtime correction is established, so do not change production.
+Do not expand into storage/scheduler redesign,50% target or the PR203 real-vault task.
+
+Read-only native sanity2026-10-22T17:12:19.997Z passes: C39built/installed and
+source hashes match,107files/88Markdown,no fixture/controller/debugger,pluginenabled,
+zero unsaved/acquisition/body writer debt. No host mutation/harness/cleanup/runtime
+change occurred in this follow-up; original restoration remains untouched.
+Documentation links/content/whitespace and byte-preserved standing-header checks
+are the affected lane. Earlier2682-execution full verify and specialized native
+correctness remain scoped to their recorded immutable artifact; not rerun here.
+C14 accepted; C15+ paused. Saved documentation commit and publication are recorded
+in PR201 and the delivery message. Await restart prerequisite or maintainer risk decision.
