@@ -925,6 +925,24 @@ These controlled workloads are not a full application restart, Synthetic-Scale-v
 physical-device evidence or proof of the original Mac thermals. See the
 [PR #201 validation record](docs/validation/indexing-cpu-201-2026-10-21.md) for actual results.
 
+The separate Windows fresh-process acceptance lane is
+`node scripts/testing/obsidian/indexingFresh.mjs`. Follow its
+[pre-collection protocol](docs/validation/indexing-cpu-201-windows-protocol.md).
+It is pinned to the existing Small vault and the recorded A/F artifacts; it never
+builds them. Set the three explicit vault variables, a nonexistent direct TEMP
+`KPLEX_HOST_REPORT_DIR` named `kplex-pr201-resume...`, and `KPLEX_CPU_FRESH_BASELINE_DIR` to the previously
+verified baseline `dist` folder. Only after the maintainer confirms all other
+vaults saved/closed, set `KPLEX_CPU_FRESH_RESTART_CONFIRMED=only-kplex-test-small`.
+The driver independently verifies one Small window before every graceful quit.
+It backs up configuration/artifacts and the original database, restores the
+common logical checkpoint in a preparation process, then proves new Browser and
+renderer identities. It runs the disabled-plugin control and three alternating
+warm pairs serially, retaining timestamped CPU/presence/memory/scalar samples and
+actual maintenance events for 600 seconds after completion. Preparation and app
+startup are separate from warm activation; physical storage equality is not
+claimed. Private traces and failed arms remain in the report folder. Focused
+guard/observer/cancellation tests run in the ordinary non-host test lane.
+
 ### Local folder wave validation
 
 After exact-build staging, run `npm run verify:obsidian:folder-wave -- <fresh-absolute-report-directory>`

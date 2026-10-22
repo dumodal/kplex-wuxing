@@ -125,3 +125,89 @@ confounders; neither establishes identical physical storage. If restart safety i
 unavailable, finish retained-trace analysis and report C with that precise
 prerequisite. No runtime, SI4, settings/default, publication, recovery or PR203
 changes belong to this assignment.
+
+## Execution details fixed before fresh collection
+
+Restart confirmation has now been received: the maintainer saved/closed the other
+vaults. Native inventory independently finds one Small BrowserWindow. The driver
+is `scripts/testing/obsidian/indexingFresh.mjs`; artifacts are staged only while
+the host is closed. Its observer retains1second samples, flushes bounded private
+trace batches every10samples, and polls only small progress state through CLI
+every10seconds. This shared observation/IPC/file-write overhead is included in
+CPU, including the disabled-plugin control. No detailed profiler is enabled.
+The actual source/URL/cache/snapshot completion predicates retain their previous
+deadlines. Cancellation releases only test-owned waits and observers; original
+configuration/database restoration runs independently of scenario success.
+
+Maintenance observation forwards schedule/defer/execute, snapshot-catalog and
+generation-delete calls with original receiver/result/promise identity. Actual
+cleanup entry and settlement are required for maintenance coverage in A/F arms.
+Internal cache cleanup catches some failures, so fulfillment alone is not proof
+that records were successfully deleted. Missing execution remains missing
+coverage, never a timer-based claim of success. Counter/identity coverage and
+foreground/throttle violations are retained separately from scenario completion;
+no automatic CPU-burst or large-sampling-gap exclusion is applied.
+
+Graceful shutdown and native window inventory use the documented Electron
+[app lifecycle](https://www.electronjs.org/docs/latest/api/app#appquit) and
+[BrowserWindow inventory](https://www.electronjs.org/docs/latest/api/browser-window#browserwindowgetallwindows).
+The driver never force-terminates a process when those operations fail.
+
+For descriptive burst tables, before collecting A/F arms, group consecutive
+sample brackets whose individual process CPU divided by actual bracket wall
+duration is at least0.25 of one core. Report bracket start/end uncertainty,
+duration and actual CPU sum; preserve gaps and all samples. This is a display
+rule, **not** an acceptance tolerance or an exclusion rule. Full interval CPU
+and each matched difference remain the decision evidence, including activity
+below that display threshold and the disabled-plugin control.
+
+### Visibility correction before the matched cohort
+
+The first preparation attempt rejected a non-owned TEMP directory name before
+database mutation and restored original state. The next attempt completed its
+disabled-plugin control but baselineA1 later recorded `document.hidden=true`
+despite document/native focus remaining true. That baseline arm was cancelled
+through the owned cleanup path; all original state was restored/verified. These
+receipts remain private and separately reported. The visibility violation, not
+its CPU result, prevents pooling that arm with matched acceptance data.
+
+AC power-plan reads show a900second display timeout and no AC system-sleep timeout.
+That is consistent with idle display power management, but the visibility change's
+cause was not directly captured. Before collecting the replacement complete
+cohort, every arm now owns the same temporary Electron
+[`prevent-display-sleep` request](https://www.electronjs.org/docs/latest/api/power-save-blocker).
+It starts before settling and stops independently during cleanup; its lifecycle
+is recorded and tested. No global power-plan value, background-throttling policy
+or production scheduler is changed. The new host control and three alternating
+pairs are a separate cohort; no result from the prior attempt is silently removed
+or treated as matching these corrected display conditions. Decision rules and
+the three-pair bound are unchanged.
+
+### Console-transport correction and final attempt bound
+
+The display-request cohort's control completed, but its baselineA1 recorded44
+consecutive samples with both document/native focus false while remaining visible.
+This is a focus violation, **not another hidden-document episode**. A later bounded
+diagnostic saw one visible/focused Small window, an unlocked idle system and no
+own override of `document.hidden`; it did not identify the focus owner during the
+earlier interval. The partial arm was cancelled and original state restored.
+
+Native console helpers now explicitly use `windowsHide:true`, retaining their
+argument arrays and deadlines. The installed Node declarations and
+[Node subprocess documentation](https://nodejs.org/api/child_process.html#child_processspawnsynccommand-args-options)
+show that console-window hiding otherwise defaults to false. This removes a
+launcher-side focus risk; it does not establish that a console caused the prior
+focus loss. All arms in the final complete attempt use this transport and the
+same test-owned display request. Earlier controls/partial arms stay separate.
+If visibility/focus comparability fails again, stop with C and the precise host
+prerequisite rather than continue another series of Windows adjustments.
+
+## Execution closed
+
+The final seven-arm cohort completed and original state restoration passed.
+Foreground/visibility comparability failed in F2, and transient GPU terminal CPU
+was unavailable in every arm. Collection stopped at the declared three pairs;
+no further Windows adjustments or extra pairs followed. The decision remains C
+under the rules above. Individual CPU, timing, maintenance, coverage failures and
+the explicit maintainer risk decision are recorded in the
+[current validation result](indexing-cpu-201-2026-10-21.md#fresh-process-windows-acceptance-result--2026-10-22).
