@@ -5373,3 +5373,46 @@ Main integrated44e6103. Actual Windows/DPR1 screenshots24main+26popout, zoom1/.8
 ## 2026-10-19 - PR149 camera raster follow-up
 
 The maintainer supplied adjacent scroll-position blur/sharp captures and expanded-outline observations. At integrated main d0a7c73, native Windows controls reproduce retained old-scale text; removing the permanent camera transform hint sharpens the same pixels at the same camera/scroll coordinates. Only that CSS hint is removed. The geometry/state regression fails before the change; the47-case focused native-theme/motion/fit/typography/Wander group passes after it. A reusable Small probe covers18owned notes, adjacent scroll offsets,1/1.25/.83zoom, eight expanded headings with no native scroller, actual middle-button pan and idle. Candidate main and owning-popout replays each25samples/cleanup pass. Preserve the initial non-overflow setup and immediate-after-stage enablement-guard failures as excluded evidence. Full clean-head verification and exact-artifact native replay follow; C14 remains paused. No indexing/source/scheduler/persistence change, forced GPU layer, CSS zoom rewrite, scroll snapping, comparative performance claim or personal-vault access. See docs/validation/label-sharpness-149-2026-10-19.md; macOS, other physical DPI/GPU and mobile remain separate acceptance.
+
+
+## 2026-10-22 - PR201 indexing CPU partial implementation and evidence return
+
+C14 remains accepted; structural C15-C26 remain paused. PR201 stays draft with reviewable
+uncommitted changes; no commit, push, merge or release is performed for this checkpoint.
+Existing startup/source/body-cache owners now retire only proved covered initial creates and
+share actual completed current parser input, including immediate hot publication before group
+yield, priority admission before further parser submission, original input/native/caller fences
+and exact selected-receipt delayed-write rejection. Dirty/source/semantic authority remains
+independent. Existing optional queue budgets bound retained acceleration; parser/cache versions
+already equal3 on baseline, and the database version/schema is unchanged. No new global proof
+cache, scheduler, source collection or structural extraction is introduced.
+
+Complete final8 verification passes2663 Node executions (7 architecture/130 core/1280 main/
+227 UI/357 source/662 realIDB),0fail/cancel/skip, plus production indexing/startup fixtures,
+official lint, real types/build, exact Small staging/smoke316ms and cleanup. Current mainSHA256
+`7d5430e59b6f204df0d4564e8d7ecdaf0776e5ea85063dce54e2d179f4ce4687`.
+Formal v2 three-pair native observations reach equivalent closure with zero unsaved: cold median
+CPU9.810388->9.201033s(-6.21%), warm3.927948->4.529019s(+15.30%). Cold parser submissions195->71
+median and source reads/parses65/65->0/0; warm readiness advances but requested-proof work increases.
+**The requested50% CPU target is NOT met.** Historical cache/tombstone rows, enabled observers,
+all-Obsidian process activity and limited sample counts prevent a general CPU-acceptance claim.
+No original Mac722-unsaved tail or private-vault heat diagnosis is established.
+
+Foreground/startup/quiescent ontology/interaction/gate/folder protections have passing native
+checkpoints with restoration; initial ontology-tail and setup-overlap failures remain retained,
+with the ontology cause unproved. Setup-only source/URL closure barriers preserve original
+oracles/deadlines and are not a production root-cause claim. Three observer controls per arm and
+finite128/256 one-pair experiments pass: candidate source reads/parses0 versus baseline129/257,
+CPU to equivalent closure-2.98%/-5.17%; these are bounded observations, not general scaling acceptance.
+Native On-demand/Eager rename, sections, Excalidraw18, all5 SI5 recovery cases and date24 per mode
+pass; corrected Eager baseline date24 also passes. Reviewed date setup fixes cover Windows backup
+basenames, normalized received:<revision>: keys and actual Eager view activation before settling;
+no deadline/zero-work/readiness weakening or runtime artifact change. Small-only SI4 accessible-alias
+fails on candidate and exact baseline and remains unresolved. Five-millisecond diagnostic profiling
+passes in both builds with cleanup, ineligible for acceptance CPU and without a dominant removable
+renderer hotspot. Final native sanity confirms107files/88Markdown, no owned fixtures/controllers,
+detached debugger, empty source/cache tasks and0unsaved with exact runtime hashes. Results are in
+[the durable PR201 report](docs/validation/indexing-cpu-201-2026-10-21.md);
+HANDOFF is only the transient return. No further speculative cache/proof change is accepted here.
+Next manual priorities: affected macOS original reproduction; full-process Eager/On-demand restarts
+with real startup changes; physical mobile/iOS queue/memory pressure.

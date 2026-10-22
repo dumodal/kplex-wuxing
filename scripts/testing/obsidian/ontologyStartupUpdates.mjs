@@ -34,6 +34,16 @@ async function scenario(app,c){
   leaf=app.workspace.getLeaf('tab');await leaf.setViewState({type:'k-plex-react-view',active:true});await app.workspace.revealLeaf(leaf);await leaf.view.waitUntilReady();p.notifyNavigation(path('A'),leaf);
   await until(()=>leaf.view.contentEl.querySelector('.kplex-role-center')?.dataset.kplexPath===path('A')&&p.index.semanticDemandCounts.has(path('A')),'The actual fixture center/demand did not open');
   await until(()=>p.getIndexStatus().upToDate&&!p.rebuildTask&&!p.index.building,'Fixture preparation did not settle');
+  // This synthetic startup assumes a settled preceding fixture. Graph readiness alone does not
+  // retire independent source/URL work, which can legitimately supersede a private startup owner.
+  await p.index.flushSourceRepository();
+  await until(()=>{
+   const source=p.index.sourceAcquisition,activity=source.getActivityState(),urls=p.index.getUrlIndexProgress();
+   return source.hasSemanticDependencies()&&!source.inventory&&!activity.pendingKnown&&!activity.knownImpactTasks
+    &&!activity.sourceActive&&!activity.repoWrites&&!activity.repoDeleteTask
+    &&p.index.getSourceRepositoryDiagnostics().unsaved===0&&urls.complete&&!urls.active&&!urls.failed
+    &&p.getIndexStatus().upToDate&&!p.rebuildTask&&!p.index.building;
+  },'Fixture source and URL work did not settle');
   p.settings.lastActivePath=path('A');await p.saveSettings(false,false);
   check(p.startupGraphSeedPaths()[0]===path('A'),'The controlled startup must seed the tested saved center');
   const [a,b]=owned;

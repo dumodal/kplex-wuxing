@@ -9,7 +9,7 @@ import { obsidianCliExecutable } from "./processTools.mjs";
 import { spawnNativeSync as spawnSync } from "./processTools.mjs";
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateTarget } from './runner.mjs';
 const projectRoot = resolve(fileURLToPath(new URL('../../..', import.meta.url)));
@@ -128,12 +128,14 @@ function install(token, originalSettings, originalLayout) {
         for (const path of [c.meeting, c.daily, c.working])
             c.releases.push(i.acquireSemanticDemand(path));
         await p.saveSettings();
+        // Eager graph reconciliation intentionally waits while every Plex is closed.
+        if (!i.isOnDemandMode()) { p.settings.lastActivePath = c.meeting; await p.activateView(); }
         await settle();
         const tab = app.setting.pluginTabs.find(tab => tab.id === 'k-plex');
         check(tab, 'Registered plugin settings missing');
         /** Inspect the actual registered declarative tree without opening or changing the user's Settings page. */
         const flatten = items => items.flatMap(item => [item, ...flatten(item.items ?? [])]);
-        const row = flatten(tab.getSettingDefinitions()).find(item => item.control?.key === 'datePropertyRelations');
+        const row = flatten(tab.getSettingDefinitions()).find(item => String(item.control?.key ?? '').replace(/^received:\d+:/, '') === 'datePropertyRelations');
         check(row?.name && row.desc && row.control.type === 'dropdown' && defaults.every(role=>row.control.options[role]) && Object.keys(row.control.options).length===6 && row.control.defaultValue==='parent', 'Searchable date dropdown definition missing');
         c.scenarios.push({ id: 'registered-declarative-date-setting', status: 'passed', name: row.name, options: row.control.options });
         c.baselineBuilds = i.getSemanticPreparationDiagnostics().fullBuilds; c.warmReadiness={initialIndexComplete:p.initialIndexComplete,building:i.building,rebuildTask:!!p.rebuildTask,rebuildTimer:p.rebuildTimer,indexDirty:p.indexDirty};
@@ -219,7 +221,7 @@ try {
     evaluate('(async()=>{const p=app.plugins.plugins["k-plex"];await p.actionPreferenceQueue;await p.settingsWriteQueue;return JSON.stringify(true)})()');
     configuration = [join(target.pluginDir, 'data.json'), join(target.config, 'community-plugins.json'), join(target.config, 'hotkeys.json'), join(target.config, 'types.json')].map(path => ({ path, bytes: existsSync(path) ? readFileSync(path) : null }));
     for (const c of configuration) {
-        if (c.bytes) writeFileSync(join(output, c.path.endsWith('/data.json') ? 'original-data.json' : 'original-' + c.path.split('/').pop()), c.bytes);
+        if (c.bytes) writeFileSync(join(output, 'original-' + basename(c.path)), c.bytes);
     }
     baseline = evaluate('JSON.stringify({layout:app.workspace.getLayout(),files:app.vault.getMarkdownFiles().length,settingsOpen:app.setting.isOpen,mobile:app.isMobile,hidden:document.hidden,visibility:document.visibilityState})');
     originalSettings = evaluate('JSON.stringify(app.plugins.plugins["k-plex"].settings)');

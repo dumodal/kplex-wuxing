@@ -1,6 +1,9 @@
 /**
  * Every per-file publisher retires affected local read covers before notifying, including batched
- * progressive ingestion. Newly compiled ontology cannot remain hidden by an inferred local cover.
+ * ingestion. Independent URL parsing retains its complete input in the bounded optional body queue
+ * before projecting URL-only facts. Exact observation tokens permit hot/queued foreground reuse;
+ * only background URL owners add optional durable reads. Optional source receipts never own URL liveness.
+ * Newly compiled ontology cannot remain hidden by an inferred local cover.
  * Startup metadata resolution keeps an unchanged finite read cover only while its replacement
  * is pending. Source/policy/native revision fences and relationship write authority stay separate.
  * Saved native navigation is available before asynchronous catalogs; its filename/folder facets
@@ -4213,15 +4216,43 @@ export class GraphIndex {
 
   /** Read admission is already bounded; parser CPU uses the inventory or visible-source lane.
    * The scheduler lease ends before the caller joins serial URL publication. Foreground repairs
-   * are scheduled without joining from a mutation/current-node owner, preserving that outer lease. */
+   * are scheduled without joining from a mutation/current-node owner, preserving that outer lease.
+   * An unavailable source receipt disables optional input sharing without cancelling independent URL
+   * progress. Only a complete parse receives a cache token; URL projections never receive one. */
   private async parseUrlOwnerBody(file: TFile, background: boolean, current: () => boolean): Promise<ParsedBodyMetadata | undefined> {
+    /** Only an actual current complete-parser record may satisfy a dirty URL owner. Foreground
+     * callers never add optional storage waits or join work in a preempted background lane. */
+    const sharedInput = (): ParsedBodyMetadata | undefined => {
+      const request = this.sourceAcquisition.getBodyCacheRequest(file);
+      if (request?.inputToken === undefined) return undefined;
+      const hot = this.fieldCache.get(file.path);
+      if (hot?.mtime === request.mtime && hot.inputToken === request.inputToken) return hot.body;
+      return this.indexedDb.getQueuedBody(request.path, request.mtime, request.inputToken) ?? undefined;
+    };
+    const shared = sharedInput();
+    if (shared) return current() ? shared : undefined;
+    if (background && !this.foregroundUrlOwners.has(file.path)) {
+      const request = this.sourceAcquisition.getBodyCacheRequest(file);
+      if (request?.inputToken !== undefined) {
+        const cached = (await this.indexedDb.getBodies([request])).get(request.path);
+        if (!current()) return undefined;
+        if (cached && this.sourceAcquisition.getBodyCacheRequest(file)?.inputToken === request.inputToken) return cached;
+      }
+    }
+    const bodyInput = this.sourceAcquisition.captureBodyInput(file, current);
     const content = await this.readUrlOwnerBody(file);
     if (!current()) return undefined;
     const priority = background && !this.foregroundUrlOwners.has(file.path) ? INDEX_WORK_PRIORITY.urlInventory : INDEX_WORK_PRIORITY.visibleNeighborhood;
     return this.workScheduler.run(priority, async () => {
       await this.workScheduler.checkpoint(priority);
       if (!current()) return undefined;
-      return this.metadataParser.parse(content, () => this.workScheduler.checkpoint(priority));
+      const latest = sharedInput();
+      if (latest) return latest;
+      const body = await this.metadataParser.parse(content, () => this.workScheduler.checkpoint(priority));
+      if (!current()) return undefined;
+      // Retain the original complete parse before refreshUrlOwner derives its URL-only projection.
+      if (bodyInput.accept()) this.indexedDb.queueBodyWrite(file.path, file.stat.mtime, body, bodyInput);
+      return body;
     });
   }
 
@@ -4256,6 +4287,12 @@ export class GraphIndex {
   refreshUrlOwner(path: string, changed = true, cachedBody?: ParsedBodyMetadata, acquired?: Readonly<{ body: ParsedBodyMetadata; file: TFile; revision: FileRevision; frontmatter?: Record<string, unknown> }>, background = false,
     releaseSourcePublicationTurn = false): Promise<void> {
     if (this.diagnosticsClosed || this.persistentCachePurged) return Promise.resolve();
+    if (changed) {
+      // Explicit URL observations have their own event fence, including before source listeners
+      // receive a native event. A coalesced retry cannot borrow a parse accepted before that edit.
+      const file = this.app.vault.getFileByPath(path);
+      if (file?.extension === "md") this.sourceAcquisition.retireBodyInput(file);
+    }
     if (this.preparationDeferred) {
       if (changed) {
         if (this.app.vault.getFileByPath(path)) this.urlOwnerEvents.set(path, (this.urlOwnerEvents.get(path) ?? 0) + 1);
@@ -4274,10 +4311,10 @@ export class GraphIndex {
     const existing = this.urlOwnerTasks.get(path);
     if (existing) return existing;
     const file = this.app.vault.getFileByPath(path), event = this.urlOwnerEvents.get(path) ?? 0;
-    if (!file || file.extension !== "md") { this.foregroundUrlOwners.delete(path); return this.retireUrlOwner(path); }
+    if (!file || file.extension !== "md" || file.path !== path) { this.foregroundUrlOwners.delete(path); return this.retireUrlOwner(path); }
     const revision = captureFileRevision(file);
     const current = (): boolean => !this.diagnosticsClosed && !this.persistentCachePurged
-      && fileRevisionMatches(file, revision) && this.app.vault.getFileByPath(path) === file
+      && fileRevisionMatches(file, revision) && this.app.vault.getFileByPath(path) === file && file.path === path
       && event === (this.urlOwnerEvents.get(path) ?? 0);
     const task = this.withUrlReadBudget(file, async () => {
       try {

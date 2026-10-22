@@ -1141,7 +1141,15 @@ test('equal-stat edit during awaited URL cache write cannot persist stale facts 
     f.add('A.md','https://obsidian.md');let entered;const held=new Promise(r=>entered=r),hold=new Promise(r=>unblock=r);
     const put=index.indexedDb.putUrlOwners.bind(index.indexedDb);let first=true;
     index.indexedDb.putUrlOwners=async records=>{if(first){first=false;entered();await hold;}return put(records);};
-    const scan=index.startBackgroundUrlIndex();await held;f.texts.set('A.md','');void index.refreshUrlOwner('A.md');unblock();await scan;
+    const scan=index.startBackgroundUrlIndex();await held;
+    const file=f.app.vault.getFileByPath('A.md'),state=index.sourceAcquisition.state(file),revision=state.revision;
+    const flags=[state.dirty,state.bodyDirty,state.created];
+    ok(index.sourceAcquisition.getBodyCacheRequest(file)?.inputToken,'Completed full parse is initially shareable');
+    f.texts.set('A.md','');void index.refreshUrlOwner('A.md');
+    ok(!index.sourceAcquisition.getBodyCacheRequest(file)?.inputToken,'Explicit URL change retires prior sharing without a Vault event');
+    equal(state.revision,revision,'URL parser retirement does not fabricate a source event');
+    equal([state.dirty,state.bodyDirty,state.created],flags,'Source dirty and created masks stay independent');
+    unblock();await scan;
     while(index.urlOwnerTasks.size)await Promise.all([...index.urlOwnerTasks.values()]);
     ok(!index.getNeighborhood('https://obsidian.md')?.parents.length,'Live superseded URL incidence retires');index.destroy();
     next=new sourceModules.GraphIndex({app:f.app,settings:o.settings,getIndexSourceRevision:()=>0},f.app);

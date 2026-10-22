@@ -123,6 +123,75 @@ test("real Chromium: parsed-body write-behind remains readable without granting 
         }finally{owner.close();}
       })()`),true);
     });
+    await t.test("exact parser-input tokens bind the actual queued and durable body records", async () => {
+      assert.equal(await browser.evaluate(`(async()=>{
+        const owner=await fresh('body-input-token'),body=sourceModules.parseBodyMetadata('Status:: complete\\nhttps://example.com/token');
+        let current=true;const stamp={inputToken:'opaque-current-input',isCurrent:()=>current};
+        try{
+          owner.queueBodyWrite('token.md',8,body,stamp);window.clearTimeout(owner.bodyWriteTimer);owner.bodyWriteTimer=null;
+          equal(await owner.getBody('token.md',8,stamp.inputToken),body,'Exact queued complete input');
+          equal(await owner.getBody('token.md',8,'different-input'),null,'Equal stats do not authorize another token');
+          equal((await owner.getBodies([{path:'token.md',mtime:8,inputToken:'different-input'}])).size,0,'Batch uses exact token');
+          await owner.flushQueuedBodyWrites();equal(owner.queuedBodyWrites.size,0,'Successful write leaves no extra body mirror');
+          equal(await owner.getBody('token.md',8,stamp.inputToken),body,'Token survives ordinary structured-clone persistence');
+          const replacement=sourceModules.parseBodyMetadata('Status:: unversioned');
+          await owner.putBody('token.md',8,replacement);
+          equal(await owner.getBody('token.md',8,stamp.inputToken),null,'A prior sidecar certificate cannot bless replacement bytes');
+          equal(await owner.getBody('token.md',8),replacement,'Clean restart retains ordinary optional cache compatibility');
+          owner.queueBodyWrite('retired.md',8,body,stamp);window.clearTimeout(owner.bodyWriteTimer);owner.bodyWriteTimer=null;
+          current=false;equal(await owner.getBody('retired.md',8,stamp.inputToken),null,'Retired queued input is unreadable');
+          await owner.flushQueuedBodyWrites();equal(owner.queuedBodyWrites.size,0,'Stale queued input drains without retry');
+          equal(await owner.getBody('retired.md',8),null,'Stale queued input never reaches durable storage');
+          return true;
+        }finally{owner.close();}
+      })()`),true);
+    });
+    await t.test("held body-cache opening rechecks parser-input validity before its write transaction", async () => {
+      assert.equal(await browser.evaluate(`(async()=>{
+        const owner=await fresh('body-token-held-write'),body=sourceModules.parseBodyMetadata('Status:: retired'),open=owner.open.bind(owner);
+        let current=true,release,entered;const hold=new Promise(resolve=>release=resolve),reached=new Promise(resolve=>entered=resolve);
+        owner.open=async()=>{entered();await hold;return open();};
+        try{
+          const writing=owner.putBody('held-token.md',8,body,{inputToken:'held-input',isCurrent:()=>current});
+          await reached;current=false;release();await writing;owner.open=open;
+          equal(await owner.getBody('held-token.md',8),null,'Retired bytes do not enter the transaction');return true;
+        }finally{release();owner.close();}
+      })()`),true);
+    });
+    await t.test("optional parser queues bound record count during storage failure without changing neutral facts", async () => {
+      assert.equal(await browser.evaluate(`(async()=>{
+        const owner=await fresh('body-record-budget'),body=sourceModules.parseBodyMetadata('Field:: bounded');
+        owner.putBodies=async()=>false;
+        try{
+          for(let n=0;n<1201;n++)owner.queueBodyWrite('budget-'+n+'.md',1,body);
+          window.clearTimeout(owner.bodyWriteTimer);owner.bodyWriteTimer=null;
+          equal(owner.queuedBodyWrites.size,1200,'Finite desktop record budget');
+          equal(await owner.getBody('budget-0.md',1),null,'Oldest optional body evicted');
+          equal(await owner.getBody('budget-1200.md',1),body,'Latest optional body remains readable');
+          await owner.flushQueuedBodyWrites();equal(owner.queuedBodyWrites.size,1200,'Failed storage cannot grow or discard the current bounded queue');
+          equal((await owner.sources.inspect('budget-1200.md')).head,null,'Eviction and failure grant no neutral source authority');
+          owner.close();equal(owner.queuedBodyBytes,0,'Close releases estimated retained bytes');return true;
+        }finally{owner.close();}
+      })()`),true);
+    });
+    await t.test("optional parser queues bound estimated payload bytes and reject an oversize body", async () => {
+      assert.equal(await browser.evaluate(`(async()=>{
+        const owner=await fresh('body-byte-budget'),body=sourceModules.parseBodyMetadata('Field:: '+'x'.repeat(1024*1024));
+        owner.putBodies=async()=>false;
+        try{
+          for(let n=0;n<20;n++)owner.queueBodyWrite('bytes-'+n+'.md',1,body);
+          window.clearTimeout(owner.bodyWriteTimer);owner.bodyWriteTimer=null;
+          ok(owner.queuedBodyWrites.size<20,'Payload bytes evict before count budget');
+          ok(owner.queuedBodyBytes<=32*1024*1024,'Desktop estimated parser DTO budget');
+          equal(await owner.getBody('bytes-19.md',1),body,'Newest bounded input remains readable');
+          const oversize=sourceModules.parseBodyMetadata('Field:: '+'x'.repeat(9*1024*1024));
+          owner.queueBodyWrite('bytes-19.md',1,oversize);
+          equal(await owner.getBody('bytes-19.md',1),null,'Oversize replacement retires the old optional entry');
+          ok(owner.queuedBodyBytes<=32*1024*1024,'Oversize input never inflates retained budget');
+          await owner.flushQueuedBodyWrites();ok(owner.queuedBodyBytes<=32*1024*1024,'Storage failure retains a finite byte budget');return true;
+        }finally{owner.close();}
+      })()`),true);
+    });
     await t.test("queued reads reject mismatched paths, mtimes, parser versions, malformed bodies and closed owners", async () => {
       assert.equal(await browser.evaluate(`(async()=>{
         const owner=await fresh('queued-body-validity'),body=sourceModules.parseBodyMetadata('Field:: [[Valid]]');

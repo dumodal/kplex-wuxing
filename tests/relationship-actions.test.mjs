@@ -504,11 +504,12 @@ test("URL discovery status is independent of ready local graphs and clears after
 });
 
 test("pre-restore file events update temporary availability while preserving backlog revision fences", async () => {
-  class TFile { constructor(path) { this.path = path; this.extension = "md"; } }
+  class TFile { constructor(path) { this.path = path; this.extension = "md"; this.stat = { mtime: 1, ctime: 1, size: 0 }; } }
   class TFolder { constructor(path) { this.path = path; } }
   const vaultEvents = new Map(), metadataEvents = new Map(), updates = [], cleanup = [], topology = [];
-  const context = { indexPreparationAdmitted: true, preRestoreListenerCleanup: null, preRestoreChanged: false, indexDirtyRevision: 0,
+  const context = { indexPreparationAdmitted: true, preRestoreListenerCleanup: null, indexDirtyRevision: 0,
     preRestoreReasons: new Map(), preRestoreMarkdownPaths: new Map(),
+    preRestoreDormantReasons: new Set(), preRestoreDormantMarkdownPaths: new Set(), preRestoreCreatedItems: new Map(),
     app: { vault: { on: (kind, callback) => { vaultEvents.set(kind, callback); return kind; }, offref: kind => vaultEvents.delete(kind) },
       metadataCache: { on: (kind, callback) => { metadataEvents.set(kind, callback); return kind; }, offref: kind => metadataEvents.delete(kind) } },
     index: { invalidateHostStructure: () => topology.push(context.indexDirtyRevision),
@@ -521,7 +522,7 @@ test("pre-restore file events update temporary availability while preserving bac
   file.path = "Renamed.md"; vaultEvents.get("rename")(file, "Created.md");
   vaultEvents.get("delete")(file);
   assert.deepEqual(updates, [[1, "Created.md", file], [2, "Created.md", file], [3, "Renamed.md"]]);
-  assert.equal(context.preRestoreChanged, true);
+  assert.equal(context.preRestoreReasons.get("vault:delete"), 3, "The admitted delete remains in the startup backlog");
   assert.equal(context.preRestoreReasons.get("vault:rename"), 2);
   assert.equal(context.preRestoreMarkdownPaths.get("Renamed.md"), 3);
   const folder = new TFolder("NewFolder");
