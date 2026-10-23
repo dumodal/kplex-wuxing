@@ -17,6 +17,9 @@
  * only storage port can release them after a failed/closed normal connection, without new authority.
  * Clean dependency checks select the owner/journal and durable head in one readonly transaction;
  * overlays and exceptional heads retain ordinary inspection, and repair writes require a reread.
+ * Ordinary replacements may preserve selected dependency counts only after bounded old-row/ledger
+ * authentication, recomputed projection equality and a final activation fence. Their inactive
+ * rows use the existing durable private reclaim owner; source facts and primary journals still advance.
  * Optional legacy URL-alias upgrades authenticate unchanged primary families and exact dependency
  * memberships, then select durable metadata only in the existing CAS transaction. Failed optional
  * writes cannot mask primary facts through unsaved fallback. Inactive private row reclamation is
@@ -91,6 +94,7 @@ export type SourceLocalDependencyCheckpoint =
   | "before-local-staging"
   | "after-local-staging-page"
   | "after-local-activation"
+  | "after-local-reclaim-page"
   | "after-local-old-count-batch"
   | "after-local-new-count-batch"
   | "before-local-repair-retire";
@@ -219,7 +223,15 @@ type PrefetchedSourceChunk = Readonly<{
   firstPostings?: unknown[];
   release?: () => void;
 }>;
-type PreparedLocalDependencies = Readonly<{ records: number; digest: string }>;
+/** A write-local streamed equality receipt, never persisted or shared as source authority. */
+type LocalDependencyCountReuse = {
+  readonly head: SourceHead;
+  readonly owner: SourceLocalDependencyOwner;
+  readonly revision: number;
+  verified: number;
+  valid: boolean;
+};
+type PreparedLocalDependencies = Readonly<{ records: number; digest: string; reuse?: LocalDependencyCountReuse }>;
 
 /** A pinned historical repair read; its pages are never an alternate public discovery route. */
 export type ContributorJournalReader = Readonly<{
@@ -1650,6 +1662,7 @@ export class NeutralSourceRepository {
             repairs.put({ ...repair, toIndex: end } satisfies SourceLocalDependencyRepair);
             return { done: false };
           });
+        this.runtime.localDependencyCheckpoint?.("after-local-reclaim-page");
         if (page.done) return "ready";
         await this.runtime.yield();
       }
@@ -1706,6 +1719,87 @@ export class NeutralSourceRepository {
     });
   }
 
+  /**
+   * Authenticate a matching candidate only after new staging has finished. Recompute the old
+   * commitment with the old rows' own revision/ordinal byte boundaries; equal stored/new digests
+   * alone cannot hide missing rows or invalid ledgers. Hashing and cooperative yields occur outside
+   * IndexedDB transactions. A failed equality proof falls back to normal selected-count repair.
+   */
+  private async authenticateLocalCountReuse(db: IDBDatabase, reuse: LocalDependencyCountReuse,
+    current: () => boolean): Promise<void> {
+    let digest = "0".repeat(64);
+    while (reuse.valid && reuse.verified < reuse.owner.records) {
+      if (!current() || this.closed) throw new SourceFactError("cancelled");
+      const page = await this.authenticateLocalCountReusePage(db, reuse, current);
+      if (page === null) return;
+      digest = await this.runtime.digest(digest + JSON.stringify(page));
+      if (!current() || this.closed) throw new SourceFactError("cancelled");
+      if (reuse.verified < reuse.owner.records) await this.runtime.yield();
+    }
+    if (digest !== reuse.owner.digest) reuse.valid = false;
+  }
+
+  /**
+   * Read/authenticate one original old-revision page, retaining at most 256 rows and the established
+   * byte-bounded page. A single over-byte-boundary lookahead is reread on the next transaction rather
+   * than retained. Each source-distinct key's complete occurrence range is counted only in its first
+   * authenticated page, preserving duplicate-underflow checks without a whole-source key set.
+   */
+  private async authenticateLocalCountReusePage(db: IDBDatabase, reuse: LocalDependencyCountReuse,
+    current: () => boolean): Promise<readonly string[] | null> {
+    const { head, owner } = reuse;
+    return this.transaction(db, [SOURCE_HEAD_STORE, SOURCE_LOCAL_OWNER_STORE, SOURCE_LOCAL_KEY_STORE,
+      SOURCE_LOCAL_DEPENDENCY_STORE, META_STORE], "readonly", head.sourceId,
+      /** Validate the exact predecessor and ledger fence before advancing this bounded proof prefix. */
+      async (transaction) => {
+        const [rawHead, rawOwner, rawState] = await Promise.all([
+          unknownValue(transaction.objectStore(SOURCE_HEAD_STORE).get(head.sourceId)),
+          unknownValue(transaction.objectStore(SOURCE_LOCAL_OWNER_STORE).get(head.sourceId)),
+          unknownValue(transaction.objectStore(META_STORE).get(SOURCE_LOCAL_DEPENDENCY_STATE_KEY)),
+        ]);
+        if (!current() || this.closed) throw new SourceFactError("cancelled");
+        if (JSON.stringify(rawHead) !== JSON.stringify(head) || JSON.stringify(rawOwner) !== JSON.stringify(owner)
+          || !validSourceLocalDependencyState(rawState) || rawState.version !== SOURCE_LOCAL_STATE_VERSION
+          || !rawState.complete || rawState.pending !== 0 || rawState.revision !== reuse.revision) {
+          reuse.valid = false; return null;
+        }
+        const store = transaction.objectStore(SOURCE_LOCAL_DEPENDENCY_STORE), keys = transaction.objectStore(SOURCE_LOCAL_KEY_STORE);
+        const rows: SourceLocalDependencyRow[] = []; let bytes = 0;
+        for (let index = reuse.verified; index < owner.records && rows.length < SOURCE_MAX_BATCH_RECORDS; index++) {
+          const row = await unknownValue(store.get([head.sourceId, head.sourceRevision, index]));
+          if (!validSourceLocalDependencyRow(row) || row.sourceId !== head.sourceId || row.sourceRevision !== head.sourceRevision
+            || row.index !== index) { reuse.valid = false; return null; }
+          const rowBytes = encodedBytes(JSON.stringify(row)) + 1;
+          if (rowBytes > SOURCE_MAX_RECORD_BYTES) { reuse.valid = false; return null; }
+          // These are write()'s original row-size/page rules, including the OLD revision string.
+          if (rows.length && bytes + rowBytes > SOURCE_CHUNK_TARGET_BYTES) break;
+          rows.push(row); bytes += rowBytes;
+          if (bytes >= SOURCE_CHUNK_TARGET_BYTES) break;
+        }
+        if (!rows.length) { reuse.valid = false; return null; }
+        const pageKeys = new Map<string, number>();
+        for (const row of rows) if (!pageKeys.has(row.key)) pageKeys.set(row.key, row.index);
+        for (const [key, firstIndex] of pageKeys) {
+          const range = IDBKeyRange.bound([key, head.sourceId, head.sourceRevision], [key, head.sourceId, head.sourceRevision, []], false, true);
+          const first = await requestValue(store.index(SOURCE_LOCAL_LOOKUP_INDEX).getKey(range));
+          if (!Array.isArray(first) || first.length !== 3 || first[0] !== head.sourceId || first[1] !== head.sourceRevision
+            || !sourceCount(first[2]) || first[2] > firstIndex) { reuse.valid = false; return null; }
+          // The exact earlier prefix checked this key already. Full count ranges across keys are
+          // disjoint, preventing repeated-key backend range enumeration from becoming quadratic.
+          if (first[2] < reuse.verified) continue;
+          const [ledger, occurrences] = await Promise.all([
+            unknownValue(keys.get(key)), requestValue(store.index(SOURCE_LOCAL_LOOKUP_INDEX).count(range)),
+          ]);
+          if (!validSourceLocalDependencyKeyState(ledger) || ledger.key !== key || occurrences === 0 || ledger.count < occurrences) {
+            reuse.valid = false; return null;
+          }
+        }
+        if (!current() || this.closed) throw new SourceFactError("cancelled");
+        reuse.verified += rows.length;
+        return rows.map(/** Hash only the ordered keys, matching the existing persisted commitment. */row => row.key);
+      });
+  }
+
   /** Stage one bounded contiguous page of immutable source-local dependency rows. */
   private async stageLocalDependencies(db: IDBDatabase, rows: readonly SourceLocalDependencyRow[], current: () => boolean): Promise<void> {
     if (!current() || this.closed) throw new SourceFactError("cancelled");
@@ -1713,21 +1807,23 @@ export class NeutralSourceRepository {
     const sourceId = rows[0].sourceId, revision = rows[0].sourceRevision, first = rows[0].index;
     if (rows.length > SOURCE_MAX_BATCH_RECORDS || rows.some((row, offset) => row.sourceId !== sourceId || row.sourceRevision !== revision
       || row.index !== first + offset || !validSourceLocalDependencyRow(row))) throw new SourceFactError("dependency-invalid");
-    await this.transaction(db, [SOURCE_LOCAL_DEPENDENCY_STORE, SOURCE_LOCAL_REPAIR_STORE], "readwrite", sourceId, async (transaction) => {
-      if (!current()) throw new SourceFactError("cancelled");
-      const store = transaction.objectStore(SOURCE_LOCAL_DEPENDENCY_STORE), repairs = transaction.objectStore(SOURCE_LOCAL_REPAIR_STORE);
-      const rawMarker = await unknownValue(repairs.get(sourceId));
-      if (rawMarker !== undefined) {
-        if (!validSourceLocalDependencyRepair(rawMarker) || !this.isLocalDependencyStaging(rawMarker)
-          || rawMarker.sourceId !== sourceId || rawMarker.fromRevision !== revision || rawMarker.fromRecords !== first) {
-          throw new SourceFactError("dependency-pending");
-        }
-      } else if (first !== 0) throw new SourceFactError("dependency-invalid");
-      for (const row of rows) store.put(row);
-      const records = first + rows.length;
-      repairs.put({ version: 1, sourceId, fromRevision: revision, fromRecords: records, fromIndex: 0,
-        toRevision: revision, toRecords: records, toIndex: 0 } satisfies SourceLocalDependencyRepair);
-    });
+    await this.transaction(db, [SOURCE_LOCAL_DEPENDENCY_STORE, SOURCE_LOCAL_REPAIR_STORE], "readwrite", sourceId,
+      /** Check marker ownership before committing this bounded immutable page. */
+      async (transaction) => {
+        if (!current()) throw new SourceFactError("cancelled");
+        const store = transaction.objectStore(SOURCE_LOCAL_DEPENDENCY_STORE), repairs = transaction.objectStore(SOURCE_LOCAL_REPAIR_STORE);
+        const rawMarker = await unknownValue(repairs.get(sourceId));
+        if (rawMarker !== undefined) {
+          if (!validSourceLocalDependencyRepair(rawMarker) || !this.isLocalDependencyStaging(rawMarker)
+            || rawMarker.sourceId !== sourceId || rawMarker.fromRevision !== revision || rawMarker.fromRecords !== first) {
+            throw new SourceFactError("dependency-pending");
+          }
+        } else if (first !== 0) throw new SourceFactError("dependency-invalid");
+        for (const row of rows) store.put(row);
+        const records = first + rows.length;
+        repairs.put({ version: 1, sourceId, fromRevision: revision, fromRecords: records, fromIndex: 0,
+          toRevision: revision, toRecords: records, toIndex: 0 } satisfies SourceLocalDependencyRepair);
+      });
     this.runtime.localDependencyCheckpoint?.("after-local-staging-page");
     if (!current() || this.closed) throw new SourceFactError("cancelled");
     this.reportCompletedWork(current);
@@ -1911,7 +2007,7 @@ export class NeutralSourceRepository {
     let memoryBytes = 0; let memoryComplete = true; let db: IDBDatabase | null = null; let retainedView: SourceView | null = null;
     let storageReason: SourceReason = "storage-unavailable";
     let localRows: SourceLocalDependencyRow[] = []; let localBytes = 0; let localRecords = 0; let localDigest = "0".repeat(64);
-    let localSelected = false;
+    let localSelected = false; let localReuse: LocalDependencyCountReuse | undefined;
     /** Preserve the fallback only within its explicit bound; live callers still own their parsed inputs. */
     const retain = (chunk: SourceChunk, batches: SourcePosting[][]): void => {
       if (!memoryComplete) return;
@@ -1996,6 +2092,15 @@ export class NeutralSourceRepository {
           } else {
             const settled = await this.settleLocalDependencyWork(db, input.sourceId, current);
             if (settled !== "ready") throw new SourceFactError(settled);
+            const selected = await this.localDependencySelection(db, input.sourceId, current, true);
+            const { state, owner, head } = selected;
+            if (state.version === SOURCE_LOCAL_STATE_VERSION && state.complete && state.pending === 0 && !selected.repair
+              && owner?.version === SOURCE_LOCAL_DEPENDENCY_VERSION && owner.state === "complete" && head
+              && owner.sourceRevision === head.sourceRevision && owner.sequence === head.sequence
+              && expectedHeadMatches(input.expected, head) && !this.memory.has(input.sourceId)
+              && !this.unsaved.has(input.sourceId) && !this.pendingDeletes.has(input.sourceId)) {
+              localReuse = { head, owner, revision: state.revision, verified: 0, valid: true };
+            }
           }
           if (input.aliasUpgradeFrom && this.hostChange) throw new SourceFactError("dependency-pending");
           if (this.hostChange && (await this.flushContributorHostChange() !== "ready" || this.hostChange)) throw new SourceFactError("dependency-pending");
@@ -2105,7 +2210,7 @@ export class NeutralSourceRepository {
         families[family] = { revision, chunks: chunkIndex, records: recordCount, bytes: byteCount, postings: postingCount, digest, postingDigest };
       }
       if (!(await stagePending()) || !(await flushLocal())) return this.result("cancelled", "cancelled");
-      const local: PreparedLocalDependencies = { records: localRecords, digest: localDigest };
+      const local: PreparedLocalDependencies = { records: localRecords, digest: localDigest, ...(localReuse ? { reuse: localReuse } : {}) };
       if (!current() || this.closed) return this.result("cancelled", "cancelled");
       const head: SourceManifest = { sourceId: input.sourceId, sourceRevision: revision, formatVersion: SOURCE_FACT_FORMAT_VERSION,
         compilerVersion: SOURCE_FACT_COMPILER_VERSION, bodyParserVersion: input.bodyParserVersion ?? SOURCE_BODY_PARSER_VERSION, resolutionVersion: SOURCE_RESOLUTION_VERSION,
@@ -2116,6 +2221,11 @@ export class NeutralSourceRepository {
           // Producers and frame codecs validated the exact encoded records before staging.
           // Activation atomically proves that every bounded chunk/posting write committed; a later
           // process still performs full digest/frame/posting validation before reuse.
+          // Changed projections, including late differences, pay no old-row authentication cost.
+          // Matching candidates still authenticate physical old rows/counts before final activation.
+          if (localReuse && localReuse.owner.records === local.records && localReuse.owner.digest === local.digest) {
+            await this.authenticateLocalCountReuse(db, localReuse, current);
+          }
           const result = await this.activate(db, head, input.expected, current, dependencyTicket, local, input.aliasUpgradeFrom);
           if (result.outcome === "activated") {
             localSelected = true;
@@ -2151,12 +2261,15 @@ export class NeutralSourceRepository {
   /**
    * Commit a complete manifest and durable sequence atomically. Producers validate frames before
    * staging; this transaction checks committed chunk/posting counts. Readers later verify full
-   * digests and regenerated postings before treating the selected head as reusable.
+   * digests and regenerated postings before treating the selected head as reusable. Ordinary count
+   * reuse additionally rechecks the exact bounded authentication receipt and keeps the normal primary
+   * mutation ticket, journal and source publication; only old/new count churn changes to private reclaim.
    */
   private async activate(db: IDBDatabase, head: SourceManifest, expected: SourceHeadExpectation,
     current: () => boolean, dependencyTicket?: string, local?: PreparedLocalDependencies, aliasUpgrade?: SelectedSourceStamp): Promise<SourceWriteResult> {
     if (!current() || this.closed) return this.result("cancelled", "cancelled");
     try {
+      let countsReused = false;
       const stores = [SOURCE_HEAD_STORE, SOURCE_CHUNK_STORE, SOURCE_POSTING_STORE, META_STORE, SOURCE_IMPACT_STORE,
         SOURCE_LOCAL_DEPENDENCY_STORE, SOURCE_LOCAL_OWNER_STORE, SOURCE_LOCAL_REPAIR_STORE];
       const activated = await this.transaction(db, stores, "readwrite", head.sourceId, async (transaction) => {
@@ -2223,13 +2336,24 @@ export class NeutralSourceRepository {
         const fromRecords = selectedOwner?.state === "complete" ? selectedOwner.records : 0;
         const toRevision = head.state === "complete" ? head.sourceRevision : null;
         const toRecords = head.state === "complete" ? nextRecords : 0;
-        const needsRepair = !aliasUpgrade && (fromRecords > 0 || toRecords > 0);
-        if (aliasUpgrade && fromRevision && fromRecords > 0) {
+        const reuse = local?.reuse;
+        // Digests retain canonical page boundaries, including revision-string byte effects. A false
+        // negative deliberately falls back; source authority never depends on projection equality.
+        countsReused = !!aliasUpgrade || !!reuse && reuse.valid && reuse.verified === nextRecords
+          && localState.version === SOURCE_LOCAL_STATE_VERSION && localState.complete && localState.pending === 0
+          && localState.revision === reuse.revision && head.state === "complete" && !!selectedOwner
+          && selectedOwner.version === SOURCE_LOCAL_DEPENDENCY_VERSION && selectedOwner.state === "complete"
+          && selectedOwner.sourceId === head.sourceId && JSON.stringify(raw) === JSON.stringify(reuse.head)
+          && JSON.stringify(selectedOwner) === JSON.stringify(reuse.owner)
+          && selectedOwner.records === nextRecords && selectedOwner.digest === nextDigest
+          && !this.memory.has(head.sourceId) && !this.unsaved.has(head.sourceId) && !this.pendingDeletes.has(head.sourceId);
+        const needsRepair = !countsReused && (fromRecords > 0 || toRecords > 0);
+        if (countsReused && fromRevision && fromRecords > 0) {
           // Identical authenticated memberships preserve selected counts. Old inactive rows use the
           // existing private reclaim owner; failures retiring them never make those counts pending.
           repairs.put({ version: 1, sourceId: head.sourceId, fromRevision, fromRecords, fromIndex: fromRecords,
             toRevision: fromRevision, toRecords: fromRecords, toIndex: 0 } satisfies SourceLocalDependencyRepair);
-        } else if (aliasUpgrade) repairs.delete(head.sourceId);
+        } else if (countsReused) repairs.delete(head.sourceId);
         if (needsRepair) {
           repairs.put({ version: 1, sourceId: head.sourceId, fromRevision, fromRecords, fromIndex: 0,
             toRevision, toRecords, toIndex: 0 } satisfies SourceLocalDependencyRepair);
@@ -2246,7 +2370,13 @@ export class NeutralSourceRepository {
       // Selection consumers must reread after an intervening durable commit, including tombstones.
       this.sourceActivationRevision++;
       this.runtime.localDependencyCheckpoint?.("after-local-activation");
-      const repaired = aliasUpgrade ? "ready" : await this.repairLocalDependencies(db, head.sourceId, current);
+      // Ordinary reuse owns reclaim before returning, just as ordinary replacement owns selected
+      // repair. Staging has finished and the old marker is now durably inactive. Interruption keeps
+      // its bounded cursor for the next write/reopen; optional alias cleanup remains in write.finally.
+      if (countsReused && !aliasUpgrade && this.localStaging.get(head.sourceId) === head.sourceRevision) this.localStaging.delete(head.sourceId);
+      const repaired = aliasUpgrade ? "ready" : countsReused
+        ? await this.cleanupStagedLocalDependencies(db, head.sourceId, current)
+        : await this.repairLocalDependencies(db, head.sourceId, current);
       if (repaired !== "ready" && repaired !== "cancelled") this.diagnostics.lastReason = repaired;
       this.rememberDurable(activated);
       if (activated.state === "complete" && SOURCE_FAMILIES.every((family) => activated.families[family]?.records === 0)) this.diagnostics.empty += 1;

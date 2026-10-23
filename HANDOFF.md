@@ -19,116 +19,42 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Assignment: Windows dependency-count reuse
+# Return: dependency-count reuse ? PR #204
 
-**Prepared:** 2026-10-23, Europe/Budapest, by Zsolt's Codex Agent.
-**State/direction:** Prepared investigation-to-implementation handoff for the Windows agent with real dependencies, Chromium and Obsidian CLI. No runtime implementation or measurements have been performed in this planning change.
-**Branch:** `2026-10-23-dependency-count-reuse`.
-**Accepted base:** `main@cd12a857c1c2c89c2d13f6c6b2a3e1a5203d5ffa`, the merge of #201.
+**State/direction:** Local validation complete; main agent publishing the reviewed checkpoint for maintainer review. Keep draft; no merge/release. Prepared 2026-10-23 by Zsolt's Codex Agent.
+**Branch:** 2026-10-23-dependency-count-reuse.
+**Accepted base:** main@cd12a857c1c2c89c2d13f6c6b2a3e1a5203d5ffa, including merged #201.
+**Durable evidence:** [dependency-count reuse validation](docs/validation/dependency-count-reuse-204-2026-10-23.md).
 
-## Objective and independence from #203
+## Implementation and review return
 
-Measure and, where the proof is sufficient, eliminate repeated decrement/increment bookkeeping when an ordinary source replacement has exactly the same local-dependency projection as its predecessor. Reuse the existing repository transaction/journal/reclaim owners. The user-visible goal is less CPU and storage work during reauthorization/reconciliation without delaying navigation, tag/folder availability or editing.
+All production changes are confined to src/index/SourceRepository.ts. Matching ordinary replacements authenticate bounded original rows, recompute their ordered digest and validate selected ledger multiplicity before the existing activation transaction rechecks predecessor/owner/local-state revision, staging and ordinary ticket fences. New source facts/head/families/owner/sequence still publish. Existing private reclaim drains old membership rows before return and remains crash-resumable. Changed/uncertain states keep normal repair. No schema, scheduler, concurrency, defaults, parsing or semantic policy changed; optional alias failure semantics remain separate.
 
-PR #203 is actively measuring a real-vault copy on the Mac. **Leave it completely uninterrupted:** do not change its branch, handoff, report, binaries, candidate pins, instructions, running process or cache; do not request new probes or data from that agent. Work only on this branch and existing Windows disposable fixtures. There is no dependency on #203 completing or supplying its private harness. Do not merge/rebase either experiment into the other.
+Source SHA-256: 951ce4e86ad1bea9b86a53d7efad1c2e4375e3eda38e220b4933409510a337ef.
+Final built/installed main.js: 46bcd36b14291169465f98f0c2635ffb331d576eb84177d1e030281a90dc15d1.
+Baseline main.js: 608b2dd34e98ac84d117ebeb86d8cd287e26b3f34b8302a0f1ee7e72c9a53194.
+Manifest/styles hashes and exact browser bundle/source identities are in the validation report/private receipts. Production output is unchanged by this documentation/tooling checkpoint.
 
-This assignment includes implementation after a local proof of redundant work. Do not stop at instrumentation when a safe bounded correction is demonstrated. Conversely, an unmeasured hypothesis is not permission to rewrite storage. If this optimization is unsafe or has negligible opportunity, deliver that specific result and the reason rather than broadening the task.
+## Actual evidence
 
-## Evidence and what remains unknown
+- Corrected full cohort: all 30 real-Chromium arms passed; corrected late control: all eight passed. Representative three matched 128-owner pairs reduced renderer CPU by 31.8% unchanged / 24.2% mixed, complete-maintenance elapsed by 26.4% / 19.3%. All old memberships and retired source/family rows are included. Redundant key writes 4,984 to zero; mixed retains exactly 1,246 required writes. Every restart/edit oracle found zero debt.
+- Initial design failed the late-change control (+20.4% median CPU). Retained unfavorable evidence led to post-staging equality gating. Corrected changed projections perform zero authentication; median late-control CPU is essentially unchanged, with a slower individual elapsed arm retained. Small later reopen/edit elapsed increases and unequal starting heap samples remain documented.
+- Actual Small Vault edits advanced eight source revisions with matching 128 memberships; final diagnostic authenticated/reclaimed all 128. Across eight matching edits plus one changed URL, key writes were 288 baseline versus 32 final. These diagnostic counts are not native CPU measurements or a private-vault hit rate.
+- Node22.22.2 full npm run verify, installed Obsidian types and production build passed; six lane totals 7/130/1333/227/357/679, zero failed/cancelled/skipped. Strict exact-build deployment/render/error receipt passed. PowerShell wrapper status1 from redirected npm stderr notices is retained and explained in the report; child verification and runner receipt passed.
+- Focused real-IDB11/11 plus final harness3/3 passed. Covers shared/repeated keys, physical old-row/digest/ledger corruption, byte pages including UTF-8, changed fallback, competing connections/CAS, unsaved/legacy/pending state, cancellation/close/storage failure, reclaim/reopen/edit/deletion. Independent/main source review found no remaining defect.
+- Exact46bcd36b Windows native checks passed: normal acquisition diagnostic; two expected diagnostic faults with independently verified cleanup; SI4 Small settings; SI5 five recovery cases and three warm plugin reloads (heads unchanged, zero semantic read/parse); foreground inventory; actual On-demand live updates/Find before held unrelated work; gate counts; rename; stationary startup ontology updates. The first live-update attempt failed its Eager-profile prerequisite; a fresh actual required-profile run passed and original settings/configuration bytes were restored.
+- Existing guarded Small remains 107 files/88 Markdown notes. Final checks find index ready, zero pending source work, only Small open, no JavaScript errors and exact artifact still installed. Native baseline diagnostic used Obsidian1.14.4; a user-authorized graceful restart loaded1.14.5. CPU cohorts used identical Chrome155.0.8059.82 and were finished before reopening Small.
 
-Read the pinned [#203 interim report](https://github.com/zsviczian/kplex/blob/c99073b312d0f81e8c5b1562e5b848bd8df8f8b9/docs/validation/mac-vault-indexing-203-2026-10-22.md), specifically **Separate full-snapshot diagnostics / Where the observed request volume goes**. That document is on another branch; it is not present on this branch by default. Read it at the pinned revision without checking out or editing #203.
+## Ownership, cleanup and limits
 
-The report records 7,613,254 / 7,615,311 observed native object-store request calls in its two diagnostic arms. `sourceLocalDependencies` and `sourceLocalDependencyKeys` account for 5,972,339 / 5,973,798 calls, approximately 78.45%. These include repeated readwrite gets and count puts/deletes. Parsing falls sharply between the tested builds while this volume barely changes.
+Main/offline review preserved C14 ownership, bounded storage, primary journals, multiplicity, per-file publication and existing source/acquisition/recovery boundaries. New test helpers use existing portable/browser/native process/target guards. Native pass now requires all independent cleanup owners and confirmed controller removal; outer transport failures cancel/join owned cleanup with a bounded lifetime. Normal and deliberate fault runs verified these paths. The temporary plan marker is removed.
 
-Important limits: those are late-attached, separately instrumented diagnostics; neither reached formal completion. Their unsaved peaks are larger than the unprofiled runs. They do not measure exclusive CPU by store, do not establish an unchanged-projection hit rate, and do not promise 78% CPU savings. Their candidate is the older `c4a656b`, not the accepted final #201 runtime. Current main retains the relevant ordinary-activation mechanism, verified during preparation; reproduce and measure it on this assignment's actual base.
+Raw traces/source snapshots/builds remain private TEMP under kplex-204-validation, kplex-dependency-count-reuse-lDO9Af (corrected full), and kplex-dependency-count-reuse-wbKzGF (corrected late). Do not publish vault data or raw logs. Other historical failures and receipt identities remain in the durable report.
 
-Current source evidence:
+Renderer CPU excludes Browser/storage-process CPU; no exclusive-store CPU, allocation/true-peak, equivalent physical storage/OS cache/heap or whole-vault saving is established. Windows automation does not prove physical touch/mobile/Mac behavior. This is a narrow dependency-count improvement; the broader indexing CPU objective remains open.
 
-- `SourceRepository.write()` streams dependency memberships, their record count and rolling digest while staging new immutable rows. It does not retain a whole-source key set.
-- `activate()` selects the new source head and local owner atomically. Ordinary activation creates an old-decrement/new-increment repair journal whenever either side has records.
-- `repairLocalDependencies()` reads each old/new membership and its selected key count, updates that count, and deletes old rows after the decrement. Progress is journaled in bounded transactions.
-- Optional URL-alias upgrade already checks exact selected-owner/version/record-count/digest equivalence, preserves counts and uses a private reclaim marker for old rows.
-- The alias path has extra semantics: optional failures do not mask primary facts and its primary mutation ticket is acquired differently. **Do not label ordinary writes as alias upgrades or copy those weaker/different failure semantics into normal acquisition.**
+PR #203 and its Mac experiment, branch, candidate selection, instructions, files and agent are completely untouched. No measurements were requested from it.
 
-A replacement may need a new source revision while its projected dependency contributions remain the same. Determine when that happens in current production call paths. Count equality by itself is insufficient; unchanged file stats or graph-ready state are also insufficient. An identical projection is not proof that source facts, relation meaning, search labels or source authority are unchanged.
+## Next action
 
-This targets replacement work. Truly new owners still need their initial contribution counts; deletion and changed projections still need updates. Do not present the optimization as removing all cold-index storage work.
-
-## Read these owners and contracts before coding
-
-At the pinned base:
-
-- [SourceRepository.ts](https://github.com/zsviczian/kplex/blob/cd12a857c1c2c89c2d13f6c6b2a3e1a5203d5ffa/src/index/SourceRepository.ts): `write`, `activate`, `repairLocalDependencies`, `settleLocalDependencyWork`, `cleanupStagedLocalDependencies`, `canDeferPrivateRepair`, `ensureLocalDependencies`, and primary dependency mutation/ticket owners.
-- [SourceLocalDependencies.ts](https://github.com/zsviczian/kplex/blob/cd12a857c1c2c89c2d13f6c6b2a3e1a5203d5ffa/src/index/SourceLocalDependencies.ts): versioned owner/row/state/repair contracts and canonical membership projection. Memberships preserve occurrence multiplicity.
-- [sourceAcquisition.ts](https://github.com/zsviczian/kplex/blob/cd12a857c1c2c89c2d13f6c6b2a3e1a5203d5ffa/src/adapters/obsidian/sourceAcquisition.ts): actual replacement/reauthorization callers, host/native incarnation and observation revisions. Trace for evidence, not an invitation to alter event handling.
-- [SOURCE_REPOSITORY.md](https://github.com/zsviczian/kplex/blob/cd12a857c1c2c89c2d13f6c6b2a3e1a5203d5ffa/docs/SOURCE_REPOSITORY.md), `docs/INDEXING_ARCHITECTURE.md`, `docs/SOURCE_CONTRIBUTOR_DISCOVERY.md`, `docs/ARCHITECTURE.md` and the accepted checkpoint ledger.
-- [source-local-dependencies-indexeddb.test.mjs](https://github.com/zsviczian/kplex/blob/cd12a857c1c2c89c2d13f6c6b2a3e1a5203d5ffa/tests/source-local-dependencies-indexeddb.test.mjs): alias-proof rejection, private-marker closure, projection upgrades and existing interruption checkpoints.
-- `tests/source-startup-indexeddb.test.mjs`, `tests/source-indexeddb.test.mjs`, `tests/source-acquisition.test.mjs`, `tests/support/contributorBrowserFixture.mjs` and browser harness helpers.
-- Existing #201 test-only probes/checkpoint tools and `scripts/testing/obsidian/runner.mjs` / `processTools.mjs`. Reuse them only where appropriate; do not recreate the entire #201 measurement campaign.
-
-Follow current AGENTS/CONTRIBUTING/mixed-agent workflow and their source-comment/ownership requirements. C14 is accepted; structural refactoring remains paused.
-
-## Stage 1 — prove and quantify the opportunity
-
-1. Verify branch, base, dirty files, dependencies, Node 22.22.2 and actual browser/CLI access. Preserve merged #201 behaviour. Establish the current comparison baseline; do not reuse pre-#201 numbers as this task's baseline.
-2. Build a small production-owner characterization in real Chromium IndexedDB. Start with a fully selected, healthy dependency owner; run a genuine ordinary source replacement that advances the source revision while producing an identical current-version membership sequence. Verify the actual old/new keys and multiplicities outside timing. Count native get/put/delete/transaction work, separating staging, selected-count repair and inactive-row reclamation.
-3. Include changed-projection, first-creation, deletion and already-pending controls. Add shared keys across owners, repeated keys within one owner, nested tags, URL/origin contributions and enough rows to cross a 256-record page and a byte-boundary. A same-record-count/different-key case must not qualify.
-4. Add bounded test-only aggregate diagnostics at existing staging/activation/repair boundaries: attempted replacements, exact-projection matches, record-weighted matches, disqualification reasons and operations attributable to each phase. Do not retain private filenames/content or add a global per-source history. Avoid per-note logs, extra database reads or expensive serialization in timed runs. Detailed equality/oracle work can run separately.
-5. Exercise real source acquisition/reconciliation in the existing Windows disposable vault, including normal reload/reauthorization and genuine edits. Establish whether ordinary use reaches the characterized case, rather than relying solely on fabricated repository calls. Small fixture frequency is not a claim about the private Mac dataset.
-
-Produce an early go/no-go summary: actual mechanism, production trigger, candidate eligibility fraction and record-weighted fraction in the tested workload, removable work and safety preconditions. The report's 78.45% request share is motivation, not the measured removable bound. If there is no defensible opportunity, stop with evidence and a precise follow-up recommendation; do not spend the session on a new generic profiler.
-
-## Stage 2 — the smallest safe implementation
-
-If Stage 1 confirms meaningful removable work and sufficient proof, extend the existing activation boundary to preserve selected counts for eligible identical ordinary projections. Start with conservative eligibility and ordinary fallback for everything else. The existing alias path is a design reference, not a flag to misuse.
-
-Before coding the fast path, write down these invariants and check them against actual source:
-
-- The predecessor's selected source/head/sequence and local owner agree, the projection version is current, and its counts are already valid under the existing state/journal contract. All required old-state authentication remains. Do not trust only a stored digest if required validity evidence is absent.
-- The fully produced/staged new projection has matching record count and rolling digest under the same canonical projection and batching rules. Audit how ordering, byte boundaries and revision-string length affect the digest. Conservative false negatives are acceptable; unordered sets, count-only equality, extra global sorting or a changed digest/schema are not substitutes.
-- Recheck predecessor, journal, current/closed state and new staging completeness inside the activation transaction. No stale preflight receipt can authorize the final commit.
-- Publish the new source head, its actual families/sequence and new local-owner selection normally. Advance required revision/invalidations and preserve primary contributor tickets, host observation and closed-world lookup fences. The optimization changes count maintenance, not source authority or graph semantics.
-- Preserve exact membership multiplicity and counts shared by other sources. Do not deduplicate repeated contributions.
-- Account for memory/unsaved overlays, pending deletion, partially repaired counts, older projection formats, missing/corrupt state, concurrent writers and genuine changed memberships. Fallback must preserve existing conservative results and recovery, not silently certify an invalid selection.
-- Retire inactive rows with the existing bounded, durable private reclaim protocol. Ensure ordinary replacements actually invoke/schedule its owner and that later writes/restarts can settle it. Merely changing `needsRepair` is insufficient: `activate` and `write` currently distinguish alias repair/cleanup after commit.
-- No unbounded old-revision accumulation or hidden transfer of cost to the next restart/first interaction. Include reclaim work in the end-to-end result and test repeated eligible replacements.
-
-A schema change, new global proof cache, new scheduling owner or altered trust model requires a separate explicit design decision. Stop with the proposed design rather than implementing such a change here. Do not bypass checks to manufacture a fast-path hit rate.
-
-## Stage 3 — correctness, interruption and performance gates
-
-Extend existing tests rather than replacing accepted expectations. Required focused cases:
-
-- Eligible unchanged ordinary replacement advances the real head/owner and returns fresh source facts while preserving exact selected key counts; key-count writes caused solely by removing/readding identical contributions disappear. Test changed source data with the same dependency projection so the fast path cannot become source-update suppression.
-- Changed projection (including equal count/different keys), first owner, tombstone/recreation, rename/path-dependent keys and legacy projection upgrade retain correct maintenance. Alias-only upgrades retain their distinct no-primary-mask failure behaviour.
-- Multiple owners sharing keys and duplicates within an owner retain exact positive and negative lookup coverage, including tags/ancestors, canonical URL/origin keys, fields and resolver tokens.
-- Two independent connections competing on the same source; replacement after preflight; unrelated owner counts changing concurrently; stale source tickets; invalid state/digest/missing rows where the established reader contract requires rejection.
-- Cancellation/close/failure before staging, after a staged page, around activation and during private reclaim. Reopen the real database or browser process and prove counts are applied exactly once, selected rows survive, inactive rows are reclaimed and no stranded pending journal is introduced. Cover more than one page and repeated replacements.
-- Unsaved fallback, payload eviction, pending deletion and recovery continue to mask stale facts. The optimization cannot clear an unsaved mask or advance readiness to claim savings.
-- Navigation, relationship editing, search/aliases, early tag/folder availability, gate counts and provenance stay correct during background work as well as after closure. A source-storage optimization must not create extra parses, full rebuilds or foreground durability waits.
-
-Use `npm run test:sources`, `npm run test:sources:browser` and complete `npm run verify` with real dependencies/typings on Node 22.22.2. Stage the exact final artifact with `npm run verify:obsidian`, then run applicable SI4/SI5, foreground/live-update, ontology/interaction, tag/folder/gate and rename/recovery coverage serially. Scope the lanes to affected contracts; Small native tests are not large-vault or physical-device acceptance.
-
-For work/CPU comparison, prefer one deterministic repeated-replacement workload at 64/128/256 owners, with both dense/shared and mixed-change cases; use the established browser fixture for larger row counts. Do not create a new vault/profile without consent. Compare accepted base versus candidate with identical input and starting logical state, at least three paired trials for the representative workload. Run uninstrumented/lightweight timing separately from detailed counting. Record source activations, staging/repair/reclaim native calls, key writes, records/bytes, CPU/elapsed to complete maintenance, remaining journals/rows, memory and responsive action checks. Measure a later reopen and subsequent ordinary edit so deferred debt cannot masquerade as savings.
-
-Operation reduction is the primary causal proof; total CPU is an empirical result. Do not promise a whole-vault percentage, pool Mac/Windows figures, infer CPU shares from request shares, or spend another open-ended session trying to obtain perfect process-exit accounting. Disclose actual CPU coverage/foreground/observer limits, preserve all runs, and give no clean performance pass to incomplete data. No new arbitrary overall 50% acceptance threshold: show exactly which work was removed and whether representative end-to-end cost improved without changed-path/interactive regression.
-
-## Windows safety and excluded work
-
-Use the existing prepared `C:\Obsidian\kplex-test-small` (functional) and, only after verifying actual fixture contents, `C:\Obsidian\kplex-test` (scale). Require matching explicit vault name/path/config variables and real-path validation. Use `Obsidian.com` through shared helpers. Keep raw traces in private TEMP storage and deterministic synthetic fixtures out of personal vaults. Back up and restore test-owned configuration/database state under existing guards; no global/origin-wide reset. Ask before application-wide restart if other vaults are open. Browser-process restart coverage can proceed without interrupting production Obsidian.
-
-Out of scope: #203 measurements or raw private data; production-vault use; the `adoptStartupSources` incomplete-state fix; metadata-watchdog policy; broad event/reconciliation restart design; arbitrary storage-failure fixes; adjacency/evidence representation; new cache/schema/scheduler/concurrency budgets; release/default changes. Record related observations separately without bundling their fixes.
-
-## Delivery and stopping
-
-- [ ] Verify accepted baseline and reproduce ordinary unchanged-projection maintenance with counts and a real caller.
-- [ ] Report go/no-go and eligibility/savings bounds; implement only the proved narrow optimization.
-- [ ] Pass focused crash/recovery/parity and negative controls; measure complete staging/repair/reclaim cost.
-- [ ] Complete real verification and exact-artifact Windows interaction/recovery checks; independently restore owned state.
-- [ ] Return code, evidence, limitations and an actionable merge/no-go recommendation on this branch.
-
-Keep one runtime change per independently validated checkpoint. Preserve the single transient handoff header; accepted sanitized evidence belongs in a focused `docs/validation/` report and this PR. Remove the temporary plan marker before final review. Use the repository's mixed-agent publication authority: an offline implementation return does not authorize commit/push/PR updates; the main validation agent publishes only under maintainer authority. Do not merge/release or write main. Identify comments as **Zsolt's Codex Agent**.
-
-The final summary must answer: which ordinary trigger repeated unchanged bookkeeping; how often eligibility occurred in the tested workload; which checks made reuse safe; actual before/after operations and CPU including reclamation; whether new/changed/deleted cases and interaction remain correct; and what is still unknown about real-vault impact. Do not claim #203's heat, unsaved tail or startup-completion defect has been fixed by this work.
-
-Preparation checked repository permissions, main/#201 state, related work, the pinned interim report, current source, existing regression fixtures and workflow. It changed documentation only. No runtime test, build, deployment, benchmark or code optimization is claimed at this stage.
+Verify this branch's publication and CI at its final head; record the actual checks in draft #204. Maintainer reviews the scoped improvement and stated limits. No further optimization, merge, release, main writes or #203 work is authorized here. This handoff remains transient; overwrite this body for the next assignment while preserving the standing header.

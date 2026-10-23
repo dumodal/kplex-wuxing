@@ -228,6 +228,271 @@ const repairBrowserInitialize = `(() => {
   return true;
 })()`;
 
+/** Ordinary source revisions retain fresh facts while authenticated equal projections avoid count churn. */
+test("ordinary count reuse authenticates complete projections and reclaims old records", { timeout: 180_000 }, async t => {
+  const browser = await chromiumHarness(bundle);
+  try {
+    assert.equal(await browser.evaluate(contributorBrowserInitialize), true);
+    assert.equal(await browser.evaluate(repairBrowserInitialize), true);
+
+    await t.test("fresh facts, shared keys and cross-page duplicates preserve exact counts", async () => {
+      assert.equal(await browser.evaluate(`(async()=>{
+        const M=sourceModules,cache=new M.KplexIndexedDbCache('ordinary-count-reuse-fresh'),r=cache.sources;
+        try{
+          const db=await cache.open();
+          for(const id of ['A.md','B.md'])equal((await r.replace(await r1Input(r,id,'shared-',700,300))).outcome,'activated','Seed owner');
+          equal(await r.completeLocalDependencyInventory(),'ready','Close selected counts');
+          const before=(await r.inspect('A.md')).head,keysBefore=await value(db.transaction(M.SOURCE_LOCAL_KEY_STORE).objectStore(M.SOURCE_LOCAL_KEY_STORE).getAll());
+          const input=await r1Input(r,'A.md','shared-',700,300),produce=input.families.metadata;
+          input.families.metadata=/** Fresh source casing changes facts without changing normalized memberships. */emit=>produce(fact=>emit({...fact,fieldName:fact.fieldName.toUpperCase()}));
+          const put=IDBObjectStore.prototype.put,del=IDBObjectStore.prototype.delete,indexCount=IDBIndex.prototype.count;let keyWrites=0,reclaimDeletes=0,sourceKeyCounts=0;
+          IDBIndex.prototype.count=/** Each source-distinct key range is counted only once despite cross-page duplicates. */function(...args){if(this.objectStore.name===M.SOURCE_LOCAL_DEPENDENCY_STORE)sourceKeyCounts++;return indexCount.apply(this,args);};
+          IDBObjectStore.prototype.put=/** Count selected-key writes without retaining source content. */function(...args){if(this.name===M.SOURCE_LOCAL_KEY_STORE)keyWrites++;return put.apply(this,args);};
+          IDBObjectStore.prototype.delete=/** Include inactive row reclamation in the measured operation boundary. */function(...args){if(this.name===M.SOURCE_LOCAL_KEY_STORE)keyWrites++;if(this.name===M.SOURCE_LOCAL_DEPENDENCY_STORE)reclaimDeletes++;return del.apply(this,args);};
+          let result;try{result=await r.replace(input);}finally{IDBObjectStore.prototype.put=put;IDBObjectStore.prototype.delete=del;IDBIndex.prototype.count=indexCount;}
+          equal(sourceKeyCounts,702,'One full range count per source-distinct key, not per page');
+          equal(result.outcome,'activated','Ordinary replacement activates');equal(keyWrites,0,'Identical projection performs no selected-key writes');
+          const after=(await r.inspect('A.md')).head;ok(after.sourceRevision!==before.sourceRevision&&after.sequence>before.sequence,'Actual source authority advances');
+          const facts=[];equal(await r.visit('A.md','metadata',rows=>{facts.push(...rows);return true;}),'ready','Read fresh facts');equal(facts[0].fieldName,'SHARED-0','Fresh source payload is not suppressed');
+          equal(await value(db.transaction(M.SOURCE_LOCAL_KEY_STORE).objectStore(M.SOURCE_LOCAL_KEY_STORE).getAll()),keysBefore,'All shared and repeated counts stay byte-exact');
+          equal(reclaimDeletes,1001,'Every old membership is reclaimed before return');
+          equal(await value(db.transaction(M.SOURCE_LOCAL_DEPENDENCY_STORE).objectStore(M.SOURCE_LOCAL_DEPENDENCY_STORE).index(M.SOURCE_LOCAL_REVISION_INDEX).count(IDBKeyRange.only(['A.md',before.sourceRevision]))),0,'No inactive row debt');
+          equal(await value(db.transaction(M.SOURCE_LOCAL_REPAIR_STORE).objectStore(M.SOURCE_LOCAL_REPAIR_STORE).get('A.md')),undefined,'Private reclaim marker retired');
+          const key=M.sourceLocalDependencyKey('field','shared-repeat'),lookup=await r.lookupLocalDependencies([key]);equal(lookup.outcome,'ready','Authenticated duplicate lookup');equal(lookup.value.sources.map(source=>source.head.sourceId),['A.md','B.md'],'Both selected owners remain visible');
+          equal((await value(db.transaction(M.SOURCE_LOCAL_KEY_STORE).objectStore(M.SOURCE_LOCAL_KEY_STORE).get(key))).count,600,'Multiplicity is not deduplicated');
+          equal((await r.tombstone('A.md')).outcome,'activated','Deletion uses real decrements');equal((await value(db.transaction(M.SOURCE_LOCAL_KEY_STORE).objectStore(M.SOURCE_LOCAL_KEY_STORE).get(key))).count,300,'Shared owner survives deletion');
+          equal((await r.replace(await r1Input(r,'A.md','shared-',700,300))).outcome,'activated','Tombstone recreation increments normally');equal((await value(db.transaction(M.SOURCE_LOCAL_KEY_STORE).objectStore(M.SOURCE_LOCAL_KEY_STORE).get(key))).count,600,'Recreation restores exact counts');
+          return true;
+        }finally{cache.close();}
+      })()`), true);
+    });
+
+    await t.test("equal record counts with different keys and byte-boundary digest changes use ordinary repair", async () => {
+      assert.equal(await browser.evaluate(`(async()=>{
+        const M=sourceModules;
+        for(const mode of ['different-key','revision-bytes']){
+          const cache=new M.KplexIndexedDbCache('ordinary-count-reuse-fallback-'+mode),db=await cache.open();let longRevision=false;
+          const r=mode==='revision-bytes'?new M.NeutralSourceRepository({open:async()=>db,failed:()=>{}},{...M.sourceRepositoryRuntime(),uniqueId:()=>longRevision?'r'.repeat(200):'s'}):cache.sources;
+          try{
+            const prefix=mode==='revision-bytes'?'field-'+('x'.repeat(1500)):'old-',count=mode==='revision-bytes'?300:10;
+            equal((await r.replace(await r1Input(r,'A.md',prefix,count))).outcome,'activated','Seed projection');equal(await r.completeLocalDependencyInventory(),'ready','Close counts');
+            const before=await value(db.transaction(M.SOURCE_LOCAL_OWNER_STORE).objectStore(M.SOURCE_LOCAL_OWNER_STORE).get('A.md'));longRevision=true;
+            const put=IDBObjectStore.prototype.put,del=IDBObjectStore.prototype.delete;let writes=0;
+            IDBObjectStore.prototype.put=/** Count all ledger puts in ordinary fallback. */function(...args){if(this.name===M.SOURCE_LOCAL_KEY_STORE)writes++;return put.apply(this,args);};
+            IDBObjectStore.prototype.delete=/** Include zero-count removals in ordinary fallback. */function(...args){if(this.name===M.SOURCE_LOCAL_KEY_STORE)writes++;return del.apply(this,args);};
+            try{equal((await r.replace(await r1Input(r,'A.md',mode==='different-key'?'new-':prefix,count))).outcome,'activated','Fallback selects fresh source');}finally{IDBObjectStore.prototype.put=put;IDBObjectStore.prototype.delete=del;}
+            const after=await value(db.transaction(M.SOURCE_LOCAL_OWNER_STORE).objectStore(M.SOURCE_LOCAL_OWNER_STORE).get('A.md'));
+            equal(after.records,before.records,'Control has identical record count');ok(after.digest!==before.digest,'Control changes authenticated digest');equal(writes,2*before.records,'Fallback performs complete decrement/increment maintenance');
+            equal((await r.lookupLocalDependencies([M.sourceLocalDependencyKey('field',mode==='different-key'?'old-0':prefix+'0')])).outcome,'ready','Positive/negative counts remain authenticated');
+          }finally{r.close();cache.close();}
+        }
+        return true;
+      })()`), true);
+    });
+
+    await t.test("same-width UTF-8 projections reuse counts across original byte-limited pages", async () => {
+      assert.equal(await browser.evaluate(`(async()=>{
+        const M=sourceModules,cache=new M.KplexIndexedDbCache('ordinary-count-reuse-utf8-pages'),r=cache.sources;
+        try{
+          const db=await cache.open(),prefix='wide-'+('\\u6f22'.repeat(700))+('\\ud83d\\ude42'.repeat(100))+'-';ok(new TextEncoder().encode(prefix).length>prefix.length*2,'Fixture distinguishes UTF-8 bytes from string length');
+          equal((await r.replace(await r1Input(r,'A.md',prefix,300))).outcome,'activated','Seed wide memberships');equal(await r.completeLocalDependencyInventory(),'ready','Close wide selected counts');
+          const before=(await r.inspect('A.md')).head,ledger=await value(db.transaction(M.SOURCE_LOCAL_KEY_STORE).objectStore(M.SOURCE_LOCAL_KEY_STORE).getAll()),pages=[],authenticate=r.authenticateLocalCountReusePage;
+          const put=IDBObjectStore.prototype.put,del=IDBObjectStore.prototype.delete;let keyWrites=0,reclaimed=0;
+          r.authenticateLocalCountReusePage=/** Observe actual original-row proof page boundaries without changing results. */async function(...args){const first=args[1].verified,page=await authenticate.apply(this,args);if(page)pages.push({records:page.length,bytes:page.reduce((sum,key,index)=>sum+new TextEncoder().encode(JSON.stringify({version:1,sourceId:'A.md',sourceRevision:args[1].head.sourceRevision,index:first+index,key})).length+1,0)});return page;};
+          IDBObjectStore.prototype.put=/** Count every selected-key put across the successful wide projection replacement. */function(...args){if(this.name===M.SOURCE_LOCAL_KEY_STORE)keyWrites++;return put.apply(this,args);};
+          IDBObjectStore.prototype.delete=/** Include old membership reclamation and selected-key removals before return. */function(...args){if(this.name===M.SOURCE_LOCAL_KEY_STORE)keyWrites++;if(this.name===M.SOURCE_LOCAL_DEPENDENCY_STORE)reclaimed++;return del.apply(this,args);};
+          try{equal((await r.replace(await r1Input(r,'A.md',prefix,300))).outcome,'activated','Wide matching projection activates normally');}finally{r.authenticateLocalCountReusePage=authenticate;IDBObjectStore.prototype.put=put;IDBObjectStore.prototype.delete=del;}
+          const after=(await r.inspect('A.md')).head;equal(before.sourceRevision.length,36,'Original source uses standard UUID width');equal(after.sourceRevision.length,before.sourceRevision.length,'Replacement preserves revision byte width');ok(after.sourceRevision!==before.sourceRevision,'Actual wide source revision advances');
+          ok(pages.length>1&&pages.some(page=>page.records<M.SOURCE_MAX_BATCH_RECORDS),'Proof crosses byte boundaries before the record ceiling');ok(pages.every(page=>page.records<=M.SOURCE_MAX_BATCH_RECORDS&&page.bytes<=M.SOURCE_CHUNK_TARGET_BYTES),'Every observed proof page respects both normal bounds');
+          equal(pages.reduce((sum,page)=>sum+page.records,0),301,'Every original membership is authenticated exactly once');equal(keyWrites,0,'Byte-paged matching projection performs zero key writes');equal(reclaimed,301,'All old wide membership rows are reclaimed');
+          equal(await value(db.transaction(M.SOURCE_LOCAL_KEY_STORE).objectStore(M.SOURCE_LOCAL_KEY_STORE).getAll()),ledger,'Wide ledger is byte-exact after reuse');equal(await value(db.transaction(M.SOURCE_LOCAL_REPAIR_STORE).objectStore(M.SOURCE_LOCAL_REPAIR_STORE).get('A.md')),undefined,'Wide private reclaim journal retires');
+          equal(await value(db.transaction(M.SOURCE_LOCAL_DEPENDENCY_STORE).objectStore(M.SOURCE_LOCAL_DEPENDENCY_STORE).index(M.SOURCE_LOCAL_REVISION_INDEX).count(IDBKeyRange.only(['A.md',before.sourceRevision]))),0,'No old wide membership debt remains');return true;
+        }finally{cache.close();}
+      })()`), true);
+    });
+
+    await t.test("deferred authentication interruption preserves old authority and recovers staged rows once", async () => {
+      assert.equal(await browser.evaluate(`(async()=>{
+        const M=sourceModules;
+        for(const boundary of ['page','digest'])for(const mode of ['cancel','close','storage']){
+          const vault='ordinary-count-reuse-proof-stop-'+boundary+'-'+mode,cache=new M.KplexIndexedDbCache(vault),db=await cache.open(),seed=cache.sources;
+          let faultRepo;
+          try{
+            equal((await seed.replace(await r1Input(seed,'A.md','field-',700,300))).outcome,'activated','Seed authenticated multi-page predecessor');equal(await seed.completeLocalDependencyInventory(),'ready','Close predecessor counts');
+            const old=(await seed.inspect('A.md')).head,ledger=await value(db.transaction(M.SOURCE_LOCAL_KEY_STORE).objectStore(M.SOURCE_LOCAL_KEY_STORE).getAll()),control={live:true,hit:false,auth:false,pages:0,failures:0},base=M.sourceRepositoryRuntime();
+            const interrupt=/** Apply one caller, repository-lifetime or real native-handle interruption. */()=>{if(control.hit)return;control.hit=true;if(mode==='cancel')control.live=false;else if(mode==='close')faultRepo.close();else db.close();};
+            const runtime={...base,digest:/** Interrupt the proof hash only after actual first-page authentication has returned. */async text=>{const digest=await base.digest(text);if(boundary==='digest'&&control.auth)interrupt();return digest;}};
+            faultRepo=new M.NeutralSourceRepository({open:async()=>db,failed:()=>{control.failures++;},unavailableReason:()=> 'storage-unavailable'},runtime);
+            const authenticate=faultRepo.authenticateLocalCountReusePage;
+            faultRepo.authenticateLocalCountReusePage=/** Retain the real IDB page result, then interrupt at its completed transaction boundary. */async function(...args){const page=await authenticate.apply(this,args);if(page){control.pages++;control.auth=true;if(boundary==='page')interrupt();}return page;};
+            const result=await faultRepo.replace(await r1Input(faultRepo,'A.md','field-',700,300),()=>control.live);
+            ok(control.hit&&control.pages===1,'Exact first authentication boundary reached for '+boundary+'/'+mode);
+            if(mode==='storage'){
+              equal(result.outcome,'unsaved','Closed actual IDB handle retains ordinary source fallback');equal(result.sequence,null,'Storage fallback has no false durable sequence');ok(faultRepo.getDiagnostics().unsaved>0&&control.failures>0,'Normal unsaved mask and storage failure owner remain active');
+              const masked=await faultRepo.inspect('A.md');equal(masked.saved,false,'Old disk head is masked by the ordinary unsaved replacement');ok(masked.head&&masked.head.sourceRevision!==old.sourceRevision,'Unsaved current facts remain distinct from old durable authority');
+            }else equal(result.outcome,'cancelled','Interrupted proof cannot select a durable head');
+            faultRepo.close();cache.close();
+            const reopened=new M.KplexIndexedDbCache(vault),next=await reopened.open(),r=reopened.sources;
+            try{
+              equal(await value(next.transaction('sourceHeads').objectStore('sourceHeads').get('A.md')),old,'Reopen sees the exact old selected head after '+boundary+'/'+mode);equal(await value(next.transaction(M.SOURCE_LOCAL_KEY_STORE).objectStore(M.SOURCE_LOCAL_KEY_STORE).getAll()),ledger,'Old selected counts were never decremented or incremented');
+              const state=await value(next.transaction('meta').objectStore('meta').get(M.SOURCE_LOCAL_DEPENDENCY_STATE_KEY));equal(state.pending,0,'No selected count-repair journal was introduced by a failed proof');
+              const marker=await value(next.transaction(M.SOURCE_LOCAL_REPAIR_STORE).objectStore(M.SOURCE_LOCAL_REPAIR_STORE).get('A.md')),staged=marker?.fromRevision;let stagedDeletes=0;const del=IDBObjectStore.prototype.delete;
+              if(marker)ok(marker.fromRevision===marker.toRevision&&marker.fromRevision!==old.sourceRevision&&marker.fromIndex===0&&marker.toIndex===0&&marker.fromRecords===1001,'Only the fully staged unselected revision remains private');
+              IDBObjectStore.prototype.delete=/** Count cleanup of the exact interrupted staging revision separately from predecessor reclaim. */function(key,...args){if(this.name===M.SOURCE_LOCAL_DEPENDENCY_STORE&&Array.isArray(key)&&key[0]==='A.md'&&key[1]===staged)stagedDeletes++;return del.call(this,key,...args);};
+              try{equal((await r.replace(await r1Input(r,'A.md','field-',700,300))).outcome,'activated','Fresh next edit settles prior private staging and its own normal ticket');}finally{IDBObjectStore.prototype.delete=del;}
+              equal(stagedDeletes,marker?1001:0,'Interrupted staging is deleted exactly once');equal(await value(next.transaction(M.SOURCE_LOCAL_KEY_STORE).objectStore(M.SOURCE_LOCAL_KEY_STORE).getAll()),ledger,'Successful retry preserves exact old contributions');equal(await value(next.transaction(M.SOURCE_LOCAL_REPAIR_STORE).objectStore(M.SOURCE_LOCAL_REPAIR_STORE).get('A.md')),undefined,'No stranded private or selected journal remains');
+              const selected=(await r.inspect('A.md')).head,rows=await value(next.transaction(M.SOURCE_LOCAL_DEPENDENCY_STORE).objectStore(M.SOURCE_LOCAL_DEPENDENCY_STORE).getAll());equal(rows.length,1001,'Only one complete membership revision remains');equal([...new Set(rows.map(row=>row.sourceRevision))],[selected.sourceRevision],'Old and interrupted revisions are both reclaimed');
+              equal((await r.lookupLocalDependencies([M.sourceLocalDependencyKey('field','field-repeat')])).outcome,'ready','Duplicate counts remain authenticated after reopen and next edit');
+            }finally{reopened.close();}
+          }finally{faultRepo?.close();cache.close();}
+        }
+        return true;
+      })()`), true);
+    });
+
+    await t.test("a last-key projection change incurs zero old-row authentication", async () => {
+      assert.equal(await browser.evaluate(`(async()=>{
+        const M=sourceModules,cache=new M.KplexIndexedDbCache('ordinary-count-reuse-late-change'),r=cache.sources;
+        try{
+          await cache.open();equal((await r.replace(await r1Input(r,'A.md','field-',700))).outcome,'activated','Seed long predecessor');equal(await r.completeLocalDependencyInventory(),'ready','Close selected counts');
+          const input=await r1Input(r,'A.md','field-',700),produce=input.families.metadata;
+          input.families.metadata=/** Change only the final membership after an otherwise identical long prefix. */emit=>produce(fact=>emit(fact.normalizedFieldName==='field-699'?{...fact,fieldName:'changed-last',normalizedFieldName:'changed-last'}:fact));
+          const authenticate=r.authenticateLocalCountReuse,put=IDBObjectStore.prototype.put,del=IDBObjectStore.prototype.delete;let authentications=0,writes=0;
+          r.authenticateLocalCountReuse=/** Observe the real proof owner without altering its result or arguments. */async function(...args){authentications++;return authenticate.apply(this,args);};
+          IDBObjectStore.prototype.put=/** Include every ordinary fallback count mutation. */function(...args){if(this.name===M.SOURCE_LOCAL_KEY_STORE)writes++;return put.apply(this,args);};
+          IDBObjectStore.prototype.delete=/** Include fallback zero-count deletions as mutations. */function(...args){if(this.name===M.SOURCE_LOCAL_KEY_STORE)writes++;return del.apply(this,args);};
+          try{equal((await r.replace(input)).outcome,'activated','Changed last key publishes normally');}finally{r.authenticateLocalCountReuse=authenticate;IDBObjectStore.prototype.put=put;IDBObjectStore.prototype.delete=del;}
+          equal(authentications,0,'Final digest mismatch avoids all old-row authentication');equal(writes,1402,'Changed projection retains full ordinary decrement/increment maintenance');
+          const old=await r.lookupLocalDependencies([M.sourceLocalDependencyKey('field','field-699')]),fresh=await r.lookupLocalDependencies([M.sourceLocalDependencyKey('field','changed-last')]);
+          equal(old.outcome,'ready','Removed key has authoritative negative');equal(old.value.sources,[],'Old final key no longer contributes');equal(fresh.outcome,'ready','New final key has authoritative owner');equal(fresh.value.sources.map(source=>source.head.sourceId),['A.md'],'Fresh final key belongs to the replacement');return true;
+        }finally{cache.close();}
+      })()`), true);
+    });
+
+    await t.test("missing old rows and invalid or understated duplicate ledgers cannot certify reuse", async () => {
+      assert.equal(await browser.evaluate(`(async()=>{
+        const M=sourceModules;
+        for(const mode of ['missing-row','corrupt-row','missing-key','zero-key','duplicate-underflow','stale-owner','corrupt-digest']){
+          const cache=new M.KplexIndexedDbCache('ordinary-count-reuse-invalid-'+mode),db=await cache.open(),r=cache.sources;
+          try{
+            equal((await r.replace(await r1Input(r,'A.md','field-',10,300))).outcome,'activated','Seed duplicate owner');equal(await r.completeLocalDependencyInventory(),'ready','Close counts');
+            const old=await value(db.transaction(M.SOURCE_LOCAL_OWNER_STORE).objectStore(M.SOURCE_LOCAL_OWNER_STORE).get('A.md')),key=M.sourceLocalDependencyKey('field','field-repeat');
+            await edit(db,[M.SOURCE_LOCAL_DEPENDENCY_STORE,M.SOURCE_LOCAL_KEY_STORE,M.SOURCE_LOCAL_OWNER_STORE],async tx=>{
+              if(mode==='missing-row')tx.objectStore(M.SOURCE_LOCAL_DEPENDENCY_STORE).delete(['A.md',old.sourceRevision,1]);
+              if(mode==='corrupt-row'){const store=tx.objectStore(M.SOURCE_LOCAL_DEPENDENCY_STORE),row=await value(store.get(['A.md',old.sourceRevision,1]));store.put({...row,unexpected:true});}
+              if(mode==='missing-key')tx.objectStore(M.SOURCE_LOCAL_KEY_STORE).delete(key);
+              if(mode==='zero-key'||mode==='duplicate-underflow')tx.objectStore(M.SOURCE_LOCAL_KEY_STORE).put({version:1,key,count:mode==='zero-key'?0:1});
+              if(mode==='stale-owner')tx.objectStore(M.SOURCE_LOCAL_OWNER_STORE).put({...old,sequence:old.sequence+1});
+              if(mode==='corrupt-digest')tx.objectStore(M.SOURCE_LOCAL_OWNER_STORE).put({...old,digest:'0'.repeat(64)});
+            });
+            const phases=[],checkpoint=r.runtime.localDependencyCheckpoint;r.runtime={...r.runtime,localDependencyCheckpoint:point=>{phases.push(point);checkpoint?.(point);}};
+            await r.replace(await r1Input(r,'A.md','field-',10,300));
+            ok(!phases.includes('after-local-reclaim-page'),'Corrupt predecessor does not take private count reuse: '+mode);
+            if(!['stale-owner','corrupt-digest'].includes(mode)){
+              const state=await value(db.transaction('meta').objectStore('meta').get(M.SOURCE_LOCAL_DEPENDENCY_STATE_KEY));ok(state.pending>0,'Ordinary failed repair remains pending: '+mode);
+              ok((await r.lookupLocalDependencies([key])).outcome!=='ready','Corruption never opens closed-world lookup: '+mode);
+            }
+          }finally{cache.close();}
+        }
+        return true;
+      })()`), true);
+    });
+
+    await t.test("label-only URL edits retain canonical URLs, origins and nested tag ownership", async () => {
+      assert.equal(await browser.evaluate(`(async()=>{
+        const M=sourceModules,f=await fixture('ordinary-count-reuse-url-tags');
+        try{
+          for(const id of ['A.md','B.md']){f.add(id,'[First](https://example.com/path)',{tags:['project/nested/leaf']});f.metadata.get(id).hostTags=['#project/nested/leaf'];}
+          await f.acquire();ok(await f.acquisition.reconcile(),'Close canonical tag/URL owners');
+          const r=f.repository,db=await f.cache.open(),selected=await r.inspect('A.md'),urls=[];equal(await r.visit('A.md','body-urls',rows=>{urls.push(...rows);return true;}),'ready','Read genuine URL source');
+          const before=await value(db.transaction(M.SOURCE_LOCAL_KEY_STORE).objectStore(M.SOURCE_LOCAL_KEY_STORE).getAll()),put=IDBObjectStore.prototype.put,del=IDBObjectStore.prototype.delete;let keyWrites=0;
+          IDBObjectStore.prototype.put=/** Count selected-key puts around the ordinary label edit. */function(...args){if(this.name===M.SOURCE_LOCAL_KEY_STORE)keyWrites++;return put.apply(this,args);};
+          IDBObjectStore.prototype.delete=/** Count selected-key deletions around the ordinary label edit. */function(...args){if(this.name===M.SOURCE_LOCAL_KEY_STORE)keyWrites++;return del.apply(this,args);};
+          let result;try{result=await r.replace({sourceId:'A.md',expected:selected.expected,physical:{...selected.head.physical,mtime:selected.head.physical.mtime+1},observation:{...selected.head.observation,revision:selected.head.observation.revision+1},
+            families:{...selected.head.families,'body-urls':async emit=>{for(const record of urls)if(!await emit({...record,label:'Changed label'}))return false;return true;}}});}finally{IDBObjectStore.prototype.put=put;IDBObjectStore.prototype.delete=del;}
+          equal(result.outcome,'activated','Ordinary URL label source edit publishes');equal(keyWrites,0,'URL label edit reuses selected counts');equal(await value(db.transaction(M.SOURCE_LOCAL_KEY_STORE).objectStore(M.SOURCE_LOCAL_KEY_STORE).getAll()),before,'Shared URLs, origins and tags preserve all occurrence counts');
+          const fresh=[];await r.visit('A.md','body-urls',rows=>{fresh.push(...rows);return true;});equal(fresh[0].label,'Changed label','Fresh URL label remains available');
+          for(const node of ['https://example.com/path','https://example.com','tag:project','tag:project/nested']){const lookup=await r.lookupLocalDependencies([M.sourceLocalDependencyKey('node',node)]);equal(lookup.outcome,'ready','Canonical lookup remains authenticated');equal(lookup.value.sources.map(source=>source.head.sourceId),['A.md','B.md'],'Both contributors survive '+node);}
+          return true;
+        }finally{f.close();}
+      })()`), true);
+    });
+
+    await t.test("activation rechecks unrelated ledger changes and another connection's winning source", async () => {
+      assert.equal(await browser.evaluate(`(async()=>{
+        const M=sourceModules;
+        for(const mode of ['unrelated-owner','same-source']){
+          const vault='ordinary-count-reuse-concurrent-'+mode,cache=new M.KplexIndexedDbCache(vault),r=cache.sources,db=await cache.open();
+          for(const id of ['A.md','B.md'])equal((await r.replace(await r1Input(r,id,'shared-',10,3))).outcome,'activated','Seed concurrent owner');equal(await r.completeLocalDependencyInventory(),'ready','Close concurrent state');
+          const connection=new M.KplexIndexedDbCache(vault);await connection.open();const other=connection.sources,activate=r.activate;let interfered=false;
+          try{
+            r.activate=/** Advance a genuine independent connection after streamed proof but before final CAS. */async function(...args){if(!interfered){interfered=true;equal((await other.replace(await r1Input(other,mode==='same-source'?'A.md':'B.md',mode==='same-source'?'winner-':'shared-',10,3))).outcome,'activated','Independent writer commits');}return activate.apply(this,args);};
+            const put=IDBObjectStore.prototype.put,del=IDBObjectStore.prototype.delete;let keyWrites=0;
+            IDBObjectStore.prototype.put=/** Count all selected-key puts across the controlled interleave. */function(...args){if(this.name===M.SOURCE_LOCAL_KEY_STORE)keyWrites++;return put.apply(this,args);};
+            IDBObjectStore.prototype.delete=/** Count all selected-key deletions across the controlled interleave. */function(...args){if(this.name===M.SOURCE_LOCAL_KEY_STORE)keyWrites++;return del.apply(this,args);};
+            let result;try{result=await r.replace(await r1Input(r,'A.md','shared-',10,3));}finally{IDBObjectStore.prototype.put=put;IDBObjectStore.prototype.delete=del;}
+            if(mode==='unrelated-owner'){equal(result.outcome,'activated','Original source CAS remains valid');equal(keyWrites,28,'Changed global ledger revision forces full ordinary fallback');}
+            else{equal(result.outcome,'superseded','Another source head/ticket cannot be bypassed');const fresh=[];await other.visit('A.md','metadata',rows=>{fresh.push(...rows);return true;});equal(fresh[0].fieldName,'winner-0','Only the winning source is published');}
+            equal((await other.lookupLocalDependencies([M.sourceLocalDependencyKey('field','shared-repeat')])).outcome,'ready','Interleaved exact counts remain readable');
+          }finally{r.activate=activate;connection.close();cache.close();}
+        }
+        return true;
+      })()`), true);
+    });
+
+    await t.test("unclosed, old-format and unsaved selections fall back, and eligible staging cancellation keeps old authority", async () => {
+      assert.equal(await browser.evaluate(`(async()=>{
+        const M=sourceModules;
+        for(const mode of ['incomplete','old-state','pending','unsaved','cancel-before','cancel-page']){
+          const cache=new M.KplexIndexedDbCache('ordinary-count-reuse-state-'+mode),db=await cache.open(),seed=cache.sources;
+          try{
+            equal((await seed.replace(await r1Input(seed,'A.md','field-',300,3))).outcome,'activated','Seed gated owner');equal(await seed.completeLocalDependencyInventory(),'ready','Close owner');
+            const before=(await seed.inspect('A.md')).head;
+            if(['incomplete','old-state','pending'].includes(mode))await edit(db,['meta'],async tx=>{const store=tx.objectStore('meta'),state=await value(store.get(M.SOURCE_LOCAL_DEPENDENCY_STATE_KEY));store.put({...state,...(mode==='incomplete'?{complete:false}:mode==='old-state'?{version:2}:{pending:1})});});
+            const replacement=await r1Input(seed,'A.md','field-',300,3);if(mode==='unsaved')seed.unsaved.add('A.md');
+            if(mode.startsWith('cancel-')){
+              const session=await r1FaultSession(cache,mode==='cancel-before'?'before-local-staging':'after-local-staging-page','cancel'),result=await r1Run(session,await r1Input(session.repository,'A.md','field-',300,3));
+              equal(result.outcome,'cancelled','Caller cancellation remains terminal');equal((await seed.inspect('A.md')).head,before,'Cancelled streamed proof cannot publish a head');
+              equal((await seed.replace(await r1Input(seed,'A.md','field-',300,3))).outcome,'activated','Fresh retry owns normal primary ticket');
+            }else{
+              const put=IDBObjectStore.prototype.put,del=IDBObjectStore.prototype.delete;let writes=0;
+              IDBObjectStore.prototype.put=/** Record all key puts when the current selection is ineligible. */function(...args){if(this.name===M.SOURCE_LOCAL_KEY_STORE)writes++;return put.apply(this,args);};
+              IDBObjectStore.prototype.delete=/** Record key deletions as part of normal fallback. */function(...args){if(this.name===M.SOURCE_LOCAL_KEY_STORE)writes++;return del.apply(this,args);};
+              try{equal((await seed.replace(replacement)).outcome,'activated','Conservative fallback remains writable '+mode);}finally{IDBObjectStore.prototype.put=put;IDBObjectStore.prototype.delete=del;}
+              equal(writes,608,'Ineligible selection retains every count decrement/increment');
+            }
+          }finally{cache.close();}
+        }
+        return true;
+      })()`), true);
+    });
+
+    await t.test("reclaim interruption survives reopen and later edit and deletion without deferred count work", async () => {
+      assert.equal(await browser.evaluate(`(async()=>{
+        const M=sourceModules;
+        for(const phase of ['after-local-activation','after-local-reclaim-page']){
+          const vault='ordinary-count-reuse-reclaim-'+phase,cache=new M.KplexIndexedDbCache(vault),db=await cache.open(),seed=cache.sources;
+          equal((await seed.replace(await r1Input(seed,'A.md','field-',700,300))).outcome,'activated','Seed multi-page owner');equal(await seed.completeLocalDependencyInventory(),'ready','Close counts');
+          const old=(await seed.inspect('A.md')).head,session=await r1FaultSession(cache,phase),result=await r1Run(session,await r1Input(session.repository,'A.md','field-',700,300));
+          equal(result.outcome,'activated','Head commits before controlled close');ok(session.control.hit,'Requested durable checkpoint reached');
+          const marker=await value(db.transaction(M.SOURCE_LOCAL_REPAIR_STORE).objectStore(M.SOURCE_LOCAL_REPAIR_STORE).get('A.md'));ok(marker&&marker.fromRevision===old.sourceRevision&&marker.fromIndex===marker.fromRecords,'Inactive private marker survives close');
+          if(phase==='after-local-reclaim-page')equal(marker.toIndex,256,'Exact first reclaim page commits');cache.close();
+          const reopened=new M.KplexIndexedDbCache(vault),next=await reopened.open(),r=reopened.sources;
+          try{
+            const key=M.sourceLocalDependencyKey('field','field-repeat');equal((await r.lookupLocalDependencies([key])).outcome,'ready','Closed selected counts survive inactive reclaim debt');
+            equal((await r.replace(await r1Input(r,'A.md','field-',700,300))).outcome,'activated','Subsequent replacement drains prior debt and reclaims its own predecessor');
+            equal(await value(next.transaction(M.SOURCE_LOCAL_REPAIR_STORE).objectStore(M.SOURCE_LOCAL_REPAIR_STORE).get('A.md')),undefined,'No accumulated private journal');
+            const selected=(await r.inspect('A.md')).head,rows=await value(next.transaction(M.SOURCE_LOCAL_DEPENDENCY_STORE).objectStore(M.SOURCE_LOCAL_DEPENDENCY_STORE).getAll());equal([...new Set(rows.map(row=>row.sourceRevision))],[selected.sourceRevision],'Only current revision remains after repeated reuse');
+            equal((await r.tombstone('A.md')).outcome,'activated','Deletion after restart settles exact contribution');equal((await r.lookupLocalDependencies([key])).outcome,'ready','Deletion keeps authoritative negatives');
+            equal(await value(next.transaction(M.SOURCE_LOCAL_KEY_STORE).objectStore(M.SOURCE_LOCAL_KEY_STORE).count()),0,'No repeated count debt after deletion');
+          }finally{reopened.close();}
+        }
+        return true;
+      })()`), true);
+    });
+  } finally { await browser.cleanup(); }
+});
+
 test("source-local semantic dependencies are incrementally activated, reusable, and bounded", { timeout: 300_000 }, async t => {
   const browser = await chromiumHarness(bundle);
   try {
