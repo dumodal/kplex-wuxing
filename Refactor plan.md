@@ -5683,3 +5683,13 @@ Brain stayed off. Crash preserved; isolated crashed-Small reload recovered, subs
 passes. Root cause unresolved, not a clean acceptance waiver. Test-only alternate immutable
 artifact attribution/scalar diagnostics/explicit variant added;41driver checks pass.
 Native ontology/startup admission and real-copy measurement still pending; runtime unchanged.
+
+Action log (2026-10-23, PR206 native completion checkpoint): ontologyStartupUpdates passes
+stationary editing before remaining source commit with physical provenance; startupAdmission
+passes dormant policy/device controls/concurrent opening/close-reopen/explicit closed rebuild.
+All native runs used exact6ad7c816 candidate on Mac; inherited Windows limitation label in
+startup report is not host evidence. Early-history failure and hot-activation crash remain
+qualified, not waived. Small closed and19 original config/plugin files byte-restored offline;
+original Sync/community restored only after closure. Brain is sole healthy window/off[].
+Same retained S2 restore now active with independent external power sampler. Candidate CPU/
+work, broad-tag, read-only real-copy recovery and final audit remain pending. No runtime change.

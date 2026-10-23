@@ -182,6 +182,19 @@ The existing indexing suite now explicitly expects no pre-layout body invalidati
 opposite post-layout-before-admission control. Existing watchdog and same-stat protections pass.
 No SourceRepository algorithm or reserved read-plumbing loop changes.
 
+The native ontology/editing-during-startup lane subsequently passed: stationary relationships
+updated before the remaining source committed, with physical provenance preserved. Native startup
+admission also passed dormant policy, all six device controls, concurrent opening, close/reopen,
+closed explicit rebuilding and inactive live-surface admission. These are Mac desktop executions;
+the inherited startup driver's returned limitation string says “Windows”, but is not host evidence.
+They do not establish physical-mobile input or full application restart.
+
+Small was closed after checking writer/controller/mask cleanup. Its19 original configuration files
+and plugin bytes were restored offline and byte-compared; its original Sync setting and original
+plugin-enabled list were restored only after native window/registry closure. Only the healthy
+brain-copy window remained. The real-copy S2 restoration is active, with independent external AC
+sampling armed; candidate CPU/work and broad-tag results remain pending.
+
 ## Native interaction follow-up and qualifications
 
 The exact combined bundle passes native Small SI5 restart/corrupt acceleration/requested-source
