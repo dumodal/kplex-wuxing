@@ -19,62 +19,78 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Active acceptance: PR206 final main advancement
+# Final acceptance return: PR206 integrated with current accepted main
 
-Prepared by Zsolt's Codex Agent, 2026-10-23. Main validation agent owns this assignment.
-Maintainer authorizes current-main integration, affected verification and normal merge after gates;
-no rebase/force-push/release/production deployment/branch deletion or207experiment modification.
+Prepared by **Zsolt's Codex Agent**, 2026-10-23, Europe/Budapest.
+No offline implementation/optimization assignment remains. Main validation agent owns final
+remote documentary-head CI and authorized normal merge. At this documentary checkpoint those
+are the remaining gates; exact final remote/CI/merge proof is recorded on #206/private checkpoint
+at delivery to avoid a self-referential report/commit loop. Consult actual PR state before acting.
 
-Completed/frozen first integration: source95b0093 (reviewed12c911a plus acceptedmain9307476/#205),
-exact main08edf2b9 /manifest3395e425 /styles88b61aa5. Full npmverify/49focused/native Small pass;
-CI415/418 pass. One guarded S2 full-app startup and ordinary warm activation both truly complete
-plus ten-minute quiet:408.930s/620.420CPU-s and153.016s/267.606CPU-s; startup12unfocused samples/
-late attachment qualified.0body reads/parses/replacements/URL reads/builders/masks, cached validity
-work retained. Exact complete vocabulary and seven strict semantic/gate/search/provenance hashes
-match controls. Original broadtag still fails2pending/256visits. Frozen artifact/evidence remain
-private kplex-206-integration-yoggyf26; never relabel08 or older6ad as a future source build.
+Current integrated runtime source: `823d1d3c8272be44ab5494af85445b66fd28f944`.
+Normal merge parents cf14b1c (completed first integration evidence) and accepted main
+`ea89a831aee433bfcfa2847f710ff82ebcfe158c` (merged #207, plus #201/#203/#204/#205).
+Reviewed12c911a and first normal merge95b0093 preserved. Only HANDOFF/ledger/package testlist
+conflicts; current206 assignment/header, both full histories/reports/inventories retained.
+SourceRepository exactly accepted #207 d8d6d532...809d8; #205 protected reader and #206's three
+startup owners preserved. No unmerged Windows input, custom count/lease/schema/read-plumbing
+change, rebase/force-push or207experiment/branch modification. Do not resume207causal/storagework.
+C14 accepted; structural C15-C26 paused.
 
-All native work/cleanup/content+config audits completed19:37:52UTC; user explicitly told Macfree.
-Do NOT steal focus or restart without establishing availability/other-vault isolation again.
-Brain K-Plex/writers off; no hooks/controllers/processes/new crash, native IDB restored. Copy20190
-content files unchanged; original223configuration files unchanged (no original fullcontentbaseline).
-All copy config/workspace bytes match except retained disabled08main. Small CLOSED/all19original
-configuration files restored offline, including Synctrue/enabledplugins: PREPARE IT OFFLINE before
-opening it for any new native check. Original Zsolt's Brain (2025) never write/toggle/deploy/queryDB.
+NEW exact artifact, Node22.22.2/real dependencies/installed Obsidian1.13.0 declarations:
+- main.js `9912395b8a7927067ba6d366e634e3839a0f374bc5473d4284291be63062b653`
+- manifest.json `3395e425860e5068e9f3b3d9a0e3d58cefd2c11dededc690beb87f60e733ed7d`
+- styles.css `88b61aa508ede97b10fbd30c957d14ba19b257aa26f5ee9f547f13faa0f43974`
+SourceCI421 passes. Full npmverify passes7architecture/130core/1395main/227DOM/357portable/
+721realIDB, zero failures/skips; separate174combined startup/discovery/recovery/count/journal/
+lease/foreground checks pass. Runtime/build inputs remain source823; later changes documentary.
 
-Final fetch discovers accepted main ea89a831aee433bfcfa2847f710ff82ebcfe158c (merged207) after
-that completed checkpoint. Current branch before documentary checkpoint is8c62e0f; local docs
-record all first-integration results and this advancement. Commit/push that valid evidence,
-then normally merge acceptedmain; preserve both histories/reports/test inventories/rootheader.
-Keep THIS active206assignment if HANDOFF conflicts; do not replace with Windows inactive207return.
-No blanket ours/theirs. Preserve205 metadatareader and206 recovery/discovery/narrow autobuildguard.
+Exact new-build native Small checks pass: strict staging/render, all5SI5 source/cache/reload
+cases, genuine failed-adoption recovery exactly2(false,true) with0fullbuild/mask, bounded eight-
+note selectedrepair create/edit/change/delete/lateredit and ready localinventory, held-background
+foreground navigation/edit/provenance, real native/same-stat-event/offlinealias/rename/delete.
+SI5 originalobserver failedCLIevalafterfirstcase; capturedstate ready/no sourcefailure and cleanup
+passes. Fresh native-result-file observer keeps native scenario/cleanup bytes and deadlines,
+passesall5 with0transportretry; failedreceiptretained. Stop owner initiallyconflated unload with
+saved enablement; observed loadedfalse/enabled[kplex], thennormalCLIclear +guardedclose restores
+all19Smalloriginalfiles afterregistryclosed. No productcheck/deadline weakened; privatehelpers only.
 
-Reviewed intervening runtime diff is selected localdependencycountrepair only (139lines):
-bounded cursor-membership prefixes, one validated scalar ledger read/finalwrite per distinctkey,
-ordered old-before-new intermediate counts, atomic old-prefix range deletion in existingjournal.
-Metadataread/validation/schema/startup owners unchanged. Accepted207 includes the maintainer-accepted
-reopening/storage tradeoff, unresolved backend cause and no production-vault scaling bound;
-this integration does not reopen that stopped investigation. Both completed timings had0selected
-repairs/replacements; no new statistical CPU claim applies to upcoming artifact. Do not resume207
-storage/rootcause investigation or alter its branch/experiment. Preserve its accepted limitations.
+Read-only Brain activation verifies exact live database and loadednewrepair method. Actual
+fullsnapshotroute/initial/source/URLcompletion; sourcechecked/bodyreads/parses/repairs/failures0,
+allsource/write/deleteowners0. Complete vocabulary and seven strict semantic/gate/search/
+provenance hashes match both retained controls, no normalization. Original broadtag still fails
+at30.841s with2pending/256visits; no new semantic divergence/crash. Observertransporterrors0.
 
-Normal ea89a83 merge resolves only HANDOFF/ledger/package testlist; both inventories/ledger tails
-retained and current206 assignment preserved. Runtime conflictfree; accepted SourceRepository
-exact SHA d8d6d532. Combined startup/discovery/recovery/count/journal/lease/foreground174/174 pass,
-zero failures/skips. NEXT: commit/push normal integration, then buildnew
-Node22.22.2 realdeps/actual Obsidian typings artifact and recordall3hashes/newsourcecommit. Full
-npmverify plus focused206startup/recovery and207selectedrepair realIDB checks. Publish checkpoint/
-startremoteCI promptly. After local checks, establish Mac testwindowavailability for ONLY affected
-exact-build native recovery/countrepair/invalidation/foreground/reload and guarded realcopy
-activation/semantic parity. Do not repeat historical matrix; completed95timings stay frozen.
-Ask before full-app restart ifother vaultsopen; noneplanned. No new mutatingSmalldriveronBrain.
-Update ETA/checklist regularly. UserMacfree remains true during independent work.
+Firstintegration95/main08 remains FROZEN: retainedS2 startup408.930s +602.128squiet /620.420CPU-s,
+ordinarywarm153.016s +603.971squiet /267.606CPU-s. Startup latecounters/12unfocusedwork samples
+qualified; warmvalid/focused/AC.0unnecessarybodyreads/parses/replacements/URLreads/fullbuilders/
+masks; cachedvaliditywork remains. Both had0selectedrepair/replacement, so newer207production
+branch was not exercised. Those CPU observations are NOT relabeled as main991 or a new statistical
+speedup. Current-source affected realIDB/native positivebranch and realcopyparity supply later
+integration evidence; no historicalmatrix rerun. Actual204reuse0 for no-replacement realcopyruns;
+native13/32matching projections are eligibility, not realizedreuse or exclusiveCPU attribution.
+Historical6ad belongsonly to independentstudy. Preserve allprevious artifacts/measurements/limits.
 
-Retain named followups: broadtag, joinedrelationshipnameorder not universallycosmetic, unexplained
-firstbaseline+2nodes, veryearly recenttab failureboth, isolatedunattributedhistoricalcrash. Repeated
-crash/new candidate regression blocksdraft. Historical fewerpairs/power/censored/controlqualifications
-remain. Detailed record docs/validation/startup-source-convergence-206-2026-10-23.md, new section
-Accepted-main advancement. C14accepted/C15-C26paused. Preserve historical203/206seeds/archives;
-new restricted integration archive excludes this transient HANDOFF. FinalheadCIpass +actualcurrent
-maininspection +affectednativechecks +cleanup required beforeauthorizedready/normalmerge. Verify
-GHmerged/mergecommitreachablemain. Use Zsolt's Codex Agent in GitHubcomments.
+All native work/audits finish20:27:16UTC; user told Macfree again. NO furtherfocus/restart needed
+for unchanged823code. Do notstealfocus afterrelease; reestablishavailability ifsourceadvances.
+Brain K-Plex/community/Sync/Publish off; no controllers/hooks/debugger/processes, IDB methodsnative,
+no new crashreports. Copied20190contentfiles/10,956,614,603B unchanged; fresh223config/workspace
+bytes restored except intentionally retained DISABLED main991. Small CLOSED/all19originalfiles
+identical, including original Sync/enabledplugins: PREPAREOFFLINE before futureopening.
+Original Zsolt's Brain (2025) neverwritten/enabled/staged/restored/databaseopened. Its223config
+hashes matchedbefore19:37:52UTCfirstrelease; no fulloriginalcontentbaseline/claim. Later steps
+onlytargetguarded testvaults. Testcopy DB `k-plex-index-v1-6b706c65782d746573742d627261696e2d6d6163`.
+
+Detailed phased record: docs/validation/startup-source-convergence-206-2026-10-23.md.
+Retain five206followups: broadtag; joinedtype-nameorder notuniversallycosmetic; unexplainedfirst-
+baseline+2nodes; veryearlyrecenttabfailureboth; isolatedunattributedhistoricalrenderercrash.
+Fewerpairs/power/censored/controlled-versus-naturalcandidate qualifications remain, as do207's
+maintainer-accepted reopen/storagecost, unresolvedbackendcause and no production-scalingbound.
+No newissue/PR. New private evidence kplex-206-integration-yoggyf26/dedicated restricted durable
+integrationarchive, separatefrom historical203/206seeds/archives; preserveall; NEVERarchiveHANDOFF.
+
+FINAL: commit/push documentaryacceptance, verifyactualremotehead +finalheadCIpass; fetchcurrent
+main andinspect/revalidateanyinterveningacceptedchange. Thenmarkready/normalmerge WITHOUTanother
+approval, verifyGHmerged/mergecommitreachablemain, preservebranches. No release/prod deployment/
+forcepush/historyrewrite/207modification. Ifgatefails keepdraft andreportpreciseblocker. Use
+Zsolt's Codex Agent in GitHubcomments. No extraheavytestsneededfordocs-onlychanges.

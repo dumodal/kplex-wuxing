@@ -5941,3 +5941,37 @@ complete207ledger tail and package testlist union; no runtime conflict or lost i
 SourceRepository exact d8d6d532, all206startupfiles unchanged. Combined focused startup/recovery/
 discovery/count/journal/lease/foreground realIDB174/174 pass, zero failures/skips. Newartifact/full
 verify/exactnative/CI pending. Preserve first95/08evidence and accepted207storage/reopen limits.
+
+
+### 2026-10-23 - PR206 current-main823 exact-build acceptance complete
+
+Normal merge823d1d3 retains cf14first-integration evidence and acceptedmain ea89a83/#207;
+SourceRepository exact d8d6d532, protected205reader and all206startup owners unchanged. Both
+complete histories/reports/testlists retained; no Windowsbranch/experiment or newoptimization.
+New Mac artifact9912395b /manifest3395e425 /styles88b61aa5, Node22.22.2 realdependencies and
+actual Obsidian1.13.0 types. Fullverify7/130/1395/227/357/721 zero failures/skips; combined174/174;
+sourceCI421 passes. Final documentary-head CI remains required before authorizednormalmerge.
+
+Exact Small staging/SI5/genuine automaticadoption2attempts/native selectedrepair/foreground/
+realcreate-samestateevent-offlinealias-rename-delete pass. OriginalSI5CLIevaltimeout retained,
+actualstate ready/cleanup passes; newfileobserver keeps nativeactions/cleanupbytes anddeadlines,
+all5pass/0transportretry. Stop-owner unload-vs-persistedenablement assertionretained; normalCLI
+clears saved preference, positivelyguardedclose restores all19originalSmallfiles onlywhenclosed.
+No productionvalidators/readiness/deadline changes. Nativecount13/32matches are eligibility,
+notrealized204reuse; changedmembership2attempts0matches and readyinventory provegenuinefallback.
+
+New BrainactualDB/loadedmethod guarded; normal fullsnapshotactivation completes, sourceowners0,
+canonicalreads/parses/repairs0; fullvocabulary/sevenstrictsemantic-gate-search-provenance hashes
+matchcontrols exactly. Originalbroadtag30.841s/2pending/256visits remains; nonewcrash/divergence.
+First95/08S2+warmCPU/results remain frozen, not relabeled as991: zero selectedrepair branch means
+current source focused/native positivebranch checks are affectedvalidation, not a repeatedmatrix.
+No new statistically established speedup. All five206followups/measurementlimits and accepted207
+reopen/storagecost/unknownbackend/no productionbound remain. No207investigation is resumed.
+
+Final nativecleanup/audits20:27:16UTC and Macreleasedagain: copied20190files/10,956,614,603B unchanged;
+copy223configuration/workspace bytes restored except retainedDISABLED991main; Smallclosed/all19
+originalfiles identical. Controllers/hooks/processesgone/IDBnative/no newcrash. Originalconfiguration
+hashproof before19:37release retained; subsequentguardedoperations neverwrite/openoriginalDB,
+no originalfullcontentclaim. Finalremote/CI/normalmerge/reachabilityproof recordedon206/private
+checkpoint toavoidself-reference. Preservehistory/privateevidence; noHANDOFFarchive, release,
+productiondeployment, branchdelete or historyrewrite. C14accepted; C15-C26paused.

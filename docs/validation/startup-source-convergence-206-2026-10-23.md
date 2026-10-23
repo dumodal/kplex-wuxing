@@ -890,3 +890,101 @@ without conflict: SourceRepository exactly matches accepted #207 SHA-256
 files remain unchanged. Combined startup/discovery/recovery plus count/journal/lease/foreground
 real-IndexedDB focus passes **174/174**, zero failures/skips, before publishing this integration.
 New full verification/build, exact-build native acceptance and final-head CI remain pending.
+
+### Current-accepted-main artifact and affected acceptance
+
+Normal integration source **`823d1d3c8272be44ab5494af85445b66fd28f944`** has parents
+cf14b1c (the frozen first-integration evidence) and accepted main ea89a83 (#207). No runtime
+resolution/edit is needed: SourceRepository is exactly accepted d8d6d532 and the three #206
+startup owners are unchanged. Both architecture histories, test/script inventories and reports
+are retained. The root HANDOFF retains its standing header and current #206 assignment.
+
+The newly built, frozen and natively staged Mac artifact is:
+
+| Current artifact | SHA-256 |
+| --- | --- |
+| main.js | `9912395b8a7927067ba6d366e634e3839a0f374bc5473d4284291be63062b653` |
+| manifest.json | `3395e425860e5068e9f3b3d9a0e3d58cefd2c11dededc690beb87f60e733ed7d` |
+| styles.css | `88b61aa508ede97b10fbd30c957d14ba19b257aa26f5ee9f547f13faa0f43974` |
+
+Node22.22.2, real installed dependencies and Obsidian1.13.0 declarations. Full `npm run verify`
+passes architecture7/core130/main1395/DOM227/portable-source357/real-IndexedDB721 executions,
+zero failures/skips, followed by its actual TypeScript production build. The separate combined
+174/174 focused run also passes. [CI421](https://github.com/zsviczian/kplex/actions/runs/40014412320)
+passes this exact source. Later documentary-head CI is still required before merge.
+
+Affected native checks run serially after all heavy local verification/builds finish. Small is
+first verified closed, its fresh19-file original configuration backed up, and Sync/Publish/all
+community plugins disabled offline before opening. Strict existing staging/render verification
+checks the new three hashes; the loaded repository also exposes the new accepted repair method,
+preventing old loaded code from being mistaken for the installed artifact.
+
+| Current-build lane | Actual result |
+| --- | --- |
+| SI5 source/cache/reload | All five unchanged cases pass: changed policy, missing/corrupt optional graph, genuinely damaged source, offline edit. Source-backed restarts have0full builds; unchanged cases0canonical reads/parses. Damaged source repairs exactly1; offline edit requires1read/parse. Missing/corrupt cache restores global vocabulary. |
+| Failed-adoption recovery | Genuine unavailable metadata causes false adoption; restored availability/change signal causes true adoption. Exactly2attempts, scene preserved,0full builds/unsaved masks, cleanup passes. Settled-lifetime coordinator-flag qualification remains explicit. |
+| Native selected repair | Existing eight-note diagnostic passes creation, prose/label edits, changed membership, deletion and later edit; complete local dependency inventory reaches ready. Native selected repair opens34membership cursors.13/32projection attempts match the prior count/digest, but this is eligibility, **not** a realized #204 reuse counter or exclusive CPU attribution. Changed edit has2attempts/0matches, proving genuine fallback. |
+| Foreground during held work | Navigation, editing, native creation/frontmatter and current pair provenance pass while unrelated work is held; actual authority/durability converge during cleanup. No owned fixture/controller remains. |
+| Required invalidation | Late create, real same-stat bytes plus explicit native notification, authenticated changed body-URL family, offline alias/reload, rename and deletion pass. Unsaved0, cleanup passes. Independent host non-delivery qualification above is retained. |
+
+The first current-build SI5 invocation remains a failed receipt: changed-policy completes, then a
+CLI `eval` times out during missing-cache observation. Captured native state is ready, pending0,
+full builds0, failures0; original cleanup restores settings/fixtures/throttling. A separately
+identified invocation uses atomic native-owned result files instead of concurrent CLI status
+polls. Its native scenario/cleanup tail is byte-identical (retained SHA and original driver bytes),
+30-second CLI/300-second case bounds unchanged, with no per-case scenario replay or readiness
+substitution. All five cases pass with0lost-install acknowledgements/transport retries. No product
+or checked-in test driver is modified. Neither invocation is a CPU acceptance measurement.
+
+The first close owner also retains its failed assertion: `disablePlugin` unloads the instance but
+leaves persisted enablement. Native inspection proves loadedfalse, enabled[k-plex], no controller
+and writers off. Normal CLI disable clears the preference; a separate positively guarded closure
+then verifies the registry closed before all19original Small files are restored offline. The
+final complete inventory has0added/removed/changed files. No product validity check is relaxed.
+
+### Current-build real-copy confirmation and final cleanup
+
+Before staging, native guard verifies exact Brain name/path, stopped plugin/all writers off and
+existing database `k-plex-index-v1-6b706c65782d746573742d627261696e2d6d6163`, schema10. The current
+223-file configuration is backed up. All three installed hashes match the new frozen artifact.
+Normal activation verifies the newly loaded repair method and the **actual active connection's
+database name**, then completes source authority/initial adoption/URL work through the ordinary
+full-snapshot route. No checkpoint is restored, preferred route forced or full application restarted.
+
+Current source counters are0checked acquisitions/canonical body reads/parses/repairs/resolution refreshes/failures,
+1cached body reuse, with pending-known/impact/source/write/delete owners all0. Initial complete is
+true and initial-source-incomplete false. All110470base/86593URL-overlay/110470combined vocabulary
+records and all seven strict target/gate/search/provenance hashes exactly match both retained
+controls; combined SHA remains757a297f...25450c. No strict difference is normalized away.
+Cached validity/metadata/storage work still exists; these counters do not mean all startup work is0.
+The unchanged original broad tag again times out at30.841seconds with canonical data available,
+2pending tasks/256dependency visits. Functional observer transport errors0; native cleanup passes.
+
+The two full startup/warm **CPU observations above remain source95b0093/main08edf2b9 only**.
+Their zero selected-repair/replacement workload does not execute the intervening #207 production
+change. Current-source full/focused tests, positive native selected repair, source-backed recovery,
+foreground/invalidation and exact real-copy activation/parity validate the affected combination.
+No new CPU figure, statistical speedup or full-app timing pair is assigned to main9912395b; no
+historical matrix is rerun. Realized #204 reuse remains0 in the no-replacement real-copy runs;
+the native diagnostic's matching projections are reported separately as eligibility.
+
+After all native work, copied nonconfiguration content again matches **20190files /
+10,956,614,603bytes**,0added/removed/changed, both against its current entry manifest and the
+earlier unchanged fixture. Copied settings/community/core/workspace bytes match their fresh
+pre-staging backup; only intentionally retained, disabled main9912395b differs. Small is closed
+and its complete19-file original configuration matches. K-Plex/all community plugins/Sync/Publish
+are off in Brain; no owned controller/fault hook/debugger/process remains; native IDB prototypes
+are restored. No new or changed Obsidian crash report appears during either integration phase.
+
+All native work/audits finish **20:27:16UTC** and the Mac is released again within the agreed
+15–20minute window. No more focus/restart is needed. The protected original's configuration audit
+was identical before the earlier19:37:52UTC release; later operations only target guarded test
+vaults and never open its database or write/enable/stage/restore its files. No full original-content
+hash claim is made. Historical seeds/sidecars/archives and all failed observers remain preserved.
+
+Final publication changes only the current HANDOFF, append-only ledger and this report. Recheck
+accepted main and exact remote head, pass final documentary-head CI, then perform the authorized
+normal merge and verify GitHub merged plus main reachability. The five named #206 follow-ups and
+all previous measurement qualifications remain. Accepted #207 reopening/storage cost, unresolved
+backend cause and missing production-scale bound also remain; its investigation is not resumed.
+No new issue/PR, optimization, release, production deployment, history rewrite or branch deletion.
