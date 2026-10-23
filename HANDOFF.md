@@ -19,54 +19,57 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Active acceptance: PR #206 integration and merge
+# Active acceptance: PR206 final main advancement
 
-Prepared by **Zsolt's Codex Agent**, 2026-10-23, Europe/Budapest.
-State: implementing final integration and acceptance; main validation agent owns this assignment.
+Prepared by Zsolt's Codex Agent, 2026-10-23. Main validation agent owns this assignment.
+Maintainer authorizes current-main integration, affected verification and normal merge after gates;
+no rebase/force-push/release/production deployment/branch deletion or207experiment modification.
 
-The maintainer authorizes normal integration of accepted main, conflict resolution, validation,
-publication and merge without another approval once every stated acceptance gate passes.
-Keep draft until then. No release, production deployment, force-push, branch deletion or #207 changes.
+Completed/frozen first integration: source95b0093 (reviewed12c911a plus acceptedmain9307476/#205),
+exact main08edf2b9 /manifest3395e425 /styles88b61aa5. Full npmverify/49focused/native Small pass;
+CI415/418 pass. One guarded S2 full-app startup and ordinary warm activation both truly complete
+plus ten-minute quiet:408.930s/620.420CPU-s and153.016s/267.606CPU-s; startup12unfocused samples/
+late attachment qualified.0body reads/parses/replacements/URL reads/builders/masks, cached validity
+work retained. Exact complete vocabulary and seven strict semantic/gate/search/provenance hashes
+match controls. Original broadtag still fails2pending/256visits. Frozen artifact/evidence remain
+private kplex-206-integration-yoggyf26; never relabel08 or older6ad as a future source build.
 
-Branch: `2026-10-23-startup-source-convergence`; reviewed head
-`12c911a2b3fd9fed64e50a375d0d4ebcb9c91e0b`; initial working tree clean.
-Accepted main: `930747679894f003a2acf3b800df798826ee090c`, including #205 plus #201/#203/#204.
-Normal merge is committed at95b0093. Only HANDOFF and Refactor plan conflicted: preserve this standing
-header/current #206 assignment and both historical ledger inventories. Runtime merges cleanly.
-Preserve #205 protected metadata fetching and #206 recovery/discovery/automatic-rebuild ownership.
-No #207 branch or unfinished dependency-count work is imported, deployed or modified.
+All native work/cleanup/content+config audits completed19:37:52UTC; user explicitly told Macfree.
+Do NOT steal focus or restart without establishing availability/other-vault isolation again.
+Brain K-Plex/writers off; no hooks/controllers/processes/new crash, native IDB restored. Copy20190
+content files unchanged; original223configuration files unchanged (no original fullcontentbaseline).
+All copy config/workspace bytes match except retained disabled08main. Small CLOSED/all19original
+configuration files restored offline, including Synctrue/enabledplugins: PREPARE IT OFFLINE before
+opening it for any new native check. Original Zsolt's Brain (2025) never write/toggle/deploy/queryDB.
 
-Read [historical validation](docs/validation/startup-source-convergence-206-2026-10-23.md)
-and append a distinct integration section. Historical 6ad7c816 bundle/measurements stay unchanged.
-Build a new exact artifact with Node22.22.2 and real dependencies/installed Obsidian typings.
-Full npm run verify and49focused tests pass on Node22.22.2; real typings1.13.0.
-Runtime source95b0093/main.js08edf2b9; accepted205SourceRepository534a061e; native Small
-lanes and CI415 pass with explicitly retained observer/host-delivery limits in the report.
-Small closed/original19files restored offline; Brain alone is foreground/AC/writers off.
-Retained-S2 restore is active in private task kplex-206-integration-yoggyf26; native decoding
-verification must complete before activation. Then one full-app startup and one ordinary warm
-activation from its genuinely persisted state, both ten-minute quiet/original45-minute cap. No heavy verification overlaps timed native observation.
-Keep the existing45-minute cap and ten-minute quiet interval. Verify actual source/URL/persistence
-completion, avoided work, recovery, semantic/provenance behavior and foreground responsiveness.
-Ask before application restart unless all other vaults are verifiably closed.
+Final fetch discovers accepted main ea89a831aee433bfcfa2847f710ff82ebcfe158c (merged207) after
+that completed checkpoint. Current branch before documentary checkpoint is8c62e0f; local docs
+record all first-integration results and this advancement. Commit/push that valid evidence,
+then normally merge acceptedmain; preserve both histories/reports/test inventories/rootheader.
+Keep THIS active206assignment if HANDOFF conflicts; do not replace with Windows inactive207return.
+No blanket ours/theirs. Preserve205 metadatareader and206 recovery/discovery/narrow autobuildguard.
 
-Authorized copy: `/Users/zsviczian/Obsidian/kplex-test-brain-mac`.
-Exact DB: `k-plex-index-v1-6b706c65782d746573742d627261696e2d6d6163`.
-Protected original: `/Users/zsviczian/Obsidian/Zsolt's Brain (2025)`; never write/toggle/deploy/restore.
-Reverify target, disabled Sync/Publish/external writers and checkpoint compatibility before writes.
-Small was closed with original configuration restored (including Sync and plugin enablement):
-prepare it offline before opening. Never run mutating Small drivers against the real-data copy.
-Preserve historical evidence under private archive2026-10-23-pr206-final and original203 streams.
-Retained S2 SHA4e70e312...6f4c2, A4 SHA2c1ec851...dfe8. Do not overwrite historical receipts/seeds.
+Reviewed intervening runtime diff is selected localdependencycountrepair only (139lines):
+bounded cursor-membership prefixes, one validated scalar ledger read/finalwrite per distinctkey,
+ordered old-before-new intermediate counts, atomic old-prefix range deletion in existingjournal.
+Metadataread/validation/schema/startup owners unchanged. Both completed timings had0selected
+repairs/replacements; no new statistical CPU claim applies to upcoming artifact. Do not resume207
+storage/rootcause investigation or alter its branch/experiment. Preserve its accepted limitations.
 
-Retain named unresolved follow-ups: broad-tag completion on both artifacts; route-dependent joined
-relationship-name ordering; unexplained first-baseline two-node terminal difference; very-early
-recent-tab synchronization on both; isolated unattributed candidate renderer crash. Do not normalize
-strict oracle differences or increase deadlines. A repeated crash/new substantive regression blocks
-merge and leaves draft. Fewer pairs/power-qualified first baseline/censored second baseline and
-controlled-versus-natural recovery distinctions remain accepted historical limitations.
+NEXT: merge ea89a83 normally; resolve docs/package testinventory conflicts deliberately; buildnew
+Node22.22.2 realdeps/actual Obsidian typings artifact and recordall3hashes/newsourcecommit. Full
+npmverify plus focused206startup/recovery and207selectedrepair realIDB checks. Publish checkpoint/
+startremoteCI promptly. After local checks, establish Mac testwindowavailability for ONLY affected
+exact-build native recovery/countrepair/invalidation/foreground/reload and guarded realcopy
+activation/semantic parity. Do not repeat historical matrix; completed95timings stay frozen.
+Ask before full-app restart ifother vaultsopen; noneplanned. No new mutatingSmalldriveronBrain.
+Update ETA/checklist regularly. UserMacfree remains true during independent work.
 
-Before merge: final-head verification and remote CI pass, exact native checks/targeted confirmations
-pass subject only to accepted existing qualifications, owned resources/configuration/fixtures restored.
-Inspect any main advance and rerun affected checks. Verify GitHub merged and resulting commit
-reachable from main. C14 accepted; structural C15-C26 remain paused.
+Retain named followups: broadtag, joinedrelationshipnameorder not universallycosmetic, unexplained
+firstbaseline+2nodes, veryearly recenttab failureboth, isolatedunattributedhistoricalcrash. Repeated
+crash/new candidate regression blocksdraft. Historical fewerpairs/power/censored/controlqualifications
+remain. Detailed record docs/validation/startup-source-convergence-206-2026-10-23.md, new section
+Accepted-main advancement. C14accepted/C15-C26paused. Preserve historical203/206seeds/archives;
+new restricted integration archive excludes this transient HANDOFF. FinalheadCIpass +actualcurrent
+maininspection +affectednativechecks +cleanup required beforeauthorizedready/normalmerge. Verify
+GHmerged/mergecommitreachablemain. Use Zsolt's Codex Agent in GitHubcomments.

@@ -596,7 +596,7 @@ artifacts remain against0f94252; later integrated Mac validation is still explic
 No merge, release, main-branch write or production deployment is authorized.
 
 
-## Integration validation — accepted main plus #206 (in progress)
+## Integration validation — accepted main plus #206
 
 This section is a new final-acceptance record. Every preceding result belongs to its explicitly
 identified historical runtime and remains unchanged. The maintainer now authorizes integration
@@ -613,15 +613,15 @@ are preserved. No runtime conflict, rebase, force-push or #207 import occurs.
 The merged runtime preserves #205's protected bounded metadata fetch/reader reservation and
 all digest, frame, posting, lease, current-selection and cancellation checks. #206 remains in
 its existing startup/source-event owners. Schema/count maintenance/read-plumbing policy is not
-changed during integration. The complete integrated diff and required verification remain under
-review. A new Node22.22.2 production artifact will be identified below; historical6ad7c816 is
+changed during integration. The complete integrated diff and required verification are reviewed
+below. A new Node22.22.2 production artifact is identified below; historical6ad7c816 is
 never relabeled as this integrated build.
 
 Initial guarded native inspection finds exactly one Brain-copy window, plugin/community off,
 Sync/Publish off, no retained controller/debugger/fault hook and native IDB methods. AC connected,
 thermal nominal. The window was visible but not focused; timed observations must establish and
-retain foreground ownership. Native checks and one S2/warm confirmation remain pending. No merge
-is claimed while any gate remains pending.
+retain foreground ownership. Native checks and one S2/warm confirmation were pending at this
+initial preflight; their completed results follow. No merge is claimed while a gate is pending.
 
 
 ### Integrated artifact and completed verification checkpoint
@@ -714,6 +714,170 @@ fixed by the workspace-ready control. Main rechecked after native work remains93
 Small is now closed, original19configuration/artifact files restored byte-for-byte offline.
 Native Brain preflight verifies one foreground/unlocked window, AC/nominal thermal, all community
 plugins/Sync/Publish off, no owned controller/fault hook/debugger and native IDB methods restored.
-Retained S2 hash/schema10/15stores/1,537,552rows match original metadata. Its guarded restore is
-in progress; activation is fenced until decoded native readback verifies every store. Primary
-S2/warm observations and final integration integrity/CI/merge remain pending.
+Retained S2 hash/schema10/15stores/1,537,552rows match original metadata. Its guarded restore
+completes at19:00:24.557UTC, with activation fenced until decoded native readback verifies every
+store. The primary S2/warm observations and final integrity results follow below.
+
+### Integrated retained-S2 application startup
+
+Before activation, the existing guarded importer completed decoded native verification of all
+15 stores /1,537,552 rows against the original S2 counts and digests. The three bounded observer
+windows joined one owned restore job; they did not perform three imports. The exact vault/database,
+unchanged schema compatibility and original stream SHA were checked before restoration. Historical
+streams, sidecars and durable evidence remain unchanged. Preparation/import time is excluded below.
+
+The single full-application launch starts at19:02:54.759UTC. Hydration takes its actual
+`full-snapshot` route; no route is forced. Actual source authority, initial
+completion, URL completion and persistence/semantic-owner drain coincide at **408.930seconds from
+launch**. Observation continues through **602.128seconds of quiet**, ending at1010.932seconds.
+No body-dirty enumeration, canonical body read, parse, source repair, activated replacement,
+resolution refresh, source chunk/byte write or URL read occurs. Source checks11839 and body reuses
+11840 remain real work: cached validity checking has not been removed. All11839URL owners finish,
+11819 restored from the retained cache. Final node count110470, authority true, initial complete,
+all five scheduler lanes/source owners/body writers empty, no queued snapshot and no unsaved source.
+
+Initial sampled discovery flags show11839 total Markdown files,0dirty/body-dirty/created/resolution-
+dirty/nonzero-revision entries. Forwarding observes11839 distinct acquisitions,0same-revision
+revisits,2inventory admissions (one session inventory pass and an empty follow-up),0automatic
+full builds/cancellations and0unsaved masks. Session full-builder starts are also0. The late observer
+attaches38.923seconds after launch; forwarding counts cover that suffix and cannot prove absence
+of every earlier operation. Fresh runtime source/repository/URL counters and the actual completion
+state supply separate evidence. No observer overflow occurs.
+
+The current inputs need **zero** source activations, unlike the historical candidate's one genuine
+resolution update. This is not an exactly-one-activation requirement or a forced route. Genuine
+offline/source changes still require their demonstrated work in the integrated Small lanes.
+Realized #204 ordinary activation-count reuse and selected-count repair are both0 because this
+run makes no replacement; digest eligibility is not counted as realized reuse.
+
+Whole-application external process-family CPU is **620.420CPU-seconds**, including the quiet interval;
+external maximum sampling gap1040ms, no recorder errors, native CPU coverage valid/maxgap1043.9ms,
+AC/unlock/visibility/throttling conditions intact. There are12unfocused one-second native samples
+at299.014-310.007seconds after attachment, during work; the complete subsequent quiet interval is
+focused. Consequently the observer correctly reports `comparable:false`. This is a bounded
+integration/work-completion confirmation, **not** a new controlled speedup estimate or an additional
+historical matched pair. No build, test, hashing/import or heavy oracle overlaps the observation.
+Normal cleanup disables K-Plex, empties community enablement and restores owned configuration.
+
+### Integrated ordinary warm activation
+
+The separately declared warm condition is the naturally completed/persisted integrated S2 state,
+after its full quiet interval and normal disable. There is no A4 import, cache clear, application
+restart, route override or forced rebuild between the two confirmations. This is not row-matched
+to the historical warm controls.
+
+| Confirmation | Actual closure | Subsequent quiet | Whole-application CPU through observation |
+| --- | --- | --- | --- |
+| Retained-S2 full-app startup |408.930s from launch|602.128s|620.420CPU-s, external process-family sampling; focus qualification above|
+| Ordinary warm activation |153.016s from pre-admission probe arm|603.971s|267.606CPU-s, native cumulative application-process sampling|
+
+Warm observation ends756.016seconds after arm. All757native samples retain valid CPU identity,
+foreground, visibility, AC, unlock and throttling conditions; maximum gap1057.5ms, no dropped
+forwarding events. Warm startup performs0checked-source acquisitions,1cached body request/reuse,
+0canonical reads/parses/repairs/resolution refreshes/activated replacements/chunk writes/URL reads,
+and0unsaved masks. All11839URL owners are restored from this completed cache. One session inventory
+pass and an empty follow-up do not reacquire the vault: repeated owners/revisions and automatic
+full builds/cancellations remain0. Hashing/validation and inventory work still exist; the warm
+observer records48152hash calls and59968transactions, which are not exclusive CPU attribution.
+Final authority/initial completion/URL completion are true, node count110470, all source/semantic/
+persistence queues drained. Realized #204 ordinary reuse and selected-count repair are both0.
+
+Both runs finish within their original45-minute cap and retain the600000ms quiet requirement.
+Neither is pooled with the historical pairs, used to attribute an exact plugin-only CPU share,
+or treated as a new statistically established speedup. Startup adoption completion is separately
+established by real owner/readiness state; changing a coordinator flag is not credited as CPU work
+avoided. The genuine-failure/recovery and invalidation lanes above remain separate correctness
+evidence. No additional optimization or runtime change was introduced during this closeout.
+
+### Integrated semantic parity, reload and cleanup
+
+After both timing windows, a separate normal activation and the unchanged eight-target oracle
+check the real-data copy. All seven bounded targets render and retain exact relationship/gate/
+search/provenance hashes against both retained candidate2 and baseline2. Complete base, URL and
+combined vocabularies are byte-equivalent as decoded records:110470base,86593URL-overlay and
+110470combined entries; combined SHA-256
+`757a297f478716577bf95f2f2ea7945e119c0d81f7b77ab792299f8d5225450c`.
+The ordinary reload selects its actual full-snapshot route; no source-backed route is forced.
+Source-backed startup and reload correctness are independently covered by the Small lanes.
+
+The original broad-tag target still times out at30.639seconds with canonical data available,
+2pending semantic tasks and256dependency visits. It is not a passing target or substituted with
+the bounded tag. One30-second read-only CLI transport timeout is retained during this functional
+invocation; the native-owned task continues under the unchanged observer/action bounds. The exact
+returned result, strict comparisons and cleanup succeed. This transport observation is not pooled
+with the timed CPU lanes and does not erase the historical observer failures.
+
+Final native inspection after activation/reload finds one healthy isolated copy window, K-Plex
+off/community enabled set empty, Sync/Publish off, no study/functional/recovery/indexing/startup
+controllers, no metadata fault hook, debugger or DevTools, restored layout observer and all nine
+checked native IndexedDB method prototypes restored. No new or changed Obsidian crash report
+appears. Independent process audit finds0owned live processes. All test-owned fixture/resource
+cleanup passes. Small remains closed and its complete19-file original configuration/artifact
+inventory matches byte-for-byte, with0added/removed/changed files.
+
+Independent post-observation hashing confirms:
+
+- Copied nonconfiguration content:20190files /10,956,614,603bytes, identical,0added/removed/changed.
+- Protected production configuration:223files /84,002,510bytes, identical. No original full-content
+  baseline exists; this is not a full production-content hash claim. No original-vault operation
+  writes, enables, stages, restores or queries its plugin database.
+- Copied configuration:223files,0added/removed; all settings/community/core/workspace bytes match.
+  The original existing file-explorer leaf and saved workspace bytes are restored through the
+  typed Workspace owner. Only the intentionally retained integrated `main.js` differs from the
+  integration-start configuration. Manifest/styles match the recorded integrated hashes.
+
+At19:37:52UTC all native work/audits finish and the Mac is released for ordinary use. Further
+report/GitHub/CI work requires no Obsidian focus or restart. Historical seeds, sidecars and private
+archives are preserved; new integration evidence uses a separate restricted durable archive.
+
+### Acceptance boundaries and final publication
+
+The integrated implementation preserves accepted main9307476/#205 and #201/#203/#204, with
+no #207 import or experiment/branch change. Runtime/build inputs remain those of95b0093 and the
+three exact artifact hashes above; subsequent publication changes are documentary. Both
+[CI415](https://github.com/zsviczian/kplex/actions/runs/39997178488) and
+[CI418](https://github.com/zsviczian/kplex/actions/runs/40006531209) pass. The final documentary
+head must also pass remote CI before the authorized ready/normal-merge operation. Its exact
+remote checkpoint, final CI and verified merge reachability are recorded on #206 at delivery,
+avoiding a self-referential report/commit/CI update loop. Main is rechecked before merging; any
+intervening accepted change requires affected revalidation. No release, production deployment,
+force-push, history rewrite or branch deletion is part of this closeout.
+
+No new substantive semantic, recovery or responsiveness regression is demonstrated. Retain these
+named follow-ups and the historical qualifications, without calling them fixed:
+
+1. Broad-tag semantic completion failure on baseline and candidate, still present integrated.
+2. Route-dependent joined relationship-type name ordering, not universally cosmetic; strict
+   full-reference differences remain unnormalized.
+3. First baseline's unexplained two-node terminal-count difference; later exact vocabularies do
+   not retrospectively identify those original two rows.
+4. Very-early recent-tab synchronization failure on both historical artifacts; workspace-ready
+   passes are a separate, qualified lane.
+5. Isolated unattributed historical candidate renderer crash; it does not recur during integrated
+   staging, activation/reload, focused native checks or either confirmation.
+
+Fewer historical completed pairs, power-qualified first baseline, censored second baseline and
+controlled-versus-naturally-stranded-candidate recovery remain accepted measurement limits.
+The integrated startup focus interruption and late operation attachment are additional explicit
+observation limits; they do not establish a new CPU comparison or change the actual avoided-work,
+completion, exact semantic parity or matched quiet-period results. No extra issues/PRs are created.
+
+### Accepted-main advancement at final publication
+
+The final19:41UTC fetch discovers accepted main **`ea89a831aee433bfcfa2847f710ff82ebcfe158c`**,
+the normal merge of #207. This occurs after the native observations and Mac release above. The
+95b0093/08edf2b9 evidence remains a completed, frozen integration checkpoint; it must not be
+relabeled as a build of this newer source or silently used to waive affected checks.
+
+The intervening production change is confined to selected local dependency-count repair in
+SourceRepository: bounded authenticated membership cursor pages, one scalar ledger read/final
+mutation per distinct key, ordered old/new intermediate count checks and atomic old-prefix range
+deletion in the existing journal transaction. #205's protected metadata reader, #206's startup
+owners and the storage schema are unchanged. Accepted #207 tests/tooling/reports and its explicit
+storage/reopening limitations must be preserved; its stopped investigation is not resumed.
+
+Current accepted main will be merged normally into #206, with a newly identified artifact, full
+verification and affected recovery/count/invalidation/foreground/native checks before merge.
+The completed S2/warm runs exercise0selected repairs/replacements: those observations remain
+evidence about their exact frozen source, not timings of the forthcoming artifact. No historical
+matrix repetition or new optimization is planned. #206 remains draft until the updated gates pass.

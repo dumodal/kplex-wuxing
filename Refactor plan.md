@@ -5810,3 +5810,44 @@ absent; controlled real event invalidation passes. Unchanged live actions pass v
 file observer,100ms heartbeat max107ms; old early-sync/broad-tag/crash limits remain. Small
 closed/original19files restored; Brain alone/writers off; original S2 restoration active. No207,
 product/runtime edit, release or production action. Final S2+warm/audit/documentary-CI/merge pending.
+
+
+### 2026-10-23 - PR206 final accepted-main integration and Mac acceptance
+
+Normal integration source95b0093 preserves reviewed12c911a and accepted main9307476/#205,
+including prior201/203/204. Only HANDOFF and this ledger conflicted; both inventories and the
+standing header/current206 return are retained. Runtime merges cleanly. SourceRepository is
+byte-identical to accepted205 (SHA534a061e...4c63e); reviewed206 runtime owners are unchanged.
+No207, read-plumbing/lease/count/reclaim/schema policy change, rebase or force-push.
+
+Node22.22.2/real dependencies/actual Obsidian1.13.0 declarations: full npmverify and49focused
+checks pass; new exact main08edf2b9, manifest3395e425, styles88b61aa5. SourceCI415 and native-
+documentaryCI418 pass; final documentary-head CI/authorized normal merge are separate final gates.
+Exact-build Small native recovery/source-backed/foreground/settings/invalidation/reload/reader
+checks pass with recorded observer/setup and independent same-stat host-delivery limits.
+
+One retained-S2 actual full-snapshot startup: closure408.930s, quiet602.128s, whole-app CPU620.420s;
+late counters/12unfocused work samples explicitly prevent a controlled CPU comparison. One ordinary
+warm activation from its naturally persisted state: closure153.016s, quiet603.971s, CPU267.606s,
+valid/focused/AC sampling. Both actual source/URL/persistence owners drain, no unnecessary body
+reads/parses/source replacements/URL reads/automatic builder/masks; cached validity work remains.
+No new matrix or statistical speedup claim; actual204reuse0 without replacement. Exact full
+vocabulary/seven strict semantic/gate/search/provenance hashes match both retained controls.
+
+All native resources/fixtures restored, Small closed/original19files identical, Brain settings/
+workspace bytes restored with integratedmain retained disabled, writersoff. Copied content20190/
+10,956,614,603B and original configuration223/84,002,510B hashes unchanged; no originalfullcontent
+baseline/claim. No crash recurrence. User Mac released19:37:52UTC. Historical receipts/seeds and
+all failed observers retained separately from new restricted integration evidence; no HANDOFFarchive.
+Keep broad-tag completion, joined-label order, original+2nodes, early recent-tab and unattributed
+crash follow-ups explicit; fewer pairs/power/censoring/controlledrecovery qualifications remain.
+Final remote/CI/merge proof belongs on206/privatefinalcheckpoint to avoid self-reference. C14
+accepted; C15-C26 paused. No release/prod deployment/branchdelete/207change. Detailed integration
+record: docs/validation/startup-source-convergence-206-2026-10-23.md.
+
+
+2026-10-23 final206fetch discovers acceptedmain ea89a83 (merged207) after firstintegration95
+Macclosure/audits/release. Frozen08artifact/results are not relabeled as newer code. Mergeheld;
+normal currentmain integration/newartifact/fullverify/affectedselectedrepair+206nativechecks
+required. Preserve accepted207history/tests/reports/limits; do not resume its stopped investigation.
+UserMacfree during independent work; reestablish availability before furthernativefocus/restart.
