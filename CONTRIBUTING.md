@@ -1069,6 +1069,31 @@ do not publish them without review. Current inputs are matched, but database his
 restored or claimed identical. Source digests, storage calls, sampled memory and inclusive renderer
 CPU have distinct meanings; operation reductions alone do not establish a universal speedup.
 
+### Cached-source reader validation
+
+Use Node 22.22.2 and `node scripts/testing/cached-source-read-batching.mjs characterize` for finite
+real-IndexedDB production-reader counts, dense/legacy/shared-revision controls and corrupt-family
+recovery. `full` runs 64/128/256-owner comparisons with three alternating 128-owner pairs. The
+accepted baseline is pinned inside the driver; it refuses unrelated runtime differences. Each
+arm owns a disposable Chromium profile/database, complete lease release, later edit/reclamation
+and a real browser restart/reopen. Run serially without builds, suites or native indexing.
+Receipts remain private in the printed task-owned temporary directory.
+
+Detailed native transaction/request/lease/hash/decode counts are separate from lightweight CDP
+renderer CPU timing. The fixture invokes production acquisition/repository methods with synthetic
+host doubles and without GraphIndex's optional background checkpoint. Browser/storage-process CPU,
+full application scheduling, physical cache equivalence and OS process birth/exit coverage are not
+established. Transaction creation-to-terminal-event lifetimes include queueing/dispatch and do not
+measure exclusive write-lock time. See the [PR205 report](docs/validation/cached-source-read-batching-205-2026-10-23.md).
+
+After exact-build staging, `node scripts/testing/obsidian/cachedSourceReads.mjs` uses the three
+explicit Small-vault variables and fresh `KPLEX_HOST_REPORT_DIR`. It reads sixteen existing bounded
+cached metadata sources through the production helper, verifies exact facts/heads and restores
+diagnostic methods. `KPLEX_CACHED_READ_FAIL_AFTER_FIRST=1` deliberately fails after one read to test
+wrapper/controller cleanup; expect a failed scenario with successful cleanup. Immutable baseline
+artifacts require `KPLEX_PROBE_ARTIFACT_DIR` plus `KPLEX_PROBE_BASELINE_REF`; this does not bypass
+installed-artifact/vault guards or stage a build. Native totals are diagnostic, not CPU attribution.
+
 ### Passive indexing diagnostics validation
 
 The native verifier allows 35 minutes for the complete serial portable suite. This aggregate
