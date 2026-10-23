@@ -19,37 +19,15 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR #205: validated Windows implementation return
 
-Prepared by **Zsolt's Codex Agent**, 2026-10-23. Scoped implementation and required local/Windows acceptance are complete. Keep #205 draft for maintainer review. No merge, release, main write or production deployment occurred. The maintainer explicitly authorized regular validated commits/pushes for this assignment.
+---
 
-Branch: `2026-10-23-cached-source-read-batching`.
-Accepted base: `0f94252aabb8b23458b5df192380854ea0bddd53`, preserving merged #201/#203/#204.
-Published implementation: `8b1df5764d4799960a64ee2b149566b6278d0516`, remote identity verified.
-Companion #206, `sourceAcquisition.ts` and startup admission/event/readiness/retry policy are untouched. Exact private reader proposal was posted in #205 comment 6362396841; no shared-seam integration was needed.
+# Accepted / inactive: PR207 scoped merge decision
 
-## Implementation and evidence
+Zsolt's Codex Agent. Maintainer explicitly accepts documented reopening latency and physical-storage tradeoff, unresolved backend cause and absence of a production-vault scaling bound. Causal work is stopped. Acceptance is a maintainer limitation, not a performance pass: unchanged thresholds and adverse/incomplete results are preserved. Both baseline/candidate storage-growth sequences remain an open follow-up in docs/validation/dependency-repair-storage-207-2026-10-23.md. No more measurements or speculative storage work is authorized here.
 
-Only production `SourceRepository.ts` changes. Ordinary current-grammar metadata visits prepare one chunk/first posting page inside atomic head/all-family-lease selection. Limits remain one chunk, 256 records, 256 KiB and the existing 8 MiB decode budget. All leases/authentication/final freshness, masks, cancellation/close and conservative failed-release protection remain. Prepared decode belongs to the registered reader; no public API/schema/scheduler/proof cache/resource-budget change. Dense/legacy/oversized/memory paths retain ordinary reads; expanded pin write-store scope is documented.
+CI417 passed full verification atafb0a1d1e0bf9a5b4250a9f693c20e1fc25fea14. Then normal reconciliation with freshly fetched main returned Already up to date; main930747679894f003a2acf3b800df798826ee090c was already included. No unmerged #206 work imported. SourceRepository d8d6d532bb711b3cb2bb5d0e55152392495533b8eb64c069158ca8b0e98809d8 and production main.js19d75415c69d8c77bbde934f618eeece2f0387459a49003090eedef61b9bb28f unchanged.
 
-Runtime source SHA-256: `534a061e64ddfe7a609cc774788567ec8ba6afc4c953ea556e7ff9834fe4c63e`.
-Built and installed `main.js`: `7fa00a354d38fb2cedecbb9d15c5277e0513813b7074d487f5ebda9820c2b79f`.
-Baseline `main.js`: `46bcd36b14291169465f98f0c2635ffb331d576eb84177d1e030281a90dc15d1`.
-Manifest/styles are unchanged. Full identities, raw receipt locations, every pair and failure are in [the validation report](docs/validation/cached-source-read-batching-205-2026-10-23.md).
+Affected current-source real-IDB integration125/125 passes, zero failures/skips. Exact19 build on guarded Small passes foreground and all five SI5 recovery cases; settings, fixtures, controllers and throttling restored. Private receipts: %TEMP%/kplex-207-merge-3JHTTZ. No new correctness/substantive integration regression. No application-wide restart or production install. Original full/Windows evidence remains applicable.
 
-- Sixteen-source metadata helper 48→32 native transactions; complete restart inventory 82→66. Requests, committed leases, hashes, decodes and bytes unchanged. Native caller corroborates 32 transactions with independently verified zero owned durable leases/readers/decode.
-- Controlled 64/128/256 comparisons include complete release, later edit/old-record reclamation and real browser-process restart/reopen. First representative CPU pairs +4.57%,−11.13%,−8.38%; oracle confirmation −4.64%,−4.99%,−4.96%. All unfavorable endpoints retained. No shifted repair/deferred work or reclamation debt.
-- Final real-IDB diagnostics 14/14 and focused safety 11/11 pass, zero skips. Limits, corruption, shared revisions, concurrent foreground/edits, close/cancel, masks and aborted-release conservatism are covered.
-- Node 22.22.2 full `npm run verify`, real typings/build and strict `verify:obsidian` pass. Main 1355, DOM 227, portable-source 357 and real-IDB 690 executions pass with zero skips; 20,015-source exact metadata/evidence/gates/degrees case passes.
-- Exact-build SI4/SI5 recovery, foreground inventory/live updates, startup admission, gates/tags/folders/search, rename and ontology checks pass serially. Intentional native caller failure proves durable and wrapper/controller/config cleanup. Initial startup attempt refused an open Plex; retained failure was followed by prerequisite-controlled rerun and original layout/config restoration.
-- Separate tooling checkpoint `b8fac4f` reproduces/fixes inherited Windows symlink EPERM with a genuine junction and unchanged alias refusal; 22/22 tests pass, no skipped safety.
-
-## Final state and qualifications
-
-Small is back to 107 files / 88 Markdown notes, original Eager profile, ready semantic/URL state, zero active readers/decode/unsaved/pending work/controllers. All owned fixtures/configuration/layout changes restored. Two global conservative family leases remain: exact key/source/revision/owner fingerprints match both records in all three October 22 checkpoints, including the original pre-investigation database. They predate #205, have no current owner/selected revision, and were preserved. Their original failure cause is unknown. Fresh comparison arms and all observed new native leases close to zero; do not claim Small's entire database is lease-free.
-
-Native Windows host: Obsidian 1.14.5 (installer 1.14.0), Electron 43.3.0 / Chrome 150.0.7871.212 / embedded Node 24.18.1. Drivers/builds use Node 22.22.2. Component browser is Chrome 155.0.8059.82. CPU covers the isolated Chromium renderer with host doubles and no GraphIndex background checkpoint, not whole Obsidian/Browser/storage CPU. Heap endpoints are samples; transaction elapsed time is not exclusive lock time. Physical-cache equivalence, Mac/phone or original overall CPU acceptance is unclaimed. No additional manual gate is requested for this Windows scope.
-
-Independent review covered ownership/bounds/authentication/finality/cancellation/conservative failure, reuse/TSDoc, actual production callers, attribution and harness cleanup. Required available checks are complete. GitHub workflow 401 for implementation 8b1df57 was still running at documentary finalization; CI is not called passed. Final PR/remote checkpoint verification reports its actual state without waiting for CI.
-
-Raw receipts remain private under `%TEMP%\kplex-205-validation` and report-listed owned browser directories. Historical lease comparison read archived files in matching Electron V8 context only; no checkpoint restore, global reset or forced cleanup occurred. Production vaults were never accessed/deployed. C14 remains accepted; structural refactoring stays paused. No further optimization or measurement campaign is pending for this scoped return.
+Maintainer authorizes normal merge after final documentation CI. Final checkpoint, CI status and verified merge/main reachability are recorded on PR207; consult its final comment for completion. This inactive handoff is not a new assignment or permission to resume investigation. No release/production deployment, #206 branch/experiment/private-data change or broader CPU campaign. No manual check needed for these documentation-only acceptance updates.

@@ -5637,3 +5637,87 @@ remain unclaimed. Report: docs/validation/cached-source-read-batching-205-2026-1
 symlink EPERM correction separately published b8fac4f preserves genuine alias refusal, 22/22 pass.
 Independent ownership/validity/bounds/TSDoc/harness review complete; no C15 advancement. PR205 stays
 draft for maintainer review; GitHub workflow 401 still running at finalization, not called a pass.
+
+
+### 2026-10-23 — PR207 ordinary dependency-count repair returned for review
+
+Zsolt's Codex Agent. #205 unchanged-head retry passed complete verification/build after retained
+64.9ms timer failure; supported non-reproducible timing limitation, no weakened guard/deadline.
+Normal merge 930747679894f003a2acf3b800df798826ee090c is verified on main and is #207's accepted
+baseline, incorporated by normal merge 86d7fe459161a36c7ddd7c5f5e5d2fa236526412 before implementation.
+Supersedes earlier #205 draft/running-CI status; broader CPU objective remains open.
+PR207 retains C14 boundaries and #204 reuse/#205 readers. Only production SourceRepository ordinary
+repair changes: byte/record-bounded authenticated cursor prefix, once-per-distinct-key ledger read
+and mutation, ordered intermediate count checks, exact old-prefix deletion and journal progress in
+original atomic transaction. Corruption, native error identity, concurrent writer, cancellation,
+unsaved and partial-journal browser restart coverage preserved/extended. No schema/scheduler/default
+or startup/source-acquisition change; #206 untouched. Final source d8d6d532 / main 19d75415 frozen.
+Node 22.22.2 complete verify/build/typings/official lint and strict staging pass; real-IDB 701, main 1363,
+UI 227, portable 357, architecture 7 / core 130; zero failures/skips. Exact-build Small SI4/SI5, foreground,
+startup admission, tags/folders/gates/search, rename, held-startup ontology/live edits and independent
+restoration pass. Initial premature final audit retained; natural restored startup then closes.
+107 files / 88 Markdown notes, ready Eager, zero owned debt/controllers; exactly 2 historical conservative leases preserved.
+Historical measured 5d52/d7d3 cohort 98 required arms + 1 incomplete startup retained. Final d8d6/19d7 differs
+only two error-preserving catches; six-case regression and 42-arm deterministic bridge pass, all 26
+detailed counts/digests/bytes/debts match. Mixed requests −30.1%, representative median paired renderer
+CPU −42.6% / wall −43.7%; distinct −14.2% requests / −31.9% CPU / −34.9% wall. Browser/storage CPU unmeasured.
+Repeatable candidate-associated native IDB-open penalty after SIGTERM/fallback restart remains;
+no backend cause established. Return for code/evidence review with performance acceptance held pending
+maintainer tradeoff decision or one focused graceful-quit comparison. No unqualified merge, release,
+production deployment, broad redesign or C15 advancement. Detailed report:
+docs/validation/dependency-repair-batching-207-2026-10-23.md. Remote CI status is tracked against PR head.
+
+
+### 2026-10-23 - PR207 graceful restart comparison; keep draft
+
+Zsolt's Codex Agent. Supersedes the pending graceful-quit question only; original performance/failure
+evidence remains. CI411 on479100d passed complete verify. Production d8d6 source/main19d754 frozen.
+Added isolated opt-in browser lifecycle/drain diagnostics and contract tests; default shutdown unchanged.
+All28 browser arms pass:4 smoke,12 forced/graceful128,12 bounded graceful64/256; no exclusions/retries.
+Actual native completion, connection close, clean exit0/new PID, later recreation/edit and cleanup proven.
+Graceful native-open penalty persists2/3 at128 and3/3 at256;256 deltas+83.5/+56.6/+83.6ms, combined
+restart/reopen+194.3/+145.5/+101.8ms (all3 meet unchanged material criterion). Larger physical file
+history observed but backend cause/Browser-storage CPU unmeasured; not a proved compaction/GC diagnosis.
+Maintenance still saves26.8-30.6s wall /12.8-14.7 renderer CPU seconds at256; no tolerance change.
+Recommendation Keep draft, return for maintainer decision; preserve implementation. A future bounded
+storage-process trace or explicit acceptance of this size-sensitive tradeoff is needed for progression.
+Affected harness/real-IDB integration81/81 pass, no skips; original exact-build native/full verification
+retained. No production changes/rebuild/release/deployment/#206 interference or C15 advancement.
+Detailed evidence: docs/validation/dependency-repair-batching-207-2026-10-23.md.
+
+
+### 2026-10-23 - PR207 focused storage isolation returned: keep draft
+
+Zsolt's Codex Agent. Accepted baseline930747 fixed; reviewed d6 source d8d6/main19d754 unchanged.
+Published test-only checkpoints979cefe7 (four-way isolation),464779c (read controls/cycles),c2edc8e
+(non-atomic metadata receipt and directory guards), all read back from the targeted branch.
+Three A/B/C/D quartets and three A/E/F/D quartets pass logical/recovery/lifecycle oracles but retain
+the material reopen penalty. Neither independent revert nor point-read/control proof is a supported fix.
+Browser-root CPU locates extra native reopen/closure cost; exact backend cause remains unproved.
+Separate256-owner detailed calls640512->393728, transactions768 unchanged; continuation attempts
+are distinguished from request creation. Full three-cycle histories: baseline file lengths55->128->163MB,
+candidate67->132->188MB; no plateau or reliable cure from a second graceful reopen. Every known
+logical repair/reclaim/lease debt closes; filesystem allocation is measured separately from live records.
+One D cycle failed after successful work/oracle on live-file lstat ENOENT; retained/cleaned, observer
+corrected with114 passing focused tests and genuine smoke/failure cleanup, complete D sequence repeated.
+No production correction, schema/scheduling/GC/default/admission/readiness changes or weakened guard.
+Reuse exact19 build/full Windows interaction/recovery evidence; CI411/412/413/414 pass, later checks
+reported on PR. Return for maintainer decision, not merge-ready; no automatic expansion of investigation.
+No release/production deployment/#206 contact or C15 advancement. No manual test needed for test-only
+changes; storage/performance acceptance is unresolved. Detailed evidence:
+docs/validation/dependency-repair-storage-207-2026-10-23.md.
+
+
+### 2026-10-23 - PR207 maintainer-accepted limitation; scoped merge authorized
+
+Zsolt's Codex Agent. Maintainer explicitly stops causal work and accepts reopening/storage cost,
+unresolved backend cause and no production-vault scaling bound for this scoped merge. No adverse
+measurement is a pass; no threshold, runtime code or scheduling change. Both storage-growth histories
+remain a separate open follow-up in the existing report, not an active benchmark assignment.
+CI417 passed atafb0a1d. Normal main reconciliation returned Already up to date against9307476.
+Current-source affected real-IDB integration125/125 passes with zero failures/skips; unchanged19 build
+Small native foreground and five-case SI5 recovery pass with cleanup/configuration/throttling restored.
+No new correctness or substantive integration regression. Final documentation CI gates normal merge;
+actual result/merge reachability are recorded on PR207. Runtime d8d6/main19d754 remains unchanged.
+No unmerged #206 input/contact, new benchmark, storage change, release, production deployment or C15 work.
+Details: docs/validation/dependency-repair-storage-207-2026-10-23.md.
