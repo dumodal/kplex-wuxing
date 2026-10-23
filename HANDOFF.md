@@ -21,7 +21,7 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 # Return: dependency-count reuse ? PR #204
 
-**State/direction:** Local validation complete; main agent publishing the reviewed checkpoint for maintainer review. Keep draft; no merge/release. Prepared 2026-10-23 by Zsolt's Codex Agent.
+**State/direction:** Local validation and CI complete. Maintainer authorized merging #204 on 2026-10-23; main integration resolves only this transient handoff and the combined test inventory. No release or further runtime work is authorized. Prepared by Zsolt's Codex Agent.
 **Branch:** 2026-10-23-dependency-count-reuse.
 **Accepted base:** main@cd12a857c1c2c89c2d13f6c6b2a3e1a5203d5ffa, including merged #201.
 **Durable evidence:** [dependency-count reuse validation](docs/validation/dependency-count-reuse-204-2026-10-23.md).
@@ -54,6 +54,10 @@ Raw traces/source snapshots/builds remain private TEMP under kplex-204-validatio
 Renderer CPU excludes Browser/storage-process CPU; no exclusive-store CPU, allocation/true-peak, equivalent physical storage/OS cache/heap or whole-vault saving is established. Windows automation does not prove physical touch/mobile/Mac behavior. This is a narrow dependency-count improvement; the broader indexing CPU objective remains open.
 
 PR #203 and its Mac experiment, branch, candidate selection, instructions, files and agent are completely untouched. No measurements were requested from it.
+
+## Main integration at maintainer-approved merge
+
+Current main includes merged #203. Only this transient handoff and package.json test inventory conflicted; both test suites/scripts were preserved and all imported Mac-study files remain unchanged. Production source remains the tested 951ce4e8 hash. The focused combined inventory ran 25 tests: 24 passed; the inherited Mac guard test failed with Windows EPERM at symlinkSync (directory symlink privilege unavailable). This is retained as an environment limitation, not a passing test. No Mac experiment or runtime was changed. The maintainer explicitly instructed merging without waiting for new GitHub CI.
 
 ## Next action
 
