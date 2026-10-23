@@ -1,7 +1,7 @@
-/** PR203 test-tool safety gates: identity refusal, pre-enable ordering and owned blocked storage. */
+/** PR203 test-tool safety gates: native filesystem-alias refusal, pre-enable ordering and owned blocked storage. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,mkdirSync,writeFileSync,symlinkSync,linkSync,rmSync,readFileSync,realpathSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,symlinkSync,linkSync,rmSync,readFileSync,realpathSync,lstatSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createRequire} from 'node:module';
@@ -168,7 +168,10 @@ test('study guards reject production names, aliases, overlap and shared files',/
     const nested=join(f.options.productionPath,f.options.vaultName),nestedConfig=join(nested,'.obsidian');
     mkdirSync(nestedConfig,{recursive:true});writeFileSync(join(nestedConfig,'community-plugins.json'),'[]');
     assert.throws(/** A correctly named copy still cannot live inside production. */ ()=>validateStudyTarget({...f.options,vaultPath:nested,configDir:nestedConfig}),/overlap/);
-    const alias=join(f.root,'alias');symlinkSync(f.options.vaultPath,alias);
+    // A Windows junction is a genuine directory alias without the symbolic-link privilege requirement.
+    // Verify the native alias itself so portability never turns this safety case into a mock or skip.
+    const alias=join(f.root,'alias');symlinkSync(f.options.vaultPath,alias,process.platform==='win32'?'junction':'dir');
+    assert.equal(lstatSync(alias).isSymbolicLink(),true);assert.equal(realpathSync(alias),realpathSync(f.options.vaultPath));
     assert.throws(/** A same-name check alone must not admit filesystem aliases. */ ()=>validateStudyTarget({...f.options,vaultPath:alias}),/Symlink/);
     const shared=join(f.options.configDir,'shared.json');linkSync(join(f.options.configDir,'community-plugins.json'),shared);
     assert.throws(/** Hard-linked settings are refused even inside a distinct folder. */ ()=>validateStudyTarget(f.options),/hard-linked/);

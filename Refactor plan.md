@@ -5616,3 +5616,24 @@ Focused22tests pass Node22.22.2; full verification is in progress at publication
 release/architecture/core/lint and earlier test batches. CI/full-suite pending is not a pass; actual
 terminal outcomes are recorded in PR203. Finalized report/retention status; no new runtime fix,
 measurement, C15 advancement or release. Scientific acceptance remains qualified/inconclusive.
+
+
+Action log (2026-10-23, PR205 protected cached metadata reads): accepted main-agent implementation
+and Windows scope review at base 0f94252, preserving merged #201/#203/#204. Published runtime/test/
+harness checkpoint 8b1df5764d4799960a64ee2b149566b6278d0516; remote head verified. Sole production
+change is private SourceRepository metadata pin/fetch sharing: eligible visits 3 to 2 transactions;
+16-owner complete restart inventory 82 to 66 with every request/lease/hash unchanged. No sourceAcquisition,
+startup admission/readiness/retry, public API/schema/scheduler/budget change; companion #206 untouched.
+Source SHA 534a061e and exact built/installed main 7fa00a35 remain frozen. Full Node 22.22.2 real
+verify/build/typings and strict native staging pass; focused 11, diagnostic 14, two full cohorts 12 each,
+real-IDB 690 and 20,015-source exact incidence pass. Exact-build SI4/SI5, foreground/live updates,
+startup admission, gates/tags/folders/search, rename/ontology and cleanup pass. Failed startup
+precondition retained; proper closed-Plex rerun restores original layout/config. Final global audit
+found 2 historical conservative leases, both exactly matching original/warm October 22 checkpoint
+identities; preserved, no new lease debt. No reset/restore/expiry/deletion or production deployment.
+Scoped renderer component improvement is modest; all unfavorable pairs/edit endpoints retained.
+Browser/storage CPU, full-app scheduling, physical caches/devices and original broad CPU objective
+remain unclaimed. Report: docs/validation/cached-source-read-batching-205-2026-10-23.md. Tooling
+symlink EPERM correction separately published b8fac4f preserves genuine alias refusal, 22/22 pass.
+Independent ownership/validity/bounds/TSDoc/harness review complete; no C15 advancement. PR205 stays
+draft for maintainer review; GitHub workflow 401 still running at finalization, not called a pass.

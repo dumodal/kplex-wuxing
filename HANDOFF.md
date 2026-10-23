@@ -19,46 +19,37 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Return: dependency-count reuse ? PR #204
+# PR #205: validated Windows implementation return
 
-**State/direction:** Local validation and CI complete. Maintainer authorized merging #204 on 2026-10-23; main integration resolves only this transient handoff and the combined test inventory. No release or further runtime work is authorized. Prepared by Zsolt's Codex Agent.
-**Branch:** 2026-10-23-dependency-count-reuse.
-**Accepted base:** main@cd12a857c1c2c89c2d13f6c6b2a3e1a5203d5ffa, including merged #201.
-**Durable evidence:** [dependency-count reuse validation](docs/validation/dependency-count-reuse-204-2026-10-23.md).
+Prepared by **Zsolt's Codex Agent**, 2026-10-23. Scoped implementation and required local/Windows acceptance are complete. Keep #205 draft for maintainer review. No merge, release, main write or production deployment occurred. The maintainer explicitly authorized regular validated commits/pushes for this assignment.
 
-## Implementation and review return
+Branch: `2026-10-23-cached-source-read-batching`.
+Accepted base: `0f94252aabb8b23458b5df192380854ea0bddd53`, preserving merged #201/#203/#204.
+Published implementation: `8b1df5764d4799960a64ee2b149566b6278d0516`, remote identity verified.
+Companion #206, `sourceAcquisition.ts` and startup admission/event/readiness/retry policy are untouched. Exact private reader proposal was posted in #205 comment 6362396841; no shared-seam integration was needed.
 
-All production changes are confined to src/index/SourceRepository.ts. Matching ordinary replacements authenticate bounded original rows, recompute their ordered digest and validate selected ledger multiplicity before the existing activation transaction rechecks predecessor/owner/local-state revision, staging and ordinary ticket fences. New source facts/head/families/owner/sequence still publish. Existing private reclaim drains old membership rows before return and remains crash-resumable. Changed/uncertain states keep normal repair. No schema, scheduler, concurrency, defaults, parsing or semantic policy changed; optional alias failure semantics remain separate.
+## Implementation and evidence
 
-Source SHA-256: 951ce4e86ad1bea9b86a53d7efad1c2e4375e3eda38e220b4933409510a337ef.
-Final built/installed main.js: 46bcd36b14291169465f98f0c2635ffb331d576eb84177d1e030281a90dc15d1.
-Baseline main.js: 608b2dd34e98ac84d117ebeb86d8cd287e26b3f34b8302a0f1ee7e72c9a53194.
-Manifest/styles hashes and exact browser bundle/source identities are in the validation report/private receipts. Production output is unchanged by this documentation/tooling checkpoint.
+Only production `SourceRepository.ts` changes. Ordinary current-grammar metadata visits prepare one chunk/first posting page inside atomic head/all-family-lease selection. Limits remain one chunk, 256 records, 256 KiB and the existing 8 MiB decode budget. All leases/authentication/final freshness, masks, cancellation/close and conservative failed-release protection remain. Prepared decode belongs to the registered reader; no public API/schema/scheduler/proof cache/resource-budget change. Dense/legacy/oversized/memory paths retain ordinary reads; expanded pin write-store scope is documented.
 
-## Actual evidence
+Runtime source SHA-256: `534a061e64ddfe7a609cc774788567ec8ba6afc4c953ea556e7ff9834fe4c63e`.
+Built and installed `main.js`: `7fa00a354d38fb2cedecbb9d15c5277e0513813b7074d487f5ebda9820c2b79f`.
+Baseline `main.js`: `46bcd36b14291169465f98f0c2635ffb331d576eb84177d1e030281a90dc15d1`.
+Manifest/styles are unchanged. Full identities, raw receipt locations, every pair and failure are in [the validation report](docs/validation/cached-source-read-batching-205-2026-10-23.md).
 
-- Corrected full cohort: all 30 real-Chromium arms passed; corrected late control: all eight passed. Representative three matched 128-owner pairs reduced renderer CPU by 31.8% unchanged / 24.2% mixed, complete-maintenance elapsed by 26.4% / 19.3%. All old memberships and retired source/family rows are included. Redundant key writes 4,984 to zero; mixed retains exactly 1,246 required writes. Every restart/edit oracle found zero debt.
-- Initial design failed the late-change control (+20.4% median CPU). Retained unfavorable evidence led to post-staging equality gating. Corrected changed projections perform zero authentication; median late-control CPU is essentially unchanged, with a slower individual elapsed arm retained. Small later reopen/edit elapsed increases and unequal starting heap samples remain documented.
-- Actual Small Vault edits advanced eight source revisions with matching 128 memberships; final diagnostic authenticated/reclaimed all 128. Across eight matching edits plus one changed URL, key writes were 288 baseline versus 32 final. These diagnostic counts are not native CPU measurements or a private-vault hit rate.
-- Node22.22.2 full npm run verify, installed Obsidian types and production build passed; six lane totals 7/130/1333/227/357/679, zero failed/cancelled/skipped. Strict exact-build deployment/render/error receipt passed. PowerShell wrapper status1 from redirected npm stderr notices is retained and explained in the report; child verification and runner receipt passed.
-- Focused real-IDB11/11 plus final harness3/3 passed. Covers shared/repeated keys, physical old-row/digest/ledger corruption, byte pages including UTF-8, changed fallback, competing connections/CAS, unsaved/legacy/pending state, cancellation/close/storage failure, reclaim/reopen/edit/deletion. Independent/main source review found no remaining defect.
-- Exact46bcd36b Windows native checks passed: normal acquisition diagnostic; two expected diagnostic faults with independently verified cleanup; SI4 Small settings; SI5 five recovery cases and three warm plugin reloads (heads unchanged, zero semantic read/parse); foreground inventory; actual On-demand live updates/Find before held unrelated work; gate counts; rename; stationary startup ontology updates. The first live-update attempt failed its Eager-profile prerequisite; a fresh actual required-profile run passed and original settings/configuration bytes were restored.
-- Existing guarded Small remains 107 files/88 Markdown notes. Final checks find index ready, zero pending source work, only Small open, no JavaScript errors and exact artifact still installed. Native baseline diagnostic used Obsidian1.14.4; a user-authorized graceful restart loaded1.14.5. CPU cohorts used identical Chrome155.0.8059.82 and were finished before reopening Small.
+- Sixteen-source metadata helper 48→32 native transactions; complete restart inventory 82→66. Requests, committed leases, hashes, decodes and bytes unchanged. Native caller corroborates 32 transactions with independently verified zero owned durable leases/readers/decode.
+- Controlled 64/128/256 comparisons include complete release, later edit/old-record reclamation and real browser-process restart/reopen. First representative CPU pairs +4.57%,−11.13%,−8.38%; oracle confirmation −4.64%,−4.99%,−4.96%. All unfavorable endpoints retained. No shifted repair/deferred work or reclamation debt.
+- Final real-IDB diagnostics 14/14 and focused safety 11/11 pass, zero skips. Limits, corruption, shared revisions, concurrent foreground/edits, close/cancel, masks and aborted-release conservatism are covered.
+- Node 22.22.2 full `npm run verify`, real typings/build and strict `verify:obsidian` pass. Main 1355, DOM 227, portable-source 357 and real-IDB 690 executions pass with zero skips; 20,015-source exact metadata/evidence/gates/degrees case passes.
+- Exact-build SI4/SI5 recovery, foreground inventory/live updates, startup admission, gates/tags/folders/search, rename and ontology checks pass serially. Intentional native caller failure proves durable and wrapper/controller/config cleanup. Initial startup attempt refused an open Plex; retained failure was followed by prerequisite-controlled rerun and original layout/config restoration.
+- Separate tooling checkpoint `b8fac4f` reproduces/fixes inherited Windows symlink EPERM with a genuine junction and unchanged alias refusal; 22/22 tests pass, no skipped safety.
 
-## Ownership, cleanup and limits
+## Final state and qualifications
 
-Main/offline review preserved C14 ownership, bounded storage, primary journals, multiplicity, per-file publication and existing source/acquisition/recovery boundaries. New test helpers use existing portable/browser/native process/target guards. Native pass now requires all independent cleanup owners and confirmed controller removal; outer transport failures cancel/join owned cleanup with a bounded lifetime. Normal and deliberate fault runs verified these paths. The temporary plan marker is removed.
+Small is back to 107 files / 88 Markdown notes, original Eager profile, ready semantic/URL state, zero active readers/decode/unsaved/pending work/controllers. All owned fixtures/configuration/layout changes restored. Two global conservative family leases remain: exact key/source/revision/owner fingerprints match both records in all three October 22 checkpoints, including the original pre-investigation database. They predate #205, have no current owner/selected revision, and were preserved. Their original failure cause is unknown. Fresh comparison arms and all observed new native leases close to zero; do not claim Small's entire database is lease-free.
 
-Raw traces/source snapshots/builds remain private TEMP under kplex-204-validation, kplex-dependency-count-reuse-lDO9Af (corrected full), and kplex-dependency-count-reuse-wbKzGF (corrected late). Do not publish vault data or raw logs. Other historical failures and receipt identities remain in the durable report.
+Native Windows host: Obsidian 1.14.5 (installer 1.14.0), Electron 43.3.0 / Chrome 150.0.7871.212 / embedded Node 24.18.1. Drivers/builds use Node 22.22.2. Component browser is Chrome 155.0.8059.82. CPU covers the isolated Chromium renderer with host doubles and no GraphIndex background checkpoint, not whole Obsidian/Browser/storage CPU. Heap endpoints are samples; transaction elapsed time is not exclusive lock time. Physical-cache equivalence, Mac/phone or original overall CPU acceptance is unclaimed. No additional manual gate is requested for this Windows scope.
 
-Renderer CPU excludes Browser/storage-process CPU; no exclusive-store CPU, allocation/true-peak, equivalent physical storage/OS cache/heap or whole-vault saving is established. Windows automation does not prove physical touch/mobile/Mac behavior. This is a narrow dependency-count improvement; the broader indexing CPU objective remains open.
+Independent review covered ownership/bounds/authentication/finality/cancellation/conservative failure, reuse/TSDoc, actual production callers, attribution and harness cleanup. Required available checks are complete. GitHub workflow 401 for implementation 8b1df57 was still running at documentary finalization; CI is not called passed. Final PR/remote checkpoint verification reports its actual state without waiting for CI.
 
-PR #203 and its Mac experiment, branch, candidate selection, instructions, files and agent are completely untouched. No measurements were requested from it.
-
-## Main integration at maintainer-approved merge
-
-Current main includes merged #203. Only this transient handoff and package.json test inventory conflicted; both test suites/scripts were preserved and all imported Mac-study files remain unchanged. Production source remains the tested 951ce4e8 hash. The focused combined inventory ran 25 tests: 24 passed; the inherited Mac guard test failed with Windows EPERM at symlinkSync (directory symlink privilege unavailable). This is retained as an environment limitation, not a passing test. No Mac experiment or runtime was changed. The maintainer explicitly instructed merging without waiting for new GitHub CI.
-
-## Next action
-
-Verify this branch's publication and CI at its final head; record the actual checks in draft #204. Maintainer reviews the scoped improvement and stated limits. No further optimization, merge, release, main writes or #203 work is authorized here. This handoff remains transient; overwrite this body for the next assignment while preserving the standing header.
+Raw receipts remain private under `%TEMP%\kplex-205-validation` and report-listed owned browser directories. Historical lease comparison read archived files in matching Electron V8 context only; no checkpoint restore, global reset or forced cleanup occurred. Production vaults were never accessed/deployed. C14 remains accepted; structural refactoring stays paused. No further optimization or measurement campaign is pending for this scoped return.
