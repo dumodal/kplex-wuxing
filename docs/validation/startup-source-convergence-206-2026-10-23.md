@@ -341,6 +341,28 @@ The initial baseline warm control reused its then-current post-#203 state withou
 row-for-row equality to this imported A4 state is not established, so no clean warm CPU percentage
 will be inferred.
 
+## Ordinary candidate warm control
+
+The retained A4 seed completed decoded native verification across15stores/1,537,695rows. The
+atomic changed-store import took about17m41s outside timing; three resume observers joined the
+same retained job after their deadlines. The control then used the original baseline warm profile:
+plugin-level activation in the running isolated copy, forwarding observers disabled, no forced
+route or rebuild, and independent external AC polling.
+
+Actual ready/source/URL/persistence closure was **192.021s**, followed by **600.235s quiet**;
+last observed cumulative whole-application native CPU was **397.542CPU-s**. Native CPU/process,
+AC/foreground/unlock coverage was valid (maximum sample gap1.034s), agreeing with independent
+external AC. Source reads/parses/repairs/activated replacements/chunks/payload bytes/masks were
+all0. URL ownership completed11,839 owners from cache with0reads. Cleanup removed the controller,
+restored owned configuration and left K-Plex off with an empty community enabled set.
+
+The earlier current-base warm control observed205.020s closure/601.325s quiet/446.789CPU-s,
+also with0reads/parses/repairs/replacements. Its early6.080s sampling gap, missing prearmed external
+power series and non-reimported starting state remain qualifications. The candidate follows a
+verified import with no full app restart; setup-related host/GC work cannot be excluded. Therefore
+these observations show retained zero-repair warm behavior, **not a clean matched warm CPU
+percentage**. No OFF-control subtraction or exact plugin-only CPU attribution is made.
+
 ## Parallel coordination checkpoint
 
 At the A1 checkpoint GitHub reports #205 and #207 open/draft. The maintainer has authorized the

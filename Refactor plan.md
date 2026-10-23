@@ -5729,3 +5729,11 @@ explicitlylimited. Source runtime frozen, no Windows import; final warm/broad-ta
 - Corrected full-eight-target candidate call executes the original broad target; seven bounded hashes and both complete candidate vocabularies match.
 - Broad tag FAILS the unchanged 30.308s observation: rendered/canonical ready, semantic work active, 2 pending scopes / 256 dependency visits, while startup was complete and source owners idle. Do not count completed observer cleanup as semantic success; one transport timeout was tolerated and retained.
 - No evidence identifies this as A's initial-adoption defect. Current-base comparison remains pending. Restore retained A4 separately for an ordinary warm control; original baseline warm state was not newly imported, so warm CPU equality/percentage is not established.
+
+
+### PR #206 ordinary candidate warm control - 2026-10-23
+
+- Original A4 seed decoded verified (15 stores / 1,537,695 rows); 17m41s import excluded, same-job resume observers preserved.
+- Candidate warm source/URL/persistence closure 192.021s, quiet 600.235s, observed whole-application native CPU 397.542 CPU-s; coverage valid, max native gap 1.034s, independent external AC valid.
+- Zero source reads/parses/repairs/replacements/payload writes/masks; URL cache covers 11,839 owners without reads. Cleanup leaves plugin off / enabled list empty.
+- Original base warm 205.020s / 446.789 CPU-s remains coverage, power and starting-state qualified; no clean warm CPU percentage or exact plugin-only attribution. Reverse S2 baseline and full vocabulary parity pending.
