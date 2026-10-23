@@ -19,62 +19,20 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR201 Windows performance acceptance — completed return, conclusion C
+# PR203 Mac study complete — no active assignment
 
-Main validation agent: Zsolt's Codex Agent. No active experiment or automatic
-optimization follow-up. PR201 remains draft for the maintainer's merge/risk decision.
-PR203's branch, candidate, instructions and Mac real-vault investigation were untouched.
+Zsolt's Codex Agent, 2026-10-23 Europe/Budapest.
 
-Branch: 2026-10-21-indexing-cpu-reduction. Entry tooling/docs head: 8309371.
-The commit containing this return changes only harness/tests/documentation.
-Runtime baseline 551a3b52895484de3dd41e5c6eb2fa8c6712fec4 and candidate
-fa08e60e1a7122f8b37fcd11c943b883317b6ae8 remain pinned. Built, measured and restored
-candidate main SHA256 c39fb4876315a3348b782fe91400398faab1f98de8c0852eb9cc06bf24509a58.
-No runtime edits/builds; startup-backlog, exact parser reuse, bounded source-head
-validation and corrected SI4 are unchanged. Existing exact-artifact correctness
-and successful pinned-runtime CI remain applicable.
+The maintainer authorized committing/finalizing PR203, merging the useful report/tooling, then
+switching to main and fetching. The explicit follow-up says not to wait for CI before merging.
+Final merge state and terminal verification results are recorded on [PR203](https://github.com/zsviczian/kplex/pull/203).
 
-Durable evidence: docs/validation/indexing-cpu-201-2026-10-21.md (new result first,
-all prior checkpoints/failures retained); predeclared protocol is linked there.
-The maintainer confirmed only Small remained open. Native guards verified one
-recognized Small window before graceful application restarts; no forced kills,
-new profiles/destinations, global storage resets, forced GC or scheduling changes.
+- [Final study record](docs/validation/mac-vault-indexing-203-2026-10-22.md) contains all measured results and qualifications. Guarded Mac harness and focused tests are committed; temporary plan marker removed. Current-main integration preserves PR201. Production source/styles/release metadata are unchanged relative to main.
+- 22focused Mac tests pass Node22.22.2. Full verification is running at publication, with release/architecture/core/lint and earlier test batches passed. No pending full-suite/CI outcome is claimed as a pass. Maintainer accepted merging without waiting for CI; actual results follow in the PR conversation.
+- Measured runtimes remain A551a3b/Bc4a656b; newerfa08e60/current main is not measured here. Warm broad-tag/startup/profile/power/resource/control qualifications remain; no production optimization or performance acceptance is implied.
+- Private final capture snapshot `/Users/zsviczian/kplex-private-evidence/2026-10-23-pr203-final`:1103verifiedfiles/2063535924storedbytes, immutable measurement artifacts/source identities and failed/qualified receipts. Earlier partial/pause snapshots and working seeds/worktrees retained. No HANDOFF archive; do not move/delete registered A/Bworktrees blindly.
+- Final hashes match20190copied content files/10.956GB and223protected production config files/84MB. No original full-content baseline; no production write/toggle/database operation. Copy K-Plex/Sync/Publish/external writers disabled, controllers/debugger removed, no study driver remains. User may use the Mac normally.
 
-Final cohort: host,A1,F1,F2,A2,A3,F3, serial fresh Browser and renderer lifetimes,
-common authenticated logical checkpoint, separate preparation-process import,
-60-second settling and unchanged warm activation. Normal maintenance entered and
-fulfilled once per A/F arm near five minutes. Process/presence/CPU/memory/scalar
-traces and wrapper retirement are retained privately. No detailed profiler ran.
-
-Scenario collection and cleanup passed; acceptance remains open. Each arm
-misses terminal CPU for an exited GPU; every acceptanceEligible/comparable flag
-remains false. F2 also has 74 focus violations/65 hidden samples, four 46–60-second
-gaps and a 657.029-second tail. Other six arms have no measured visibility/focus
-violation. Actual post-tail F-A: -.038022,+.524616(unmatched657vs600s),-1.116261
-CPU-seconds. No repeated candidate-specific excess or causal product path was
-established. Old expensive tails were mainly selected renderer and also baseline;
-new small 2–4-second renderer bins occur in both arms. Maintenance is separate.
-Do not relabel passed collection as A, discard F2 or invent a tolerance/cause.
-
-Stop C at the declared bound. No extra pairs, runtime fix or Windows adjustments.
-Smallest next step is an explicit maintainer risk decision for a scoped merge.
-Clean acceptance would first require stable foreground and independent terminal
-process-CPU coverage, with controlled observer overhead, before replacement work.
-No such additional experiment is started or implicitly authorized by this return.
-
-Private root: TEMP/kplex-pr201-resume-windows-fresh-20261022-4; summary SHA256
-88aa83805f20a760be071a21e3faf267d62832c0062d04e636c28db882e91ee4.
-Earlier preflight and two cancelled baseline cohorts remain separate/private.
-Original DB capture/restore/verify SHA c7f9185504f4703425854e62ac8f25fb0ec46f8048290fd00f81023e85f35600.
-All 12 JSON files byte-restored, original layout/plugin/C39 artifact restored,
-107 files/88 Markdown, zero source/cache/unsaved debt, no controller/debugger and
-all test-owned display requests released. Native cleanup receipt passed.
-
-New source: indexingFresh.mjs, Host, Scenario, Observation, Guards under
-scripts/testing/obsidian; four focused test files are wired into npm test.
-Main reviewed serialization, lifecycle/guard/cancellation ownership and TSDoc;
-33 new and 45 existing runner/checkpoint/transport/probe executions passed on Node 22.22.2.
-Syntax/whitespace/header preservation and unchanged runtime/artifact checks pass.
-No full functional matrix repeated; exact C39 evidence is reused as requested.
-Raw traces stay private. Git/PR publication status belongs in the PR/final return;
-keep draft, no merge/release/history rewrite or automatic C15/refactor continuation.
+No additional experiment, runtime change, release or implementation task is queued. C14 remains
+accepted and structural refactoring paused. Any follow-up needs a new scoped assignment; keep the
+measurement's frozen identities and failures when assessing newer runtime changes.
