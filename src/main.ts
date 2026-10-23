@@ -35,6 +35,8 @@
  * relocation approves bounded native reference occurrences and retains partial-write recovery locally.
  * Device-specific startup admission and strategy are captured once; actual views and explicit work
  * share the existing initialization owners. Dormant native changes retain coalesced validity fences.
+ * Fresh restore inventory retires unchanged native create notifications only under their exact
+ * identity/path/stat/event proof; dormant semantic edits and destructive changes retain reconciliation.
  * Ontology text drafts persist one guarded field through the existing settings queue before live
  * semantic publication; slow refresh remains outside the disk queue and cannot replay failed saves.
  */
@@ -217,10 +219,17 @@ export default class KplexPlugin extends Plugin {
   private recentLeafHistory: WorkspaceLeaf[] = [];
   private readonly hoverParent: HoverParent = { hoverPopover: null };
   private reactiveIndexListenersRegistered = false;
-  private preRestoreChanged = false;
   private preRestoreUncoveredChanges = false;
   private readonly preRestoreReasons = new Map<string, number>();
   private readonly preRestoreMarkdownPaths = new Map<string, number>();
+  /** A dormant observation protects later non-create events through admission's asynchronous setup. */
+  private preRestoreHadDormantEvent = false;
+  private readonly preRestoreDormantReasons = new Set<string>();
+  private readonly preRestoreDormantMarkdownPaths = new Set<string>();
+  /** Coalesce create observations by path; immutable tokens distinguish discovery from later identity/stat drift. */
+  private readonly preRestoreCreatedItems = new Map<string, {
+    item: TFile | TFolder; reason: string; revision: number; mtime: number | null; ctime: number | null; size: number | null;
+  }>();
   private preRestoreListenerCleanup: (() => void) | null = null;
   private openKplexViews = 0;
   private indexViewOpened = false;
@@ -230,7 +239,6 @@ export default class KplexPlugin extends Plugin {
   private indexPreparationAdmitted = false;
   private explicitIndexPreparationRequested = false;
   private indexSearchPrimed = false;
-  private preRestoreDormantChanges = false;
   private readonly layoutReadyWaiters = new Set<() => void>();
   private metadataStabilized = false;
   private metadataStabilityPromise: Promise<number> | null = null;
@@ -678,20 +686,45 @@ export default class KplexPlugin extends Plugin {
 
   /** Discard startup events already covered by the captured physical inventory. */
   private classifyPreRestoreChanges(snapshotFresh: boolean): void {
-    // The inventory already includes events delivered before its synchronous tree walk.
-    // Keep only events that arrived while snapshot preview/hydration was loading.
     const inventoryRevision = this.index.getRestoreInventorySourceRevision();
-    this.preRestoreUncoveredChanges = this.preRestoreChanged &&
-      (this.preRestoreDormantChanges || inventoryRevision === null || inventoryRevision !== this.indexDirtyRevision);
-    if (this.preRestoreUncoveredChanges) {
-      for (const [reason, revision] of this.preRestoreReasons) {
-        if (this.preRestoreDormantChanges || inventoryRevision === null || revision > inventoryRevision) this.indexBacklogReasons.add(reason);
-      }
-      for (const [path, revision] of this.preRestoreMarkdownPaths) {
-        if (this.preRestoreDormantChanges || inventoryRevision === null || revision > inventoryRevision) this.dirtyMarkdownPaths.add(path);
+    const uncoveredCreates = new Set<string>();
+    const uncoveredCreateReasons = new Set<string>();
+    const observedCreateReasons = new Set<string>();
+    for (const [path, token] of this.preRestoreCreatedItems) {
+      observedCreateReasons.add(token.reason);
+      const current = token.item instanceof TFile
+        ? this.app.vault.getFileByPath(path) === token.item
+          && token.item.stat.mtime === token.mtime && token.item.stat.ctime === token.ctime && token.item.stat.size === token.size
+        : this.app.vault.getFolderByPath(path) === token.item;
+      // Matching physical signatures alone cannot prove a replaced native identity. This only
+      // retires an unchanged create seen before capture; full hydration keeps its own final fences.
+      if (!snapshotFresh || inventoryRevision === null || token.revision > inventoryRevision
+        || token.item.path !== path || !current) {
+        uncoveredCreates.add(path);
+        uncoveredCreateReasons.add(token.reason);
       }
     }
-    this.preRestoreDormantChanges = false;
+    this.preRestoreUncoveredChanges = false;
+    for (const [reason, revision] of this.preRestoreReasons) {
+      const createReason = reason === "vault:create" || reason === "vault:create-markdown";
+      const uncoveredCreate = createReason && (!observedCreateReasons.has(reason)
+        || uncoveredCreateReasons.has(reason));
+      if (this.preRestoreDormantReasons.has(reason) || inventoryRevision === null || revision > inventoryRevision || uncoveredCreate) {
+        this.indexBacklogReasons.add(reason);
+        this.preRestoreUncoveredChanges = true;
+      }
+    }
+    for (const [path, revision] of this.preRestoreMarkdownPaths) {
+      if (this.preRestoreDormantMarkdownPaths.has(path) || inventoryRevision === null
+        || revision > inventoryRevision || uncoveredCreates.has(path)) {
+        this.dirtyMarkdownPaths.add(path);
+        this.preRestoreUncoveredChanges = true;
+      }
+    }
+    this.preRestoreDormantReasons.clear();
+    this.preRestoreDormantMarkdownPaths.clear();
+    this.preRestoreHadDormantEvent = false;
+    this.preRestoreCreatedItems.clear();
     this.preRestoreReasons.clear();
     this.preRestoreMarkdownPaths.clear();
     this.indexDirty = !snapshotFresh || this.preRestoreUncoveredChanges || this.indexBacklogReasons.size > 0;
@@ -700,38 +733,61 @@ export default class KplexPlugin extends Plugin {
   /** Capture changes during snapshot inspection before normal event-driven work is registered. */
   private installPreRestoreChangeFence(): void {
     if (this.preRestoreListenerCleanup) return;
-    const mark = (reason: string, file?: TFile): void => {
-      this.preRestoreChanged = true;
-      this.preRestoreDormantChanges ||= !this.indexPreparationAdmitted;
+    /** Record one source epoch and coalesce native create proof separately from dormant semantic invalidation. */
+    const mark = (reason: string, file?: TFile, createdItem?: TFile | TFolder): void => {
       this.indexDirtyRevision += 1;
+      this.preRestoreHadDormantEvent ||= !this.indexPreparationAdmitted;
       this.preRestoreReasons.set(reason, this.indexDirtyRevision);
       if (file?.extension === "md") this.preRestoreMarkdownPaths.set(file.path, this.indexDirtyRevision);
+      if (createdItem) {
+        // Keep the first native proof: another delivered create for a replacement object must
+        // not erase observed identity drift. Latest reason/path revisions still fence late events.
+        if (!this.preRestoreCreatedItems.has(createdItem.path)) this.preRestoreCreatedItems.set(createdItem.path, {
+          item: createdItem, reason, revision: this.indexDirtyRevision,
+          mtime: createdItem instanceof TFile ? createdItem.stat.mtime : null,
+          ctime: createdItem instanceof TFile ? createdItem.stat.ctime : null,
+          size: createdItem instanceof TFile ? createdItem.stat.size : null,
+        });
+      } else if (this.preRestoreHadDormantEvent) {
+        // Admission can yield before inventory capture. Preserve the old dormant lifetime's
+        // protection for later same-stat edits, without retaining unrelated covered creates.
+        this.preRestoreDormantReasons.add(reason);
+        if (file?.extension === "md") this.preRestoreDormantMarkdownPaths.add(file.path);
+      }
     };
-    const created = this.app.vault.on("create", (item) => {
+    /** Native destructive events retire old path observations without transferring create proof. */
+    const retirePathObservations = (path: string, descendants: boolean): void => {
+      /** Match the exact native path, including descendants only for a folder operation. */
+      const matches = (candidate: string): boolean => candidate === path || descendants && candidate.startsWith(path + "/");
+      for (const candidate of this.preRestoreMarkdownPaths.keys()) if (matches(candidate)) {
+        this.preRestoreMarkdownPaths.delete(candidate);
+        this.preRestoreDormantMarkdownPaths.delete(candidate);
+      }
+      for (const candidate of this.preRestoreCreatedItems.keys()) if (matches(candidate)) this.preRestoreCreatedItems.delete(candidate);
+    };
+    const created = this.app.vault.on("create", /** Capture an unchanged native create for later inventory coverage without granting semantic authority. */ (item) => {
       this.index.invalidateHostStructure();
       mark(item instanceof TFile && item.extension === "md" ? "vault:create-markdown" : "vault:create",
-        item instanceof TFile ? item : undefined);
+        item instanceof TFile ? item : undefined, item instanceof TFile || item instanceof TFolder ? item : undefined);
       if (!this.indexPreparationAdmitted) {this.index.observeDeferredHostChange(item); return;}
       if (item instanceof TFile) this.index.updateHostFileAvailability(item.path, item);
       else if (item instanceof TFolder) void this.index.updateHostFolderAvailability(item.path, item);
     });
-    const deleted = this.app.vault.on("delete", (item) => {
+    const deleted = this.app.vault.on("delete", /** Retain destructive invalidation and retire dormant path proof before ordinary native availability updates. */ (item) => {
       this.index.invalidateHostStructure();
       mark("vault:delete", item instanceof TFile ? item : undefined);
       if (!this.indexPreparationAdmitted) {
-        for (const path of this.preRestoreMarkdownPaths.keys()) {
-          if (path === item.path || item instanceof TFolder && path.startsWith(item.path + "/")) this.preRestoreMarkdownPaths.delete(path);
-        }
+        retirePathObservations(item.path, item instanceof TFolder);
         this.index.observeDeferredHostChange(item); return;
       }
       if (item instanceof TFile) this.index.updateHostFileAvailability(item.path);
       else if (item instanceof TFolder) void this.index.updateHostFolderAvailability(item.path);
     });
-    const renamed = this.app.vault.on("rename", (item, oldPath) => {
+    const renamed = this.app.vault.on("rename", /** Keep rename reconciliation and remove old dormant coordinates without transferring create coverage. */ (item, oldPath) => {
       this.index.invalidateHostStructure();
       mark("vault:rename", item instanceof TFile ? item : undefined);
       if (!this.indexPreparationAdmitted) {
-        this.preRestoreMarkdownPaths.delete(oldPath);
+        retirePathObservations(oldPath, item instanceof TFolder);
         this.index.observeDeferredHostChange(item, true, oldPath); return;
       }
       if (item instanceof TFile) this.index.updateHostFileAvailability(oldPath, item);
@@ -743,7 +799,7 @@ export default class KplexPlugin extends Plugin {
         void this.index.refreshVisiblePresentation(file.path);
       }
     });
-    const metadata = this.app.metadataCache.on("changed", (file) => {
+    const metadata = this.app.metadataCache.on("changed", /** Preserve observed dormant metadata edits even when the later physical snapshot has identical stats. */ (file) => {
       if (this.app.vault.getFileByPath(file.path) !== file) return;
       const previousSourceRevision = this.indexDirtyRevision;
       mark("metadata:changed", file);
@@ -751,12 +807,13 @@ export default class KplexPlugin extends Plugin {
       void this.index.refreshVisiblePresentation(file.path);
       if (this.index.refreshVisibleHostMetadataPreviews(file.path, previousSourceRevision)) this.scheduleVisibleMetadataRefresh(file.path);
     });
-    const modified = this.app.vault.on("modify", file => {
+    const modified = this.app.vault.on("modify", /** Retain actual Markdown body edits independently of create coverage and physical-stat equality. */ file => {
       if (!(file instanceof TFile) || file.extension !== "md") return;
       mark("metadata:changed", file);
       if (!this.indexPreparationAdmitted) this.index.observeDeferredHostChange(file, true);
     });
     let released = false;
+    /** Retire listeners and transient native tokens idempotently on restore handover or plugin unload. */
     const release = (): void => {
       if (released) return;
       released = true;
@@ -766,6 +823,12 @@ export default class KplexPlugin extends Plugin {
       this.app.vault.offref(renamed);
       this.app.metadataCache.offref(metadata);
       this.app.metadataCache.offref(resolved);
+      this.preRestoreReasons.clear();
+      this.preRestoreMarkdownPaths.clear();
+      this.preRestoreDormantReasons.clear();
+      this.preRestoreDormantMarkdownPaths.clear();
+      this.preRestoreHadDormantEvent = false;
+      this.preRestoreCreatedItems.clear();
       this.preRestoreListenerCleanup = null;
     };
     this.preRestoreListenerCleanup = release;

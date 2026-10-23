@@ -27,6 +27,8 @@
  * runtime capabilities and injected runtimes retain their existing dispatch contract.
  * Single-chunk disk families coalesce their first bounded posting page with the chunk fetch;
  * speculative decode supplies no authority and retains all digest, frame, selection and lease fences.
+ * A bounded single-page selection closes heads and sequence in one atomic readonly transaction;
+ * multi-page selections retain their global sequence fence and all reads recheck local overlays.
  */
 import { yieldToHostTask } from "../adapters/obsidian/yieldToHostTask";
 import { estimateReferenceRecordBytes } from "../core/graph/source";
@@ -1087,11 +1089,13 @@ export class NeutralSourceRepository {
   }
 
   /**
-   * Validate a finite multi-source scope with bounded head pages under one global source-sequence
-   * fence. This preserves the former all-at-once atomic meaning without a permanent 256-owner cap.
+   * Validate a finite multi-source scope atomically in one bounded head page, or under a global
+   * source-sequence fence across several pages. Both paths retain local overlay/caller checks after
+   * storage awaits; a single atomic page needs no separate sequence-capture or closing transaction.
    */
   async validateSelections(stamps: readonly SelectedSourceStamp[], current: () => boolean): Promise<{ reason: SourceReason; sourceId?: string }> {
     const disk: SelectedSourceStamp[] = [];
+    /** Pending deletion, unsaved overlays and caller retirement mask disk heads before and after IO. */
     const localReason = (stamp: SelectedSourceStamp): SourceReason => {
       const id = stamp.head.sourceId;
       if (this.closed || !current()) return "cancelled";
@@ -1112,38 +1116,50 @@ export class NeutralSourceRepository {
       if (this.closed || !current()) return { reason: "cancelled" };
       if (!db) return { reason: this.storage.unavailableReason?.() ?? "storage-unavailable" };
       try {
-        const capturedSequence = await this.transaction(db, [META_STORE], "readonly", "", async (transaction) => {
-          const raw = await unknownValue(transaction.objectStore(META_STORE).get(SOURCE_SEQUENCE_KEY));
-          if (raw === undefined) return 0;
-          if (!sourceObject(raw) || raw.key !== SOURCE_SEQUENCE_KEY || !sourceCount(raw.value)) throw new SourceFactError("catalog-uncertain");
-          return raw.value;
-        });
+        const singlePage = disk.length <= SOURCE_MAX_BATCH_RECORDS;
+        const capturedSequence = singlePage ? null : await this.transaction(db, [META_STORE], "readonly", "",
+          /** Separate pages must all observe the same durable source-sequence coordinate. */
+          async (transaction) => {
+            const raw = await unknownValue(transaction.objectStore(META_STORE).get(SOURCE_SEQUENCE_KEY));
+            if (raw === undefined) return 0;
+            if (!sourceObject(raw) || raw.key !== SOURCE_SEQUENCE_KEY || !sourceCount(raw.value)) throw new SourceFactError("catalog-uncertain");
+            return raw.value;
+          });
         for (let offset = 0; offset < disk.length; offset += SOURCE_MAX_BATCH_RECORDS) {
           const page = disk.slice(offset, offset + SOURCE_MAX_BATCH_RECORDS);
-          const result = await this.transaction(db, [SOURCE_HEAD_STORE, META_STORE], "readonly", "", async (transaction) => {
-            const rawSequence = await unknownValue(transaction.objectStore(META_STORE).get(SOURCE_SEQUENCE_KEY));
-            const sequence = rawSequence === undefined ? 0 : sourceObject(rawSequence) && rawSequence.key === SOURCE_SEQUENCE_KEY
-              && sourceCount(rawSequence.value) ? rawSequence.value : -1;
-            if (sequence !== capturedSequence) return { reason: "superseded" as const };
-            const heads = await Promise.all(page.map((stamp) => unknownValue(transaction.objectStore(SOURCE_HEAD_STORE).get(stamp.head.sourceId))));
-            for (let index = 0; index < page.length; index += 1) {
-              const stamp = page[index], raw = heads[index];
-              const reason = sourceHeadReason(raw);
-              if (reason !== "ready") return { reason, sourceId: stamp.head.sourceId };
-              if (!expectedHeadMatches({ kind: "head", revision: stamp.head.sourceRevision, sequence: stamp.sequence! }, raw)) {
-                return { reason: "superseded" as const, sourceId: stamp.head.sourceId };
+          const result = await this.transaction(db, [SOURCE_HEAD_STORE, META_STORE], "readonly", "",
+            /** One transaction authenticates this whole bounded head page and its sequence shape. */
+            async (transaction) => {
+              const rawSequence = await unknownValue(transaction.objectStore(META_STORE).get(SOURCE_SEQUENCE_KEY));
+              const sequence = rawSequence === undefined ? 0 : sourceObject(rawSequence) && rawSequence.key === SOURCE_SEQUENCE_KEY
+                && sourceCount(rawSequence.value) ? rawSequence.value : -1;
+              if (singlePage && sequence < 0) throw new SourceFactError("catalog-uncertain");
+              if (!singlePage && sequence !== capturedSequence) return { reason: "superseded" as const };
+              const heads = await Promise.all(page.map(
+                /** Schedule every exact head read inside the same native transaction snapshot. */
+                (stamp) => unknownValue(transaction.objectStore(SOURCE_HEAD_STORE).get(stamp.head.sourceId))));
+              for (let index = 0; index < page.length; index += 1) {
+                const stamp = page[index], raw = heads[index];
+                const reason = sourceHeadReason(raw);
+                if (reason !== "ready") return { reason, sourceId: stamp.head.sourceId };
+                if (!expectedHeadMatches({ kind: "head", revision: stamp.head.sourceRevision, sequence: stamp.sequence! }, raw)) {
+                  return { reason: "superseded" as const, sourceId: stamp.head.sourceId };
+                }
               }
-            }
-            return { reason: "ready" as const };
-          });
+              return { reason: "ready" as const };
+            });
           if (result.reason !== "ready") return result;
           if (offset + SOURCE_MAX_BATCH_RECORDS < disk.length) { await this.runtime.yield(); if (!current() || this.closed) return { reason: "cancelled" }; }
         }
-        const finalSequence = await this.transaction(db, [META_STORE], "readonly", "", async (transaction) => {
-          const raw = await unknownValue(transaction.objectStore(META_STORE).get(SOURCE_SEQUENCE_KEY));
-          return raw === undefined ? 0 : sourceObject(raw) && raw.key === SOURCE_SEQUENCE_KEY && sourceCount(raw.value) ? raw.value : -1;
-        });
-        if (finalSequence !== capturedSequence) return { reason: "superseded" };
+        if (!singlePage) {
+          const finalSequence = await this.transaction(db, [META_STORE], "readonly", "",
+            /** Close source activation during any earlier page or cooperative continuation. */
+            async (transaction) => {
+              const raw = await unknownValue(transaction.objectStore(META_STORE).get(SOURCE_SEQUENCE_KEY));
+              return raw === undefined ? 0 : sourceObject(raw) && raw.key === SOURCE_SEQUENCE_KEY && sourceCount(raw.value) ? raw.value : -1;
+            });
+          if (finalSequence !== capturedSequence) return { reason: "superseded" };
+        }
       } catch (error) { return { reason: errorReason(error, "read-error") }; }
     }
     for (let index = 0; index < stamps.length; index += 1) {

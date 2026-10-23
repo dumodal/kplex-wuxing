@@ -8,6 +8,29 @@ This is the accepted SI3 persistence contract and historical contributor prototy
 
 `src/adapters/obsidian/sourceAcquisition.ts` owns observed file incarnations/events, MetadataCache readiness, legacy migration, inventory and host resolution. It calls the existing exported `resolveObsidianReferenceTarget()` and Date collector. No path/basename guesser, Date grammar or semantic classifier is added.
 
+Complete current-process parses may carry an optional parser-input token through the existing hot,
+queued and durable body cache. Acquisition validates native file identity, path, mtime/ctime/size,
+observed per-file revision and parser version before sharing that input. An unrelated host-resolution
+change does not invalidate lexical input, but still cancels semantic captures. A missing/tombstoned
+head's synchronous synthetic incarnation increment may carry only an already-current accepted
+receipt; actual host events and replacement identities cannot. Reuse never clears dirty/created or
+unsaved state, establishes source completeness, or grants edit authority. Source activation retains
+its independent host/caller/metadata/storage fences. URL-only projections cannot be certified as
+complete bodies. Optional body-queue eviction can require reparsing; it cannot remove source facts
+or masks. See the [PR201 validation record](validation/indexing-cpu-201-2026-10-21.md).
+
+An explicit URL-owner change independently retires optional sharing before task coalescing. A weak
+per-file input epoch rejects parses captured before that observation but accepted afterward; the
+accepted receipt also retires its queued persistence guard. This changes no source observation
+revision, dirty/created flag, inventory scheduling or unsaved mask. Ordinary unchanged URL discovery
+and source publication retain sharing. Native source events remain the source authority fence.
+
+A completed full-build parse enters the existing hot body cache before yielding, independently of
+graph/source publication. Before parser submission, the builder rechecks its original input lifetime
+and selects only an already-complete matching hot/queued token after its existing priority checkpoint.
+Accepted cache-write guards also require that exact receipt to remain selected, so an older delayed
+writer cannot overwrite the body required by a newer token. Batched persistence remains unchanged.
+
 `KplexIndexedDbCache` remains the single connection owner. It also owns narrowly scoped, temporary existing-database handles used only to retire an ended contributor reader after normal-handle failure; they cannot make the normal writer available. Incremental `GraphBuilder` calls acquisition **before semantic no-op suppression**. A complete semantic rebuild uses neutral facts for body reuse but leaves source activation to the independent inventory after authoritative publication; it does not wait for a source write per note. `GraphIndex` also starts inventory after complete snapshot hydration. Preview/checkpoint hydration does not claim source completeness. The C14 publication callback remains synchronous; private source staging and graph preparation are asynchronous and separately fenced. Staging can add private-path latency; no latency improvement is claimed.
 
 ## SI4a selected-head read capability — Accepted

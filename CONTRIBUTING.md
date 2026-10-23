@@ -1012,6 +1012,44 @@ that becomes canonical before query is recorded as a setup exclusion, not a comp
 The lane records bounded milestone/resource aggregates, checks foreground ownership and restores
 its fixture files, wrappers, workspace, preferences and exact configuration bytes.
 
+### Controlled indexing CPU workloads
+
+For the PR #201 controlled CPU workloads, run `node scripts/testing/obsidian/indexingCpu.mjs`
+after exact-build staging in the explicitly configured disposable Small vault. Use a fresh
+`KPLEX_HOST_REPORT_DIR` for every serial run. `KPLEX_CPU_SCENARIO=restore` tests unchanged
+initial discovery notifications and warm opening; the default `reconstruction` creates and
+removes an owned subtree. `KPLEX_CPU_OWNERS` accepts 32, 64, 128 or 256; every tenth owner has
+a long paragraph. Both lanes wait for source/URL/cache/snapshot drain and a matched idle tail,
+and record CPU/backlog at 30 seconds from workload start.
+`KPLEX_CPU_OBSERVERS=false` omits work observers for overhead controls; `KPLEX_CPU_DETAILED=true`
+adds the existing detailed resource observer and must be matched across comparisons. Use
+`KPLEX_CPU_PROFILE=true` for separate bounded renderer-JavaScript sampling runs, excluded from
+CPU acceptance; these samples omit Browser/GPU/Utility work and parser workers.
+The five-millisecond diagnostic completed on the tested Windows host; an earlier one-millisecond
+attempt timed out and remains recorded. Ordinary CPU comparisons do not enable profiling. Preserve
+foreground/focus and original throttling. Reports contain private configuration receipts.
+These controlled workloads are not a full application restart, Synthetic-Scale-v2 acceptance,
+physical-device evidence or proof of the original Mac thermals. See the
+[PR #201 validation record](docs/validation/indexing-cpu-201-2026-10-21.md) for actual results.
+
+The separate Windows fresh-process acceptance lane is
+`node scripts/testing/obsidian/indexingFresh.mjs`. Follow its
+[pre-collection protocol](docs/validation/indexing-cpu-201-windows-protocol.md).
+It is pinned to the existing Small vault and the recorded A/F artifacts; it never
+builds them. Set the three explicit vault variables, a nonexistent direct TEMP
+`KPLEX_HOST_REPORT_DIR` named `kplex-pr201-resume...`, and `KPLEX_CPU_FRESH_BASELINE_DIR` to the previously
+verified baseline `dist` folder. Only after the maintainer confirms all other
+vaults saved/closed, set `KPLEX_CPU_FRESH_RESTART_CONFIRMED=only-kplex-test-small`.
+The driver independently verifies one Small window before every graceful quit.
+It backs up configuration/artifacts and the original database, restores the
+common logical checkpoint in a preparation process, then proves new Browser and
+renderer identities. It runs the disabled-plugin control and three alternating
+warm pairs serially, retaining timestamped CPU/presence/memory/scalar samples and
+actual maintenance events for 600 seconds after completion. Preparation and app
+startup are separate from warm activation; physical storage equality is not
+claimed. Private traces and failed arms remain in the report folder. Focused
+guard/observer/cancellation tests run in the ordinary non-host test lane.
+
 ### Local folder wave validation
 
 After exact-build staging, run `npm run verify:obsidian:folder-wave -- <fresh-absolute-report-directory>`

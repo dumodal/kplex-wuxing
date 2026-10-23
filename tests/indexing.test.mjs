@@ -1610,6 +1610,144 @@ const plugin = { app, settings, getIndexSourceRevision: () => 0, recordDiagnosti
 const index = new GraphIndex(plugin, app);
 console.log(`Startup admission: ${await runStartupAdmission({KplexPlugin,GraphIndex,app,settings,TFile,TFolder,fixtureEvents})} production scenarios passed.`);
 
+// Exercise the actual temporary native listeners, including the dormant interval before admission.
+// A physical snapshot can cover initial discovery notifications; it cannot cover observed same-stat
+// body/metadata edits merely because its later inventory has matching paths, mtimes and sizes.
+function preRestoreFenceFixture() {
+  const startup = new KplexPlugin();
+  const nativeFiles = new Map();
+  const nativeFolders = new Map();
+  const deferred = [];
+  let inventoryRevision = null;
+  startup.app = {
+    ...app,
+    vault: {
+      ...app.vault, ...fixtureEvents(),
+      getFileByPath: path => nativeFiles.get(path) ?? null,
+      getFolderByPath: path => nativeFolders.get(path) ?? null,
+    },
+    metadataCache: { ...metadataCache, ...fixtureEvents() },
+  };
+  startup.register = () => {};
+  startup.index = {
+    getRestoreInventorySourceRevision: () => inventoryRevision,
+    invalidateHostStructure: () => {},
+    observeDeferredHostChange: (...args) => { deferred.push(args); },
+    updateHostFileAvailability: () => {},
+    updateHostFolderAvailability: async () => {},
+    refreshVisiblePresentation: async () => {},
+    refreshVisibleHostMetadataPreviews: () => false,
+  };
+  startup.installPreRestoreChangeFence();
+  const put = item => (item instanceof TFile ? nativeFiles : nativeFolders).set(item.path, item);
+  const create = item => { put(item); startup.app.vault.trigger("create", item); return item; };
+  const capture = () => { inventoryRevision = startup.getIndexSourceRevision(); startup.indexPreparationAdmitted = true; };
+  const classify = (fresh = true) => startup.classifyPreRestoreChanges(fresh);
+  const close = () => {
+    const release = startup.preRestoreListenerCleanup;
+    release(); release();
+    const revision = startup.getIndexSourceRevision();
+    startup.app.vault.trigger("create", new TFile("After cleanup.md"));
+    assert.equal(startup.getIndexSourceRevision(), revision, "Retired pre-restore listeners must not retain event ownership");
+  };
+  return { startup, nativeFiles, nativeFolders, deferred, put, create, capture, classify, close };
+}
+{
+  const f = preRestoreFenceFixture();
+  try {
+    f.create(new TFolder("Initial"));
+    f.create(new TFile("Initial/Note.md", 17));
+    f.create(new TFile("Initial/Image.png", 18));
+    assert.equal(f.deferred.length, 3, "Dormant native creates retain lightweight source invalidation");
+    f.capture(); f.classify();
+    assert.equal(f.startup.indexDirty, false, "Fresh captured inventory covers unchanged dormant initial file/folder/attachment discovery");
+    assert.deepEqual([...f.startup.indexBacklogReasons], [], "Covered initial creates must not force a post-restore full rebuild");
+    assert.deepEqual([...f.startup.dirtyMarkdownPaths], []);
+    assert.equal(f.startup.preRestoreUncoveredChanges, false);
+  } finally { f.close(); }
+}
+for (const repeat of ["same-native", "replacement-native", "after-capture"]) {
+  const f = preRestoreFenceFixture();
+  try {
+    const original = f.create(new TFile("Repeated.md", 18));
+    if (repeat === "after-capture") f.capture();
+    f.create(repeat === "replacement-native" ? new TFile(original.path, original.stat.mtime) : original);
+    if (repeat !== "after-capture") f.capture();
+    f.classify();
+    assert.equal(f.startup.indexDirty, repeat !== "same-native", `${repeat}: repeated callbacks retain the first native proof and latest event fence`);
+    assert.deepEqual([...f.startup.dirtyMarkdownPaths], repeat === "same-native" ? [] : [original.path]);
+    assert.deepEqual([...f.startup.indexBacklogReasons], repeat === "same-native" ? [] : ["vault:create-markdown"]);
+  } finally { f.close(); }
+}
+for (const event of ["modify", "changed"]) for (const admittedBeforeEvent of [false, true]) {
+  const f = preRestoreFenceFixture();
+  try {
+    f.create(new TFolder("Initial"));
+    const note = f.create(new TFile("Initial/Edited.md", 19));
+    f.create(new TFile("Initial/Unchanged.md", 19));
+    f.create(new TFile("Initial/Image.png", 20));
+    // Search/catalog preparation can yield after admission but before inventory capture.
+    if (admittedBeforeEvent) f.startup.indexPreparationAdmitted = true;
+    const stat = { ...note.stat };
+    (event === "modify" ? f.startup.app.vault : f.startup.app.metadataCache).trigger(event, note);
+    assert.deepEqual(note.stat, stat, "The observed startup edit deliberately keeps identical physical stats");
+    f.capture(); f.classify();
+    assert.equal(f.startup.indexDirty, true, `Equal-stat ${event} remains outstanding across admission=${admittedBeforeEvent}`);
+    assert.deepEqual([...f.startup.indexBacklogReasons], ["metadata:changed"], "Covered creates cannot turn an outstanding note edit into structural rebuild work");
+    assert.deepEqual([...f.startup.dirtyMarkdownPaths], [note.path], "Only the actually edited Markdown owner needs a patch");
+    assert.equal(f.startup.preRestoreUncoveredChanges, true);
+  } finally { f.close(); }
+}
+for (const kind of ["markdown", "attachment", "folder"]) {
+  const f = preRestoreFenceFixture();
+  try {
+    f.capture();
+    const item = f.create(kind === "folder" ? new TFolder("Late") : new TFile(kind === "markdown" ? "Late.md" : "Late.png", 21));
+    f.classify();
+    assert.equal(f.startup.indexDirty, true, `A genuine post-capture ${kind} create remains outstanding`);
+    assert.deepEqual([...f.startup.indexBacklogReasons], [kind === "markdown" ? "vault:create-markdown" : "vault:create"]);
+    assert.deepEqual([...f.startup.dirtyMarkdownPaths], kind === "markdown" ? [item.path] : []);
+  } finally { f.close(); }
+}
+for (const condition of ["unknown-inventory", "stale-snapshot", "file-replaced", "folder-replaced", "stat-changed", "ctime-changed", "path-changed"]) {
+  const f = preRestoreFenceFixture();
+  try {
+    const item = f.create(condition === "folder-replaced" ? new TFolder("Initial") : new TFile("Initial.md", 22));
+    if (condition !== "unknown-inventory") f.capture();
+    if (condition === "file-replaced") f.put(new TFile(item.path, item.stat.mtime));
+    if (condition === "folder-replaced") f.put(new TFolder(item.path));
+    if (condition === "stat-changed") item.stat.size += 1;
+    if (condition === "ctime-changed") item.stat.ctime += 1;
+    if (condition === "path-changed") {
+      f.nativeFiles.delete(item.path); item.path = "Moved.md"; f.put(item);
+    }
+    f.classify(condition !== "stale-snapshot");
+    assert.equal(f.startup.indexDirty, true, `${condition}: unproved create coverage must retain safe startup work`);
+    assert(f.startup.indexBacklogReasons.has(item instanceof TFile ? "vault:create-markdown" : "vault:create"),
+      `${condition}: a stale/unknown inventory or changed native token cannot erase the create reason`);
+  } finally { f.close(); }
+}
+for (const operation of ["delete-recreate", "rename"]) for (const admittedBeforeEvent of [false, true]) {
+  const f = preRestoreFenceFixture();
+  try {
+    const original = f.create(new TFile("Original.md", 23));
+    if (admittedBeforeEvent) f.startup.indexPreparationAdmitted = true;
+    if (operation === "delete-recreate") {
+      f.nativeFiles.delete(original.path); f.startup.app.vault.trigger("delete", original);
+      f.create(new TFile(original.path, original.stat.mtime));
+    } else {
+      const oldPath = original.path;
+      f.nativeFiles.delete(oldPath); original.path = "Renamed.md"; f.put(original);
+      f.startup.app.vault.trigger("rename", original, oldPath);
+    }
+    f.capture(); f.classify();
+    assert.equal(f.startup.indexDirty, true, `${operation} remains outstanding across admission=${admittedBeforeEvent}`);
+    assert(f.startup.indexBacklogReasons.has(operation === "rename" ? "vault:rename" : "vault:delete"),
+      "Observed destructive identity changes must not be mistaken for initial discovery");
+    if (operation === "rename" && !admittedBeforeEvent) assert(!f.startup.dirtyMarkdownPaths.has("Original.md"), "Dormant rename retires the old Markdown coordinate");
+  } finally { f.close(); }
+}
+
 // Restore has a temporary event fence before the normal reactive listeners are installed.
 // Events before inventory capture are already represented there; later events must remain queued
 // even if stale-snapshot reconciliation itself succeeds without a new event during its await.
@@ -1634,7 +1772,6 @@ for (const { inventoryRevision, fresh, remainsDirty } of [
   startup.metadataStabilized = true;
   startup.notifyIndexStatus = () => {};
   startup.hasVisibleKplexSurface = () => false;
-  startup.preRestoreChanged = true;
   startup.indexDirtyRevision = 1;
   startup.preRestoreMarkdownPaths.set("Note A.md", 1);
   startup.preRestoreReasons.set("metadata:changed", 1);
@@ -1647,7 +1784,6 @@ for (const { inventoryRevision, fresh, remainsDirty } of [
 {
   const startup = new KplexPlugin();
   startup.index = { isOnDemandMode: () => false, getRestoreInventorySourceRevision: () => 1 };
-  startup.preRestoreChanged = true;
   startup.indexDirtyRevision = 1;
   startup.preRestoreReasons.set("metadata:changed", 1);
   startup.indexBacklogReasons.add("manual-rebuild");
@@ -1658,7 +1794,6 @@ for (const { inventoryRevision, fresh, remainsDirty } of [
 {
   const startup = new KplexPlugin();
   startup.index = { isOnDemandMode: () => false, getRestoreInventorySourceRevision: () => 1 };
-  startup.preRestoreChanged = true;
   startup.indexDirtyRevision = 2;
   startup.preRestoreReasons.set("vault:rename-folder", 1);
   startup.preRestoreReasons.set("metadata:changed", 2);
@@ -3326,6 +3461,15 @@ try {
   const realNow = Date.now, realSetTimeout = window.setTimeout, realClearTimeout = window.clearTimeout;
   let clock = realNow(), timerId = -1;
   const watchdogTimers = new Map();
+  const sourceClocks = new Map();
+  // Source storage is unavailable here and its independent retry backoff also reaches five seconds.
+  // Keep that owner on its real runtime clock; the map below controls hydration watchdogs only.
+  const useRealSourceClock = restored => {
+    const runtime = restored.indexedDb.sources.runtime;
+    sourceClocks.set(runtime, { now: runtime.now, schedule: runtime.schedule, cancel: runtime.cancel });
+    Object.assign(runtime, { now: realNow, schedule: (callback, delay) => realSetTimeout(callback, delay), cancel: id => realClearTimeout(id) });
+  };
+  useRealSourceClock(index);
   Date.now = () => clock;
   window.setTimeout = (callback, ms, ...args) => {
     if (ms !== 5000) return realSetTimeout(callback, ms, ...args);
@@ -3347,6 +3491,7 @@ try {
   const controlledIndexes = [];
   const makeRestoreIndex = () => {
     const restored = new GraphIndex({ ...plugin, settings: { ...settings, pinnedNodes: [], maxItemCount: 100 } }, app);
+    useRealSourceClock(restored);
     restored.indexedDb.getBodies = async (requests) => new Map(requests.flatMap(({ path, mtime }) => {
       const cached = index.fieldCache.get(path);
       return cached?.mtime === mtime ? [[path, cached.body]] : [];
@@ -3589,6 +3734,8 @@ try {
     controlledIndexes.forEach((item) => item.destroy());
     controlledIndexes.length = 0;
     Date.now = realNow; window.setTimeout = realSetTimeout; window.clearTimeout = realClearTimeout;
+    for (const [runtime, original] of sourceClocks) Object.assign(runtime, original);
+    sourceClocks.clear();
   }
   const runtimePatch = await index.patchMarkdownPaths(["Note A.md"]);
   assert.deepEqual(runtimePatch, { outcome: "patched", count: 1 });

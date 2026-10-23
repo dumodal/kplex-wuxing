@@ -1,6 +1,7 @@
 /**
  * Tests K-Plex strict host-runner staging and failure paths with injected filesystem/CLI doubles.
  * Canonical command and DOM expectations match production; these tests do not launch Obsidian.
+ * Imported checkpoint/consumer contracts cover private CPU instrumentation without native hosts.
  */
 import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
@@ -18,6 +19,33 @@ import { startupCacheIdentity } from "../scripts/testing/obsidian/startupCacheId
 import { startupRetainedMemory } from "../scripts/testing/obsidian/startupRetainedMemory.mjs";
 import {nativeDocumentSessions,withNativeDocumentSessions} from "../scripts/testing/obsidian/nativeDocumentSessions.mjs";
 import ts from "typescript";
+import {createLightweightIndexingProbe} from "../scripts/testing/obsidian/indexingCpuProbe.mjs";
+import "./indexing-checkpoint.test.mjs";
+import "./indexing-consumer-probe.test.mjs";
+
+/** Synchronous scalar counting must preserve exact product results and require no timing/encoding globals. */
+test("lightweight indexing observations preserve original promises, receivers, throws and inherited methods", async () => {
+  const parsed=Promise.resolve({complete:true}),digested=Promise.resolve("digest"),transaction=Promise.resolve("rows"),failure=new Error("original parser failure");
+  const parser=Object.create({/** Return or throw the same fixture identity under its original receiver. */ parse(text){assert.equal(this,parser);if(text==="fail")throw failure;return parsed;}});
+  const runtime=Object.create({/** A digest wrapper must forward its string and existing promise unchanged. */ digest(text){assert.equal(this,runtime);assert.equal(text,"hash me");return digested;}});
+  const repository=Object.create({/** Storage observation must preserve receiver and transaction mode. */ transaction(...args){assert.equal(this,repository);assert.equal(args[2],"readonly");return transaction;}});
+  repository.runtime=runtime;
+  const index={metadataParser:parser,sourceAcquisition:{repository}};
+  // The injected native observer must work without timers, performance, TextEncoder or Node globals.
+  const probe=runInNewContext(`(${createLightweightIndexingProbe.toString()})(index)`,{index});
+  assert.equal(parser.parse("body"),parsed);assert.equal(runtime.digest("hash me"),digested);
+  assert.equal(repository.transaction(null,["sourceHeads"],"readonly"),transaction);
+  assert.throws(/** Exercise the instrumented synchronous failure path. */ ()=>parser.parse("fail"),
+    /** The observer must retain the original exception identity. */ error=>error===failure);
+  probe.sample({heapUsed:12,rss:24});const observed=JSON.parse(JSON.stringify(probe.snapshot()));
+  assert.deepEqual(observed.parser,{calls:2,utf16Units:8});assert.deepEqual(observed.hashing,{calls:1,utf16Units:7});
+  assert.deepEqual(observed.transactions,{calls:1,readonly:1,readwrite:0,other:0});
+  assert.equal(observed.heapMaximum,12);assert.equal(observed.rssMaximum,24);
+  probe.stop();probe.stop();
+  assert.equal(Object.hasOwn(parser,"parse"),false);assert.equal(Object.hasOwn(runtime,"digest"),false);assert.equal(Object.hasOwn(repository,"transaction"),false);
+  parser.parse("after stop");assert.equal(probe.snapshot().parser.calls,2);
+  await Promise.all([parsed,digested,transaction]);
+});
 
 test("native fixture session tools disable explicit owners and serialize only native scalar state through lexical probes",async()=>{
   const calls=[],a={id:"A",view:{documentSession:{ownerId:"A"},getViewType:()=>"k-plex-react-view",getState:()=>({plexSession:{version:1,ownerId:"A",centerPath:"A.md"}})}},b={id:"B",view:{getViewType:()=>"k-plex-sidepanel-view",getState:()=>({plexSession:{version:1,ownerId:"B",centerPath:"B.md"}})}};

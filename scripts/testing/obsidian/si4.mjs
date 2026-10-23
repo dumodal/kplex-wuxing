@@ -2,6 +2,8 @@
  * Exact-build native SI4 settings acceptance in an explicitly configured disposable vault.
  * Waits for real startup/source readiness, creates only owned root-level fixtures, exercises saved
  * policies and live consumers, and restores settings, methods, demand, fixtures and throttling.
+ * Accessible-name references resolve in each node's owning document without restoring duplicate
+ * native tooltip attributes on ordinary nodes.
  * This functional lane does not claim foreground latency, restart or physical-device acceptance.
  */
 import { spawnNativeSync as spawnSync, obsidianCliExecutable } from "./processTools.mjs";
@@ -83,6 +85,7 @@ async function nativeAcceptance() {
     return value ? { parent:value.isParent, child:value.isChild, left:value.isLeftFriend, right:value.isRightFriend, inferred:value.isInferred } : null;
   };
   const centerElement = () => [...document.querySelectorAll("[data-kplex-path]")].find(el => el.getAttribute("data-kplex-path") === A && el.classList.contains("kplex-role-center"));
+  /** Assert current semantic, visible and referenced accessible names after each saved policy. */
   const observe = label => {
     const neighborhood = i.getNeighborhood(A), center = i.get(A), gates = i.gateStats(center);
     ok(neighborhood?.center.path === A, `${label} current neighborhood`);
@@ -96,7 +99,13 @@ async function nativeAcceptance() {
       ok(gates[side].visibleCount === paths.length, `${label} gate/list parity ${side}`);
     }
     const node = centerElement(); ok(node, `${label} rendered center`);
-    ok(node.getAttribute("aria-label")?.includes("SI4 acceptance alias"), `${label} accessible alias`);
+    const nameIds = (node.getAttribute("aria-labelledby") ?? "").trim().split(/\s+/).filter(Boolean);
+    ok(nameIds.length > 0, `${label} accessible name reference`);
+    const nameElements = nameIds.map(id => node.ownerDocument.getElementById(id));
+    ok(nameElements.every(Boolean), `${label} accessible name reference resolves`);
+    const accessibleName = nameElements.map(element => element.textContent ?? "").join(" ");
+    ok(accessibleName.includes("SI4 acceptance alias"), `${label} accessible alias`);
+    ok(!node.hasAttribute("aria-label") && !node.hasAttribute("title"), `${label} no duplicate node tooltip`);
     if(node.classList.contains("is-node-image-only"))ok(node.querySelector(".kplex-node-visual.is-replace img"),`${label} rendered replacement image`);
     else ok(node.querySelector(".kplex-thought-label")?.textContent.includes("SI4 acceptance alias"), `${label} rendered alias`);
     for (const side of ["top","bottom","left","right"]) {
@@ -107,7 +116,8 @@ async function nativeAcceptance() {
     }
     return {label, B:relation(B),C:relation(C),D:relation(D),image:relation(image),gates,
       siblings:neighborhood.siblings.filter(item => paths.includes(item.page.path)).map(item => item.page.path),
-      title:i.titleFor(center),evidenceCount:evidence.length,writeReady:true};
+      title:i.titleFor(center),evidenceCount:evidence.length,writeReady:true,
+      accessibility:{nameReferences:nameIds.length,name:accessibleName,noDuplicateNodeTooltip:true}};
   };
   const step = async (label, mutate, check) => {
     controller.phase = label; stepOwners = new Set(); const start = performance.now(), captures = work.captures;
