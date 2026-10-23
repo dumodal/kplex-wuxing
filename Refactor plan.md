@@ -5684,3 +5684,25 @@ storage-process trace or explicit acceptance of this size-sensitive tradeoff is 
 Affected harness/real-IDB integration81/81 pass, no skips; original exact-build native/full verification
 retained. No production changes/rebuild/release/deployment/#206 interference or C15 advancement.
 Detailed evidence: docs/validation/dependency-repair-batching-207-2026-10-23.md.
+
+
+### 2026-10-23 - PR207 focused storage isolation returned: keep draft
+
+Zsolt's Codex Agent. Accepted baseline930747 fixed; reviewed d6 source d8d6/main19d754 unchanged.
+Published test-only checkpoints979cefe7 (four-way isolation),464779c (read controls/cycles),c2edc8e
+(non-atomic metadata receipt and directory guards), all read back from the targeted branch.
+Three A/B/C/D quartets and three A/E/F/D quartets pass logical/recovery/lifecycle oracles but retain
+the material reopen penalty. Neither independent revert nor point-read/control proof is a supported fix.
+Browser-root CPU locates extra native reopen/closure cost; exact backend cause remains unproved.
+Separate256-owner detailed calls640512->393728, transactions768 unchanged; continuation attempts
+are distinguished from request creation. Full three-cycle histories: baseline file lengths55->128->163MB,
+candidate67->132->188MB; no plateau or reliable cure from a second graceful reopen. Every known
+logical repair/reclaim/lease debt closes; filesystem allocation is measured separately from live records.
+One D cycle failed after successful work/oracle on live-file lstat ENOENT; retained/cleaned, observer
+corrected with114 passing focused tests and genuine smoke/failure cleanup, complete D sequence repeated.
+No production correction, schema/scheduling/GC/default/admission/readiness changes or weakened guard.
+Reuse exact19 build/full Windows interaction/recovery evidence; CI411/412/413/414 pass, later checks
+reported on PR. Return for maintainer decision, not merge-ready; no automatic expansion of investigation.
+No release/production deployment/#206 contact or C15 advancement. No manual test needed for test-only
+changes; storage/performance acceptance is unresolved. Detailed evidence:
+docs/validation/dependency-repair-storage-207-2026-10-23.md.

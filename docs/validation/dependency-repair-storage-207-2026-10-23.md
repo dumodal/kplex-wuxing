@@ -1,5 +1,7 @@
 # PR207 dependency-repair storage isolation
 
+**Return: keep draft.** No production correction is supported by this bounded causal study. Both partial reverts and both read-path controls retain the penalty. Browser-root CPU is implicated, but the physical backend cause is unproved; neither repeated history plateaus within three cycles. The substantial maintenance improvement remains intact.
+
 Zsolt's Codex Agent,2026-10-23. This report supplements [the original validation report](dependency-repair-batching-207-2026-10-23.md); historical measurements and failures remain intact. Draft PR207, branch2026-10-23-dependency-repair-batching. No automatic merge/release/production deployment; #206 untouched.
 
 ## Checkpoint and precollection protocol
@@ -83,7 +85,7 @@ Both causal cohorts identify additional Browser-root process CPU during reopen, 
 
 Remaining causal uncertainty: B–F retain page-wide membership preparation before ledger mutation and deferred old-row reclamation, byte accounting and changed request sequencing. A interleaves ordinal read, ledger read/mutation and individual retirement per occurrence. The experiment rules out either simple independent revert as a demonstrated correction, but cannot attribute the physical history to a single shared instruction, engine compaction, GC, cursor prefetch or an interaction between mechanisms. No speculative runtime correction is made.
 
-CI413/run39990635875 passed complete verification at published checkpoint979cefe7ec01f253b00869591d683c48d76d4953. Final diagnostic contracts pass111/111, zero failures/skips; final D/A cycle smokes pass. Deliberate two-owner driver failure exits1 as expected, retains its completed phase and error, and proves owned profile removal; it is a cleanup test, not an acceptance exclusion. Full repeated D/A cycles and a separate six-variant detailed native-request cohort remain in progress/pending. No new native deployment is needed for an unchanged production artifact.
+CI413/run39990635875 passed complete verification at published checkpoint979cefe7ec01f253b00869591d683c48d76d4953. At that checkpoint, diagnostic contracts passed111/111, zero failures/skips; D/A cycle smokes passed. Deliberate two-owner driver failure exited1 as expected, retained its completed phase and error, and proved owned profile removal; it is a cleanup test, not an acceptance exclusion. The then-pending full cycles and six-variant detailed cohort are completed below. No new native deployment is needed for an unchanged production artifact.
 
 ## Retained incomplete repeated-history attempt
 
@@ -96,3 +98,101 @@ All normal fixture source facts, memberships, counts, revisions and reclamation 
 The stat correction and independent review also close the touched helper's inherited directory-alias gap: authenticate `Default`, `IndexedDB` and traversed directories before enumeration; retain alias rejection and distinguish unexpected errors from retirement. A dedicated all-missing-entry case exercises the new entry bound rather than merely hitting the older regular-file bound. Focused contracts now pass **114/114**, zero failures/skips; robust D/A cycle smokes and deliberate failed-driver cleanup also pass. No safety assertion is relaxed.
 
 A completed all three cycles in the retained first launch, with exact logical/oracle/closure checks and complete Windows allocation observations. Regular-file totals after the second reopen were 54,618,874 → 128,316,997 → 163,305,031 bytes. First/repeat native opens were 18.8/20.9, 97.6/82.2 and 38.6/21.7 ms. Physical-file growth and variable reopen cost therefore also occur in accepted baseline; these observations do not identify a candidate-specific leak or establish a growth bound. D's complete three-cycle repeat starts only after the corrected observer's 114 contracts and both smoke/cleanup checks pass. The original D incomplete attempt remains recorded, not converted to a pass.
+
+## Complete repeated-history results
+
+A completed17:41–17:52 UTC in the retained first launch; corrected-observer D completed17:54:30–18:01:57 UTC. Same source workload/observations, same database per variant through three cycles, no reset. These are separate diagnostic sequences, not alternating primary timing pairs. The D failed attempt and observer-version difference are retained above. Every phase/reopen source-membership-ledger oracle matches A against D at the corresponding cycle. Every final close, native drain, actual graceful exit/new PID and owned-profile removal passes. Windows per-file AllocationSize observations are complete, with no unknown files.
+
+| Variant/cycle | File lengths after first / second reopen (bytes) | File allocation after second reopen (bytes) | Native open first / second (ms) | closeWork first / second (ms) | Browser CPU first / second reopen (ms) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+|A/1|54876402 / 54618874|54677520|18.8 / 20.9|4.0 / 4.2|30.8 / 36.0|
+|A/2|128682908 / 128316997|128450576|97.6 / 82.2|5.6 / 5.2|129.3 / 114.8|
+|A/3|165602106 / 163305031|163475760|38.6 / 21.7|11.2 / 12.6|55.8 / 47.8|
+|D/1|67547835 / 67158041|67227664|18.4 / 16.8|130.5 / 30.5|189.1 / 58.4|
+|D/2|144749739 / 132370130|132485136|92.0 / 119.1|56.8 / 52.8|239.1 / 258.5|
+|D/3|186821367 / 187876686|188080840|107.5 / 107.5|126.2 / 62.5|381.8 / 262.3|
+
+| Variant/cycle | Create+change+delete elapsed s | Renderer CPU s | Browser CPU s |
+| --- | ---: | ---: | ---: |
+|A/1|210.323|99.868|386.895|
+|A/2|219.242|100.720|434.044|
+|A/3|235.491|103.090|546.197|
+|D/1|128.135|56.758|260.181|
+|D/2|132.731|60.422|325.111|
+|D/3|141.547|59.475|375.018|
+
+Phase sums include complete selected maintenance, known old-family reclamation and closure within each ordinary workload. They exclude intervening semantic oracles, restarts and metadata observations. The primary matched CPU study remains the acceptance source; diagnostic sequence sums are not pooled with it. Known post-deletion logical state at every cycle:256 tombstone owners,0 selected memberships/bytes,0 count keys,0 repairs/pending/impact journals/primary dirty work,0 retired source chunks/postings and0 reader/lease/decode reservations. This is not a byte census of every metadata store or a verified total live database payload.
+
+Both variants grow across these three histories; neither shows a plateau. D ends about24.6MB above A in regular-file lengths, while both retain substantially more filesystem allocation than after cycle one. That does not prove an indefinitely growing leak or a candidate-only growth mechanism, but it does not establish the requested no-accumulation bound. Additional graceful reopen sometimes decreases file totals without reducing latency (D cycle2:144.7→132.4MB;92.0→119.1ms native open), so neither cleanup nor performance can be inferred from the other. No scaling extrapolation is made.
+
+A fast native open is also insufficient: D cycle1 opens in18.4ms but closeWork costs130.5ms; its repeat opens in16.8ms and closure still costs30.5ms. D cycle3 native open remains107.5ms on both reopens, with closure126.2→62.5ms. Normal repeated reopen does not reliably remove the measured cost.
+
+### Expensive interval located in retained transaction receipts
+
+In cycle1, both variants finish completeInventory in roughly1–2ms. The following readonly `meta` transaction (two protection-lease prefix counts plus two state gets) lasts about128.5ms in D versus2.5ms in A; the subsequently queued sourceImpacts count completes with it. Existing bounded receipts have first-success/terminal timestamps for transactions, not every request, so they do not isolate which of those meta operations or backend work accounts for the delay. Browser-root reopen CPU is189.1ms versus30.8ms; renderer counters do not explain it. These are retained receipt observations, not a new profiling run.
+
+The expensive closure counts are this diagnostic harness’s proof of released leases, not a measured production startup feature. completeInventory performs the same ordinary meta-state put in both variants, including the repeat reopen; “without source writes” does not mean literally no metadata write. Zero count-ledger writes and repair entries do not prove absence of backend work. The source/physical-history mechanism and exclusive backend stack remain unknown.
+
+## Separate detailed native-operation cohort
+
+All six256-owner mixed-deletion arms passed18:03:02–18:11:36UTC, with no retry/exclusion. Source facts, membership/count oracles, committed sequences513/514, complete known reclamation and later recreation/edit match across A–F. Every observer retires with zero pending/aborted native transactions; every graceful close/new-PID/owned cleanup passes. Private receipts: `%TEMP%/kplex-repair-storage-207-counts-87XBkC`. Detailed timing/CPU is not pooled with primary acceptance.
+
+| Variant | Selected RW transactions | Membership gets | Cursor opens / continues | Ledger gets | Ledger put+delete | Old membership delete requests | Coverage counts | Native API attempts | Created IDB requests |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+|A|768|159488|0 / 0|159488|159488|159488|0|640512|640512|
+|B|768|0|768 / 158720|115456|115456|159488|0|552448|393728|
+|C|768|0|768 / 158720|159488|159488|768|0|481792|323072|
+|D|768|0|768 / 158720|115456|115456|768|0|393728|235008|
+|E|768|159488|0 / 0|115456|115456|768|768|394496|394496|
+|F|768|0|768 / 158720|115456|115456|768|768|394496|235776|
+
+Native API attempts include cursor.continue; a continuation reuses a cursor request, so it is separated from newly created requests. Transaction creation is a separate column. The legacy “native request” metric includes these continuation attempts; no historical value is erased or silently redefined. Every variant authenticates159,488 membership occurrences across768 selected-repair transactions; there are115,456 page-distinct keys. D eliminates44,032 duplicate ledger reads and44,032 ledger mutations, and replaces159,488 old-row deletes with768 authenticated range deletes. Journal/transaction counts remain unchanged. E/F each add768 scalar coverage counts; neither is adopted. These deterministic operation counts do not attribute CPU savings by themselves.
+
+### Exact isolated source/build identities
+
+These are browser TypeScript fixture bundles, not installed alternative Obsidian packages. Each source changes only SourceRepository through the pinned test-only transforms; every summary retains exact source/bundle/tool hashes. Production D main.js remains the reviewed19d75415… artifact.
+
+| Variant | Source SHA-256 | Fixture bundle SHA-256 |
+| --- | --- | --- |
+|A|534a061e64ddfe7a609cc774788567ec8ba6afc4c953ea556e7ff9834fe4c63e|0a5005f3350f0f68e3bcc9f0779b18c861090907466bf0acb168b3a0db1d5add|
+|B|39b1b914e6e67316b1b0e295a65a11e37bd7a0379cb21e6dd14c9c63c5000e66|ee0540739cdba72a38a7f57da8650ac12b936a0412a10acb7781e01813585bf7|
+|C|16eafc6852cfa47d50014ded456285774c329a231711433056040261279eec00|f6a207393e997b65b180871328bb700eb06b0d0fd1b3d267680ba39e363b5a4b|
+|D|d8d6d532bb711b3cb2bb5d0e55152392495533b8eb64c069158ca8b0e98809d8|343bec7712a7b5c7f9a9f0a7cd1cd98907c92e8ce7ab2cbb16d1aebf0b10dc76|
+|E|1d06f632c0a68b9ad4379ba19a6931238d29d964b244617825553ea37588ded3|2820809bc26a0a9e01b209db9b202580ff4ce656c37045452e68112f1a88235b|
+|F|ce7ea408c86ee0482f9520c64f88755a67e82fb3468b7a0b5abaab289f884c5e|0eca894dd40669ba071bea166865a6363c169b554842e66ee1774f166c539624|
+
+## Separated lifecycle and later-work endpoints
+
+All variants’ full separated clocks and metric endpoints are retained in their arm receipts. The following table shows the accepted A/D production contrast in both primary cohorts. The restart/reopen sum includes post-exit metadata and excludes intervening fixture/observer binding; it is not continuous Obsidian startup. No allocation observer ran in these primary cohorts. Subsequent recreation and genuine-edit CPU includes their ordinary complete known closure, with a source oracle afterward.
+
+| Cohort/pair/variant | Shutdown ms | Launch ms | Outer reopen ms | Restart+reopen sum ms | Recreation ms / renderer CPU s | Later edit ms / renderer CPU s |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+|causal/1/A|128.8|324.4|45.6|502.3|205.5 / 0.122|389.0 / 0.196|
+|causal/1/D|120.2|315.6|193.6|633.0|226.3 / 0.085|229.6 / 0.118|
+|causal/2/D|115.8|323.8|186.3|628.5|251.9 / 0.103|352.6 / 0.126|
+|causal/2/A|127.7|337.2|49.7|517.3|210.9 / 0.124|387.0 / 0.204|
+|causal/3/A|135.6|328.6|42.2|509.1|206.7 / 0.125|390.0 / 0.202|
+|causal/3/D|128.5|356.7|200.5|688.5|252.1 / 0.100|478.8 / 0.132|
+|point/1/A|125.8|351.0|43.4|523.5|211.9 / 0.126|423.2 / 0.211|
+|point/1/D|139.0|327.8|316.2|787.8|246.5 / 0.091|317.7 / 0.121|
+|point/2/D|140.1|339.4|230.1|716.1|244.0 / 0.086|252.6 / 0.124|
+|point/2/A|117.3|344.2|40.9|506.6|212.9 / 0.130|450.1 / 0.229|
+|point/3/A|126.1|334.6|45.0|508.7|186.9 / 0.116|402.2 / 0.206|
+|point/3/D|115.7|329.7|167.4|617.0|230.2 / 0.083|228.1 / 0.120|
+
+## Decision: keep draft; no supported narrow correction
+
+Both requested optimizations remain in production. Removing either one independently does not resolve the material penalty. Alternative bounded read mechanics also do not resolve it. The results permit a common phase-organization effect, multiple independent effects, or interactions with physical backend history; they do not isolate one as the cause. Additional Browser-root CPU is established, including costly closure metadata transactions, but no engine-level compaction/GC/storage-stack diagnosis is proved.
+
+The maintenance improvement is preserved. In the first fresh256-owner matched deletion cohort D uses10.229/9.935/10.828 renderer CPU seconds versus A22.610/23.021/22.872:54.8%/56.8%/52.7% less by individual pair. Complete workload wall savings are25.6/27.3/26.6s. The original representative equal-operation mix remains42.6% less renderer CPU (mostly-distinct31.9%); those earlier sizes/artifacts and all failures stay in the original report and are not pooled with this cohort.
+
+Against those savings, the original candidate-specific graceful-reopen cost is repeatable and remains above the unchanged criterion. Both repeated histories continue growing through three cycles, and a normal additional reopen does not reliably remove D’s cost. These bounded observations establish neither unlimited growth nor the requested no-accumulation bound. I therefore recommend **keep #207 draft**, rather than accept an unproved storage tradeoff or change production speculatively. A maintainer could explicitly accept the measured cost and unresolved scaling risk, but this investigation does not supply evidence for an unqualified merge. No additional campaign is started. If continued separately, the unresolved prerequisite is attribution of the owned Browser/backend interval to the physical write/read path, not another renderer-only profile or tolerance change.
+
+## Verification, reuse and limits
+
+- Node22.22.2, Windows, Chromium155.0.8059.82. All24 primary causal/read-control arms and all6 detailed arms pass, with exact facts/counts/revisions/recreation/edit parity. Six complete repeated cycles pass across A and D; one earlier D cycle is retained incomplete due the diagnosed post-work stat race. Smoke and deliberate-failure probes remain separate.
+- 114 focused real-IndexedDB/factory/lifecycle/harness/inventory tests pass, zero failures/skips. This includes every test-only variant’s ordinary work, intermediate underflow/overflow, native quota/abort attribution, malformed/gapped rows, bounded-page cancellation and reopen recovery. Added count-proof/fractional-lookahead negatives preserve the stated candidate authentication contract.
+- Production source, schemas, defaults, scheduling, GC, admission, readiness/retry, unsaved recovery, #204 count reuse and #205 protection are unchanged. Reuse the exact19d75415… real-dependency build/full verification and applicable Windows interaction/recovery evidence from the original report, including early tags/folders/search/gates/editing, foreground, SI4/5 and cleanup. No new Obsidian deployment, application restart or production-vault experiment is represented as having run in this storage-only assignment. Obsidian’s Electron43/Chrome150 host differs from this deterministic Chrome155 fixture.
+- CI411 and independently checked final reviewed diagnostic CI412 passed; CI413 passed on isolation checkpoint979cefe7…. CI414/run39996991127 passed complete verification at464779c572756a2d0cf25570aa10004d6e6bb177. Later checkpoint CI416 is checked independently and its actual final status is recorded in PR checks/comments; in-progress status is not counted as a pass.
+- Physical storage and OS caches remain unmatched despite equal logical inputs and fresh per-arm profiles. File lengths, Windows per-file filesystem allocation and known logical record counts are separate. Allocation omits directory/device-exclusive effects. Three cycles establish only this finite history. CPU snapshots have observer overhead and no terminal sample for exited children; shutdown/launch CPU and exclusive backend stacks are not established. Endpoint heaps are not allocation or true peaks. No baseline/candidate medians are subtracted to infer individual-run CPU.
+- No manual/device check is needed for these test-only changes. The remaining blocker is performance acceptance, not an unrun automation that can substitute for causal evidence. #206 branch, implementation, fixtures, startup owners and retained data are untouched. No merge/release/production deployment.
