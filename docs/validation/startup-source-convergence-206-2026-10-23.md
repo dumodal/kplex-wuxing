@@ -2,7 +2,29 @@
 
 Prepared by **Zsolt's Codex Agent**, 2026-10-23, Europe/Budapest.
 
-**Status: A1/A2 and B are implemented and verified. The reverse accepted-baseline run naturally reproduces failed adoption followed by genuine recovery without completion. Two candidate S2 runs repeat avoided work; normal-cache vocabulary and seven-target parity match. A separate full-builder count difference, exact-candidate real-copy recovery confirmation and final audit remain pending. CPU observations are qualified below.**
+**Review status: implementation and authorized native validation are complete on the pinned accepted baseline; this PR stays draft.**
+
+A naturally stranded current-base startup now establishes the missing recovery continuation;
+the exact candidate automatically recovers on the real-data copy in a controlled two-attempt test.
+B removes proved unnecessary body/URL invalidation and competing startup rebuilding. Candidate
+S2 closure is428.6/441.0s with693.78/728.23CPU-s through ten-minute quiet; the completed baseline
+is1963.1s/4036.03CPU-s with its power qualification. The other baseline is censored/incomplete,
+not another pair. No universal percentage or exact plugin-only CPU saving is claimed.
+
+Normal-cache complete vocabularies and all seven strict target hashes match. The original broad
+tag remains unresolved; full-reference label ordering and the first terminal two-row count remain
+explicit qualifications. Final copy-content and protected-production-configuration hashes match;
+K-Plex/writers are off, owned resources are removed, and source/reader/schema boundaries stay intact.
+
+| Review checkpoint | Commit | Result |
+| --- | --- | --- |
+| A1: settled recovery continuation | `4407177ece2af255d265987fe5fdb6662db8b1dc` | Existing initial owner resumes after meaningful source/semantic recovery. |
+| A2: settings-publication recovery | `91770e42947d49b543eb80e75e2b1b7fd5088c89` | Coherent presentation, alias and empty-demand semantic updates cannot strand adoption. |
+| B: source event and startup ownership policy | `b38a8899b95b0acbf74349cbbe9a7e232fa5a56a` | Initial enumeration keeps normal validity checks without forced body work; startup-only automatic rebuilding cannot compete with source adoption. |
+
+The combined exact runtime bundle is`6ad7c8165cfa0ad66448897aaf0c401b0ccf722702f3c7498c911348502d4a50`.
+Subsequent changes are native-test tooling and evidence/documentation, not shipped runtime changes.
+
 
 ## Scope and checkpoints
 
@@ -142,7 +164,7 @@ regression, not a captured native stack. Three startup-only ownership cases fail
 seven genuine-change/cold/on-demand/explicit-demand controls pass. An empty later inventory was
 small follow-up work, not another broad pass.
 
-## Working follow-up A2 and checkpoint B
+## Checkpoints A2 and B
 
 A2 now also notifies after coherent non-paint settings publication, meaningful legacy display-name
 publication and empty-demand semantic settings refresh. Alias-vocabulary lifetime joins the queued
@@ -161,7 +183,7 @@ cleanup passed. Before faults, the exact Small database was checkpointed across1
 stream SHA-256`1b6c510db41387d1fc38a257af8286b3da05d5f7fcbc9a793870fac946fe3118`.
 Exact-build SI4 Small settings/gates/search/provenance/stale-write acceptance also passed. Native
 SI5 and foreground acceptance subsequently passed; live/startup qualifications are recorded below.
-Fresh-process real-copy timing follows below; final integrity audit remains pending.
+Fresh-process real-copy timing and final integrity audit are recorded below.
 Forty-one driver/observer checks passed after registering the native recovery command.
 
 B qualifies initial create enumeration at the existing lifecycle listeners rather than changing
@@ -193,7 +215,7 @@ Small was closed after checking writer/controller/mask cleanup. Its19 original c
 and plugin bytes were restored offline and byte-compared; its original Sync setting and original
 plugin-enabled list were restored only after native window/registry closure. Only the healthy
 brain-copy window remained. The real-copy S2 restoration is active, with independent external AC
-sampling armed; subsequent candidate CPU/work results follow below and broad-tag acceptance remains pending.
+sampling armed; subsequent candidate CPU/work and unresolved broad-tag outcomes follow below.
 
 ## Native interaction follow-up and qualifications
 
@@ -279,13 +301,12 @@ sub-call was rejected by the helper's required seven-kind inventory, so it **did
 this is a retained harness error, not a broad-tag pass or product failure. The next full-eight-target
 call keeps the original target and unchanged deadline. Current candidate base and served vocabulary
 both contain110,470 nodes; baseline's full rebuild reported110,472. Whole-vocabulary and target
-parity against the next current-baseline run remains pending; the count difference alone is not
-classified as semantic equivalence or a regression.
+parity against the next current-baseline run is established below; the first terminal count
+difference itself remains unclassified and is not erased by those later observations.
 
-A second matched pair is now running in reverse order(candidate then base), with independent
-power observation on both. Two pairs are planned; fewer than the three-pair target will remain an
-explicit sample-size limit. Real-copy broad-tag/parity, ordinary warm control and final audit are
-still pending. A's recovery correctness remains separately established by controlled real-IDB and
+The reverse repetition subsequently ran with independent power observation on both, but its
+baseline ended incomplete as recorded below. It is not a second completed pair. Broad-tag/parity,
+ordinary warm control and final audit outcomes follow; the three-pair target was not achieved. A's recovery correctness remains separately established by controlled real-IDB and
 native Small tests; this naturally fresh full-snapshot candidate run did not need source-adoption
 resumption and is not a current native stranded-startup reproduction.
 
@@ -313,8 +334,8 @@ repair and zero realized ordinary count reuse. This repeats avoided replacement/
 it does not remove the existing near-vault-wide cached validity pass.
 
 The two candidate totals are428.6/441.0s to closure and693.78/728.23CPU-s through quiet. These are
-not yet two complete matched pairs: the reverse-order baseline is still pending. Post-timing full
-eight-target checks, global vocabulary parity, ordinary warm control and final audit remain pending.
+not two complete matched pairs: the reverse-order baseline later ends incomplete. Post-timing full
+eight-target checks, global vocabulary parity, ordinary warm control and final audit follow below.
 
 ## Retained broad-tag control on the current candidate
 
@@ -333,8 +354,8 @@ One CLI transport timeout occurred during this separate functional lane; the bou
 continued, captured the broad failure and passed cleanup. A completed observation receipt means
 the observer/cleanup finished, not that the broad-tag assertion passed.
 
-The current-baseline repeat will exercise the same target. Whole-vocabulary parity against that
-baseline is still pending. To keep ordinary warm behavior separate from this interrupted broad
+The current-baseline repeat subsequently exercises the same target and whole-vocabulary parity
+is established below. To keep ordinary warm behavior separate from this interrupted broad
 workload, the candidate warm control restores the retained A4 stream (15stores/1,537,695rows,
 SHA-256`2c1ec8518b8ca5969ebefea7d09092a7284d40daa48844c6939e2640cde0dfe8`).
 The initial baseline warm control reused its then-current post-#203 state without a new import;
@@ -461,7 +482,91 @@ was verified against original SHA-256`7bb3818fb6a40b54e1bab409ebccc97264d2ca3a67
 (897,030,856bytes), with original sidecar bytes retained. The failure receipt is preserved; the
 retry is a new import only because the failed attempt never started a storage job. Subsequent
 observer expirations join that same retry job. Native exact-candidate recovery confirmation and
-final integrity audit remain pending.
+final integrity audit are completed below.
+
+## Exact-candidate recovery confirmation on the real-data copy
+
+The source-only S1 import completed decoded verification at16:45:28.143UTC:15stores/1,426,582rows,
+with0pages/0snapshot chunks. The wrapper reverified the live vault/database name, exact committed
+rows, stopped plugin and disabled writers before staging the frozen candidate. Historical compressed
+streams/sidecars are unchanged; the missing former raw path and same-job observer expirations remain
+in their receipts.
+
+Normal plugin enable/view activation naturally selected **source-backed eager startup**, loaded the
+110,470-node vocabulary and reached actual ready state before the fault. It performed0source
+activations/chunks/reads/parses/masks; the retained URL cache completed11,839owners without reads.
+This is a functional source-only confirmation, not another CPU measurement or forced route.
+
+The native five-second fault/recovery lane then reopened only initial coordinator flags on that
+settled lifetime and withheld metadata for one existing bounded Markdown owner. **No real note was
+created, modified or deleted.** One actual adoption returnedfalse with unavailable metadata;
+restoring the real getter and its genuine metadata-change signal produced one successful automatic
+adoption. Exactly **two attempts(false,true)** occurred and unchanged readiness did not spin.
+The published scene remained present, full-build count stayed0, and no unsaved mask remained.
+
+Across the controlled lane, checked sources increased20→22 and body reuse21→23, with one repair-path
+operation and0vault reads/parses. The recorded missing-metadata counter is1after recovery; it counts
+the observed failure, not current queued work. Actual authority and successful adoption prove
+completion. Inner cleanup restored method descriptors/settings/controller; outer cleanup stopped
+the reload, restored owned layout/settings bytes and left K-Plex off/enabled set empty. One earlier
+CLI timeout during normal vocabulary preparation was retained and tolerated; the fault assertions
+and cleanup completed. Native host reports Obsidian1.15.0(installer1.14.0), driverNode22.22.2.
+
+**Limit:** coordinator flags were reopened after a naturally settled source-only startup. This is
+not a naturally stranded fresh candidate startup. The accepted-base reverse S2 run supplies the
+separate genuine first-startup failure/recovery trace; Small/real-IDB regressions and this exact
+candidate real-copy test supply controlled correction evidence. A is correctness, not CPU credit.
+
+## Preview and memory observation coverage
+
+| Run | First observed center DOM after launch | Sampled probe-process heap maximum | Sampled probe-process RSS maximum |
+| --- | ---: | ---: | ---: |
+| Base S2 1 | 48.1s | 2425.8MiB | 2812.8MiB |
+| Candidate S2 1 | 38.6s | 2312.4MiB | 1941.3MiB |
+| Candidate S2 2 | 47.0s | 2288.7MiB | 2184.2MiB |
+| Base S2 2 (incomplete) | 50.7s | 2556.0MiB | 1854.4MiB |
+
+CLI forwarding attached late: these DOM times prove presence by that observation, not first paint,
+physical input or an earlier absence. Memory is `process.memoryUsage()` from the process executing
+the probe, sampled after attachment; it is not a whole-application peak, byte bound or exclusive
+plugin allocation, and early peaks may be missed. No universal memory saving is inferred. Native
+Small held-background interaction/editing/ontology tests supply the in-progress behavior evidence;
+real-copy bounded navigation/gates/search/provenance runs are separate post-timing checks with0
+body reads/parses. The unresolved original broad target is not counted as a passing interaction.
+
+## Final integrity, cleanup and retained evidence
+
+Independent read-only hashing after the native lanes found:
+
+- Copied nonconfiguration content: **20,190files /10,956,614,603bytes**, all hashes identical;
+  no added, removed or changed content.
+- Protected production configuration: **223files /84,002,510bytes**, all hashes identical.
+  No production full-content baseline exists; this is not a full original-content hash claim.
+- All test-copy settings/community/core/workspace bytes match the starting configuration. The
+  original existing active file-explorer leaf was restored through typed Workspace APIs and its
+  saved workspace file is byte-identical. Only the intentionally retained exact candidate
+  `main.js`/manifest differ; original artifact/configuration backups remain private.
+
+Final native inspection verifies one foreground/unlocked copy window, K-Plex/community enabled
+set empty, Sync/Publish off, no study/functional/recovery/indexing/startup controllers, no metadata
+fault hook, no debugger/DevTools, restored layout observer, and native IndexedDB method prototypes.
+The owned-process audit finds0live test processes; owned observers/caffeinate wrappers have ended.
+Small remains closed with its original19configuration files restored offline. No release, merge,
+main write or production deployment was performed.
+
+`SourceRepository.ts` remains byte-identical to the accepted baseline, SHA-256
+`951ce4e86ad1bea9b86a53d7efad1c2e4375e3eda38e220b4933409510a337ef`.
+No reader/lease/validation/count-reuse/reclaim/schema change or reserved read-plumbing loop was made.
+The full real-dependency `npm run verify:obsidian` run and exact-build smoke remain valid for this
+unchanged runtime; subsequent native-driver-only changes have their41focused checks and paired
+native controls. There is no reason to rerun the complete historical matrix.
+
+Private raw receipts, configurations, checkpoint derivatives, canonical vocabulary/provenance
+inputs, native failures and exact artifacts are retained in restricted archive identifier
+**`2026-10-23-pr206-final`**. An independent per-file SHA-256 readback verified the archived evidence against its private source directory; the restricted archive manifest retains file identities/counts.
+Historical #203 archives/checkpoints are preserved separately. No raw note paths/content or
+configuration are added to Git; the archive index maps observations and their limitations for
+independent review.
 
 ## Parallel coordination checkpoint
 
@@ -483,9 +588,9 @@ artifacts remain against0f94252; later integrated Mac validation is still explic
 - [x] Current-baseline controlled failure and targeted native causal sequence.
 - [x] Checkpoint A implementation, bounded recovery/negative regressions and qualified native Small confirmation.
 - [x] Checkpoint B demonstrated cause, independent implementation and regression evidence.
-- [ ] Before/after work and CPU receipts, interaction/recovery checks, realized #204 reuse.
+- [x] Before/after work and CPU receipts, interaction/recovery checks and realized #204 reuse, with censored/unmatched limits preserved.
 - [x] Full real-dependency verification and applicable exact-build Small lanes, with the recorded recent-navigation/crash qualifications.
-- [ ] Final copy/original-configuration audit and independent owned-resource cleanup.
-- [ ] Validated commits pushed, remote checkpoint verified and draft #206 updated for review.
+- [x] Final copy/original-configuration audit and independent owned-resource cleanup.
+- [x] Validated checkpoints pushed; final review record is published and the remote draft checkpoint is independently verified at delivery.
 
 No merge, release, main-branch write or production deployment is authorized.
