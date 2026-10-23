@@ -5722,3 +5722,10 @@ explicitlylimited. Source runtime frozen, no Windows import; final warm/broad-ta
 - Second candidate closure 441.0s, whole-process CPU 728.23 CPU-s through 603.9s quiet; independent external AC and native/process coverage valid.
 - Repeats zero reads/parses/repairs, one genuine resolution activation (one chunk / 4,881 bytes), 11,839 cached validity calls, no full builder or masks. #204 selected-count repair 1 / realized ordinary reuse 0.
 - Cleanup restored settings and left copy disabled. Post-timing full-eight-target oracle is running; baseline reverse repeat, two-node vocabulary difference, warm control and final integrity audit remain pending. No final semantic or general speedup claim.
+
+
+### PR #206 original broad-tag control retained - 2026-10-23
+
+- Corrected full-eight-target candidate call executes the original broad target; seven bounded hashes and both complete candidate vocabularies match.
+- Broad tag FAILS the unchanged 30.308s observation: rendered/canonical ready, semantic work active, 2 pending scopes / 256 dependency visits, while startup was complete and source owners idle. Do not count completed observer cleanup as semantic success; one transport timeout was tolerated and retained.
+- No evidence identifies this as A's initial-adoption defect. Current-base comparison remains pending. Restore retained A4 separately for an ordinary warm control; original baseline warm state was not newly imported, so warm CPU equality/percentage is not established.

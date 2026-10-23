@@ -316,6 +316,31 @@ The two candidate totals are428.6/441.0s to closure and693.78/728.23CPU-s throug
 not yet two complete matched pairs: the reverse-order baseline is still pending. Post-timing full
 eight-target checks, global vocabulary parity, ordinary warm control and final audit remain pending.
 
+## Retained broad-tag control on the current candidate
+
+The corrected full-eight-target post-timing call actually executed the original broad tag.
+All seven bounded targets again pass with identical semantic/provenance hashes; both candidate
+repetitions also export byte-identical complete base/URL/served vocabularies (served110,470nodes,
+SHA-256`757a297f478716577bf95f2f2ea7945e119c0d81f7b77ab792299f8d5225450c`).
+
+The **original broad tag does not pass**: it renders and is canonically ready, but the unchanged
+oracle times out after30.308s with active semantics, two pending scopes and256 dependency visits.
+This matches the historical failure shape, not a substituted leaf target. Startup had already
+completed (`initial=true`, incomplete=false), source activity/pending-known/repository writes were0,
+and hydration was complete. There is no evidence here that the pending broad-tag work shares A's
+missing initial-adoption continuation; it remains unresolved and outside the measured CPU claim.
+One CLI transport timeout occurred during this separate functional lane; the bounded observer
+continued, captured the broad failure and passed cleanup. A completed observation receipt means
+the observer/cleanup finished, not that the broad-tag assertion passed.
+
+The current-baseline repeat will exercise the same target. Whole-vocabulary parity against that
+baseline is still pending. To keep ordinary warm behavior separate from this interrupted broad
+workload, the candidate warm control restores the retained A4 stream (15stores/1,537,695rows,
+SHA-256`2c1ec8518b8ca5969ebefea7d09092a7284d40daa48844c6939e2640cde0dfe8`).
+The initial baseline warm control reused its then-current post-#203 state without a new import;
+row-for-row equality to this imported A4 state is not established, so no clean warm CPU percentage
+will be inferred.
+
 ## Parallel coordination checkpoint
 
 At the A1 checkpoint GitHub reports #205 and #207 open/draft. The maintainer has authorized the
