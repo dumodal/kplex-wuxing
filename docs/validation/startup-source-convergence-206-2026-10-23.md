@@ -594,3 +594,31 @@ artifacts remain against0f94252; later integrated Mac validation is still explic
 - [x] Validated checkpoints pushed; final review record is published and the remote draft checkpoint is independently verified at delivery.
 
 No merge, release, main-branch write or production deployment is authorized.
+
+
+## Integration validation — accepted main plus #206 (in progress)
+
+This section is a new final-acceptance record. Every preceding result belongs to its explicitly
+identified historical runtime and remains unchanged. The maintainer now authorizes integration
+and merge only after final-head local, remote-CI and exact-build native gates pass; earlier
+keep-draft/no-merge statements describe the completed independent study.
+
+Remote #206 and clean local checkout both began at reviewed
+`12c911a2b3fd9fed64e50a375d0d4ebcb9c91e0b`. Accepted main is
+`930747679894f003a2acf3b800df798826ee090c`, including merged #205 and preserved #201/#203/#204.
+A normal merge retains both histories. Only the transient HANDOFF and append-only architecture
+ledger conflicted: the standing header/current #206 assignment and both historical inventories
+are preserved. No runtime conflict, rebase, force-push or #207 import occurs.
+
+The merged runtime preserves #205's protected bounded metadata fetch/reader reservation and
+all digest, frame, posting, lease, current-selection and cancellation checks. #206 remains in
+its existing startup/source-event owners. Schema/count maintenance/read-plumbing policy is not
+changed during integration. The complete integrated diff and required verification remain under
+review. A new Node22.22.2 production artifact will be identified below; historical6ad7c816 is
+never relabeled as this integrated build.
+
+Initial guarded native inspection finds exactly one Brain-copy window, plugin/community off,
+Sync/Publish off, no retained controller/debugger/fault hook and native IDB methods. AC connected,
+thermal nominal. The window was visible but not focused; timed observations must establish and
+retain foreground ownership. Native checks and one S2/warm confirmation remain pending. No merge
+is claimed while any gate remains pending.

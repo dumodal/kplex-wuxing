@@ -30,6 +30,8 @@
  * runtime capabilities and injected runtimes retain their existing dispatch contract.
  * Single-chunk disk families coalesce their first bounded posting page with the chunk fetch;
  * speculative decode supplies no authority and retains all digest, frame, selection and lease fences.
+ * Ordinary small current-grammar metadata visits share that protected fetch with atomic head/lease
+ * selection. The view owns any prepared decode until family validation transfers or releases it.
  * A bounded single-page selection closes heads and sequence in one atomic readonly transaction;
  * multi-page selections retain their global sequence fence and all reads recheck local overlays.
  */
@@ -199,6 +201,7 @@ type SourceView = {
   memory?: MemorySource;
   connection?: IDBDatabase;
   release?: Promise<void>;
+  prepared?: Readonly<{ family: SourceFamily; chunk: PrefetchedSourceChunk }>;
 };
 type MemorySource = {
   head: SourceManifest;
@@ -984,8 +987,11 @@ export class NeutralSourceRepository {
    * does not unmask that head for readers; includeTombstone alone never grants this authority.
    * Parser2 primary candidates additionally authenticate their leased URL family, even
    * for otherwise head-only inspections; compatibility never rewrites the selected head.
+   * An ordinary metadata visitor may prepare one target-sized current-grammar chunk in this same
+   * transaction. Its decode reservation belongs to the registered view before commit completion.
    */
-  private async pin(sourceId: string, includeTombstone = false, deletion?: PendingSourceDeletion, leaseFamilies = true, current: () => boolean = () => true): Promise<{ view: SourceView | null; expected: SourceHeadExpectation; reason: SourceReason }> {
+  private async pin(sourceId: string, includeTombstone = false, deletion?: PendingSourceDeletion, leaseFamilies = true, current: () => boolean = () => true,
+    prepareMetadata = false): Promise<{ view: SourceView | null; expected: SourceHeadExpectation; reason: SourceReason }> {
     /** Match this request by identity after every asynchronous boundary; retention is not authority. */
     const deleting = (): boolean => deletion !== undefined && this.pendingDeletes.get(sourceId) === deletion
       && deletion.current() && !this.closed;
@@ -1011,11 +1017,14 @@ export class NeutralSourceRepository {
     const db = await this.open();
     if (!db) return { view: null, expected: { kind: "unavailable" }, reason: this.storage.unavailableReason?.() ?? "storage-unavailable" };
     let leased: SourceView | undefined;
+    let preparing = false;
     try {
       // A head-only observation owns a copied manifest, not any immutable chunks. It needs no
       // cleanup lease or write transaction. Parser2 compatibility repins below to authenticate
       // its URL family. Every actual family reader still pins atomically.
-      const selected = await this.transaction(db, leaseFamilies ? [SOURCE_HEAD_STORE, META_STORE] : [SOURCE_HEAD_STORE],
+      const stores = leaseFamilies ? [SOURCE_HEAD_STORE, META_STORE] : [SOURCE_HEAD_STORE];
+      if (prepareMetadata && leaseFamilies) stores.push(SOURCE_CHUNK_STORE, SOURCE_POSTING_STORE);
+      const selected = await this.transaction(db, stores,
         leaseFamilies ? "readwrite" : "readonly", sourceId, async (transaction) => {
         if (deletion && !deleting()) throw new SourceFactError("cancelled");
         const raw = await unknownValue(transaction.objectStore(SOURCE_HEAD_STORE).get(sourceId));
@@ -1030,6 +1039,15 @@ export class NeutralSourceRepository {
         leased = { head, sequence: head.sequence, saved: true, expected, leases, connection: db };
         // Register before commit completion: unload may run before the pin promise resumes.
         if (leaseFamilies) this.readers.add(leased);
+        const metadata = head.families.metadata;
+        if (prepareMetadata && leaseFamilies && !legacyPrimaryGrammarCandidate(head) && metadata?.chunks === 1
+          && metadata.bytes <= SOURCE_CHUNK_TARGET_BYTES && metadata.records <= SOURCE_MAX_BATCH_RECORDS) {
+          preparing = true;
+          const chunk = await this.readSingleFamilyChunk(transaction, leased, "metadata", metadata,
+            /** Closing the repository retires this preparation even if its caller remains current. */
+            () => !this.closed && current(), true);
+          leased.prepared = { family: "metadata", chunk };
+        }
         return { view: leased, expected, reason };
       });
       if (selected.view && (this.closed || !current())) {
@@ -1049,11 +1067,13 @@ export class NeutralSourceRepository {
       return selected;
     } catch (error) {
       if (leased) await this.releaseLeases(leased);
-      return { view: null, expected: { kind: "unavailable" }, reason: this.fail(errorReason(error, "read-error")) };
+      return { view: null, expected: { kind: "unavailable" }, reason: this.fail(errorReason(error, preparing ? "invalid-chunk" : "read-error"), preparing ? "metadata" : undefined) };
     }
   }
-  /** Delete only this reader's leases using its original connection, including during unload. */
+  /** Release an unconsumed prepared decode and delete only this reader's original-connection leases. */
   private releaseLeases(view: SourceView): Promise<void> {
+    view.prepared?.chunk.release?.();
+    view.prepared = undefined;
     if (view.release) return view.release;
     this.readers.delete(view);
     if (!view.leases.length || !view.connection) return Promise.resolve();
@@ -1282,47 +1302,66 @@ export class NeutralSourceRepository {
    */
   private async prefetchSingleFamilyChunk(db: IDBDatabase, view: SourceView, family: SourceFamily,
     manifest: SourceFamilyManifest, current: () => boolean): Promise<PrefetchedSourceChunk> {
-    let release: (() => void) | undefined;
+    let prepared: PrefetchedSourceChunk | undefined;
     try {
       return await this.transaction(db, [SOURCE_CHUNK_STORE, SOURCE_POSTING_STORE], "readonly", view.head.sourceId,
-        /** No crypto or task await occurs between the chunk request and its dependent posting request. */
+        /** Keep the prepared reservation owned if transaction commit fails after request success. */
         async (transaction): Promise<PrefetchedSourceChunk> => {
-          const raw = await unknownValue(transaction.objectStore(SOURCE_CHUNK_STORE).get([view.head.sourceId, manifest.revision, family, 0]));
-          if (!current()) throw new SourceFactError("cancelled", family);
-          if (!validSourceChunk(raw) || raw.sourceId !== view.head.sourceId || raw.revision !== manifest.revision
-            || raw.family !== family || raw.index !== 0 || !raw.final) return { raw };
-          release = this.reserveDecode(raw.data.length * 4 + raw.bytes);
-          let facts: StoredSourceFact[], first: SourcePosting[] | undefined;
-          try {
-            if (encodedBytes(raw.data) !== raw.bytes) throw new SourceFactError("invalid-chunk", family);
-            const decoded: unknown = JSON.parse(raw.data);
-            if (!Array.isArray(decoded) || decoded.length !== raw.records) throw new SourceFactError("invalid-chunk", family);
-            const preview: SourceFrameValidator = new SourceFrameValidator(family);
-            facts = [];
-            for (const record of decoded) { preview.accept(record); facts.push(record); }
-            preview.finish();
-            // Breaking a typed iteration closes the generator without reading its untyped return value.
-            for (const batch of postingBatches(view.head.sourceId, manifest.revision, family, facts, 0)) {
-              first = batch; break;
-            }
-          } catch {
-            release(); release = undefined;
-            return { raw };
-          }
-          // Only the first byte/record-bounded page travels with this chunk. The preview page is
-          // discarded on return; canonical validation regenerates it after the SHA/frame checks.
-          if (!first) return { raw, decoded: facts, release };
-          const lower = first[0], upper = first[first.length - 1];
-          const range = IDBKeyRange.bound([lower.sourceId, lower.revision, lower.family, lower.index],
-            [upper.sourceId, upper.revision, upper.family, upper.index]);
-          const firstPostings = await requestValue<unknown[]>(transaction.objectStore(SOURCE_POSTING_STORE).getAll(range, first.length));
-          if (!current()) throw new SourceFactError("cancelled", family);
-          return { raw, decoded: facts, firstPostings, release };
+          prepared = await this.readSingleFamilyChunk(transaction, view, family, manifest, current);
+          return prepared;
         });
+    } catch (error) { prepared?.release?.(); throw error; }
+  }
+
+  /**
+   * Prepare one exact immutable chunk and first bounded posting page inside an already owned native
+   * transaction. There is no hashing, host callback or task yield here. A metadata pin additionally
+   * bounds speculative work by the target-sized manifest; suspicious large rows retain ordinary
+   * digest-before-frame validation outside the write transaction instead of speculative parsing.
+   * @returns A reservation transferred to the transaction owner, or an unprepared raw fallback.
+   * @throws Request/cancellation/decode failures after releasing any private reservation.
+   */
+  private async readSingleFamilyChunk(transaction: IDBTransaction, view: SourceView, family: SourceFamily,
+    manifest: SourceFamilyManifest, current: () => boolean, boundedPreview = false): Promise<PrefetchedSourceChunk> {
+    let release: (() => void) | undefined;
+    try {
+      const raw = await unknownValue(transaction.objectStore(SOURCE_CHUNK_STORE).get([view.head.sourceId, manifest.revision, family, 0]));
+      if (!current()) throw new SourceFactError("cancelled", family);
+      if (!validSourceChunk(raw) || raw.sourceId !== view.head.sourceId || raw.revision !== manifest.revision
+        || raw.family !== family || raw.index !== 0 || !raw.final) return { raw };
+      if (boundedPreview && (raw.bytes > manifest.bytes || raw.records > manifest.records
+        || raw.data.length > SOURCE_CHUNK_TARGET_BYTES)) return { raw };
+      release = this.reserveDecode(raw.data.length * 4 + raw.bytes);
+      let facts: StoredSourceFact[], first: SourcePosting[] | undefined;
+      try {
+        if (encodedBytes(raw.data) !== raw.bytes) throw new SourceFactError("invalid-chunk", family);
+        const decoded: unknown = JSON.parse(raw.data);
+        if (!Array.isArray(decoded) || decoded.length !== raw.records) throw new SourceFactError("invalid-chunk", family);
+        const preview: SourceFrameValidator = new SourceFrameValidator(family);
+        facts = [];
+        for (const record of decoded) { preview.accept(record); facts.push(record); }
+        preview.finish();
+        // Breaking a typed iteration closes the generator without reading its untyped return value.
+        for (const batch of postingBatches(view.head.sourceId, manifest.revision, family, facts, 0)) {
+          first = batch; break;
+        }
+      } catch {
+        release(); release = undefined;
+        return { raw };
+      }
+      // Only the first byte/record-bounded page travels with this chunk. The preview page is
+      // discarded on return; canonical validation regenerates it after the SHA/frame checks.
+      if (!first) return { raw, decoded: facts, release };
+      const lower = first[0], upper = first[first.length - 1];
+      const range = IDBKeyRange.bound([lower.sourceId, lower.revision, lower.family, lower.index],
+        [upper.sourceId, upper.revision, upper.family, upper.index]);
+      const firstPostings = await requestValue<unknown[]>(transaction.objectStore(SOURCE_POSTING_STORE).getAll(range, first.length));
+      if (!current()) throw new SourceFactError("cancelled", family);
+      return { raw, decoded: facts, firstPostings, release };
     } catch (error) { release?.(); throw error; }
   }
 
-  /** Validate one complete immutable family, reusing only one reserved single-chunk disk preview. */
+  /** Validate one immutable family, taking ownership of at most one protected prepared chunk. */
   private async visitFamily(view: SourceView, family: SourceFamily, consume: (records: readonly StoredSourceFact[]) => Promise<boolean> | boolean,
     current: () => boolean, captureChunk?: (chunk: SourceChunk, batches: SourcePosting[][]) => void): Promise<SourceReason> {
     const manifest = view.head.families[family];
@@ -1337,7 +1376,12 @@ export class NeutralSourceRepository {
           let raw: unknown;
           let prefetchedDecoded: readonly StoredSourceFact[] | undefined;
           let firstPostings: unknown[] | undefined;
-          if (view.memory) raw = view.memory.chunks.get(memoryKey(family, index));
+          if (view.prepared?.family === family && index === 0) {
+            const prepared = view.prepared.chunk;
+            view.prepared = undefined;
+            raw = prepared.raw; release = prepared.release;
+            prefetchedDecoded = prepared.decoded; firstPostings = prepared.firstPostings;
+          } else if (view.memory) raw = view.memory.chunks.get(memoryKey(family, index));
           else {
             const db = await this.open(); if (!db || !current()) return "storage-unavailable";
             if (manifest.chunks === 1) {
@@ -1501,10 +1545,14 @@ export class NeutralSourceRepository {
       return expectation(raw);
     } catch { return { kind: "unavailable" }; }
   }
-  /** Replay one family under a reader pin; callers consume privately until the final result is ready. */
+  /**
+   * Replay one family under a reader pin; callers consume privately until the final result is ready.
+   * Small current-grammar metadata shares its first protected fetch with selection; all other
+   * families, multi-chunk owners, legacy grammar and memory facts retain their ordinary read path.
+   */
   async visit(sourceId: string, family: SourceFamily, consume: (records: readonly StoredSourceFact[]) => Promise<boolean> | boolean,
     current: () => boolean = () => true): Promise<SourceReason> {
-    const pinned = await this.pin(sourceId, false, undefined, true, current);
+    const pinned = await this.pin(sourceId, false, undefined, true, current, family === "metadata");
     if (!pinned.view) return pinned.reason;
     try { return await this.visitFamily(pinned.view, family, consume, current); }
     finally { await this.unpin(pinned.view); }

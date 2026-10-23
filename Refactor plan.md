@@ -5772,3 +5772,30 @@ explicitlylimited. Source runtime frozen, no Windows import; final warm/broad-ta
 - Final native state: one copy window, plugin/community off, Sync/Publish off, no owned controllers/fault hooks/debugger, native IDB methods/layout observer restored; no live owned processes. Small closed/original19configs restored offline. SourceRepository unchanged SHA951ce4e86ad1bea9b86a53d7efad1c2e4375e3eda38e220b4933409510a337ef.
 - Runtime checkpoints A1 4407177 / A2 91770e4 / B b38a889 retain accepted0f+#201+#204. Private archive2026-10-23-pr206-final preserves evidence; historical streams untouched. Keep draft/no merge-release-main-production. Later combined Mac validation after independently ready Windows205/207 remains separate; no additive savings assumed.
 - Highest review limits: censored reverse baseline/no matched quiet, first baseline power/terminal two-row count qualification, original broad-tag failure, pre-existing full/cached joined-label ordering (fixture styles commute), paired early recent-navigation control failure and one unattributed candidate Small renderer crash/recovery. No extra manual tests delegated because automated native lanes cover the authorized scope.
+Action log (2026-10-23, PR205 protected cached metadata reads): accepted main-agent implementation
+and Windows scope review at base 0f94252, preserving merged #201/#203/#204. Published runtime/test/
+harness checkpoint 8b1df5764d4799960a64ee2b149566b6278d0516; remote head verified. Sole production
+change is private SourceRepository metadata pin/fetch sharing: eligible visits 3 to 2 transactions;
+16-owner complete restart inventory 82 to 66 with every request/lease/hash unchanged. No sourceAcquisition,
+startup admission/readiness/retry, public API/schema/scheduler/budget change; companion #206 untouched.
+Source SHA 534a061e and exact built/installed main 7fa00a35 remain frozen. Full Node 22.22.2 real
+verify/build/typings and strict native staging pass; focused 11, diagnostic 14, two full cohorts 12 each,
+real-IDB 690 and 20,015-source exact incidence pass. Exact-build SI4/SI5, foreground/live updates,
+startup admission, gates/tags/folders/search, rename/ontology and cleanup pass. Failed startup
+precondition retained; proper closed-Plex rerun restores original layout/config. Final global audit
+found 2 historical conservative leases, both exactly matching original/warm October 22 checkpoint
+identities; preserved, no new lease debt. No reset/restore/expiry/deletion or production deployment.
+Scoped renderer component improvement is modest; all unfavorable pairs/edit endpoints retained.
+Browser/storage CPU, full-app scheduling, physical caches/devices and original broad CPU objective
+remain unclaimed. Report: docs/validation/cached-source-read-batching-205-2026-10-23.md. Tooling
+symlink EPERM correction separately published b8fac4f preserves genuine alias refusal, 22/22 pass.
+Independent ownership/validity/bounds/TSDoc/harness review complete; no C15 advancement. PR205 stays
+draft for maintainer review; GitHub workflow 401 still running at finalization, not called a pass.
+
+
+Action log (2026-10-23, PR206 final integration in progress): normal merge of accepted main
+930747679894f003a2acf3b800df798826ee090c into reviewed12c911a preserves #205 protected metadata
+reads and #206 recovery/discovery/startup ownership, both test inventories and historical reports.
+Only HANDOFF/ledger conflicts; current206 assignment and both historical ledger sections retained.
+New exact artifact/full verification/native/CI/S2+warm acceptance pending; no #207 import, release
+or production action. C14 accepted; C15-C26 paused. See report integration section.
