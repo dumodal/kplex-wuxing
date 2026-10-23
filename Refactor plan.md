@@ -5637,3 +5637,32 @@ remain unclaimed. Report: docs/validation/cached-source-read-batching-205-2026-1
 symlink EPERM correction separately published b8fac4f preserves genuine alias refusal, 22/22 pass.
 Independent ownership/validity/bounds/TSDoc/harness review complete; no C15 advancement. PR205 stays
 draft for maintainer review; GitHub workflow 401 still running at finalization, not called a pass.
+
+
+### 2026-10-23 — PR207 ordinary dependency-count repair returned for review
+
+Zsolt's Codex Agent. #205 unchanged-head retry passed complete verification/build after retained
+64.9ms timer failure; supported non-reproducible timing limitation, no weakened guard/deadline.
+Normal merge 930747679894f003a2acf3b800df798826ee090c is verified on main and is #207's accepted
+baseline, incorporated by normal merge 86d7fe459161a36c7ddd7c5f5e5d2fa236526412 before implementation.
+Supersedes earlier #205 draft/running-CI status; broader CPU objective remains open.
+PR207 retains C14 boundaries and #204 reuse/#205 readers. Only production SourceRepository ordinary
+repair changes: byte/record-bounded authenticated cursor prefix, once-per-distinct-key ledger read
+and mutation, ordered intermediate count checks, exact old-prefix deletion and journal progress in
+original atomic transaction. Corruption, native error identity, concurrent writer, cancellation,
+unsaved and partial-journal browser restart coverage preserved/extended. No schema/scheduler/default
+or startup/source-acquisition change; #206 untouched. Final source d8d6d532 / main 19d75415 frozen.
+Node 22.22.2 complete verify/build/typings/official lint and strict staging pass; real-IDB 701, main 1363,
+UI 227, portable 357, architecture 7 / core 130; zero failures/skips. Exact-build Small SI4/SI5, foreground,
+startup admission, tags/folders/gates/search, rename, held-startup ontology/live edits and independent
+restoration pass. Initial premature final audit retained; natural restored startup then closes.
+107 files / 88 Markdown notes, ready Eager, zero owned debt/controllers; exactly 2 historical conservative leases preserved.
+Historical measured 5d52/d7d3 cohort 98 required arms + 1 incomplete startup retained. Final d8d6/19d7 differs
+only two error-preserving catches; six-case regression and 42-arm deterministic bridge pass, all 26
+detailed counts/digests/bytes/debts match. Mixed requests −30.1%, representative median paired renderer
+CPU −42.6% / wall −43.7%; distinct −14.2% requests / −31.9% CPU / −34.9% wall. Browser/storage CPU unmeasured.
+Repeatable candidate-associated native IDB-open penalty after SIGTERM/fallback restart remains;
+no backend cause established. Return for code/evidence review with performance acceptance held pending
+maintainer tradeoff decision or one focused graceful-quit comparison. No unqualified merge, release,
+production deployment, broad redesign or C15 advancement. Detailed report:
+docs/validation/dependency-repair-batching-207-2026-10-23.md. Remote CI status is tracked against PR head.

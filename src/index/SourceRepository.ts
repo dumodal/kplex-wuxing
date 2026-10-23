@@ -34,6 +34,9 @@
  * selection. The view owns any prepared decode until family validation transfers or releases it.
  * A bounded single-page selection closes heads and sequence in one atomic readonly transaction;
  * multi-page selections retain their global sequence fence and all reads recheck local overlays.
+ * Selected local-count repair retains a byte/record-bounded contiguous membership prefix and one
+ * outstanding ledger read. Each distinct count is written once only after every ordered old/new
+ * occurrence passes its intermediate count checks inside the original journal transaction.
  */
 import { yieldToHostTask } from "../adapters/obsidian/yieldToHostTask";
 import { estimateReferenceRecordBytes } from "../core/graph/source";
@@ -1878,15 +1881,63 @@ export class NeutralSourceRepository {
   }
 
   /**
-   * Apply one selected-owner count journal in bounded transactions. Head/owner selection already
-   * committed atomically; while this journal exists closed-world lookup is pending, never partial.
-   * Old rows are deleted only after their decrements commit, so crash/restart resumes exactly once.
+   * Read a contiguous selected-repair prefix without bulk-fetching unchecked record payloads.
+   * At most one cursor value is unchecked at a time. The caller shares the record/byte allowance
+   * across old and new phases; only the first row of an otherwise empty page may exceed its target,
+   * up to the existing single-record ceiling. A byte-boundary lookahead is discarded and reread on
+   * the next transaction. Every requested ordinal must exist, including the final bounded ordinal.
+   */
+  private readLocalDependencyRepairRows(store: IDBObjectStore, sourceId: string, revision: string,
+    first: number, records: number, limit: number, byteLimit: number, allowOversized: boolean,
+    current: () => boolean): Promise<{ rows: SourceLocalDependencyRow[]; bytes: number }> {
+    if (first >= records || limit <= 0) return Promise.resolve({ rows: [], bytes: 0 });
+    const end = Math.min(records, first + limit);
+    return new Promise(
+      /** Keep cursor continuation inside the active transaction and retain only validated rows. */
+      (resolve, reject) => {
+        const selected: SourceLocalDependencyRow[] = []; let bytes = 0;
+        const request = store.openCursor(IDBKeyRange.bound([sourceId, revision, first], [sourceId, revision, end - 1]));
+        request.onerror = /** Preserve native read failure for the transaction owner's recovery policy. */
+          () => reject(request.error ?? new SourceFactError("read-error"));
+        request.onsuccess = /** Authenticate exact primary coordinates before retaining or advancing a row. */
+          () => {
+            try {
+              if (!current() || this.closed) throw new SourceFactError("cancelled");
+              const cursor = request.result, index = first + selected.length;
+              if (!cursor) throw new SourceFactError("dependency-invalid");
+              const row: unknown = cursor.value, key = cursor.primaryKey;
+              if (!Array.isArray(key) || key.length !== 3 || key[0] !== sourceId || key[1] !== revision || key[2] !== index
+                || !validSourceLocalDependencyRow(row) || row.sourceId !== sourceId || row.sourceRevision !== revision || row.index !== index) {
+                throw new SourceFactError("dependency-invalid");
+              }
+              const rowBytes = encodedBytes(JSON.stringify(row)) + 1;
+              if (rowBytes > SOURCE_MAX_RECORD_BYTES) throw new SourceFactError("dependency-invalid");
+              if (bytes + rowBytes > byteLimit && (selected.length > 0 || !allowOversized)) {
+                resolve({ rows: selected, bytes }); return;
+              }
+              selected.push(row); bytes += rowBytes;
+              if (index + 1 === end || bytes >= byteLimit) resolve({ rows: selected, bytes });
+              else cursor.continue();
+            } catch (error) { reject(error instanceof Error ? error : new Error("Source dependency repair failed")); }
+          };
+      });
+  }
+
+  /**
+   * Apply one selected-owner count journal in record/byte-bounded transactions. Head/owner selection
+   * already committed atomically; while this journal exists closed-world lookup is pending, never
+   * partial. Read each page-distinct ledger once, but replay every old decrement before every new
+   * increment so an underflow or overflow cannot be hidden by a compensating final count. Ledger
+   * reads, one final mutation per key, an exact old-prefix range deletion and cursor advancement share the original
+   * readwrite transaction; a crash or independent writer therefore cannot lose/replay contributions.
    */
   private async repairLocalDependencies(db: IDBDatabase, sourceId: string, current: () => boolean): Promise<SourceReason> {
     try {
       while (current() && !this.closed) {
         const progress = await this.transaction(db, [SOURCE_LOCAL_DEPENDENCY_STORE, SOURCE_LOCAL_KEY_STORE, SOURCE_LOCAL_REPAIR_STORE, META_STORE],
-          "readwrite", sourceId, async (transaction) => {
+          "readwrite", sourceId,
+          /** Retain mutable counts only within this journal transaction's bounded authenticated prefix. */
+          async (transaction) => {
             const meta = transaction.objectStore(META_STORE), repairs = transaction.objectStore(SOURCE_LOCAL_REPAIR_STORE);
             const rawState = await unknownValue(meta.get(SOURCE_LOCAL_DEPENDENCY_STATE_KEY));
             if (!validSourceLocalDependencyState(rawState)) throw new SourceFactError("dependency-invalid");
@@ -1897,32 +1948,72 @@ export class NeutralSourceRepository {
             }
             if (!validSourceLocalDependencyRepair(rawRepair) || rawRepair.sourceId !== sourceId) throw new SourceFactError("dependency-invalid");
             if (this.isLocalDependencyPrivateRepair(rawRepair)) throw new SourceFactError("dependency-pending");
+            // Private staging/reclaim encodings were handled above. A selected repair always moves
+            // between different revisions; preloading equal revisions could otherwise hide the
+            // missing-row failure previously exposed by deleting each old row before reading new.
+            if (rawRepair.fromRevision !== null && rawRepair.fromRevision === rawRepair.toRevision) throw new SourceFactError("dependency-invalid");
             if (rawState.pending === 0) throw new SourceFactError("dependency-invalid");
             let repair = rawRepair;
             const rows = transaction.objectStore(SOURCE_LOCAL_DEPENDENCY_STORE), keys = transaction.objectStore(SOURCE_LOCAL_KEY_STORE);
-            let processed = 0, decremented = false, incremented = false;
-            const apply = async (revision: string, index: number, delta: -1 | 1): Promise<void> => {
-              const rawRow = await unknownValue(rows.get([sourceId, revision, index]));
-              if (!validSourceLocalDependencyRow(rawRow) || rawRow.sourceId !== sourceId || rawRow.sourceRevision !== revision || rawRow.index !== index) {
-                throw new SourceFactError("dependency-invalid");
+            const old = repair.fromRevision === null ? { rows: [], bytes: 0 }
+              : await this.readLocalDependencyRepairRows(rows, sourceId, repair.fromRevision, repair.fromIndex,
+                repair.fromRecords, SOURCE_MAX_BATCH_RECORDS, SOURCE_CHUNK_TARGET_BYTES, true, current);
+            repair = { ...repair, fromIndex: repair.fromIndex + old.rows.length };
+            const next = repair.toRevision !== null && repair.fromIndex === repair.fromRecords
+              && old.rows.length < SOURCE_MAX_BATCH_RECORDS && old.bytes < SOURCE_CHUNK_TARGET_BYTES
+              ? await this.readLocalDependencyRepairRows(rows, sourceId, repair.toRevision, repair.toIndex,
+                repair.toRecords, SOURCE_MAX_BATCH_RECORDS - old.rows.length, SOURCE_CHUNK_TARGET_BYTES - old.bytes,
+                old.rows.length === 0, current) : { rows: [], bytes: 0 };
+            repair = { ...repair, toIndex: repair.toIndex + next.rows.length };
+            const counts = new Map<string, number>();
+            for (const row of old.rows) counts.set(row.key, 0);
+            for (const row of next.rows) counts.set(row.key, 0);
+            await new Promise<void>(
+              /** Stream ledger reads with one unchecked native result, rather than retaining a bulk corrupt payload. */
+              (resolve, reject) => {
+                const distinct = counts.keys();
+                /** Validate and normalize one ledger before issuing the next request in this active transaction. */
+                const read = (): void => {
+                  try {
+                    if (!current() || this.closed) throw new SourceFactError("cancelled");
+                    const selected = distinct.next();
+                    if (selected.done) { resolve(); return; }
+                    const key = selected.value, request = keys.get(key);
+                    request.onerror = /** Preserve genuine native read errors for the repository transaction owner. */
+                      () => reject(request.error ?? new SourceFactError("read-error"));
+                    request.onsuccess = /** Retain only the authenticated scalar; a malformed ledger stops further reads. */
+                      () => {
+                        const value: unknown = request.result;
+                        if (value !== undefined && (!validSourceLocalDependencyKeyState(value) || value.key !== key)) {
+                          reject(new SourceFactError("dependency-invalid")); return;
+                        }
+                        counts.set(key, value === undefined ? 0 : value.count);
+                        read();
+                      };
+                  } catch (error) { reject(error instanceof Error ? error : new Error("Source dependency repair failed")); }
+                };
+                read();
+              });
+            if (!current() || this.closed) throw new SourceFactError("cancelled");
+            for (const [entries, delta] of [[old.rows, -1], [next.rows, 1]] as const) {
+              for (const row of entries) {
+                const previous = counts.get(row.key)!;
+                const count = previous + delta;
+                if (!sourceCount(count) || delta < 0 && previous === 0) throw new SourceFactError("dependency-invalid");
+                counts.set(row.key, count);
               }
-              const rawKey = await unknownValue(keys.get(rawRow.key));
-              const state: SourceLocalDependencyKeyState = rawKey === undefined ? { version: 1, key: rawRow.key, count: 0 }
-                : validSourceLocalDependencyKeyState(rawKey) && rawKey.key === rawRow.key ? rawKey : (() => { throw new SourceFactError("dependency-invalid"); })();
-              const count = state.count + delta;
-              if (!sourceCount(count) || delta < 0 && state.count === 0) throw new SourceFactError("dependency-invalid");
-              if (count === 0) keys.delete(rawRow.key); else keys.put({ version: 1, key: rawRow.key, count } satisfies SourceLocalDependencyKeyState);
-              if (delta < 0) rows.delete([sourceId, revision, index]);
-            };
-            while (repair.fromRevision !== null && repair.fromIndex < repair.fromRecords && processed < SOURCE_MAX_BATCH_RECORDS) {
-              await apply(repair.fromRevision, repair.fromIndex, -1);
-              repair = { ...repair, fromIndex: repair.fromIndex + 1 }; processed += 1; decremented = true;
             }
-            while (repair.toRevision !== null && repair.fromIndex === repair.fromRecords && repair.toIndex < repair.toRecords
-              && processed < SOURCE_MAX_BATCH_RECORDS) {
-              await apply(repair.toRevision, repair.toIndex, 1);
-              repair = { ...repair, toIndex: repair.toIndex + 1 }; processed += 1; incremented = true;
+            for (const [key, count] of counts) {
+              if (count === 0) keys.delete(key); else keys.put({ version: 1, key, count } satisfies SourceLocalDependencyKeyState);
             }
+            if (old.rows.length) {
+              // Every primary key in this exact numeric range was authenticated as the contiguous
+              // old prefix. The same readwrite transaction excludes an intervening writer, so one
+              // range request retires precisely those occurrences with their counts and cursor.
+              const first = old.rows[0], last = old.rows[old.rows.length - 1];
+              rows.delete(IDBKeyRange.bound([sourceId, first.sourceRevision, first.index], [sourceId, last.sourceRevision, last.index]));
+            }
+            const decremented = old.rows.length > 0, incremented = next.rows.length > 0;
             const complete = repair.fromIndex === repair.fromRecords && repair.toIndex === repair.toRecords;
             if (complete) {
               this.runtime.localDependencyCheckpoint?.("before-local-repair-retire");

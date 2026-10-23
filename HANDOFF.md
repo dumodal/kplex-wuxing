@@ -19,103 +19,31 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Assignment: batch ordinary dependency-count maintenance
+# Return: PR207 ordinary dependency repair
 
-Prepared by **Zsolt's Codex Agent**, 2026-10-23, Europe/Budapest.
-State: active Windows implementation assignment; post-#205 baseline pinned before implementation or comparative testing.
-Recipient: Windows agent with real dependencies, Chromium IndexedDB and Obsidian CLI.
-Branch: `2026-10-23-dependency-repair-batching`.
-Creation base: accepted `main@0f94252aabb8b23458b5df192380854ea0bddd53` (merged #201/#203/#204).
-Accepted comparison baseline: `main@930747679894f003a2acf3b800df798826ee090c`, normal merge of #205 after its complete unchanged-head CI retry passed. This branch incorporates it through a normal non-rewriting merge.
-Parallel Mac work: [#206](https://github.com/zsviczian/kplex/pull/206), startup recovery and avoided reprocessing. Leave its branch, experiment, fixtures, candidate and instructions unchanged.
+Zsolt's Codex Agent, 2026-10-23. Returned for maintainer code/evidence review.
+Branch: `2026-10-23-dependency-repair-batching`; keep draft, do not merge/release/deploy production.
 
-## Objective and relation to previous work
+## Accepted baseline and #205
 
-Reduce native request/continuation and repeated ledger-write work during creation, genuinely changed replacement, deletion and selected-count recovery. The target is `NeutralSourceRepository.repairLocalDependencies()`, not source admission, cached reader leases or the canonical dependency projection.
+#205's one unchanged-head CI retry passed complete verification/build after the retained 64.9ms timer failure. Unchanged runtime, previous complete implementation/local/native passes and fixture-path review support its documented non-reproducible timing disposition; no assertion/deadline changed and no precise host/GC cause was established. Normal merge `930747679894f003a2acf3b800df798826ee090c` is verified reachable from main. It is #207's accepted baseline, incorporated by normal merge `86d7fe459161a36c7ddd7c5f5e5d2fa236526412` before implementation/comparison. #201–#205 work is preserved. #206 branch/experiment/data/startup/event owners remain untouched.
 
-#204 avoids decrement/reincrement maintenance when a complete replacement has an authenticated identical projection. New owners and changed/deleted projections still use ordinary count repair. #205 coalesces a bounded metadata read with its pin transaction; it does not optimize this write path. The Mac thread decides which startup work is necessary; this thread makes necessary count maintenance cheaper.
+## Implementation and identity
 
-Read the merged #203 and #204 reports and the [pinned #205 report](https://github.com/zsviczian/kplex/blob/104a5837ca358238f2c3cbd5f7177516094ab138/docs/validation/cached-source-read-batching-205-2026-10-23.md). #203's approximately 78.45% dependency-store request share is a historical diagnostic call count, not CPU attribution or a savings forecast. #204's unchanged-projection renderer savings do not apply to every cold owner or this task's comparison.
+Only production owner changed: `src/index/SourceRepository.ts`, ordinary selected-count repair. A contiguous cursor prefix shares the existing 256-record / 256 KiB allowance across old/new phases, with inherited legal oversized-singleton behavior. Each distinct ledger is read once; all old decrements precede new increments with exact intermediate underflow/overflow checks. One final mutation per key and one authenticated old-prefix range delete commit atomically with the original journal cursors/pending state. No schema/scheduling/settings/reader/lease/source-acquisition change; #204 unchanged-projection reuse remains.
 
-Current source-confirmed mechanism: ordinary repair already groups at most 256 membership occurrences into a native transaction, but its nested `apply()` awaits one membership get and one ledger get per occurrence, then queues one count mutation and, for an old occurrence, one row deletion. It repeats this even when many occurrences in that bounded page name the same key. This is not one transaction per occurrence. The opportunity is fewer native calls and serial request continuations within the existing bounded journal transaction, not merely increasing its batch size.
+Final source SHA256: `d8d6d532bb711b3cb2bb5d0e55152392495533b8eb64c069158ca8b0e98809d8`. Final tested production main.js: `19d75415c69d8c77bbde934f618eeece2f0387459a49003090eedef61b9bb28f`; manifest/styles match baseline. The large 98-arm CPU study measured earlier source 5d52…/build d7d3…; final code differs only in two catch expressions preserving Error/DOMException identity. The rejected intermediate normalization and lint/stopped verification failures are retained. A failing-then-passing six-case real-IDB regression validates storage notification, quota, attributed cancellation, rollback and exact recovery. Final 42-arm bridge passes; all 26 detailed arms exactly match earlier operation/digest/byte/debt results. Do not silently relabel historical CPU as final-build measurements.
 
-The expected benefit is a hypothesis until measured. Repeated-key workloads may reduce both ledger reads and writes; all-distinct workloads may only benefit from bounded read scheduling. Do not assume realistic pages have a high duplicate rate or that one large duplicate fixture represents the vault.
+## Results and completed validation
 
-## Entry, #205 and baseline discipline
+Mixed ordinary operation requests 17,516→12,248(−30.1%); mostly-distinct 17,068→14,652(−14.2%). Three alternating 128-owner pairs per ordinary operation: equal create/change/delete median pair-sum renderer CPU 49.268→28.320s(−42.6% paired), elapsed 101.804→57.055s(−43.7%) mixed;47.331→32.219s(−31.9%),101.634→66.569s(−34.9%) mostly-distinct. Browser/storage/utility CPU is unmeasured; later edits improve. Include all old-family reclamation/lease closure. One incomplete browser-start attempt remains retained.
 
-The maintainer explicitly authorized #205 merge after CI resolution. Exactly one unchanged-head failed-job retry passed complete verification/build at `104a5837ca358238f2c3cbd5f7177516094ab138` (run402 attempt2, job120398933314), zero failures/skips. Implementation CI401 and complete local/native exact-build validation also passed. The retained original 64.9ms URL-heavy failure remains a non-reproducible timing limitation: no IndexedDB is present in that fixture and the expensive changed native read path is unreachable; generic memory-read branch overhead does not establish zero changed instructions. No specific GC/host cause is proven. No bound/deadline/runtime change was made. The PR records the full disposition. Normal merge commit `930747679894f003a2acf3b800df798826ee090c` was fetched, fast-forwarded into local main and verified reachable.
+Node 22.22.2 complete verify/build/real typings/official lint and strict exact-build Obsidian staging pass: architecture 7 / core 130 / main 1363 / UI 227 / portable 357 / real-IDB 701, zero failures/skips. Existing URL-heavy <50 ms guard and Windows genuine-junction alias refusal retained. Final-build Small ordinary repair, deliberate cleanup failure, SI4(functional Small, not 600-note scale), SI5, foreground/startup admission, tags/folders/gates/search, rename, held-startup ontology edits and On-demand live updates pass. Independent cleanup restores original settings/layout/config/file inventory. Initial final audit ran before restored Eager startup completed; retained failure, then natural completion and unchanged assertions pass. Final 107 files / 88 Markdown notes, ready Eager, no pending/unsaved/readers/decode/controllers; exactly 2 historical conservative leases preserved against October 22 receipts. No production deployment.
 
-This assignment now compares against that exact accepted post-#205 baseline. Runtime SourceRepository SHA-256 is `534a061e64ddfe7a609cc774788567ec8ba6afc4c953ea556e7ff9834fe4c63e`; production main.js is `7fa00a354d38fb2cedecbb9d15c5277e0513813b7074d487f5ebda9820c2b79f`. #204 count reuse and #205 leases/readers remain intact. No #207 runtime changes or comparative measurements preceded this pin. Preserve all planned requirements below.
+## Review decision
 
-Read AGENTS.md, CONTRIBUTING.md, docs/AGENT_WORKFLOW.md, docs/ARCHITECTURE.md, docs/SOURCE_REPOSITORY.md and docs/INDEXING_ARCHITECTURE.md. C14 remains accepted; no architectural extraction is authorized.
+Ready for code/evidence review, **not an unqualified merge recommendation**. Three separate diagnostic pairs reproduce candidate-associated post-restart native IDB-open delay 25.1→521.3ms,27.1→188.1ms,25.7→34.9ms under existing SIGTERM/fallback protocol, with zero repair/count writes. Backend cause remains unknown; renderer CPU does not explain/exonerate storage waits. Responsiveness diagnostics show no observed ≥50 ms long tasks; native checks pass, but these do not resolve the restart tradeoff.
 
-## Source and test owners
+Next maintainer action: review implementation/report and decide whether to accept the measured restart qualification or authorize one focused graceful-quit versus existing-termination comparison. No speculative storage redesign/scheduling/GC tuning. Do not request Mac measurements. No extra general UI manual matrix is required for this backend-only change; full-app shutdown/macOS/physical-mobile acceptance remains unclaimed.
 
-- `src/index/SourceRepository.ts`: `repairLocalDependencies`, `activate`, `write`, `repairAllLocalDependencies`, `settleLocalDependencyWork`, tombstone/unsaved/retry ownership, and #204 count reuse/private reclaim. Keep primary tickets and source activation fences unchanged.
-- `src/index/SourceLocalDependencies.ts`: immutable membership rows, key-count state, exact occurrence multiplicity, selected repair cursors and private staging/reclaim distinction. Do not change its projection, key encoding or schema.
-- `tests/source-local-dependencies-indexeddb.test.mjs`: real selected-count recovery, interruption points, shared/repeated keys, corruption, #204 unchanged fast path and changed fallback.
-- `tests/source-indexeddb.test.mjs`, `tests/source-startup-indexeddb.test.mjs`, acquisition tests and existing real-browser/fixture helpers.
-- Reuse `scripts/testing/dependency-count-reuse.mjs`, `tests/support/dependencyCountReuseFixture.mjs` and the native diagnostic owner where appropriate. Extend shared helpers rather than copying a new full measurement framework. Keep a distinct report/workload so #204's historical results are not overwritten.
-
-No change to `main.ts`, `GraphIndex.ts`, source-acquisition event/retry/read-plumbing policy, metadata watchdog, UI defaults, parser, reader leases or the Mac harness is planned. Any essential cross-boundary edit needs a precise proposal before implementation, not an unannounced scope expansion.
-
-## Stage 1 — characterize a real ordinary repair page
-
-1. Pin accepted source/build/tool versions and verify existing Windows test-vault identity. Record current source/fixtures rather than importing private Mac notes.
-2. Exercise genuine ordinary creation, changed replacement and deletion through real IndexedDB. Include a native acquisition demonstration using test-owned notes. Verify the expected ordered membership multiset and final ledger outside timing.
-3. Count membership reads, distinct keys per bounded repair page, ledger reads/mutations, old-row deletions, serial await stages, native transactions and payload bytes separately. Keep staging, count maintenance, primary journals and later reclamation separate. No high-volume per-note logs or unbounded history.
-4. Include all-distinct keys, heavily repeated keys, mixed/skewed distributions, shared keys across owners, repeated keys across page boundaries and a genuine late changed target. Do not count #204-skipped maintenance as this patch's saving.
-5. Establish a deterministic operation-count baseline and a bounded design checkpoint. Continue to implementation if there is meaningful removable work and a sound safety argument; otherwise return the precise no-go. Avoid another broad A/B profiler campaign.
-
-## Stage 2 — smallest bounded transaction-local improvement
-
-Investigate gathering a contiguous repair prefix with bounded native reads, validating every membership, reading each distinct ledger once, and applying one final count mutation per key. Reuse the existing transaction, repair row, progress cursors and between-page yielding. A transaction-local Map is acceptable under record AND byte limits; no whole-source/vault map or permanent count mirror.
-
-The implementation choice may use bounded exact-range fetches or queued bounded requests. Verify installed/native IndexedDB behaviour; do not invent a bulk API. A range result must prove every requested source/revision/ordinal, expected cardinality and continuity. Never let getAll silently skip a missing membership. Do not overfetch unbounded malformed/oversized rows; preserve or tighten existing single-record/aggregate limits with a conservative fallback. Count=256 alone is not a memory bound.
-
-### Exact correctness requirements
-
-- Preserve the effective order: old contributions are decremented before new contributions are added. Journals may cross that phase boundary within one transaction, but work cannot be netted across commits or sources.
-- **A net delta of zero is not sufficient.** Example: a selected repair removes three occurrences of keyK then adds three, but the stored ledger contains only two. Existing code rejects the underflow. An optimized net-zero update must still reject; skipping the write cannot skip membership/ledger authentication. Similarly, a missing old ledger cannot be repaired silently by a compensating addition.
-- Check minimum/intermediate counts, integer overflow, strict version/key/envelope shape and negative-coverage invariants, not only the final count. Preserve multiplicity; grouping is not set deduplication. Zero-count deletion and later readdition may coalesce only inside a transaction after equivalent validation.
-- Commit ledger mutations, old-row deletions and exact `fromIndex`/`toIndex` advancement atomically. On abort none of that page is credited. After interruption resume exactly once; do not replay already-applied counts or skip an uncommitted suffix.
-- Preserve selected-vs-private repair distinction and `pending`/revision completion state. Closed-world queries remain pending until all required selected maintenance closes. Never decrement the global pending count early or suppress primary contributor tickets.
-- Serialize correctly against independent writers sharing a key or replacing/deleting the same owner. Do not pre-read mutable ledger values outside the transaction and later overwrite another writer's contribution.
-- Hashing, host callbacks and scheduling waits remain outside native transactions. No larger batch/concurrency/timeout budgets, long transaction across unrelated awaits, whole-vault lock or new scheduler.
-- Preserve cancellation/close checks and existing after-old/after-new/before-retire checkpoint intent. Retain foreground opportunities between bounded pages. CPU saved must not be purchased by longer blocking intervals or starving edits/navigation.
-- #204's equality gate, authenticated reuse and private reclaim remain the fast path for eligible unchanged replacement. New/changed/deleted work remains correct, and inherited unresolved protection records must not be cleared to improve metrics.
-
-Prefer one conservative helper in the repository with existing fallback. A schema, journal-format, trust-model or public interface change requires a separate decision. Do not expand into cross-owner batching or lease redesign here.
-
-## Stage 3 — regressions and acceptance
-
-Add failing-then-passing work tests and real-IndexedDB negative controls:
-
-- Empty/new owner, 1/255/256/257 memberships; byte-boundary and wide UTF-8 keys; all-distinct and repeated keys across pages; old-to-new transition exactly before/inside/after a page.
-- Repeated shared key counts across two or more owners; remove-to-zero, readdition, deletion/recreation, genuine changed targets, URL/origin memberships, nested tags, fields and resolver tokens. Verify exact negative as well as positive lookup results.
-- Understated/missing/zero/malformed ledger, same-key compensating additions, overflow, missing/duplicated/wrong-source/wrong-revision/wrong-ordinal rows. Preserve fail-closed results and transaction rollback.
-- Two connections editing shared counts or the same owner; superseded source ticket; cancellation/close/native abort before and after page commit; storage unavailable/unsaved eviction/retry; browser-process restart with a partial journal; subsequent edit/deletion and old-row reclamation.
-- #204 unchanged count reuse and #205 read lifetime regressions when present. No added source writes during clean warm validation.
-- Foreground navigation/editing/search and tag/folder/count/provenance correctness during dense repair. Keep the existing URL-heavy <50ms timer bound; do not alter it to obtain a pass.
-
-Use Node22.22.2 with real dependencies/typings; run focused source tests, real Chromium IndexedDB, full `npm run verify`, exact-build `verify:obsidian` and applicable SI4/SI5, live-update, foreground, tag/folder/gate/search and rename/recovery checks. All fixture/controller/settings/database cleanup is independent of scenario success. Reuse configured Small; native scale claims require actual fixture counts.
-
-For performance, extend the established #204 fixture to measure fresh creation, changed replacement and deletion. Keep unchanged replacement as a no-regression control. Use 64/128/256-owner scaling with representative 128-owner repeated and mostly-distinct workloads, at least three matched serial pairs in alternating order where feasible. Include complete selected-count repair, old-row and source-family reclamation, a subsequent ordinary edit and reopen. Observe total CPU with process scope explicit, wall time, native calls/transactions, retained bytes and longest transaction/task/interaction delays. Detailed counting is separate from lightweight timing; do not pool host versions or old reports.
-
-Success requires substantial demonstrated reduction in this operation path and improved representative complete cost without regressing distinct-key/small edits, foreground behaviour or recovery. Do not invent a whole-vault CPU target or claim 78% savings. If only an unrealistic duplicate-only fixture improves, do not ship complexity on that basis. Preserve unfavorable runs and report whether physical/storage-process CPU and cache equivalence were actually observed. Avoid a new open-ended CPU-accounting project.
-
-## Windows safety, delivery and authority
-
-Use the existing guarded `C:\Obsidian\kplex-test-small` and existing browser-owned profiles. `kplex-test` may be used only after checking its current contents/scale. Require explicit vault/name/config variables and CLI real-path verification. No personal vault, new persistent test destination, global storage reset or production deployment. Ask before application-wide restart with other vaults open. Raw traces and checkpoints remain private and outside Git.
-
-- [ ] Verify baseline and finish separate #205 CI disposition; characterize ordinary repair.
-- [ ] Record the transaction-local safety design and measured opportunity.
-- [ ] Implement the smallest bounded correction with negative/crash/concurrency tests.
-- [ ] Validate complete cost, foreground behaviour and all applicable exact-build checks.
-- [ ] Restore owned state; publish sanitized evidence and the reviewed branch checkpoint.
-
-Write a new `docs/validation/` report with exact baseline/candidate/source/artifact identities, request and serialized-wait reductions, actual CPU coverage, all outcomes and remaining limitations. Preserve the standing handoff header; remove the temporary marker before final review. Follow mixed-agent publication authority and any explicit task prompt: no automatic merge, release, force-push, main write or #206 edits. Identify comments as **Zsolt's Codex Agent**.
-
-The final return must explain what changed for a first-time source, a genuinely changed source and an unchanged #204 source; which operations disappear; why crash/concurrent count correctness is preserved; actual gains/negative-path limits; and whether the package is ready for review. Do not claim the Mac recovery defect or original thermal problem solved.
-
-Preparation reviewed #205 code/tests/report/current CI, #206 scope, repository access/main/workflow and the surviving ordinary repair algorithm. Only documentation is published here; no runtime implementation, build, benchmark or native validation has been executed by this planning agent.
+Detailed protocol, failures, identities, measurements and receipts: [validation report](docs/validation/dependency-repair-batching-207-2026-10-23.md). Architecture ownership/TSDoc/bounds/recovery/cleanup review completed independently. Publication and remote CI status belong to #207's published head; no automatic merge authority.
