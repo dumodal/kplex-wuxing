@@ -380,8 +380,8 @@ export default class KplexPlugin extends Plugin {
     // URL acquisition is independent of MetadataCache, local graph preparation and full Eager inventory.
     this.registerEvent(this.app.vault.on("modify", /** Retire exact URL facts on content edits, including equal-stat writes. */
       file => { if (file instanceof TFile && file.extension === "md") void this.index.refreshUrlOwner(file.path); }));
-    this.registerEvent(this.app.vault.on("create", /** New Markdown owners join the independent URL cache. */
-      file => { if (file instanceof TFile && file.extension === "md") void this.index.refreshUrlOwner(file.path); }));
+    this.registerEvent(this.app.vault.on("create", /** Initial vault enumeration is validated by normal restart inventory; post-layout creates retire URL owners. */
+      file => { if (this.layoutReady && file instanceof TFile && file.extension === "md") void this.index.refreshUrlOwner(file.path); }));
     this.registerEvent(this.app.vault.on("delete", /** Deleted owners cannot retain URL reference counts. */
       file => { if (file instanceof TFile && file.extension === "md") void this.index.refreshUrlOwner(file.path); }));
     this.registerEvent(this.app.vault.on("rename", /** Old URL source coordinates retire before the renamed owner publishes. */
@@ -735,7 +735,10 @@ export default class KplexPlugin extends Plugin {
     this.indexDirty = !snapshotFresh || this.preRestoreUncoveredChanges || this.indexBacklogReasons.size > 0;
   }
 
-  /** Capture changes during snapshot inspection before normal event-driven work is registered. */
+  /** Capture changes during snapshot inspection before normal event-driven work is registered.
+   * Obsidian also emits create for existing files before layout readiness. Those observations
+   * remain physical inventory inputs, not body edits; normal restart validation still owns proof.
+   * Real modifies/deletes/renames and post-layout creates retain their ordinary invalidation. */
   private installPreRestoreChangeFence(): void {
     if (this.preRestoreListenerCleanup) return;
     /** Record one source epoch and coalesce native create proof separately from dormant semantic invalidation. */
@@ -774,7 +777,10 @@ export default class KplexPlugin extends Plugin {
       this.index.invalidateHostStructure();
       mark(item instanceof TFile && item.extension === "md" ? "vault:create-markdown" : "vault:create",
         item instanceof TFile ? item : undefined, item instanceof TFile || item instanceof TFolder ? item : undefined);
-      if (!this.indexPreparationAdmitted) {this.index.observeDeferredHostChange(item); return;}
+      if (!this.indexPreparationAdmitted) {
+        if (this.layoutReady) this.index.observeDeferredHostChange(item);
+        return;
+      }
       if (item instanceof TFile) this.index.updateHostFileAvailability(item.path, item);
       else if (item instanceof TFolder) void this.index.updateHostFolderAvailability(item.path, item);
     });
@@ -1509,7 +1515,9 @@ export default class KplexPlugin extends Plugin {
     }
   }
 
-  /** Run the host rebuild workflow and report localized progress/completion while retaining the existing semantic publication and cancellation ownership. */
+  /** Run the host rebuild workflow and report localized progress/completion while retaining the
+   * existing semantic publication and cancellation ownership. Automatic startup-only backlog
+   * remains with source adoption after hydration; genuine edits and explicit rebuilds stay owed. */
   private async performRebuild(showNotice: boolean, force: boolean, reason: string, allowClosed: boolean): Promise<void> {
     if (this.unloading) return;
     if (this.index.hasPendingStructuralMaintenance()) await this.index.waitForStructuralMaintenance();
@@ -1543,6 +1551,12 @@ export default class KplexPlugin extends Plugin {
       } else await this.ensureInitialIndex();
       if (this.unloading) return;
     }
+    // Snapshot hydration can finish before source adoption. The legacy dirty-index interval
+    // must not cancel that inventory with a second whole-vault builder for startup-only reasons.
+    // Preserve the backlog and completion state: the initial owner/recovery continuation settles it.
+    if (!force && !showNotice && !allowClosed && !this.initialIndexComplete && !this.index.isOnDemandMode()
+      && this.index.hasSourceBackedStartup() && this.dirtyMarkdownPaths.size === 0
+      && this.indexBacklogReasons.size > 0 && [...this.indexBacklogReasons].every(item => item.startsWith("startup:"))) return;
     const explicitlyRequested = showNotice;
     if (!this.hasVisibleKplexSurface() && !allowClosed && !explicitlyRequested) {
       return;

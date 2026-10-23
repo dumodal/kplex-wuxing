@@ -5650,3 +5650,23 @@ native source-backed index, not fresh-process routing. Exact15-store Small check
 before faults; SI4 passes, SI5/native foreground/real-copy timing still pending. Forty-one
 driver/observer checks pass. SourceRepository/read-plumbing unchanged. No CPU-saving claim.
 Combined Mac/Windows validation still pending; PR205/207 remain open/draft at this checkpoint.
+
+## 2026-10-23 - PR206 checkpoint B (work policy, real-copy measurement pending)
+
+| Checkpoint | Result | Remaining acceptance |
+| --- | --- | --- |
+| B lifecycle discovery and automatic builder ownership | Pre-layout enumeration no longer invalidates body/URL owners; startup-only automatic full builder yields ownership to initial source adoption | Native SI5/foreground/live checks, matched real-copy work/CPU, broad-tag control and final audit |
+
+Action log (2026-10-23, PR206 B): accepted-base native S2 showed11819 body-dirty owners at
+late attachment,11839 replacements/URL scan11819 and one full rebuild cancelling inventory
+with no changed host/maintenance epoch. Exact installed Vault API documents initial create
+enumeration. B changes lifecycle qualification only; restart metadata/resolution/Date/path
+validity remains unchanged. Eighteen real-IDB cases pass in eager/on-demand, including
+same-stat edits, late real creation/recreation, offline alias/Date/move, missing/corrupt metadata.
+Ten interval ownership cases pass: startup-only auto builder suppressed, seven real-change/
+cold/on-demand/explicit controls retain work. Broad source acquisition after revision changes
+is not labelled identical replay; baseline saw only one same-revision revisit. Existing indexing
+assertion updated deliberately with opposite post-layout create guard. Full verification and
+exact Small smoke passed in combined6ad7c816 candidate; A1/A2 recovery commits remain separate.
+No watchdog, source-read/validation/count/schema algorithm or reserved read-plumbing changes.
+No measured B CPU gain yet. Native SI5 and subsequent lanes are still pending. C14 paused.

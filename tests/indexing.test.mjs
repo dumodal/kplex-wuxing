@@ -1660,12 +1660,22 @@ function preRestoreFenceFixture() {
     f.create(new TFolder("Initial"));
     f.create(new TFile("Initial/Note.md", 17));
     f.create(new TFile("Initial/Image.png", 18));
-    assert.equal(f.deferred.length, 3, "Dormant native creates retain lightweight source invalidation");
+    assert.equal(f.deferred.length, 0, "Pre-layout discovery remains physical inventory input without body invalidation");
     f.capture(); f.classify();
     assert.equal(f.startup.indexDirty, false, "Fresh captured inventory covers unchanged dormant initial file/folder/attachment discovery");
     assert.deepEqual([...f.startup.indexBacklogReasons], [], "Covered initial creates must not force a post-restore full rebuild");
     assert.deepEqual([...f.startup.dirtyMarkdownPaths], []);
     assert.equal(f.startup.preRestoreUncoveredChanges, false);
+  } finally { f.close(); }
+}
+{
+  const f = preRestoreFenceFixture();
+  try {
+    f.startup.layoutReady = true;
+    f.create(new TFolder("Real"));
+    f.create(new TFile("Real/Note.md", 17));
+    f.create(new TFile("Real/Image.png", 18));
+    assert.equal(f.deferred.length, 3, "Post-layout creates before admission retain ordinary source invalidation");
   } finally { f.close(); }
 }
 for (const repeat of ["same-native", "replacement-native", "after-capture"]) {
