@@ -5693,3 +5693,9 @@ qualified, not waived. Small closed and19 original config/plugin files byte-rest
 original Sync/community restored only after closure. Brain is sole healthy window/off[].
 Same retained S2 restore now active with independent external power sampler. Candidate CPU/
 work, broad-tag, read-only real-copy recovery and final audit remain pending. No runtime change.
+
+Coordination checkpoint (2026-10-23 12:56UTC, PR206): GitHub verifies Windows205 merged
+12:30:42UTC as930747679894f003a2acf3b800df798826ee090c (head104a5837). Protected
+cached-metadata read batching has entered main;207 is draft/open based there for dependency-
+count maintenance. No import/rebase/merge/deployment here;0f94252 baseline andb38a889/6ad7c816
+candidate remain frozen during experiments. Later integrated Mac validation remains required.

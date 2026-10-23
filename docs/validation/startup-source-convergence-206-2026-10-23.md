@@ -232,6 +232,14 @@ Windows agent to merge #205 independently and then continue #207. This branch ke
 runtime0f94252 and the recorded artifact identities; no Windows code is imported mid-experiment.
 A later combined Mac validation against integrated code remains required once both threads are ready.
 
+At the later native-acceptance checkpoint, #205 is verified merged at **12:30:42 UTC** as
+`930747679894f003a2acf3b800df798826ee090c` (head`104a5837ca358238f2c3cbd5f7177516094ab138`).
+Its protected cached-metadata read batching has therefore entered main. #207 remains draft/open,
+now based on9307476, and owns the subsequent dependency-count maintenance optimization. Neither
+change is imported into this branch or deployed in this experiment. All reported #206 runtime
+artifacts remain against0f94252; later integrated Mac validation is still explicitly required.
+
+
 ## Remaining acceptance
 
 - [ ] Current-baseline controlled failure and targeted native causal sequence.
