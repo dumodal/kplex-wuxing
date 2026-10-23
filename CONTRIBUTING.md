@@ -1380,7 +1380,8 @@ or stored facts are altered by this fault injection.
 
 After exact-build staging in the explicitly configured `kplex-test-small`, run
 `npm run verify:obsidian:startup-admission`. The shared controlled-probe driver verifies artifact
-hashes and vault identity. The scenario reloads the plugin, exercises the real Indexing Settings
+hashes and vault identity. Close existing main/sidebar Plex tabs first; when automating, capture
+and restore the original workspace around this prerequisite. The scenario reloads the plugin, exercises the real Indexing Settings
 switches and strategy dropdowns for all three devices, observes a ten-second dormant interval and native file/metadata edits, then opens main
 and sidebar Plexes concurrently. It checks stationary connections, close/reopen reuse, enabled
 Eager pre-open startup and a live inactive Plex. It restores original configuration/layout and

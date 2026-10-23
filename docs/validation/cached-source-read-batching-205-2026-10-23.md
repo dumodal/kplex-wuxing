@@ -1,6 +1,6 @@
 # Cached-source read sharing — PR #205
 
-Prepared by **Zsolt's Codex Agent**, 2026-10-23. Implementation and validation are in progress. Pending checks are not passes. Keep #205 draft; no merge, release, main write or production-vault deployment is authorized.
+Prepared by **Zsolt's Codex Agent**, 2026-10-23. Scoped implementation and required local/Windows validation are complete. Implementation checkpoint `8b1df5764d4799960a64ee2b149566b6278d0516` is published and its remote identity verified. Keep #205 draft for maintainer review; no merge, release, main write or production-vault deployment occurred.
 
 ## Baseline and ownership
 
@@ -50,13 +50,13 @@ Full `npm run verify` and strict `verify:obsidian` passed on Node 22.22.2 with r
 
 Final native caller demonstration passes: **32 transactions, 80 store requests, 16 lease-add/delete attempts and 48 hashes** for sixteen saved sources. Exact facts/heads are unchanged; independently queried durable leases, active readers and decode reservations are all zero. The intentional failure after one read exits as expected with wrapper/controller/configuration cleanup and independently verified zero durable leases/readers/decode bytes. It remains a failed scenario receipt, not relabeled a successful workload. Candidate document visibility is visible versus the initial baseline's hidden state; native counts are diagnostic intervals, not comparable CPU or latency measurements.
 
-Candidate `main.js` SHA-256 is **`7fa00a354d38fb2cedecbb9d15c5277e0513813b7074d487f5ebda9820c2b79f`**. Manifest/styles retain the baseline hashes. Windows is 10.0.26200; native host is Obsidian 1.14.5 (installer 1.14.0), Electron 43.3.0 / Chrome 150.0.7871.212, Node 22.22.2. Only disposable Small was open; AC power and background throttling remain recorded. Sandbox process creation error1909 required the working regular Windows process context; no source or comparison preparation changed.
+Candidate `main.js` SHA-256 is **`7fa00a354d38fb2cedecbb9d15c5277e0513813b7074d487f5ebda9820c2b79f`**. Manifest/styles retain the baseline hashes. Windows is 10.0.26200; native host is Obsidian 1.14.5 (installer 1.14.0), Electron 43.3.0 / Chrome 150.0.7871.212 with embedded Node 24.18.1. Drivers, builds and portable/browser suites use Node 22.22.2. Only disposable Small was open; AC power and background throttling remain recorded. Sandbox process creation error1909 required the working regular Windows process context; no source or comparison preparation changed.
 
-Affected native interaction/recovery acceptance remains in progress. Raw receipts stay private under `kplex-205-validation` and the measurement harness's task-owned temporary directories.
+All affected native interaction/recovery acceptance passes. Raw receipts stay private under `kplex-205-validation` and the measurement harness's task-owned temporary directories.
 
 ## First complete cost cohort
 
-Private receipt: `kplex-cached-source-read-pr3zHN`, Node22.22.2, Headless Chrome155.0.8059.82. All twelve arms passed. Synthetic actual production acquisition/repository methods use host doubles; GraphIndex's optional background checkpoint is absent. This isolates the production consumer, not full application scheduling or foreground latency. Target/browser identities are retained; this is not complete OS process birth/exit CPU accounting. Each arm owns a fresh process/profile/database; later reopen restarts that browser with the same owned profile.
+Private receipt: `kplex-cached-source-read-pr3zHN`, Node 22.22.2, Headless Chrome155.0.8059.82. All twelve arms passed. Synthetic actual production acquisition/repository methods use host doubles; GraphIndex's optional background checkpoint is absent. This isolates the production consumer, not full application scheduling or foreground latency. Target/browser identities are retained; this is not complete OS process birth/exit CPU accounting. Each arm owns a fresh process/profile/database; later reopen restarts that browser with the same owned profile.
 
 Sixteen-source diagnostics: metadata component **48→32 transactions** (−33.3%); complete restart inventory **82→66** (−19.5%). Requests remain80/164 respectively; sixteen lease creations/deletions,48 hashes,16 decodes and3798 chunk bytes are identical. Dense fallback and legacy-owner authentication retain their ordinary work; a mixed legacy/current fixture saves only the current owner's transaction. This reduces coordination, not authentication or lease records.
 
@@ -117,3 +117,42 @@ All later edit/reclaim and reopened-inventory wall times are retained below. Hea
 | Confirmation / 128 / 2 | 17.625 → 17.392 | 177.310 → 164.201 | 9298660 / 13897096 | 9339428 / 13715008 |
 | Confirmation / 128 / 3 | 17.712 → 17.298 | 183.163 → 168.077 | 9337584 / 13893260 | 9367248 / 13763740 |
 | Confirmation / 256 / 1 | 17.482 → 21.173 | 393.217 → 325.917 | 22113136 / 20856812 | 22099956 / 20485536 |
+
+## Exact-build Windows acceptance and final state
+
+| Lane | Result / scope | Private receipt |
+| --- | --- | --- |
+| Strict verification/staging | Full verify, real build, installed hashes and CLI/DOM smoke pass | `verify-obsidian/report.json` |
+| Production metadata caller | 32 transactions; exact facts/heads; zero owned durable leases/readers/decode | `native-candidate/cached-source-reads.json` |
+| Intentional caller failure | Expected failed scenario; durable, wrapper, controller and configuration cleanup pass | `native-cleanup-fault/cached-source-reads.json` |
+| SI4 | Actual settings/source consumers and restoration pass; Small-specific minimum-file prerequisite is explicitly 0 | `si4/si4-native.json` |
+| SI5 | Changed policy, missing/corrupt optional cache, corrupt source and offline edit recover without an unnecessary full rebuild; settings/fixtures/throttle restored | `si5/report.json` |
+| Foreground inventory | Held background work allows requested foreground scopes; stale/cancelled work stays non-authoritative and owned state converges | `foreground/report.json` |
+| Startup admission | Dormant/native edits, six device controls, concurrent main/sidebar opening, reopen reuse, enabled Eager and inactive live Plex pass | `startup-admission-closed/startup-admission-195.json` |
+| Gate counts | Filter/count, tags/folders, URL evidence and presentation-only cases pass | `gates/` |
+| Rename and ontology startup | Identity/recovery and startup update cases pass | `rename/`, `ontology/` |
+| Live updates | Actual On-demand / background URLs / Responsive profile; edits, early interactive consumers and convergence pass; original Eager configuration restored | `live-updates-profile-final/report.json`, `live-profile-restoration.json` |
+
+The first startup-admission attempt correctly refused an already open Plex before scenario mutation. That failed receipt is retained under `startup-admission/`; an outer guard then captured the layout/configuration, closed Plex tabs, ran the unchanged probe and restored original files/layout. `startup-layout-restoration.json` passes. No assertion, deadline, readiness policy or production source was changed to obtain the pass.
+
+Final audit: Small returns to 107 files / 88 Markdown notes, original Eager mode, ready semantic/URL state, zero pending source/resolution/known work, unsaved sources, active readers, decode reservations or retained test controllers. Built and installed `main.js` remain 7fa00a35…; production source remains 534a061e…. All test-owned fixtures and altered settings/layouts are restored. Native method/DOM evidence is not actual paint, physical-device or controlled whole-Obsidian performance acceptance.
+
+### Historical conservative protection, preserved
+
+A final global-zero lease assertion initially failed on **two durable source-family leases**, despite every measured/new reader lifetime closing. A read-only audit found neither belongs to the current repository owner or selects a current family revision. Exact SHA-256 fingerprints of each lease's key/source/revision/owner match **both records in all three October 22 checkpoints**, including the original pre-investigation database:
+
+- `original.bin`: SHA-256 `bde4bd733e06e4e4a2569d6db2de598bfe0e8297be60156bde4990dba8e9460c`, timestamp 2026-10-22T06:00:21Z,2/2 exact matches.
+- `warm.bin`: `faad97c77d953a9e449854759dae69f78c26006dc1ecdafd33a2689468d56941`,2/2 matches.
+- `warm-v2.bin`: `9e4503aec40d4d80a247cfb6926b432bd3529dac6b2f886d13df11228b5a2106`,2/2 matches.
+
+This establishes that these protections predate #205. Their original failure cause is not established. They remain untouched under the existing conservative contract; no expiry, forced reclamation, global storage clearing or checkpoint restore was performed. Fresh comparison arms and candidate native observed keys have zero remaining leases. Therefore the final Small global count is **2 inherited /0 new**, not an invented global-zero result. `global-lease-audit.json`, `historical-lease-comparison.json` and `final-cleanup.json` retain this distinction privately. Node 22 initially refused the archived Electron V8 wire version; the read-only comparison ran in matching embedded Node 24.18.1 instead. No runtime build used that host Node.
+
+## Review conclusion
+
+Deliver the bounded correction for maintainer review. It removes one transaction from eligible ordinary metadata reads, reducing complete unchanged restart-inventory transactions 19.5% in the diagnostic fixture, while preserving every lease/request/hash and all source validity/recovery contracts. Representative renderer CPU improves modestly in the controlled consumer; the unfavorable pair and later edit endpoints remain included. No shifted repair/reclamation/restart debt is demonstrated.
+
+The principal limits remain Browser/storage CPU coverage, full application scheduling and physical storage/cache equivalence. Expanded write-store scope has bounded functional/diagnostic coverage, not an exclusive lock-time guarantee. This does not solve the Mac startup loop/broad-tag timeout, historical orphan reclamation or the original overall CPU objective. No further runtime optimization or additional measurement campaign is needed for this scoped return. #206 and merged #203/#204 remain untouched.
+
+Independent review covered ownership, bounds, authentication/final freshness, cancellation/close, conservative failure, component reuse, TSDoc and test-harness attribution/cleanup. Automated full verification and native acceptance complement that review. No additional manual gate is requested for this Windows scope; Mac/physical-device/production-vault performance remains unclaimed.
+
+Reproduce with Node 22.22.2: `node scripts/testing/cached-source-read-batching.mjs characterize` or `full`; use the explicit Small guards for `verify:obsidian` and documented native drivers. Final documentary publication and draft-PR head are verified separately; GitHub CI state must be reported as observed, never inferred from local passes.
