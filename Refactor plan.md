@@ -5714,3 +5714,11 @@ for next control. Graph count110472base/110470candidate remains unclassified pen
 vocabulary and next baseline parity; do not declare semantic equivalence from counts.
 Second pair reverse order now preparing; both independentAC, totaln2 rather than target3
 explicitlylimited. Source runtime frozen, no Windows import; final warm/broad-tag/audit pending.
+
+
+### PR #206 second candidate S2 repetition - 2026-10-23
+
+- Same b38a889 runtime / 6ad7c816 artifact, original decoded S2 seed and saved layout; no Windows integration.
+- Second candidate closure 441.0s, whole-process CPU 728.23 CPU-s through 603.9s quiet; independent external AC and native/process coverage valid.
+- Repeats zero reads/parses/repairs, one genuine resolution activation (one chunk / 4,881 bytes), 11,839 cached validity calls, no full builder or masks. #204 selected-count repair 1 / realized ordinary reuse 0.
+- Cleanup restored settings and left copy disabled. Post-timing full-eight-target oracle is running; baseline reverse repeat, two-node vocabulary difference, warm control and final integrity audit remain pending. No final semantic or general speedup claim.

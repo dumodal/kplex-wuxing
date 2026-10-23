@@ -2,7 +2,7 @@
 
 Prepared by **Zsolt's Codex Agent**, 2026-10-23, Europe/Budapest.
 
-**Status: A1/A2 correctness checkpoints verified; B implementation verified in the combined candidate, with native acceptance and work/CPU measurement continuing. No CPU improvement is claimed.**
+**Status: A1/A2 and B are implemented and verified. Two candidate S2 runs repeat the avoided-work result; baseline repetition, full semantic parity, warm control and final audit remain pending. CPU observations are qualified below.**
 
 ## Scope and checkpoints
 
@@ -130,8 +130,8 @@ savings belong to #204.
 Installed Obsidian1.13.0 declarations document `Vault.create` for existing files during initial
 loading. The pre-layout source fence currently treats these as body changes, and the independent
 URL create listener retires cached owner data. The controlled discovery regression fails in both
-eager and on-demand modes on this baseline. Negative cases and a safe qualification are pending;
-no cached-source validity check has been weakened.
+eager and on-demand modes on this baseline. The subsequent B checkpoint qualifies discovery and passes the negative cases below;
+no cached-source validity check is weakened.
 
 One actual full semantic rebuild also occurred, marked `startup:stale-snapshot` with zero modified
 paths. The source inventory was cancelled and restarted with revision1→2 and generation22→23,
@@ -161,7 +161,7 @@ cleanup passed. Before faults, the exact Small database was checkpointed across1
 stream SHA-256`1b6c510db41387d1fc38a257af8286b3da05d5f7fcbc9a793870fac946fe3118`.
 Exact-build SI4 Small settings/gates/search/provenance/stale-write acceptance also passed. Native
 SI5 and foreground acceptance subsequently passed; live/startup qualifications are recorded below.
-Fresh-process real-copy timing and final audit remain pending.
+Fresh-process real-copy timing follows below; final integrity audit remains pending.
 Forty-one driver/observer checks passed after registering the native recovery command.
 
 B qualifies initial create enumeration at the existing lifecycle listeners rather than changing
@@ -193,7 +193,7 @@ Small was closed after checking writer/controller/mask cleanup. Its19 original c
 and plugin bytes were restored offline and byte-compared; its original Sync setting and original
 plugin-enabled list were restored only after native window/registry closure. Only the healthy
 brain-copy window remained. The real-copy S2 restoration is active, with independent external AC
-sampling armed; candidate CPU/work and broad-tag results remain pending.
+sampling armed; subsequent candidate CPU/work results follow below and broad-tag acceptance remains pending.
 
 ## Native interaction follow-up and qualifications
 
@@ -289,6 +289,33 @@ still pending. A's recovery correctness remains separately established by contro
 native Small tests; this naturally fresh full-snapshot candidate run did not need source-adoption
 resumption and is not a current native stranded-startup reproduction.
 
+## Second candidate S2 repetition
+
+A second independent restore of the original S2 stream completed decoded verification before
+activation. Its first observer expired while the same native import remained owned; two resume
+observers joined that job. No duplicate import or activation during storage ownership occurred.
+Preparation took about13.6 minutes and is outside timing.
+
+The same runtime/artifact/layout and observer configuration launched at **14:04:44.478 UTC**.
+Forwarding attached about47.0s late. Ready and actual source/URL/persistence closure were both
+**441.0s after launch**, followed by **603.9s quiet**. Whole-process external CPU was **728.23
+CPU-seconds**, with valid process coverage (maximum external gap1.037s; native1.620s). Independent
+external AC sampling was valid throughout (71 samples, maximum gap15.143s), agreeing with native
+AC/foreground/unlock observations. Cleanup passed, restored configuration and left K-Plex off
+with an empty community enabled set.
+
+The repeated work result is identical in its material counts: checked11,839; reads/parses/repairs0;
+one genuine resolution refresh, one source activation, one chunk/4,881 logical payload bytes;
+11,839 cached validation acquisitions with no revisited owner; no full builder or unsaved mask.
+One broad inventory was followed by a roughly0.12s empty completion, both successful at unchanged
+host/maintenance/inventory revisions. Actual #204 observation again records one selected-count
+repair and zero realized ordinary count reuse. This repeats avoided replacement/parser work;
+it does not remove the existing near-vault-wide cached validity pass.
+
+The two candidate totals are428.6/441.0s to closure and693.78/728.23CPU-s through quiet. These are
+not yet two complete matched pairs: the reverse-order baseline is still pending. Post-timing full
+eight-target checks, global vocabulary parity, ordinary warm control and final audit remain pending.
+
 ## Parallel coordination checkpoint
 
 At the A1 checkpoint GitHub reports #205 and #207 open/draft. The maintainer has authorized the
@@ -306,11 +333,11 @@ artifacts remain against0f94252; later integrated Mac validation is still explic
 
 ## Remaining acceptance
 
-- [ ] Current-baseline controlled failure and targeted native causal sequence.
-- [ ] Checkpoint A implementation, bounded recovery/negative regressions and native confirmation.
-- [ ] Checkpoint B demonstrated cause, independent implementation and regression evidence.
+- [x] Current-baseline controlled failure and targeted native causal sequence.
+- [x] Checkpoint A implementation, bounded recovery/negative regressions and qualified native Small confirmation.
+- [x] Checkpoint B demonstrated cause, independent implementation and regression evidence.
 - [ ] Before/after work and CPU receipts, interaction/recovery checks, realized #204 reuse.
-- [ ] Full real-dependency verification and applicable exact-build native lanes.
+- [x] Full real-dependency verification and applicable exact-build Small lanes, with the recorded recent-navigation/crash qualifications.
 - [ ] Final copy/original-configuration audit and independent owned-resource cleanup.
 - [ ] Validated commits pushed, remote checkpoint verified and draft #206 updated for review.
 
