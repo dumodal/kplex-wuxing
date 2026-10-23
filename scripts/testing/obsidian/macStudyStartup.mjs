@@ -4,7 +4,8 @@
  * an independent bounded child. Early CPU coverage survives synchronous CLI reconnects; native
  * scalar observation is explicitly late and cannot claim complete early operation counters.
  * Pure diagnostic flag reads retry at most twice under the run deadline. Failed runs attempt
- * full probe capture before the independent recorder, observer and configuration cleanup.
+ * full probe capture before the independent recorder, observer and configuration cleanup. Optional
+ * convergence observers forward existing owners and retain bounded scalar diagnostics only.
  */
 import {spawn} from 'node:child_process';
 import {readFileSync,writeFileSync,existsSync,realpathSync} from 'node:fs';
@@ -18,6 +19,7 @@ import {verifyStudyCheckpoint} from './macStudySafety.mjs';
 import {captureMacDiagnosticProfiles} from './macStudyCpuProfile.mjs';
 import {createStartupResourceProbe} from './startupResources.mjs';
 import {captureMacStudySystem} from './macStudySystem.mjs';
+import {createStartupSourceConvergenceProbe} from './startupSourceConvergenceProbe.mjs';
 
 const executable='/Applications/Obsidian.app',self=fileURLToPath(import.meta.url);
 
@@ -130,7 +132,7 @@ async function recordProcesses(file,maximumMs) {
 export async function runMacStudyStartup({target,config,report,cli,evaluate,save}) {
   if(process.platform!=='darwin')throw Error('Actual Mac startup required');
   const maximumMs=config.maximumMs??900000;
-  if((config.nativeProfile||config.captureSourceFlags||config.lateStartupObservers||config.diagnosticEvents||config.resourceCounts||config.detailedResources)&&config.purpose!=='diagnostic')throw Error('Startup detail requires diagnostic purpose');
+  if((config.nativeProfile||config.captureSourceFlags||config.lateStartupObservers||config.diagnosticEvents||config.convergenceDiagnostics||config.resourceCounts||config.detailedResources)&&config.purpose!=='diagnostic')throw Error('Startup detail requires diagnostic purpose');
   if(maximumMs<60000||maximumMs>2700000)throw Error('Startup observation bound refused');
   const communityFile=join(target.config,'community-plugins.json'),dataFile=join(target.pluginDir,'data.json'),workspaceFile=join(target.config,'workspace.json');
   const community=readFileSync(communityFile,'utf8'),data=readFileSync(dataFile,'utf8'),workspace=readFileSync(workspaceFile,'utf8');
@@ -177,7 +179,7 @@ export async function runMacStudyStartup({target,config,report,cli,evaluate,save
       try {
         if(!armed) {
           report.startup.reconnectedAt=new Date().toISOString();
-          const attachment=evaluate(`(()=>{if(app.vault.getName()!==${JSON.stringify(target.vaultName)}||app.vault.adapter.getBasePath()!==${JSON.stringify(target.vault)})throw Error('Startup target mismatch');const p=app.plugins.plugins['k-plex'];if(!p?.index)throw Error('Startup plugin not loaded yet');const r=require('@electron/remote'),w=r.getCurrentWindow();if(r.BrowserWindow.getAllWindows().filter(x=>!x.isDestroyed()).length!==1)throw Error('Startup lost single-window isolation');r.app.show?.();r.app.focus({steal:true});w.show();w.moveTop();w.focus();if(!window.kplexMacStartup?.probe){const epoch=Date.now();window.kplexMacStartup={epoch,probe:(${createMacStudyProbe.toString()})(app,{...${JSON.stringify({observers:!!config.lateStartupObservers,allowRunning:true,partialObservers:!!config.lateStartupObservers,diagnostic:config.purpose==='diagnostic',diagnosticEvents:!!config.diagnosticEvents,databaseName:target.databaseName,resourceDetailed:!config.resourceCounts,requireAc:config.requireAc!==false,requireUnlocked:true})},systemStateReader:(${captureMacStudySystem.toString()})${config.detailedResources||config.resourceCounts?',resourceFactory:('+createStartupResourceProbe.toString()+')':''}})};}return JSON.stringify({attached:true,epoch:window.kplexMacStartup.epoch})})()`);
+          const attachment=evaluate(`(()=>{if(app.vault.getName()!==${JSON.stringify(target.vaultName)}||app.vault.adapter.getBasePath()!==${JSON.stringify(target.vault)})throw Error('Startup target mismatch');const p=app.plugins.plugins['k-plex'];if(!p?.index)throw Error('Startup plugin not loaded yet');const r=require('@electron/remote'),w=r.getCurrentWindow();if(r.BrowserWindow.getAllWindows().filter(x=>!x.isDestroyed()).length!==1)throw Error('Startup lost single-window isolation');r.app.show?.();r.app.focus({steal:true});w.show();w.moveTop();w.focus();if(!window.kplexMacStartup?.probe){const epoch=Date.now();window.kplexMacStartup={epoch,probe:(${createMacStudyProbe.toString()})(app,{...${JSON.stringify({observers:!!config.lateStartupObservers,allowRunning:true,partialObservers:!!config.lateStartupObservers,diagnostic:config.purpose==='diagnostic',diagnosticEvents:!!config.diagnosticEvents,databaseName:target.databaseName,resourceDetailed:!config.resourceCounts,requireAc:config.requireAc!==false,requireUnlocked:true})},systemStateReader:(${captureMacStudySystem.toString()})${config.convergenceDiagnostics?',convergenceFactory:('+createStartupSourceConvergenceProbe.toString()+')':''}${config.detailedResources||config.resourceCounts?',resourceFactory:('+createStartupResourceProbe.toString()+')':''}})};}return JSON.stringify({attached:true,epoch:window.kplexMacStartup.epoch})})()`);
           armed=true;report.startup.probeEpoch=attachment.epoch;report.startup.attachedAt=new Date().toISOString();
           if(config.captureSourceFlags) {
             report.startup.sourceFlags=[];

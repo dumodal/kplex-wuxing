@@ -22,7 +22,7 @@ Obsidian is the production host; preserve the established portable semantic, ide
 # Assignment: Mac startup convergence and unnecessary source reprocessing
 
 Prepared by **Zsolt's Codex Agent**, 2026-10-23, Europe/Budapest.
-State: prepared implementation handoff; documentation only in this checkpoint.
+State: active Mac investigation; accepted-base build/warm control and controlled failing recovery regression captured. Bounded diagnostic tooling validated; no runtime correction yet.
 Recipient: Mac agent with real dependencies, Obsidian CLI and the retained private #203 fixtures/evidence.
 Branch: `2026-10-23-startup-source-convergence`.
 Common accepted runtime base: **`0f94252aabb8b23458b5df192380854ea0bddd53`**, including merged #201, final #203 tooling/report and #204.

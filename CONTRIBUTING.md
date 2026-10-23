@@ -250,8 +250,12 @@ adds bounded existing-native-object flag counts after reconnect and around captu
 retained-memory/unsaved overlap, active lanes, pending deletion and retry/readiness flags without
 calling stored validity predicates. `lateStartupObservers: true` permits diagnostic forwarding after
 CLI reconnect; coverage remains `since-late-attachment`, never pre-admission. `diagnosticEvents: true`
-retains at most 128 aggregate fixed-label mask/adoption/reconcile events, with overflow explicit;
-no owner IDs, method arguments or error text are exported. `resourceCounts: true` records native
+retains at most 128 aggregate fixed-label mask/adoption/reconcile events, with overflow explicit.
+`convergenceDiagnostics: true` adds PR206's diagnostic-only bounded source/adoption transitions,
+native-event categories and actual #204 private-reclaim versus selected-repair branch counts.
+It performs no extra proof reads, source work or scheduler changes. Its 256-event detail limit
+and 32 concurrent activation-observer limit expose overflow; startup forwarding remains late.
+No owner IDs, method arguments or error text are exported. `resourceCounts: true` records native
 transaction/request counters without detailed payload serialization; it cannot be combined with
 `detailedResources`. Each option requires `purpose: "diagnostic"`.
 Pure diagnostic flag queries retry at most twice under the original run deadline, recording each
