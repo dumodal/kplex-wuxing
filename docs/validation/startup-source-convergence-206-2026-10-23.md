@@ -363,6 +363,23 @@ verified import with no full app restart; setup-related host/GC work cannot be e
 these observations show retained zero-repair warm behavior, **not a clean matched warm CPU
 percentage**. No OFF-control subtraction or exact plugin-only CPU attribution is made.
 
+## Reverse baseline: in-progress qualification
+
+The second original-S2 restore completed decoded verification at15:17:14.985UTC, using the same
+15stores/1,537,552rows and no duplicate import. Reverse baseline timing started15:18UTC with
+independent external AC polling and the unchanged45-minute cap; its result is not complete yet.
+At late attachment,11,820 owners were body-dirty and19 already repaired. It has again read11,819
+URL owners and entered one competing full-builder path.
+
+This repeat has a materially different work trajectory from the first baseline: at15:36UTC it
+had performed721 source reads/parses and retained719 unsaved masks after cancellation. Repair-path
+counts exceed actual durable activations. Production code explicitly counts a live unsaved result
+as repair-path work; it must not be equated with a successful persisted source-head replacement.
+The prior baseline and both candidate terminal observations had0masks. This observation remains
+in progress: actual recovery, closure, quiet and final CPU are pending. No flush, mask clearing,
+forced rebuild, timeout increase or intervention is used to improve its outcome. If the original
+cap censors closure/quiet, that remains an incomplete result rather than another matched pass.
+
 ## Parallel coordination checkpoint
 
 At the A1 checkpoint GitHub reports #205 and #207 open/draft. The maintainer has authorized the

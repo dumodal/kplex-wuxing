@@ -5737,3 +5737,11 @@ explicitlylimited. Source runtime frozen, no Windows import; final warm/broad-ta
 - Candidate warm source/URL/persistence closure 192.021s, quiet 600.235s, observed whole-application native CPU 397.542 CPU-s; coverage valid, max native gap 1.034s, independent external AC valid.
 - Zero source reads/parses/repairs/replacements/payload writes/masks; URL cache covers 11,839 owners without reads. Cleanup leaves plugin off / enabled list empty.
 - Original base warm 205.020s / 446.789 CPU-s remains coverage, power and starting-state qualified; no clean warm CPU percentage or exact plugin-only attribution. Reverse S2 baseline and full vocabulary parity pending.
+
+
+### PR #206 reverse baseline in progress - 2026-10-23
+
+- Exact S2 restore 2 decoded verified at 15:17:14.985 UTC; reverse accepted-base startup launched 15:18 UTC with independent external AC and unchanged 45-minute cap.
+- Repeats initial body-dirty enumeration (11,820 still dirty / 19 repaired at late attachment), URL reads 11,819 and competing builder admission.
+- At 15:36 UTC, source reads/parses 721 and unsaved masks 719 demonstrate a different cancellation/recovery trajectory. Repair-path counters include live unsaved outcomes; durable activations remain separate. Terminal work/CPU, recovery and quiet are not yet known.
+- No forced flush, mask clear, route or extended cap. Preserve a censored result if required; no second matched-pair success is preclaimed.
