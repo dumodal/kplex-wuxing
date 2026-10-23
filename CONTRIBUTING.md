@@ -254,7 +254,8 @@ retains at most 128 aggregate fixed-label mask/adoption/reconcile events, with o
 `convergenceDiagnostics: true` adds PR206's diagnostic-only bounded source/adoption transitions,
 native-event categories and actual #204 private-reclaim versus selected-repair branch counts.
 It performs no extra proof reads, source work or scheduler changes. Its 256-event detail limit
-and 32 concurrent activation-observer limit expose overflow; startup forwarding remains late.
+and 32 concurrent activation-observer limit expose overflow. Anonymous owner trajectories retain
+at most eight weak identities and 128 scalar transitions; startup forwarding remains late.
 No owner IDs, method arguments or error text are exported. `resourceCounts: true` records native
 transaction/request counters without detailed payload serialization; it cannot be combined with
 `detailedResources`. Each option requires `purpose: "diagnostic"`.

@@ -22,7 +22,7 @@ Obsidian is the production host; preserve the established portable semantic, ide
 # Assignment: Mac startup convergence and unnecessary source reprocessing
 
 Prepared by **Zsolt's Codex Agent**, 2026-10-23, Europe/Budapest.
-State: active Mac investigation; accepted-base build/warm control and controlled failing recovery regression captured. Bounded diagnostic tooling validated; no runtime correction yet.
+State: active Mac investigation. Instrumentation checkpoint 7a966a7 is pushed/remote-verified; baseline warm control completed with qualified CPU. Current-base S2 native startup capture is running from the decoded-verified retained seed. Private task pointer: `/private/tmp/kplex-206-active-path`. Local checkpoint-A runtime/tests are unvalidated and uncommitted; checkpoint-B event-order tests are also uncommitted. No candidate is deployed. Do not interrupt or overlap the active native driver, restore or startup observer.
 Recipient: Mac agent with real dependencies, Obsidian CLI and the retained private #203 fixtures/evidence.
 Branch: `2026-10-23-startup-source-convergence`.
 Common accepted runtime base: **`0f94252aabb8b23458b5df192380854ea0bddd53`**, including merged #201, final #203 tooling/report and #204.

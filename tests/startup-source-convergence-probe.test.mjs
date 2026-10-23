@@ -55,7 +55,7 @@ test('observer preserves promise identity, counts actual branch selection, and e
   assert.equal(result.counts['countReuse.selectedRepair'], 1);
   assert.equal(result.active, 0);
   assert(!JSON.stringify(result).includes('private-owner'));
-  assert.equal(f.listeners.size, 6);
+  assert.equal(f.listeners.size, 7);
   probe.stop(); probe.stop();
   assert.equal(f.listeners.size, 0);
   assert.equal(f.source.inventoryReady, originalReady);
@@ -75,4 +75,17 @@ test('event detail is bounded and partial installation restores earlier wrappers
   assert.throws(() => createStartupSourceConvergenceProbe(f.app, f.plugin), /Missing convergence/);
   assert.equal(f.plugin.index.adoptStartupSources, original);
   assert.equal(f.listeners.size, 0);
+});
+
+test('owner trajectories cap weak identities and detail without exporting private paths', /** Retain only anonymous ordinals and fixed source flags. */ async () => {
+  const f = fixture(), probe = createStartupSourceConvergenceProbe(f.app, f.plugin);
+  const files = Array.from({ length: 10 }, /** Supply distinct native-shaped identities. */ (_, n) => ({ path: 'private-note-' + n, extension: 'md' }));
+  for (let n = 0; n < 200; n++) await f.source.acquire(files[n % files.length]);
+  const result = probe.snapshot();
+  assert.equal(result.sampledOwners, 8);
+  assert.equal(result.ownerEvents.length, 128);
+  assert(result.droppedOwnerEvents > 0);
+  assert(!JSON.stringify(result).includes('private-note'));
+  assert(result.ownerEvents.every(/** Anonymous identities remain within the documented bound. */ item => item.id >= 1 && item.id <= 8));
+  probe.stop();
 });

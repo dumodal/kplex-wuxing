@@ -6,9 +6,9 @@
  */
 export function createStartupSourceConvergenceProbe(app, plugin) {
   const index = plugin.index, source = index.sourceAcquisition, repo = source.repository;
-  const restores = [], counts = {}, events = [], active = new Map();
+  const restores = [], counts = {}, events = [], active = new Map(), ownerEvents = [], owners = new WeakMap();
   const started = performance.now();
-  let closed = false, droppedEvents = 0, activationOverflow = 0, adoption = 0, nextAdoption = 0;
+  let closed = false, droppedEvents = 0, activationOverflow = 0, adoption = 0, nextAdoption = 0, sampledOwners = 0, droppedOwnerEvents = 0;
   /** Increment only caller-supplied finite categories, never a source/path-derived key. */
   function count(key) { counts[key] = (counts[key] ?? 0) + 1; }
   /** Retain bounded scalar transitions; excess detail is explicitly unavailable. */
@@ -24,6 +24,18 @@ export function createStartupSourceConvergenceProbe(app, plugin) {
       pendingKnown: source.pendingKnownFiles.size, semantic: index.hasPendingSemanticPreparation(),
       initial: plugin.initialIndexComplete, incomplete: plugin.initialSourceIndexIncomplete,
       generation: index.generation, hydrationRun: index.snapshotHydrationRun };
+  }
+  /** Sample at most eight weak native identities and 128 scalar transitions, without paths or content. */
+  function ownerEvent(file, kind, details = {}) {
+    if (!file || typeof file !== 'object' || file.extension !== 'md') return;
+    let id = owners.get(file);
+    if (!id) { if (sampledOwners >= 8) return; id = ++sampledOwners; owners.set(file, id); }
+    if (ownerEvents.length >= 128) { droppedOwnerEvents++; return; }
+    const observation = source.states.get(file);
+    ownerEvents.push({ elapsedMs: performance.now() - started, id, kind, revision: observation?.revision ?? null,
+      dirty: !!observation?.dirty, bodyDirty: !!observation?.bodyDirty, created: !!observation?.created,
+      resolutionDirty: !!observation?.resolutionDirty, inventory: !!source.inventory,
+      capturedCoordinates: !!source.sourceCoordinates?.has(file.path), ...details });
   }
   /** Restore own/inherited method shape exactly, preserving the original result/promise identity. */
   function wrap(owner, key, observe) {
@@ -74,7 +86,10 @@ export function createStartupSourceConvergenceProbe(app, plugin) {
     wrap(source, 'acquire', /** Classify acquisition admission from existing weakly held source flags. */ function(original, args) {
       const observation = this.states.get(args[0]); count('acquire.total');
       for (const key of ['dirty', 'bodyDirty', 'created', 'resolutionDirty']) if (observation?.[key]) count('acquire.' + key);
-      return original.apply(this, args);
+      ownerEvent(args[0], 'acquire.begin');
+      return observe(original.apply(this, args), /** Sample flags only after the actual acquisition result settles. */ value => {
+        ownerEvent(args[0], 'acquire.end', { current: !!value?.current, saved: !!value?.saved });
+      });
     });
     wrap(source, 'markContributorHostChange', /** Count validity changes and whether they interrupt active inventory. */ function(original, args) {
       const kind = ['source', 'topology', 'resolution', 'environment'].includes(args[0]) ? args[0] : 'other';
@@ -104,9 +119,9 @@ export function createStartupSourceConvergenceProbe(app, plugin) {
     }
     for (const [owner, name, label] of [[app.vault, 'create', 'create'], [app.vault, 'modify', 'modify'],
       [app.vault, 'rename', 'rename'], [app.vault, 'delete', 'delete'],
-      [app.metadataCache, 'changed', 'metadata'], [app.metadataCache, 'resolved', 'resolved']]) {
-      const ref = owner.on(name, /** Count native notifications separately from source validity revisions. */ () => {
-        if (!closed) { count('native.' + label); if (source.inventory) count('native.active.' + label); }
+      [app.metadataCache, 'changed', 'metadata'], [app.metadataCache, 'resolve', 'resolve'], [app.metadataCache, 'resolved', 'resolved']]) {
+      const ref = owner.on(name, /** Count native notifications separately from source validity revisions. */ file => {
+        if (!closed) { count('native.' + label); if (source.inventory) count('native.active.' + label); ownerEvent(file, 'native.' + label); }
       });
       restores.push(/** Release this diagnostic listener independently of plugin listeners. */ () => owner.offref(ref));
     }
@@ -116,7 +131,8 @@ export function createStartupSourceConvergenceProbe(app, plugin) {
   }
   return {
     /** Export bounded aggregate evidence, never owner keys or private note coordinates. */
-    snapshot() { return { counts: { ...counts }, events: events.slice(), droppedEvents, activationOverflow, active: active.size }; },
+    snapshot() { return { counts: { ...counts }, events: events.slice(), droppedEvents, ownerEvents: ownerEvents.slice(),
+      sampledOwners, droppedOwnerEvents, activationOverflow, active: active.size }; },
     /** Retire observers even if one independent resource cannot be restored. */
     stop() {
       if (closed) return;
