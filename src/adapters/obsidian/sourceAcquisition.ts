@@ -38,6 +38,10 @@
  * foreground parser to finish its current input instead of abandoning it before the cache write.
  * Requested readonly center previews reuse this body loader and its native/cache/parser fences,
  * queueing optional parser persistence without acquiring neutral-source or semantic authority.
+ * Full-build, URL and source consumers share complete parser results through exact native-observation
+ * tokens on the existing optional body records. Weak receipts retain no bodies and never clear dirty
+ * acquisition state; per-file metadata/event/native drift retires them independently of graph readiness.
+ * Host-resolution drift still fences semantic acquisition, while lexical parser input remains reusable.
  */
 import { yieldToHostTask } from "./yieldToHostTask";
 import { canonicalTagPaths } from "../../core/graph/tagPaths";
@@ -63,7 +67,7 @@ import { CachedSourceReplay, type CachedSourceHost, type CachedSourceRequest } f
 import { selectedSourceFailure, type SelectedSourceResult, type SelectedSourceReader } from "../../index/SourceRepository";
 import type { ParsedBodyMetadata, ParsedFileMetadata } from "../../core/parser/metadata";
 import { mergeFileMetadata } from "../../index/fieldParser";
-import type { KplexIndexedDbCache } from "../../index/IndexedDbCache";
+import type { BodyCacheRequest, BodyCacheStamp, KplexIndexedDbCache } from "../../index/IndexedDbCache";
 import { SOURCE_BODY_PARSER_VERSION, SOURCE_DECODE_BUDGET_BYTES, SOURCE_FAMILIES, SOURCE_MAX_BATCH_RECORDS, SourceFactError, sourceFieldNames, sourceValueSteps, type SourceFamily, type SourceFamilyManifest,
   type SourceObservation, type SourcePhysical, type SourceReason, type StoredMetadataFact, type StoredSourceFact } from "../../index/SourceFacts";
 import type { SourceFamilyProducer, SourceInspection, SourceRepositoryDiagnostics, SourceLocalInventoryProjection } from "../../index/SourceRepository";
@@ -77,6 +81,10 @@ import { resolveObsidianReferenceTarget } from "./ontologySourceCollector";
 type FileObservation = { identity: string | null; observation?: SourceObservation; validatedHostRevision?: number; revision: number; dirty: boolean; bodyDirty: boolean; resolutionDirty: boolean; path: string; oldPath?: string; created: boolean; impact: Promise<void> | null };
 type SourceCoordinates = Readonly<{ order: number; markdownOrder: number }>;
 type Capture = { physical: SourcePhysical; revision: number; hostRevision: number; state: FileObservation; file: TFile };
+/** A tiny weak native receipt names an accepted optional cache record; it retains no parser body. */
+type BodyInputReceipt = { inputToken: string; parserVersion: number; physical: SourcePhysical; revision: number; retired: boolean };
+/** Caller completion accepts one full parse; later optional persistence retains only native validity. */
+export type SourceBodyInput = BodyCacheStamp & { accept(): boolean };
 /** One short native create wave; never a retained folder catalog or durable source certificate. */
 type EmptyFolderCreateWave = {
   folder: TFolder; path: string; parent: TFolder; parentPath: string; openedAt: number; lastCauseAt: number;
@@ -145,6 +153,9 @@ export class ObsidianSourceAcquisition {
   private readonly repository;
   private readonly metadataHost;
   private readonly states = new WeakMap<TFile, FileObservation>();
+  private readonly bodyInputs = new WeakMap<TFile, BodyInputReceipt>();
+  /** Optional-input invalidation also fences parses still awaiting their first acceptance. */
+  private readonly bodyInputEpochs = new WeakMap<TFile, number>();
   private readonly cleanup: Array<() => void> = [];
   private epoch = "";
   private hostRevision = 0;
@@ -765,7 +776,16 @@ export class ObsidianSourceAcquisition {
         // path+mtime legacy body accelerator is not identity-safe across that absence boundary.
         // A complete in-memory head in storage-degraded operation remains valid current-process
         // authority even though inspection.saved is false; do not misclassify it as recreation.
-        if (!state.dirty) { state.dirty = true; state.revision += 1; }
+        if (!state.dirty) {
+          // This is a source-incarnation fence, not a native content event. A complete parser
+          // result obtained in this process after capturing this exact TFile remains lexical input;
+          // an older path/mtime cache still has no token and cannot cross the absence boundary.
+          const input = this.bodyInputs.get(file);
+          const currentInput = input && !input.retired && input.parserVersion === SOURCE_BODY_PARSER_VERSION
+            && this.currentFileInput({ ...this.capture(file), ...input });
+          state.dirty = true; state.revision += 1;
+          if (currentInput && input) input.revision = state.revision;
+        }
         state.bodyDirty = true; state.created = true;
         for (const key of this.resolutionImpactKeys(file.path, now)) keys.add(key);
         this.startupDiagnostics?.processed("source", file.path);
@@ -1012,8 +1032,52 @@ export class ObsidianSourceAcquisition {
 
   /** Fence GraphBuilder body reads against observed equal-stat edits as well as mutable file stats. */
   getFileRevision(file: TFile): number { this.start(); return this.state(file).revision; }
-  /** An observed content change cannot be satisfied by an equal-mtime hot, neutral or legacy body. */
+  /** An observed edit rejects unqualified equal-mtime input; exact completed parser tokens are separate. */
   needsBodyRead(file: TFile): boolean { this.start(); return this.state(file).bodyDirty; }
+  /** An independent explicit URL edit retires optional sharing without changing source authority.
+   * Mark the exact accepted receipt so queued write guards retire with its weak selection. */
+  retireBodyInput(file: TFile): void {
+    this.bodyInputEpochs.set(file, (this.bodyInputEpochs.get(file) ?? 0) + 1);
+    const input = this.bodyInputs.get(file);
+    if (input) input.retired = true;
+    this.bodyInputs.delete(file);
+  }
+  /** Capture before native I/O; only a completed full current-parser result may accept this receipt.
+   * Completed input may outlive its semantic caller, but never its exact native/per-file event lifetime
+   * or selection by a newer completed receipt. Unaccepted captures may reuse a later completed input.
+   * The opaque token is stored with the actual body; this receipt alone cannot bless cached bytes. */
+  captureBodyInput(file: TFile, caller: () => boolean): SourceBodyInput {
+    const capture = this.capture(file), inputToken = this.repository.createIdentity();
+    const inputEpoch = this.bodyInputEpochs.get(file) ?? 0;
+    let acceptedInput: BodyInputReceipt | undefined;
+    const isCurrent = (): boolean => {
+      // Only the missing-head inventory branch can carry an accepted token across its synthetic
+      // incarnation fence. This guard retains that exact receipt object, never another token's
+      // replacement. Actual native events still make the accepted receipt's revision fail.
+      return (this.bodyInputEpochs.get(file) ?? 0) === inputEpoch
+        && (!acceptedInput || this.bodyInputs.get(file) === acceptedInput
+          && !acceptedInput.retired && acceptedInput.parserVersion === SOURCE_BODY_PARSER_VERSION)
+        && this.currentFileInput(acceptedInput ? { ...capture, ...acceptedInput } : capture);
+    };
+    return { inputToken, isCurrent, accept: () => {
+      if (acceptedInput || (this.bodyInputEpochs.get(file) ?? 0) !== inputEpoch || !this.currentFileInput(capture) || !caller()) return false;
+      acceptedInput = { inputToken, parserVersion: SOURCE_BODY_PARSER_VERSION, physical: capture.physical,
+        revision: capture.revision, retired: false };
+      this.bodyInputs.set(file, acceptedInput);
+      return true;
+    } };
+  }
+  /** Dirty sources may select only the actual complete parse accepted for this exact observation.
+   * Ordinary clean restart hits retain the established path/mtime/parser-version cache contract. */
+  getBodyCacheRequest(file: TFile): BodyCacheRequest | null {
+    if (this.closed) return null;
+    const capture = this.capture(file), input = this.bodyInputs.get(file);
+    if (!this.currentFileInput(capture)) return null;
+    if (input && !input.retired && input.parserVersion === SOURCE_BODY_PARSER_VERSION && this.currentFileInput({ ...capture, ...input })) {
+      return { path: capture.physical.path, mtime: capture.physical.mtime, inputToken: input.inputToken };
+    }
+    return capture.state.bodyDirty ? null : { path: capture.physical.path, mtime: capture.physical.mtime };
+  }
   /** Capture mutable TFile/stat fields before any await; a TFile replacement is also a change. */
   private capture(file: TFile): Capture {
     this.start();
@@ -1021,12 +1085,16 @@ export class ObsidianSourceAcquisition {
     return { state, file, revision: state.revision, hostRevision: this.hostRevision,
       physical: { identity: state.identity ?? "unbound", path: file.path, mtime: file.stat.mtime, size: file.stat.size, ctime: file.stat.ctime } };
   }
-  /** A relevant host observation is a different fence from graph policy/generation. */
-  private current(capture: Capture, caller: () => boolean): boolean {
+  /** Lexical parser input depends on this native/file-event lifetime, not unrelated host resolution. */
+  private currentFileInput(capture: Capture): boolean {
     const { file, physical, state } = capture;
-    return !this.closed && caller() && state.revision === capture.revision && this.hostRevision === capture.hostRevision
+    return !this.closed && state.revision === capture.revision
       && this.app.vault.getFileByPath(physical.path) === file && file.path === physical.path
       && file.stat.mtime === physical.mtime && file.stat.size === physical.size && file.stat.ctime === physical.ctime;
+  }
+  /** Semantic/source consumers additionally retain their caller and host-resolution observation. */
+  private current(capture: Capture, caller: () => boolean): boolean {
+    return !this.closed && caller() && this.hostRevision === capture.hostRevision && this.currentFileInput(capture);
   }
   /** Hash only Date-registry observations and Daily Notes interpretation configuration, not K-Plex settings. */
   private environment(cache: CachedMetadata): string {
@@ -1563,8 +1631,8 @@ export class ObsidianSourceAcquisition {
     if (!valid()) return null;
     const neutral = await this.readBody(file, valid, requireCurrentParser); if (!valid()) return null;
     if (neutral) return neutral;
-    const legacy = capture.state.bodyDirty ? undefined
-      : (await this.cache.getBodies([{ path: capture.physical.path, mtime: capture.physical.mtime }])).get(capture.physical.path);
+    let request = this.getBodyCacheRequest(file);
+    const legacy = request ? (await this.cache.getBodies([request])).get(capture.physical.path) : undefined;
     if (!valid()) return null;
     if (legacy) { this.counters.legacyBodies += 1; return legacy; }
     if (background) {
@@ -1575,8 +1643,8 @@ export class ObsidianSourceAcquisition {
       const latest = await this.readBody(file, valid, requireCurrentParser);
       if (!valid()) return null;
       if (latest) return latest;
-      const queued = capture.state.bodyDirty ? undefined
-        : (await this.cache.getBodies([{ path: capture.physical.path, mtime: capture.physical.mtime }])).get(capture.physical.path);
+      request = this.getBodyCacheRequest(file);
+      const queued = request ? (await this.cache.getBodies([request])).get(capture.physical.path) : undefined;
       if (!valid()) return null;
       if (queued) { this.counters.legacyBodies += 1; return queued; }
     }
@@ -1585,22 +1653,24 @@ export class ObsidianSourceAcquisition {
       // completed queued data so no further cache await separates admission from native I/O.
       await this.backgroundCheckpoint?.();
       if (!valid()) return null;
-      const queued = capture.state.bodyDirty ? null : this.cache.getQueuedBody(capture.physical.path, capture.physical.mtime);
+      request = this.getBodyCacheRequest(file);
+      const queued = request ? this.cache.getQueuedBody(request.path, request.mtime, request.inputToken) : null;
       if (queued) { this.counters.legacyBodies += 1; return queued; }
     }
     this.counters.vaultReads += 1;
+    const bodyInput = this.captureBodyInput(file, valid);
     const text = Platform.isMobile ? await this.app.vault.read(file) : await this.app.vault.cachedRead(file);
     if (!valid()) return null;
     this.counters.parses += 1;
     const body = await this.parse(text, background ? this.backgroundCheckpoint : undefined);
-    if (!valid()) return null;
+    if (!valid() || !bodyInput.accept()) return null;
     // Versioned parser body cache remains an optional accelerator, not neutral-source durability.
     if (!awaitBodyWrite) {
-      this.cache.queueBodyWrite(capture.physical.path, capture.physical.mtime, body);
+      this.cache.queueBodyWrite(capture.physical.path, capture.physical.mtime, body, bodyInput);
       this.notifyPresentationInputs(capture.physical.path, valid);
       return valid() ? body : null;
     }
-    const saved = await this.cache.putBody(capture.physical.path, capture.physical.mtime, body);
+    const saved = await this.cache.putBody(capture.physical.path, capture.physical.mtime, body, bodyInput);
     if (saved && valid()) this.notifyPresentationInputs(capture.physical.path, valid);
     return valid() ? body : null;
   }

@@ -41,6 +41,17 @@ function start(scenario='legacy',layoutAcceptance,nativeDragAcceptance,htmlDrag,
  const c=window.__kplexInteractionUpdates={settings:structuredClone(p.settings),policy:p.savedSettingsPolicy,layout:app.workspace.getLayout(),owners:{documents:documentSessions(p).capture(),last:p.lastDocumentLeaf,recent:[...p.recentLeafHistory],sidecars:[...p.sidecarLeaves]},bounds:win.getBounds(),minimum:win.getMinimumSize(),inventory:app.vault.getFiles().map(f=>f.path).sort(),files:[],leaves:[],releases:[],restores:[],cases:[],done:false,folder:'Kplex-Interaction-Updates-'+Date.now()};
  const check=(ok,message)=>{if(!ok)throw Error(message)},wait=ms=>new Promise(r=>window.setTimeout(r,ms));
  const until=async(fn,message)=>{const end=Date.now()+90000;while(!fn()){check(!c.cancelled&&Date.now()<end,message);await wait(50)}};
+ // Independent source work must settle before a presentation-only measurement or deliberate hold.
+ const settleFixtureSources=async()=>{
+  await p.index.flushSourceRepository();
+  await until(()=>{
+   const source=p.index.sourceAcquisition,activity=source.getActivityState(),urls=p.index.getUrlIndexProgress();
+   return source.hasSemanticDependencies()&&!source.inventory&&!activity.pendingKnown&&!activity.knownImpactTasks
+    &&!activity.sourceActive&&!activity.repoWrites&&!activity.repoDeleteTask
+    &&p.index.getSourceRepositoryDiagnostics().unsaved===0&&urls.complete&&!urls.active&&!urls.failed
+    &&!p.index.hasActiveSemanticPreparation()&&!p.index.hasPendingSemanticPreparation();
+  },'Fixture source and URL work did not settle');
+ };
  const frames=()=>new Promise(r=>window.requestAnimationFrame(()=>window.requestAnimationFrame(r)));
  const path=name=>c.folder+'/'+name+'.md',root=()=>c.leaf.view.contentEl;
  /** Focus once per owning window, without changing background-throttling policy. */
@@ -95,6 +106,9 @@ function start(scenario='legacy',layoutAcceptance,nativeDragAcceptance,htmlDrag,
    c.phase='initial-demand';await p.index.refreshOnDemandGraph([path('Center'),path('Parent')],false);
    c.phase='initial-view';c.leaf=app.workspace.getLeaf('tab');c.leaves.push(c.leaf);native(c.leaf);await c.leaf.setViewState({type:'k-plex-react-view',active:true});let viewReady=false;void c.leaf.view.waitUntilReady().then(()=>{viewReady=true});await until(()=>viewReady,'Native Plex did not render its ready surface');await navigate('Center');native(c.leaf);await wait(300);
    await until(()=>root().querySelectorAll('.kplex-role-child').length>=32&&root().querySelectorAll('.kplex-role-sibling').length===4&&!p.index.hasActiveSemanticPreparation()&&!p.index.hasPendingSemanticPreparation(),'Fixture graph and four sibling sources not settled');
+   // A complete graph can precede its independent source writer. Finish fixture work before
+   // attributing any subsequent acquisition to presentation-only actions; keep the zero-work oracle.
+   await settleFixtureSources();
    root().querySelector('button[aria-label="'+p.translator('graph.fitGraph')+'"]').click();await wait(350);
    const work={builds:0,semanticRefresh:0,acquisitions:0},stop=[];
    for(const [owner,name,key]of [[p.index,'rebuild','builds'],[p.index,'rebuildProgressively','builds'],[p.index,'refreshSemanticSettings','semanticRefresh'],[p.index.sourceAcquisition,'acquire','acquisitions']]){const original=owner[name];owner[name]=function(...args){work[key]++;return original.apply(this,args)};let restored=false;const restore=()=>{if(!restored){restored=true;owner[name]=original}};stop.push(restore);c.restores.push(restore)}
@@ -129,6 +143,7 @@ function start(scenario='legacy',layoutAcceptance,nativeDragAcceptance,htmlDrag,
     check(JSON.stringify(app.metadataCache.getFileCache(file).frontmatter.Parent)===JSON.stringify(before),'Sibling parent changed');c.cases.push({id:'sibling-'+role,status:'passed',sharedParentPreserved:true});
    }
    // Hold a real private build at its final presentation boundary while the ordinary creator runs.
+   await settleFixtureSources();
    const ghost=p.index.get(path('Ghost').slice(0,-3))??p.index.get(path('Ghost'));check(ghost&&!ghost.file,'Fixture placeholder absent');
    const oldPath=ghost.path,prepare=p.index.preparePresentationPublication;let releaseBuild,held=false;
    const gate=new Promise(resolve=>releaseBuild=resolve);let build;c.restores.push(async()=>{releaseBuild();p.index.preparePresentationPublication=prepare;await build});

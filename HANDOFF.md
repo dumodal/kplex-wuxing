@@ -19,34 +19,62 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Return: issue #197 ? lens color editor stacking
+# PR201 Windows performance acceptance — completed return, conclusion C
 
-- Request: https://github.com/zsviczian/kplex/issues/197. After reviewing the validated fix, the maintainer authorized committing and merging it, closing the issue, then switching to `main` and fetching. No release was requested.
-- Branch: `2026-10-21-issue-197-lens-editor-stacking`, base `b0fc3cb`; validated implementation prepared for the authorized merge.
-- Confirmed cause: the Filters and lenses body portal used z-index 100000, above native Obsidian modal containers (layer 50). Replaced it with `var(--layer-popover, 30)` in `styles.css`. Existing owner-document portal, focus, dismissal, style draft and settings owners remain unchanged.
-- Regression: the existing nested color-editor Chromium test now loads actual CSS, forces overlap and hit-tests the native color input. Old CSS fails; corrected CSS passes, including pinned Node 22.22.2.
-- Added `scripts/testing/obsidian/lensColorStacking.mjs` using the existing controlled native harness. Baseline native failure and cleanup confirmed. Corrected build passes native main/popout fill, border, text, nested theme chooser, Cancel/Escape and outside dismissal; current final driver also checks applying a color to the unsaved lens draft.
-- Durable details: `docs/validation/lens-color-stacking-197-2026-10-21.md`; contributor instructions link the reusable command.
+Main validation agent: Zsolt's Codex Agent. No active experiment or automatic
+optimization follow-up. PR201 remains draft for the maintainer's merge/risk decision.
+PR203's branch, candidate, instructions and Mac real-vault investigation were untouched.
 
-## Actual validation
+Branch: 2026-10-21-indexing-cpu-reduction. Entry tooling/docs head: 8309371.
+The commit containing this return changes only harness/tests/documentation.
+Runtime baseline 551a3b52895484de3dd41e5c6eb2fa8c6712fec4 and candidate
+fa08e60e1a7122f8b37fcd11c943b883317b6ae8 remain pinned. Built, measured and restored
+candidate main SHA256 c39fb4876315a3348b782fe91400398faab1f98de8c0852eb9cc06bf24509a58.
+No runtime edits/builds; startup-backlog, exact parser reuse, bounded source-head
+validation and corrected SI4 are unchanged. Existing exact-artifact correctness
+and successful pinned-runtime CI remain applicable.
 
-- Windows; Obsidian 1.14.4 (installer 1.14.0), installed typings 1.13.0. Initial installed Node 22.22.3; subsequently obtained official Node 22.22.2 in a temporary directory and verified its executable SHA-256 against the official SHASUMS manifest. No system Node install changed.
-- Real production/type build passed. Release, architecture, host-free core (130 tests) and official Obsidian lint passed before aggregate tests.
-- The first two full verification attempts on Node 22.22.3 failed unchanged `tests/indexing.test.mjs:3478` watchdog timer cleanup (one timer, expected zero). This intermittent assertion was also reproduced on unchanged source in the preceding assignment. No test/timing/indexing code was weakened or modified.
-- Full `npm run verify:obsidian` on pinned Node 22.22.2 passed: release/architecture/core checks, official lint, all four main test batches (1,267 / 227 / 334 / 654; 2,482 tests), the production build, exact-hash staging, plugin reload and native rendered-state/error assertions. Architecture/core add 137 tests, making 2,619 reported tests, all passing with no skips. The earlier watchdog assertion also passed in this complete run. The affected overlap regression passed both independently and within the full suite.
-- Corrected-build native probes passed on both Node 22.22.3 and pinned 22.22.2, including all six main/popout color cases. The final driver verifies that Use color applies the exact alpha value to the local draft, while Cancel/Escape retain the parent and the saved lenses remain unchanged. Both runs restored original settings/enablement bytes and removed temporary controller ownership.
-- Actual main-window and popout screenshots were visually inspected: native color modal and backdrop cover the lens panel correctly.
-- No note or saved lens fixtures. Native mouse/key input is trusted Electron delivery; source modes/color text use DOM form events. Physical mobile, macOS, community-theme overrides and actual existing-leaf migration remain untested.
+Durable evidence: docs/validation/indexing-cpu-201-2026-10-21.md (new result first,
+all prior checkpoints/failures retained); predeclared protocol is linked there.
+The maintainer confirmed only Small remained open. Native guards verified one
+recognized Small window before graceful application restarts; no forced kills,
+new profiles/destinations, global storage resets, forced GC or scheduling changes.
 
-## Private receipts
+Final cohort: host,A1,F1,F2,A2,A3,F3, serial fresh Browser and renderer lifetimes,
+common authenticated logical checkpoint, separate preparation-process import,
+60-second settling and unchanged warm activation. Normal maintenance entered and
+fulfilled once per A/F arm near five minutes. Process/presence/CPU/memory/scalar
+traces and wrapper retirement are retained privately. No detailed profiler ran.
 
-- Temporary pinned runtime: `C:\Users\viczi\AppData\Local\Temp\kplex-node-22.22.2-b6366df50131475da118730a57d2d03b\node.exe`; SHA-256 `ae1a50511be58e987483fdbc12125407443926d2d394669ade2352776e920dd3`. Prepend its directory to the process PATH when rerunning npm's scripts with this runtime.
-- Native baseline reproduction: `C:\Users\viczi\AppData\Local\Temp\kplex-issue197-native-baseline-198dff7d8bf04b568e5edb945187018a\lens-color-stacking-197.json` (expected failure; cleanup passed).
-- Initial fixed native run: `C:\Users\viczi\AppData\Local\Temp\kplex-issue197-native-a7dc85e2741043ffbd5396760ea10208\lens-color-stacking-197.json` (passed; cleanup passed).
-- Final pinned native run: `C:\Users\viczi\AppData\Local\Temp\kplex-issue197-native-pinned-642ad1445ccb496d8d63c903bac835f3\lens-color-stacking-197.json` (passed; cleanup passed); screenshots alongside it.
-- Full pinned verification directory: `C:\Users\viczi\AppData\Local\Temp\kplex-issue197-pinned-638b0383750742a09b79523a09de89e0`.
-- Build main SHA-256: `3b96f51e8b734bd622fb0034f1e17682efb17eda8b6caed6e2d69ac7bd05e5f3`; styles SHA-256: `88b61aa508ede97b10fbd30c957d14ba19b257aa26f5ee9f547f13faa0f43974`.
+Scenario collection and cleanup passed; acceptance remains open. Each arm
+misses terminal CPU for an exited GPU; every acceptanceEligible/comparable flag
+remains false. F2 also has 74 focus violations/65 hidden samples, four 46–60-second
+gaps and a 657.029-second tail. Other six arms have no measured visibility/focus
+violation. Actual post-tail F-A: -.038022,+.524616(unmatched657vs600s),-1.116261
+CPU-seconds. No repeated candidate-specific excess or causal product path was
+established. Old expensive tails were mainly selected renderer and also baseline;
+new small 2–4-second renderer bins occur in both arms. Maintenance is separate.
+Do not relabel passed collection as A, discard F2 or invent a tolerance/cause.
 
-## Delivery
+Stop C at the declared bound. No extra pairs, runtime fix or Windows adjustments.
+Smallest next step is an explicit maintainer risk decision for a scoped merge.
+Clean acceptance would first require stable foreground and independent terminal
+process-CPU coverage, with controlled observer overhead, before replacement work.
+No such additional experiment is started or implicitly authorized by this return.
 
-Implementation, regression, real build and native main/popout validation complete. `git diff --check` and driver syntax checks passed. Generated artifacts and private receipts remain outside tracked source. No unresolved task blocker; the platform/device limits above remain untested. The maintainer approved the six changed/new source, test and documentation files for merge; GitHub records the resulting commit/PR and issue closure.
+Private root: TEMP/kplex-pr201-resume-windows-fresh-20261022-4; summary SHA256
+88aa83805f20a760be071a21e3faf267d62832c0062d04e636c28db882e91ee4.
+Earlier preflight and two cancelled baseline cohorts remain separate/private.
+Original DB capture/restore/verify SHA c7f9185504f4703425854e62ac8f25fb0ec46f8048290fd00f81023e85f35600.
+All 12 JSON files byte-restored, original layout/plugin/C39 artifact restored,
+107 files/88 Markdown, zero source/cache/unsaved debt, no controller/debugger and
+all test-owned display requests released. Native cleanup receipt passed.
+
+New source: indexingFresh.mjs, Host, Scenario, Observation, Guards under
+scripts/testing/obsidian; four focused test files are wired into npm test.
+Main reviewed serialization, lifecycle/guard/cancellation ownership and TSDoc;
+33 new and 45 existing runner/checkpoint/transport/probe executions passed on Node 22.22.2.
+Syntax/whitespace/header preservation and unchanged runtime/artifact checks pass.
+No full functional matrix repeated; exact C39 evidence is reused as requested.
+Raw traces stay private. Git/PR publication status belongs in the PR/final return;
+keep draft, no merge/release/history rewrite or automatic C15/refactor continuation.

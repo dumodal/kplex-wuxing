@@ -59,6 +59,8 @@ test('a prose edit still reads, parses, acquires and atomically publishes its ne
   f.host.texts.set(f.file.path, 'Changed prose'); f.file.stat.mtime++;
   let acquired = 0, publications = 0;
   f.builder.sourceAcquisition = { needsBodyRead: /** Force observed content acquisition despite hot input. */ () => true,
+    getBodyCacheRequest: /** This partial acquisition double offers no optional parser input. */ () => null,
+    captureBodyInput: /** Exercise parsing without certifying a reusable input. */ () => undefined,
     getFileRevision: /** Keep this source current throughout its successful publication. */ () => 1,
     acquire: async /** Observe current neutral-source acquisition before fingerprint admission. */ () => { acquired++; return { current: true }; } };
   const result = await f.builder.patchMarkdownFiles(f.state, [f.file], {
@@ -80,6 +82,8 @@ test('retirement, rename, delete and equal-stat replacement during no-op prepara
     const original = f.builder.applyFieldNameSourceFacts;
     let epoch = 1;
     f.builder.sourceAcquisition = { needsBodyRead: /** Isolate post-acquisition metadata fencing. */ () => false,
+      getBodyCacheRequest: /** This fixture tests semantic lifetime, not parser-input reuse. */ () => null,
+      captureBodyInput: /** Leave optional parser-input certification unavailable. */ () => undefined,
       getFileRevision: /** Same-stat host events still retire the captured revision. */ () => epoch,
       acquire: async /** A valid acquisition cannot override later event/identity retirement. */ () => ({ current: true }) };
     f.builder.applyFieldNameSourceFacts = async /** Change captured lifetime only after real field staging. */ function (...args) {

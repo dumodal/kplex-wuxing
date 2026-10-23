@@ -69,13 +69,20 @@ function hostFixture(backgroundCheckpoint, runBackgroundWork, onPresentationInpu
     schedule: (callback, delay) => { const id = ++timerId; timers.set(id, { callback, delay }); return id; }, cancel: id => timers.delete(id),
   });
   const cache = { sources: repository,
-    getQueuedBody: (path, mtime) => { const item = legacy.get(path); return item?.mtime === mtime ? item.body : null; },
-    getBodies: async requests => new Map(requests.flatMap(({ path, mtime }) => { const item = legacy.get(path); return item?.mtime === mtime ? [[path, item.body]] : []; })),
-    putBody: async (path, mtime, body) => { legacy.set(path, { path, mtime, parserVersion: 2, body }); return true; },
+    getQueuedBody: (path, mtime, inputToken) => { const item = legacy.get(path); return item?.mtime === mtime
+      && (inputToken === undefined || item.inputToken === inputToken) && item.isCurrent?.() !== false ? item.body : null; },
+    getBodies: async requests => new Map(requests.flatMap(({ path, mtime, inputToken }) => {
+      const body = cache.getQueuedBody(path, mtime, inputToken); return body ? [[path, body]] : [];
+    })),
+    putBody: async (path, mtime, body, stamp) => {
+      if (stamp?.isCurrent() === false) return false;
+      legacy.set(path, { path, mtime, parserVersion: 2, body, ...stamp }); return true;
+    },
   };
-  cache.putBodies = async values => { for (const value of values) await cache.putBody(value.path, value.mtime, value.body); };
+  cache.putBodies = async values => { for (const value of values) await cache.putBody(value.path, value.mtime, value.body,
+    value.inputToken === undefined ? undefined : { inputToken: value.inputToken, isCurrent: value.isCurrent }); };
   cache.deleteBody = async path => { legacy.delete(path); };
-  cache.queueBodyWrite = (path, mtime, body) => { legacy.set(path, { path, mtime, parserVersion: 2, body }); };
+  cache.queueBodyWrite = (path, mtime, body, stamp) => { legacy.set(path, { path, mtime, parserVersion: 2, body, ...stamp }); };
   const parser = async value => { parses.push(value); return parseBodyMetadata(value); };
   const acquisition = new ObsidianSourceAcquisition(app, cache, parser, undefined, undefined, undefined, backgroundCheckpoint, runBackgroundWork, onPresentationInputsAvailable);
   const add = (path, bodyText = "Links:: [[Alias]] [[Target]]", frontmatter = {}) => {
@@ -391,6 +398,207 @@ test("an observed equal-stat body edit invalidates immutable and legacy inputs, 
     f.app.metadataCache.trigger("changed", source);
     await f.acquisition.reconcile();
     assert.deepEqual(f.reads, [source.path]); assert.equal(f.parses.length, 1);
+  } finally { f.close(); }
+});
+
+/** A full semantic build owns no durable source write; its complete parser input still has one exact lifetime. */
+for (const change of ["unchanged", "same-stat edit", "recreated identity"]) {
+  test(`a non-acquiring full build shares current parser input with source acquisition: ${change}`, async t => {
+    const f = hostFixture();
+    try {
+      f.acquisition.start();
+      let source = f.add("rebuild.md", "Status:: before");
+      f.app.vault.trigger("create", source);
+      const plugin = { getIndexSourceRevision: () => 0, settings: {
+        hierarchy: { hidden: [], parents: [], children: [], leftFriends: [], rightFriends: [], previous: [], next: [], exclusions: [] },
+        noteTypeField: "type", primaryTagField: "type", thumbnailProperty: "thumbnail", nodeImageProperty: "image",
+        inferAllLinksAsFriends: false, inverseInfer: false, showFullTagName: false, tagStyleList: [], baseNodeStyle: { maxLabelLength: 30 },
+      } };
+      const hot = new Map();
+      const builder = new window.sourceModules.GraphBuilder(plugin, f.app, hot, { parse: f.parser }, f.cache,
+        () => true, new Map(), f.acquisition);
+      assert(await builder.build({ acquireSources: false }));
+      assert.equal(f.reads.length, 1);
+      assert.equal(f.parses.length, 1);
+      assert.equal((await f.repository.inspect(source.path)).head, null, "The full build did not acquire a neutral source");
+      assert.equal(f.acquisition.state(source).bodyDirty, true, "A graph build cannot clear source acquisition state");
+      assert.equal(f.acquisition.state(source).created, true, "A graph build cannot certify a newly created source");
+      const revision = f.acquisition.getFileRevision(source);
+      if (change === "same-stat edit") {
+        f.text.set(source.path, "Status:: after!");
+        f.app.vault.trigger("modify", source);
+        assert(f.acquisition.getFileRevision(source) > revision);
+      } else if (change === "recreated identity") {
+        const retired = source;
+        f.files.delete(retired.path);
+        f.app.vault.trigger("delete", retired);
+        source = f.add(retired.path, "Status:: after!");
+        f.app.vault.trigger("create", source);
+        assert.notEqual(source, retired);
+        assert.deepEqual(source.stat, retired.stat, "Replacement has the same physical stats");
+      }
+      const body = await f.acquisition.readRequestedBody(source, () => true);
+      assert(body);
+      assert.equal(f.acquisition.state(source).bodyDirty, true, "Parser-input reuse grants no acquisition authority");
+      assert.equal((await f.repository.inspect(source.path)).head?.state === "complete", false,
+        "A requested body read cannot acquire neutral source facts");
+      const acquired = await f.acquisition.acquire(source, body);
+      assert.equal(acquired.current, true);
+      assert.equal(acquired.saved, false, "This fixture has no durable storage");
+      assert.equal(body.inlineFields.status[0], change === "unchanged" ? "before" : "after!");
+      t.diagnostic(`completed production owners: reads=${f.reads.length}, parses=${f.parses.length}, change=${change}`);
+      const expected = change === "unchanged" ? 1 : 2;
+      assert.equal(f.reads.length, expected, "Only a genuinely new revision needs another native body read");
+      assert.equal(f.parses.length, expected, "A complete exact-revision parser result is shared between full build and source acquisition");
+    } finally { f.close(); }
+  });
+}
+
+for (const held of ["read", "parser", "write"]) for (const retirement of ["same-stat edit", "recreated identity", "unload", "caller"]) {
+  test(`a ${held} held parser input cannot gain a cache certificate after ${retirement}`, async () => {
+    const f = hostFixture(); let release, entered, valid = true;
+    const hold = new Promise(resolve => { release = resolve; });
+    const reached = new Promise(resolve => { entered = resolve; });
+    try {
+      f.acquisition.start();
+      let source = f.add("held.md", "Status:: before");
+      f.app.vault.trigger("create", source);
+      if (held === "read") {
+        const read = f.app.vault.cachedRead;
+        f.app.vault.cachedRead = async file => { const text = await read(file); entered(); await hold; return text; };
+      } else if (held === "parser") {
+        const parse = f.acquisition.parse;
+        f.acquisition.parse = async (...args) => { const body = await parse(...args); entered(); await hold; return body; };
+      } else {
+        const put = f.cache.putBody;
+        f.cache.putBody = async (...args) => { entered(); await hold; return put(...args); };
+      }
+      const task = f.acquisition.loadBody(source, () => valid);
+      await reached;
+      if (retirement === "same-stat edit") {
+        f.text.set(source.path, "Status:: after!"); f.app.vault.trigger("modify", source);
+      } else if (retirement === "recreated identity") {
+        const retired = source; f.files.delete(retired.path); f.app.vault.trigger("delete", retired);
+        source = f.add(retired.path, "Status:: after!"); f.app.vault.trigger("create", source);
+      } else if (retirement === "unload") f.acquisition.close();
+      else valid = false;
+      release();
+      assert.equal(await task, null);
+      assert.equal(f.legacy.has(source.path), retirement === "caller" && held === "write",
+        "Only an already completed current parse may survive its caller leaving during optional persistence");
+      if (retirement !== "caller") assert.equal(f.acquisition.getBodyCacheRequest(source), null,
+        "An edited, replaced or closed owner cannot select the retired certificate");
+    } finally { release?.(); f.close(); }
+  });
+}
+
+test("an independent URL edit retires the exact queued parser receipt without changing source authority", async () => {
+  const f = hostFixture();
+  try {
+    f.acquisition.start();
+    const source = f.add("url-edit.md", "Status:: before"); f.app.vault.trigger("create", source);
+    assert(await f.acquisition.readRequestedBody(source, () => true));
+    const queued = f.legacy.get(source.path), state = { ...f.acquisition.state(source) };
+    const unsaved = f.repository.getDiagnostics().unsaved;
+    assert.equal(queued.isCurrent(), true);
+    f.text.set(source.path, "Status:: after!");
+    f.acquisition.retireBodyInput(source);
+    assert.equal(queued.isCurrent(), false, "Retirement reaches the exact guard held by optional persistence");
+    assert.equal(f.acquisition.getBodyCacheRequest(source), null);
+    assert.deepEqual(f.acquisition.state(source), state, "Parser retirement does not advance source revisions or change dirty/created state");
+    assert.equal(f.repository.getDiagnostics().unsaved, unsaved, "Source masks remain untouched");
+    const body = await f.acquisition.readRequestedBody(source, () => true);
+    assert.equal(body.inlineFields.status[0], "after!");
+    assert.equal(f.reads.length, 2); assert.equal(f.parses.length, 2);
+  } finally { f.close(); }
+});
+
+test("an explicit URL edit fences a source parse that has not accepted its optional input yet", async () => {
+  const f = hostFixture(); let entered, release;
+  const reached = new Promise(resolve => { entered = resolve; }), hold = new Promise(resolve => { release = resolve; });
+  try {
+    f.acquisition.start();
+    const source = f.add("url-pending.md", "Status:: before"); f.app.vault.trigger("create", source);
+    const state = { ...f.acquisition.state(source) }, parse = f.acquisition.parse;
+    f.acquisition.parse = async (...args) => { const body = await parse(...args); entered(); await hold; return body; };
+    const pending = f.acquisition.readRequestedBody(source, () => true); await reached;
+    f.text.set(source.path, "Status:: after!"); f.acquisition.retireBodyInput(source); release();
+    assert.equal(await pending, null, "Late source completion cannot reintroduce a pre-edit parser token");
+    assert.equal(f.acquisition.getBodyCacheRequest(source), null);
+    assert.deepEqual(f.acquisition.state(source), state, "The optional-input epoch is independent of source observations");
+    f.acquisition.parse = parse;
+    const body = await f.acquisition.readRequestedBody(source, () => true);
+    assert.equal(body.inlineFields.status[0], "after!");
+    assert.equal(f.reads.length, 2); assert.equal(f.parses.length, 2);
+  } finally { release?.(); f.close(); }
+});
+
+test("a dirty source receipt cannot bless an unrelated equal-stat optional cache record", async () => {
+  const f = hostFixture();
+  try {
+    f.acquisition.start();
+    const source = f.add("token.md", "Status:: current"); f.app.vault.trigger("create", source);
+    assert(await f.acquisition.readRequestedBody(source, () => true));
+    assert.equal(f.reads.length, 1);
+    f.legacy.set(source.path, { path: source.path, mtime: source.stat.mtime, body: parseBodyMetadata("Status:: stale") });
+    const current = await f.acquisition.readRequestedBody(source, () => true);
+    assert.equal(current.inlineFields.status[0], "current");
+    assert.equal(f.reads.length, 2); assert.equal(f.parses.length, 2);
+    assert.equal(f.acquisition.state(source).bodyDirty, true);
+    assert.equal((await f.repository.inspect(source.path)).head, null);
+  } finally { f.close(); }
+});
+
+test("a dirty exact-input cache lookup rejects a same-stat edit while its read is pending", async () => {
+  const f = hostFixture(); let entered, release;
+  const reached = new Promise(resolve => { entered = resolve; }), hold = new Promise(resolve => { release = resolve; });
+  try {
+    f.acquisition.start();
+    const source = f.add("cache-held.md", "Status:: before"); f.app.vault.trigger("create", source);
+    assert(await f.acquisition.readRequestedBody(source, () => true));
+    const get = f.cache.getBodies;
+    f.cache.getBodies = async (...args) => { const bodies = await get(...args); entered(); await hold; return bodies; };
+    const task = f.acquisition.readRequestedBody(source, () => true); await reached;
+    f.text.set(source.path, "Status:: after!"); f.app.vault.trigger("modify", source); release();
+    assert.equal(await task, null);
+    assert.equal(f.acquisition.getBodyCacheRequest(source), null);
+    assert.equal(f.reads.length, 1, "The retired cache read cannot admit another native read");
+  } finally { release?.(); f.close(); }
+});
+
+for (const change of ["ctime", "metadata", "parser version"]) {
+  test(`a dirty source's exact parser receipt rejects ${change} drift`, async () => {
+    const f = hostFixture();
+    try {
+      f.acquisition.start();
+      const source = f.add("receipt.md", "Status:: current"); f.app.vault.trigger("create", source);
+      assert(await f.acquisition.readRequestedBody(source, () => true));
+      assert(f.acquisition.getBodyCacheRequest(source)?.inputToken);
+      if (change === "ctime") source.stat.ctime++;
+      else if (change === "metadata") f.app.metadataCache.trigger("changed", source);
+      else f.acquisition.bodyInputs.get(source).parserVersion--;
+      assert.equal(f.acquisition.getBodyCacheRequest(source), null);
+      const body = await f.acquisition.readRequestedBody(source, () => true);
+      assert.equal(body.inlineFields.status[0], "current");
+      assert.equal(f.reads.length, 2); assert.equal(f.parses.length, 2);
+      assert.equal(f.acquisition.state(source).bodyDirty, true);
+    } finally { f.close(); }
+  });
+}
+
+test("unrelated host-resolution drift preserves exact lexical parser input without granting source authority", async () => {
+  const f = hostFixture();
+  try {
+    f.acquisition.start();
+    const source = f.add("lexical.md", "Status:: current"); f.app.vault.trigger("create", source);
+    assert(await f.acquisition.readRequestedBody(source, () => true));
+    const token = f.acquisition.getBodyCacheRequest(source)?.inputToken;
+    f.app.metadataCache.trigger("resolved"); f.app.metadataCache.trigger("resolved");
+    assert.equal(f.acquisition.getBodyCacheRequest(source)?.inputToken, token);
+    assert(await f.acquisition.readRequestedBody(source, () => true));
+    assert.equal(f.reads.length, 1); assert.equal(f.parses.length, 1);
+    assert.equal(f.acquisition.hasSemanticDependencies(), false);
+    assert.equal(f.acquisition.state(source).bodyDirty, true);
   } finally { f.close(); }
 });
 

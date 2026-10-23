@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import { webcrypto } from 'node:crypto';
 import { contributorBrowserBundle } from './support/contributorBrowserFixture.mjs';
 
-const bundle = await contributorBrowserBundle(['src/index/GraphIndex.ts', 'src/index/IndexSnapshot.ts']);
+const bundle = await contributorBrowserBundle(['src/index/GraphIndex.ts', 'src/index/GraphBuilder.ts', 'src/index/IndexSnapshot.ts']);
 
 /** Keep the real GraphIndex/cache/publication algorithms; replace only host facts and storage acquisition. */
 function fixture(mode) {
@@ -15,7 +15,7 @@ function fixture(mode) {
   const window = { crypto: webcrypto, performance: { now: () => 0 },
     setTimeout(callback, delay = 0) { const id = ++token; timers.set(id, { callback, at: clock + delay }); return id; },
     clearTimeout(id) { timers.delete(id); } };
-  const context = vm.createContext({ window, performance: window.performance, structuredClone, URL, TextEncoder, TextDecoder,
+  const context = vm.createContext({ window, performance: window.performance, structuredClone, URL, TextEncoder, TextDecoder, DOMException,
     Date: class extends Date { static now() { return clock; } }, setTimeout: window.setTimeout, clearTimeout: window.clearTimeout });
   vm.runInContext(bundle, context);
   const M = window.sourceModules, file = new window.ContributorFile('Owned.md'), root = new window.ContributorFolder();
@@ -81,6 +81,156 @@ for (const phase of ['catalog', 'preview']) for (const retirement of ['timeout',
 
 /** External promises deliberately cannot be aborted; their late callbacks still execute. */
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; }
+
+for (const first of ['URL', 'source']) test(`${first}-first complete parsing is shared without a foreground URL storage wait`, async () => {
+  const f = fixture('eager'), i = f.index;
+  let reads = 0, parses = 0;
+  f.app.vault.cachedRead = async () => { reads++; return 'Status:: retained\nLink:: [label](https://example.com/shared)'; };
+  const parse = i.metadataParser.parse.bind(i.metadataParser);
+  i.metadataParser.parse = async (...args) => { parses++; return parse(...args); };
+  i.indexedDb.getBodies = f.M.KplexIndexedDbCache.prototype.getBodies;
+  i.sourceAcquisition.observeBeforeStart(f.file, true);
+  try {
+    const source = () => i.sourceAcquisition.readRequestedBody(f.file, () => true);
+    const url = () => i.parseUrlOwnerBody(f.file, false, () => true);
+    const firstBody = await (first === 'URL' ? url() : source());
+    assert(firstBody);
+    if (first === 'source') i.indexedDb.getBodies = async () => { throw Error('Foreground URL must not wait for optional storage'); };
+    const secondBody = await (first === 'URL' ? source() : url());
+    assert(secondBody);
+    assert.equal(secondBody.inlineFields.status[0], 'retained', 'URL sharing retains non-URL inline fields');
+    assert.equal(reads, 1); assert.equal(parses, 1);
+    assert.equal(i.sourceAcquisition.state(f.file).bodyDirty, true, 'Complete parser reuse grants no source authority');
+    assert.equal(i.sourceAcquisition.hasSemanticDependencies(), false);
+  } finally { i.destroy(); await f.settle(); assert.equal(f.timers.size, 0); }
+});
+
+test('a complete full-build parse is available to URL work before the group publication boundary', async () => {
+  const f = fixture('eager'), i = f.index, gate = deferred(), reached = deferred();
+  let parses = 0, held = false, task;
+  f.app.metadataCache.getFirstLinkpathDest = () => null;
+  i.indexedDb.putBodies = async () => true;
+  f.app.vault.cachedRead = async () => 'Status:: complete\nParent:: [[Target]]\nhttps://example.com/shared-group';
+  const parse = i.metadataParser.parse.bind(i.metadataParser);
+  i.metadataParser.parse = async (...args) => { parses++; return parse(...args); };
+  i.sourceAcquisition.observeBeforeStart(f.file, true);
+  const builder = new f.M.GraphBuilder(i.plugin, f.app, i.fieldCache, i.metadataParser, i.indexedDb,
+    () => !i.diagnosticsClosed, new Map(), i.sourceAcquisition);
+  const yieldToHost = builder.yieldToHost.bind(builder);
+  builder.yieldToHost = async (...args) => {
+    if (!held && parses > 0) { held = true; reached.resolve(); await gate.promise; }
+    return yieldToHost(...args);
+  };
+  try {
+    task = builder.build({ acquireSources: false }); await reached.promise;
+    const body = await i.parseUrlOwnerBody(f.file, false, () => true);
+    assert.equal(body.inlineFields.status[0], 'complete');
+    assert.equal(body.inlineFields.parent[0], '[[Target]]', 'Sharing retains complete non-URL parser fields');
+    assert.equal(parses, 1, 'URL work reuses the completed parse before full graph/source publication');
+    assert.equal(i.sourceAcquisition.state(f.file).bodyDirty, true);
+    assert.equal(i.sourceAcquisition.hasSemanticDependencies(), false);
+    gate.resolve(); assert(await task);
+  } finally { gate.resolve(); i.destroy(); await task; await f.settle(); assert.equal(f.timers.size, 0); }
+});
+
+for (const change of ['unchanged', 'same-stat source event', 'ctime', 'replacement', 'URL input epoch', 'caller', 'unload']) {
+  test(`full-build parser admission rechecks completed input and captured lifetime: ${change}`, async () => {
+    const f = fixture('eager'), i = f.index, readGate = deferred(), reached = deferred();
+    let reads = 0, parses = 0, writes = 0, caller = true, task, releasePriority = () => {};
+    let content = 'Status:: complete\nParent:: [[Target]]\nhttps://example.com/admission';
+    f.app.metadataCache.getFirstLinkpathDest = () => null;
+    f.app.vault.cachedRead = async () => {
+      const captured = content;
+      if (++reads === 1) { reached.resolve(); await readGate.promise; }
+      return captured;
+    };
+    i.indexedDb.putBodies = async () => { writes++; return true; };
+    // Worker submission ignores the cooperative-checkpoint argument; keep the real parser grammar.
+    i.metadataParser.parse = async text => { parses++; return f.M.parseBodyMetadata(text); };
+    i.sourceAcquisition.observeBeforeStart(f.file, true);
+    const builder = new f.M.GraphBuilder(i.plugin, f.app, i.fieldCache, i.metadataParser, i.indexedDb,
+      () => caller && !i.diagnosticsClosed, new Map(), i.sourceAcquisition,
+      () => i.workScheduler.checkpoint(4));
+    try {
+      task = builder.build({ acquireSources: false }); await reached.promise;
+      releasePriority = i.workScheduler.begin(3);
+      readGate.resolve(); await f.settle();
+      if (change === 'unchanged') assert.equal(parses, 0, 'P4 does not submit a parser while higher-priority work owns admission');
+      if (change === 'same-stat source event') {
+        i.sourceAcquisition.state(f.file).revision++;
+      } else if (change === 'ctime') f.file.stat.ctime++;
+      else if (change === 'replacement') {
+        const replacement = new f.file.constructor(f.file.path);
+        f.app.vault.getFileByPath = path => path === replacement.path ? replacement : null;
+      } else if (change === 'URL input epoch') {
+        const revision = i.sourceAcquisition.getFileRevision(f.file);
+        i.sourceAcquisition.retireBodyInput(f.file);
+        assert.equal(i.sourceAcquisition.getFileRevision(f.file), revision, 'The optional epoch leaves source observations untouched');
+      } else if (change === 'caller') caller = false;
+      if (change === 'unload') i.destroy();
+      else if (change !== 'replacement') {
+        if (change !== 'unchanged') content = 'Status:: current\nParent:: [[Target]]\nhttps://example.com/admission';
+        const body = await i.parseUrlOwnerBody(f.file, false, () => true);
+        assert.equal(body.inlineFields.parent[0], '[[Target]]');
+      }
+      releasePriority();
+      const result = await task;
+      if (change === 'unchanged') {
+        assert(result);
+        assert.equal(parses, 1, 'A current completed URL parse satisfies the earlier full-build miss');
+        assert.equal(reads, 2, 'The already-admitted held native read is not counted as avoided');
+        assert.equal(i.fieldCache.get(f.file.path).body.inlineFields.status[0], 'complete');
+        assert.equal(i.sourceAcquisition.state(f.file).bodyDirty, true);
+        assert.equal(i.sourceAcquisition.hasSemanticDependencies(), false);
+      } else assert.equal(result, null, 'A newer input cannot certify the old private build lifetime');
+      assert.equal(writes, 0, 'Reusing a completed input adds no full-build body-cache write');
+    } finally { readGate.resolve(); releasePriority(); i.destroy(); await task; await f.settle(); assert.equal(f.timers.size, 0); }
+  });
+}
+
+for (const condition of ['closed source owner', 'stale renamed binding']) {
+  test(`independent URL owner settles with ${condition} without a retry spin`, async () => {
+    const f = fixture('eager'), i = f.index, path = f.file.path;
+    let reads = 0, calls = 0;
+    f.app.vault.cachedRead = async () => { reads++; return 'https://example.com/independent'; };
+    const refresh = i.refreshUrlOwner.bind(i);
+    i.refreshUrlOwner = (...args) => {
+      assert(++calls <= 3, 'A permanently unavailable optional source receipt cannot drive retries');
+      return refresh(...args);
+    };
+    if (condition === 'closed source owner') i.sourceAcquisition.close();
+    else {
+      f.file.path = 'Renamed.md';
+      f.app.vault.getFileByPath = candidate => candidate === path ? f.file : null;
+    }
+    try {
+      const task = i.refreshUrlOwner(path, false);
+      await f.advance(0); await task;
+      assert.equal(calls, 1); assert.equal(i.urlOwnerTasks.size, 0);
+      if (condition === 'closed source owner') {
+        assert.equal(reads, 1); assert(i.urlOwners.has(path), 'URL discovery remains independent of source acquisition');
+        assert.equal(i.sourceAcquisition.getBodyCacheRequest(f.file), null);
+      } else {
+        assert.equal(reads, 0); assert.equal(i.urlOwners.has(path), false, 'A stale native lookup is retired at admission');
+      }
+    } finally { i.destroy(); await f.settle(); assert.equal(f.timers.size, 0); }
+  });
+}
+
+test('unrelated host resolution during a URL read preserves progress and the exact lexical receipt', async () => {
+  const f = fixture('eager'), i = f.index, gate = deferred(); let entered = false;
+  f.app.vault.cachedRead = async () => { entered = true; await gate.promise; return 'Status:: complete\nhttps://example.com/host-drift'; };
+  try {
+    const task = i.parseUrlOwnerBody(f.file, false, () => true);
+    await f.settle(); assert(entered);
+    i.sourceAcquisition.hostRevision++;
+    gate.resolve();
+    const body = await task;
+    assert.equal(body.inlineFields.status[0], 'complete');
+    assert(i.sourceAcquisition.getBodyCacheRequest(f.file)?.inputToken);
+    assert.equal(i.sourceAcquisition.hasSemanticDependencies(), false);
+  } finally { gate.resolve(); i.destroy(); await f.settle(); assert.equal(f.timers.size, 0); }
+});
 
 for (const mode of ['eager', 'on-demand']) {
   for (const held of ['page', 'publication', 'compiler']) test(`${mode}: inactive cached URL ${held} releases startup, discovery and late work`, async () => {

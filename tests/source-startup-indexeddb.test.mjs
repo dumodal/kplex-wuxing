@@ -10,6 +10,121 @@ import { createStartupResourceProbe } from "../scripts/testing/obsidian/startupR
 const bundle = await contributorBrowserBundle(["src/index/GraphIndex.ts", "src/index/GraphBuilder.ts", "src/index/IndexSnapshot.ts",
   "src/core/graph/compiler.ts", "src/adapters/obsidian/metadataSourceCollector.ts", "src/adapters/obsidian/ontologySourceCollector.ts"]);
 
+/** A fresh current-session full parse is distinct from a path/mtime cache predating a missing head. */
+test("a full build without native create events shares its complete parse across missing-head source reconciliation", async () => {
+  const browser = await chromiumHarness(bundle);
+  try {
+    assert.equal(await browser.evaluate(contributorBrowserInitialize), true);
+    assert.equal(await browser.evaluate(`(async()=>{
+      const M=sourceModules,f=await fixture('full-build-missing-head-input');
+      try {
+        const file=f.add('Missing.md','Status:: complete');
+        const settings={hierarchy:{hidden:[],parents:[],children:[],leftFriends:[],rightFriends:[],previous:[],next:[],exclusions:[]},
+          noteTypeField:'type',primaryTagField:'type',thumbnailProperty:'thumbnail',nodeImageProperty:'image',
+          inferAllLinksAsFriends:false,inverseInfer:false,showFullTagName:false,tagStyleList:[],baseNodeStyle:{maxLabelLength:30}};
+        const parser={parse:async text=>{f.parses.push(text);return M.parseBodyMetadata(text);}};
+        const builder=new M.GraphBuilder({settings,getIndexSourceRevision:()=>0},f.app,new Map(),parser,f.cache,()=>true,new Map(),f.acquisition);
+        ok(await builder.build({acquireSources:false}),'Complete semantic graph builds without acquiring sources');
+        equal((await f.repository.inspect(file.path)).head,null,'Source head is genuinely absent in real IDB');
+        equal(f.acquisition.state(file).revision,0,'No native create/change event was supplied');
+        equal(f.reads.length,1,'Full build read once');equal(f.parses.length,1,'Full build parsed once');
+        ok(await f.acquisition.reconcile(),'Actual missing-head restart inventory and source acquisition close');
+        equal(f.reads.length,1,'A synthetic source-incarnation fence does not reread the already-current native input');
+        equal(f.parses.length,1,'A synthetic source-incarnation fence does not reparse the already-current native input');
+        equal((await f.repository.inspect(file.path)).head.state,'complete','Only real source acquisition grants durable authority');return true;
+      } finally {f.close();}
+    })()`), true);
+  } finally { await browser.cleanup(); }
+});
+
+for (const nativeEdit of [false, true]) test(`a held queued parser receipt crosses only its explicit missing-head fence (native edit ${nativeEdit})`, async () => {
+  const browser = await chromiumHarness(bundle);
+  try {
+    assert.equal(await browser.evaluate(contributorBrowserInitialize), true);
+    assert.equal(await browser.evaluate(`(async()=>{
+      const f=await fixture('missing-head-held-queue-${nativeEdit}');let release,entered,releaseAcquire,enterAcquire;
+      const hold=new Promise(resolve=>release=resolve),reached=new Promise(resolve=>entered=resolve);
+      const holdAcquire=new Promise(resolve=>releaseAcquire=resolve),acquireReached=new Promise(resolve=>enterAcquire=resolve);
+      try {
+        const file=f.add('Queued.md','Status:: before');
+        ok(await f.acquisition.readRequestedBody(file,()=>true),'A current native full parse enters the ordinary queue');
+        const receipt=f.acquisition.bodyInputs.get(file),sourceCapture=f.acquisition.capture(file),queued=f.cache.queuedBodyWrites.get(file.path);
+        const put=f.cache.putBodies.bind(f.cache);f.cache.putBodies=async records=>{entered();await hold;return put(records);};
+        window.clearTimeout(f.cache.bodyWriteTimer);f.cache.bodyWriteTimer=null;
+        const writing=f.cache.flushQueuedBodyWrites();await reached;
+        const acquire=f.acquisition.acquire.bind(f.acquisition);let beforeAcquire;
+        f.acquisition.acquire=async(...args)=>{
+          if(!beforeAcquire){
+            const state=f.acquisition.state(file);
+            beforeAcquire={dirty:state.dirty,bodyDirty:state.bodyDirty,created:state.created,head:(await f.repository.inspect(file.path)).head};
+            enterAcquire();await holdAcquire;
+          }
+          return acquire(...args);
+        };
+        const reconciling=f.acquisition.reconcile();await acquireReached;
+        equal(beforeAcquire,{dirty:true,bodyDirty:true,created:true,head:null},'Parser reuse cannot clear dirty/created state or grant source durability');
+        ok(f.acquisition.bodyInputs.get(file)===receipt,'Only the exact accepted receipt object is carried');
+        ok(!f.acquisition.current(sourceCapture,()=>true),'Original semantic/source capture remains cancelled by the synthetic revision');
+        ok(queued.isCurrent(),'The queued record follows its exact explicitly carried missing-head receipt');
+        equal(f.reads.length,1,'Synthetic fence reuses the actual native input');equal(f.parses.length,1,'No duplicate complete parse');
+        if(${nativeEdit}){
+          f.texts.set(file.path,'Status:: after!');f.app.vault.trigger('modify',file);
+          ok(!queued.isCurrent(),'A real equal-stat native edit retires the carried receipt');
+          equal(f.acquisition.getBodyCacheRequest(file),null,'Native edit cannot carry an old receipt');
+          const current=await f.acquisition.readRequestedBody(file,()=>true);
+          equal(current.inlineFields.status,['after!'],'Current native input replaces the retired queued record');
+          equal(f.reads.length,2,'Genuine equal-stat edit reads again');equal(f.parses.length,2,'Genuine equal-stat edit parses again');
+        }
+        releaseAcquire();equal(await reconciling,!${nativeEdit},'Only the unchanged source pass may acquire durable authority');
+        release();await writing;
+        if(${nativeEdit}){
+          equal((await f.cache.getBody(file.path,file.stat.mtime)).inlineFields.status,['after!'],'Old held completion cannot replace newer queued bytes');
+          equal((await f.repository.inspect(file.path)).head,null,'A current optional parser write cannot acquire the cancelled source');
+        } else {
+          equal((await f.acquisition.readBody(file)).inlineFields.status,['before'],'Only actual completed source acquisition owns durable body authority');
+        }
+        return true;
+      } finally {releaseAcquire?.();release?.();f.close();}
+    })()`), true);
+  } finally { await browser.cleanup(); }
+});
+
+/** Competing completed producers must not replace the body selected by the latest exact receipt. */
+test("a held actual queued write cannot overwrite a newer completed receipt for the same input", async () => {
+  const browser = await chromiumHarness(bundle);
+  try {
+    assert.equal(await browser.evaluate(contributorBrowserInitialize), true);
+    assert.equal(await browser.evaluate(`(async()=>{
+      const f=await fixture('competing-completed-body-receipts');let release,entered;
+      const hold=new Promise(resolve=>release=resolve),reached=new Promise(resolve=>entered=resolve);
+      try {
+        const file=f.add('Competing.md','Status:: complete');
+        f.acquisition.start();f.app.vault.trigger('create',file);
+        const state=f.acquisition.state(file),before={revision:state.revision,dirty:state.dirty,bodyDirty:state.bodyDirty,created:state.created};
+        const older=f.acquisition.captureBodyInput(file,()=>true);
+        const oldBody=await f.acquisition.parse(await f.app.vault.cachedRead(file));ok(older.accept(),'First actual full parse accepts');
+        f.cache.queueBodyWrite(file.path,file.stat.mtime,oldBody,older);
+        window.clearTimeout(f.cache.bodyWriteTimer);f.cache.bodyWriteTimer=null;
+        const open=f.cache.open.bind(f.cache);let first=true;
+        f.cache.open=async()=>{if(first){first=false;entered();await hold;}return open();};
+        const writing=f.cache.flushQueuedBodyWrites();await reached;
+        const newer=f.acquisition.captureBodyInput(file,()=>true);
+        const newBody=await f.acquisition.parse(await f.app.vault.cachedRead(file));ok(newer.accept(),'A competing actual full parse accepts the exact unchanged input');
+        ok(await f.cache.putBody(file.path,file.stat.mtime,newBody,newer),'The selected receipt reaches real IndexedDB before the old queue resumes');
+        equal(f.acquisition.getBodyCacheRequest(file).inputToken,newer.inputToken,'The newest accepted receipt selects its own actual record');
+        release();await writing;
+        equal((await f.acquisition.readRequestedBody(file,()=>true)).inlineFields.status,['complete'],'Source projection uses the current complete parser record');
+        equal(f.reads.length,2,'The superseded queued write cannot force a third native read');
+        equal(f.parses.length,2,'The superseded queued write cannot force a third complete parse');
+        ok(!older.isCurrent()&&newer.isCurrent(),'Write guards follow only the exact selected accepted receipt');
+        equal({revision:state.revision,dirty:state.dirty,bodyDirty:state.bodyDirty,created:state.created},before,'Optional selection does not change source dirty/incarnation state');
+        equal((await f.repository.inspect(file.path)).head,null,'Competing optional writes grant no durable source authority');
+        return true;
+      } finally {release?.();f.close();}
+    })()`), true);
+  } finally { await browser.cleanup(); }
+});
+
 /** A later genuine source pass must wake subscribed status UI after saved hydration has ended. */
 test("source inventory notifies status after complete snapshot hydration without graph publication", async () => {
   const browser = await chromiumHarness(bundle);
