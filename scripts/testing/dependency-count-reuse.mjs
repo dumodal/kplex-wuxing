@@ -199,7 +199,14 @@ export async function arm(bundle, name, config, detailed) {
       /** The active transaction observer has already authenticated this exact pre-quit lifetime. */
       beforeShutdown: async () => result.beforeShutdown,
       /** Observe file metadata after actual process exit, separately from launch/open timing. */
-      afterShutdown: async () => { result.storageAfterShutdown = await ownedIndexedDbSize(result.processBeforeShutdown.profile); return result.storageAfterShutdown; } });
+      afterShutdown: async () => {
+        result.storageAfterShutdown = await ownedIndexedDbSize(result.processBeforeShutdown.profile);
+        if (config.storageInventory) {
+          const { inventoryOwnedIndexedDbFiles } = await import("../../tests/support/indexedDbFileInventory.mjs");
+          result.storageAfterShutdown.inventory = await inventoryOwnedIndexedDbFiles(result.processBeforeShutdown.profile);
+        }
+        return result.storageAfterShutdown;
+      } });
     else await browser.restart();
     result.browserRestartElapsedMs = performance.now() - restartStart;
     await initialize(browser);

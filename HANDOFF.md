@@ -19,8 +19,13 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Active: PR207 storage isolation
 
-Zsolt's Codex Agent. Maintainer authorizes focused A/B/C/D causal comparison, bounded repeated cycles and evidence-supported narrow correction. Keep accepted930747 baseline and frozen d6/d8/19d7 reviewed candidate. No production edit before first full comparison. Preserve prior reports/failures, #204/#205, all contracts and #206 boundary. No merge/release/production deployment.
+---
 
-Protocol and current identities: docs/validation/dependency-repair-storage-207-2026-10-23.md. First stage uses isolated test-only source factory, original deterministic fixture/lifecycle,3 serial alternating256-owner quads and separate detailed request cohort.44 real-IDB/factory contracts and4arm smoke pass; CI412 independently still running at preparation. Main owns serialized measurements, native validation and authorized branch publication. No pending Mac request. Standing header unchanged.
+# Active: PR207 storage isolation — repeated-history stage
+
+Zsolt's Codex Agent. Fixed accepted baseline930747679894f003a2acf3b800df798826ee090c; frozen reviewed candidate d6ef7f07b199e2eb2497f13148374f5edf6802d3, source d8d6d532… and main.js19d75415… unchanged. No production edits. CI411/412/413 pass independently. Preserve original validation report, all failures, #204/#205 and #206 boundary. No merge/release/production deployment.
+
+New evidence and finite protocol: docs/validation/dependency-repair-storage-207-2026-10-23.md. Three A/B/C/D quartets and three A/E/F/D quartets all pass correctness/cleanup but altered variants retain material reopen penalty. Neither simple optimization revert nor bounded point-read strategy fixes it. Browser-root CPU shows additional reopen cost; exact backend path remains unproven.111 focused diagnostic/native-IDB/lifecycle/inventory contracts pass, final D/A cycle smoke passes and deliberate cleanup-failure probe passes its expected exit1/profile-removal oracle.
+
+Main is running three complete256-owner create/change/delete cycles per D/A, sameDB/profile without reset and two graceful reopens each. Separate six-variant detailed request/file-allocation cohort remains pending. No concurrent local tests/builds/native work during measurements. Finish bounded history, publish exact evidence and return draft recommendation; do not expand causal variants or optimize production without supporting cause. Raw traces stay private.

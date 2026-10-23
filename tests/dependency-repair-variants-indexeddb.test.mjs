@@ -12,6 +12,8 @@ import { contributorBrowserBundle, contributorBrowserInitialize } from "./suppor
 import { chromiumHarness } from "./support/browserTypeScript.mjs";
 import { installDependencyCountReuseFixture } from "./support/dependencyCountReuseFixture.mjs";
 import { createDependencyRepairVariants, DEPENDENCY_REPAIR_VARIANT_IDENTITIES } from "./support/dependencyRepairVariants.mjs";
+import { createDependencyRepairPointReadVariant } from "./support/dependencyRepairPointReads.mjs";
+import { createDependencyRepairCursorProofVariant } from "./support/dependencyRepairCursorProof.mjs";
 
 /** Read an immutable accepted/frozen blob without checking out, modifying or publishing any branch. */
 function pinnedSource(commit) {
@@ -23,9 +25,13 @@ function pinnedSource(commit) {
   return result.stdout;
 }
 
-const variants = createDependencyRepairVariants({
+const primaryVariants = createDependencyRepairVariants({
   baselineSource: pinnedSource(DEPENDENCY_REPAIR_VARIANT_IDENTITIES.baselineCommit),
   candidateSource: pinnedSource(DEPENDENCY_REPAIR_VARIANT_IDENTITIES.candidateCommit),
+});
+const variants = Object.freeze({ ...primaryVariants,
+  E: createDependencyRepairPointReadVariant({ candidateSource: primaryVariants.D.source }),
+  F: createDependencyRepairCursorProofVariant({ candidateSource: primaryVariants.D.source }),
 });
 
 /** Install small durable-journal helpers; all requests and transactions remain genuine Chromium IDB. */
@@ -89,7 +95,7 @@ function installVariantContracts() {
   window.variantContracts = { key, snapshot, journal, finalState, reopen };
 }
 
-/** A/B/C/D must differ in measured work, while preserving actual persisted count and recovery contracts. */
+/** Primary variants and optional E/F preserve actual persisted count and recovery contracts. */
 for (const variant of Object.values(variants)) test(`dependency repair variant ${variant.id} preserves real IndexedDB contracts`, { timeout: 180_000 },
   /** Run one variant in its own disposable browser/profile, keeping scenarios serial and bounded. */
   async t => {
@@ -141,6 +147,18 @@ for (const variant of Object.values(variants)) test(`dependency repair variant $
           })()`), true);
         });
 
+      if (variant.id !== "A") for (const wide of [false, true]) await t.test(`${wide ? "byte-lookahead" : "ordinary"} prefix rejects a fractional neighbor before any range mutation`,
+        /** D-derived prefixes must authenticate range coverage even when the final point read is discarded. */async () => {
+          assert.equal(await browser.evaluate(`(/** A fractional key is real IDB data, not a mocked cursor result. */async()=>{
+            const M=sourceModules,V=variantContracts,wide=${wide},prefix=wide?'x'.repeat(160*1024):'field-',c=await V.journal('variant-fractional-${variant.id}-'+wide,[prefix+'0',prefix+'1'],['fresh']);
+            try{
+              await edit(c.db,[M.SOURCE_LOCAL_DEPENDENCY_STORE],/** Place an invalid coordinate strictly between the two requested integer ordinals. */tx=>tx.objectStore(M.SOURCE_LOCAL_DEPENDENCY_STORE).put({version:1,sourceId:'Owner.md',sourceRevision:'old',index:0.5,key:V.key('unexpected')}));
+              const before=await V.snapshot(c.db);equal(await c.repository.repairLocalDependencies(c.db,'Owner.md',/** Keep the caller live so range validation owns the rejection. */()=>true),'dependency-invalid','Unchecked fractional neighbor prevents repair');
+              equal(await V.snapshot(c.db),before,'No retained-prefix count deletion or cursor can commit before coverage rejects');await V.reopen(c);equal(await V.snapshot(c.db),before,'Rejected coverage remains durable after reopen');return true;
+            }finally{c.cache.close();}
+          })()`), true);
+        });
+
       await t.test("synchronous native quota failure retains identity and supports durable retry",
         /** Inject only a genuine request-boundary throw while preserving the actual database implementation. */async () => {
           assert.equal(await browser.evaluate(`(/** Keep native failure attribution separate from domain-invalid count failures. */async()=>{
@@ -153,6 +171,29 @@ for (const variant of Object.values(variants)) test(`dependency repair variant $
               IDBObjectStore.prototype.get=original;equal(await V.snapshot(c.db),before,'Native failure rolls back its page');r.close();r=null;
               await V.reopen(c);equal(await c.repository.repairLocalDependencies(c.db,'Owner.md',/** The restored journal retry remains live. */()=>true),'ready','Durable quota retry resumes');return await V.finalState(c);
             }finally{IDBObjectStore.prototype.get=original;r?.close();c.cache.close();}
+          })()`), true);
+        });
+
+      if (variant.id === "E" || variant.id === "F") await t.test("membership-read and scalar-proof native failures preserve identity cancellation and retry",
+        /** E/F's additional proof owner must preserve the established native-fault and attributed-abort contracts. */async () => {
+          assert.equal(await browser.evaluate(`(/** Fault only the contingency helper's actual native request boundaries. */async()=>{
+            const M=sourceModules,V=variantContracts;
+            for(const location of ${JSON.stringify(variant.id === "E" ? ["membership-get", "coverage-count"] : ["membership-cursor", "coverage-count"])})for(const mode of ['quota','attributed-abort']){
+              const c=await V.journal('variant-${variant.id}-native-'+location+'-'+mode,['old','shared'],['new','shared']),get=IDBObjectStore.prototype.get,count=IDBObjectStore.prototype.count,advance=IDBCursor.prototype.continue,failures=[];let r,fired=false;
+              try{
+                const injected=new DOMException('Synthetic contingency request failure',mode==='quota'?'QuotaExceededError':'AbortError');
+                r=new M.NeutralSourceRepository({open:/** Borrow the genuine database for this single injected request. */async()=>c.db,failed:/** Preserve the exact native identity for the storage-owner assertion. */(_db,error)=>failures.push(error),unavailableReason:/** Retain the original failure fallback. */()=> 'storage-unavailable'},M.sourceRepositoryRuntime());
+                /** Cancel only through the public owner before throwing an attributed native abort. */
+                const fail=()=>{fired=true;if(mode==='attributed-abort')r.cancelSource('Owner.md');throw injected;};
+                IDBObjectStore.prototype.get=/** Forward all reads except the first owned E membership point read. */function(...args){if(location==='membership-get'&&!fired&&this.name===M.SOURCE_LOCAL_DEPENDENCY_STORE)return fail();return get.apply(this,args);};
+                IDBObjectStore.prototype.count=/** Forward all counts except the first owned contingency scalar range proof. */function(...args){if(location==='coverage-count'&&!fired&&this.name===M.SOURCE_LOCAL_DEPENDENCY_STORE)return fail();return count.apply(this,args);};
+                IDBCursor.prototype.continue=/** Forward traversal except the first owned F membership continuation. */function(...args){if(location==='membership-cursor'&&!fired&&(this.source.objectStore?.name??this.source.name)===M.SOURCE_LOCAL_DEPENDENCY_STORE)return fail();return advance.apply(this,args);};
+                const before=await V.snapshot(c.db);equal(await r.repairLocalDependencies(c.db,'Owner.md',/** Native attribution, rather than caller retirement, owns this abort. */()=>true),mode==='quota'?'quota-exceeded':'cancelled','Contingency request preserves its error reason');ok(fired,'Intended contingency request reached');equal(failures.length,mode==='quota'?1:0,'Only unowned native failure notifies storage');if(mode==='quota')ok(failures[0]===injected,'Actual quota identity reaches storage owner');
+                IDBObjectStore.prototype.get=get;IDBObjectStore.prototype.count=count;IDBCursor.prototype.continue=advance;equal(await V.snapshot(c.db),before,'Contingency request failure rolls back the complete page');r.close();r=null;
+                await V.reopen(c);equal(await c.repository.repairLocalDependencies(c.db,'Owner.md',/** A fresh owner resumes only the uncommitted journal. */()=>true),'ready','Contingency request recovers durably');await V.finalState(c);
+              }finally{IDBObjectStore.prototype.get=get;IDBObjectStore.prototype.count=count;IDBCursor.prototype.continue=advance;r?.close();c.cache.close();}
+            }
+            return true;
           })()`), true);
         });
 
