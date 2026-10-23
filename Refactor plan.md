@@ -5745,3 +5745,11 @@ explicitlylimited. Source runtime frozen, no Windows import; final warm/broad-ta
 - Repeats initial body-dirty enumeration (11,820 still dirty / 19 repaired at late attachment), URL reads 11,819 and competing builder admission.
 - At 15:36 UTC, source reads/parses 721 and unsaved masks 719 demonstrate a different cancellation/recovery trajectory. Repair-path counters include live unsaved outcomes; durable activations remain separate. Terminal work/CPU, recovery and quiet are not yet known.
 - No forced flush, mask clear, route or extended cap. Preserve a censored result if required; no second matched-pair success is preclaimed.
+
+
+### PR #206 current accepted-base native recovery failure - 2026-10-23
+
+- Reverse baseline stops incomplete at original 45-minute cap (last sample 2703.1s including IPC/poll jitter), 5,214.95 whole-process CPU-s; independent external AC/native/process coverage valid; cleanup off[]/configuration restored. Not a matched completed pair.
+- Exact native sequence: first adoption flush=false with 719 masks at launch+2163.6s; source-ready/authority recovers at 2436.1s, all owners drain 2436.7s, but initial=false/incomplete=true with no second adoption through remaining 266.4s. No observer overflow. Accepted current baseline now naturally reproduces A's missing continuation. Completion correctness is separate from CPU work reduction.
+- Actual activations 11,839; source reads/parses 821, 719 same-revision owner revisits and masks genuinely repaired (100 recovery reads/parses plus 619 body reuses/resolution refreshes). #204 realized ordinary reuse 11,101 / selected repair 719 since late attachment.
+- Normal post-timing baseline reload has byte-identical complete base/URL/served vocabulary and all seven bounded provenance hashes versus both candidates; original broad tag still fails. Explicit full-builder reference is separately investigating first baseline count 110,472 versus cached 110,470; no performance/recovery claim for that reference.

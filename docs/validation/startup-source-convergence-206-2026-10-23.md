@@ -2,7 +2,7 @@
 
 Prepared by **Zsolt's Codex Agent**, 2026-10-23, Europe/Budapest.
 
-**Status: A1/A2 and B are implemented and verified. Two candidate S2 runs repeat the avoided-work result; baseline repetition, full semantic parity, warm control and final audit remain pending. CPU observations are qualified below.**
+**Status: A1/A2 and B are implemented and verified. The reverse accepted-baseline run naturally reproduces failed adoption followed by genuine recovery without completion. Two candidate S2 runs repeat avoided work; normal-cache vocabulary and seven-target parity match. A separate full-builder count difference, exact-candidate real-copy recovery confirmation and final audit remain pending. CPU observations are qualified below.**
 
 ## Scope and checkpoints
 
@@ -99,7 +99,7 @@ count reuse) from selected-count repair; matching digest eligibility alone is no
 They start no source work and perform no extra proof reads. The three observer tests and all 22 existing Mac-study tests passed under Node22.22.2.
 Native observer forwarding completed without overflow in the targeted capture below. Diagnostic forwarding counts are not exclusive CPU attribution.
 
-## Targeted current-base S2 result
+## First targeted current-base S2 result
 
 The retained S2 stream was imported and decoded-readback verified: **15 stores / 1,537,552 rows**.
 The atomic changed-store job exceeded two observation deadlines; subsequent observers joined the
@@ -363,22 +363,61 @@ verified import with no full app restart; setup-related host/GC work cannot be e
 these observations show retained zero-repair warm behavior, **not a clean matched warm CPU
 percentage**. No OFF-control subtraction or exact plugin-only CPU attribution is made.
 
-## Reverse baseline: in-progress qualification
+## Reverse baseline: genuine recovery without convergence on the accepted code
 
-The second original-S2 restore completed decoded verification at15:17:14.985UTC, using the same
-15stores/1,537,552rows and no duplicate import. Reverse baseline timing started15:18UTC with
-independent external AC polling and the unchanged45-minute cap; its result is not complete yet.
-At late attachment,11,820 owners were body-dirty and19 already repaired. It has again read11,819
-URL owners and entered one competing full-builder path.
+The second original-S2 restore completed decoded verification at15:17:14.985UTC across the same
+15stores/1,537,552rows. Reverse baseline launched at15:18:43.202UTC, with independent external AC
+and the unchanged45-minute cap. Its terminal status is **incomplete**, not a second matched pass.
+The final observation is2703.1s after launch, including bounded polling/IPC overrun of the nominal
+cap; whole-process external CPU is **5,214.95CPU-s**. External process coverage is valid (maximum
+gap1.200s); native maximum gap1.648s and independent AC182samples/maxgap15.322s agree. Cleanup
+restored configuration and left K-Plex off/enabled set empty.
 
-This repeat has a materially different work trajectory from the first baseline: at15:36UTC it
-had performed721 source reads/parses and retained719 unsaved masks after cancellation. Repair-path
-counts exceed actual durable activations. Production code explicitly counts a live unsaved result
-as repair-path work; it must not be equated with a successful persisted source-head replacement.
-The prior baseline and both candidate terminal observations had0masks. This observation remains
-in progress: actual recovery, closure, quiet and final CPU are pending. No flush, mask clearing,
-forced rebuild, timeout increase or intervention is used to improve its outcome. If the original
-cap censors closure/quiet, that remains an incomplete result rather than another matched pass.
+Unlike the first current-base run, this repeat naturally reproduces the missing continuation.
+All times below are after launch, derived from the retained native epoch rather than rounded IPC
+return timestamps; no forwarding or owner-event overflow occurred.
+
+| Boundary | Time | Observed state |
+| --- | ---: | --- |
+| Initial adoption begins | 129.2s | Source authority unavailable; initial inventory active. |
+| Inventory superseded | 164.1s | Inventory revision1→2/generation23→24; host and maintenance remain1. |
+| Initial adoption's source flush returns false | 2163.6s | 719 unsaved masks; no requested semantic task; adoption returns false. |
+| Genuine authority recovery | 2436.1s | 0masks/0pending-known; authority true; coordinator still incomplete. |
+| Source/URL/persistence/scheduler owners drained | 2436.7s | No active build/hydration/semantic/cache/source owner or queued snapshot. |
+| Final observation | 2703.1s | Initial=false/incomplete=true; no second adoption for the remaining266.4s. |
+
+The failed condition is the actual source flush returning false while unsaved recovery is owed.
+The later source-ready callback and a successful inventory completion prove recovery, yet the old
+coordinator never reconsiders its failed result. This confirms A's relevant mechanism on the
+accepted baseline, independently of the older #203 runtimes. It is a correctness/liveness defect;
+changing completion after work has already drained is not CPU savings.
+
+Initial late flags show11,820body-dirty/19already repaired. Final production counters are:
+checked12,558; legacyBodies11,106; reads/parses821; reusedBodies619; repairs11,939;
+resolutionRefreshes619; pendingMetadata/failures0. Actual durable activations are11,839,
+with47,602logical chunks/76,944,951payload bytes. Repair-path counters include live unsaved
+outcomes and must not be substituted for persisted replacements. Recovery adds100reads/parses
+beyond the initial721, plus619body reuses/resolution refreshes; all719masks genuinely drain.
+
+Late forwarding observes12,539acquisitions/11,820unique owners/**719same-revision revisits**,
+12,640parser submissions,350,321transactions and408,512hash calls. This proves a repeated subset,
+not another near-vault-wide identical-revision pass. Four inventory admissions include two false
+and two successful outcomes; one full builder was admitted. Actual #204 ordinary reuse is11,101
+since attachment, separately from719selected-count repairs. URL reads are11,819. The candidate
+repetitions avoid dirty-body replacement, cancellation/masks and these revisits while retaining
+cached-owner validity checks. No mask clearing, forced flush/rebuild, watchdog change or timeout
+extension is used to improve this run.
+
+UI-ready and its required matched quiet interval never occur, so the5,214.95CPU-s censored total
+is **not pooled with completed pairs** or used for a clean before/after percentage. Two candidate
+repetitions and one complete power-qualified baseline remain fewer than the three-pair target.
+
+The separate normal-cache baseline reload completes after timing and exports exactly the same
+base110,470/URL86,593/served110,470path-kind vocabularies as both candidates; all seven bounded
+relationship/provenance hashes and expected search eligibility match. The original broad tag again
+fails after rendering with active semantics. This does not retroactively complete the censored
+startup. The first baseline full-builder count110,472 is still being investigated by a separate
+explicit full-builder semantic reference, outside CPU/recovery evidence.
 
 ## Parallel coordination checkpoint
 
