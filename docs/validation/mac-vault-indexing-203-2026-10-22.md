@@ -1,10 +1,20 @@
 # Mac real-vault indexing study — PR #203
 
+Later review update, **2026-10-23 10:59 Budapest (08:59 UTC)**: the sections beginning **Later working-tree update**
+contain results collected after the fixed report-only review commit `c99073b`. Warm, profile, resource,
+navigation and disabled-control captures are now recorded, and final content/configuration integrity
+passes. The optional post-restore control is focus-qualified. Private final evidence retention and
+review of the uncommitted harness remain delivery work; this report is still an interim review artifact.
+GitHub metadata now confirms that #201 merged independently at **2026-10-23 04:27:52 UTC** with a
+later runtime. The interim commit's description of #201 as draft was stale. This Mac study still
+measures frozen A/B below; it does not validate that newer runtime. This agent performed no push
+or merge. At the metadata recheck, PR203 remains draft and already contains the first report commit.
+
 Zsolt's Codex Agent. Interim review snapshot: **2026-10-23 07:37 Budapest (05:37 UTC)**.
 Measurement branch
 `2026-10-22-mac-vault-indexing-study`, starting at
 `22b44d3ed0781087a9a19bd7749f69089884de5a`. Runtime optimization work remains in
-draft #201; this branch changes test tooling and documentation only. Results below are
+#201; this branch changes test tooling and documentation only. Results below are
 single observations unless explicitly identified otherwise. The replacement cold pair is complete;
 matched later warm measurements and final acceptance checks remain pending. Historical pause and
 failed-run sections below describe their recorded state at that time, not the current live state.
@@ -1004,3 +1014,249 @@ At this interim snapshot the warm cohort has not started. The latest forecast is
 remaining planned measurement/report work, conditional on actual durations and the existing 45-minute
 cap per run. Pending checks are not passes; the report-only Git checkpoint does not publish harness
 source or raw private evidence and does not end the active study.
+
+## Later working-tree update — A4-seeded warm cohort
+
+This section was collected **after** the fixed interim review commit `c99073b` and is not part of
+that committed snapshot. It retains frozen A/B runtime revisions and the A4 seed declared above.
+The later #201 runtime `fa08e60` is still unmeasured. Final disabled controls and end-of-study
+integrity are recorded in the closing sections below.
+
+Three warm timing pairs now complete, in A→B, B→A, A→B order. Every selected arm restores the same
+complete A4 seed, uses the same native probe, observes actual AC/unlocked/visible/focused conditions,
+finishes at least ten minutes after the last observed drain and unloads K-Plex with saved enablement
+empty. Native CPU coverage is valid in all six selected arms. Seven bounded navigation/oracle targets
+pass in each, with exact within-pair semantic hash parity. Two pairs have full functional acceptance
+for their declared workloads; W4 has an additional broad-tag semantic timeout in both arms.
+
+An original W3 A arm is retained and excluded because it records two hidden/unfocused samples.
+Its bounded oracles and cleanup pass; its readiness variation precedes the later focus interruption,
+so the interruption does not explain all CPU variation. That excluded arm reaches readiness at
+147,013.9 ms / 243.762226 CPU-s, compared with 155,010.9 ms / 222.985295 CPU-s for its accepted
+fresh retry. Exclusion follows the foreground rule, not its CPU direction. A W5 restore first attempt fails a 30-second
+foreground CLI transport call before storage maintenance starts. Its preflight remains K-Plex off
+and storage not busy; a fresh restore receipt succeeds. Neither failure is overwritten by its retry.
+
+| Warm pair | Ready CPU A / B (s) | Final closure CPU A / B (s) | Full interval CPU A / B (s) | Functional qualification |
+| --- | ---: | ---: | ---: | --- |
+| W3 | 222.985 / 233.176 | 222.985 / 233.176 | 357.292 / 370.274 | Seven bounded targets pass |
+| W4 | 195.791 / 252.684 | 329.462 / 252.684 | 339.662 / 414.735 | Seven bounded targets pass; extra broad tag times out in both |
+| W5 | 223.430 / 229.266 | 223.430 / 229.266 | 388.965 / 370.380 | Seven bounded targets pass |
+
+| Metric | A median and range (CPU-s) | B median and range (CPU-s) | Median paired B−A | B/A median ratio change |
+| --- | ---: | ---: | ---: | ---: |
+| Ready | 222.985 [195.791, 223.430] | 233.176 [229.266, 252.684] | +4.57% | +4.57% |
+| Final observable closure | 223.430 [222.985, 329.462] | 233.176 [229.266, 252.684] | +2.61% | +4.36% |
+| Full interval including quiet | 357.292 [339.662, 388.965] | 370.380 [370.274, 414.735] | +3.63% | +3.66% |
+
+The pairwise readiness changes are +4.57%, +29.06%, +2.61%; closure changes are +4.57%, −23.30%,
++2.61%; full-interval changes are +3.63%, +22.10%, −4.78%. These are three descriptive observations,
+not a confidence interval. A single percentage would obscure both variation and the metric boundary.
+
+W4 A first becomes ready at 145,017.9 ms / 195.790838 CPU-s. At 347,021.3 ms, one sample observes
+one scheduler lane active, resetting the quiet clock; final observable closure is 348,016.9 ms /
+329.461630 CPU-s. Parser/hash/transaction/source counters do not advance across that pulse. It is
+not the continuously active post-ready source tail seen in cold progressive runs, and does not prove
+new semantic preparation. The full interval reaches 339.661971 CPU-s. W4 B is ready/drained at
+153,050.7 ms / 252.683545 CPU-s, then reaches 414.734983 CPU-s including quiet. Comparing readiness,
+last observable closure and full interval therefore gives different directions in this pair.
+
+All six selected arms have identical forwarded work counts: parser calls 0, hash calls 48,173 over
+41,518,128 UTF-16 units, transactions 71,872 (59,984 readonly / 11,888 readwrite), body requests 1,
+source acquisitions/checks/reads/parses/repairs 0 and body reuse 1. Actual semantic full builds are 0,
+the hydration route is full snapshot, nodes are 110,470 and actual restart inventory count is 1.
+Forwarded inventory-start count 2 is a different boundary. Failures, repository read failures and
+unsaved masks remain 0. These equal low-level counts do not establish equal native physical cost.
+
+Index diagnostics persist inside the checkpoint. The old cold A4 build entry at `1792731131148`
+appears in every restored warm diagnostic history; it is not a new warm build. Derived summaries
+separate decisions before the run start from current-run decisions, and use actual semantic full-build
+counters and route state. Unfiltered persisted decision strings must not be counted as fresh work.
+
+W4's extra broad-tag checks run outside the primary timing window. A times out after 31.1 seconds
+and B after 32.2 seconds, both with the center rendered and canonical source ready, but semantic
+preparation still active, one pending task and 256 dependency visits. No full build starts. This is a
+bounded semantic-readiness failure, not evidence that the tag is absent or its kind unsupported.
+The oracle's `kind` is a report label; navigation uses the generic path. The predeclared controller
+tolerates this known post-timing oracle error for continuing timing work, while the cohort summary
+explicitly withholds full functional acceptance. A rendered center alone is insufficient.
+
+## Later warm diagnostic profiles and native resources
+
+Separate A/B profile runs restore the same A4 seed and request profiling at 90 seconds, during the
+observed warm hot phase before formal readiness. Both native Browser and renderer `sample` captures
+exit successfully and produce files; renderer CDP profiles retain 2,510 / 2,751 samples. Native
+sampler gaps grow to 5,486.6 / 6,468.0 ms, so **both instrumented CPU captures fail coverage** and
+are excluded from primary CPU comparisons. Foreground/power conditions and cleanup pass.
+
+The nominal five-second renderer profiles span 10.422 / 10.741 seconds of recorded sample deltas,
+with substantial unattributed program gaps. Program/GC/idle wall-weighted fractions are respectively
+58.8%/20.9%/16.1% in A and 60.7%/16.2%/19.4% in B; they are not exclusive CPU shares. Sparse active
+frames include `sendSync`, `transaction`, `n.onsuccess` and `reconcileRestartHostInventory`. Native
+wall-thread samples contain no usable LevelDB/IndexedDB/IDB symbols; a few deserialization/GC mentions
+do not permit exact native storage attribution. These traces are qualitative supporting evidence.
+
+Separate resource runs are deliberately capped near eight minutes and finish with only about five
+quiet minutes; their `incomplete` status is expected and is not ten-minute timing acceptance. Both
+have valid native CPU coverage (maximum gaps 3,038.4 / 3,353.1 ms), actual AC/foreground coverage,
+zero source I/O/parsing/checks/repairs/masks/read failures, complete-snapshot hydration and clean unload.
+
+The detailed phase table reaches its 256-bucket limit in both arms. Its `other` bucket merges
+206,225 / 205,554 later method/request/transaction events, preventing their classification by native
+operation. The following are **explicitly classified lower bounds**, not total native activity:
+
+| Classified native resource boundary (lower bounds) | A | B |
+| --- | ---: | ---: |
+| Readonly transactions, all complete | 60,260 | 60,493 |
+| Readwrite transactions, all complete | 23,686 | 23,686 |
+| Readonly `get` calls | 143,431 | 143,588 |
+| Readonly `getAll` calls | 11,959 | 11,959 |
+| Readonly `openCursor` / `getAllKeys` | 189 / 98 | 189 / 98 |
+| Readwrite `get` / `add` / `delete` | 11,844 / 11,840 / 11,840 | 11,844 / 11,840 / 11,840 |
+| Readwrite `put` / `count` | 4 / 2 | 4 / 2 |
+
+Observed native failures are zero; no transaction remains active/pending at the final snapshot, and
+peak concurrent transactions are 36 in both arms. Classified ObjectStore calls are at least 191,207 /
+191,364, with additional unclassified activity. The table cannot establish equality of total native
+operation volumes. Phase-bucket labels describe the most recent scalar observation, not an exclusive
+initiating call stack. ObjectStore instrumentation also does not cover every possible native
+index/cursor continuation or measure CPU/physical disk I/O. This cap is a qualification of the later
+detailed warm captures; the earlier counts-only startup diagnostics use 253 buckets and no `other`
+events, so their reported 78.45% classified call share does not have this particular overflow.
+
+The separate bounded reader/lease counters remain complete: **11,886 readers start/release, and
+11,886 committed leases create/retire in each arm**, with zero unknown retirements, tracking overflow,
+live leases or aborted creation/retirement. Peak live readers/leases are 1, decode peak is 246,537
+bytes and every resource drain flag is true. Reader-wait union is 17.219 / 14.243 seconds; committed
+lease-lifetime sums are 12.214 / 10.120 seconds. These are inclusive, overlapping elapsed-time
+boundaries, not exclusive CPU or disk time. Detailed observation adds unisolated overhead.
+
+Pinned A `SourceRepository.ts` lines 974–1064 connect the `meta.add` / `meta.delete` pattern to persistent
+family read leases: pinning with `leaseFamilies=true` reads the source head and adds a lease in a
+source-head/meta write transaction; releasing uses the original connection to delete it. A head-only
+pin is readonly, but legacy primary-grammar candidates may repin to authenticate the body-URL family.
+The classified 11,840 additions/removals are a lower bound; the independent complete counter records
+11,886 committed creations/retirements in each revision. The classified native readwrite count alone
+already exceeds the forwarded count because release operations can use the original connection,
+outside that forwarding boundary.
+
+These leases protect immutable-family readers against reclamation and preserve revision/CAS safety;
+they are not established redundant writes. A future proposal should first prove safe scope reuse or
+batching while preserving deletion, unsaved-source and current-owner guards. No lease removal,
+algorithm change or exclusive per-consumer CPU attribution is performed in this study.
+
+## Later active navigation diagnostic
+
+Both arms restore the same A4 checkpoint. Before either activation, the workload is fixed to start
+at 90 seconds, with the original broad tag first, then the seven bounded targets. This uses the existing
+navigation driver and a three-minute diagnostic cap, with no runtime/probe change. Its purpose is to
+observe navigation away from the broad tag while restart reconciliation is active; it cannot force
+the same semantic-preparation state seen in W4's post-timing oracle.
+
+All eight centers are available and rendered in both arms. Search results match all expectations,
+including the virtual target's expected absence from search. Every target starts before formal ready
+with one active source lane, adds no source reads/parses and finishes with semantic-active false.
+The broad tag exposes 4,136 child gates in both arms. Its observed navigation-to-DOM interval is
+508.2 / 475.3 ms; bounded targets range 190.6–238.3 ms in A and 135.1–185.1 ms in B. These few
+programmatic intervals establish neither actual paint nor physical interaction latency, and no
+speedup claim is made from this single instrumented pair. The workload does not reproduce W4's
+still-pending broad-tag semantic task; that failure remains unresolved.
+
+A ends as deliberately `incomplete` at the three-minute diagnostic cap, with clean unload. B captures
+the complete workload with valid native CPU/foreground/power coverage, and its ordinary cleanup
+records unloaded K-Plex and empty enablement. A redundant final-cleanup CLI call then times out,
+leaving B's overall receipt `failed`; the parent correctly stops before controls. The failed receipt
+and failed playlist are retained. A fresh standalone cleanup succeeds and independently confirms
+off/empty enablement, and the copied settings match the diagnostic's saved original bytes. This
+recovery permits the already-declared disabled controls; it does not turn the original B receipt into
+a passed run. Maximum native sample gaps during navigation are 3,410.0 / 2,485.5 ms.
+
+At that group boundary, only the private controller's disabled-control duration validation changes:
+an OFF plugin never satisfies the loaded-plugin drain predicate, so its `quietMs` is naturally zero.
+The native driver already correctly terminates controls after the requested `elapsedMs`; a prior
+60-second OFF diagnostic confirms this. The private controller/final-integrity gate now require
+completed status, `completedQuiet`, observed elapsed duration, valid CPU/foreground/power and clean
+off/empty enablement. Native probes and all A/B timing receipts remain unchanged. The boundary
+correction and cleanup recovery have separate private receipts; no prior failure is relabeled.
+
+## Disabled controls and final safety verification
+
+The ordinary disabled control completes at 601,492.0 ms / **8.801909 CPU-s**. Browser accounts for
+4.874966, the selected renderer 3.821180, GPU 0.083990 and Utility 0.021773 CPU-s. All 602 samples
+show K-Plex unloaded, with no process births/exits, unsupported/regressing counters, hidden/unfocused
+samples, power changes or locks. Maximum gap is 1,022.0 ms; external AC has 42 samples and a
+15.035-second maximum gap. It is a valid ten-minute disabled-host control, with off/empty enablement
+and controller removal verified afterward.
+
+Next, the same A4 checkpoint is restored while K-Plex stays disabled. The guarded restore completes;
+one CLI polling timeout is retained while native storage maintenance continues to verified completion.
+The post-restore OFF capture completes at 601,575.8 ms / **27.992692 CPU-s**, but has **29 unfocused
+samples** from 330,017.2 to 358,016.9 ms. Its full interval is therefore **not timing-comparable**.
+It has no hidden samples, power/lock/throttling changes, process births/exits or CPU counter errors;
+maximum gap is 1,693.8 ms and all 602 samples show K-Plex unloaded. External AC again has 42 samples,
+maximum gap 15.042 seconds. Cleanup is off/empty enablement. The strict parent and original final
+timing gate remain failed; their receipts are preserved.
+
+The post-restore CPU is principally renderer-side: renderer 22.196297, Browser 5.587920, GPU 0.166211,
+Utility 0.042264 CPU-s. By the observed sample at/after 30 seconds, aggregate CPU is already 18.251164
+versus 0.420057 in the ordinary control; at/after 120 seconds it is 19.758624 versus 1.796610. That
+early burst precedes the later focus interruption. This is evidence that non-plugin activity after
+fixture restoration can contribute to a subsequent observation. It does not identify GC,
+deserialization, storage compaction or any other exclusive cause, nor quantify the carryover in any
+particular warm arm. The full control is still qualified. No control cost is subtracted from A/B CPU,
+and no ordinary-vs-post-restore matched percentage or observer-overhead estimate is claimed.
+
+A separately labeled safety-only continuation verifies both terminal OFF captures and cleanup before
+read-only integrity hashing. It does not waive the failed timing comparison. At **2026-10-23
+08:56:31 UTC / 10:56:31 Budapest**:
+
+- All **20,190 copied nonconfiguration files / 10,956,614,603 bytes** match the starting hashes:
+  no added, removed or changed files.
+- All **223 protected production configuration files / 84,002,510 bytes** match starting hashes:
+  no added, removed or changed files. No original full-content before-manifest was acquired, so the
+  original-vault integrity audit remains configuration-scoped. The agent performed no production
+  writes, plugin toggles, deployment, database operations or note operations.
+- Copied K-Plex `data.json` (97,681 bytes) and property `types.json` (2,060 bytes) match their original
+  hashes. Saved community enablement is empty; Sync and Publish remain disabled.
+- Native verification finds K-Plex unloaded, no study/startup controller, no debugger or DevTools,
+  the original layout-ready method restored and all nine checked IndexedDB prototype methods native.
+  No measurement driver or study `caffeinate` child remains. The copy and evidence are retained.
+
+The focus requirement and vault-window isolation are released after these checks. No additional timing
+run, production deployment, automatic optimization or refactor is queued. The real build, official
+Obsidian lint and 22 focused harness tests previously passed on Node 22.22.2; only documentation and
+private orchestration/aggregation changed afterward. Documentation whitespace/content checks apply
+to this review update; a full runtime verification suite is not claimed as rerun.
+
+## Review conclusion and next investigation
+
+The frozen candidate reduces cold source reads/parses, but these observations do not establish a
+uniform whole-process CPU reduction. Cold execution routes differ, C3 has unresolved power history,
+and the fresh full-snapshot warm cohort has a +4.57% median readiness CPU change with material
+within-revision variation. The quiet interval remains a separate metric. Host activity after fixture
+restoration, incomplete profiling coverage and capped detailed phase buckets constrain attribution.
+The original production cache/session is not reproduced merely by copying notes, and the later merged
+runtime is not measured. This is not performance acceptance of current main.
+
+The most useful review priorities are:
+
+1. **Readiness/recovery after full-snapshot startup.** Both frozen revisions can drain masks and regain
+   authority yet retain an initially incomplete adoption for the 45-minute cap. Trace the one-shot
+   initial adoption and subsequent retry ownership against the newer merged runtime before proposing
+   a correction. The observed failure is stronger evidence than a guessed cache-corruption diagnosis.
+2. **Post-ready neutral reconciliation.** The cold progressive route repeats about 11,823 neutral
+   source validations and spends another five minutes after readiness, without new parsing or repair.
+   Revisions change, so same-revision replay is not established. Compare the newer bounded-head
+   validation implementation before designing narrowly scoped reuse or batching; preserve revision,
+   owner, unsaved-source, deletion and publication guards.
+3. **Warm authorization/lease work and physical host history.** Zero body parsing still coexists with
+   11,886 complete lease lifetimes in each separate detailed capture. Prove safe scope reuse before
+   changing reader protection. Classified native counts are lower bounds, not exclusive consumer CPU;
+   adjacency/copy/compaction costs cannot be ranked above measured work from these traces. Any new
+   optimization proposal needs a better bounded attribution design and exact-current-runtime evidence.
+
+The immediate deliverable is this report-only Git review update. Raw profiles, database checkpoints,
+configurations and private target identities stay outside Git. A fresh verified final retention under
+`/Users/zsviczian/kplex-private-evidence/2026-10-23-pr203-final` follows these captures; the existing
+partial and pause snapshots remain intact. The harness/workflow files remain uncommitted for
+independent review. No merge, release or runtime correction is requested by this report.
