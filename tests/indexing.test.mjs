@@ -1,4 +1,5 @@
 import {runStartupAdmission} from './support/startupAdmission.mjs';
+import {runStartupSourceConvergence} from './support/startupSourceConvergence.mjs';
 /**
  * Exercises compiled production indexing, persistence, parser, settings and scene workflows against
  * finite Vault/Obsidian doubles. The archived compatibility oracle remains intact; only approved
@@ -1609,6 +1610,7 @@ const plugin = { app, settings, getIndexSourceRevision: () => 0, recordDiagnosti
 
 const index = new GraphIndex(plugin, app);
 console.log(`Startup admission: ${await runStartupAdmission({KplexPlugin,GraphIndex,app,settings,TFile,TFolder,fixtureEvents})} production scenarios passed.`);
+console.log(`Startup source convergence: ${await runStartupSourceConvergence({KplexPlugin,GraphIndex,app,settings})} production scenarios passed.`);
 
 // Exercise the actual temporary native listeners, including the dormant interval before admission.
 // A physical snapshot can cover initial discovery notifications; it cannot cover observed same-stat

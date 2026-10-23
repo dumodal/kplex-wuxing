@@ -21,6 +21,8 @@
  * repairs without adding a scheduler, changing repository fences or retaining another work queue.
  * An explicit inventory pass consumes its queued debounce; newer events remain requested and are
  * scheduled by that pass's existing finally owner, avoiding duplicate unchanged readiness signals.
+ * Readiness consumers run only after the awaited inventory releases ownership, so recovery cannot
+ * recursively join its producer or consume a still-active source inventory as a settled signal.
  * Background-only owner/page checkpoints defer to the caller's foreground lane without retiring
  * inventory progress. Editable pair requests acquire only their exact document owners; full replay
  * certifies both positive and negative declarations before global incidence inventory is ready.
@@ -1000,7 +1002,6 @@ export class ObsidianSourceAcquisition {
       && !this.localInventoryCompletionPending;
     this.localDependenciesReady = ready;
     this.localDependencyAuthorityReady = ready || this.localDependencyAuthorityReady && !this.uncertainResolution && !this.environmentMaintenancePending;
-    if (ready) this.inventoryReady?.();
     return ready;
   }
 
@@ -1982,6 +1983,7 @@ export class ObsidianSourceAcquisition {
    * durable completion fence. Neither an inventory result nor a delay proves tombstone activation.
    * Starting an explicit pass consumes an earlier scheduled request; active joins and events after
    * its capture retain their existing ownership and follow-up scheduling.
+   * A successful current readiness notification runs after releasing the awaited inventory owner.
    */
   async reconcile(): Promise<boolean> {
     this.start();
@@ -1994,7 +1996,7 @@ export class ObsidianSourceAcquisition {
     this.requested = false;
     // Events that arrive after this boundary advance inventoryRevision and cancel this pass.
     const revision = this.inventoryRevision;
-    let activityToken = 0, activityFailed = false;
+    let activityToken = 0, activityFailed = false, readyNotification = false;
     this.inventoryCaptureRevision = revision;
     const current = (): boolean => !this.closed && revision === this.inventoryRevision;
     /** Retain one broad task's priority without changing its existing inventory/CAS lifetime. */
@@ -2157,7 +2159,6 @@ export class ObsidianSourceAcquisition {
           this.pendingKnownFiles.clear();
           this.startupDiagnostics?.phase("source", "complete");
           this.startupDiagnostics?.mark("source-authority");
-          this.inventoryReady?.();
         }
         return ready;
       } catch { activityFailed = true; this.counters.failures += 1; return false; }
@@ -2165,6 +2166,7 @@ export class ObsidianSourceAcquisition {
     this.inventory = this.runBackgroundWork ? this.runBackgroundWork(work) : work();
     try {
       const result = await this.inventory;
+      readyNotification = result;
       try { this.startupDiagnostics?.endActivity?.(activityToken,
         activityFailed ? "failed" : !current() ? "cancelled" : result ? "complete" : "incomplete", this.counters); }
       catch { /* Keep the original source result, including an unsuccessful pass. */ }
@@ -2179,7 +2181,11 @@ export class ObsidianSourceAcquisition {
       catch { /* Preserve the original rejection when optional accounting is unavailable. */ }
       throw error;
     }
-    finally { this.inventory = null; this.inventoryCaptureRevision = null; if (this.requested) this.requestInventory(); }
+    finally {
+      this.inventory = null; this.inventoryCaptureRevision = null;
+      if (this.requested) this.requestInventory();
+      if (readyNotification && current() && this.hasSemanticDependencies()) this.inventoryReady?.();
+    }
   }
   /**
    * Join source reconciliation and its durable writes, never an unload guarantee. A native metadata

@@ -12,7 +12,8 @@
  * Committed base-color upgrades use a native notification modal; acknowledgment shares the
  * library metadata queue and unload preserves undismissed notifications for the next startup.
  * Unsuccessful source-backed startup adoption reports incomplete coverage rather than implying
- * that index preparation is still running; it never grants semantic write authority.
+ * that index preparation is still running; settled source/semantic recovery coalesces through
+ * the existing initial-index owner and never grants semantic write authority by notification.
  * File deletion captures its ontology-cleanup preference before consent; settings navigation
  * cancels that approval, and concurrent preference changes require a fresh deletion request.
  * Missing Hidden configuration offers an explicitly approved unused property or exact settings
@@ -251,6 +252,9 @@ export default class KplexPlugin extends Plugin {
   private initialIndexTask: Promise<void> | null = null;
   private initialIndexComplete = false;
   private initialSourceIndexIncomplete = false;
+  /** One latest meaningful recovery signal; the normal initial-index task still owns adoption. */
+  private initialSourceRecovery: Readonly<{ index: GraphIndex; key: string; isCurrent: () => boolean }> | null = null;
+  private initialSourceRecoveryTask: Promise<void> | null = null;
   /** In-memory guard against duplicate claims while the persisted one-time startup guidance flag saves. */
   private startupIndexInfoBubbleClaimed = false;
   private snapshotRestoreTask: Promise<{ restored: boolean; fresh: boolean; createdAt: number | null; partial?: boolean }> | null = null;
@@ -587,6 +591,7 @@ export default class KplexPlugin extends Plugin {
     for (const resolve of this.layoutReadyWaiters) resolve();
     this.layoutReadyWaiters.clear();
     this.unloading = true;
+    this.initialSourceRecovery = null;
     this.savedSettingsRefresh?.close();
     this.settingsReconciliation?.dispose();
     this.settingsTab?.disposeOntologySettings();
@@ -1209,8 +1214,14 @@ export default class KplexPlugin extends Plugin {
   /** Complete the initial source owner; an unsuccessful adoption reports incomplete coverage until a later attempt succeeds. */
   private async adoptInitialSourceIndex(): Promise<void> {
     this.initialSourceIndexIncomplete = false;
-    const adopted = await this.index.adoptStartupSources();
-    if (this.unloading) return;
+    const index = this.index;
+    let adopted: boolean;
+    try { adopted = await index.adoptStartupSources(); }
+    catch (error) {
+      if (!this.unloading && this.index === index) { this.initialSourceIndexIncomplete = true; this.notifyIndexStatus(); }
+      throw error;
+    }
+    if (this.unloading || this.index !== index) return;
     this.initialSourceIndexIncomplete = !adopted;
     this.initialIndexComplete = adopted;
     if (adopted) {
@@ -1223,6 +1234,49 @@ export default class KplexPlugin extends Plugin {
       if (this.indexDirty && this.hasVisibleKplexSurface()) this.scheduleRebuild("startup:post-initial-backlog");
     }
     this.notifyIndexStatus();
+  }
+
+  /** Only the current admitted eager lifetime with actual policy/demand may resume failed startup. */
+  private canResumeInitialSourceIndex(index: GraphIndex): boolean {
+    return !this.unloading && this.layoutReady && this.indexPreparationAdmitted && this.index === index
+      && !this.initialIndexComplete && !index.isOnDemandMode()
+      && (this.startupIndexPolicy.beforeView || this.explicitIndexPreparationRequested
+        || this.openKplexViews > 0 || this.hasVisibleKplexSurface());
+  }
+
+  /**
+   * Consume genuine settled source/semantic recovery through the existing startup owners.
+   * A single continuation joins preparation and initial adoption before considering the latest
+   * fenced signal. Signals arriving during an attempt coalesce, rather than being lost or spawning
+   * parallel adopters. GraphIndex suppresses unchanged readiness stamps; this loop starts no timer,
+   * recursively retries no failure, and never schedules work merely because an attempt returned false.
+   */
+  resumeInitialSourceIndex(index: GraphIndex, key: string, isCurrent: () => boolean): void {
+    if (!this.canResumeInitialSourceIndex(index) || !isCurrent()) return;
+    if (this.initialSourceRecovery?.index === index && this.initialSourceRecovery.key === key) return;
+    this.initialSourceRecovery = { index, key, isCurrent };
+    if (this.initialSourceRecoveryTask) return;
+    const task: Promise<void> = Promise.resolve().then(/** Drain only newly notified recovery, serially after the original owners. */ async () => {
+      try {
+        while (this.initialSourceRecovery) {
+          const recovery = this.initialSourceRecovery;
+          this.initialSourceRecovery = null;
+          if (this.indexPreparationTask) await this.indexPreparationTask.catch(/** Original callers own errors; genuine recovery rechecks the retained source baseline. */ () => undefined);
+          if (this.initialIndexTask) await this.initialIndexTask.catch(/** A rejected adopter releases its owner before a meaningful new signal is consumed. */ () => undefined);
+          if (!this.initialSourceIndexIncomplete || !this.canResumeInitialSourceIndex(recovery.index) || !recovery.isCurrent()) continue;
+          try { await this.ensureInitialIndex(); }
+          catch (error) { console.error('[K-Plex] Initial source recovery failed', error); }
+        }
+      } finally {
+        // Release before this promise settles. A notification in a later microtask must not join
+        // an already-drained continuation and leave its new signal without an owner.
+        if (this.initialSourceRecoveryTask === task) this.initialSourceRecoveryTask = null;
+      }
+    });
+    this.initialSourceRecoveryTask = task;
+    void task.catch(/** Unexpected notification failure remains explicit without affecting a newer continuation. */ error => {
+      console.error('[K-Plex] Initial source recovery failed', error);
+    });
   }
 
   /**

@@ -5616,3 +5616,26 @@ Focused22tests pass Node22.22.2; full verification is in progress at publication
 release/architecture/core/lint and earlier test batches. CI/full-suite pending is not a pass; actual
 terminal outcomes are recorded in PR203. Finalized report/retention status; no new runtime fix,
 measurement, C15 advancement or release. Scientific acceptance remains qualified/inconclusive.
+
+
+## 2026-10-23 - PR206 checkpoint A1 (recovery correctness, acceptance incomplete)
+
+| Checkpoint | Result | Remaining acceptance |
+| --- | --- | --- |
+| A1 settled source/scope recovery | Existing initial-index owner resumes through one coalesced fenced continuation; full verify and exact-build Small smoke pass | Settings-publication follow-up, native recovery/interaction, B work reduction and matched CPU measurements |
+
+Action log (2026-10-23, PR206 A1): current-base controlled missing-metadata/write-failure
+recovery reproduces stranded initial adoption; 15 coordinator scenarios and two real-IDB
+recovery cases now pass. Source inventory releases before notification; no polling, forced
+completion, watchdog/storage/SourceRepository change. Full npm run verify passes Node22.22.2;
+exact Small bundle4b53d61d2ae7d1ff4a3a127b71c0d30036722e726559bf264113eaac4e39cf28
+passes command/render/no-captured-JS-error smoke only. Native fault recovery remains pending.
+Three settings-publication cases still fail and are a separate unregistered working-tree follow-up.
+Accepted-base S2 actually converges in32m43s plus10mquiet; wholeprocess4036.03CPU-s,
+external power series absent/retrospective cross-check only. No A1 CPU-saving claim.
+Discovery invalidation and startup-only interval full-builder ownership are demonstrated before
+fixtures for B, not corrected in A1. PR205/207 currently open/draft; user authorizes Windows
+independent merge, no mid-experiment import here; combined Mac acceptance later required.
+C14 accepted, C15-C26 paused. See docs/validation/startup-source-convergence-206-2026-10-23.md.
+Prioritized remaining native checks: automatic genuine recovery without reopen/rebuild;
+early editing/navigation/tag-folder-search semantic parity; original unresolved broad-tag control.

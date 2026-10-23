@@ -6,6 +6,8 @@
  * Newly compiled ontology cannot remain hidden by an inferred local cover.
  * Startup metadata resolution keeps an unchanged finite read cover only while its replacement
  * is pending. Source/policy/native revision fences and relationship write authority stay separate.
+ * Settled source authority and requested semantic publication notify the existing startup owner
+ * through deduplicated, fenced recovery capabilities; notifications never grant completion.
  * Saved native navigation is available before asynchronous catalogs; its filename/folder facets
  * own no semantic incidence, source acquisition, negative inventory proof or write authority.
  * Optional presentation dispatch uses finite snapshots and nonrecursive coalescing. Settings-only
@@ -680,6 +682,8 @@ export class GraphIndex {
   private sourceBackedStartup = false;
   private warmSourceRecoveryAvailable = false;
   private sourceNodeVocabularyPublished = false;
+  /** Last notified recovery stamp; unchanged incomplete inputs cannot reschedule startup adoption. */
+  private initialSourceRecoveryKey: string | null = null;
   /** Last complete cache presentation stays readable across host waves, but owns no current authority. */
   private cachedSnapshotPages = new WeakSet<GraphPage>();
   private urlAliasFacetVersion = URL_ALIAS_FACET_VERSION;
@@ -723,6 +727,7 @@ export class GraphIndex {
         this.retryDemandedSemanticScopes();
         this.retrySourceNodeImpacts();
         this.retryUrlAliasUpgrade();
+        this.notifyInitialSourceRecovery();
       },
       /** Refresh subscribed source progress; only the source-authority phase advances its watchdog. */
       () => {
@@ -1771,6 +1776,31 @@ export class GraphIndex {
   /** Source-backed startup completion belongs to source adoption, not graph-cache hydration. */
   hasSourceBackedStartup(): boolean { return this.sourceBackedStartup; }
   /**
+   * Notify the startup coordinator only after current source authority and requested semantics
+   * recover. Source notifications arrive after inventory ownership is released; scope notifications
+   * arrive after their task is removed. The notification is a retry capability, never readiness.
+   * Captured lifecycle/publication/source/policy fences reject a queued stale signal. Successful
+   * semantic publication changes the stamp, while repeated unchanged failure notifications do not.
+   */
+  private notifyInitialSourceRecovery(): void {
+    if (this.diagnosticsClosed || !this.sourceBackedStartup || this.isOnDemandMode()
+      || !this.sourceAcquisition.hasSemanticDependencies() || this.hasPendingSemanticPreparation()) return;
+    const run = this.snapshotHydrationRun, generation = this.generation, publication = this.publicationRevision;
+    const policy = this.semanticPolicyRevision, presentation = this.presentationRevision;
+    const source = this.plugin.getIndexSourceRevision(), maintenance = this.sourceAcquisition.getMaintenanceRevision();
+    /** Recheck actual prerequisites after the coordinator's awaited owner, not only at notification. */
+    const current = (): boolean => !this.diagnosticsClosed && this.sourceBackedStartup && !this.isOnDemandMode()
+      && run === this.snapshotHydrationRun && generation === this.generation && publication === this.publicationRevision
+      && policy === this.semanticPolicyRevision && presentation === this.presentationRevision
+      && source === this.plugin.getIndexSourceRevision() && maintenance === this.sourceAcquisition.getMaintenanceRevision()
+      && this.sourceAcquisition.hasSemanticDependencies() && !this.hasPendingSemanticPreparation();
+    if (!current()) return;
+    const key = [run, generation, publication, policy, presentation, source, maintenance, this.semanticRevision].join(':');
+    if (key === this.initialSourceRecoveryKey) return;
+    this.initialSourceRecoveryKey = key;
+    this.plugin.resumeInitialSourceIndex?.(this, key, current);
+  }
+  /**
    * Close source-backed startup in consumer order: source authority, requested scopes, global nodes.
    * The catalog is compiled privately from durable facts and published atomically without evidence.
    * A policy/source/maintenance interruption retains the earlier coherent baseline and returns false
@@ -2813,6 +2843,7 @@ export class GraphIndex {
         && ((this.semanticDemandCounts.get(centerPath) ?? 0) > 0 || this.plugin.settings.lastActivePath === centerPath)
         && (sourceRevision !== this.plugin.getIndexSourceRevision() || publicationRevision !== this.publicationRevision
           || presentationRevision !== this.presentationRevision)) void this.ensureSemanticScope(centerPath);
+      this.notifyInitialSourceRecovery();
     });
     this.semanticPreparationTasks.set(centerPath, { policyRevision, demandRevision, maintenanceRevision, coverageSignature,
       sourceRevision, publicationRevision, presentationRevision, task });

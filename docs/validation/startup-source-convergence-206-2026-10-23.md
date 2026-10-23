@@ -2,7 +2,7 @@
 
 Prepared by **Zsolt's Codex Agent**, 2026-10-23, Europe/Budapest.
 
-**Status: investigation in progress. No runtime correction or performance improvement is claimed.**
+**Status: checkpoint A1 verified; recovery/settings follow-up and checkpoint B remain in progress. No CPU improvement is claimed.**
 
 ## Scope and checkpoints
 
@@ -42,21 +42,34 @@ retained S2 full-snapshot stream has SHA-256
 the A4 warm seed is a different checkpoint. A retained sidecar alone does not prove a successful
 new import: decoded verification and the native committed receipt are required before activation.
 
-## Current causal leads
+## Checkpoint A1 — settled recovery continuation
 
-The current plugin coordinator sets initial source completion from one `adoptStartupSources()`
-result and releases its task when incomplete. GraphIndex's source-ready consumer wakes the
-source-authority waiter and demanded semantic consumers, but does not notify that coordinator.
-This is a source-trace lead, not yet a current-baseline native reproduction of the historical S2
-failure. A controlled local regression drives the production coordinator and existing GraphIndex
-source-ready callback without manually invoking adoption a second time. On the unchanged runtime
-it fails the assertion that recovered authority must automatically resume startup, after all 58
-existing startup-admission scenarios pass. This failing test remains part of checkpoint A work in
-progress; the instrumentation checkpoint does not claim a passing runtime correction.
+The unchanged current-base coordinator fails controlled recovery regressions: initial adoption
+returns incomplete after missing source metadata or a controlled storage-write failure; source
+authority and requested semantics later recover, but the coordinator never adopts again. The
+write-failure fixture explicitly injects post-eviction memory state; it does not test the eviction
+algorithm itself. Recovery uses the actual source event/storage path and does not manually invoke
+a second adoption.
 
-Adoption can also fail because source flush is incomplete, semantic preparation is pending,
-or publication fences change. The actual failed condition and later meaningful recovery must
-be recorded before choosing the correction. Empty work queues alone do not establish readiness.
+A1 notifies the existing initial-index owner after source inventory ownership releases and after
+requested semantic tasks settle. One coalesced continuation joins original preparation/adoption,
+then rechecks captured lifetime, demand, source, publication and policy fences. Unchanged failure
+signals do not spin. Notifications grant no readiness; actual adoption still owns completion.
+Persistent failures, supersession, unloading, closed demand and genuine edit backlog remain explicit.
+No timer, polling, watchdog change, storage-schema change or SourceRepository modification is added.
+
+On Node22.22.2, all existing indexing fixtures, 58 startup-admission scenarios and 15 new coordinator
+scenarios pass. The acquisition/real-IDB lane passes 46 tests, including two new real-storage
+recovery cases. Full `npm run verify` passed with real dependencies, followed by exact-build Small
+native command/render/no-captured-JavaScript-error smoke. That smoke does not establish native
+fault recovery or complete interaction acceptance. The tested bundle is
+`4b53d61d2ae7d1ff4a3a127b71c0d30036722e726559bf264113eaac4e39cf28`.
+
+A separate settings-publication regression exposes three remaining cases: presentation facets,
+legacy display-name policy and empty-demand semantic-policy refresh can supersede an initial
+adopter without a later source/scope-finalizer signal. These failing follow-up fixtures are retained
+privately/in the working tree, excluded from the A1 test inventory until corrected. Checkpoint A
+therefore remains open. A1 is a correctness checkpoint, not measured CPU savings.
 
 ## Measurement plan and limits
 
@@ -85,39 +98,57 @@ transitions, native event categories, inventory admissions versus joins and sour
 flags. They distinguish the actual ordinary activation private-reclaim branch (#204 realized
 count reuse) from selected-count repair; matching digest eligibility alone is not counted as reuse.
 They start no source work and perform no extra proof reads. The three observer tests and all 22 existing Mac-study tests passed under Node22.22.2.
-Native observer validation remains pending. Diagnostic forwarding counts are not exclusive CPU attribution.
+Native observer forwarding completed without overflow in the targeted capture below. Diagnostic forwarding counts are not exclusive CPU attribution.
 
-## Targeted S2 capture in progress
+## Targeted current-base S2 result
 
-The original S2 checkpoint was fully verified in the current test database: **15 stores /
-1,537,552 rows**, atomic changed-store import followed by decoded native readback. The storage
-job exceeded two bounded observation windows; both receipts were retained and later observers
-joined the same owned job. No second import or early activation occurred. Total preparation
-was approximately sixteen minutes and is outside startup timing.
+The retained S2 stream was imported and decoded-readback verified: **15 stores / 1,537,552 rows**.
+The atomic changed-store job exceeded two observation deadlines; subsequent observers joined the
+same job, with no duplicate import or early activation. Approximately sixteen minutes of import
+preparation are outside timing.
 
-The current-base application launch began at **10:39:17.761 UTC**. Diagnostic attachment at
-**10:40:05.878 UTC** was late: forwarding totals omit earlier work. Initial native source flags
-show **11,819 body-dirty sources**, **zero `created` flags**, and 20 sources already repaired,
-out of 11,839 Markdown owners. At about 29 minutes after attachment, more than 11,500 sources
-had been checked/repaired, with no unsaved masks observed. Final adoption, true closure, quiet
-and cleanup remain pending. This is not yet a repeated current-base stranded-startup result.
+Launch began **10:39:17.761 UTC**; forwarding attached **48.117 seconds late**, so its totals are
+lower bounds since attachment. Unlike historical S2, this current-base run **completed**: ready at
+approximately **1,829.121 seconds** after launch, final source/URL/persistence closure at
+**1,963.121 seconds**, followed by **601.257 seconds** quiet. Whole-process external CPU delta
+was **4,036.03 CPU-seconds**, sampled without reported process errors (maximum gap1.056s).
+Native foreground, unlock and AC checks remained valid. No historical stranded outcome is claimed
+for this native run; the current-base liveness defect is established by controlled regressions.
 
-Two lifecycle paths explain a candidate admission cause: before layout readiness,
-`installPreRestoreChangeFence()` forwards `Vault.create` through deferred host change with
-`bodyChanged=true`; the independent URL create listener calls `refreshUrlOwner()` with its
-ordinary changed-owner default. Installed Obsidian **1.13.0** declarations explicitly document
-that `Vault.create` also fires for each existing file during initial vault loading and recommend
-registering ordinary create handlers within `Workspace.onLayoutReady`. The source and URL
-paths can therefore turn initial discovery into body invalidation and URL cache retirement.
-A controlled before/after qualification and real/offline negative cases are still pending; no
-cached-source validity check has been removed and no work reduction is claimed yet.
+Independent external power polling was inadvertently not armed for the first warm/S2 captures.
+Retained retrospective system-power logs and terminal AC state agree with native AC observations,
+but are not a prearmed external power series. This remains a measurement qualification; later
+matched captures must arm the independent power recorder.
 
-The current-baseline real-IDB coordinator regression also fails after actual missing-metadata
-recovery: source authority and requested semantic preparation close, but no second adoption
-follows. A local unvalidated correction joins existing startup owners and handles both source
-and semantic completion signals. This checkpoint does not publish that runtime correction.
-The new diagnostic probe additionally retains at most **eight anonymous weak native identities /
-128 scalar owner transitions**, exposing dropped detail without exporting note paths.
+Initial attached source flags were **11,819 body-dirty**, zero created, and 20 already repaired,
+out of 11,839 Markdown owners. Final production counters checked11,840/repaired11,839 owners;
+URL processing completed11,839 owners with11,819 reads. Late forwarding observed11,820 source
+acquisitions,11,819 unique identities and **one same-revision revisit**. Near-vault-wide identical-
+revision replay is therefore not established. Actual activated ordinary private-reclaim branches
+realized **11,819 #204 count reuses** since attachment; eligibility alone is not counted, and these
+savings belong to #204.
+
+Installed Obsidian1.13.0 declarations document `Vault.create` for existing files during initial
+loading. The pre-layout source fence currently treats these as body changes, and the independent
+URL create listener retires cached owner data. The controlled discovery regression fails in both
+eager and on-demand modes on this baseline. Negative cases and a safe qualification are pending;
+no cached-source validity check has been weakened.
+
+One actual full semantic rebuild also occurred, marked `startup:stale-snapshot` with zero modified
+paths. The source inventory was cancelled and restarted with revision1→2 and generation22→23,
+while maintenance/host revisions remained1. The existing 120-second automatic dirty-index flush
+can enter full rebuilding after snapshot hydration but before source adoption completes. This
+caller attribution follows production call inventory/conditions and a controlled exact-interval
+regression, not a captured native stack. Three startup-only ownership cases fail before correction;
+seven genuine-change/cold/on-demand/explicit-demand controls pass. An empty later inventory was
+small follow-up work, not another broad pass.
+
+## Parallel coordination checkpoint
+
+At the A1 checkpoint GitHub reports #205 and #207 open/draft. The maintainer has authorized the
+Windows agent to merge #205 independently and then continue #207. This branch keeps accepted
+runtime0f94252 and the recorded artifact identities; no Windows code is imported mid-experiment.
+A later combined Mac validation against integrated code remains required once both threads are ready.
 
 ## Remaining acceptance
 
