@@ -5666,3 +5666,21 @@ no backend cause established. Return for code/evidence review with performance a
 maintainer tradeoff decision or one focused graceful-quit comparison. No unqualified merge, release,
 production deployment, broad redesign or C15 advancement. Detailed report:
 docs/validation/dependency-repair-batching-207-2026-10-23.md. Remote CI status is tracked against PR head.
+
+
+### 2026-10-23 - PR207 graceful restart comparison; keep draft
+
+Zsolt's Codex Agent. Supersedes the pending graceful-quit question only; original performance/failure
+evidence remains. CI411 on479100d passed complete verify. Production d8d6 source/main19d754 frozen.
+Added isolated opt-in browser lifecycle/drain diagnostics and contract tests; default shutdown unchanged.
+All28 browser arms pass:4 smoke,12 forced/graceful128,12 bounded graceful64/256; no exclusions/retries.
+Actual native completion, connection close, clean exit0/new PID, later recreation/edit and cleanup proven.
+Graceful native-open penalty persists2/3 at128 and3/3 at256;256 deltas+83.5/+56.6/+83.6ms, combined
+restart/reopen+194.3/+145.5/+101.8ms (all3 meet unchanged material criterion). Larger physical file
+history observed but backend cause/Browser-storage CPU unmeasured; not a proved compaction/GC diagnosis.
+Maintenance still saves26.8-30.6s wall /12.8-14.7 renderer CPU seconds at256; no tolerance change.
+Recommendation Keep draft, return for maintainer decision; preserve implementation. A future bounded
+storage-process trace or explicit acceptance of this size-sensitive tradeoff is needed for progression.
+Affected harness/real-IDB integration81/81 pass, no skips; original exact-build native/full verification
+retained. No production changes/rebuild/release/deployment/#206 interference or C15 advancement.
+Detailed evidence: docs/validation/dependency-repair-batching-207-2026-10-23.md.

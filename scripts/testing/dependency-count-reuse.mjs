@@ -6,7 +6,7 @@
  */
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile, readdir, lstat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { performance as nodePerformance } from "node:perf_hooks";
 import { basename, dirname, join, resolve, sep } from "node:path";
@@ -14,6 +14,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { contributorBrowserBundle, contributorBrowserInitialize } from "../../tests/support/contributorBrowserFixture.mjs";
 import { chromiumHarness } from "../../tests/support/browserTypeScript.mjs";
 import { installDependencyCountReuseFixture } from "../../tests/support/dependencyCountReuseFixture.mjs";
+import { installRestartCompletionObserver } from "../../tests/support/restartCompletionObserver.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const repairStudy = (process.argv[2] ?? "").startsWith("repair-");
@@ -21,6 +22,27 @@ const base = repairStudy ? "930747679894f003a2acf3b800df798826ee090c" : "cd12a85
 const runtimeFile = "src/index/SourceRepository.ts";
 /** Pin compared source/bundle bytes independently of the surrounding tooling commit. */
 const sha256 = value => createHash("sha256").update(value).digest("hex");
+
+/** Stat only regular files below this harness's owned IndexedDB directory; never read database contents. */
+async function ownedIndexedDbSize(profile) {
+  const selected = resolve(profile);
+  if (!selected.startsWith(resolve(tmpdir()) + sep) || basename(selected) !== "profile"
+    || !basename(dirname(selected)).startsWith("kplex-source-idb-")) throw Error("Unowned browser profile size request");
+  for (const path of [dirname(selected), selected]) if ((await lstat(path)).isSymbolicLink()) throw Error("Profile alias rejected");
+  const started = performance.now(), stack = [join(selected, "Default", "IndexedDB")];
+  let files = 0, bytes = 0, directories = 0;
+  while (stack.length) {
+    const directory = stack.pop(); if (++directories > 128) throw Error("IndexedDB directory bound exceeded");
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name), state = await lstat(path);
+      if (state.isSymbolicLink()) throw Error("IndexedDB alias rejected");
+      if (state.isDirectory()) stack.push(path);
+      else if (state.isFile()) { if (++files > 4096) throw Error("IndexedDB file bound exceeded"); bytes += state.size; }
+    }
+  }
+  return { files, bytes, directories, observationElapsedMs: performance.now() - started,
+    scope: "Sum of regular-file stat sizes under the owned profile Default/IndexedDB; not allocated disk bytes, live records, fsync or physical-cache equivalence" };
+}
 
 /** Read an owned optional receipt without treating malformed JSON or other I/O errors as absence. */
 async function optionalReceipt(path) {
@@ -116,6 +138,7 @@ async function arm(bundle, name, config, detailed) {
     result.freshProcessLaunchElapsedMs = performance.now() - launchStart;
     result.failurePhase = "fixture-preparation";
     await initialize(browser);
+    if (config.shutdown) await browser.evaluate(`(${installRestartCompletionObserver.toString()})()`);
     result.browserVersion = await browser.command("Browser.getVersion");
     result.target = await browser.command("Target.getTargetInfo");
     const database = `dependency-${config.operation ? "repair" : "reuse"}-${name}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -154,9 +177,26 @@ async function arm(bundle, name, config, detailed) {
     }
     result.after = await browser.evaluate("dependencyCountReuse.oracle(dependencyCountReuse.context)");
     result.failurePhase = "restart-and-later-edit";
+    if (config.shutdown) result.beforeFixtureClose = await browser.evaluate("window.__kplexRestartCompletion.drain()");
     await browser.evaluate("dependencyCountReuse.context.fixture.close();true");
+    if (config.shutdown) {
+      result.beforeShutdown = await browser.evaluate(`(/** Prove native terminal completion and closed connection before either shutdown protocol. */async()=>{
+        const d=window.__kplexRestartCompletion,B=dependencyCountReuse;await d.drain();
+        ok(B.context.repository.transactions.size===0,'Repository has no active native transactions');
+        let closed=false;try{B.context.db.transaction('meta','readonly');}catch(error){closed=error instanceof DOMException&&error.name==='InvalidStateError';}
+        ok(closed,'Fixture cache requested actual native connection close');
+        const receipt=d.retire();delete window.__kplexRestartCompletion;return {...receipt,completedTransactions:receipt.completed,abortedTransactions:receipt.aborted,connectionClosed:closed};
+      })()`);
+      result.processBeforeShutdown = browser.identity();
+      result.storageBeforeShutdown = await ownedIndexedDbSize(result.processBeforeShutdown.profile);
+    }
     const restartStart = performance.now();
-    await browser.restart();
+    if (config.shutdown) result.restartLifecycle = await browser.restart({ shutdown: config.shutdown,
+      /** The active transaction observer has already authenticated this exact pre-quit lifetime. */
+      beforeShutdown: async () => result.beforeShutdown,
+      /** Observe file metadata after actual process exit, separately from launch/open timing. */
+      afterShutdown: async () => { result.storageAfterShutdown = await ownedIndexedDbSize(result.processBeforeShutdown.profile); return result.storageAfterShutdown; } });
+    else await browser.restart();
     result.browserRestartElapsedMs = performance.now() - restartStart;
     await initialize(browser);
     result.restartedTarget = await browser.command("Target.getTargetInfo");
@@ -246,12 +286,19 @@ async function arm(bundle, name, config, detailed) {
     result.reopenOracle = await browser.evaluate("dependencyCountReuse.oracle(dependencyCountReuse.context)");
     await browser.evaluate("dependencyCountReuse.context.fixture.close();true");
     result.status = "passed"; delete result.failurePhase;
-  } catch (error) { result.status = "failed"; result.error = String(error.stack ?? error); }
+  } catch (error) {
+    result.status = "failed"; result.error = String(error.stack ?? error);
+    if (error.lifecycleReceipt) result.restartLifecycle = error.lifecycleReceipt;
+  }
   finally {
     if (!browser) {
       result.freshProcessLaunchElapsedMs = performance.now() - launchStart;
       result.cleanup = { status: "unverified-by-driver", note: "Browser helper rejected before returning its handle; driver obtained no cleanup capability. No measured CPU endpoints exist." };
     } else {
+      if (config.shutdown) {
+        try { result.shutdownObserverCleanup = await browser.evaluate("(/** Retire only this arm's test observer if an earlier stage failed. */()=>{const d=window.__kplexRestartCompletion;if(!d)return {present:false,bindingsRestored:true};const value=d.retire();delete window.__kplexRestartCompletion;return {present:true,...value}})()"); }
+        catch (error) { result.shutdownObserverCleanup = { bindingsRestored: false, error: String(error.stack ?? error) }; result.status = "failed"; }
+      }
       if (config.reopenDiagnostic) {
         try { result.reopenDiagnosticCleanup = await browser.evaluate("(/** Restore/delete only this arm's retained diagnostic handle even after native or transport failure. */()=>{const B=dependencyCountReuse,d=B.reopenDiagnostic;if(!d)return {present:false,restored:true};const cleanup=d.retire();delete B.reopenDiagnostic;return {present:true,...cleanup,pendingTransactions:d.report.pendingTransactions}})()"); }
         catch (error) { result.reopenDiagnosticCleanup = { restored: false, error: String(error.stack ?? error) }; result.status = "failed"; }
@@ -299,13 +346,24 @@ async function controls(bundle, name) {
 async function main() {
   if (process.version !== "v22.22.2") throw new Error(`Node 22.22.2 required; actual ${process.version}`);
   const mode = (process.argv[2] ?? "smoke").replace(/^repair-/, "");
-  if (!["smoke", "characterize", "representative", "full", "late-control", "reopen", "responsiveness"].includes(mode)) throw new Error("Use smoke, characterize, representative, full, late-control, repair-reopen or repair-responsiveness");
-  const followup = repairStudy && ["reopen", "responsiveness"].includes(mode);
-  if (!repairStudy && ["reopen", "responsiveness"].includes(mode)) throw new Error("Follow-up diagnostics are restricted to the PR207 repair study");
+  if (!["smoke", "characterize", "representative", "full", "late-control", "reopen", "responsiveness", "shutdown", "shutdown-smoke", "shutdown-size"].includes(mode)) throw new Error("Use an existing comparison mode or repair-shutdown, repair-shutdown-smoke, repair-shutdown-size");
+  const shutdownStudy = mode.startsWith("shutdown");
+  const followup = repairStudy && (["reopen", "responsiveness"].includes(mode) || shutdownStudy);
+  if (!repairStudy && (["reopen", "responsiveness"].includes(mode) || shutdownStudy)) throw new Error("Follow-up diagnostics are restricted to the PR207 repair study");
   const changed = git(["diff", base, "--name-only", "--", "src/"]).trim().split(/\r?\n/).filter(Boolean);
   if (changed.some(/** Other runtime changes would invalidate the single-file exact-baseline override. */file => file !== runtimeFile)) throw new Error(`Exact baseline override insufficient for runtime files: ${changed.join(", ")}`);
   const baselineSource = git(["show", `${base}:${runtimeFile}`]);
   const candidateSource = await readFile(join(root, runtimeFile), "utf8");
+  let productionArtifacts;
+  if (shutdownStudy) {
+    if (sha256(baselineSource) !== "534a061e64ddfe7a609cc774788567ec8ba6afc4c953ea556e7ff9834fe4c63e"
+      || sha256(candidateSource) !== "d8d6d532bb711b3cb2bb5d0e55152392495533b8eb64c069158ca8b0e98809d8") throw Error("Shutdown study source identity changed");
+    if (!process.env.KPLEX_REPAIR_BASELINE_ARTIFACT_DIR) throw Error("Pinned baseline artifact directory required");
+    productionArtifacts = { A: sha256(await readFile(join(process.env.KPLEX_REPAIR_BASELINE_ARTIFACT_DIR, "main.js"))),
+      F: sha256(await readFile(join(root, "dist/main.js"))) };
+    if (productionArtifacts.A !== "7fa00a354d38fb2cedecbb9d15c5277e0513813b7074d487f5ebda9820c2b79f"
+      || productionArtifacts.F !== "19d75415c69d8c77bbde934f618eeece2f0387459a49003090eedef61b9bb28f") throw Error("Shutdown study production artifact identity changed");
+  }
   const bundles = { A: await contributorBrowserBundle([runtimeFile], { [runtimeFile]: baselineSource }), F: await contributorBrowserBundle([runtimeFile]) };
   const resumeDirectory = process.env.KPLEX_REPAIR_RESUME_DIR;
   if (resumeDirectory && followup) throw new Error("Follow-up diagnostics require a fresh separate report directory, not acceptance-cohort resumption");
@@ -325,14 +383,22 @@ async function main() {
       limitations: "Renderer ProcessTime covers renderer threads only; Browser/storage/utility CPU, OS PIDs/births/exits and sampling gaps are not observed. Fresh profiles do not establish equivalent physical storage, OS caches or heap. Browser launch/restart wall costs are separate; their startup CPU precedes CDP metric enablement and is excluded. Detailed native lifetime elapsed includes scheduling and is not exclusive lock time.",
     });
   }
+  if (shutdownStudy) {
+    summary.productionArtifacts = productionArtifacts;
+    summary.conditions.shutdownStudy = "Diagnostic-only: same completed 128-owner mixed deletion write history; forced SIGTERM/fallback versus normal CDP Browser.close. Passive transaction terminal observer, closed native connection, actual owned PID exit/new PID before reopen. No forced GC or idle delay. File stat observations are outside native-open clocks; physical equivalence is not inferred.";
+    summary.conditions.decisionRule = "Existing material rule retained: candidate >=10% and >5ms excess in at least2/3 pairs for reopen, localized native open, and separately total shutdown/relaunch/reopen. Inspect cost shifted into shutdown. If graceful128 repeats material excess, bounded64/256 graceful size comparison; all failures/unfavorable arms retained, no post-hoc tolerance.";
+  }
   if (followup) Object.assign(summary.conditions, { diagnosticOnly: true, cpuEligibleForAcceptance: false,
-    diagnosticScope: mode === "reopen" ? "One-evaluation fixture/open, lookup, flush, completeInventory and closure-remainder wall spans; total renderer CPU only. Native open events and at most 16 transaction records; SystemInfo snapshots outside CPU endpoints. No source payloads or extra between-phase native awaits."
+    diagnosticScope: mode === "reopen" || shutdownStudy ? "One-evaluation fixture/open, lookup, flush, completeInventory and closure-remainder wall spans; total renderer CPU only. Native open events and at most 16 transaction records; SystemInfo snapshots outside CPU endpoints. No source payloads or extra between-phase native awaits."
       : "16ms event-loop heartbeat including terminal gap, optional >=50ms long-task count/observed maximum/top8. Whole replacement includes staging, count repair, reclamation, closure and IPC; no exclusive count-owner CPU, true maximum task duration or paint inference.",
     diagnosticOverhead: "Diagnostic observers and process snapshots are separate follow-ups; do not pool these CPU endpoints with the original acceptance cohort. Original unfavorable reopen endpoints remain unchanged." });
   const protocol = repairStudy ? { version: "dependency-repair-207-v1", transportBatch: 8, seedBatch: 32,
     fixtureSha256: sha256(await readFile(join(root, "tests/support/dependencyCountReuseFixture.mjs"))),
     browserHarnessSha256: sha256(await readFile(join(root, "tests/support/browserTypeScript.mjs"))),
     contributorFixtureSha256: sha256(await readFile(join(root, "tests/support/contributorBrowserFixture.mjs"))) } : null;
+  if (shutdownStudy) Object.assign(protocol, { version: "dependency-repair-207-shutdown-v1",
+    lifecycleSha256: sha256(await readFile(join(root, "tests/support/chromiumLifecycle.mjs"))),
+    completionObserverSha256: sha256(await readFile(join(root, "tests/support/restartCompletionObserver.mjs"))) });
   const passed = new Map();
   if (resumeDirectory) {
     const previousBytes = await readFile(join(directory, "summary.json"));
@@ -377,7 +443,17 @@ async function main() {
     await save(name, result); currentResults.set(name, result.status);
   };
   if (followup) {
-    if (mode === "reopen") {
+    if (shutdownStudy) {
+      const pairs = mode === "shutdown-smoke" ? 1 : 3;
+      for (let pair = 1; pair <= pairs; pair++) {
+        const sizes = mode === "shutdown-size" ? pair % 2 ? [64, 256] : [256, 64] : [mode === "shutdown-smoke" ? 2 : 128];
+        for (const owners of sizes) for (const shutdown of mode === "shutdown-size" ? ["graceful"] : pair % 2 ? ["forced", "graceful"] : ["graceful", "forced"])
+          for (const kind of pair % 2 ? ["A", "F"] : ["F", "A"]) {
+            const name = `diagnostic-${shutdown}-${owners}-mixed-delete-${pair}-${kind}`;
+            await run(kind, name, { owners, distribution: "mixed", operation: "delete", wide: false, pair, reopenDiagnostic: true, shutdown }, false);
+          }
+      }
+    } else if (mode === "reopen") {
       for (let pair=1;pair<=3;pair++) for (const kind of pair%2?["A","F"]:["F","A"]) {
         const name=`diagnostic-reopen-128-mixed-delete-${pair}-${kind}`;
         await run(kind,name,{owners:128,distribution:"mixed",operation:"delete",wide:false,pair,reopenDiagnostic:true},false);

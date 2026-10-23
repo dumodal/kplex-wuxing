@@ -242,3 +242,138 @@ The implementation is useful and ready for **code/evidence review**, with full l
 **An unqualified performance-acceptance or merge recommendation is held.** The declared adverse reopen criterion was triggered and the bounded diagnostic locates a repeatable candidate-associated native database-open penalty. Its storage-process cost and backend cause are unmeasured. Better maintenance totals do not erase it. No speculative runtime correction, GC, storage redesign, delay or schedule tuning is proposed.
 
 The smallest remaining decision is maintainer acceptance of the measured restart tradeoff, or one specifically scoped comparison of graceful browser quit against the existing SIGTERM/fallback restart, retaining the same completed write history and open-phase observations. That would test the remaining shutdown/physical-state confounder; it is not assumed to clear the candidate. Full-application Obsidian shutdown, macOS and physical mobile acceptance are not established by these Windows/component checks. No additional general UI manual matrix is needed for this backend-only change. #207 stays draft and must not merge automatically. GitHub publication/CI status is recorded in the PR against the published head; local verification is not represented as remote CI.
+
+
+## Graceful-shutdown follow-up protocol (declared before collection)
+
+2026-10-23: CI411 completed successfully against published implementation `479100d03c5bbed0a5e4e17da01b667f58d7d2af`; diagnostic work started independently while CI ran. Production is frozen at final source d8d6... / artifact 19d754... . Accepted baseline remains 930747... / source534a... / artifact7fa00... . Original forced-restart measurements above remain intact.
+
+Retained forced diagnostics localized the three candidate-associated delays to native `indexedDB.open()` (25.1 -> 521.3,27.1 -> 188.1,25.7 -> 34.9ms). Lookup stayed 2.2-2.6ms; outer transport about1.2-1.6ms; repair/count writes were zero. The old helper sent SIGTERM with a five-second SIGKILL fallback and waited for root exit, but did not retain actual PID/exit/fallback receipts. Native terminal completion and physical backend quiescence were not interchangeable, and no LevelDB/GC/compaction cause was established.
+
+New bounded comparison: three alternating baseline/candidate pairs at128 owners, mixed deletion, for both forced and graceful protocols (12 arms). Pair source order AF/FA/AF; protocol order forced/graceful,graceful/forced,forced/graceful. Same fixture, seed/transport batches, logical oracle, write/reclamation history and post-reopen recreation/edit. Final catch-only correction is distinguished from the earlier measured source. A separate2-owner four-arm smoke passed and is excluded from inference.
+
+A passive native transaction observer is installed before setup, waits for every complete/abort event, proves repository pending transactions zero and native connection closure, then restores its binding before quit. Forced shutdown retains the original signals/deadline. Graceful shutdown sends CDP Browser.close and requires actual owned root PID exit0 without signal before a different root launches; timeout/fallback cannot earn a graceful pass. Owned profile IndexedDB regular-file stat totals are observed before shutdown and after actual exit, before launch, with their overhead separate. These totals are neither allocated disk usage nor logical live data, and do not establish equal OS caches/fsync/compaction state. No forced GC, delay, global storage change or production deployment.
+
+Separate clocks: shutdown -> actual exit, post-exit stat observation, browser launch, browser-local native open/fixture open/lookup/flush/inventory/closure, outer CDP elapsed and observer CPU. Combined restart+reopen is also assessed so cost moved into shutdown is visible. Renderer CPU covers that process only, not Browser/storage/utility processes. Diagnostic observer CPU is not pooled with the original acceptance cohort.
+
+Decision rule remains candidate >=10% **and** >5ms excess in at least2/3 matched pairs; inspect native open and complete restart/reopen separately. If graceful128 repeats material excess, run only bounded64/256 graceful comparison (three alternating pairs per size), then stop. All failures/unfavorable arms are retained. Contract tests24/24 pass; default non-opt-in restart semantics remain unchanged.
+
+
+## Main shutdown comparison: actual results
+
+All12 arms passed; collection16:00:53-16:09:35UTC. Private receipt directory `%TEMP%/kplex-dependency-repair-207-shutdown-ogaLcJ`; four-arm smoke `%TEMP%/kplex-dependency-repair-207-shutdown-smoke-JlQDwv`. No runs excluded or retried. The size extension was triggered by graceful native-open excess in2/3 pairs under the unchanged criterion.
+
+Each A/F cell is baseline/candidate in milliseconds, preserving actual paired samples.
+
+| Protocol/pair | Native open A/F | Delta F-A | Outer reopen A/F | Shutdown A/F | Launch A/F | Restart+reopen sum A/F |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+|forced/1|73.7 / 37.2|-36.5|83.9 / 51.3|99.8 / 72.2|385.2 / 351.5|576.6 / 477.3|
+|graceful/1|24.9 / 40.8|15.9|35.8 / 52.6|153.4 / 131.1|331.4 / 320.5|523.2 / 507.0|
+|graceful/2|454.4 / 39.2|-415.2|465.1 / 50.8|126.2 / 114.4|331.7 / 349.0|925.5 / 516.9|
+|forced/2|74.3 / 611.8|537.5|84.4 / 625.4|96.1 / 80.2|342.4 / 398.6|525.3 / 1107.0|
+|forced/3|26.2 / 37.8|11.6|35.8 / 50.4|91.1 / 69.5|333.7 / 339.0|463.1 / 460.9|
+|graceful/3|26.5 / 39.2|12.7|38.0 / 50.5|120.9 / 124.4|326.7 / 334.2|488.3 / 511.4|
+
+The sum includes shutdown, post-exit metadata observation, relaunch and outer reopen. It excludes the intervening fixture-binding initialization, target/SystemInfo queries and CPU endpoint calls; it is a sum of measured spans, not continuous full-application startup latency. All clocks are distinct; native open is request-call to success, not browser launch or transport.
+
+| Protocol/pair | Fixture open A/F | Lookup A/F | closeWork A/F | Renderer reopen CPU A/F | Transport remainder A/F |
+| --- | ---: | ---: | ---: | ---: | ---: |
+|forced/1|75.0 / 38.3|2.3 / 2.5|5.1 / 9.3|6.7 / 6.4|1.4 / 1.1|
+|graceful/1|25.8 / 41.9|2.5 / 2.4|5.8 / 6.3|6.5 / 7.1|1.7 / 1.8|
+|graceful/2|455.5 / 40.3|2.5 / 2.6|5.6 / 6.6|6.9 / 6.8|1.4 / 1.3|
+|forced/2|75.3 / 612.9|2.1 / 4.0|5.7 / 7.3|6.3 / 9.0|1.3 / 1.1|
+|forced/3|27.0 / 39.0|2.1 / 2.6|5.1 / 6.6|6.3 / 7.1|1.4 / 2.2|
+|graceful/3|27.5 / 40.1|2.2 / 2.2|6.6 / 6.5|7.3 / 6.5|1.5 / 1.6|
+
+| Protocol/pair | Preceding delete/closure wall ms A/F | Renderer CPU ms A/F | IndexedDB stat bytes A before/after | F before/after |
+| --- | ---: | ---: | ---: | ---: |
+|forced/1|24396.4 / 9606.3|11065.1 / 4665.5|17920108 / 17920108|30043045 / 30067829|
+|graceful/1|24348.2 / 10021.2|11122.4 / 4819.8|24450653 / 26130427|33282147 / 34368369|
+|graceful/2|24330.6 / 9982.4|11122.6 / 4876.5|25048274 / 26557975|33958773 / 35527334|
+|forced/2|25209.5 / 10221.9|11444.4 / 4868.1|25402275 / 25419800|35194047 / 35219021|
+|forced/3|25164.7 / 10128.8|11228.6 / 4789.6|25000722 / 25030170|18839097 / 18857855|
+|graceful/3|24771.3 / 10358.5|11096.5 / 4920.6|25209029 / 26701558|33800759 / 35181866|
+
+Every arm starts from the same verified128-owner logical inventory:79,744 memberships,12,038,784 logical JSON bytes and24,982 distinct keys. After deletion and reopen there are128 tombstone owners, zero selected membership bytes/keys, and zero repair/pending/dirty/journal/inactive/lease/reader/decode debt. This is not a physically empty database. All pre-quit native transaction starts equal terminal completions plus aborts, pending=0, connection-close check passes, bindings restore. Graceful roots acknowledge Browser.close and exit0 without signal/fallback; forced roots report SIGTERM (no SIGKILL escalation); every replacement PID differs. Reopen executes zero repair entries/count writes, and later recreation/edit/oracles/cleanup pass.
+
+`SystemInfo.getProcessInfo` is unavailable through this page target (explicit failure retained), so these results do not attribute Browser/storage/utility CPU. Renderer ProcessTime includes renderer threads only, and Node observer CPU is separate. No renderer CPU spike explains the native wait.
+
+Exact diagnostic protocol receipts:
+
+```json
+{
+  "sourceHashes": {
+    "A": "534a061e64ddfe7a609cc774788567ec8ba6afc4c953ea556e7ff9834fe4c63e",
+    "F": "d8d6d532bb711b3cb2bb5d0e55152392495533b8eb64c069158ca8b0e98809d8"
+  },
+  "bundleHashes": {
+    "A": "0a5005f3350f0f68e3bcc9f0779b18c861090907466bf0acb168b3a0db1d5add",
+    "F": "343bec7712a7b5c7f9a9f0a7cd1cd98907c92e8ce7ab2cbb16d1aebf0b10dc76"
+  },
+  "productionArtifacts": {
+    "A": "7fa00a354d38fb2cedecbb9d15c5277e0513813b7074d487f5ebda9820c2b79f",
+    "F": "19d75415c69d8c77bbde934f618eeece2f0387459a49003090eedef61b9bb28f"
+  },
+  "protocol": {
+    "version": "dependency-repair-207-shutdown-v1",
+    "transportBatch": 8,
+    "seedBatch": 32,
+    "fixtureSha256": "ba747512909fecc4cdf78bc909c68dec7c91dd9abc43932ae15e046c8fd3374e",
+    "browserHarnessSha256": "1679543234a82e3707b4a8929ace6f9baabadc16011026371bfc87e5aaaeac93",
+    "contributorFixtureSha256": "65232eb0125dbe5da9a924c6247ef6a4ce087f7deb2a3b0aade9170226e4c41a",
+    "lifecycleSha256": "68e2c0a71b2c5d5c31e3c972eb4b1f05f2e32e7c7c6abdedf475d8e130e39a7f",
+    "completionObserverSha256": "7f9f9d5236adb503b40b16dee118d73035ed8eb3cd109cb98d2160d9ba8df6fe"
+  }
+}
+```
+
+
+## Bounded graceful size comparison and final decision
+
+All12 extension arms passed,16:09:52-16:21:22UTC, three alternating pairs each at64 and256 owners. Private receipts: `%TEMP%/kplex-dependency-repair-207-shutdown-size-p4E6aZ`. Together with the main12 and smoke4, all28 browser arms pass; no failures, exclusions, retries or extra measurements. The inherited generic summary condition says128 owners; actual arm configs/oracles and the predeclared size protocol correctly specify64/256. No source or runtime artifact changed.
+
+| Owners/pair | Native open A/F ms | Delta F-A | Outer reopen A/F ms | Shutdown A/F ms | Launch A/F ms | Restart+reopen sum A/F ms |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+|64/1|13.3 / 35.5|22.2|23.3 / 43.9|111.8 / 180.1|330.6 / 371.6|468.3 / 597.7|
+|256/1|34.7 / 118.2|83.5|42.9 / 204.4|149.6 / 174.1|332.8 / 340.2|528.1 / 722.4|
+|256/2|32.5 / 89.1|56.6|41.0 / 164.1|143.2 / 157.0|343.9 / 351.7|531.0 / 676.5|
+|64/2|14.2 / 29.5|15.3|23.3 / 37.6|143.3 / 133.7|354.8 / 331.8|523.2 / 504.9|
+|64/3|15.2 / 37.8|22.6|24.2 / 49.0|139.6 / 156.7|352.0 / 325.0|518.0 / 532.6|
+|256/3|34.1 / 117.7|83.6|43.7 / 184.2|170.5 / 144.5|353.9 / 339.7|570.4 / 672.2|
+
+| Owners/pair | Lookup A/F ms | closeWork A/F ms | Renderer reopen CPU A/F ms | Delete/closure wall A/F ms | Renderer write CPU A/F ms |
+| --- | ---: | ---: | ---: | ---: | ---: |
+|64/1|2.7 / 2.3|4.3 / 3.6|6.6 / 6.3|13127.8 / 5312.7|5558.1 / 2918.3|
+|256/1|2.2 / 2.7|3.6 / 81.1|6.5 / 7.0|50166.3 / 23354.3|22858.8 / 10064.5|
+|256/2|2.5 / 2.2|3.6 / 70.0|6.6 / 6.8|50601.9 / 23736.9|23290.2 / 9961.6|
+|64/2|2.4 / 2.1|4.3 / 3.6|6.3 / 6.1|12039.4 / 5038.6|5756.9 / 2563.2|
+|64/3|2.3 / 2.3|4.3 / 6.3|6.6 / 6.4|11932.1 / 4951.9|5718.1 / 2477.2|
+|256/3|2.2 / 2.4|4.0 / 61.5|6.7 / 7.0|54308.9 / 23741.1|24929.1 / 10269.8|
+
+| Owners/pair | IndexedDB stat bytes A before/after | F before/after |
+| --- | ---: | ---: |
+|64/1|7575507 / 7575593|17106485 / 17106485|
+|256/1|29607939 / 29607939|61504098 / 61504098|
+|256/2|29607916 / 29607916|70390515 / 71795124|
+|64/2|7601963 / 7601963|16946506 / 16946506|
+|64/3|7583458 / 7583458|12744595 / 14583107|
+|256/3|29648346 / 29648346|60806192 / 60806192|
+
+All size arms retain the same native terminal-completion, connection-close, actual exit0/new PID, zero reopen repairs/count writes, recreation/edit/oracle and independent cleanup assertions as the main study. Baseline/candidate full logical before/after oracle objects match in every pair.
+
+| Logical starting inventory | Memberships | Logical JSON bytes | Distinct keys |
+| --- | ---: | ---: | ---: |
+|64 owners|39872|6015744|12566|
+|128 owners|79744|12038784|24982|
+|256 owners|159488|24098688|49814|
+
+**Recommendation: Keep draft (option3).** The candidate-associated penalty is not confined to SIGTERM/fallback. At256 owners, native-open deltas are +83.5,+56.6,+83.6ms, and combined restart/reopen deltas +194.3,+145.5,+101.8ms; all three pairs trigger the unchanged material criterion in both intervals. This is larger than the13-16ms non-outlier native excess at128 and the roughly20ms-scale excess at64. The sample supports growth at256; it does not establish a monotone scaling law or a bound for larger databases/vaults. The128 baseline454.4ms graceful outlier and forced candidate611.8ms remain retained. Graceful shutdown is reassuring about actual clean exit, but is not a performance cure.
+
+The expensive interval is localized to native open, plus approximately61-81ms closeWork in the256 candidate arms (see phase table), with no pending repair/count work. It is not browser launch or CDP transport alone. Browser/utility/storage CPU is unmeasured; no backend profile establishes WAL recovery, compaction, range-delete processing or GC as the cause. The preceding implementation demonstrably changes work and physical file history, but file-size observations do not identify a storage mechanism. Native transaction closure and clean root exit rule out those missing lifecycle prerequisites; they do not prove equal physical state or OS cache.
+
+Maintenance remains substantially cheaper: at256 each paired delete/closure saves26.8-30.6 seconds wall and12.8-14.7 renderer CPU seconds. These diagnostic cost observations are not pooled with the original acceptance CPU cohort or used to raise the tolerance. The implementation, #204 reuse, #205 reader protection, prior correctness/native evidence and original forced results remain intact. No production fix is proposed without a demonstrated backend cause. The smallest future causal diagnostic would be a targeted browser/storage-process trace of this bounded256-owner baseline/candidate history and native-open/closure interval; it was not added to this bounded assignment. Alternatively the maintainer can explicitly accept this measured, size-sensitive tradeoff. No automatic merge, release, production deployment or #206 change.
+
+Measured diagnostic driver SHA256: `c2f9775b090b26e3c57bb39fbdc64b8da87b719d1db40367f21b6920f776e828`. Browser fixture/helper/lifecycle/observer and A/F bundle/artifact hashes match the main protocol block above for all extension arms. Raw receipts and measured-driver copy stay private. Reproduction uses pinned Node22.22.2, `KPLEX_REPAIR_BASELINE_ARTIFACT_DIR` pointing to verified baseline7fa00... main.js, unchanged candidate dist19d754..., and commands `node scripts/testing/dependency-count-reuse.mjs repair-shutdown-smoke`, then `repair-shutdown`, with `repair-shutdown-size` only when the fixed trigger is met. Do not pool these diagnostic observers with earlier acceptance timings.
+
+
+Follow-up validation: pinned Node22.22.2 `node --test --test-concurrency=1 tests/chromium-lifecycle.test.mjs tests/restart-completion-observer.test.mjs tests/dependency-count-reuse-harness.test.mjs tests/source-local-dependencies-indexeddb.test.mjs` passes **81/81**, zero failures/cancellations/skips,70.0s. Private log `%TEMP%/kplex-207-validation/shutdown-final-regression.log`. New contract tests are included in `npm test`. All28 owned browser profile paths are absent after their recorded passing cleanup. CI411 run39978278077/job120498537183 completed successfully (npm ci and complete npm run verify) against479100d03c5bbed0a5e4e17da01b667f58d7d2af. Follow-up changes are diagnostic tooling/tests/docs only; the completed real-dependency build/full local/native validation and CI remain applicable to unchanged production source/artifact. No new production build/native matrix is claimed for this diagnostic-only checkpoint. No further general UI manual checks are required; full Obsidian shutdown/macOS/mobile performance acceptance remains unclaimed.
