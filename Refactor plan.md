@@ -5706,3 +5706,18 @@ reported on PR. Return for maintainer decision, not merge-ready; no automatic ex
 No release/production deployment/#206 contact or C15 advancement. No manual test needed for test-only
 changes; storage/performance acceptance is unresolved. Detailed evidence:
 docs/validation/dependency-repair-storage-207-2026-10-23.md.
+
+
+### 2026-10-23 - PR207 maintainer-accepted limitation; scoped merge authorized
+
+Zsolt's Codex Agent. Maintainer explicitly stops causal work and accepts reopening/storage cost,
+unresolved backend cause and no production-vault scaling bound for this scoped merge. No adverse
+measurement is a pass; no threshold, runtime code or scheduling change. Both storage-growth histories
+remain a separate open follow-up in the existing report, not an active benchmark assignment.
+CI417 passed atafb0a1d. Normal main reconciliation returned Already up to date against9307476.
+Current-source affected real-IDB integration125/125 passes with zero failures/skips; unchanged19 build
+Small native foreground and five-case SI5 recovery pass with cleanup/configuration/throttling restored.
+No new correctness or substantive integration regression. Final documentation CI gates normal merge;
+actual result/merge reachability are recorded on PR207. Runtime d8d6/main19d754 remains unchanged.
+No unmerged #206 input/contact, new benchmark, storage change, release, production deployment or C15 work.
+Details: docs/validation/dependency-repair-storage-207-2026-10-23.md.

@@ -1,6 +1,8 @@
 # PR207 dependency-repair storage isolation
 
-**Return: keep draft.** No production correction is supported by this bounded causal study. Both partial reverts and both read-path controls retain the penalty. Browser-root CPU is implicated, but the physical backend cause is unproved; neither repeated history plateaus within three cycles. The substantial maintenance improvement remains intact.
+**Historical investigation return: keep draft.** No production correction is supported by this bounded causal study. Both partial reverts and both read-path controls retain the penalty. Browser-root CPU is implicated, but the physical backend cause is unproved; neither repeated history plateaus within three cycles. The substantial maintenance improvement remains intact.
+
+Current disposition: the maintainer has accepted the documented limitation for a scoped merge, subject to CI and integration. The adverse findings and earlier investigation recommendation below are preserved. See the final acceptance section.
 
 Zsolt's Codex Agent,2026-10-23. This report supplements [the original validation report](dependency-repair-batching-207-2026-10-23.md); historical measurements and failures remain intact. Draft PR207, branch2026-10-23-dependency-repair-batching. No automatic merge/release/production deployment; #206 untouched.
 
@@ -196,3 +198,29 @@ Against those savings, the original candidate-specific graceful-reopen cost is r
 - CI411 and independently checked final reviewed diagnostic CI412 passed; CI413 passed on isolation checkpoint979cefe7…. CI414/run39996991127 passed complete verification at464779c572756a2d0cf25570aa10004d6e6bb177. Later checkpoint CI416 is checked independently and its actual final status is recorded in PR checks/comments; in-progress status is not counted as a pass.
 - Physical storage and OS caches remain unmatched despite equal logical inputs and fresh per-arm profiles. File lengths, Windows per-file filesystem allocation and known logical record counts are separate. Allocation omits directory/device-exclusive effects. Three cycles establish only this finite history. CPU snapshots have observer overhead and no terminal sample for exited children; shutdown/launch CPU and exclusive backend stacks are not established. Endpoint heaps are not allocation or true peaks. No baseline/candidate medians are subtracted to infer individual-run CPU.
 - No manual/device check is needed for these test-only changes. The remaining blocker is performance acceptance, not an unrun automation that can substitute for causal evidence. #206 branch, implementation, fixtures, startup owners and retained data are untouched. No merge/release/production deployment.
+
+## Maintainer-accepted limitation and scoped merge authorization
+
+On 2026-10-23, after reviewing this return, the maintainer explicitly stopped the causal investigation and accepted the documented reopening-latency and physical-storage tradeoff for a scoped merge of #207. This acceptance includes the unresolved backend cause and lack of a production-vault scaling bound. It supersedes the earlier merge hold as a maintainer risk decision; it does not supersede or relabel any measurement.
+
+The predeclared material-regression criterion remains unchanged. The adverse reopen results remain adverse, the incomplete metadata-race attempt remains incomplete, and the observed growth is not recast as a plateau or a performance pass. Preserve the validated implementation and all earlier source/artifact identities. No speculative storage correction, new benchmark campaign, schema/scheduling change, release or production deployment is authorized.
+
+The authorized merge is conditional on final CI, reconciliation with current accepted main, and affected integration checks finding no new correctness or substantive integration regression. Only accepted main may be incorporated; no unmerged #206 branch, fixture, implementation or retained evidence is an integration input. Actual integration and merge receipts are recorded with the final PR checkpoint/comment.
+
+### Open follow-up: baseline-and-candidate physical storage growth
+
+Retain this separately from scoped merge acceptance. Across the three complete repeated histories, post-second-reopen regular-file lengths were 54.6 → 128.3 → 163.3 MB for baseline and 67.2 → 132.4 → 187.9 MB for candidate. Per-file filesystem allocation approximately matched lengths, while the known logical repair/reclaim/lease debt closed. Neither sequence reached a plateau in this window; a second graceful reopen did not reliably eliminate the candidate cost.
+
+The backend mechanism, eventual growth bound, complete live-payload census and production-vault scaling remain unresolved. Both variants' growth, all timing variation, differing observer versions and the retained failed attempt remain part of this follow-up. This is an open engineering question, not an active assignment or authorization for more measurements, storage redesign, changed thresholds or a #206 measurement request.
+
+### Accepted-main reconciliation and affected integration
+
+CI417/run40002619982 completed full verification successfully at afb0a1d1e0bf9a5b4250a9f693c20e1fc25fea14. Only after that gate, fetched origin/main was reconciled normally: git merge --no-edit origin/main returned Already up to date. Accepted main remained930747679894f003a2acf3b800df798826ee090c; no source/dependency/build/default change or unmerged #206 input was introduced.
+
+Affected integration was rerun under Node22.22.2 after reconciliation:
+
+- Real Chromium IndexedDB: source-local dependencies, contributor journal recovery, contributor lease protection and foreground startup: **125/125 passed, zero failures/skips**. These run current production sources, not experimental variant overrides.
+- Existing guarded kplex-test-small, unchanged installed/built19d75415… artifact: native foreground inventory/interaction passed with zero owned fixtures and controller removed; configuration restored.
+- Native SI5 changed-policy, missing-cache, corrupt-cache, corrupt-source and offline-edit recovery passed. Settings, fixtures and throttling were restored. No application-wide restart, new vault, production install or performance comparison was performed. Informational timings in these functional receipts are not new acceptance CPU evidence.
+
+Private integration receipts: %TEMP%/kplex-207-merge-3JHTTZ. SourceRepository SHA256 remains d8d6d532bb711b3cb2bb5d0e55152392495533b8eb64c069158ca8b0e98809d8; main.js remains19d75415c69d8c77bbde934f618eeece2f0387459a49003090eedef61b9bb28f. No new correctness or substantive integration regression was found. The acceptance/integration documentation checkpoint has its own CI gate before merge; its actual result and verified merge commit are recorded in the PR's final comment. No performance assertion or adverse result is relabeled.
