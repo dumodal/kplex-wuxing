@@ -5618,6 +5618,160 @@ terminal outcomes are recorded in PR203. Finalized report/retention status; no n
 measurement, C15 advancement or release. Scientific acceptance remains qualified/inconclusive.
 
 
+## 2026-10-23 - PR206 checkpoint A1 (recovery correctness, acceptance incomplete)
+
+| Checkpoint | Result | Remaining acceptance |
+| --- | --- | --- |
+| A1 settled source/scope recovery | Existing initial-index owner resumes through one coalesced fenced continuation; full verify and exact-build Small smoke pass | Settings-publication follow-up, native recovery/interaction, B work reduction and matched CPU measurements |
+
+Action log (2026-10-23, PR206 A1): current-base controlled missing-metadata/write-failure
+recovery reproduces stranded initial adoption; 15 coordinator scenarios and two real-IDB
+recovery cases now pass. Source inventory releases before notification; no polling, forced
+completion, watchdog/storage/SourceRepository change. Full npm run verify passes Node22.22.2;
+exact Small bundle4b53d61d2ae7d1ff4a3a127b71c0d30036722e726559bf264113eaac4e39cf28
+passes command/render/no-captured-JS-error smoke only. Native fault recovery remains pending.
+Three settings-publication cases still fail and are a separate unregistered working-tree follow-up.
+Accepted-base S2 actually converges in32m43s plus10mquiet; wholeprocess4036.03CPU-s,
+external power series absent/retrospective cross-check only. No A1 CPU-saving claim.
+Discovery invalidation and startup-only interval full-builder ownership are demonstrated before
+fixtures for B, not corrected in A1. PR205/207 currently open/draft; user authorizes Windows
+independent merge, no mid-experiment import here; combined Mac acceptance later required.
+C14 accepted, C15-C26 paused. See docs/validation/startup-source-convergence-206-2026-10-23.md.
+Prioritized remaining native checks: automatic genuine recovery without reopen/rebuild;
+early editing/navigation/tag-folder-search semantic parity; original unresolved broad-tag control.
+
+Action log (2026-10-23, PR206 A2): coherent non-paint/legacy-alias/empty-demand semantic
+settings publication resumes its superseded initial adopter, with alias lifetime fenced. Three
+regressions pass; A1 remains separately reviewable at4407177. Combined A2/B working-tree full
+verify and exact native Small smoke pass with bundle6ad7c8165cfa0ad66448897aaf0c401b0ccf722702f3c7498c911348502d4a50.
+Controlled native metadata recovery passes exactly2 actual adoptions(false/true), retained scene,
+fullBuilds0 and masks0; cleanup/settings bytes pass. This reopens coordinator flags on a settled
+native source-backed index, not fresh-process routing. Exact15-store Small checkpoint retained
+before faults; SI4 passes, SI5/native foreground/real-copy timing still pending. Forty-one
+driver/observer checks pass. SourceRepository/read-plumbing unchanged. No CPU-saving claim.
+Combined Mac/Windows validation still pending; PR205/207 remain open/draft at this checkpoint.
+
+## 2026-10-23 - PR206 checkpoint B (work policy, real-copy measurement pending)
+
+| Checkpoint | Result | Remaining acceptance |
+| --- | --- | --- |
+| B lifecycle discovery and automatic builder ownership | Pre-layout enumeration no longer invalidates body/URL owners; startup-only automatic full builder yields ownership to initial source adoption | Native SI5/foreground/live checks, matched real-copy work/CPU, broad-tag control and final audit |
+
+Action log (2026-10-23, PR206 B): accepted-base native S2 showed11819 body-dirty owners at
+late attachment,11839 replacements/URL scan11819 and one full rebuild cancelling inventory
+with no changed host/maintenance epoch. Exact installed Vault API documents initial create
+enumeration. B changes lifecycle qualification only; restart metadata/resolution/Date/path
+validity remains unchanged. Eighteen real-IDB cases pass in eager/on-demand, including
+same-stat edits, late real creation/recreation, offline alias/Date/move, missing/corrupt metadata.
+Ten interval ownership cases pass: startup-only auto builder suppressed, seven real-change/
+cold/on-demand/explicit controls retain work. Broad source acquisition after revision changes
+is not labelled identical replay; baseline saw only one same-revision revisit. Existing indexing
+assertion updated deliberately with opposite post-layout create guard. Full verification and
+exact Small smoke passed in combined6ad7c816 candidate; A1/A2 recovery commits remain separate.
+No watchdog, source-read/validation/count/schema algorithm or reserved read-plumbing changes.
+No measured B CPU gain yet. Native SI5 and subsequent lanes are still pending. C14 paused.
+
+Action log (2026-10-23, PR206 native functional follow-up): frozen runtimeb38a889/6ad7c816
+passes SI5 and ordinary foreground. Original very-early recent-tab sync fails BOTH accepted
+0f94252 and candidate: native activation inside existing3s workspace/history guard is absent
+from history, while canonical/physical target exists and semantics are idle. No production
+navigation change. Separate explicit workspace-ready variant holds unrelated P3 and passes
+both arms through actual queue drain. It does not erase the original early failure.
+A candidate hot activation after identical decoded Small checkpoint restore crashed renderer
+before controller installation; OS SIGTRAP on renderer worker has no causal JS stack. Healthy
+Brain stayed off. Crash preserved; isolated crashed-Small reload recovered, subsequent variant
+passes. Root cause unresolved, not a clean acceptance waiver. Test-only alternate immutable
+artifact attribution/scalar diagnostics/explicit variant added;41driver checks pass.
+Native ontology/startup admission and real-copy measurement still pending; runtime unchanged.
+
+Action log (2026-10-23, PR206 native completion checkpoint): ontologyStartupUpdates passes
+stationary editing before remaining source commit with physical provenance; startupAdmission
+passes dormant policy/device controls/concurrent opening/close-reopen/explicit closed rebuild.
+All native runs used exact6ad7c816 candidate on Mac; inherited Windows limitation label in
+startup report is not host evidence. Early-history failure and hot-activation crash remain
+qualified, not waived. Small closed and19 original config/plugin files byte-restored offline;
+original Sync/community restored only after closure. Brain is sole healthy window/off[].
+Same retained S2 restore now active with independent external power sampler. Candidate CPU/
+work, broad-tag, read-only real-copy recovery and final audit remain pending. No runtime change.
+
+Coordination checkpoint (2026-10-23 12:56UTC, PR206): GitHub verifies Windows205 merged
+12:30:42UTC as930747679894f003a2acf3b800df798826ee090c (head104a5837). Protected
+cached-metadata read batching has entered main;207 is draft/open based there for dependency-
+count maintenance. No import/rebase/merge/deployment here;0f94252 baseline andb38a889/6ad7c816
+candidate remain frozen during experiments. Later integrated Mac validation remains required.
+
+Action log (2026-10-23, PR206 first matched S2 observation): exact6ad7c816 candidate completes
+428.6s to actual source/URL/persistence closure plus602.3squiet,693.78wholeprocessCPU-s.
+Accepted-base comparison1963.1sclosure/601.3squiet/4036.03CPU-s; baseline external-power
+series absent, so ONE QUALIFIED pair, no universal speedup. Source validations11839 remain;
+body reads/parses0, actualactivations1resolution/chunks1/4881payloadB versus base11839
+activations/47606chunks/76946676payloadB. No cancelled inventory/full builder; broad pass plus
+0.3sfollow-up, not zero reconciliation. #204selectedRepair1/reuse0 versus baseline11819
+observedactualreuses, no additive saving. Candidate postclosure~134nativeCPU-s INCLUDED.
+Seven bounded native semantic/provenance targets pass after a failed transport observer;
+original broad-tag subcall rejected required-kind inventory before execution, fixed to full8
+for next control. Graph count110472base/110470candidate remains unclassified pending global
+vocabulary and next baseline parity; do not declare semantic equivalence from counts.
+Second pair reverse order now preparing; both independentAC, totaln2 rather than target3
+explicitlylimited. Source runtime frozen, no Windows import; final warm/broad-tag/audit pending.
+
+
+### PR #206 second candidate S2 repetition - 2026-10-23
+
+- Same b38a889 runtime / 6ad7c816 artifact, original decoded S2 seed and saved layout; no Windows integration.
+- Second candidate closure 441.0s, whole-process CPU 728.23 CPU-s through 603.9s quiet; independent external AC and native/process coverage valid.
+- Repeats zero reads/parses/repairs, one genuine resolution activation (one chunk / 4,881 bytes), 11,839 cached validity calls, no full builder or masks. #204 selected-count repair 1 / realized ordinary reuse 0.
+- Cleanup restored settings and left copy disabled. Post-timing full-eight-target oracle is running; baseline reverse repeat, two-node vocabulary difference, warm control and final integrity audit remain pending. No final semantic or general speedup claim.
+
+
+### PR #206 original broad-tag control retained - 2026-10-23
+
+- Corrected full-eight-target candidate call executes the original broad target; seven bounded hashes and both complete candidate vocabularies match.
+- Broad tag FAILS the unchanged 30.308s observation: rendered/canonical ready, semantic work active, 2 pending scopes / 256 dependency visits, while startup was complete and source owners idle. Do not count completed observer cleanup as semantic success; one transport timeout was tolerated and retained.
+- No evidence identifies this as A's initial-adoption defect. Current-base comparison remains pending. Restore retained A4 separately for an ordinary warm control; original baseline warm state was not newly imported, so warm CPU equality/percentage is not established.
+
+
+### PR #206 ordinary candidate warm control - 2026-10-23
+
+- Original A4 seed decoded verified (15 stores / 1,537,695 rows); 17m41s import excluded, same-job resume observers preserved.
+- Candidate warm source/URL/persistence closure 192.021s, quiet 600.235s, observed whole-application native CPU 397.542 CPU-s; coverage valid, max native gap 1.034s, independent external AC valid.
+- Zero source reads/parses/repairs/replacements/payload writes/masks; URL cache covers 11,839 owners without reads. Cleanup leaves plugin off / enabled list empty.
+- Original base warm 205.020s / 446.789 CPU-s remains coverage, power and starting-state qualified; no clean warm CPU percentage or exact plugin-only attribution. Reverse S2 baseline and full vocabulary parity pending.
+
+
+### PR #206 reverse baseline in progress - 2026-10-23
+
+- Exact S2 restore 2 decoded verified at 15:17:14.985 UTC; reverse accepted-base startup launched 15:18 UTC with independent external AC and unchanged 45-minute cap.
+- Repeats initial body-dirty enumeration (11,820 still dirty / 19 repaired at late attachment), URL reads 11,819 and competing builder admission.
+- At 15:36 UTC, source reads/parses 721 and unsaved masks 719 demonstrate a different cancellation/recovery trajectory. Repair-path counters include live unsaved outcomes; durable activations remain separate. Terminal work/CPU, recovery and quiet are not yet known.
+- No forced flush, mask clear, route or extended cap. Preserve a censored result if required; no second matched-pair success is preclaimed.
+
+
+### PR #206 current accepted-base native recovery failure - 2026-10-23
+
+- Reverse baseline stops incomplete at original 45-minute cap (last sample 2703.1s including IPC/poll jitter), 5,214.95 whole-process CPU-s; independent external AC/native/process coverage valid; cleanup off[]/configuration restored. Not a matched completed pair.
+- Exact native sequence: first adoption flush=false with 719 masks at launch+2163.6s; source-ready/authority recovers at 2436.1s, all owners drain 2436.7s, but initial=false/incomplete=true with no second adoption through remaining 266.4s. No observer overflow. Accepted current baseline now naturally reproduces A's missing continuation. Completion correctness is separate from CPU work reduction.
+- Actual activations 11,839; source reads/parses 821, 719 same-revision owner revisits and masks genuinely repaired (100 recovery reads/parses plus 619 body reuses/resolution refreshes). #204 realized ordinary reuse 11,101 / selected repair 719 since late attachment.
+- Normal post-timing baseline reload has byte-identical complete base/URL/served vocabulary and all seven bounded provenance hashes versus both candidates; original broad tag still fails. Explicit full-builder reference is separately investigating first baseline count 110,472 versus cached 110,470; no performance/recovery claim for that reference.
+
+
+### PR #206 semantic reference and label-order qualification - 2026-10-23
+
+- Normal baseline/candidate cached routes match complete vocabulary and all seven strict hashes. Explicit accepted-base rebuild also has 110,470 nodes; first baseline terminal 110,472 count is not reproduced and its extra identities were not captured. Keep first whole-graph/CPU comparison qualified.
+- Explicit reference matches six hashes; saved-center digest differs solely in three joined type-name orders. A paired raw canonical capture under unchanged 0f proves exact decision/provenance and gates equal; relation endpoints/role/type/direction equal, only joined label order differs. Correct earlier all-seven reference claim; do not normalize the oracle away.
+- Order can affect override precedence/exact-text predicates generally. Exact/normalized/imported-key fixture lookup shows one relevant override and no other, thus identical layered style here. Preserve this pre-existing route-dependent label-order limit; no core relation/style protocol changed.
+- Original broad tag fails normal cached profiles with 2 pending scopes/256 dependency visits; explicit full state reaches the unchanged 1,000-relation observer budget, not a pass.
+- S1 raw temp path missing caused no import. Compressed original retained; newly unpacked 897,030,856 bytes verified original 7bb3818 SHA. Retry storage job now owned; join it on observer expiry. Exact-candidate real-copy recovery/audit pending.
+
+
+### PR #206 exact-candidate large-copy recovery and final integrity - 2026-10-23
+
+- Original source-only S1 decoded15stores/1,426,582rows/pages0; live vault/database and committed rows verified before exact6ad7c816 deployment. Normal eager source-backed startup settles with110,470 nodes and zero source activations/chunks/body reads/parses/masks.
+- Controlled real-copy metadata availability failure on one existing bounded Markdown owner (no note writes) produces exactly two actual adoptions, false then automatically true; scene retained, no full build or mask, checked+2/body reuse+2/repair-path1/body reads-parses0. Metadata missing-observation counter1 is not a current queue. Method/settings/layout/controller cleanup passes. Explicit limitation: coordinator flags reopened on a settled natural source-only lifetime, not a naturally stranded fresh candidate. One preparation CLI timeout retained.
+- Final copied content20,190files/10,956,614,603bytes and protected production223configuration files/84,002,510bytes exactly match starting hashes. No original full-content baseline exists. All copy settings/community/core/workspace bytes restored; only intentional disabled exact candidate main.js/manifest differ.
+- Final native state: one copy window, plugin/community off, Sync/Publish off, no owned controllers/fault hooks/debugger, native IDB methods/layout observer restored; no live owned processes. Small closed/original19configs restored offline. SourceRepository unchanged SHA951ce4e86ad1bea9b86a53d7efad1c2e4375e3eda38e220b4933409510a337ef.
+- Runtime checkpoints A1 4407177 / A2 91770e4 / B b38a889 retain accepted0f+#201+#204. Private archive2026-10-23-pr206-final preserves evidence; historical streams untouched. Keep draft/no merge-release-main-production. Later combined Mac validation after independently ready Windows205/207 remains separate; no additive savings assumed.
+- Highest review limits: censored reverse baseline/no matched quiet, first baseline power/terminal two-row count qualification, original broad-tag failure, pre-existing full/cached joined-label ordering (fixture styles commute), paired early recent-navigation control failure and one unattributed candidate Small renderer crash/recovery. No extra manual tests delegated because automated native lanes cover the authorized scope.
 Action log (2026-10-23, PR205 protected cached metadata reads): accepted main-agent implementation
 and Windows scope review at base 0f94252, preserving merged #201/#203/#204. Published runtime/test/
 harness checkpoint 8b1df5764d4799960a64ee2b149566b6278d0516; remote head verified. Sole production
@@ -5638,6 +5792,65 @@ symlink EPERM correction separately published b8fac4f preserves genuine alias re
 Independent ownership/validity/bounds/TSDoc/harness review complete; no C15 advancement. PR205 stays
 draft for maintainer review; GitHub workflow 401 still running at finalization, not called a pass.
 
+
+Action log (2026-10-23, PR206 final integration in progress): normal merge of accepted main
+930747679894f003a2acf3b800df798826ee090c into reviewed12c911a preserves #205 protected metadata
+reads and #206 recovery/discovery/startup ownership, both test inventories and historical reports.
+Only HANDOFF/ledger conflicts; current206 assignment and both historical ledger sections retained.
+New exact artifact/full verification/native/CI/S2+warm acceptance pending; no #207 import, release
+or production action. C14 accepted; C15-C26 paused. See report integration section.
+
+Action log (2026-10-23, PR206 integrated native checkpoint): source95b0093 normally includes
+accepted main9307476/#205 and preserves201/203/204; exact main.js08edf2b9d219c2e579b1644948ab34474c833b563127c618f5a2b542dc73b9df. Full Node22.22.2 verify,49focused tests and CI415 pass.
+Exact native Small settings/SI5/recovery/protected-reader/foreground/ontology/rename/invalidation/
+admission/live controls pass with retained setup/transport and host non-delivery receipts. Native
+recovery2actual attempts false-to-true; metadata16owners/32transactions/all80requests/16leases/
+48hashes retained, no owned residue. Same-stat notification suppression reproduces with plugin
+absent; controlled real event invalidation passes. Unchanged live actions pass via single-owner
+file observer,100ms heartbeat max107ms; old early-sync/broad-tag/crash limits remain. Small
+closed/original19files restored; Brain alone/writers off; original S2 restoration active. No207,
+product/runtime edit, release or production action. Final S2+warm/audit/documentary-CI/merge pending.
+
+
+### 2026-10-23 - PR206 final accepted-main integration and Mac acceptance
+
+Normal integration source95b0093 preserves reviewed12c911a and accepted main9307476/#205,
+including prior201/203/204. Only HANDOFF and this ledger conflicted; both inventories and the
+standing header/current206 return are retained. Runtime merges cleanly. SourceRepository is
+byte-identical to accepted205 (SHA534a061e...4c63e); reviewed206 runtime owners are unchanged.
+No207, read-plumbing/lease/count/reclaim/schema policy change, rebase or force-push.
+
+Node22.22.2/real dependencies/actual Obsidian1.13.0 declarations: full npmverify and49focused
+checks pass; new exact main08edf2b9, manifest3395e425, styles88b61aa5. SourceCI415 and native-
+documentaryCI418 pass; final documentary-head CI/authorized normal merge are separate final gates.
+Exact-build Small native recovery/source-backed/foreground/settings/invalidation/reload/reader
+checks pass with recorded observer/setup and independent same-stat host-delivery limits.
+
+One retained-S2 actual full-snapshot startup: closure408.930s, quiet602.128s, whole-app CPU620.420s;
+late counters/12unfocused work samples explicitly prevent a controlled CPU comparison. One ordinary
+warm activation from its naturally persisted state: closure153.016s, quiet603.971s, CPU267.606s,
+valid/focused/AC sampling. Both actual source/URL/persistence owners drain, no unnecessary body
+reads/parses/source replacements/URL reads/automatic builder/masks; cached validity work remains.
+No new matrix or statistical speedup claim; actual204reuse0 without replacement. Exact full
+vocabulary/seven strict semantic/gate/search/provenance hashes match both retained controls.
+
+All native resources/fixtures restored, Small closed/original19files identical, Brain settings/
+workspace bytes restored with integratedmain retained disabled, writersoff. Copied content20190/
+10,956,614,603B and original configuration223/84,002,510B hashes unchanged; no originalfullcontent
+baseline/claim. No crash recurrence. User Mac released19:37:52UTC. Historical receipts/seeds and
+all failed observers retained separately from new restricted integration evidence; no HANDOFFarchive.
+Keep broad-tag completion, joined-label order, original+2nodes, early recent-tab and unattributed
+crash follow-ups explicit; fewer pairs/power/censoring/controlledrecovery qualifications remain.
+Final remote/CI/merge proof belongs on206/privatefinalcheckpoint to avoid self-reference. C14
+accepted; C15-C26 paused. No release/prod deployment/branchdelete/207change. Detailed integration
+record: docs/validation/startup-source-convergence-206-2026-10-23.md.
+
+
+2026-10-23 final206fetch discovers acceptedmain ea89a83 (merged207) after firstintegration95
+Macclosure/audits/release. Frozen08artifact/results are not relabeled as newer code. Mergeheld;
+normal currentmain integration/newartifact/fullverify/affectedselectedrepair+206nativechecks
+required. Preserve accepted207history/tests/reports/limits; do not resume its stopped investigation.
+UserMacfree during independent work; reestablish availability before furthernativefocus/restart.
 
 ### 2026-10-23 — PR207 ordinary dependency-count repair returned for review
 
@@ -5721,3 +5934,44 @@ No new correctness or substantive integration regression. Final documentation CI
 actual result/merge reachability are recorded on PR207. Runtime d8d6/main19d754 remains unchanged.
 No unmerged #206 input/contact, new benchmark, storage change, release, production deployment or C15 work.
 Details: docs/validation/dependency-repair-storage-207-2026-10-23.md.
+
+
+2026-10-23 PR206 currentmain reconciliation: normal ea89a83 integration resolves HANDOFF/current206,
+complete207ledger tail and package testlist union; no runtime conflict or lost inventory. Accepted
+SourceRepository exact d8d6d532, all206startupfiles unchanged. Combined focused startup/recovery/
+discovery/count/journal/lease/foreground realIDB174/174 pass, zero failures/skips. Newartifact/full
+verify/exactnative/CI pending. Preserve first95/08evidence and accepted207storage/reopen limits.
+
+
+### 2026-10-23 - PR206 current-main823 exact-build acceptance complete
+
+Normal merge823d1d3 retains cf14first-integration evidence and acceptedmain ea89a83/#207;
+SourceRepository exact d8d6d532, protected205reader and all206startup owners unchanged. Both
+complete histories/reports/testlists retained; no Windowsbranch/experiment or newoptimization.
+New Mac artifact9912395b /manifest3395e425 /styles88b61aa5, Node22.22.2 realdependencies and
+actual Obsidian1.13.0 types. Fullverify7/130/1395/227/357/721 zero failures/skips; combined174/174;
+sourceCI421 passes. Final documentary-head CI remains required before authorizednormalmerge.
+
+Exact Small staging/SI5/genuine automaticadoption2attempts/native selectedrepair/foreground/
+realcreate-samestateevent-offlinealias-rename-delete pass. OriginalSI5CLIevaltimeout retained,
+actualstate ready/cleanup passes; newfileobserver keeps nativeactions/cleanupbytes anddeadlines,
+all5pass/0transportretry. Stop-owner unload-vs-persistedenablement assertionretained; normalCLI
+clears saved preference, positivelyguardedclose restores all19originalSmallfiles onlywhenclosed.
+No productionvalidators/readiness/deadline changes. Nativecount13/32matches are eligibility,
+notrealized204reuse; changedmembership2attempts0matches and readyinventory provegenuinefallback.
+
+New BrainactualDB/loadedmethod guarded; normal fullsnapshotactivation completes, sourceowners0,
+canonicalreads/parses/repairs0; fullvocabulary/sevenstrictsemantic-gate-search-provenance hashes
+matchcontrols exactly. Originalbroadtag30.841s/2pending/256visits remains; nonewcrash/divergence.
+First95/08S2+warmCPU/results remain frozen, not relabeled as991: zero selectedrepair branch means
+current source focused/native positivebranch checks are affectedvalidation, not a repeatedmatrix.
+No new statistically established speedup. All five206followups/measurementlimits and accepted207
+reopen/storagecost/unknownbackend/no productionbound remain. No207investigation is resumed.
+
+Final nativecleanup/audits20:27:16UTC and Macreleasedagain: copied20190files/10,956,614,603B unchanged;
+copy223configuration/workspace bytes restored except retainedDISABLED991main; Smallclosed/all19
+originalfiles identical. Controllers/hooks/processesgone/IDBnative/no newcrash. Originalconfiguration
+hashproof before19:37release retained; subsequentguardedoperations neverwrite/openoriginalDB,
+no originalfullcontentclaim. Finalremote/CI/normalmerge/reachabilityproof recordedon206/private
+checkpoint toavoidself-reference. Preservehistory/privateevidence; noHANDOFFarchive, release,
+productiondeployment, branchdelete or historyrewrite. C14accepted; C15-C26paused.

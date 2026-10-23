@@ -57,6 +57,20 @@ repository work. Admission validates current policy/inventory normally, includin
 URL replay/discovery respects those edit fences instead of treating stat-matching cached input as
 current. Unchanged warm caches remain reusable. Hydration/source watchdogs begin with admitted work.
 
+Obsidian emits `Vault.create` for existing files during pre-layout vault discovery. The temporary
+fence retains native physical inventory observations, but does not classify that enumeration as a
+body edit or retire independent URL cache owners. Normal restart source/metadata/resolution and
+Date-environment validation still runs; modifies/deletes/renames and post-layout creates retain
+ordinary invalidation, including same-stat edits before admission.
+
+An incomplete source-backed initial adoption remains owned by the initial-index coordinator.
+Settled source inventory, requested semantic completion and coherent settings publications can
+notify one coalesced continuation. It joins original preparation/adoption, rechecks lifetime,
+policy/demand/source/publication fences and lets actual adoption establish completion. Unchanged
+failed input does not create a retry loop. While that owner is incomplete, an automatic dirty-index
+flush cannot replace startup-only, zero-edited-path backlog with a competing full builder. Genuine
+edits, structural changes, cold/on-demand work and explicit rebuilding retain their existing owners.
+
 The legacy `urlIndexingMode` setting already migrates to `background`; this feature does not restore
 the retired URL-mode UI or make graph/cache admission depend on that compatibility field.
 

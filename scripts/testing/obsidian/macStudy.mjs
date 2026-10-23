@@ -4,6 +4,7 @@
  * onload. Raw reports and configuration receipts must stay outside Git. No production mutation,
  * fixture creation, forced flush, scheduler hold or cache-policy change is owned. The separate
  * startup action owns normal application quit only after positively verifying one test window.
+ * Optional bounded convergence observers are restricted to explicitly labelled diagnostic runs.
  */
 import {readFileSync,writeFileSync,mkdirSync,realpathSync,existsSync,readdirSync} from 'node:fs';
 import {join,resolve} from 'node:path';
@@ -19,6 +20,7 @@ import {captureMacDiagnosticProfiles} from './macStudyCpuProfile.mjs';
 import {createStartupResourceProbe} from './startupResources.mjs';
 import {runMacStudyAvailability} from './macStudyAvailability.mjs';
 import {captureMacStudySystem} from './macStudySystem.mjs';
+import {createStartupSourceConvergenceProbe} from './startupSourceConvergenceProbe.mjs';
 
 const project=resolve(fileURLToPath(new URL('../../..',import.meta.url)));
 const config=JSON.parse(readFileSync(process.argv[2],'utf8'));
@@ -28,7 +30,7 @@ if(Number.isNaN(stopAt)||stopAt<=Date.now())throw Error('Invalid or expired obse
 const allowed=['inspect','checkpoint','restore','resume-restore','resume-checkpoint','reset','measure','control','startup','cleanup'];
 if(!allowed.includes(action))throw Error('Unknown study action');
 if(config.nativeProfile&&config.purpose!=='diagnostic')throw Error('Native profiles require a separately labelled diagnostic run');
-if((config.detailedResources||config.resourceCounts||config.lateStartupObservers||config.diagnosticEvents||config.availabilityTargets)&&config.purpose!=='diagnostic')throw Error('Resource/event/navigation observation requires a separate diagnostic run');
+if((config.detailedResources||config.resourceCounts||config.lateStartupObservers||config.diagnosticEvents||config.convergenceDiagnostics||config.availabilityTargets)&&config.purpose!=='diagnostic')throw Error('Resource/event/navigation observation requires a separate diagnostic run');
 if(config.detailedResources&&config.resourceCounts)throw Error('Choose counts-only or detailed resource observation');
 if(config.captureSourceFlags&&config.purpose!=='diagnostic')throw Error('Source-state inventory requires a separate diagnostic run');
 if(config.availabilityTargets&&(!Number.isSafeInteger(config.availabilityAfterMs??15000)||(config.availabilityAfterMs??15000)<0||(config.availabilityAfterMs??15000)+65000>(config.maximumMs??2700000)))throw Error('Availability workload must fit within the diagnostic observation');
@@ -44,7 +46,7 @@ const report={schema:1,action,status:'running',started:new Date().toISOString(),
   platform:process.platform,
   target:{name:target.vaultName,path:target.vault,database:target.databaseName},source:config.source,purpose:config.purpose??'acceptance-observation',artifacts:null};
 report.bounds={quietMs:config.quietMs??(action==='control'?60000:600000),maximumMs:config.maximumMs??2700000,stopAt:Number.isFinite(stopAt)?new Date(stopAt).toISOString():null,requireAc:config.requireAc!==false,requireUnlocked:true};
-report.harness=Object.fromEntries(['macStudy.mjs','macStudySafety.mjs','macStudyStorage.mjs','macStudyProbe.mjs','macStudyOracle.mjs','macStudyStartup.mjs','macStudyCpuProfile.mjs','macStudyAvailability.mjs','macStudySystem.mjs','startupResources.mjs'].map(/** Freeze test-source identity before any native action. */ name=>[name,createHash('sha256').update(readFileSync(new URL(name,import.meta.url))).digest('hex')]));
+report.harness=Object.fromEntries(['macStudy.mjs','macStudySafety.mjs','macStudyStorage.mjs','macStudyProbe.mjs','macStudyOracle.mjs','macStudyStartup.mjs','macStudyCpuProfile.mjs','macStudyAvailability.mjs','macStudySystem.mjs','startupResources.mjs','startupSourceConvergenceProbe.mjs'].map(/** Freeze test-source identity before any native action. */ name=>[name,createHash('sha256').update(readFileSync(new URL(name,import.meta.url))).digest('hex')]));
 const reportFile=join(reportDir,'report.json');
 let restoration=null,measurementOwned=false;
 
@@ -175,7 +177,7 @@ try {
       writeFileSync(join(reportDir,'data-before.json'),originalData,{mode:0o600});
       await enableObserved({
         arm:/** Arm native process sampling before onload, without changing startup settings. */ async()=>{
-          report.arm=evaluate(`(()=>{const c=window.kplexMacStudy;if(c.storage.busy)throw Error('Storage busy');c.probe=(${createMacStudyProbe.toString()})(app,{...${JSON.stringify({observers:config.observers!==false,sampleMs:1000,storageBusy:false,databaseName:target.databaseName,diagnostic:config.purpose==='diagnostic',diagnosticEvents:!!config.diagnosticEvents,resourceDetailed:!config.resourceCounts,requireAc:config.requireAc!==false,requireUnlocked:true})},systemStateReader:(${captureMacStudySystem.toString()})${config.detailedResources||config.resourceCounts?',resourceFactory:('+createStartupResourceProbe.toString()+')':''}});return JSON.stringify(c.probe.snapshot())})()`);
+          report.arm=evaluate(`(()=>{const c=window.kplexMacStudy;if(c.storage.busy)throw Error('Storage busy');c.probe=(${createMacStudyProbe.toString()})(app,{...${JSON.stringify({observers:config.observers!==false,sampleMs:1000,storageBusy:false,databaseName:target.databaseName,diagnostic:config.purpose==='diagnostic',diagnosticEvents:!!config.diagnosticEvents,resourceDetailed:!config.resourceCounts,requireAc:config.requireAc!==false,requireUnlocked:true})},systemStateReader:(${captureMacStudySystem.toString()})${config.convergenceDiagnostics?',convergenceFactory:('+createStartupSourceConvergenceProbe.toString()+')':''}${config.detailedResources||config.resourceCounts?',resourceFactory:('+createStartupResourceProbe.toString()+')':''}});return JSON.stringify(c.probe.snapshot())})()`);
           if(!report.arm.validCpu)throw Error('Native cumulative CPU unavailable');
           if(!report.arm.comparable)throw Error('Renderer lost foreground before enable');
         },

@@ -1,4 +1,5 @@
 import {runStartupAdmission} from './support/startupAdmission.mjs';
+import {runStartupSourceConvergence} from './support/startupSourceConvergence.mjs';
 /**
  * Exercises compiled production indexing, persistence, parser, settings and scene workflows against
  * finite Vault/Obsidian doubles. The archived compatibility oracle remains intact; only approved
@@ -1609,6 +1610,7 @@ const plugin = { app, settings, getIndexSourceRevision: () => 0, recordDiagnosti
 
 const index = new GraphIndex(plugin, app);
 console.log(`Startup admission: ${await runStartupAdmission({KplexPlugin,GraphIndex,app,settings,TFile,TFolder,fixtureEvents})} production scenarios passed.`);
+console.log(`Startup source convergence: ${await runStartupSourceConvergence({KplexPlugin,GraphIndex,app,settings})} production scenarios passed.`);
 
 // Exercise the actual temporary native listeners, including the dormant interval before admission.
 // A physical snapshot can cover initial discovery notifications; it cannot cover observed same-stat
@@ -1658,12 +1660,22 @@ function preRestoreFenceFixture() {
     f.create(new TFolder("Initial"));
     f.create(new TFile("Initial/Note.md", 17));
     f.create(new TFile("Initial/Image.png", 18));
-    assert.equal(f.deferred.length, 3, "Dormant native creates retain lightweight source invalidation");
+    assert.equal(f.deferred.length, 0, "Pre-layout discovery remains physical inventory input without body invalidation");
     f.capture(); f.classify();
     assert.equal(f.startup.indexDirty, false, "Fresh captured inventory covers unchanged dormant initial file/folder/attachment discovery");
     assert.deepEqual([...f.startup.indexBacklogReasons], [], "Covered initial creates must not force a post-restore full rebuild");
     assert.deepEqual([...f.startup.dirtyMarkdownPaths], []);
     assert.equal(f.startup.preRestoreUncoveredChanges, false);
+  } finally { f.close(); }
+}
+{
+  const f = preRestoreFenceFixture();
+  try {
+    f.startup.layoutReady = true;
+    f.create(new TFolder("Real"));
+    f.create(new TFile("Real/Note.md", 17));
+    f.create(new TFile("Real/Image.png", 18));
+    assert.equal(f.deferred.length, 3, "Post-layout creates before admission retain ordinary source invalidation");
   } finally { f.close(); }
 }
 for (const repeat of ["same-native", "replacement-native", "after-capture"]) {

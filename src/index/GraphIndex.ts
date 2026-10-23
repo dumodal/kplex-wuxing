@@ -6,6 +6,8 @@
  * Newly compiled ontology cannot remain hidden by an inferred local cover.
  * Startup metadata resolution keeps an unchanged finite read cover only while its replacement
  * is pending. Source/policy/native revision fences and relationship write authority stay separate.
+ * Settled source authority and requested semantic publication notify the existing startup owner
+ * through deduplicated, fenced recovery capabilities; notifications never grant completion.
  * Saved native navigation is available before asynchronous catalogs; its filename/folder facets
  * own no semantic incidence, source acquisition, negative inventory proof or write authority.
  * Optional presentation dispatch uses finite snapshots and nonrecursive coalescing. Settings-only
@@ -680,6 +682,8 @@ export class GraphIndex {
   private sourceBackedStartup = false;
   private warmSourceRecoveryAvailable = false;
   private sourceNodeVocabularyPublished = false;
+  /** Last notified recovery stamp; unchanged incomplete inputs cannot reschedule startup adoption. */
+  private initialSourceRecoveryKey: string | null = null;
   /** Last complete cache presentation stays readable across host waves, but owns no current authority. */
   private cachedSnapshotPages = new WeakSet<GraphPage>();
   private urlAliasFacetVersion = URL_ALIAS_FACET_VERSION;
@@ -723,6 +727,7 @@ export class GraphIndex {
         this.retryDemandedSemanticScopes();
         this.retrySourceNodeImpacts();
         this.retryUrlAliasUpgrade();
+        this.notifyInitialSourceRecovery();
       },
       /** Refresh subscribed source progress; only the source-authority phase advances its watchdog. */
       () => {
@@ -1771,6 +1776,33 @@ export class GraphIndex {
   /** Source-backed startup completion belongs to source adoption, not graph-cache hydration. */
   hasSourceBackedStartup(): boolean { return this.sourceBackedStartup; }
   /**
+   * Notify the startup coordinator only after current source authority and requested semantics
+   * recover. Source notifications arrive after inventory ownership is released; scope notifications
+   * arrive after their task is removed. The notification is a retry capability, never readiness.
+   * Captured lifecycle/publication/source/policy fences reject a queued stale signal. Successful
+   * semantic publication changes the stamp, while repeated unchanged failure notifications do not.
+   */
+  private notifyInitialSourceRecovery(): void {
+    if (this.diagnosticsClosed || !this.sourceBackedStartup || this.isOnDemandMode()
+      || !this.sourceAcquisition.hasSemanticDependencies() || this.hasPendingSemanticPreparation()) return;
+    const run = this.snapshotHydrationRun, generation = this.generation, publication = this.publicationRevision;
+    const policy = this.semanticPolicyRevision, presentation = this.presentationRevision;
+    const aliases = this.aliasVocabularyPresentationRevision;
+    const source = this.plugin.getIndexSourceRevision(), maintenance = this.sourceAcquisition.getMaintenanceRevision();
+    /** Recheck actual prerequisites after the coordinator's awaited owner, not only at notification. */
+    const current = (): boolean => !this.diagnosticsClosed && this.sourceBackedStartup && !this.isOnDemandMode()
+      && run === this.snapshotHydrationRun && generation === this.generation && publication === this.publicationRevision
+      && policy === this.semanticPolicyRevision && presentation === this.presentationRevision
+      && aliases === this.aliasVocabularyPresentationRevision
+      && source === this.plugin.getIndexSourceRevision() && maintenance === this.sourceAcquisition.getMaintenanceRevision()
+      && this.sourceAcquisition.hasSemanticDependencies() && !this.hasPendingSemanticPreparation();
+    if (!current()) return;
+    const key = [run, generation, publication, policy, presentation, aliases, source, maintenance, this.semanticRevision].join(':');
+    if (key === this.initialSourceRecoveryKey) return;
+    this.initialSourceRecoveryKey = key;
+    this.plugin.resumeInitialSourceIndex?.(this, key, current);
+  }
+  /**
    * Close source-backed startup in consumer order: source authority, requested scopes, global nodes.
    * The catalog is compiled privately from durable facts and published atomically without evidence.
    * A policy/source/maintenance interruption retains the earlier coherent baseline and returns false
@@ -2320,7 +2352,8 @@ export class GraphIndex {
     this.titleCache.clear();
   }
 
-  /** Prepare all active centers for the current policy; no full/source rebuild is scheduled here. */
+  /** Prepare all active centers for the current policy, then notify the startup owner even when
+   * demand is empty and no scope finalizer exists. Notification never grants semantic readiness. */
   async refreshSemanticSettings(): Promise<void> {
     if (this.preparationDeferred) {this.fullSemanticSettings = graphCompilerSettingsFromLegacy(this.plugin.settings); return;}
     if (this.usesLocalForeground()) {
@@ -2337,6 +2370,7 @@ export class GraphIndex {
     for (const [path, count] of this.semanticDemandCounts) if (count > 0) paths.add(path);
     if (this.plugin.settings.lastActivePath) paths.add(this.plugin.settings.lastActivePath);
     await Promise.all([...paths].map((path) => this.ensureSemanticScope(path)));
+    this.notifyInitialSourceRecovery();
   }
 
   /** Create a bounded runtime with the actual caller's lane: requested center P1, visible facets
@@ -2813,6 +2847,7 @@ export class GraphIndex {
         && ((this.semanticDemandCounts.get(centerPath) ?? 0) > 0 || this.plugin.settings.lastActivePath === centerPath)
         && (sourceRevision !== this.plugin.getIndexSourceRevision() || publicationRevision !== this.publicationRevision
           || presentationRevision !== this.presentationRevision)) void this.ensureSemanticScope(centerPath);
+      this.notifyInitialSourceRecovery();
     });
     this.semanticPreparationTasks.set(centerPath, { policyRevision, demandRevision, maintenanceRevision, coverageSignature,
       sourceRevision, publicationRevision, presentationRevision, task });
@@ -3222,7 +3257,8 @@ export class GraphIndex {
   /**
    * Legacy synchronous display-name facade. It owns only alias/name/title preferences, not selected
    * type/style facets. Meaningful title changes advance the pending alias vocabulary lifetime;
-   * settings controls use refreshPresentationSettings for the full atomic path.
+   * settings controls use refreshPresentationSettings for the full atomic path. A meaningful
+   * publication can resume an initial adopter superseded by that alias lifetime.
    */
   refreshDisplayNames(): void {
     const settings = { ...this.presentationSettings,
@@ -3234,7 +3270,10 @@ export class GraphIndex {
     this.titleCache.clear();
     this.rebuildSearchIndex();
     this.emitPresentation();
-    if (effects.presentationFacets || effects.searchTerms) this.retryUrlAliasUpgrade();
+    if (effects.presentationFacets || effects.searchTerms) {
+      this.retryUrlAliasUpgrade();
+      this.notifyInitialSourceRecovery();
+    }
   }
 
   /** Base and retained bounded publications all need the same SI1 presentation facets. */
@@ -3255,6 +3294,7 @@ export class GraphIndex {
    * tasks; exhaustion preserves the coherent predecessor and reports pending to its caller. No builder, patcher, parser, relationship cache or body read
    * participates in presentation staging. Pending legacy alias upgrades retain their existing owner;
    * only meaningful facet/search changes supersede that work. Source publication/unload still fence it.
+   * A coherent non-paint publication notifies the existing startup owner after its policy is current.
    */
   async refreshPresentationSettings(): Promise<void> {
     if (this.preparationDeferred) {this.presentationSettings = capturePresentationSettings(this.plugin.settings); return;}
@@ -3303,6 +3343,7 @@ export class GraphIndex {
         { changedKeys: [...keys], modified: facets?.pending ?? 0 });
       this.emitPresentation({ kind: effects.paintOnly ? "paint" : "presentation", changedKeys: keys });
       if (effects.presentationFacets || effects.searchTerms) this.retryUrlAliasUpgrade();
+      if (!effects.paintOnly) this.notifyInitialSourceRecovery();
       return;
     }
   }

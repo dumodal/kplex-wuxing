@@ -3,14 +3,14 @@
  * forwarding counters; retains no note text and exports no owner coordinates. Weakly held file
  * observations are private. CPU includes each Electron
  * process identity once. Optional existing resource instrumentation belongs only to a separate
- * diagnostic lane. The caller supplies a self-contained native system reader; strict runs require
+ * diagnostic lane, including optional bounded PR206 source/recovery observation. The caller supplies a self-contained native system reader; strict runs require
  * sampled AC and an unlocked session. Long gaps invalidate CPU coverage and restart quiet.
  */
 export function createMacStudyProbe(app,options) {
   const remote=require('@electron/remote'),win=remote.getCurrentWindow(),processInfo=require('process');
   const originalLayout=app.workspace.onLayoutReady,originals=[],processes=new Map(),samples=[];
   const started=performance.now(),epoch=Date.now(),throttle=win.webContents.getBackgroundThrottling();
-  let plugin=null,timer=null,closed=false,attached=false,preAdmission=null,attachError=null,lastSample=started,resources=null;
+  let plugin=null,timer=null,closed=false,attached=false,preAdmission=null,attachError=null,lastSample=started,resources=null,convergence=null;
   const counts={parserCalls:0,parserUtf16:0,hashCalls:0,hashUtf16:0,transactions:0,readonly:0,readwrite:0,
     acquisitions:0,uniqueAcquiredOwners:0,repeatedAcquiredOwners:0,sameRevisionRevisits:0,bodyRequests:0,dirtyBodyRequests:0,
     inventoryStarts:0,sourceAdoptions:0,fullBuilds:0,maskAdds:0,maskRemoves:0,repeatedMaskAdds:0};
@@ -75,6 +75,7 @@ export function createMacStudyProbe(app,options) {
     if(!p?.index||p.indexPreparationAdmitted&&!options.allowRunning)throw Error('Pre-admission observation unavailable');
     preAdmission=!p.indexPreparationAdmitted;plugin=p;attached=true;
     resources?.attach(p.index);
+    convergence=options.convergenceFactory?.(app,p)??null;
     if(!options.observers)return;
     const index=p.index,source=index.sourceAcquisition,repo=source.repository;
     wrap(index.metadataParser,'parse',/** Count all parser submissions without retaining Markdown. */ args=>{
@@ -172,8 +173,9 @@ export function createMacStudyProbe(app,options) {
       }
       originals.length=0;
     } finally {
-      try{resources?.stop();}
-      finally{if(app.workspace.onLayoutReady===layoutReplacement)app.workspace.onLayoutReady=originalLayout;}
+      try{convergence?.stop();}
+      finally{try{resources?.stop();}
+        finally{if(app.workspace.onLayoutReady===layoutReplacement)app.workspace.onLayoutReady=originalLayout;}}
     }
   }
   /** Forward registration unchanged and attach before the host can run K-Plex's layout callback. */
@@ -193,13 +195,13 @@ export function createMacStudyProbe(app,options) {
       comparable:coverage.hidden===0&&coverage.unfocused===0&&coverage.throttleChanges===0&&coverage.locked===0&&coverage.powerChanges===0
         &&(!options.requireAc||coverage.powerUnsupported===0&&coverage.onBattery===0)&&(!options.requireUnlocked||coverage.idleUnsupported===0),
       systemPolicy:{requireAc:!!options.requireAc,requireUnlocked:!!options.requireUnlocked},
-      ...(full?{samples,outcomes:{...outcomes},maskOrigins:{...maskOrigins},events,eventDrops,processes:Array.from(processes.values()),diagnostics:plugin?.getStartupDiagnostics(),decisions:plugin?.index.getIndexDiagnostics(),...(resources?{resources:resources.snapshot()}:{} )}:{}),
+      ...(full?{samples,outcomes:{...outcomes},maskOrigins:{...maskOrigins},events,eventDrops,processes:Array.from(processes.values()),diagnostics:plugin?.getStartupDiagnostics(),decisions:plugin?.index.getIndexDiagnostics(),...(resources?{resources:resources.snapshot()}:{} ),...(convergence?{convergence:convergence.snapshot()}:{} )}:{}),
       runtime:processInfo.versions,throttle};
   }
   const running=app.plugins.plugins['k-plex'];
   if(running&&!options.allowRunning)throw Error('Probe must arm before enable');
   if(options.allowRunning&&options.observers&&!(options.partialObservers&&options.diagnostic))throw Error('Late startup observation cannot claim early operation counters');
-  if((options.partialObservers||options.diagnosticEvents)&&!options.diagnostic)throw Error('Partial/event observation requires explicit diagnostic purpose');
+  if((options.partialObservers||options.diagnosticEvents||options.convergenceFactory)&&!options.diagnostic)throw Error('Partial/event observation requires explicit diagnostic purpose');
   if(options.storageBusy)throw Error('Storage operation still owned');
   resources=options.resourceFactory?.({phase:/** Return the last scalar sample's finite lane phases; never query status per resource operation. */ ()=>resourcePhase,now:/** Resource timings are inclusive elapsed time, not process CPU. */ ()=>performance.now(),databaseName:options.databaseName,detailed:options.resourceDetailed!==false});
   app.workspace.onLayoutReady=layoutReplacement;

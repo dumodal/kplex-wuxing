@@ -250,8 +250,13 @@ adds bounded existing-native-object flag counts after reconnect and around captu
 retained-memory/unsaved overlap, active lanes, pending deletion and retry/readiness flags without
 calling stored validity predicates. `lateStartupObservers: true` permits diagnostic forwarding after
 CLI reconnect; coverage remains `since-late-attachment`, never pre-admission. `diagnosticEvents: true`
-retains at most 128 aggregate fixed-label mask/adoption/reconcile events, with overflow explicit;
-no owner IDs, method arguments or error text are exported. `resourceCounts: true` records native
+retains at most 128 aggregate fixed-label mask/adoption/reconcile events, with overflow explicit.
+`convergenceDiagnostics: true` adds PR206's diagnostic-only bounded source/adoption transitions,
+native-event categories and actual #204 private-reclaim versus selected-repair branch counts.
+It performs no extra proof reads, source work or scheduler changes. Its 256-event detail limit
+and 32 concurrent activation-observer limit expose overflow. Anonymous owner trajectories retain
+at most eight weak identities and 128 scalar transitions; startup forwarding remains late.
+No owner IDs, method arguments or error text are exported. `resourceCounts: true` records native
 transaction/request counters without detailed payload serialization; it cannot be combined with
 `detailedResources`. Each option requires `purpose: "diagnostic"`.
 Pure diagnostic flag queries retry at most twice under the original run deadline, recording each
@@ -1012,6 +1017,14 @@ that becomes canonical before query is recorded as a setup exclusion, not a comp
 The lane records bounded milestone/resource aggregates, checks foreground ownership and restores
 its fixture files, wrappers, workspace, preferences and exact configuration bytes.
 
+For an immutable accepted-baseline functional comparison, set `KPLEX_PROBE_ARTIFACT_DIR` and
+`KPLEX_PROBE_BASELINE_REF`; the driver still verifies all installed artifact hashes. The original
+early recent-tab case may execute inside the native three-second sidecar/history guard. Keep any
+failure visible. A separately labelled `KPLEX_FOREGROUND_WORKSPACE_READY=true` variant waits for
+that existing guard while the unrelated P3 read remains held; its pass does not erase the original
+early-startup failure or establish availability during workspace reassociation. Neither variant
+changes the15-second foreground assertion deadline or production scheduling.
+
 ### Controlled indexing CPU workloads
 
 For the PR #201 controlled CPU workloads, run `node scripts/testing/obsidian/indexingCpu.mjs`
@@ -1375,6 +1388,20 @@ incomplete coverage. Zero-result Unassigned rows must still disappear, with the 
 zero-source-work assertions. The wrapper is restored on every exit; no production index state
 or stored facts are altered by this fault injection.
 
+
+### Startup source recovery
+
+After full verification/exact-build staging in `kplex-test-small`, run
+`npm run verify:obsidian:startup-source-recovery` with the three explicit test-vault variables
+and a fresh `KPLEX_HOST_REPORT_DIR`. Back up the exact Small database before fault injection.
+The bounded probe reopens initial coordinator flags on an already settled source-backed eager
+native index, withholds metadata for one owned note, and lets real reconciliation fail. Restoring
+the genuine native metadata and delivering its existing changed event must complete adoption
+automatically, retain the published scene and leave no unsaved mask or new full build. The probe
+forwards original promises, caps retained attempt outcomes, restores method descriptors, deletes
+its note and reloads the plugin with original settings bytes. This controlled recovery lane does
+not establish fresh-process route selection, physical interaction or CPU improvement; use the
+separate guarded application-startup study for those startup observations.
 
 ### Startup admission
 

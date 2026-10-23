@@ -6,7 +6,7 @@
 import { createStartupResourceProbe } from './startupResources.mjs';
 
 /** Run real physical discovery and local semantic work before releasing unrelated URL acquisition. */
-export async function runLiveUpdatesForeground({ cli, evaluate, wait, report, vaultName, composer = false, progress = () => {} }) {
+export async function runLiveUpdatesForeground({ cli, evaluate, wait, report, vaultName, composer = false, workspaceReady = false, progress = () => {} }) {
     const token = 'foreground-live-' + Date.now() + '-' + Math.random().toString(36).slice(2);
     let installed = false;
     try {
@@ -21,7 +21,8 @@ export async function runLiveUpdatesForeground({ cli, evaluate, wait, report, va
             if (Date.now() > holdDeadline) throw Error('Real unrelated P3 hold not reached');
             await wait(150);
         }
-        evaluate(`(()=>{const c=window.__kplexForegroundLiveUpdates;c.task=(${exerciseLiveUpdates.toString()})(c,${composer}).then(value=>{c.value=value;c.done=true},error=>{c.error=String(error);c.done=true});return JSON.stringify({started:true})})()`);
+        report.workspaceGuardVariant = workspaceReady ? 'after-existing-workspace-guard; original early case remains separate' : 'original-early';
+        evaluate(`(()=>{const c=window.__kplexForegroundLiveUpdates;c.task=(${exerciseLiveUpdates.toString()})(c,${composer},${workspaceReady}).then(value=>{c.value=value;c.done=true},error=>{c.error=String(error);c.done=true});return JSON.stringify({started:true})})()`);
         const deadline = Date.now() + 180000;
         while (true) {
             await wait(300);
@@ -85,11 +86,17 @@ async function installLiveUpdates(resourceFactory, vaultName, ownerToken) {
     return JSON.stringify({ installed: true, folder: c.folder, foreground: c.foreground() });
 }
 
-/** Exercise existing public Find/recent-sync consumers; optional composer selection never submits a write. */
-async function exerciseLiveUpdates(c, composer) {
+/** Exercise existing public Find/recent-sync consumers; optional composer selection never submits a
+ * write. The explicit workspace-ready variant retains unrelated P3 work but separates the native
+ * session's existing sidecar/history guard from source availability. Original early failures remain. */
+async function exerciseLiveUpdates(c, composer, workspaceReady) {
     const p = c.p, i = p.index; c.phase = 'foreground-create'; await p.activateView();
     c.host = app.workspace.getLeavesOfType('k-plex-react-view').find(leaf => p.isKplexLeafVisible(leaf));
     if (!c.host) throw Error('Visible graph host missing'); await c.host.view.waitUntilReady(); await c.wait(200); c.foreground(); await c.select(c.anchor);
+    if (workspaceReady) {
+        await c.until(() => !p.startupInitializing, 'Existing workspace guard did not settle');
+        c.emit('workspace-guard-settled-before-actions', { gateStillHeld: c.held && !c.released });
+    }
     c.before = i.getSourceAcquisitionCounters();
     if (composer) {
         const leaf = app.workspace.getLeaf('tab'); c.leaves.push(leaf); await leaf.openFile(c.anchor, { active: true }); await c.activate(leaf);
@@ -125,9 +132,19 @@ async function exerciseLiveUpdates(c, composer) {
     c.emit('foreground-available-before-release', { center: c.created.path, exact: i.get(c.created.path)?.file === c.created, gateStillHeld: c.held && !c.released, scheduler: i.getWorkPriorityDiagnostics() });
     c.recentFile = await c.createNative('Recent.md', 'Child:: [[Live Recent Ghost]]\n');
     const recent = app.workspace.getLeaf('tab'); c.leaves.push(recent); await recent.openFile(c.recentFile, { active: true }); await c.activate(c.host);
-    c.emit('recent-sync-request', { path: c.recentFile.path });
+    c.emit('recent-sync-request', { path: c.recentFile.path, canonical: !!i.get(c.recentFile.path),
+        physical: i.getVaultSearchPage(c.recentFile.path)?.file === c.recentFile,
+        activationObserved: p.recentLeafHistory.some(leaf => leaf.view?.file === c.recentFile) });
     if (!app.commands.executeCommandById('k-plex:kplex-sync-plex-from-tab')) throw Error('Public recent-sync command missing');
-    await c.until(() => c.host.view.contentEl.querySelector('.kplex-role-center')?.dataset.kplexPath === c.recentFile.path && i.getNeighborhood(c.recentFile.path)?.children.some(item => item.page.name === 'Live Recent Ghost' && item.relationType === 1), 'Explicit recent sync did not finish before P3 release', c.foregroundDeadlineMs);
+    try {
+        await c.until(() => c.host.view.contentEl.querySelector('.kplex-role-center')?.dataset.kplexPath === c.recentFile.path && i.getNeighborhood(c.recentFile.path)?.children.some(item => item.page.name === 'Live Recent Ghost' && item.relationType === 1), 'Explicit recent sync did not finish before P3 release', c.foregroundDeadlineMs);
+    } catch (error) {
+        c.emit('recent-sync-incomplete', { centered: c.host.view.contentEl.querySelector('.kplex-role-center')?.dataset.kplexPath === c.recentFile.path,
+            canonical: !!i.get(c.recentFile.path), physical: i.getVaultSearchPage(c.recentFile.path)?.file === c.recentFile,
+            activationObserved: p.recentLeafHistory.some(leaf => leaf.view?.file === c.recentFile),
+            semanticPending: i.hasPendingSemanticPreparation(), semanticActive: i.hasActiveSemanticPreparation() });
+        throw error;
+    }
     c.emit('recent-sync-before-release', { exact: i.get(c.recentFile.path)?.file === c.recentFile, gateStillHeld: c.held && !c.released }); await c.select(c.created);
     if (!c.held || c.released) throw Error('Foreground controls did not retain the unrelated body gate');
     c.phase = 'background-drain'; c.release();
