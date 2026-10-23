@@ -1787,15 +1787,17 @@ export class GraphIndex {
       || !this.sourceAcquisition.hasSemanticDependencies() || this.hasPendingSemanticPreparation()) return;
     const run = this.snapshotHydrationRun, generation = this.generation, publication = this.publicationRevision;
     const policy = this.semanticPolicyRevision, presentation = this.presentationRevision;
+    const aliases = this.aliasVocabularyPresentationRevision;
     const source = this.plugin.getIndexSourceRevision(), maintenance = this.sourceAcquisition.getMaintenanceRevision();
     /** Recheck actual prerequisites after the coordinator's awaited owner, not only at notification. */
     const current = (): boolean => !this.diagnosticsClosed && this.sourceBackedStartup && !this.isOnDemandMode()
       && run === this.snapshotHydrationRun && generation === this.generation && publication === this.publicationRevision
       && policy === this.semanticPolicyRevision && presentation === this.presentationRevision
+      && aliases === this.aliasVocabularyPresentationRevision
       && source === this.plugin.getIndexSourceRevision() && maintenance === this.sourceAcquisition.getMaintenanceRevision()
       && this.sourceAcquisition.hasSemanticDependencies() && !this.hasPendingSemanticPreparation();
     if (!current()) return;
-    const key = [run, generation, publication, policy, presentation, source, maintenance, this.semanticRevision].join(':');
+    const key = [run, generation, publication, policy, presentation, aliases, source, maintenance, this.semanticRevision].join(':');
     if (key === this.initialSourceRecoveryKey) return;
     this.initialSourceRecoveryKey = key;
     this.plugin.resumeInitialSourceIndex?.(this, key, current);
@@ -2350,7 +2352,8 @@ export class GraphIndex {
     this.titleCache.clear();
   }
 
-  /** Prepare all active centers for the current policy; no full/source rebuild is scheduled here. */
+  /** Prepare all active centers for the current policy, then notify the startup owner even when
+   * demand is empty and no scope finalizer exists. Notification never grants semantic readiness. */
   async refreshSemanticSettings(): Promise<void> {
     if (this.preparationDeferred) {this.fullSemanticSettings = graphCompilerSettingsFromLegacy(this.plugin.settings); return;}
     if (this.usesLocalForeground()) {
@@ -2367,6 +2370,7 @@ export class GraphIndex {
     for (const [path, count] of this.semanticDemandCounts) if (count > 0) paths.add(path);
     if (this.plugin.settings.lastActivePath) paths.add(this.plugin.settings.lastActivePath);
     await Promise.all([...paths].map((path) => this.ensureSemanticScope(path)));
+    this.notifyInitialSourceRecovery();
   }
 
   /** Create a bounded runtime with the actual caller's lane: requested center P1, visible facets
@@ -3253,7 +3257,8 @@ export class GraphIndex {
   /**
    * Legacy synchronous display-name facade. It owns only alias/name/title preferences, not selected
    * type/style facets. Meaningful title changes advance the pending alias vocabulary lifetime;
-   * settings controls use refreshPresentationSettings for the full atomic path.
+   * settings controls use refreshPresentationSettings for the full atomic path. A meaningful
+   * publication can resume an initial adopter superseded by that alias lifetime.
    */
   refreshDisplayNames(): void {
     const settings = { ...this.presentationSettings,
@@ -3265,7 +3270,10 @@ export class GraphIndex {
     this.titleCache.clear();
     this.rebuildSearchIndex();
     this.emitPresentation();
-    if (effects.presentationFacets || effects.searchTerms) this.retryUrlAliasUpgrade();
+    if (effects.presentationFacets || effects.searchTerms) {
+      this.retryUrlAliasUpgrade();
+      this.notifyInitialSourceRecovery();
+    }
   }
 
   /** Base and retained bounded publications all need the same SI1 presentation facets. */
@@ -3286,6 +3294,7 @@ export class GraphIndex {
    * tasks; exhaustion preserves the coherent predecessor and reports pending to its caller. No builder, patcher, parser, relationship cache or body read
    * participates in presentation staging. Pending legacy alias upgrades retain their existing owner;
    * only meaningful facet/search changes supersede that work. Source publication/unload still fence it.
+   * A coherent non-paint publication notifies the existing startup owner after its policy is current.
    */
   async refreshPresentationSettings(): Promise<void> {
     if (this.preparationDeferred) {this.presentationSettings = capturePresentationSettings(this.plugin.settings); return;}
@@ -3334,6 +3343,7 @@ export class GraphIndex {
         { changedKeys: [...keys], modified: facets?.pending ?? 0 });
       this.emitPresentation({ kind: effects.paintOnly ? "paint" : "presentation", changedKeys: keys });
       if (effects.presentationFacets || effects.searchTerms) this.retryUrlAliasUpgrade();
+      if (!effects.paintOnly) this.notifyInitialSourceRecovery();
       return;
     }
   }

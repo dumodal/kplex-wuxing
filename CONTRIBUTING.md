@@ -1356,6 +1356,20 @@ zero-source-work assertions. The wrapper is restored on every exit; no productio
 or stored facts are altered by this fault injection.
 
 
+### Startup source recovery
+
+After full verification/exact-build staging in `kplex-test-small`, run
+`npm run verify:obsidian:startup-source-recovery` with the three explicit test-vault variables
+and a fresh `KPLEX_HOST_REPORT_DIR`. Back up the exact Small database before fault injection.
+The bounded probe reopens initial coordinator flags on an already settled source-backed eager
+native index, withholds metadata for one owned note, and lets real reconciliation fail. Restoring
+the genuine native metadata and delivering its existing changed event must complete adoption
+automatically, retain the published scene and leave no unsaved mask or new full build. The probe
+forwards original promises, caps retained attempt outcomes, restores method descriptors, deletes
+its note and reloads the plugin with original settings bytes. This controlled recovery lane does
+not establish fresh-process route selection, physical interaction or CPU improvement; use the
+separate guarded application-startup study for those startup observations.
+
 ### Startup admission
 
 After exact-build staging in the explicitly configured `kplex-test-small`, run

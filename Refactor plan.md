@@ -5639,3 +5639,14 @@ independent merge, no mid-experiment import here; combined Mac acceptance later 
 C14 accepted, C15-C26 paused. See docs/validation/startup-source-convergence-206-2026-10-23.md.
 Prioritized remaining native checks: automatic genuine recovery without reopen/rebuild;
 early editing/navigation/tag-folder-search semantic parity; original unresolved broad-tag control.
+
+Action log (2026-10-23, PR206 A2): coherent non-paint/legacy-alias/empty-demand semantic
+settings publication resumes its superseded initial adopter, with alias lifetime fenced. Three
+regressions pass; A1 remains separately reviewable at4407177. Combined A2/B working-tree full
+verify and exact native Small smoke pass with bundle6ad7c8165cfa0ad66448897aaf0c401b0ccf722702f3c7498c911348502d4a50.
+Controlled native metadata recovery passes exactly2 actual adoptions(false/true), retained scene,
+fullBuilds0 and masks0; cleanup/settings bytes pass. This reopens coordinator flags on a settled
+native source-backed index, not fresh-process routing. Exact15-store Small checkpoint retained
+before faults; SI4 passes, SI5/native foreground/real-copy timing still pending. Forty-one
+driver/observer checks pass. SourceRepository/read-plumbing unchanged. No CPU-saving claim.
+Combined Mac/Windows validation still pending; PR205/207 remain open/draft at this checkpoint.

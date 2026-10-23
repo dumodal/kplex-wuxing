@@ -2,7 +2,7 @@
 
 Prepared by **Zsolt's Codex Agent**, 2026-10-23, Europe/Budapest.
 
-**Status: checkpoint A1 verified; recovery/settings follow-up and checkpoint B remain in progress. No CPU improvement is claimed.**
+**Status: A1/A2 correctness checkpoints verified; B implementation verified in the combined candidate, with native acceptance and work/CPU measurement continuing. No CPU improvement is claimed.**
 
 ## Scope and checkpoints
 
@@ -67,9 +67,8 @@ fault recovery or complete interaction acceptance. The tested bundle is
 
 A separate settings-publication regression exposes three remaining cases: presentation facets,
 legacy display-name policy and empty-demand semantic-policy refresh can supersede an initial
-adopter without a later source/scope-finalizer signal. These failing follow-up fixtures are retained
-privately/in the working tree, excluded from the A1 test inventory until corrected. Checkpoint A
-therefore remains open. A1 is a correctness checkpoint, not measured CPU savings.
+adopter without a later source/scope-finalizer signal. The A1 checkpoint retained these failing follow-up fixtures outside its test inventory; A2 corrects
+and registers them below. Full fresh-process and real-copy acceptance remains separate. A1 is a correctness checkpoint, not measured CPU savings.
 
 ## Measurement plan and limits
 
@@ -142,6 +141,45 @@ caller attribution follows production call inventory/conditions and a controlled
 regression, not a captured native stack. Three startup-only ownership cases fail before correction;
 seven genuine-change/cold/on-demand/explicit-demand controls pass. An empty later inventory was
 small follow-up work, not another broad pass.
+
+## Working follow-up A2 and checkpoint B
+
+A2 now also notifies after coherent non-paint settings publication, meaningful legacy display-name
+publication and empty-demand semantic settings refresh. Alias-vocabulary lifetime joins the queued
+recovery fence. All three formerly failing settings cases pass without body reads/parses. Combined A2/B full
+`npm run verify` and exact-build Small smoke pass on Node22.22.2; the frozen combined bundle is
+`6ad7c8165cfa0ad66448897aaf0c401b0ccf722702f3c7498c911348502d4a50`.
+A1/A2 and B remain separate code checkpoints; this bundle tests their composition, not an isolated
+A2-only installable artifact.
+
+A new native Small recovery lane passed: actual metadata-unavailable reconciliation causes one
+failed adoption, genuine metadata recovery triggers one successful automatic adoption, the scene
+remains present, full-build count stays0 and unsaved masks stay0. Exactly two attempts were observed.
+The probe reopens initial coordinator flags on an already settled source-backed index; it is **not**
+a fresh-process route reproduction. Method descriptors, owned note, settings bytes and controller
+cleanup passed. Before faults, the exact Small database was checkpointed across15 stores with
+stream SHA-256`1b6c510db41387d1fc38a257af8286b3da05d5f7fcbc9a793870fac946fe3118`.
+Exact-build SI4 Small settings/gates/search/provenance/stale-write acceptance also passed. Native
+SI5, foreground/live interaction, fresh-process real-copy timing and final audit remain pending.
+Forty-one driver/observer checks passed after registering the native recovery command.
+
+B qualifies initial create enumeration at the existing lifecycle listeners rather than changing
+source validation. Pre-layout creates remain native physical inventory inputs; the independent URL
+owner does not retire its cache solely for enumeration. Real modifies/deletes/renames remain fenced
+before layout, and post-layout creates remain ordinary changes even before preparation admission.
+The controlled real-IDB suite passes18 cases across eager/on-demand modes: clean discovery, same-stat
+modify, late create/recreation, offline alias/Date/path drift, missing metadata and corrupt metadata.
+The clean two-owner fixture performs zero source acquisitions/reads/parses/replacements or URL reads;
+negative cases retain actual repair, Date resolution, new URL incidence and tombstoned old paths.
+These are controlled work results, not native CPU measurements.
+
+The automatic rebuild guard applies only to incomplete eager source-backed startup, no edited
+Markdown paths and exclusively startup-prefixed backlog. It preserves that backlog and completion
+state for the existing initial owner. Ten actual-interval/coordinator cases pass, including the three
+formerly failing startup-only cases and seven genuine-change/cold/on-demand/explicit controls.
+The existing indexing suite now explicitly expects no pre-layout body invalidation and adds the
+opposite post-layout-before-admission control. Existing watchdog and same-stat protections pass.
+No SourceRepository algorithm or reserved read-plumbing loop changes.
 
 ## Parallel coordination checkpoint
 
