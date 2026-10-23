@@ -3,6 +3,7 @@
  * input to native controls; it shares the existing browser lifetime and deadlines. A blank target
  * receives one explicit navigation, and tests start only in the loaded, focused intended document. */
 import { browserExecutable } from "./browserExecutable.mjs";
+import { closeChromiumForced, closeChromiumGracefully, cleanupFailedChromium, restartChromiumWithLifecycle } from "./chromiumLifecycle.mjs";
 import { createRequire } from "node:module";
 import { mkdtemp, readFile, writeFile, mkdir, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -48,7 +49,7 @@ export async function browserBundle(entries, stubs = {}, sourceOverrides = {}) {
 const cache={}; function require(id){if(cache[id])return cache[id].exports; const m=cache[id]={exports:{}}; if(!factories[id])throw new Error(id); factories[id](m,m.exports,require);return m.exports;}
 window.sourceModules=Object.assign({},${ids.map(id => `require(${JSON.stringify(id)})`).join(",")});})();`;
 }
-/** Own a disposable real profile; restart() reopens precisely that profile in a new browser process. */
+/** Own a disposable real profile; default restart retains forced shutdown, with explicit drained lifecycle diagnostics opt-in. */
 export async function chromiumHarness(bundle) {
   const executable = browserExecutable();
   if (!executable) throw new Error("Real Chromium required (set KPLEX_CHROMIUM); this lane is not a mock or a skip.");
@@ -64,7 +65,7 @@ export async function chromiumHarness(bundle) {
   });
   await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
   const pageUrl = `http://127.0.0.1:${server.address().port}/test.html`;
-  let child, socket, sequence = 0; const pending = new Map();
+  let child, socket, sequence = 0, failedLifecycle = null; const pending = new Map();
   async function call(method, params = {}) {
     const id = ++sequence;
     return new Promise((resolve, reject) => {
@@ -132,6 +133,36 @@ export async function chromiumHarness(bundle) {
       owned.kill("SIGTERM"); await exited; clearTimeout(kill);
     }
   }
+  /** Preserve default restart exactly; explicit protocols require a drain guard and a distinct next process identity. */
+  async function restart(options) {
+    if (options === undefined) { await stop(); await start(); return; }
+    if (!["graceful", "forced"].includes(options?.shutdown)) throw new Error("Explicit Chromium restart requires graceful or forced shutdown");
+    try {
+      const input = { child, socket, commandId: ++sequence, beforeShutdown: options.beforeShutdown };
+      return await restartChromiumWithLifecycle({ mode: options.shutdown, identity: () => ({ pid: child?.pid ?? null, profile }),
+        /** Select only the requested explicit owner; the default stop path above remains unchanged. */
+        shutdown: () => options.shutdown === "graceful" ? closeChromiumGracefully(input) : closeChromiumForced(input),
+        /** The root already exited, including signal exits whose exitCode stays null; never stop it twice. */
+        retireSocket: async () => { if (socket) socket.close(); }, afterShutdown: options.afterShutdown, start });
+    } catch (error) {
+      failedLifecycle = error.lifecycleReceipt ?? null; throw error;
+    }
+  }
+  /** Record fallback only for a failed opt-in arm; normal cleanup continues through the original stop owner. */
+  async function cleanup() {
+    if (failedLifecycle) {
+      try { if (socket) socket.close(); }
+      finally {
+        try { await cleanupFailedChromium(child, failedLifecycle); }
+        finally { server.close(); await rm(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }); }
+      }
+    } else {
+      await stop();
+      server.close(); await rm(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    }
+  }
   try { await start(); } catch (error) { await stop(); server.close(); await rm(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }); throw error; }
-  return { evaluate, command: call, restart: async () => { await stop(); await start(); }, cleanup: async () => { await stop(); server.close(); await rm(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }); } };
+  return { evaluate, command: call, restart, cleanup,
+    /** Read only this harness's owned process/profile identity; never discover another browser destination. */
+    identity: () => ({ pid: child?.pid ?? null, profile }) };
 }

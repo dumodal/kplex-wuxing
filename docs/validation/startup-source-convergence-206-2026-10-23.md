@@ -881,3 +881,12 @@ verification and affected recovery/count/invalidation/foreground/native checks b
 The completed S2/warm runs exercise0selected repairs/replacements: those observations remain
 evidence about their exact frozen source, not timings of the forthcoming artifact. No historical
 matrix repetition or new optimization is planned. #206 remains draft until the updated gates pass.
+
+The new normal merge has only HANDOFF, append-only ledger and package test-list conflicts.
+Resolution retains the active #206 assignment/standing header, every byte of the prior ledger
+followed by the complete #207 tail, and the union of both package test inventories. Runtime merges
+without conflict: SourceRepository exactly matches accepted #207 SHA-256
+`d8d6d532bb711b3cb2bb5d0e55152392495533b8eb64c069158ca8b0e98809d8`; all three #206 startup runtime
+files remain unchanged. Combined startup/discovery/recovery plus count/journal/lease/foreground
+real-IndexedDB focus passes **174/174**, zero failures/skips, before publishing this integration.
+New full verification/build, exact-build native acceptance and final-head CI remain pending.

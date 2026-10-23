@@ -52,11 +52,16 @@ No blanket ours/theirs. Preserve205 metadatareader and206 recovery/discovery/nar
 Reviewed intervening runtime diff is selected localdependencycountrepair only (139lines):
 bounded cursor-membership prefixes, one validated scalar ledger read/finalwrite per distinctkey,
 ordered old-before-new intermediate counts, atomic old-prefix range deletion in existingjournal.
-Metadataread/validation/schema/startup owners unchanged. Both completed timings had0selected
+Metadataread/validation/schema/startup owners unchanged. Accepted207 includes the maintainer-accepted
+reopening/storage tradeoff, unresolved backend cause and no production-vault scaling bound;
+this integration does not reopen that stopped investigation. Both completed timings had0selected
 repairs/replacements; no new statistical CPU claim applies to upcoming artifact. Do not resume207
 storage/rootcause investigation or alter its branch/experiment. Preserve its accepted limitations.
 
-NEXT: merge ea89a83 normally; resolve docs/package testinventory conflicts deliberately; buildnew
+Normal ea89a83 merge resolves only HANDOFF/ledger/package testlist; both inventories/ledger tails
+retained and current206 assignment preserved. Runtime conflictfree; accepted SourceRepository
+exact SHA d8d6d532. Combined startup/discovery/recovery/count/journal/lease/foreground174/174 pass,
+zero failures/skips. NEXT: commit/push normal integration, then buildnew
 Node22.22.2 realdeps/actual Obsidian typings artifact and recordall3hashes/newsourcecommit. Full
 npmverify plus focused206startup/recovery and207selectedrepair realIDB checks. Publish checkpoint/
 startremoteCI promptly. After local checks, establish Mac testwindowavailability for ONLY affected
