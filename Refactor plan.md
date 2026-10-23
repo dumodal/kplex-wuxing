@@ -5373,3 +5373,171 @@ Main integrated44e6103. Actual Windows/DPR1 screenshots24main+26popout, zoom1/.8
 ## 2026-10-19 - PR149 camera raster follow-up
 
 The maintainer supplied adjacent scroll-position blur/sharp captures and expanded-outline observations. At integrated main d0a7c73, native Windows controls reproduce retained old-scale text; removing the permanent camera transform hint sharpens the same pixels at the same camera/scroll coordinates. Only that CSS hint is removed. The geometry/state regression fails before the change; the47-case focused native-theme/motion/fit/typography/Wander group passes after it. A reusable Small probe covers18owned notes, adjacent scroll offsets,1/1.25/.83zoom, eight expanded headings with no native scroller, actual middle-button pan and idle. Candidate main and owning-popout replays each25samples/cleanup pass. Preserve the initial non-overflow setup and immediate-after-stage enablement-guard failures as excluded evidence. Full clean-head verification and exact-artifact native replay follow; C14 remains paused. No indexing/source/scheduler/persistence change, forced GPU layer, CSS zoom rewrite, scroll snapping, comparative performance claim or personal-vault access. See docs/validation/label-sharpness-149-2026-10-19.md; macOS, other physical DPI/GPU and mobile remain separate acceptance.
+
+
+## 2026-10-22 — PR203 Mac real-vault measurement checkpoint (in progress)
+
+C14 remains accepted and structural refactoring paused. This branch adds guarded test tooling
+and measurement documentation only; no indexing/parser/repository/schema/scheduler optimization,
+SI4 repair, production deployment, merge or release. Pinned A/B runtime artifacts remain separate
+from the measurement branch. See [the validation record](docs/validation/mac-vault-indexing-203-2026-10-22.md).
+
+| Measurement stage | Current result |
+| --- | --- |
+| Offline copy/trust isolation | Complete; community plugins off at trust, Sync/Publish/external writers disabled, K-Plex settings/types retained |
+| Cold pair 1 | Both complete through closure and ten quiet minutes; 2,800.613663 / 2,770.907259 CPU-s to closure |
+| Warm pair 1 | Primary timings complete, original tag oracle failed both; 582.759142 / 669.656625 CPU-s, changed idle process roster/import history limits causality |
+| Reversed warm pair 2 | B timing complete; A excluded for focus loss and 96.8-second sampling gap; A bounded seven-kind oracle passed |
+| Source-backed actual startup pair 1 | Both primary timings/quiet complete; A original cleanup failure separately recovered, B corrected cleanup passes; full CPU 4,912.74 / 4,909.66 CPU-s |
+| Full-snapshot startup pair | Both censored at45min; masks peakA18/B32 then clear naturally; initial readiness remains incomplete; cleanup/configuration pass |
+| Separate diagnostic attribution | Both completed captures censored; transient masks recover, failed initial-adoption state persists; Browser/native work dominates; interrupted B retained and fresh retry passes capture/cleanup |
+| Remaining repetitions / navigation / final checks | C2/C3 native closure/quiet complete; power comparability qualified; C4 refused before activation; later warm/profile/navigation pending reliable AC |
+| Final integrity/cleanup/durable retention | Pending |
+
+Action log (12:50 UTC): verified test/production canonical path separation, test-specific database
+identity, copy backups/manifests and staged artifact hashes. Both pinned real builds and the root
+production build passed on Node22.22.2 with installed Obsidian typings. Fourteen focused tool tests
+pass, including alias/hardlink/production refusal, pre-enable ordering, blocked/late storage ownership,
+full-value codec rejection before clearing, large-frame bounds, source-state scope, constant-time
+resource phase lookup and debugger failure cleanup. Native full checkpoints/resumes preserve schema,
+keys/values/counts/digests; no timeout authorizes another concurrent owner. Completed A full snapshot
+and B source-backed caches retained privately before any replacement. All11,839 seed heads match
+native mtime/size/ctime after both actual startups; that does not certify no native event occurred.
+
+B reduces acquisition parsing and avoids the late startup rebuild/save, but the source-backed startup
+pair's full CPU differs by only0.0627%; Browser process dominates both. Warm renderer regression
+and original post-ready unsaved symptom remain unresolved; no50%target or cache-corruption claim.
+Primary and detailed diagnostic observations remain separate. User removed the overall session limit;
+45-minute per-run cap and ten observed quiet minutes remain unchanged. Next priority is a matched
+startup from the completed test-owned full snapshot, then bounded phase profiles and remaining
+paired runs. No production database was borrowed.
+
+Risk-based remaining acceptance: native full-snapshot/large-row restore with exact readback; visibility
+and sampling continuity during long startup; original wide-tag timeout versus bounded target coverage;
+final copied-note hashes and protected-production configuration observation. Mac main-window results
+do not establish other desktop OS, popout, physical mobile/touch, actual paint or original-cache history.
+
+Action log (15:30 UTC): the full-snapshot B-to-A primary pair remains censored, not accepted
+completion. Both restore the same fully verified snapshot; no readiness/closure is observed by
+45min. Unsaved owners recover naturally around33min, while `initialIndexComplete=false` remains.
+Both perform one stale-snapshot rebuild/save; B omits A's create-backlog reason. This condition
+occurs in both revisions and differs from source-backed startup. Sixteen focused harness tests now
+pass, including explicit diagnostic-only late forwarding, bounded event history/promise preservation
+and retained-state observation without validity-callback execution. Native K-Plex-off and startup
+smokes validate Browser/renderer samples, renderer CDP capture, native counts, partial-coverage
+labels and exact cleanup. The matched diagnostic pair retains the original45min per-run cap,
+with capture near10min and continued event observation through the readiness transition. No
+runtime optimization, production write or indexing-budget/pacing change is introduced.
+
+Action log (17:50 UTC): completed full-snapshot diagnostic captures with identical Native observer
+wrappers: A949/B1045 masks recover naturally, while initialSourceIndexIncomplete remains true after
+all work drains. One observed adoption returnsfalse in each arm with no later retry; later reconcile
+returns true. Browser CPU dominates and Native request volume is about7.61million in each arm.
+These divergent diagnostic peaks do not replace the primary18/32-mask observations. First B's
+pre-profile CLI timeout is retained with its full-sample evidence gap; cleanup passes. B is retried
+from the same verified seed after bounded pure-read retry/failure-capture handling passes18tests.
+Native capture/cleanup succeeds on retry. No runtime algorithm, schema, scheduler or budget change.
+Unused completed checkpoints are losslessly compressed with verified decompressed SHA256; active
+common seeds remain raw. Final primary repetitions, navigation and integrity/retention remain pending.
+Action log (19:35 UTC): C2 B reaches ready at24:54 and observable closure at30:06,
+adding574CPU-seconds,11,822 neutral body reuses,200,536 repository-method transactions and
+234million UTF-16 hash units after readiness, without masks or new reads/parses/repairs.
+Observed source revisions change during that tail; same-revision replay is not established.
+C2 A also reaches readiness while source/known-event owners remain active. Both use a later
+metadata-watchdog/progressive route, unlike C1. Semantic fullBuilds and explicit build decisions
+must classify that route: both low forwarding and sessionWork full-build counters omit progressive.
+Later observer-off controls show39 resolution refreshes versus the first warm pair's zero;
+therefore the already-required completed A3 checkpoint will seed all three later warm pairs
+before activation. Original and later host/cache cohorts remain separate. No runtime fix is made.
+
+Action log (2026-10-22 22:30 UTC): C2/C3 native CPU/foreground/quiet/cleanup complete.
+Later progressive arms reproduce five-minute ready-to-closure tails with11,822 neutral body reuses
+and545-574CPU-seconds; no masks or new parsing/repair in those tails. C2/C3 CPU direction differs,
+but later power comparability is qualified: native-runner pmset and Obsidian's Electron monitor report
+battery, while default-context pmset reports AC. No physical cause is inferred. C4's exact test reset
+completed with retained B3 backup, then the new external guard refused before activation. Cleanup
+verifies plugin off/[], controller removed; database absent/empty and caches retained for restore.
+
+Twenty-two focused tool tests pass Node22.22.2 after any-Git-ancestor receipt refusal, native power/
+lock/thermal observation and cleanup terminal-status verification. Native inspect and fresh cleanup
+pass; original incorrect running receipt remains. Strict future runs require app-observed AC and
+unlocked state; power changes/locks qualify native samples. A60sec disabled battery diagnostic has
+61 battery samples, no locks, nominal thermal state and0.979066CPU-s; this is not AC acceptance.
+Root real build and Obsidian lint pass; runtime src remains unchanged. #201 later advanced tofa08e60
+(runtimeC39), while this series stays pinned toc4a656b; current-head acceptance is unmeasured.
+Remaining warm3/4/5, profiles/resources/navigation, final host control and integrity/retention are
+pending reliable AC. User removed overall budget, not the45-minute cap/ten-minute quiet contract.
+
+Action log (2026-10-22 22:37 UTC): power-pause retention verifies834files/1,789,978,510stored
+bytes outside Temp/Git/vaults; working seeds and pinned worktrees remain intact. No HANDOFF
+archive. Interim SHA comparison confirms all20,190copied non-config files/10,956,614,603bytes
+unchanged; protected production configuration223files/84,002,510bytes unchanged. Copy K-Plex
+data/types retain original bytes. Native single focused window confirms battery/nominal thermal,
+plugin off/[], Sync/Publish off, both controllers absent and debugger/DevTools closed. Final host
+control/integrity remain pending after remaining timing. Fresh future cohort probe804f06a observes
+native power/lock/thermal;22tests pass. Return partial; no commit/push/merge/release acceptance.
+
+Action log (2026-10-23 04:14 UTC): user reports AC connected, prior disconnect time unknown.
+Native-runner and Electron independently confirm AC; C3 remains power-qualified. Fresh exact
+copy inspect confirms testDB absent/off[]/SyncPublish off. Replacement C4 B/A resumed under
+fresh logs without repeating the reset or overwriting original refusal. Source hooks frozen.
+
+Action log (2026-10-23 04:49 UTC): replacementB4 completes actual native/external AC coverage,
+ready=closure24:07/3170.257188CPU-s,10:03quiet,total3264.594752CPU-s. Semantic route confirms
+full0/catalog1/snapshot0 with110470nodes, acquisition1read/parse, no masks/readfail. QuietCPU
+94.337564 retained despite unchanged owner counters. Cleanup off[] passes; B4checkpoint/A4follow.
+
+Action log (2026-10-23 05:42 UTC): C4 complete both actualAC/foreground/native quiet/off[].
+A metadata-watchdog progressive vs B sourcecatalog; B closureCPU-32.2162% conditional route.
+A postready tail5:00.968/586.219432CPU-s,11823neutral reuses/no source I/O/parse/repair/masks.
+All natural15stores in decoded-verified A4 fullcheckpoint selected BEFORE warm3; all12future
+restore configs updated together, old A3 evidence retained. Warm3 first restore now active.
+At explicit user request committed ONLY detailed interim report as c99073b312d0f81e8c5b1562e5b848bd8df8f8b9,
+local only/no push; harness and workflow changes remain uncommitted. No runtime optimization.
+
+Action log (2026-10-23 06:32 UTC): freshA4-fullsnapshot warm3 accepts A retry/B under actual
+AC/foreground/quiet/off[] and exact7kind semantic oracle parity. A222.985295CPU/B233.176198CPU
+(+4.5702%, B13secfaster); sourcechecks/IO/parses0/reuse1. OriginalA3focus2retained/excluded.
+Onepair only; W4BA/W5AB nowserial. Nativeprobe unchanged. Indexdiagnostics restoredhistory
+explicitly separated from newlytimestamped decisions; oldcoldentry is not newwarmbuild.
+Private hostcontrol validation tightened at terminalboundary; ordinary+postrestore controls pending.
+
+Action log (2026-10-23 07:13 UTC): W4 primaryAC/foreground/nativequiet/off[] valid both,
+but originaltag renders/canonicalready while semanticpending1/dependencyVisits256 persists
+at31-32sec inbothrevisions. Sevenboundedtargets pass/hashparity. Timing andfunctionalqualifications
+keptseparate. A lateone-schedulerlane sample347sec (no source/hash/transaction/parserdelta)
+movesfinalclosure fromreadiness145sec to348sec; notcontinuoussourcehot-tail. All3CPUmetrics
+retained. W5pre-restorationCLI30sectimeout/busyfalse/off[] retained; freshreceipt retry nowactive.
+Futureexistingnavlane same8targets/botharms at90sec testsnavigationawayfrombroadpendingtag;
+no runtimecode/hooks changed. Reportcommitc99073b remainsstable interim snapshot, no push.
+
+Action log (2026-10-23 07:42 UTC): all3A4-seeded matchedwarmtimingpairs complete withsame
+Nativeprobe/actualAC/foreground/10quiet/off[]. Sevenboundedsemanticprojections match inall3.
+W4originaltag semanticquiescence failsbothafterrendering; neverfunctionalpass. Medianreadiness
+CPU A222.985295/B233.176198(+4.5702%); fullincludingquietA357.291553/B370.380395(+3.6634%).
+Finalclosuremetric affectedbyA4singlelate scheduleradmission; reportall3metrics/ranges/pairdelta.
+Allwarm sourcechecks/IO/parses/repairs0, reuse1; Nativecarryover/physicalhistory notisolated.
+Separateprofile/resources/nav/ordinary+postrestorecontrols nowserial; no runtimechange.
+
+Action log (2026-10-23 08:56 UTC): planned Mac captures finish; no runtime optimization or
+C15 advancement. Three A4-seeded warm timing pairs preserve seven-target semantic parity;
+median readiness A222.985295/B233.176198 CPU-s (+4.5702%), with no uniform whole-process
+speedup. W4 broad-tag semantic timeout remains a functional qualification in both revisions.
+Detailed warm resource tables hit the256-bucket cap: grouped native counts are LOWER BOUNDS,
+not total equality. Dedicated reader/lease counters are complete at11886 creations/retirements
+in both, zero overflow/live leases; inclusive waits are not CPU attribution. Earlier counts-only
+startup tables have253buckets/no overflow. Profiles remain CPU-invalid due to sampling gaps.
+Navigation completes all8targets, with original B final-cleanup IPC timeout retained and separate
+cleanup recovery verified. Ordinary disabled control passes10min/8.801909 CPU-s. Optional
+post-restore disabled capture records27.992692 CPU-s but29unfocused samples; strict parent
+remains FAILED and timing is not comparable. A separate safety-only continuation validates
+terminal off[] cleanup before read-only integrity; no performance acceptance is waived.
+Final20190copy content files/10956614603bytes and223protected production config files/
+84002510bytes match initial SHA manifests exactly. Original full-content baseline was not
+acquired. Copy data/types match; K-Plex/Sync/Publish disabled, controllers/debugger removed,
+IndexedDB prototypes/layout observer restored, no study driver/caffeinate child. Focus released.
+At the user's renewed explicit request, report-only update6d3d19e511bb7e9878e27d0d7344ce908b3839a1
+committed/pushed and PR203draft/head verified. Harness/workflow remain uncommitted. Earlier
+review commitc99073b remains intact. PR201 independently merged newerfa08e60; not measured
+by this frozen c4 Mac series. Final private retention and source manifest follow; no new
+measurement, optimization, production action, merge or release is implicitly authorized.

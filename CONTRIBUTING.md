@@ -179,6 +179,113 @@ editors, native theme choosers, hit targets, Cancel/Escape and outside dismissal
 windows. It uses native Electron input, creates no note or saved lens fixtures, and restores
 workspace/settings/enablement state. See [the #197 validation record](docs/validation/lens-color-stacking-197-2026-10-21.md).
 
+### Guarded Mac real-data study (PR203)
+
+`npm run test:mac-study` checks the study's target, staging, observation-order and storage-lifetime
+guards. `npm run study:mac -- /absolute/private/run.json` runs one serial action. Read the current
+`HANDOFF.md` before using it. The study accepts only the explicitly prepared `kplex-test-brain-mac`
+copy, or `kplex-test-small` with `smoke: true`; it always requires the protected production path.
+
+The private JSON supplies `vaultName`, `vaultPath`, `configDir`, `productionPath`, `action`,
+`reportDir`, and the pinned `source` identity. Measurement additionally requires `artifactDir`.
+Storage actions use `checkpoint`. Actions are `inspect`, `checkpoint`, `restore`, `resume-restore`, `resume-checkpoint`, `reset`,
+`measure`, `control`, `startup`, and `cleanup`. Keep configurations, row streams, sidecars and reports outside
+every Git checkout/worktree and both vaults. The driver and standalone native storage controller
+reject Git metadata ancestors, including worktree `.git` files. Do not commit real note paths or raw diagnostics.
+
+Prepare the copy offline before trust: privately back up configuration, empty its enabled
+community-plugin list, disable Sync/Publish and external startup writers, and park restored
+content/plugin panes. Preserve K-Plex data, property types and the remaining core-plugin policy.
+Verify host metadata and the indexing notice have settled before running the driver. Ordinary
+`verify:obsidian` enables K-Plex and must not consume this copy's first activation.
+
+The driver validates the CLI path, refuses aliases/shared write targets and production overlap,
+stages complete hashed artifacts while stopped, and attaches observation at native layout
+registration before startup admission. It changes neither indexing pacing nor background
+throttling. Require foreground samples throughout. Native system observations use Obsidian's Electron
+`powerMonitor`, not an inferred shell power source. Strict runs default to `requireAc: true` and
+require a supported unlocked-session reading before activation. Every native sample retains power,
+lock and thermal facts; battery samples, power changes and OS locks qualify comparability even
+when window focus stays true. `requireAc: false` declares a different power condition explicitly;
+it does not turn a battery diagnostic into an AC acceptance run. Earlier reports without this
+coverage remain qualified rather than receiving retroactive power certification.
+A hidden control/run is retained and excluded
+from foreground timing comparisons, even when its native window reports focus.
+
+Default measurement observes natural source/URL/persistence closure and ten quiet minutes, capped
+at 45 minutes; expiry is incomplete, not success. Gaps longer than five seconds restart the observed quiet interval and invalidate strict CPU
+eligibility. Samples retain native window/document focus and visibility, original background
+throttling and the actual gap. Keep rejected/qualified observations in the evidence set.
+Full-build classification must use semantic diagnostics and explicit build decisions: the probe's
+`fullBuilds` counts `rebuild()` calls, and both it and `sessionWork.fullBuildStarts` omit the
+progressive compiler entry. A zero value alone does not establish that no full build occurred.
+A disabled control requires at least one minute; its shorter horizon is not a matched ten-minute
+idle comparison. Checkpoint/restore stream all
+stores with schema/count/digest checks while K-Plex is off. Reset requires retained test storage;
+a blocked deletion stays owned and prevents activation until its real terminal event. Storage
+timeouts never authorize another concurrent driver. Decoded value digests must match before an
+import clears stores and must match again after the atomic native commit. Fresh report directories
+preserve interrupted receipts. Typed-view exports use the base V8 structured serializer, preserving
+shared backing buffers; raw V8 bytes are never the equivalence oracle.
+Each encoded row is capped at 64 MiB to accommodate observed native snapshot chunks.
+Decoded verification yields between bounded batches outside live IDB transactions while
+retaining exclusive storage ownership; an oversized frame fails before import opens storage.
+`resume-restore` and `resume-checkpoint` only observe an already-retained native job to its terminal
+result and check every returned store digest against the declared checkpoint; they never start
+another write. Keep the original timeout receipt and use a fresh recovery report directory.
+Timed observation retains external CLI timeouts and retries under its unchanged deadline while
+the already-armed native sampler continues; other observation errors still abort. `stopAt`
+optionally sets an absolute ISO observation deadline within the unchanged 45-minute run cap;
+an unfinished ten-minute quiet interval remains incomplete.
+
+`oracle: true` adds bounded existing-target navigation/provenance checks after timing stops;
+`oracleTargets` carries the same private sequence to the other arm. `nativeProfile: true` requires
+`purpose: "diagnostic"` and captures separate five-second Browser/renderer native stacks plus
+a five-second renderer CDP CPU profile. It refuses an existing debugger/DevTools owner and
+releases its own profiler/debugger independently of success. `profileAfterMs` selects the phase;
+the bounded window must fit the diagnostic deadline. Raw frames remain private.
+The same profile option is available for diagnostic `startup` runs. `captureSourceFlags: true`
+adds bounded existing-native-object flag counts after reconnect and around capture, capped at
+20,000 Markdown objects, without note reads, acquisition or exported identities. It also counts
+retained-memory/unsaved overlap, active lanes, pending deletion and retry/readiness flags without
+calling stored validity predicates. `lateStartupObservers: true` permits diagnostic forwarding after
+CLI reconnect; coverage remains `since-late-attachment`, never pre-admission. `diagnosticEvents: true`
+retains at most 128 aggregate fixed-label mask/adoption/reconcile events, with overflow explicit;
+no owner IDs, method arguments or error text are exported. `resourceCounts: true` records native
+transaction/request counters without detailed payload serialization; it cannot be combined with
+`detailedResources`. Each option requires `purpose: "diagnostic"`.
+Pure diagnostic flag queries retry at most twice under the original run deadline, recording each
+transport timeout; functional errors are not retried. Profiler ownership/start failures remain fatal.
+A failed startup attempts a full probe snapshot before independent cleanup; an unavailable failure
+snapshot remains explicit rather than a successful capture.
+Those runs are diagnostic, not acceptance timing. `startup` requires the maintainer to save/close
+other vaults first and independently verifies exactly one test window before normal quit/relaunch.
+Its external process recorder arms while Obsidian is absent, survives CLI reconnects, and includes
+early CPU; native operation counters attached later remain explicitly incomplete. Startup temporarily
+saves only K-Plex enablement and restores the original enabled list/data/layout. Supply `checkpoint`
+after an immediately preceding verified restore and the same private `startupLayout` receipt for
+matched startup arms. `layout-measured.json` captures the ordinary active layout after measurement
+and before post-timing navigation. Startup also checks the registry will reopen only the test copy;
+completion requires native metadata readiness, the expected center's DOM and natural quiet.
+Never invoke it against an application containing another vault.
+`detailedResources: true` reuses the existing native transaction/request/family ledger in a separate
+diagnostic run; its inclusive method durations and JSON payload estimates are not CPU or disk bytes.
+Its phase labels use the last scalar sample's source/hydration progress, with up to one sample
+of attribution lag; individual operations never recalculate plugin status.
+The phase table is capped at 256 buckets. If `groups.other` contains events, classified native
+request/transaction totals are lower bounds; do not infer total operation equality or CPU shares.
+Dedicated reader/lease counters have separate coverage and overflow fields.
+`availabilityTargets` replays the retained seven-kind sequence during background indexing;
+`availabilityAfterMs` selects its start and the bounded workload must fit the diagnostic deadline.
+It records provisional gates and DOM/search availability, uses normal navigation with native
+document follow off, and makes no complete-semantic, physical-input or paint claim. The driver owns
+cancellation and restores layout/settings independently of success.
+See the [PR203 record](docs/validation/mac-vault-indexing-203-2026-10-22.md)
+for actual coverage and limitations; implementation does not establish native acceptance.
+Receipt `status: "complete"` records completion of the requested observation horizon. Check
+`validCpu`, `comparable`, process-exit coverage and cleanup independently before accepting timing;
+disabled controls use observed elapsed time because their loaded-plugin quiet predicate stays false.
+
 ## Documentation
 
 `README.md` is the public, end-user-facing introduction and usage guide. Keep build commands, internal architecture, performance invariants and implementation notes out of the README.
