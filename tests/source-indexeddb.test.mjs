@@ -992,6 +992,225 @@ test("single-chunk disk family coalescing preserves bounded validation and selec
   } finally { await browser.cleanup(); }
 });
 
+/** The ordinary production metadata visitor shares its protected fetch with atomic selection. */
+test("protected single-family selection removes one native transaction without removing work", { timeout: 60000 }, /** Compare complete native work while restoring every observer before cleanup. */ async () => {
+  const browser = await chromiumHarness(bundle);
+  try {
+    await browser.evaluate(initialize);
+    assert.equal(await browser.evaluate(`(/** Exercise the production visitor against durable facts and its real original connection. */async()=>{
+      const owner=await fresh('protected-family-selection-counts'),r=owner.sources,db=await owner.open();
+      const nativeTransaction=db.transaction,add=IDBObjectStore.prototype.add,remove=IDBObjectStore.prototype.delete;
+      const runtime=r.runtime,calls=[];let additions=0,deletions=0,hashes=0;
+      try{
+        equal((await r.replace(await make(r,'Tiny'))).outcome,'activated','Durable tiny source');
+        const before=await r.inspect('Tiny',[]),revision=before.head.families.metadata.revision;
+        equal(before.head.families.metadata.chunks,1,'Actual production single-chunk eligibility');
+        const selectedRevisions=new Set(Object.values(before.head.families).map(/** Count storage revisions rather than assuming one lease per family. */family=>family.revision)).size;
+        db.transaction=/** Include direct original-connection lease release in native totals. */function(...args){calls.push({stores:Array.from(args[0]),mode:args[1]});return nativeTransaction.apply(this,args);};
+        IDBObjectStore.prototype.add=/** Count only actual family-lease creations. */function(value,...args){if(this.name==='meta'&&String(value?.key).startsWith('source-lease:'))additions++;return add.call(this,value,...args);};
+        IDBObjectStore.prototype.delete=/** Count the corresponding original-handle deletions. */function(key){if(this.name==='meta'&&String(key).startsWith('source-lease:'))deletions++;return remove.call(this,key);};
+        r.runtime={...runtime,digest:/** Authentication remains real SHA work, counted separately from IDB. */async text=>{hashes++;return runtime.digest(text);}};
+        const facts=[];
+        equal(await r.visit('Tiny','metadata',/** Collect private facts only until the terminal visitor result. */records=>{facts.push(...records);return true;}),'ready','Production visitor authenticates');
+        equal(facts,[{kind:'alias',value:'label'}],'Canonical metadata is unchanged');
+        equal(additions,selectedRevisions,'Every selected family revision remains durably protected');
+        equal(deletions,selectedRevisions,'Complete lease release is included');
+        equal(hashes,3,'Chunk, rolling-family and posting digest authentication remains');
+        equal(calls.length,2,'One atomic selection/protected-fetch transaction plus complete original-handle release');
+        equal(calls[0].mode,'readwrite','Selection and lease creation remain atomic');
+        ok(['sourceHeads','meta','sourceChunks','sourcePostings'].every(/** Require all protected reads and lease writes in the same native scope. */store=>calls[0].stores.includes(store)),'Same selection transaction owns protected family reads');
+        equal(calls[1],{stores:['meta'],mode:'readwrite'},'Original connection retires owned leases');
+        equal(r.decodeBytes,0,'No retained decode reservation');equal(r.readers.size,0,'No selected reader lifetime remains');
+        db.transaction=nativeTransaction;IDBObjectStore.prototype.add=add;IDBObjectStore.prototype.delete=remove;r.runtime=runtime;
+        equal(await requestValue(db.transaction('meta').objectStore('meta').index('sourceLease').count(['Tiny',revision])),0,'No durable reader debt');
+        equal((await r.inspect('Tiny',[])).head,before.head,'No source write or restamping');return true;
+      }finally{db.transaction=nativeTransaction;IDBObjectStore.prototype.add=add;IDBObjectStore.prototype.delete=remove;r.runtime=runtime;owner.close();}
+    })()`),true);
+  }finally{await browser.cleanup();}
+});
+
+/** Real native transactions exercise prepared-decode transfer, unchanged fallbacks and retirement. */
+test("protected metadata preparation preserves bounded fallback and reader cleanup", { timeout: 180000 }, /** Exercise independent native lifetime boundaries inside an owned disposable browser. */ async t => {
+  const browser = await chromiumHarness(bundle);
+  try {
+    await browser.evaluate(initialize);
+    await t.test("zero, one, record-limit and exact byte-limit families select only the bounded fast path", /** Verify count and encoded-byte eligibility without changing production budgets. */ async () => {
+      assert.equal(await browser.evaluate(`(/** Construct authenticated exact-limit storage frames and prove complete retirement. */async()=>{
+        const owner=await fresh('protected-family-boundaries'),r=owner.sources,db=await owner.open(),get=IDBObjectStore.prototype.get;
+        try{
+          const target=sourceModules.SOURCE_CHUNK_TARGET_BYTES,limit=sourceModules.SOURCE_MAX_BATCH_RECORDS;
+          const cases=[['Zero',0,null,true],['One',1,null,true],['RecordLimit',limit,null,true],['RecordOver',limit+1,null,false],['ByteLimit',1,target,true],['ByteOver',1,target+1,false]];
+          for(const [id,count,bytes,eligible] of cases){
+            const input=await make(r,id);const base=new TextEncoder().encode(JSON.stringify([{kind:'alias',value:''}])).length;
+            input.families.metadata=/** Produce exact canonical facts before arranging an authenticated storage-boundary fixture. */async emit=>{for(let i=0;i<count;i++)if(!await emit({kind:'alias',value:bytes===null?'Alias-'+i:'x'.repeat(bytes-base)}))return false;return true;};
+            equal((await r.replace(input)).outcome,'activated','Persist exact boundary '+id);let before=(await r.inspect(id,[])).head;
+            // The current writer flushes at the limit and appends an empty final chunk. Reader
+            // codecs also admit an exact-limit single chunk: retain every fact/posting, remove only
+            // that empty terminal frame and recompute its real rolling SHA/byte manifest.
+            if((count===limit||bytes!==null)&&before.families.metadata.chunks===2){
+              const manifest=before.families.metadata,firstKey=[id,manifest.revision,'metadata',0],lastKey=[id,manifest.revision,'metadata',1];
+              const first=await requestValue(db.transaction('sourceChunks').objectStore('sourceChunks').get(firstKey));
+              const last=await requestValue(db.transaction('sourceChunks').objectStore('sourceChunks').get(lastKey));
+              equal(last.records,0,'Only an empty terminal frame is removed');equal(last.data,'[]','Terminal frame has no facts');
+              const digest=await r.observationDigest(first.digest);before={...before,families:{...before.families,metadata:{...manifest,chunks:1,bytes:first.bytes,digest}}};
+              await edit(db,['sourceChunks','sourceHeads'],/** Commit the valid boundary chunk and its authenticated manifest atomically. */tx=>{tx.objectStore('sourceChunks').put({...first,final:true});tx.objectStore('sourceChunks').delete(lastKey);tx.objectStore('sourceHeads').put(before);});
+            }
+            equal(before.families.metadata.records,count,'Actual persisted record count '+id);if(bytes!==null)equal(before.families.metadata.bytes,bytes,'Actual persisted byte count '+id);
+            let speculative=0,seen=0;IDBObjectStore.prototype.get=/** Observe actual chunk work in the existing atomic write transaction. */function(...args){if(this.name==='sourceChunks'&&this.transaction.mode==='readwrite')speculative++;return get.apply(this,args);};
+            equal(await r.visit(id,'metadata',/** Count all authenticated rows, including the empty final family. */records=>{seen+=records.length;return true;}),'ready','Boundary authenticates '+id);IDBObjectStore.prototype.get=get;
+            equal(seen,count,'No truncated boundary output '+id);equal(speculative,eligible?1:0,'Exact fast-path boundary '+id);equal(r.decodeBytes,0,'Boundary reservation released '+id);equal(r.readers.size,0,'Boundary reader released '+id);
+            equal(await requestValue(db.transaction('meta').objectStore('meta').index('sourceLease').count([id,before.sourceRevision])),0,'Boundary leases retired '+id);
+          }return true;
+        }finally{IDBObjectStore.prototype.get=get;owner.close();}
+      })()`),true);
+    });
+    await t.test("dense, oversized, legacy and non-metadata owners issue no speculative write-transaction fetch", /** Preserve original readers for every intentionally ineligible owner shape. */ async () => {
+      assert.equal(await browser.evaluate(`(/** Attribute speculative native work separately from the required fallback authentication. */async()=>{
+        const owner=await fresh('protected-family-fallback'),r=owner.sources,db=await owner.open(),get=IDBObjectStore.prototype.get;
+        try{
+          const dense=await make(r,'Dense');dense.families.metadata=/** Force multiple production chunks with genuine alias facts. */async emit=>{for(let i=0;i<600;i++)if(!await emit({kind:'alias',value:'Alias-'+i}))return false;return true;};
+          const wide=await make(r,'Wide');wide.families.metadata=/** Produce one indivisible record above the speculative target but below existing decode limits. */async emit=>emit({kind:'alias',value:'x'.repeat(270000)});
+          for(const input of [dense,wide,await make(r,'Legacy'),await make(r,'Other')])equal((await r.replace(input)).outcome,'activated','Seed fallback');
+          const legacy=(await r.inspect('Legacy',[])).head;
+          await edit(db,['sourceHeads'],/** Select the recognized legacy grammar while preserving its actual URL-free bytes. */tx=>tx.objectStore('sourceHeads').put({...legacy,bodyParserVersion:2}));
+          let speculative=0;IDBObjectStore.prototype.get=/** Attribute only chunk requests inside a native write transaction. */function(...args){if(this.name==='sourceChunks'&&this.transaction.mode==='readwrite')speculative++;return get.apply(this,args);};
+          for(const [id,family,expected] of [['Dense','metadata',600],['Wide','metadata',1],['Legacy','metadata',1],['Other','values',4]]){
+            let count=0;equal(await r.visit(id,family,/** Count authenticated fallback output without retaining dense payloads. */records=>{count+=records.length;return true;}),'ready','Fallback authenticates '+id);
+            if(id!=='Other')equal(count,expected,'Complete fallback output '+id);
+          }
+          equal(speculative,0,'Ineligible paths perform no unused prepared fetch');equal(r.decodeBytes,0,'All fallback reservations close');equal(r.readers.size,0,'No fallback reader remains');return true;
+        }finally{IDBObjectStore.prototype.get=get;owner.close();}
+      })()`),true);
+    });
+    await t.test("missing and corrupt prepared rows retain digest/frame/posting failure order", /** Keep established failure precedence and reject all unauthenticated callbacks. */ async () => {
+      assert.equal(await browser.evaluate(`(/** Alter one durable envelope at a time and check independent protective cleanup. */async()=>{
+        const owner=await fresh('protected-family-corruption'),r=owner.sources,db=await owner.open();
+        try{
+          for(const fault of ['missing-chunk','bad-sha','bad-frame-and-sha','bad-frame','missing-posting','wrong-posting','large-corrupt']){
+            equal((await r.replace(await make(r,fault))).outcome,'activated','Seed '+fault);
+            const head=(await r.inspect(fault,[])).head,key=[fault,head.families.metadata.revision,'metadata',0];
+            const raw=await requestValue(db.transaction('sourceChunks').objectStore('sourceChunks').get(key));
+            if(fault==='missing-chunk')await edit(db,['sourceChunks'],/** Remove the selected chunk without changing the manifest's completeness claim. */tx=>tx.objectStore('sourceChunks').delete(key));
+            else if(fault==='missing-posting'||fault==='wrong-posting')await edit(db,['sourcePostings'],/** Corrupt a required lookup row independently of the authentic chunk. */async tx=>{const store=tx.objectStore('sourcePostings');if(fault==='missing-posting')store.delete(key);else{const posting=await requestValue(store.get(key));store.put({...posting,key:'wrong'});}});
+            else{
+              const data=fault==='bad-sha'?raw.data:JSON.stringify([{kind:'unknown',value:fault==='large-corrupt'?'x'.repeat(300000):'x'}]);
+              const digest=fault==='bad-frame'?await r.observationDigest(data):'0'.repeat(64);
+              await edit(db,['sourceChunks'],/** Persist the selected SHA/frame disagreement without mutating unrelated families. */tx=>tx.objectStore('sourceChunks').put({...raw,data,digest,bytes:new TextEncoder().encode(data).length,records:1}));
+            }
+            let consumed=0;const reason=await r.visit(fault,'metadata',/** Detect any forbidden callback before failed authentication closes. */records=>{consumed+=records.length;return true;});
+            equal(reason,{'missing-chunk':'missing-chunk','bad-sha':'invalid-chunk','bad-frame-and-sha':'invalid-chunk','bad-frame':'invalid-frame','missing-posting':'missing-posting','wrong-posting':'invalid-posting','large-corrupt':'invalid-chunk'}[fault],'Unchanged reason '+fault);
+            equal(consumed,0,'No unauthenticated fact callback '+fault);equal(r.decodeBytes,0,'Failed preparation reservation closes');equal(r.readers.size,0,'Failed preparation reader closes');
+            equal(await requestValue(db.transaction('meta').objectStore('meta').index('sourceLease').count([fault,head.sourceRevision])),0,'No durable pin remains');
+          }return true;
+        }finally{owner.close();}
+      })()`),true);
+    });
+    await t.test("close before pin resumption retires the prepared reservation before the caller continues", /** Test unload between native commit and awaited caller resumption. */ async () => {
+      assert.equal(await browser.evaluate(`(/** Hold the committed selection so synchronous close must own its prepared reservation. */async()=>{
+        const owner=await fresh('protected-family-close'),r=owner.sources,db=await owner.open(),transaction=r.transaction;let release;
+        try{
+          equal((await r.replace(await make(r,'A'))).outcome,'activated','Seed close');
+          const head=(await r.inspect('A',[])).head;let entered;const reached=new Promise(/** Signal only the post-commit boundary. */resolve=>entered=resolve),hold=new Promise(/** Let the fixture resume the retired caller after cleanup assertions. */resolve=>release=resolve);
+          r.transaction=/** Hold only after the actual combined pin transaction has committed. */async function(...args){const value=await transaction.apply(this,args);if(args[2]==='readwrite'&&args[1].includes('sourceChunks')){entered();await hold;}return value;};
+          let consumed=0;const pending=r.visit('A','metadata',/** Detect publication of any records after the held lifetime is closed. */records=>{consumed+=records.length;return true;});await reached;
+          equal(r.readers.size,1,'Reader registered before pin resumes');ok(r.decodeBytes>0,'Prepared decode is charged while continuation is held');
+          const view=[...r.readers][0];r.close();equal(r.decodeBytes,0,'Close synchronously releases unconsumed preparation');await view.release;
+          equal(await requestValue(db.transaction('meta').objectStore('meta').index('sourceLease').count(['A',head.sourceRevision])),0,'Original connection removed committed protection');
+          release();equal(await pending,'cancelled','Closed preparation never escapes');equal(consumed,0,'No callback after close');equal(r.decodeBytes,0,'No double release');return true;
+        }finally{release?.();r.transaction=transaction;owner.close();}
+      })()`),true);
+    });
+    await t.test("cancel or unload during a native prepared request leaves no reservation or healthy pin", /** Distinguish caller cancellation, source abort and repository close at actual request boundaries. */ async () => {
+      assert.equal(await browser.evaluate(`(/** Interrupt each owned lifetime while its real posting request is still active. */async()=>{
+        const getAll=IDBObjectStore.prototype.getAll;
+        try{
+          for(const mode of ['caller','source','close']){
+            const owner=await fresh('protected-family-request-'+mode),r=owner.sources,db=await owner.open();let live=true,interrupted=false;
+            try{
+              equal((await r.replace(await make(r,'A'))).outcome,'activated','Seed '+mode);const head=(await r.inspect('A',[])).head;
+              IDBObjectStore.prototype.getAll=/** Interrupt the real first posting request with owned cancellation. */function(...args){const request=getAll.apply(this,args);if(this.name==='sourcePostings'&&this.transaction.mode==='readwrite'&&!interrupted){interrupted=true;if(mode==='source')r.cancelSource('A');else if(mode==='close')r.close();else request.addEventListener('success',/** Retire caller authority before the request's awaited continuation. */()=>{live=false;},{once:true});}return request;};
+              let consumed=0;equal(await r.visit('A','metadata',/** Detect any callback escaping an interrupted preparation. */records=>{consumed+=records.length;return true;},/** Keep caller demand independent from repository/source cancellation. */()=>live),'cancelled','Interrupted pin is cancelled');
+              IDBObjectStore.prototype.getAll=getAll;equal(interrupted,true,'Real native posting boundary reached');equal(consumed,0,'No partial facts');equal(r.decodeBytes,0,'Request-local or transferred reservation released');equal(r.readers.size,0,'No active reader');
+              equal(await requestValue(db.transaction('meta').objectStore('meta').index('sourceLease').count(['A',head.sourceRevision])),0,'Aborted pin leaves no durable lease');
+            }finally{IDBObjectStore.prototype.getAll=getAll;owner.close();}
+          }return true;
+        }finally{IDBObjectStore.prototype.getAll=getAll;}
+      })()`),true);
+    });
+    await t.test("a held background preparation protects retired rows while foreground reads and edits finish", /** Prove that committed background protection does not become a foreground join or native lock. */ async () => {
+      assert.equal(await browser.evaluate(`(/** Complete foreground reads and an independent edit before resuming the retired background reader. */async()=>{
+        const first=await fresh('protected-family-foreground'),second=await fresh('protected-family-foreground'),r=first.sources,other=second.sources,transaction=r.transaction;let release;
+        try{
+          for(const id of ['Background','Foreground'])equal((await r.replace(await make(r,id))).outcome,'activated','Seed '+id);
+          const before=await r.inspect('Background',[]);let entered,held=false,live=true;const reached=new Promise(/** Announce committed background protection to the foreground fixture. */resolve=>entered=resolve),hold=new Promise(/** Retain only the caller continuation, never a live native transaction. */resolve=>release=resolve);
+          r.transaction=/** Pausing after commit must not hold a native lock or join foreground work. */async function(...args){const value=await transaction.apply(this,args);if(!held&&args[3]==='Background'&&args[2]==='readwrite'&&args[1].includes('sourceChunks')){held=true;entered();await hold;}return value;};
+          const background=r.visit('Background','metadata',/** Request validation without retaining background payloads. */()=>true,/** Model the existing caller freshness fence independently of storage. */()=>live);await reached;
+          equal(await r.visit('Foreground','metadata',/** Complete an unrelated foreground read while background remains paused. */()=>true),'ready','Foreground read completes while background continuation is held');
+          equal((await other.replace(await make(other,'Background',before.expected,'Field:: [[Changed]]'))).outcome,'activated','Independent edit completes without joining paused reader');
+          equal(await other.cleanupRevision('Background',before.head.sourceRevision),false,'Old family remains protected by original reader');
+          live=false;release();equal(await background,'cancelled','Existing caller freshness fence rejects old preparation');equal(r.decodeBytes,0,'Both read reservations retired');
+          ok(await other.cleanupRevision('Background',before.head.sourceRevision),'Retired data becomes collectible only after reader release');
+          equal(await other.visit('Background','metadata',/** Authenticate the newly selected source after old-row reclamation. */()=>true),'ready','Subsequent selected read remains healthy');return true;
+        }finally{release?.();r.transaction=transaction;first.close();second.close();}
+      })()`),true);
+    });
+    await t.test("shared revisions and memory or evicted unsaved masks retain their existing authority", /** Preserve all-family protection and storage-degraded masks without speculative disk bypass. */ async () => {
+      assert.equal(await browser.evaluate(`(/** Select mixed immutable revisions, then exercise current-memory and evicted-unsaved ownership. */async()=>{
+        const owner=await fresh('protected-family-revisions'),r=owner.sources,db=await owner.open(),storage=r.storage,get=IDBObjectStore.prototype.get;
+        try{
+          equal((await r.replace(await make(r,'A'))).outcome,'activated','Seed initial family revision');const before=await r.inspect('A',[]);
+          const next=await make(r,'A',before.expected);next.families={...before.head.families,metadata:/** Replace metadata alone while retaining other authenticated family revisions. */async emit=>emit({kind:'alias',value:'new label'})};
+          equal((await r.replace(next)).outcome,'activated','Only metadata receives a new immutable revision');const selected=(await r.inspect('A',[])).head;
+          equal(new Set(Object.values(selected.families).map(/** Distinguish actual storage revisions rather than counting family names. */family=>family.revision)).size,2,'Actual shared and fresh family revisions');
+          let pins=0;IDBObjectStore.prototype.get=/** Count the complete selected revision protection during combined fetch. */function(...args){if(this.name==='sourceChunks'&&this.transaction.mode==='readwrite')pins=r.readers.size;return get.apply(this,args);};
+          const facts=[];equal(await r.visit('A','metadata',/** Retain private metadata only until the terminal reason authenticates it. */records=>{facts.push(...records);return true;}),'ready','New metadata authenticates');
+          equal(facts,[{kind:'alias',value:'new label'}],'No retained old metadata');equal(pins,1,'One registered lifetime covers every family revision');
+          for(const revision of new Set(Object.values(selected.families).map(/** Check retirement separately for every distinct selected storage revision. */family=>family.revision)))equal(await requestValue(db.transaction('meta').objectStore('meta').index('sourceLease').count(['A',revision])),0,'Every revision lease retired');
+          r.storage={open:/** Force the existing bounded memory-write path without a native connection. */async()=>null,/** A memory-only operation must never report a native storage failure. */failed(){throw new Error('Memory-only read cannot fail native storage');}};
+          equal((await r.replace(await make(r,'Memory'))).outcome,'unsaved','Storage degradation preserves bounded source memory');r.storage=storage;
+          let diskReads=0;IDBObjectStore.prototype.get=/** Any disk head/chunk read would bypass the memory/unsaved mask. */function(...args){if(this.name==='sourceHeads'||this.name==='sourceChunks')diskReads++;return get.apply(this,args);};
+          equal(await r.visit('Memory','metadata',/** Authenticate current memory facts without granting durable authority. */()=>true),'ready','Current memory family remains usable');
+          r.memory.delete('Memory');equal(await r.visit('Memory','metadata',/** This callback must remain unreachable after unsaved payload eviction. */()=>true),'unsaved','Evicted unsaved data never exposes an older disk head');equal(diskReads,0,'Neither memory path starts durable preparation');
+          equal(r.decodeBytes,0,'Shared and memory reads close decode ownership');return true;
+        }finally{IDBObjectStore.prototype.get=get;r.storage=storage;owner.close();}
+      })()`),true);
+    });
+    await t.test("post-request failure retires prepared results for both combined and standalone transactions", /** Cover reservation ownership after request success but before a wrapper returns its result. */ async () => {
+      assert.equal(await browser.evaluate(`(/** Reject both preparation owners after native commit and prove a later read can recover. */async()=>{
+        const owner=await fresh('protected-family-terminal-failure'),r=owner.sources,db=await owner.open(),transaction=r.transaction;
+        try{
+          equal((await r.replace(await make(r,'A'))).outcome,'activated','Seed failure');const head=(await r.inspect('A',[])).head;
+          for(const family of ['metadata','values']){
+            let interrupted=false;r.transaction=/** Fail after successful native requests/commit while the wrapper still owns their reservation. */async function(...args){const value=await transaction.apply(this,args);if(!interrupted&&args[1].includes('sourceChunks')){interrupted=true;throw new sourceModules.SourceFactError('read-error');}return value;};
+            equal(await r.visit('A',family,/** No callback can authorize the interrupted prepared result. */()=>true),'read-error','No success escapes failed '+family+' transfer');r.transaction=transaction;
+            equal(interrupted,true,'Relevant combined or standalone fetch reached');equal(r.decodeBytes,0,'Transferred reservation reclaimed exactly once');equal(r.readers.size,0,'Terminal reader removed');
+            equal(await requestValue(db.transaction('meta').objectStore('meta').index('sourceLease').count(['A',head.sourceRevision])),0,'Committed lease retirement completed');
+            equal(await r.visit('A',family,/** Reauthenticate the same durable facts after removing the fixture fault. */()=>true),'ready','Later ordinary read is healthy');
+          }return true;
+        }finally{r.transaction=transaction;owner.close();}
+      })()`),true);
+    });
+    await t.test("an aborted release retains conservative protection without retaining decoded memory", /** Preserve the conservative failed-retirement contract while proving decode ownership ends. */ async () => {
+      assert.equal(await browser.evaluate(`(/** Observe a real failed lease deletion through an independent still-live connection. */async()=>{
+        const first=await fresh('protected-family-release-abort'),second=await fresh('protected-family-release-abort'),r=first.sources,other=second.sources,db=await first.open(),independentDb=await second.open(),native=db.transaction;
+        try{
+          equal((await r.replace(await make(r,'A'))).outcome,'activated','Seed retirement');const before=await r.inspect('A',[]);let aborted=false;
+          db.transaction=/** Abort only original-handle lease deletion, preserving the committed protective record. */function(stores,mode,...args){const tx=native.call(this,stores,mode,...args);if(!aborted&&mode==='readwrite'&&stores.length===1&&stores[0]==='meta'){aborted=true;queueMicrotask(/** Abort after the delete request is queued but before commit. */()=>tx.abort());}return tx;};
+          equal(await r.visit('A','metadata',/** Complete authentic reading before the independent retirement failure. */()=>true),'ready','Existing conservative release contract is preserved');db.transaction=native;
+          equal(aborted,true,'Actual release transaction aborted');equal(r.decodeBytes,0,'Release failure cannot retain private decode');equal(r.readers.size,0,'Ended reader is no longer active');
+          equal(await requestValue(independentDb.transaction('meta').objectStore('meta').index('sourceLease').count(['A',before.head.sourceRevision])),1,'Failed deletion remains protective across connections');
+          equal((await other.replace(await make(other,'A',before.expected,'Field:: [[Next]]'))).outcome,'activated','Independent later edit remains live');
+          equal(await other.cleanupRevision('A',before.head.sourceRevision),false,'Retained lease still refuses unsafe reclamation');
+          // The ordinary cache owner may close the first connection after an unexpected native
+          // release abort. Cleanup uses the independent live handle, never a closing DB object.
+          await edit(independentDb,['meta'],/** Remove only this fixture's proven-ended retained lease through the independent handle. */async tx=>{const store=tx.objectStore('meta');const keys=await requestValue(store.index('sourceLease').getAllKeys(['A',before.head.sourceRevision]));for(const key of keys)store.delete(key);});
+          ok(await other.cleanupRevision('A',before.head.sourceRevision),'Fixture-owned ended lease can be explicitly cleaned after proof');equal(await other.visit('A','metadata',/** Confirm current-family integrity after explicitly reclaiming the old revision. */()=>true),'ready','Current facts are intact');return true;
+        }finally{db.transaction=native;first.close();second.close();}
+      })()`),true);
+    });
+  }finally{await browser.cleanup();}
+});
+
 /** One-page head validation removes only redundant coordination; native snapshots and masks remain authoritative. */
 test("bounded atomic selection validation preserves local masks and multi-page finality", { timeout: 180000 }, async t => {
   const browser = await chromiumHarness(bundle);

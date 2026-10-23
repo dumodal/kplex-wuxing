@@ -22,10 +22,11 @@ Obsidian is the production host; preserve the established portable semantic, ide
 # Assignment: batch ordinary dependency-count maintenance
 
 Prepared by **Zsolt's Codex Agent**, 2026-10-23, Europe/Budapest.
-State: implementation handoff; documentation only, no new runtime code or measurements.
+State: active Windows implementation assignment; post-#205 baseline pinned before implementation or comparative testing.
 Recipient: Windows agent with real dependencies, Chromium IndexedDB and Obsidian CLI.
 Branch: `2026-10-23-dependency-repair-batching`.
 Creation base: accepted `main@0f94252aabb8b23458b5df192380854ea0bddd53` (merged #201/#203/#204).
+Accepted comparison baseline: `main@930747679894f003a2acf3b800df798826ee090c`, normal merge of #205 after its complete unchanged-head CI retry passed. This branch incorporates it through a normal non-rewriting merge.
 Parallel Mac work: [#206](https://github.com/zsviczian/kplex/pull/206), startup recovery and avoided reprocessing. Leave its branch, experiment, fixtures, candidate and instructions unchanged.
 
 ## Objective and relation to previous work
@@ -42,9 +43,9 @@ The expected benefit is a hypothesis until measured. Repeated-key workloads may 
 
 ## Entry, #205 and baseline discipline
 
-Finish the bounded #205 CI follow-up separately before modifying this task's production code. At preparation, implementation run401 (`39941638202`, commit8b1df576) passed, but final evidence run402 (`39943699965`, commit104a5837) failed `tests/indexing.test.mjs:4752`: URL-heavy post-parse graph patch blocked timers for64.9ms against the existing <50ms requirement. The intervening commit changed only documentation. This is evidence of a timing-dependent failure, not proof it is harmless or caused by #205. Recheck live status, preserve the failure, investigate without weakening the bound and report the exact-head result. Do not bury a responsiveness fix in this new PR or modify #206-owned graph/startup work without coordination.
+The maintainer explicitly authorized #205 merge after CI resolution. Exactly one unchanged-head failed-job retry passed complete verification/build at `104a5837ca358238f2c3cbd5f7177516094ab138` (run402 attempt2, job120398933314), zero failures/skips. Implementation CI401 and complete local/native exact-build validation also passed. The retained original 64.9ms URL-heavy failure remains a non-reproducible timing limitation: no IndexedDB is present in that fixture and the expensive changed native read path is unreachable; generic memory-read branch overhead does not establish zero changed instructions. No specific GC/host cause is proven. No bound/deadline/runtime change was made. The PR records the full disposition. Normal merge commit `930747679894f003a2acf3b800df798826ee090c` was fetched, fast-forwarded into local main and verified reachable.
 
-This branch deliberately contains no unmerged #205 code. Characterization can use its accepted creation base independently. If the maintainer merges #205 before implementation/timing, incorporate the accepted main through a normal non-rewriting branch update, preserve this assignment and pin the new comparison base. Do not merge #205 yourself, cherry-pick an unaccepted candidate, force-push or silently change the baseline halfway through a cohort. If it remains unmerged, keep the two changes independent and report later combined verification as pending. Existing #204 count reuse must stay intact in either case.
+This assignment now compares against that exact accepted post-#205 baseline. Runtime SourceRepository SHA-256 is `534a061e64ddfe7a609cc774788567ec8ba6afc4c953ea556e7ff9834fe4c63e`; production main.js is `7fa00a354d38fb2cedecbb9d15c5277e0513813b7074d487f5ebda9820c2b79f`. #204 count reuse and #205 leases/readers remain intact. No #207 runtime changes or comparative measurements preceded this pin. Preserve all planned requirements below.
 
 Read AGENTS.md, CONTRIBUTING.md, docs/AGENT_WORKFLOW.md, docs/ARCHITECTURE.md, docs/SOURCE_REPOSITORY.md and docs/INDEXING_ARCHITECTURE.md. C14 remains accepted; no architectural extraction is authorized.
 
