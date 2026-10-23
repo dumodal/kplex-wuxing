@@ -622,3 +622,98 @@ Sync/Publish off, no retained controller/debugger/fault hook and native IDB meth
 thermal nominal. The window was visible but not focused; timed observations must establish and
 retain foreground ownership. Native checks and one S2/warm confirmation remain pending. No merge
 is claimed while any gate remains pending.
+
+
+### Integrated artifact and completed verification checkpoint
+
+The integrated runtime source is **`95b0093de529ab2825980974d311d592b02f0000`** (normal
+merge parents reviewed12c911a and accepted main9307476). Production build Node22.22.2,
+installed real Obsidian1.13.0 declarations; no version/dependency change or #207 import.
+
+| Integrated artifact | SHA-256 |
+| --- | --- |
+| main.js | `08edf2b9d219c2e579b1644948ab34474c833b563127c618f5a2b542dc73b9df` |
+| manifest.json | `3395e425860e5068e9f3b3d9a0e3d58cefd2c11dededc690beb87f60e733ed7d` |
+| styles.css | `88b61aa508ede97b10fbd30c957d14ba19b257aa26f5ee9f547f13faa0f43974` |
+
+Full `npm run verify` passes: architecture self-tests7, core130, main1371, DOM227,
+portable sources357 and real IndexedDB710 executions, zero failures/skips. The separate focused
+startup/preferences/settings/ownership/discovery/recovery/observer run passes49/49. The existing
+strict native staging/render owner consumes that already-completed full-verification receipt,
+checks all three installed hashes and passes command/render/no-captured-JavaScript-error smoke;
+the full suite is not redundantly rerun by that staging wrapper.
+[CI415](https://github.com/zsviczian/kplex/actions/runs/39997178488) passes source95b0093.
+Final documentary-head CI remains a separate pre-merge gate.
+
+Complete integrated review confirms SourceRepository is byte-identical to accepted main
+(SHA534a061e64ddfe7a609cc774788567ec8ba6afc4c953ea556e7ff9834fe4c63e), and the three
+startup runtime files are byte-identical to reviewed B. Both test/script inventories are retained
+(no missing main or reviewed206 entries). Protected metadata selection, bounded prepared decode,
+original-connection reader leases, digest/frame/posting/finality checks and cancellation remain
+#205's accepted implementation. No additional validation, dependency-count/reclaim/schema or
+reserved read-plumbing changes occur. #206 remains in its existing startup/source-event owners.
+
+### Exact-build native integration checks
+
+Actual Mac host: Obsidian1.15.0(installer1.14.0), Electron43.3.0/Chrome150.0.7871.212;
+drivers use Node22.22.2. Existing disposable Small has76native files/74Markdown notes.
+The temporary functional profile selects actual Eager, then actual On-demand/background URLs/
+Responsive for live work. Original Small configuration is preserved separately and restored
+only after closing its native window; no mutating Small driver targets the Brain copy.
+
+| Lane | Actual result |
+| --- | --- |
+| Strict exact staging/smoke | Three integrated hashes match; actual source-backed Eager startup completes;74URL owners reused,0URL reads. |
+| SI4 | Settings, ontology/inference, rendered gates/labels, siblings, search/provenance and stale-write checks pass; owned cleanup passes. Small minimum-file prerequisite explicitly0. |
+| SI5 | Saved-policy, missing/corrupt optional graph, requested-source repair and offline edit/reload pass. Source-backed restarts have0full builds; unchanged cases0canonical reads/parses, genuine offline edit1/1. Cleanup restores settings/fixtures/throttling. |
+| Genuine recovery control | Actual adoption false with unavailable metadata, automatically true after genuine availability/change signal; exactly2attempts, full builds0, no unsaved mask, scene retained, cleanup passes. The historical settled-lifetime coordinator-flags qualification remains. |
+| #205 protected caller |16saved owners,32transactions,80requests,16lease additions/deletions,48hashes. Exact heads/facts unchanged;0owned durable leases/readers/decode remain. Diagnostic counts, not CPU shares. |
+| Held-background foreground | Navigation, editing, native creation/frontmatter updates, current pair evidence and real source closure pass while unrelated inventory is held. |
+| Ontology during startup | Existing two-held-boundary native scenario passes: stationary relationships and physical provenance update before remaining work commits; configuration restored. |
+| Rename/reload |36observations across actual On-demand and Eager: native FileManager/action rename, moves/case changes, retained identity/incidence, aliases and warm reload pass; configuration restored. |
+| Small invalidation | Real late create, controlled native notification after a real equal-mtime/equal-size write, authenticated changed body-URL family, offline alias/reload, late rename/delete all pass; cleanup passes. See host-delivery control below. |
+| Startup admission | All7case groups pass: dormant10seconds, six real device controls, dormant native edits/navigation, concurrent main/sidebar first opening and reuse, enabled pre-open Eager, explicit closed rebuilding, inactive live-Plex admission. Actual returned result and cleanup pass. |
+| On-demand live/workspace-ready | Byte-identical native actions pass with unrelated P3 held: Find, physical creation, local explicit relationships, recent-tab sync, navigation and genuine owner/queue drain. Independent100ms heartbeat48ticks/maxgap107ms; completed at5.518s in this functional invocation. Cleanup passes. No physical-input/paint or comparative CPU claim. |
+
+Native setup/observer failures remain failed receipts, not silently counted as passes:
+
+- The staging wrapper rejected Obsidian's exact already-disabled response before copying/enabling;
+  a guarded idempotent response handler then staged into a new receipt directory.
+- SI5 detaches its owned Plex leaves. Invoking recovery next without opening a Plex intentionally
+  retained a genuine edit backlog under existing demand policy. Diagnostic state and native
+  inspection show0views, source authority/owners drained, initial completion already true. Normal
+  activation restores the scenario's visible-Plex prerequisite; unchanged recovery assertions pass.
+- The ontology driver rejects a precreated evidence directory; no native mutation began. Logs were
+  moved outside a fresh directory. Rename initially rejects Small's owned theme notification;
+  normal acknowledgment in its temporary profile allows the unchanged lane and its reloads.
+- A supplementary private reader initially used an invalid family/DTO name. Correct `body-urls`
+  authentication and stored URL facts pass; no product/storage correction was made.
+- Two original policy observations lose results to CLI timeouts during reload/cleanup (the second
+  has all7case groups recorded). Cleanup passes. An identical-scenario observer permits at most3
+  read-only ETIMEDOUT queries inside unchanged15s-call/180s-owner bounds; its successful invocation
+  needs0retries. It does not retry the scenario or grant readiness.
+- The original live observer times out after Find and passes cleanup. A separate result-file
+  observer retains byte-identical installation/actions/cleanup and all15s action/180s overall/
+  90s cleanup deadlines. It avoids concurrent CLI polling and periodic resource sampling during
+  interaction; native-owned result/cleanup files and the independent heartbeat verify completion.
+  Resource/timing observations are therefore not pooled with other observer profiles.
+
+**Host delivery is distinct from product invalidation.** A public Vault API write with deliberately
+preserved mtime and size emits0modify/metadata events through45seconds in the first integrated
+control. An independent owned-file control with K-Plex absent changes the real bytes, preserves
+stat/identity and likewise sees0events during its two-second observation. The explicit native-event
+control then verifies that actual K-Plex source/URL invalidation still runs for an equal-stat edit.
+This does not promise detection of unnotified stat-identical writes. Offline Date/path environment
+negatives remain covered by the full/focused real-IDB fixtures; no forced metadata readiness,
+reader fallback, route or rebuild was introduced.
+
+No new renderer crash/native crashed window is observed; the retained historical unattributed
+crash remains unresolved. Original very-early recent-tab and broad-tag failures are not relabeled
+fixed by the workspace-ready control. Main rechecked after native work remains9307476.
+
+Small is now closed, original19configuration/artifact files restored byte-for-byte offline.
+Native Brain preflight verifies one foreground/unlocked window, AC/nominal thermal, all community
+plugins/Sync/Publish off, no owned controller/fault hook/debugger and native IDB methods restored.
+Retained S2 hash/schema10/15stores/1,537,552rows match original metadata. Its guarded restore is
+in progress; activation is fenced until decoded native readback verifies every store. Primary
+S2/warm observations and final integration integrity/CI/merge remain pending.

@@ -31,7 +31,7 @@ Keep draft until then. No release, production deployment, force-push, branch del
 Branch: `2026-10-23-startup-source-convergence`; reviewed head
 `12c911a2b3fd9fed64e50a375d0d4ebcb9c91e0b`; initial working tree clean.
 Accepted main: `930747679894f003a2acf3b800df798826ee090c`, including #205 plus #201/#203/#204.
-Normal merge is in progress. Only HANDOFF and Refactor plan conflicted: preserve this standing
+Normal merge is committed at95b0093. Only HANDOFF and Refactor plan conflicted: preserve this standing
 header/current #206 assignment and both historical ledger inventories. Runtime merges cleanly.
 Preserve #205 protected metadata fetching and #206 recovery/discovery/automatic-rebuild ownership.
 No #207 branch or unfinished dependency-count work is imported, deployed or modified.
@@ -39,9 +39,13 @@ No #207 branch or unfinished dependency-count work is imported, deployed or modi
 Read [historical validation](docs/validation/startup-source-convergence-206-2026-10-23.md)
 and append a distinct integration section. Historical 6ad7c816 bundle/measurements stay unchanged.
 Build a new exact artifact with Node22.22.2 and real dependencies/installed Obsidian typings.
-Run full npm run verify, focused startup/discovery/recovery tests, exact-build affected native
-Small lanes, remote CI, then one retained-S2 full-app startup and one separately declared warm
-activation on the guarded Brain copy. No heavy verification overlaps timed native observation.
+Full npm run verify and49focused tests pass on Node22.22.2; real typings1.13.0.
+Runtime source95b0093/main.js08edf2b9; accepted205SourceRepository534a061e; native Small
+lanes and CI415 pass with explicitly retained observer/host-delivery limits in the report.
+Small closed/original19files restored offline; Brain alone is foreground/AC/writers off.
+Retained-S2 restore is active in private task kplex-206-integration-yoggyf26; native decoding
+verification must complete before activation. Then one full-app startup and one ordinary warm
+activation from its genuinely persisted state, both ten-minute quiet/original45-minute cap. No heavy verification overlaps timed native observation.
 Keep the existing45-minute cap and ten-minute quiet interval. Verify actual source/URL/persistence
 completion, avoided work, recovery, semantic/provenance behavior and foreground responsiveness.
 Ask before application restart unless all other vaults are verifiably closed.

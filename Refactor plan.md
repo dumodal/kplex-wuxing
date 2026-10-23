@@ -5799,3 +5799,14 @@ reads and #206 recovery/discovery/startup ownership, both test inventories and h
 Only HANDOFF/ledger conflicts; current206 assignment and both historical ledger sections retained.
 New exact artifact/full verification/native/CI/S2+warm acceptance pending; no #207 import, release
 or production action. C14 accepted; C15-C26 paused. See report integration section.
+
+Action log (2026-10-23, PR206 integrated native checkpoint): source95b0093 normally includes
+accepted main9307476/#205 and preserves201/203/204; exact main.js08edf2b9d219c2e579b1644948ab34474c833b563127c618f5a2b542dc73b9df. Full Node22.22.2 verify,49focused tests and CI415 pass.
+Exact native Small settings/SI5/recovery/protected-reader/foreground/ontology/rename/invalidation/
+admission/live controls pass with retained setup/transport and host non-delivery receipts. Native
+recovery2actual attempts false-to-true; metadata16owners/32transactions/all80requests/16leases/
+48hashes retained, no owned residue. Same-stat notification suppression reproduces with plugin
+absent; controlled real event invalidation passes. Unchanged live actions pass via single-owner
+file observer,100ms heartbeat max107ms; old early-sync/broad-tag/crash limits remain. Small
+closed/original19files restored; Brain alone/writers off; original S2 restoration active. No207,
+product/runtime edit, release or production action. Final S2+warm/audit/documentary-CI/merge pending.
