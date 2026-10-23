@@ -225,6 +225,70 @@ positively identified crashed Small window restored access; the subsequent exact
 passed. No application-wide restart occurred. The crash, transport-timeout receipt and isolated
 recovery remain an **unresolved qualification**, not attributed to #206 or silently counted as a pass.
 
+## First matched S2 observation — provisional performance result
+
+The same original S2 stream was decoded-restored into the exact copy database:15 stores /
+1,537,552 rows, nine atomically changed stores and verified native readback. Two bounded observer
+deadlines expired while the single retained job continued; no duplicate import or early activation.
+The candidate used exact bundle6ad7c816 / runtimeb38a889 and the same retained startup layout,
+45-minute cap, diagnostic forwarding and ten-minute quiet requirement as the current-base capture.
+
+| Observation | Current base46bcd36b | Candidate6ad7c816 |
+| --- | ---: | ---: |
+| Launch → first observed ready | 1,829.1s | 428.6s |
+| Launch → final source/URL/persistence closure | 1,963.1s | 428.6s |
+| Quiet after final closure | 601.3s | 602.3s |
+| Whole-process external CPU through quiet | 4,036.03 CPU-s | 693.78 CPU-s |
+| Production checked-source counter | 11,840 | 11,839 |
+| Production source reads / parses | 1 /1 | 0 /0 |
+| Production source repairs / resolution refreshes | 11,839 /0 | 0 /1 |
+| Actual source-head activations | 11,839 | 1 |
+| Logical source chunks / payload bytes written | 47,606 /76,946,676 | 1 /4,881 |
+| Late forwarding parser submissions | 11,819 | 0 |
+| Late forwarding inventory admissions | 3 (one cancelled) | 2 (none cancelled) |
+| Late forwarding full builders | 1 | 0 |
+| Final unsaved masks | 0 | 0 |
+
+This is **one power-qualified diagnostic pair**, not a universal speedup or distribution. The
+candidate independently sampled external AC throughout; the baseline lacks that prearmed external
+series as already recorded. Native foreground/unlock/AC and process coverage stayed valid in both;
+candidate maximum native sample gap1.145s. Forwarding attached about48.1s late in base and38.6s
+late in candidate: forwarded work counts are lower bounds, not interchangeable whole-run totals.
+No control CPU is subtracted, and no CPU share is attributed exclusively to a parser/reader.
+
+The candidate still performs the existing cached-owner validity pass. Its11,839 forwarded
+acquisitions are **validation calls**, not avoided source reads/replacements; do not claim a
+near-vault-wide identical-revision duplicate was removed. Dirty-body requests fall to0, payload
+rewrites fall to one genuine resolution update, and the cancelled inventory/full-builder sequence
+is absent. The two candidate inventories are one broad pass plus a roughly0.3s follow-up, with
+unchanged inventory revision1 and generation2. Initial cached hydration completes in one attempt;
+the baseline's first hydration was superseded by file patches and later ran the full builder.
+This is a natural cache/work-path consequence of event qualification, not a forced route.
+
+Actual #204 branch observation is separate: base realized11,819 ordinary count reuses since
+attachment; candidate observed one selected-count repair and **zero realized count reuses**, with
+one total activation. Avoiding replacements removes reuse opportunities; this is not a #204
+regression or another saving to add. The candidate also accumulated about134 native CPU-seconds
+after logical closure, included in its ten-minute total; that tail is not hidden or exclusively
+attributed to source work.
+
+A first post-timing functional observer hit a transport timeout before its assertions; cleanup
+passed and the receipt remains. A bounded transport-tolerant retry completed without transport
+errors and passed all seven retained bounded semantic/provenance targets. The original broad-tag
+sub-call was rejected by the helper's required seven-kind inventory, so it **did not execute**:
+this is a retained harness error, not a broad-tag pass or product failure. The next full-eight-target
+call keeps the original target and unchanged deadline. Current candidate base and served vocabulary
+both contain110,470 nodes; baseline's full rebuild reported110,472. Whole-vocabulary and target
+parity against the next current-baseline run remains pending; the count difference alone is not
+classified as semantic equivalence or a regression.
+
+A second matched pair is now running in reverse order(candidate then base), with independent
+power observation on both. Two pairs are planned; fewer than the three-pair target will remain an
+explicit sample-size limit. Real-copy broad-tag/parity, ordinary warm control and final audit are
+still pending. A's recovery correctness remains separately established by controlled real-IDB and
+native Small tests; this naturally fresh full-snapshot candidate run did not need source-adoption
+resumption and is not a current native stranded-startup reproduction.
+
 ## Parallel coordination checkpoint
 
 At the A1 checkpoint GitHub reports #205 and #207 open/draft. The maintainer has authorized the

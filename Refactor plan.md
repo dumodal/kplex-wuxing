@@ -5699,3 +5699,18 @@ Coordination checkpoint (2026-10-23 12:56UTC, PR206): GitHub verifies Windows205
 cached-metadata read batching has entered main;207 is draft/open based there for dependency-
 count maintenance. No import/rebase/merge/deployment here;0f94252 baseline andb38a889/6ad7c816
 candidate remain frozen during experiments. Later integrated Mac validation remains required.
+
+Action log (2026-10-23, PR206 first matched S2 observation): exact6ad7c816 candidate completes
+428.6s to actual source/URL/persistence closure plus602.3squiet,693.78wholeprocessCPU-s.
+Accepted-base comparison1963.1sclosure/601.3squiet/4036.03CPU-s; baseline external-power
+series absent, so ONE QUALIFIED pair, no universal speedup. Source validations11839 remain;
+body reads/parses0, actualactivations1resolution/chunks1/4881payloadB versus base11839
+activations/47606chunks/76946676payloadB. No cancelled inventory/full builder; broad pass plus
+0.3sfollow-up, not zero reconciliation. #204selectedRepair1/reuse0 versus baseline11819
+observedactualreuses, no additive saving. Candidate postclosure~134nativeCPU-s INCLUDED.
+Seven bounded native semantic/provenance targets pass after a failed transport observer;
+original broad-tag subcall rejected required-kind inventory before execution, fixed to full8
+for next control. Graph count110472base/110470candidate remains unclassified pending global
+vocabulary and next baseline parity; do not declare semantic equivalence from counts.
+Second pair reverse order now preparing; both independentAC, totaln2 rather than target3
+explicitlylimited. Source runtime frozen, no Windows import; final warm/broad-tag/audit pending.
