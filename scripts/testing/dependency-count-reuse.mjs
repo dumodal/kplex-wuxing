@@ -14,6 +14,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { contributorBrowserBundle, contributorBrowserInitialize } from "../../tests/support/contributorBrowserFixture.mjs";
 import { chromiumHarness } from "../../tests/support/browserTypeScript.mjs";
 import { installDependencyCountReuseFixture } from "../../tests/support/dependencyCountReuseFixture.mjs";
+import { chromiumProcessSnapshot } from "../../tests/support/chromiumProcessMetrics.mjs";
 import { installRestartCompletionObserver } from "../../tests/support/restartCompletionObserver.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -24,7 +25,7 @@ const runtimeFile = "src/index/SourceRepository.ts";
 const sha256 = value => createHash("sha256").update(value).digest("hex");
 
 /** Stat only regular files below this harness's owned IndexedDB directory; never read database contents. */
-async function ownedIndexedDbSize(profile) {
+export async function ownedIndexedDbSize(profile) {
   const selected = resolve(profile);
   if (!selected.startsWith(resolve(tmpdir()) + sep) || basename(selected) !== "profile"
     || !basename(dirname(selected)).startsWith("kplex-source-idb-")) throw Error("Unowned browser profile size request");
@@ -89,7 +90,7 @@ function git(args) {
   return result.stdout;
 }
 /** Retain existing endpoint metrics, including optional renderer cumulative CPU; never infer store CPU. */
-async function metrics(browser) {
+export async function metrics(browser) {
   const result = await browser.command("Performance.getMetrics");
   const values = Object.fromEntries(result.metrics.map(/** Retain named cumulative CDP endpoints without deriving allocation or peak memory. */metric => [metric.name, metric.value]));
   if (!Number.isFinite(values.TaskDuration)) throw new Error("CDP TaskDuration unavailable");
@@ -101,14 +102,15 @@ function cpuDelta(before, after) {
     && after.ProcessTime >= before.ProcessTime && after.ProcessTime > 0 ? after.ProcessTime - before.ProcessTime : null;
 }
 /** Try the existing target command surface only; unsupported Browser-process access remains explicit. */
-async function processSnapshot(browser) {
+async function processSnapshot(browser, root = false) {
+  if (root) return chromiumProcessSnapshot(browser);
   try {
     const result = await browser.command("SystemInfo.getProcessInfo");
     return { supported: true, processes: result.processInfo.map(/** Retain only process identity/type and cumulative CPU, with no process command lines. */item => ({ id: item.id, type: item.type, cpuTime: item.cpuTime })) };
   } catch (error) { return { supported: false, error: String(error.stack ?? error) }; }
 }
 /** Compare each observed process identity once; births/exits and unsupported snapshots forbid complete-process attribution. */
-function processChanges(before, after) {
+export function processChanges(before, after) {
   if (!before.supported || !after.supported) return { available: false, reason: "SystemInfo process snapshots unavailable; renderer endpoints cannot identify Browser/storage CPU" };
   const old = new Map(before.processes.map(/** Bind the snapshot to actual process identities rather than process role medians. */item => [item.id, item]));
   const seen = new Set(), deltas = [], births = [], exits = [];
@@ -123,13 +125,13 @@ function processChanges(before, after) {
     limitation: "Snapshots bracket the metric requests as well as the reopen interval; no terminal sample for exits or exclusive storage-thread attribution" };
 }
 /** Bound each arm's host wait; Chromium's own command deadline bounds its awaited operation. */
-async function initialize(browser) {
+export async function initialize(browser) {
   await browser.evaluate(contributorBrowserInitialize);
   await browser.evaluate(`(${installDependencyCountReuseFixture.toString()})()`);
   await browser.command("Performance.enable", { timeDomain: "threadTicks" });
 }
 /** Run a complete replacement/reclaim interval, then restart the real browser and perform another edit. */
-async function arm(bundle, name, config, detailed) {
+export async function arm(bundle, name, config, detailed) {
   const launchStart = performance.now();
   let browser;
   const result = { name, ...config, detailed, status: "incomplete", failurePhase: "browser-start" };
@@ -150,6 +152,7 @@ async function arm(bundle, name, config, detailed) {
     result.before = await browser.evaluate("dependencyCountReuse.oracle(dependencyCountReuse.context)");
     if (detailed) await browser.evaluate("dependencyCountReuse.observer=dependencyCountReuse.observe(dependencyCountReuse.context.repository)");
     result.failurePhase = "measured-work";
+    if (config.rootProcessCpu) result.maintenanceProcessSnapshots = { before: await processSnapshot(browser, true) };
     const before = await metrics(browser), started = performance.now();
     try {
       if (config.response) await browser.evaluate("(/** Arm observers after the preparation oracle and only for this diagnostic workload. */()=>{dependencyCountReuse.responsiveness=dependencyCountReuse.observeResponsiveness();return true})()");
@@ -175,6 +178,7 @@ async function arm(bundle, name, config, detailed) {
       if (detailed) result.detail = await browser.evaluate("(/** Retire detailed wrappers before returning finite diagnostic aggregates. */()=>{const o=dependencyCountReuse.observer;o.retire();return {operations:o.operations,projectionOracle:o.eligibility,staging:o.staging,delivered:o.delivered,lifetimes:o.lifetimes}})()");
       if (config.response && (!result.responsiveness.cleanupComplete || result.responsiveness.cleanupErrors.length)) throw new Error("Responsiveness diagnostic cleanup reported a failure");
     }
+    if (config.rootProcessCpu) { result.maintenanceProcessSnapshots.after = await processSnapshot(browser, true); result.maintenanceProcessSnapshots.comparison = processChanges(result.maintenanceProcessSnapshots.before, result.maintenanceProcessSnapshots.after); }
     result.after = await browser.evaluate("dependencyCountReuse.oracle(dependencyCountReuse.context)");
     result.failurePhase = "restart-and-later-edit";
     if (config.shutdown) result.beforeFixtureClose = await browser.evaluate("window.__kplexRestartCompletion.drain()");
@@ -200,7 +204,7 @@ async function arm(bundle, name, config, detailed) {
     result.browserRestartElapsedMs = performance.now() - restartStart;
     await initialize(browser);
     result.restartedTarget = await browser.command("Target.getTargetInfo");
-    if (config.reopenDiagnostic) result.processSnapshots = { before: await processSnapshot(browser) };
+    if (config.reopenDiagnostic) result.processSnapshots = { before: await processSnapshot(browser, config.rootProcessCpu) };
     const reopenBefore = await metrics(browser);
     const observerCpuBefore = config.reopenDiagnostic ? process.cpuUsage() : null;
     const observerEventLoopBefore = config.reopenDiagnostic ? nodePerformance.eventLoopUtilization() : null;
@@ -243,7 +247,7 @@ async function arm(bundle, name, config, detailed) {
       result.reopen.rendererProcessCpuSeconds = cpuDelta(reopenBefore, reopenAfter);
       if (config.reopenDiagnostic) {
         result.reopen.diagnostic = await browser.evaluate("(/** Read native terminal events only after the original CPU endpoint; method bindings were already restored in the original evaluation. */()=>{const B=dependencyCountReuse,d=B.reopenDiagnostic;if(!d)return {missing:true};d.retire();const report=d.report;report.cleanup={...report.cleanup,pendingTransactions:report.pendingTransactions};delete B.reopenDiagnostic;return report})()");
-        result.processSnapshots.after = await processSnapshot(browser);
+        result.processSnapshots.after = await processSnapshot(browser, config.rootProcessCpu);
         result.processSnapshots.comparison = processChanges(result.processSnapshots.before,result.processSnapshots.after);
         if (result.reopen.diagnostic.missing || !result.reopen.diagnostic.cleanup.restored || result.reopen.diagnostic.pendingTransactions !== 0) throw new Error("Reopen diagnostic terminal closure is incomplete");
       }
