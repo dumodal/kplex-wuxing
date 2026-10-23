@@ -419,6 +419,50 @@ fails after rendering with active semantics. This does not retroactively complet
 startup. The first baseline full-builder count110,472 is still being investigated by a separate
 explicit full-builder semantic reference, outside CPU/recovery evidence.
 
+## Post-timing semantic reference and strict-hash qualification
+
+A separate accepted-baseline explicit rebuild used the existing owner (`rebuildIndex(true,false)`)
+after normal startup settlement, outside performance and automatic-recovery evidence. It also
+produced the same complete110,470-node vocabulary. It did **not** reproduce the first baseline's
+110,472 terminal count. The identities of those original two extra rows were not captured, so that
+first-run count remains unclassified; do not claim exact whole-graph equivalence for that terminal
+state or erase its qualification from the CPU comparison. No additional historical matrix is run.
+
+The reference renders/finds all seven bounded targets, but **only six strict hashes match**. The
+saved-center digest is`69beac600dfff598c838fb1a9f8f3401b61c3b37d79e531d628c74f361c029a2`, versus
+cached-route`cb03d2c6b3c5b4be54a21c6ed5f4a63b4f40aeaf491d8cca89ec1b26f6ed0278`.
+An early progress message incorrectly called all seven reference hashes matched after checking
+render/search success; this is corrected here and the raw diagnostic inputs remain preserved.
+
+A paired cached-then-explicit-rebuild probe on **unchanged accepted0f** reproduces that digest
+difference. Exact canonical inputs show26relation rows/26decision pairs and identical gates. All
+complete decision/provenance arrays are byte-identical. The only three changed tuples reverse
+the order of two names in the joined `typeDefinition` string; endpoints, role, relation type and
+link direction are unchanged. This is existing route-dependent label ordering, not changed source
+facts or provenance. The oracle and its strict hashes are retained without normalization.
+
+Ordering is not declared universally cosmetic: the existing style owner layers named overrides
+in order, and exact definition-text predicates can observe the string. Using that owner's exact,
+normalized and imported-key lookup rules, the two relevant fixture overrides have no conflicting
+fields (one matching override, the other absent), so the layered style is identical for this test.
+This does not establish compatibility for arbitrary conflicting overrides or exact compound-string
+predicates. Canonicalizing label order is a separate compatibility decision outside this startup
+admission/event correction. Within the matched normal-cache baseline/candidate profiles, the full
+strings and all seven strict hashes match exactly.
+
+The original broad tag times out on both normal-cache profiles: rendered/canonical-ready,
+2pending scopes/256dependency visits (base30.276s/candidate30.308s). After explicit full rebuilding
+it instead reaches the unchanged1,000-relation oracle budget. That is a retained bounded-observer
+failure, **not a broad-tag pass or proof the unresolved case is fixed**.
+
+The first source-only recovery restore never began importing: its former temporary raw path was
+absent while the preserved compressed checkpoint remained intact. A new private unpacked stream
+was verified against original SHA-256`7bb3818fb6a40b54e1bab409ebccc97264d2ca3a67b1535536b37c288859b2df`
+(897,030,856bytes), with original sidecar bytes retained. The failure receipt is preserved; the
+retry is a new import only because the failed attempt never started a storage job. Subsequent
+observer expirations join that same retry job. Native exact-candidate recovery confirmation and
+final integrity audit remain pending.
+
 ## Parallel coordination checkpoint
 
 At the A1 checkpoint GitHub reports #205 and #207 open/draft. The maintainer has authorized the
