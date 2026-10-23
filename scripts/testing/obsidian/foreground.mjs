@@ -30,9 +30,15 @@ let controllerInstalled = false;
 try {
     if (cli('vault', 'info=path').replace(/^path\s+/, '') !== target.vault)
         throw Error('Wrong vault');
+    // An immutable accepted baseline uses the same assertions, with explicit runtime attribution.
+    const artifactDirectory = process.env.KPLEX_PROBE_ARTIFACT_DIR ?? join(root, 'dist');
+    if (process.env.KPLEX_PROBE_ARTIFACT_DIR) {
+        if (!/^[a-f0-9]{7,40}$/.test(process.env.KPLEX_PROBE_BASELINE_REF ?? '')) throw Error('Alternate artifact root requires baseline attribution');
+        report.baselineRef = process.env.KPLEX_PROBE_BASELINE_REF;
+    }
     for (const name of ['main.js', 'styles.css', 'manifest.json']) {
         const hash = p => createHash('sha256').update(readFileSync(p)).digest('hex');
-        report.artifacts[name] = hash(join(root, 'dist', name));
+        report.artifacts[name] = hash(join(artifactDirectory, name));
         if (report.artifacts[name] !== hash(join(target.pluginDir, name)))
             throw Error('Installed build mismatch');
     }
@@ -44,7 +50,7 @@ try {
         report.resourceProbeSha256 = createHash('sha256').update(readFileSync(new URL('./startupResources.mjs', import.meta.url))).digest('hex');
         writeFileSync(join(out, 'foregroundLiveUpdates.mjs'), source);
         writeFileSync(join(out, 'foreground.mjs'), readFileSync(import.meta.filename));
-        report.result = await runLiveUpdatesForeground({ cli, evaluate, wait, report, vaultName, composer: process.env.KPLEX_FOREGROUND_COMPOSER === '1', progress: () => writeFileSync(join(out, 'report.json'), JSON.stringify(report, null, 2)) });
+        report.result = await runLiveUpdatesForeground({ cli, evaluate, wait, report, vaultName, composer: process.env.KPLEX_FOREGROUND_COMPOSER === '1', workspaceReady: process.env.KPLEX_FOREGROUND_WORKSPACE_READY === 'true', progress: () => writeFileSync(join(out, 'report.json'), JSON.stringify(report, null, 2)) });
     } else {
     evaluate(`(()=>{if(window.__kplexForegroundTest)throw Error('Controller exists');const p=app.plugins.plugins['k-plex'],remote=require('@electron/remote'),w=remote.getCurrentWindow();remote.app.show?.();remote.app.focus({steal:true});w.show();w.moveTop();w.focus();const c=window.__kplexForegroundTest={p,originalSettings:JSON.parse(JSON.stringify(p.settings)),folder:'Kplex-Foreground-Regression',owned:[],scenarios:[],pairTrace:[],done:false};c.timer=window.setTimeout(()=>{c.task=(async()=>{
  const delay=ms=>new Promise(r=>window.setTimeout(r,ms)),check=(v,m)=>{if(!v)throw Error(m)},until=async(fn,m,ms=15000)=>{const end=Date.now()+ms;while(!fn()){check(!c.cancelled,'Controller cancelled');if(Date.now()>end)throw Error(m);await delay(25)}};

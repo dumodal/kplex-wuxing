@@ -160,7 +160,8 @@ a fresh-process route reproduction. Method descriptors, owned note, settings byt
 cleanup passed. Before faults, the exact Small database was checkpointed across15 stores with
 stream SHA-256`1b6c510db41387d1fc38a257af8286b3da05d5f7fcbc9a793870fac946fe3118`.
 Exact-build SI4 Small settings/gates/search/provenance/stale-write acceptance also passed. Native
-SI5, foreground/live interaction, fresh-process real-copy timing and final audit remain pending.
+SI5 and foreground acceptance subsequently passed; live/startup qualifications are recorded below.
+Fresh-process real-copy timing and final audit remain pending.
 Forty-one driver/observer checks passed after registering the native recovery command.
 
 B qualifies initial create enumeration at the existing lifecycle listeners rather than changing
@@ -180,6 +181,36 @@ formerly failing startup-only cases and seven genuine-change/cold/on-demand/expl
 The existing indexing suite now explicitly expects no pre-layout body invalidation and adds the
 opposite post-layout-before-admission control. Existing watchdog and same-stat protections pass.
 No SourceRepository algorithm or reserved read-plumbing loop changes.
+
+## Native interaction follow-up and qualifications
+
+The exact combined bundle passes native Small SI5 restart/corrupt acceleration/requested-source
+repair/offline-edit acceptance, with settings restored, fixtures absent and throttling restored.
+The ordinary foreground lane also passes while unrelated inventory is held.
+
+The original very-early On-demand live-update lane has a **pre-existing recent-tab failure** on
+both accepted baseline46bcd36b and candidate6ad7c816. Find, physical creation and local semantics
+succeed, but a recent-tab activation at about1.9–2.0s occurs inside the existing three-second
+workspace/history guard. The target is canonical and physically available; no semantic task is
+pending, while the activation is absent from history and the explicit sync action does not center
+it before the unchanged15s deadline. Source recovery is not the failed prerequisite. Both failures
+and successful cleanup are retained. No navigation production code is changed for this unrelated
+condition.
+
+A **separate workspace-ready variant** waits for that existing guard while retaining the unrelated
+P3 read. It passes on both immutable baseline and candidate, including physical Find, local explicit
+relationships, recent-tab synchronization and actual owner/queue drain after release. This pass
+does not erase the original early failure or prove availability during workspace reassociation.
+The same pre-fault Small checkpoint was decoded-restored before each immutable arm; installed
+artifact hashes remain verified. Forty-one driver/observer checks pass after the tooling extension.
+
+One candidate hot activation after restoring that checkpoint crashed Small's renderer before the
+live-update controller could install. Native inspection showed a crashed renderer(pid0), with the
+brain-copy renderer healthy and K-Plex off. The retained macOS report records `EXC_BREAKPOINT` /
+`SIGTRAP` on a renderer worker thread; it supplies no causal JavaScript stack. Reloading only that
+positively identified crashed Small window restored access; the subsequent exact-build variant
+passed. No application-wide restart occurred. The crash, transport-timeout receipt and isolated
+recovery remain an **unresolved qualification**, not attributed to #206 or silently counted as a pass.
 
 ## Parallel coordination checkpoint
 

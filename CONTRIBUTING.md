@@ -1017,6 +1017,14 @@ that becomes canonical before query is recorded as a setup exclusion, not a comp
 The lane records bounded milestone/resource aggregates, checks foreground ownership and restores
 its fixture files, wrappers, workspace, preferences and exact configuration bytes.
 
+For an immutable accepted-baseline functional comparison, set `KPLEX_PROBE_ARTIFACT_DIR` and
+`KPLEX_PROBE_BASELINE_REF`; the driver still verifies all installed artifact hashes. The original
+early recent-tab case may execute inside the native three-second sidecar/history guard. Keep any
+failure visible. A separately labelled `KPLEX_FOREGROUND_WORKSPACE_READY=true` variant waits for
+that existing guard while the unrelated P3 read remains held; its pass does not erase the original
+early-startup failure or establish availability during workspace reassociation. Neither variant
+changes the15-second foreground assertion deadline or production scheduling.
+
 ### Controlled indexing CPU workloads
 
 For the PR #201 controlled CPU workloads, run `node scripts/testing/obsidian/indexingCpu.mjs`

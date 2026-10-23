@@ -5670,3 +5670,16 @@ assertion updated deliberately with opposite post-layout create guard. Full veri
 exact Small smoke passed in combined6ad7c816 candidate; A1/A2 recovery commits remain separate.
 No watchdog, source-read/validation/count/schema algorithm or reserved read-plumbing changes.
 No measured B CPU gain yet. Native SI5 and subsequent lanes are still pending. C14 paused.
+
+Action log (2026-10-23, PR206 native functional follow-up): frozen runtimeb38a889/6ad7c816
+passes SI5 and ordinary foreground. Original very-early recent-tab sync fails BOTH accepted
+0f94252 and candidate: native activation inside existing3s workspace/history guard is absent
+from history, while canonical/physical target exists and semantics are idle. No production
+navigation change. Separate explicit workspace-ready variant holds unrelated P3 and passes
+both arms through actual queue drain. It does not erase the original early failure.
+A candidate hot activation after identical decoded Small checkpoint restore crashed renderer
+before controller installation; OS SIGTRAP on renderer worker has no causal JS stack. Healthy
+Brain stayed off. Crash preserved; isolated crashed-Small reload recovered, subsequent variant
+passes. Root cause unresolved, not a clean acceptance waiver. Test-only alternate immutable
+artifact attribution/scalar diagnostics/explicit variant added;41driver checks pass.
+Native ontology/startup admission and real-copy measurement still pending; runtime unchanged.
