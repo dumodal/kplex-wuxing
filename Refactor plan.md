@@ -5606,3 +5606,13 @@ committed/pushed and PR203draft/head verified. Harness/workflow remain uncommitt
 review commitc99073b remains intact. PR201 independently merged newerfa08e60; not measured
 by this frozen c4 Mac series. Final private retention and source manifest follow; no new
 measurement, optimization, production action, merge or release is implicitly authorized.
+
+Action log (2026-10-23, PR203 repository finalization): maintainer explicitly authorized committing
+remaining guarded Mac harness/docs and merging the useful evidence/tooling into main, then
+switching/fetching main. A later instruction waives waiting for CI, not the scientific qualifications.
+Committed harnessfe77015 and integrated maincd12a857 in ca5af58, retaining BOTH test inventories
+and byte-preserving ledger additions. Production source/styles/release metadata exactly match main.
+Focused22tests pass Node22.22.2; full verification is in progress at publication after successful
+release/architecture/core/lint and earlier test batches. CI/full-suite pending is not a pass; actual
+terminal outcomes are recorded in PR203. Finalized report/retention status; no new runtime fix,
+measurement, C15 advancement or release. Scientific acceptance remains qualified/inconclusive.

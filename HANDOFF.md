@@ -19,20 +19,20 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR203 finalization in progress
+# PR203 Mac study complete — no active assignment
 
 Zsolt's Codex Agent, 2026-10-23 Europe/Budapest.
 
-The maintainer explicitly requested committing/finalizing PR203, merging useful results into main,
-then switching to main and fetching. This supersedes the previous report-only publication scope.
-The finalized contribution is test tooling, documentation and evidence; no runtime optimization is justified.
+The maintainer authorized committing/finalizing PR203, merging the useful report/tooling, then
+switching to main and fetching. The explicit follow-up says not to wait for CI before merging.
+Final merge state and terminal verification results are recorded on [PR203](https://github.com/zsviczian/kplex/pull/203).
 
-- Branch `2026-10-22-mac-vault-indexing-study`; report commit6d3d19e is already pushed. Remaining guarded harness/docs are being committed before integrating origin/main@cd12a857 (merged PR201).
-- Read [study report](docs/validation/mac-vault-indexing-203-2026-10-22.md). Frozen measured A551a3b/Bc4a656b; newerfa08e60/current main NOT measured. Functional/performance qualifications remain; no additional Mac timing or runtime correction is queued.
-- Focused harness tests22/22 pass Node22.22.2. Full verify/build on combined current-main tree remains pending, then final report/PR update, CI, merge and main checkout/fetch.
-- Copy kplex-test-brain-mac is disabled; Sync/Publish/writers off. Final copy20190files/10.956GB and protected production config223files/84MB hashes match. No original full-content baseline; no production writes/toggles/database operations. Do not open/enable/retest either vault during finalization.
-- Complete private evidence retained at `/Users/zsviczian/kplex-private-evidence/2026-10-23-pr203-final`:1103verifiedfiles/2063535924bytes, source/artifact manifest and qualified/failed receipts. Earlier partial/pause snapshots and working seeds/worktrees retained. No HANDOFF archive.
-- C14 accepted, refactoring paused. No release/production deployment requested. Preserve all PR201 changes during integration, especially shared npmtest entries and ledger notes. Refactor plan.md contains a legacy non-UTF8 byte: edit as bytes.
+- [Final study record](docs/validation/mac-vault-indexing-203-2026-10-22.md) contains all measured results and qualifications. Guarded Mac harness and focused tests are committed; temporary plan marker removed. Current-main integration preserves PR201. Production source/styles/release metadata are unchanged relative to main.
+- 22focused Mac tests pass Node22.22.2. Full verification is running at publication, with release/architecture/core/lint and earlier test batches passed. No pending full-suite/CI outcome is claimed as a pass. Maintainer accepted merging without waiting for CI; actual results follow in the PR conversation.
+- Measured runtimes remain A551a3b/Bc4a656b; newerfa08e60/current main is not measured here. Warm broad-tag/startup/profile/power/resource/control qualifications remain; no production optimization or performance acceptance is implied.
+- Private final capture snapshot `/Users/zsviczian/kplex-private-evidence/2026-10-23-pr203-final`:1103verifiedfiles/2063535924storedbytes, immutable measurement artifacts/source identities and failed/qualified receipts. Earlier partial/pause snapshots and working seeds/worktrees retained. No HANDOFF archive; do not move/delete registered A/Bworktrees blindly.
+- Final hashes match20190copied content files/10.956GB and223protected production config files/84MB. No original full-content baseline; no production write/toggle/database operation. Copy K-Plex/Sync/Publish/external writers disabled, controllers/debugger removed, no study driver remains. User may use the Mac normally.
 
-Next: integrate current main, full verification, finish documentation/PR metadata, merge after checks,
-then switch to main and fetch/fast-forward. No sub-agents or further experiments requested.
+No additional experiment, runtime change, release or implementation task is queued. C14 remains
+accepted and structural refactoring paused. Any follow-up needs a new scoped assignment; keep the
+measurement's frozen identities and failures when assessing newer runtime changes.

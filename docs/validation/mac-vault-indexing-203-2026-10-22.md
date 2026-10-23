@@ -1,58 +1,62 @@
 # Mac real-vault indexing study — PR #203
 
-Later review update, **2026-10-23 10:59 Budapest (08:59 UTC)**: the sections beginning **Later working-tree update**
-contain results collected after the fixed report-only review commit `c99073b`. Warm, profile, resource,
-navigation and disabled-control captures are now recorded, and final content/configuration integrity
-passes. The optional post-restore control is focus-qualified. Private final evidence retention and
-review of the uncommitted harness remain delivery work; this report is still an interim review artifact.
-GitHub metadata now confirms that #201 merged independently at **2026-10-23 04:27:52 UTC** with a
-later runtime. The interim commit's description of #201 as draft was stale. This Mac study still
-measures frozen A/B below; it does not validate that newer runtime. This agent performed no push
-or merge. At the metadata recheck, PR203 remains draft and already contains the first report commit.
+Zsolt's Codex Agent. **Final study record, 2026-10-23 Europe/Budapest.**
+The report-only review snapshots `c99073b` and `6d3d19e` remain in Git history. This finalization
+adds the guarded test harness and contributor workflow, removes the temporary plan marker and
+records completed evidence retention. Historical sections below retain their dated partial states,
+failed runs and qualifications; their old pending/authority notes do not describe the final state.
 
-Zsolt's Codex Agent. Interim review snapshot: **2026-10-23 07:37 Budapest (05:37 UTC)**.
-Measurement branch
-`2026-10-22-mac-vault-indexing-study`, starting at
-`22b44d3ed0781087a9a19bd7749f69089884de5a`. Runtime optimization work remains in
-#201; this branch changes test tooling and documentation only. Results below are
-single observations unless explicitly identified otherwise. The replacement cold pair is complete;
-matched later warm measurements and final acceptance checks remain pending. Historical pause and
-failed-run sections below describe their recorded state at that time, not the current live state.
+## Scope and outcome
 
-## Review summary and current status
+**Capture, cleanup and evidence delivery are complete; current-main performance acceptance is
+inconclusive.** The maintainer authorized finalizing and merging the report/tooling into `main`.
+No production indexing algorithm, cache schema, scheduling, pacing or release-version change is
+proposed by this study. The finalization tree incorporates existing `main` so it preserves PR201's
+already-merged implementation. Its production source/styles/release metadata exactly match `main`.
 
-This is an **interim evidence report**, committed at the maintainer's request for independent review.
-It does not finish the study or authorize an indexing optimization, merge or release. Only this report
-is included in the review commit; harness changes, workflow updates and the transient HANDOFF remain
-uncommitted. The measurement-tooling starting commit is `22b44d3ed0781087a9a19bd7749f69089884de5a`.
-Raw receipts, database row streams, configurations, profiles and private target identities stay outside Git.
-A reviewer with only this report can assess the claims and experimental design; reproducing the
-harness requires the separate working-tree tooling and access to private evidence.
+Measured runtime A is `551a3b52895484de3dd41e5c6eb2fa8c6712fec4`; B is
+`c4a656b54cfe66b686e662e4d8bbfa0536cc4149`. PR201 independently merged the newer runtime
+`fa08e60e1a7122f8b37fcd11c943b883317b6ae8` at 2026-10-23 04:27:52 UTC. That newer runtime
+is **not measured here**. Integrating its history for final repository verification does not change
+these immutable Mac measurement identities or provide performance acceptance of current main.
 
-The copy has completed four cold A/B observations, earlier qualified warm observations, two distinct
-application-startup cache lanes and separate full-snapshot diagnostics. **C3 has unresolved power
-comparability.** C4 has continuous actual/native and external AC coverage and completes ten quiet
-minutes in both arms. Three matched later-host warm pairs, warm profiles/resources, active navigation,
-final ten-minute disabled control and end-of-study integrity remain unperformed at this snapshot.
+The evidence covers four cold observations, earlier qualified warm runs, three later matched
+full-snapshot warm timing pairs, two full-application startup cache lanes, separate profiles/resources,
+active navigation, disabled controls and final content/configuration checks. The principal limits are:
+
+- C3 has unresolved power comparability; C1/C2 have historical power snapshots rather than continuous
+  power coverage. C4 has continuous native/external AC, but different A/B startup routes.
+- All three later warm timing pairs have valid timing and seven-target bounded semantic parity.
+  W4's additional broad-tag check times out in both arms after rendering, so only two pairs receive
+  full functional acceptance for their declared workloads.
+- Full-snapshot application startups in both frozen revisions remain incomplete at the 45-minute cap.
+- Separate warm CPU profiles exceed the sampler-gap limit. Detailed warm resource phase tables hit
+  their 256-bucket cap: grouped operation counts are lower bounds. Dedicated lease counters have
+  complete coverage. The optional post-restore OFF control has a focus interruption and is qualified.
 
 The strongest findings are:
 
-- B-c4 consistently removes nearly all repeated source acquisition reads/parses in cold indexing and
-  roughly halves shared parser calls. This is work reduction, not a demonstrated 50% CPU reduction.
-- Startup route and native/host history vary materially. C1 uses source catalogs in both arms;
-  C2/C3 use progressive fallback in both; C4 uses progressive fallback in A and a source catalog in B.
-  A single pooled percentage would hide those differences. C4's observed closure CPU reduction is
-  32.22%, conditional on that asymmetric route; earlier pairs vary, including a direction flip in C3.
-- The graph-ready label can precede observable source closure by about five minutes and 545–586
-  CPU-seconds. C4 reproduces this under verified AC:11,823 later neutral body reuses, no new source
-  reads/parses/repairs/masks. Observed revisions change; this is not established same-revision replay.
-- Full-snapshot application startups in both revisions can remain initially incomplete at 45 minutes,
-  even after transient masks recover and queues/authority drain. Diagnostic capture observes a false
-  initial adoption with no subsequent retry. That is a reproducible recovery/readiness problem in the
-  tested revisions; the later #201 runtime `fa08e60` was not measured here.
-- Native work is material. Source-local dependency rows/keys account for 78.45% of observed
-  ObjectStore calls in the separate diagnostics, **not 78.45% of CPU**. Exact per-consumer overlap,
-  exclusive operation CPU and adjacency/compaction traversal attribution remain unmeasured.
+- B-c4 removes nearly all repeated cold source reads/parses and roughly halves parser calls. That is
+  work reduction, not a demonstrated 50% whole-process CPU reduction. Cold routes/history vary;
+  C4's observed 32.22% closure CPU reduction is conditional on an asymmetric route.
+- Graph readiness can precede observable source closure by five minutes and 545–586 CPU-seconds,
+  including 11,823 later neutral reuses in strict-AC C4 without new source I/O, parsing, repair or masks.
+  Revisions change, so same-revision replay is not established.
+- The three later warm pairs do not demonstrate a uniform speedup. Readiness CPU medians are
+  A222.985 / B233.176 seconds (+4.57% ratio); full intervals including quiet are A357.292 /
+  B370.380 (+3.66%). A late scheduler pulse in W4 requires keeping readiness, last observable
+  closure and full-interval metrics separate. Counts alone do not explain their CPU variation.
+- Full-snapshot startup can regain authority and drain masks while retaining an initially incomplete
+  adoption with no observed later retry. This is a bounded recovery/readiness failure in the frozen
+  revisions; the latest runtime must be checked before proposing a correction.
+- Source-local dependency rows/keys account for 78.45% of classified ObjectStore calls in the separate
+  counts-only startup diagnostics, **not 78.45% of CPU**. Those tables do not overflow. The later
+  detailed warm tables do overflow; their separate complete counters show 11,886 committed lease
+  creations/retirements in each arm. Exact exclusive consumer/native CPU remains unresolved.
+- A valid ordinary OFF control costs 8.802 CPU-seconds over ten minutes. The focus-qualified
+  post-restore OFF capture costs 27.993 CPU-seconds, with early renderer activity before the later
+  interruption. Restoration history can contribute to observations, but its cost is not subtracted
+  from A/B timings and no exact GC/storage cause is established.
 
 | Cold pair | Order | Observed route A / B | Closure CPU A / B (s) | B versus A | Qualification |
 | --- | --- | --- | ---: | ---: | --- |
@@ -61,35 +65,25 @@ The strongest findings are:
 | C3 | A→B | progressive / progressive | 4,234.989 /4,862.508 | +14.82% | Power transition time unknown; not matched-power acceptance |
 | C4 | B→A | progressive / catalog | 4,677.013 /3,170.257 | −32.22% | Continuous native/external AC; different routes within pair |
 
-These are descriptive within-pair observations, not four replications of one fixed execution route.
-Historical runs also use earlier forwarding-probe versions. The detailed sections retain each failure,
-cache identity, outcome and validity qualification rather than replacing it with a later success.
+These are descriptive observations, not four repetitions of one fixed route. Earlier probes and
+process/power conditions differ. Failed, excluded and censored evidence remains retained.
 
-The previous interim integrity check (2026-10-23 00:36 Budapest) finds all 20,190 copied content files
-and all 223 protected production configuration files byte-identical to starting hashes. No original
-full-content before-manifest was acquired. That check predates C4; final verification after remaining
-runs is still required. No production deployment, toggle, database operation or note write is performed.
+Final verification at **2026-10-23 10:56:31 Budapest / 08:56:31 UTC** finds all **20,190 copied
+content files / 10,956,614,603 bytes** and all **223 protected production configuration files /
+84,002,510 bytes** identical to starting hashes. No original full-content before-manifest was
+acquired, so that audit remains configuration-scoped. No production write, plugin toggle, deployment,
+database operation or note operation was performed. Copy data/property types match; K-Plex, Sync,
+Publish and external/startup writers remain disabled, with study controllers/debugger removed.
 
-C4 finishes with K-Plex disabled and its completed A4 checkpoint verified. Before any later warm
-activation, all 12 declared restore configurations are changed together to that same full checkpoint:
-schema 10,15 natural stores,1,537,695 rows,1,741,828,130 bytes, SHA-256
+Before any later warm activation, all declared restores select the same naturally complete A4 seed:
+schema10,15 stores,1,537,695 rows,1,741,828,130 bytes, SHA-256
 `2c1ec8518b8ca5969ebefea7d09092a7284d40daa48844c6939e2640cde0dfe8`.
-Native key/value decoding verifies; pages 110,470, snapshot chunks 498, source heads 11,839,
-URL owners 11,839 and pending local dependency repairs 0. No snapshot store is stripped to force a
-preferred route. The former A3 seed and its failed/censored evidence remain retained. New warm
-results must be reported as this fresh A4-seeded cohort, not silently pooled with earlier observations.
-
-Prioritized review questions and next investigations:
-
-1. Check the route, power and observer qualifications before accepting any CPU percentage or median.
-   The pending matched warm cohort is needed to reassess the earlier qualified warm regression.
-2. Trace metadata-watchdog/progressive admission and the post-ready known-event reconciliation as a
-   chain. Preserve current-owner/revision/publication guards; do not infer that neutral validation is
-   removable solely because it performs no body I/O.
-3. Use the native call-volume evidence to test whether dependency membership/multiplicity is unchanged
-   during ordinary reauthorization, before proposing write reuse. It is not yet exclusive CPU attribution.
-   Any implementation proposal must first recheck the later #201 runtime and retain crash/CAS/deletion
-   and unsaved-source safety. No such runtime change is included here.
+It has 110,470 pages,498 snapshot chunks,11,839 source heads and URL owners, and zero pending
+local dependency repairs. Native key/value decoding verifies. No store is stripped to force a route;
+earlier source-only/A3 seeds remain separate. Raw notes, paths, configurations, profiles and row
+streams stay outside Git. Final private retention verifies **1,103 files / 2,063,535,924 stored bytes**,
+including exact source/artifact identities and all failed/qualified receipts. Working seeds remain intact;
+no transient HANDOFF is archived.
 
 ## Identity, isolation and environment
 
@@ -107,9 +101,9 @@ symlinks, hard-linked files, nested production/test roots or cloud-backed destin
 Private before/after manifests cover 20,190 non-configuration files / 10,956,614,603 bytes,
 including hidden/trash content. Obsidian exposes 20,144 files / 11,839 Markdown files;
 Markdown payload totals 200,112,904 bytes, largest 12,392,537 bytes. These inventories have
-different scopes and must not be substituted for each other. Final integrity checks are pending.
+different scopes and must not be substituted for each other. Final integrity checks pass as recorded above.
 
-Host: MacBookAir 10,1, Apple M1, 8 GB RAM, macOS 14.5 (23F79), recorded power context below, bounded
+Host: MacBookAir10,1, Apple M1, 8 GB RAM, macOS 14.5 (23F79), recorded power context below, bounded
 keep-awake assertions. Obsidian 1.14.4; Electron 43.3.0 / Chromium 150.0.7871.212;
 renderer Node 24.18.1. Installer version 1.14.0 is independently confirmed by the native sample
 header and application bundle's `CFBundleShortVersionString`. Builds and
@@ -1255,8 +1249,32 @@ The most useful review priorities are:
    adjacency/copy/compaction costs cannot be ranked above measured work from these traces. Any new
    optimization proposal needs a better bounded attribution design and exact-current-runtime evidence.
 
-The immediate deliverable is this report-only Git review update. Raw profiles, database checkpoints,
-configurations and private target identities stay outside Git. A fresh verified final retention under
-`/Users/zsviczian/kplex-private-evidence/2026-10-23-pr203-final` follows these captures; the existing
-partial and pause snapshots remain intact. The harness/workflow files remain uncommitted for
-independent review. No merge, release or runtime correction is requested by this report.
+The finalized deliverable is the guarded test harness, contributor workflow and this sanitized report.
+The maintainer authorized their merge into main; that merge is not acceptance of a production
+performance fix. Raw profiles/checkpoints/configurations/private identities remain outside Git.
+Verified final retention is at `/Users/zsviczian/kplex-private-evidence/2026-10-23-pr203-final`,
+with 1,103 files / 2,063,535,924 stored bytes, exact measurement source/artifact identities and failed/
+qualified receipts. Earlier partial/pause snapshots and working seeds remain intact. Future experiments
+or runtime fixes need their own scoped task. No release or further production action is queued.
+
+## Repository finalization
+
+On 2026-10-23 the maintainer authorized committing the remaining harness/documentation, finalizing
+PR203, merging the useful contribution and returning the checkout to updated `main`. The later
+instruction explicitly says **not to wait for CI before merging**. Pending CI is an accepted delivery
+limitation, not a passed check or performance acceptance.
+
+The guarded harness and 22 focused tests are committed in `fe77015`. Integration commit `ca5af58`
+incorporates `main@cd12a857`, preserving PR201's tests, source and ledger entries. Production source,
+styles and release metadata match that main revision exactly; the PR adds test tooling and evidence.
+The temporary plan marker is removed, contributor documentation explains phase-bucket overflow and
+independent timing validity, and the transient HANDOFF returns to an inactive completion note.
+
+Finalization reruns the 22 focused Mac tests successfully on Node22.22.2. The full `npm run verify`
+is in progress at publication: release, architecture, core and Obsidian lint checks have passed, as
+have the earlier main/browser test batches; source-storage tests are still running. Its actual terminal
+outcome is recorded in the PR conversation when available. Final-head GitHub CI is not awaited under
+the maintainer's instruction. No passing result is inferred from an in-progress run.
+
+This repository integration does not rerun Mac measurements or certify the newer production runtime.
+The frozen artifact identities, retained failures and all scientific qualifications above remain intact.
