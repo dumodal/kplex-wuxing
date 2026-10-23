@@ -6,9 +6,55 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import vm from "node:vm";
-import { resolve } from "node:path";
+import { resolve, join } from "node:path";
+import { tmpdir } from "node:os";
 import { installDependencyCountReuseFixture } from "./support/dependencyCountReuseFixture.mjs";
-import { attemptReceiptFilename, canSkipSavedArm, validateResumeIdentity } from "../scripts/testing/dependency-count-reuse.mjs";
+import { attemptReceiptFilename, canSkipSavedArm, validateResumeIdentity, ownedIndexedDbSize } from "../scripts/testing/dependency-count-reuse.mjs";
+
+/** Model owned directories and synthetic database files without creating or traversing real profiles. */
+function metadataState(path) {
+  const file = path.endsWith(".ldb");
+  return { isSymbolicLink: () => false, isDirectory: () => !file, isFile: () => file, size: 17 };
+}
+
+/** A live backend retirement is an explicitly incomplete metadata observation, never a false zero. */
+test("owned file stat records a listed-file race without failing completed database work", async () => {
+  const profile = join(tmpdir(), "kplex-source-idb-stat-contract", "profile");
+  const observed = await ownedIndexedDbSize(profile, {
+    readdir: async () => [{ name: "present.ldb" }, { name: "retired.ldb" }],
+    lstat: async path => { if (path.endsWith("retired.ldb")) throw Object.assign(new Error("Retired"), { code: "ENOENT" }); return metadataState(path); },
+  });
+  assert.equal(observed.status, "unstable"); assert.equal(observed.bytes, null); assert.equal(observed.files, null);
+  assert.equal(observed.observedRegularFileBytes, 17); assert.equal(observed.observedFiles, 1);
+  assert.deepEqual(observed.missingEntries, ["retired.ldb"]);
+});
+
+/** The metadata fix preserves ownership, aliases, non-race errors and finite retained receipts. */
+test("owned file stat still rejects unsafe targets and unexpected metadata failures", async () => {
+  const profile = join(tmpdir(), "kplex-source-idb-stat-contract", "profile");
+  await assert.rejects(ownedIndexedDbSize(resolve("foreign-profile")), /Unowned/);
+  await assert.rejects(ownedIndexedDbSize(profile, { lstat: async () => ({ isSymbolicLink: () => true }) }), /alias/);
+  await assert.rejects(ownedIndexedDbSize(profile, { lstat: async path => metadataState(path), readdir: async () => { throw Object.assign(new Error("Denied"), { code: "EACCES" }); } }), /Denied/);
+  const indexedRoot = join(profile, "Default", "IndexedDB");
+  await assert.rejects(ownedIndexedDbSize(profile, {
+    lstat: async path => { if (path !== indexedRoot && path.startsWith(indexedRoot)) throw Object.assign(new Error("Retired"), { code: "ENOENT" }); return metadataState(path); },
+    readdir: async () => Array.from({ length: 4225 }, (_, index) => ({ name: String(index) })),
+  }), /metadata entry bound exceeded/);
+  for (const alias of [join(profile, "Default"), indexedRoot]) {
+    await assert.rejects(ownedIndexedDbSize(profile, {
+      lstat: async path => path === alias ? { isSymbolicLink: () => true } : metadataState(path), readdir: async () => [],
+    }), /alias/);
+  }
+});
+
+/** Stable observations retain exact totals while a vanished directory remains explicitly unknown. */
+test("owned file stat distinguishes observed totals from a retired directory", async () => {
+  const profile = join(tmpdir(), "kplex-source-idb-stat-contract", "profile");
+  const observed = await ownedIndexedDbSize(profile, { lstat: async path => metadataState(path), readdir: async () => [{ name: "present.ldb" }] });
+  assert.equal(observed.status, "observed"); assert.equal(observed.bytes, 17); assert.equal(observed.files, 1);
+  const retired = await ownedIndexedDbSize(profile, { lstat: async path => metadataState(path), readdir: async () => { throw Object.assign(new Error("Retired"), { code: "ENOENT" }); } });
+  assert.equal(retired.status, "unstable"); assert.equal(retired.bytes, null); assert.deepEqual(retired.missingEntries, ["."]);
+});
 
 /** A stopped cohort may reuse results only under the exact recorded runtime and measurement inputs. */
 test("repair resume rejects changed identities and explicitly qualifies legacy protocol adoption", () => {

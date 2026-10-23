@@ -9,7 +9,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtemp, readFile, writeFile, readdir, lstat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { performance as nodePerformance } from "node:perf_hooks";
-import { basename, dirname, join, resolve, sep } from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { contributorBrowserBundle, contributorBrowserInitialize } from "../../tests/support/contributorBrowserFixture.mjs";
 import { chromiumHarness } from "../../tests/support/browserTypeScript.mjs";
@@ -24,25 +24,50 @@ const runtimeFile = "src/index/SourceRepository.ts";
 /** Pin compared source/bundle bytes independently of the surrounding tooling commit. */
 const sha256 = value => createHash("sha256").update(value).digest("hex");
 
-/** Stat only regular files below this harness's owned IndexedDB directory; never read database contents. */
-export async function ownedIndexedDbSize(profile) {
+/**
+ * Stat owned regular files without reading contents. A running backend may retire a listed file;
+ * retain that non-atomic observation as unknown totals rather than failing work or inventing zero.
+ * The optional metadata adapter makes this exact race deterministic in harness-only tests.
+ */
+export async function ownedIndexedDbSize(profile, metadata = { readdir, lstat }) {
   const selected = resolve(profile);
   if (!selected.startsWith(resolve(tmpdir()) + sep) || basename(selected) !== "profile"
     || !basename(dirname(selected)).startsWith("kplex-source-idb-")) throw Error("Unowned browser profile size request");
-  for (const path of [dirname(selected), selected]) if ((await lstat(path)).isSymbolicLink()) throw Error("Profile alias rejected");
-  const started = performance.now(), stack = [join(selected, "Default", "IndexedDB")];
-  let files = 0, bytes = 0, directories = 0;
+  for (const path of [dirname(selected), selected]) if ((await metadata.lstat(path)).isSymbolicLink()) throw Error("Profile alias rejected");
+  const defaultDirectory = await metadata.lstat(join(selected, "Default"));
+  if (defaultDirectory.isSymbolicLink() || !defaultDirectory.isDirectory()) throw Error("IndexedDB parent alias or non-directory rejected");
+  const indexedDbRoot = join(selected, "Default", "IndexedDB");
+  const started = performance.now(), stack = [indexedDbRoot], missingEntries = [];
+  let files = 0, bytes = 0, directories = 0, entriesSeen = 0;
   while (stack.length) {
     const directory = stack.pop(); if (++directories > 128) throw Error("IndexedDB directory bound exceeded");
-    for (const entry of await readdir(directory, { withFileTypes: true })) {
-      const path = join(directory, entry.name), state = await lstat(path);
+    let entries;
+    try {
+      const state = await metadata.lstat(directory);
+      if (state.isSymbolicLink() || !state.isDirectory()) throw Error("IndexedDB directory alias or non-directory rejected");
+      entries = await metadata.readdir(directory, { withFileTypes: true });
+    }
+    catch (error) {
+      if (error.code !== "ENOENT") throw error;
+      missingEntries.push(relative(indexedDbRoot, directory) || "."); continue;
+    }
+    for (const entry of entries) {
+      if (++entriesSeen > 4224) throw Error("IndexedDB metadata entry bound exceeded");
+      const path = join(directory, entry.name); let state;
+      try { state = await metadata.lstat(path); }
+      catch (error) {
+        if (error.code !== "ENOENT") throw error;
+        missingEntries.push(relative(indexedDbRoot, path)); continue;
+      }
       if (state.isSymbolicLink()) throw Error("IndexedDB alias rejected");
       if (state.isDirectory()) stack.push(path);
       else if (state.isFile()) { if (++files > 4096) throw Error("IndexedDB file bound exceeded"); bytes += state.size; }
     }
   }
-  return { files, bytes, directories, observationElapsedMs: performance.now() - started,
-    scope: "Sum of regular-file stat sizes under the owned profile Default/IndexedDB; not allocated disk bytes, live records, fsync or physical-cache equivalence" };
+  return { status: missingEntries.length ? "unstable" : "observed", missingEntries,
+    files: missingEntries.length ? null : files, bytes: missingEntries.length ? null : bytes,
+    observedFiles: files, observedRegularFileBytes: bytes, directories, observationElapsedMs: performance.now() - started,
+    scope: "Non-atomic regular-file stat observation under owned Default/IndexedDB; ENOENT leaves totals unknown. Not allocated disk bytes, live records, fsync or physical-cache equivalence" };
 }
 
 /** Read an owned optional receipt without treating malformed JSON or other I/O errors as absence. */
