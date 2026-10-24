@@ -729,7 +729,7 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
         const badgeBounds = indicator().getBoundingClientRect();
         const magnifierBounds=root().querySelector(".kplex-find").getBoundingClientRect(),plexBounds=indicator().parentElement.getBoundingClientRect();
         const toolbarBounds=root().querySelector(".kplex-scene-tools").getBoundingClientRect();
-        c.typingBadgeGeometry={top:badgeBounds.top,leftInset:badgeBounds.left-plexBounds.left,rightInset:plexBounds.right-magnifierBounds.right,magnifierTop:magnifierBounds.top,toolbarRightInset:plexBounds.right-toolbarBounds.right,toolbarTop:toolbarBounds.top};
+        c.typingBadgeGeometry={top:badgeBounds.top,leftInset:badgeBounds.left-plexBounds.left,rightInset:plexBounds.right-magnifierBounds.right,magnifierTop:magnifierBounds.top,toolbarRightInset:plexBounds.right-toolbarBounds.right,toolbarTop:toolbarBounds.top,badge:badgeBounds.toJSON(),controls:[...root().querySelectorAll(".kplex-layout-controls, .kplex-zoom-controls, .kplex-find, .kplex-scene-tools")].map(control=>{const r=control.getBoundingClientRect();return{className:control.className,bounds:r.toJSON(),overlap:r.width>0&&r.height>0&&!(badgeBounds.right<=r.left||badgeBounds.left>=r.right||badgeBounds.bottom<=r.top||badgeBounds.top>=r.bottom)}})};
         // Find shares the top-right toolbar with Footprints; symmetry belongs to the toolbar edge.
         check(Math.abs(badgeBounds.top-toolbarBounds.top)<1&&Math.abs(badgeBounds.left-plexBounds.left-(plexBounds.right-toolbarBounds.right))<1,"Native typing badge is not symmetric to its top-right toolbar");
         for (const control of root().querySelectorAll(".kplex-layout-controls, .kplex-zoom-controls, .kplex-find, .kplex-scene-tools")) {

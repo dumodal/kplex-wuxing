@@ -15,7 +15,7 @@ async function scenario(app,c){
  if(!p||app.vault.getFiles().length>=1000||app.setting.isOpen)throw Error('Clean disposable Small required');
  const settings=structuredClone(p.settings),policy=p.savedSettingsPolicy,layout=workspace.getLayout();
  const folder='Kplex-215-Views-'+Date.now(),path=name=>folder+'/'+name+'.md',files=[],hosts=[],releases=[],restores=[];
- let createdFolder,failure;const cases=[],embedded=new Set();
+ let createdFolder,failure;const cases=[],cleanup=[],embedded=new Set();
  /** Every wait fences the controller so timeout retirement cannot resume native mutations. */
  const check=(value,message)=>{if(c.closed||!value)throw Error(message)};
  const wait=async ms=>{check(true,'Retired controller');await new Promise(resolve=>window.setTimeout(resolve,ms));check(true,'Retired controller')};
@@ -121,18 +121,20 @@ async function scenario(app,c){
   hostA.parent.removeChild(hostA);parents[0].insertChild(parents[0].children.length,hostA);await workspace.revealLeaf(hostA);await hostA.view.waitUntilReady();
   await until(()=>hostA.view.contentEl.ownerDocument===document&&root(hostA)?.querySelector('[data-kplex-keyboard-id="repeat-above"]'),'Main return did not retain selected view');
   check(hostA.view.documentSession===session,'Main return replaced native session');cases.push({id:'popout-main-remount-retains-selected-view-and-canonical-occurrences'});
-  a.recover();c.progress={phase:'complete',cases};return{lane:c.lane,cases,host:{node:process.version,electron:process.versions.electron,chrome:process.versions.chrome,rendererPid:process.pid,hidden:document.hidden},limitations:['Native Electron automation; physical Windows/phone/tablet interaction remains separate.']};
+  a.recover();c.progress={phase:'complete',cases};return{lane:c.lane,cases,cleanup,host:{node:process.version,electron:process.versions.electron,chrome:process.versions.chrome,rendererPid:process.pid,hidden:document.hidden},limitations:['Native Electron automation; physical Windows/phone/tablet interaction remains separate.']};
  }catch(error){c.progress={...c.progress,embedded:[...embedded].map(leaf=>({type:leaf.view?.getViewType(),state:leaf.getViewState()?.state?.mode,editor:!!leaf.view?.editor,domType:leaf.view?.containerEl.dataset.type,deferred:leaf.view?.constructor?.name})),nativeEditors:hosts.map(host=>({mode:host.view.centerPresentation?.getSnapshot(),editor:!!root(host)?.querySelector('.kplex-central-editor-content'),source:!!root(host)?.querySelector('.cm-content'),status:root(host)?.querySelector('.kplex-central-editor-status')?.textContent,kinds:[...root(host)?.querySelectorAll('.kplex-central-editor-leaf-host [data-type]')??[]].map(el=>el.dataset.type),failure:!!root(host)?.querySelector('.kplex-view-error')}))};failure=error;throw error}
  finally{
-  const errors=[];const clean=async action=>{try{await action()}catch(error){errors.push(String(error))}};
-  for(const restore of restores.reverse())await clean(restore);
-  for(const release of releases.reverse())await clean(release);
-  for(const host of hosts.reverse())await clean(()=>host.detach());
+  const errors=[];
+  /** Attribute teardown failures without altering the native operation, timeout or assertions. */
+  const clean=async(label,action)=>{const start=Date.now();try{await action();cleanup.push({label,status:'passed',elapsedMs:Date.now()-start})}catch(error){const message=String(error);cleanup.push({label,status:'failed',elapsedMs:Date.now()-start,error:message});errors.push(label+': '+message)}c.progress={...c.progress,cleanup}};
+  for(const [i,restore]of restores.reverse().entries())await clean('restore-resource-'+i,restore);
+  for(const [i,release]of releases.reverse().entries())await clean('release-demand-'+i,release);
+  for(const [i,host]of hosts.reverse().entries())await clean('detach-host-'+i,()=>host.detach());
   p.settings=settings;p.savedSettingsPolicy=policy;
-  await clean(()=>workspace.changeLayout(layout));await clean(()=>p.settingsWriteQueue);
-  for(const file of files.reverse())if(app.vault.getFileByPath(file.path)===file)await clean(()=>app.vault.delete(file,true));
-  if(createdFolder&&app.vault.getFolderByPath(folder)===createdFolder&&!createdFolder.children.length)await clean(()=>app.vault.delete(createdFolder,true));
-  await new Promise(resolve=>window.setTimeout(resolve,500));await clean(()=>app.vault.adapter.write(p.manifest.dir+'/data.json',c.originalData));
+  await clean('restore-layout',()=>workspace.changeLayout(layout));await clean('settle-settings',()=>p.settingsWriteQueue);
+  for(const [i,file]of files.reverse().entries())if(app.vault.getFileByPath(file.path)===file)await clean('delete-fixture-'+i,()=>app.vault.delete(file,true));
+  if(createdFolder&&app.vault.getFolderByPath(folder)===createdFolder&&!createdFolder.children.length)await clean('delete-fixture-folder',()=>app.vault.delete(createdFolder,true));
+  await new Promise(resolve=>window.setTimeout(resolve,500));await clean('restore-settings-bytes',()=>app.vault.adapter.write(p.manifest.dir+'/data.json',c.originalData));
   if(errors.length)throw Error((failure?String(failure)+'; ':'')+'View fixture cleanup: '+errors.join('; '));
  }
 }

@@ -97,7 +97,7 @@ function nativeProbe(phase,saved){
   if(phase==="restore"){
    const pairs=saved.pairs.map(pair=>({host:workspace.getLeafById(pair.host),sidecar:workspace.getLeafById(pair.sidecar),center:pair.center}));
    for(const pair of pairs){check(pair.host&&pair.sidecar,"Restored native IDs missing");await until(()=>p.sidecarLeaves.get(pair.host)===pair.sidecar,"Exact restored companion not claimed");await until(()=>center(pair.host)===pair.center,"Independent center not restored");check(trail(pair.host).length===1,"Restart reconstructed old Footprints");}
-   const leaves=nativeLeafIds();check(JSON.stringify(leaves)===JSON.stringify(saved.leafIds),"Restart changed the exact native tab inventory");
+   const leaves=nativeLeafIds();c.inventory={expected:saved.leafIds,actual:leaves};check(JSON.stringify(leaves)===JSON.stringify(saved.leafIds),"Restart changed the exact native tab inventory: "+JSON.stringify(c.inventory));
    const serialized=JSON.stringify(workspace.getLayout());check(!serialized.includes('"footprints"')&&!serialized.includes('"visits"'),"Trail entered native workspace serialization");
    passed("real-renderer-restart-restores-two-exact-pairs-and-fresh-trails",{leafCount:leaves.length});
    await navigate(pairs[0].host,path("B"));await until(()=>p.fileForLeaf(pairs[0].sidecar)?.path===path("B"),"Restored A did not synchronize");
@@ -194,7 +194,7 @@ function nativeProbe(phase,saved){
 }
 
 /** Wait for one native phase; raw detailed state remains only in the private report directory. */
-async function phase(name,saved){evaluate(`(${nativeProbe.toString()})(${JSON.stringify(name)},${JSON.stringify(saved??null)})`);const end=Date.now()+180000;let state;do{await delay(300);state=evaluate('(()=>{const c=window.__kplex187Sessions;return{done:c.done,status:c.status,error:c.error,cases:c.cases,restart:c.restart}})()');assert(Date.now()<end,"Native session phase exceeded deadline");}while(!state.done);report.scenarios.push(...state.cases);writeFileSync(join(output,`${name}.json`),JSON.stringify(state,null,2));assert.equal(state.status,"passed",state.error);return state.restart;}
+async function phase(name,saved){evaluate(`(${nativeProbe.toString()})(${JSON.stringify(name)},${JSON.stringify(saved??null)})`);const end=Date.now()+180000;let state;do{await delay(300);state=evaluate('(()=>{const c=window.__kplex187Sessions;return{done:c.done,status:c.status,error:c.error,cases:c.cases,restart:c.restart,inventory:c.inventory}})()');assert(Date.now()<end,"Native session phase exceeded deadline");}while(!state.done);report.scenarios.push(...state.cases);writeFileSync(join(output,`${name}.json`),JSON.stringify(state,null,2));assert.equal(state.status,"passed",state.error);return state.restart;}
 let restart;
 try{
  assert.equal(cli("vault","info=path").replace(/^path /,""),target.vault);report.host=cli("version");
