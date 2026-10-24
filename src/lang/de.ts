@@ -7,6 +7,11 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const germanTranslations = {
+  "view.classic": "Klassisch",
+  "view.choose": "Ansicht auswählen",
+  "view.failed": "Diese Ansicht kann nicht angezeigt werden.",
+  "view.recover": "Zur klassischen Ansicht zurückkehren",
+
   "actions.view.groups.toggle": "Knoten nach Notiztyp gruppieren",
   "actions.view.groups.toggle.description": "Gruppierung nach Notiztyp in jedem Beziehungsbereich umschalten.",
   "groups.notes": "Notizen",

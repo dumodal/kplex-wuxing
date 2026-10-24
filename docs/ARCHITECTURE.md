@@ -36,6 +36,25 @@ Arrows mean **may import**, not call direction. A capability interface belongs i
 | `src/adapters/obsidian/` | Vault/source collection, writes, storage, native shells and lifecycle binding | Other layers, lang and Obsidian |
 | `src/main.ts` | Plugin lifecycle and composition | Other layers and Obsidian |
 
+## Internal Plex view policies
+
+`core/plex/views/` contains host-free projection/layout definitions and the static
+registry. Classic's ordered neighbourhood/sibling policy and measured geometry
+have one implementation; retained host APIs delegate to it. `ui/plexViews/`
+binds admitted canonical pages, lazy styles/counts and existing sections through
+narrow host reads. Definitions receive revision-scoped DTOs, finite preferences
+and measurements; they cannot access the plugin, GraphIndex, Vault or native leaves.
+
+`application/PlexViewSession` owns per-document view choice, bounded restoration
+and exact outgoing-resource disposal. `KplexDocumentSession` retains native
+workspace/editor/Sidecar ownership. Shared actions additionally fence view
+revision; occurrence IDs remain separate from canonical endpoints. The shared
+renderer accepts explicit areas, physical ports and entry/editor/frame anchors. The editor anchor currently positions the single attention-following native editor; it is not an independent occurrence/document binding. [Occurrence editor hosting](PLEX_OCCURRENCE_EDITORS.md) is a required dependent checkpoint before parallel view jobs, with an explicit initial capacity of one and no simultaneous-editor claim.
+Classic remains the sole production definition. Corpus scoring, multihop demand
+and compact large-map rendering require explicit follow-up capabilities.
+See [the implemented contract and capability matrix](PLEX_VIEW_PLUGINS.md#16-implemented-boundary-and-capability-matrix).
+This scoped feature does not resume C15–C26 or retire compatibility facades.
+
 ## Action dispatch boundary
 
 The action-manager feature extends the accepted C14 boundaries without resuming structural C15–C26 work. `src/core/plex/actions.ts` owns finite stable IDs, immutable metadata and discriminated request/target/outcome values. `actionPreferences.ts` owns bounded workflow preferences, legacy binding migration and compiled chord/context matching. Neither module acquires host state or executable behavior from persisted data.

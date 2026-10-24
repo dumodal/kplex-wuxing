@@ -7,6 +7,11 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const spanishTranslations = {
+  "view.classic": "Clásica",
+  "view.choose": "Elegir vista",
+  "view.failed": "No se puede mostrar esta vista.",
+  "view.recover": "Volver a la vista clásica",
+
   "actions.view.groups.toggle": "Agrupar nodos por tipo de nota",
   "actions.view.groups.toggle.description": "Alternar la agrupaci?n por tipo de nota en cada ?rea de relaciones.",
   "groups.notes": "Notas",

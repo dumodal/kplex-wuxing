@@ -29,6 +29,7 @@ findRecovery(plexSource);assert(recoveryEffect,'Actual PlexGraph recovery owner 
 const bundle=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
 export {startCenterWatchdog} from './src/ui/components/centerWatchdog';export {sanitizeCenterRecoveryDiagnostic} from './src/core/contracts/centerRecovery';
 import {startCenterWatchdog} from './src/ui/components/centerWatchdog';
+import {classicViewDefinition as classic} from './src/core/plex/views/classic/definition';
 import React,{useState,useEffect,useLayoutEffect,useRef} from 'react';import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';
 /** Saved rows precede native tree availability; later publication upgrades the same exact slots. */
 export async function startupHistory(){

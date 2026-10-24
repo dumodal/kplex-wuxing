@@ -313,7 +313,7 @@ test("clipped cross-link projection equals full-scene edges while querying only 
 test("focused crosslinks preserve canonical orientation, exact gates, styles and bounded visible adjacency", () => {
   const source=ts.createSourceFile('PlexGraph.tsx',readFileSync('src/ui/PlexGraph.tsx','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
   const definition=source.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text==='gatesForEdge');assert(definition);
-  const gates=new Function(ts.transpileModule(definition.getText(source),{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText+';return gatesForEdge;')();
+  const gates=new Function("classicPorts",ts.transpileModule(definition.getText(source),{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText+';return gatesForEdge;')(geometry.classicPorts);
   const pages=new Map(['Center','A','B','C','D','E','Synthetic'].map(name=>[name+'.md',page(name)]));
   pages.get('Synthetic.md').transient={kind:'section-target',sourcePath:'Center.md',actualPath:'A.md',sectionId:'s'};
   const pairs={

@@ -10,7 +10,7 @@ const graph=ts.createSourceFile('PlexGraph.tsx',readFileSync('src/ui/PlexGraph.t
 function callback(name){let value;const visit=node=>{if(ts.isVariableDeclaration(node)&&node.name.getText(graph)===name&&ts.isArrowFunction(node.initializer))value=node.initializer.getText(graph);ts.forEachChild(node,visit)};visit(graph);assert(value,name);return value}
 const built=await build({stdin:{resolveDir:process.cwd(),loader:'ts',contents:`
  import {ElementMotion} from './src/ui/components/ElementMotion';import {centerArrivalFrames} from './src/ui/components/centerArrival';
- import {compassPolygons} from './src/core/plex/compassBackground';import {COMPASS_DIRECTIONS} from './src/core/plex/colorPreferences';
+ import {compassPolygons} from './src/core/plex/compassBackground';const classic={tint:compassPolygons};import {COMPASS_DIRECTIONS} from './src/core/plex/colorPreferences';
  export function fixture(count=0){
   const root=document.createElement('div'),cameraNode=document.createElement('div'),svg=document.createElementNS('http://www.w3.org/2000/svg','svg'),node=document.createElement('div');
   root.style.cssText='position:fixed;left:10px;top:10px;width:800px;height:600px;overflow:hidden';svg.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none';

@@ -1,0 +1,32 @@
+/** Host-bound render payloads. Occurrence identity and physical areas stay separate from canonical write endpoints. */
+import type {PlexArea, PlexProjection} from "../../core/plex/views/contracts";
+import type {PositionedNode, PositionedEdge} from "../../types";
+
+export type SceneViewport = {key: string; left: number; top: number; width: number; height: number;
+  contentTop: number; contentHeight: number; initialScrollTop: number};
+export type SceneAreaBounds = {key: string; left: number; top: number; width: number; height: number; resizeEdge: "top" | "bottom"};
+export type HostPlexScene = {
+  nodes: PositionedNode[]; edges: PositionedEdge[];
+  zoneViewports: Partial<Record<string, SceneViewport>>; zoneAreas: Partial<Record<string, SceneAreaBounds>>;
+  sectionTreeEdges?: {id: string; sourcePath: string; targetPath: string}[];
+  projection?: PlexProjection;
+  areas?: readonly PlexArea[];
+  entryOccurrence?: string; editorOccurrence?: string; frameOccurrence?: string;
+  failed?: boolean;
+};
+export type SceneAreaLayout = {nodes: PositionedNode[]; localPositions: Map<string, {x: number; y: number}>;
+  contentHeight: number; count: number; filtering: boolean};
+
+/** Stable private occurrence identity; legacy scenes keep their established unique-path map keys. */
+export function occurrenceKey(node: PositionedNode): string { return node.occurrenceId ?? node.page.path; }
+/** Canonical paths are never overloaded with a visual connector's occurrence endpoint. */
+export function edgeOccurrence(edge: PositionedEdge, endpoint: "source" | "target"): string {
+  return endpoint === "source" ? edge.sourceOccurrence ?? edge.sourcePath : edge.targetOccurrence ?? edge.targetPath;
+}
+/** Non-semantic connectors have no relationship-write authority, even when both endpoints are real notes. */
+export function semanticSceneEdge(edge: PositionedEdge): boolean { return !edge.kind || edge.kind === "semantic"; }
+/** A visual edge ID wins only for its exact canonical pair; a pair without an ID must be unambiguous. */
+export function semanticEdgeForTarget(edges: readonly PositionedEdge[], source: string, target: string, id?: string): PositionedEdge | null {
+  const candidates = edges.filter(edge => semanticSceneEdge(edge) && edge.sourcePath === source && edge.targetPath === target);
+  return id ? candidates.find(edge => edge.id === id) ?? null : candidates.length === 1 ? candidates[0] : null;
+}

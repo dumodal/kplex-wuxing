@@ -60,7 +60,7 @@ test('actual PlexGraph effects retire late metadata results and queued React upd
   visit(graph);assert.equal(effects.length,2);
   for(const effect of effects){
     let epoch=0,resolve,changed;const queued=[],timers=new Map(),requests=[];
-    const page={path:'Owned.md'},context={index:{getNodeVisualRevision:()=>epoch,invalidateNodeVisual(){},resolveNodeVisuals:()=>{const task=new Promise(done=>{resolve=done});requests.push(task);return task}},visualPages:[page],visualPageByPath:new Map([[page.path,page]]),visualRefreshTimers:{current:timers},setNodeVisuals:updater=>queued.push(updater),plugin:{app:{metadataCache:{on:(_name,callback)=>{changed=callback;return callback},offref(){changed=null}}}},window:{setTimeout:()=>1,clearTimeout(){}}};
+    const page={path:'Owned.md'},context={viewSession:undefined,index:{getNodeVisualRevision:()=>epoch,invalidateNodeVisual(){},resolveNodeVisuals:()=>{const task=new Promise(done=>{resolve=done});requests.push(task);return task}},visualPages:[page],visualPageByPath:new Map([[page.path,page]]),visualRefreshTimers:{current:timers},setNodeVisuals:updater=>queued.push(updater),plugin:{app:{metadataCache:{on:(_name,callback)=>{changed=callback;return callback},offref(){changed=null}}}},window:{setTimeout:()=>1,clearTimeout(){}}};
     const emitted=ts.transpileModule('const effect='+effect+';',{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
     /** Instantiate the production callback in a finite host/effect context. */
     const install=()=>Function(...Object.keys(context),emitted+';return effect();')(...Object.values(context));

@@ -1434,3 +1434,35 @@ Native desktop drivers that request a strategy set `indexingModeDesktop`. Driver
 explicit older-build baselines also set the retired global `indexingMode`; only the device field
 owns current production startup. Reports read the actual index strategy, not a pending saved edit.
 Direct isolated GraphIndex fixtures retain their explicit legacy constructor input.
+
+
+## Internal Plex view validation
+
+Classic remains the only shipped definition. `plex-view-classic` protects the
+pre-extraction membership/caps and 16-case exact geometry golden; contract/session
+checks exercise bounded cached reads, malformed output, unknown state, independent
+lifetimes and editor compatibility. `plex-view-probe` mounts the actual shared
+Chromium renderer with a test-only non-Classic definition, including arbitrary
+areas, repeated occurrences, Find, grouping, selection, preference restoration,
+action cancellation and failure recovery. All belong to normal `npm run verify`.
+
+After exact-build `verify:obsidian` staging in backed-up Small, run
+`npm run verify:obsidian:plex-views` with the three explicit test-vault variables
+and a fresh report directory. Back up the native workspace and establish a usable
+main-pane width before interaction checks: expanded test sidebars can leave a
+42px graph with zero-width Find controls. Public sidebar collapse methods may
+prepare this disposable fixture; restore its original layout afterward. Record
+actual viewport/main-pane dimensions rather than counting clipped controls as a
+pass. It temporarily replaces one test session's static
+registry with the portable test definition, then restores it. Two serial lanes
+check the native editor/caret through dirty switches/failure and independent
+Plex/Sidecar pairs separately. Both check same-scope zero-source-work switches,
+immediate prepared-action cancellation and popout/main remount. The editor lane
+also checks incompatible-view blocking. The combined editor-plus-two-pairs
+control remains a documented limitation reproduced on accepted main; see the
+[validation report](docs/validation/plex-view-plugins-215-2026-10-24.md). It uses existing controlled-probe transport,
+owns a timestamped fixture folder and restores settings/layout/resources in
+`finally`. No production registry, global debug API or new vault is installed.
+Run existing sessions/groups/actions/workflow/sections lanes serially for Classic
+regressions. Native automation and desktop mobile emulation do not establish
+physical Windows, phone or tablet input acceptance.
