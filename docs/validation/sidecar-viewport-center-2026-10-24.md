@@ -27,7 +27,7 @@ Final production SHA-256:
 
 - main.js: f43871726a44a8b033f45854fb3ce4f3dfbd4138610abe3a3e50e2b30d79c8a9
 - manifest.json:843d327e4a634a6e28cd645be8c533adc873a1ac1c6498502b5ca44e70120109
-- styles.css:37b7b319d7f6d7dc26829b551ba00289d4cce93a8a527a743394eb1b275923ff
+- styles.css:0ece0916859bcda0203dc5dcbb3906ce1d932a2fbceb47a5dccd4076cd83f381
 
 Private logs under %TEMP% use prefix kplex-sidecar-center-. No indexing benchmark, performance campaign or complete broad verification was run for this UI-only change.
 
@@ -36,6 +36,8 @@ Private logs under %TEMP% use prefix kplex-sidecar-center-. No indexing benchmar
 The maintainer also requested three columns for the nine visibility toggles when space permits. One CSS declaration now uses auto-fit columns with a160px minimum, bounded by available width; the existing560px panel displays3 columns and3 rows. Narrower panels retain2 columns and the existing small-screen1-column override. Toggle order, labels, handlers and settings are unchanged.
 
 A private headless Chromium check loaded production CSS with explicit host-theme tokens and all9 native toggle labels. At panel widths560/440/320px and viewports1000/700/375px, measured columns were3/2/1, all switches visible and contained, with no horizontal overflow. The560px screenshot was visually inspected. This isolated CSS check does not claim foreground/native Obsidian acceptance. The official scanner and real production build were rerun successfully; main.js and manifest hashes remain unchanged, and the updated styles hash is recorded above. No permanent test or performance campaign was added for the reversible CSS change.
+
+Subtle vertical dividers now use the native background-modifier-border theme token in the column gaps. First-column rules are clipped;2px padding preserves the existing switch focus rings. No pointer targets or control handlers change. The same Chromium checks measured2/1/0 visible divider positions for3/2/1 columns, retained focus-ring space and no overflow; the wide screenshot was inspected. Scanner and real build pass again; final styles hash above includes the dividers.
 
 ## Remaining native evidence
 

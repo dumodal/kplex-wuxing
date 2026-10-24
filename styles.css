@@ -2997,8 +2997,13 @@ button.kplex-style-manager-row { height: fit-content; }
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
   gap: 6px 12px;
+  /* Clip first-column separators while leaving space for the switch focus ring. */
+  overflow: hidden;
+  padding: 2px;
+  margin: -2px;
 }
 .kplex-filter-visibility-grid .kplex-filter-layout-toggle {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3009,6 +3014,15 @@ button.kplex-style-manager-row { height: fit-content; }
   font-size: 10px;
   font-weight: 600;
   cursor: pointer;
+}
+.kplex-filter-visibility-grid .kplex-filter-layout-toggle::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: -3px;
+  bottom: -3px;
+  border-left: 1px solid var(--background-modifier-border);
+  pointer-events: none;
 }
 .kplex-filter-visibility-grid .kplex-filter-layout-toggle > span:first-child {
   overflow: hidden;

@@ -6045,3 +6045,8 @@ UI-only explicit framing bridges existing per-view Sidecar ownership state to th
 ### 2026-10-24 - Compact visibility toggles
 
 One CSS grid declaration makes the9 visibility toggles3 columns at normal panel width, retaining2-column narrower and1-column mobile layouts. Production CSS headless checks at560/440/320px measured3/2/1 columns, all9 switches visible/contained and no horizontal overflow; screenshot inspected. Scanner and real build pass; main artifact unchanged, styles37b7b319d7f6d7dc26829b551ba00289d4cce93a8a527a743394eb1b275923ff. No extra performance or native foreground work; prior Sidecar native camera checks remain pending explicit ready. No additional manual check needed for CSS sizing; native host/theme acceptance is not claimed.
+
+
+### 2026-10-24 - Visibility column dividers
+
+Added subtle native-theme column separators with clipping and preserved switch focus-ring padding. Headless production-CSS checks confirm2/1/0 visible divider positions for3/2/1 columns, all9 toggles contained and focus space retained; screenshot inspected. Scanner and real build pass. Main unchanged; styles0ece0916859bcda0203dc5dcbb3906ce1d932a2fbceb47a5dccd4076cd83f381. No additional manual check required for this reversible styling; no foreground or performance campaign.
