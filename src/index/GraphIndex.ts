@@ -100,6 +100,7 @@
  * Node imagery remains lazy presentation data. Live consent and a visual epoch fence cache reads,
  * pending durable-body results and mounted consumers without changing graph semantics or sources.
  */
+import {projectClassicNeighborhood} from "../core/plex/views/classic/projection";
 import type {TAbstractFile} from 'obsidian';
 import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
 import { canonicalWebUrl } from "../adapters/obsidian/urlIdentity";
@@ -8546,34 +8547,14 @@ export class GraphIndex {
     return paths;
   }
 
+  /** Legacy Classic projection entry point; canonical classification and reads stay index-owned. */
   getNeighborhood(path: string): Neighborhood | null {
     const center = this.get(path);
-    if (!center) return null;
-    const max = this.plugin.settings.maxItemCount;
-    const parents = this.neighbours(center, "parent").slice(0, max);
-    const children = this.neighbours(center, "child").slice(0, max);
-    const leftFriends = [...this.neighbours(center, "left"), ...this.neighbours(center, "previous")].slice(0, max);
-    const rightFriends = [...this.neighbours(center, "right"), ...this.neighbours(center, "next")].slice(0, max);
-
-    const occupied = new Set([center.path, ...parents.map((n) => n.page.path), ...children.map((n) => n.page.path), ...leftFriends.map((n) => n.page.path), ...rightFriends.map((n) => n.page.path)]);
-    const parentPaths = new Set(parents.map((n) => n.page.path));
-    const siblingsMap = new Map<string, Neighbour>();
-    if (this.plugin.settings.renderSiblings) {
-      for (const parent of parents) {
-        for (const sibling of this.neighbours(parent.page, "child")) {
-          if (occupied.has(sibling.page.path) || !parentPaths.has(parent.page.path)) continue;
-          const previous = siblingsMap.get(sibling.page.path);
-          siblingsMap.set(sibling.page.path, {
-            ...sibling,
-            role: "sibling",
-            relationType: previous?.relationType === RelationType.DEFINED || sibling.relationType === RelationType.DEFINED ? RelationType.DEFINED : RelationType.INFERRED
-          });
-        }
-      }
-    }
-    const siblings = this.sortNeighbours([...siblingsMap.values()]).slice(0, max);
-    const result = { center, parents, children, leftFriends, rightFriends, siblings };
-    return result;
+    return center ? projectClassicNeighborhood(center, {
+      identity: page => page.path,
+      neighbours: (page, role) => this.neighbours(page, role),
+      sort: rows => this.sortNeighbours(rows),
+    }, this.plugin.settings.maxItemCount, this.plugin.settings.renderSiblings) : null;
   }
 
   /** Select configured MetadataCache/staged display fields; URL search aliases never replace the primary label. */

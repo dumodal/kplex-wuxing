@@ -48,7 +48,8 @@ test("connector evidence tooltip shares semantic reference quoting without quoti
   const RelationType={DEFINED:1,INFERRED:2},translate=createTranslator("en");
   const roleLabels=productionFunction("src/ui/PlexGraph.tsx","EVIDENCE_ROLE_LABEL",{}),sourceLabels=productionFunction("src/ui/PlexGraph.tsx","EVIDENCE_SOURCE_LABEL",{});
   const relationTypeText=productionFunction("src/ui/PlexGraph.tsx","relationTypeText",{RelationType});
-  const tooltip=productionFunction("src/ui/PlexGraph.tsx","edgeEvidenceTooltipText",{EVIDENCE_ROLE_LABEL:roleLabels,EVIDENCE_SOURCE_LABEL:sourceLabels,relationTypeText});
+  const semanticSceneEdge=productionFunction("src/ui/plexViews/scene.ts","semanticSceneEdge",{});
+  const tooltip=productionFunction("src/ui/PlexGraph.tsx","edgeEvidenceTooltipText",{semanticSceneEdge,EVIDENCE_ROLE_LABEL:roleLabels,EVIDENCE_SOURCE_LABEL:sourceLabels,relationTypeText});
   const decisions=[
     {active:true,evidence:{fieldName:'Child "reference"',sourceKind:"frontmatter-ontology",role:"child",relationType:1}},
     {active:true,evidence:{sourceKind:"obsidian-link",role:"child",relationType:2}},

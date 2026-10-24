@@ -74,6 +74,7 @@ import { DoubleTapGesture } from "./components/DoubleTapGesture";
 import { InfoBubble } from "./components/InfoBubble";
 import type { FloatingLayerDismissReason } from "./components/FloatingLayer";
 import { PlexGraph } from "./PlexGraph";
+import {plexViewContributionFor} from "./plexViews/contributions";
 import { PlexFootprintsPanel } from "./PlexFootprintsPanel";
 import { ObsidianIcon } from "./ObsidianIcon";
 import { VaultStatsModal } from "./VaultStatsModal";
@@ -225,6 +226,9 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
   documentSession: import("./KplexDocumentSession").KplexDocumentSession;
 }) {
   const canvasNameId = useId();
+  const viewRevision = useSyncExternalStore(documentSession.plexView.subscribe, documentSession.plexView.getSnapshot);
+  const plexViewDefinition = documentSession.plexView.definition;
+  const ViewLabels = plexViewContributionFor(plexViewDefinition)?.Labels;
   const displayState = useSyncExternalStore(displayModes.subscribe, displayModes.getSnapshot);
   const centerMode = useSyncExternalStore(centerPresentation.subscribe, centerPresentation.getSnapshot);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -1170,7 +1174,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     const styles = new Map(plugin.settings.graphLenses.map(lens => [lens.id, lens.style]));
     return {...compiledGraphLenses, lenses: compiledGraphLenses.lenses.map(lens => ({...lens, style: styles.get(lens.id)}))};
   }, [plugin, compiledGraphLenses, paintRevision]);
-  const actions = usePlexActions({ plugin, hostLeaf, root: rootRef, convention: environment.keyConvention,
+  const actions = usePlexActions({ plugin, hostLeaf, readViewRevision: documentSession.plexView.getSnapshot, root: rootRef, convention: environment.keyConvention,
     center: page, graph: graphActionPorts, implementations: appImplementations, mounted: hasPage,
     onUserInteraction: /** Native commands/keyboard interactions pause before their accepted work. */ () => wander.pause(),
     readEscapeAction: /** Wander stops first; subsequent Escapes follow the existing display hierarchy. */ () => wander.getSnapshot().phase !== "stopped" ? "view.wander.stop" : displayModes.getSnapshot().zen ? "view.zen.toggle" : displayModes.getSnapshot().fullscreen ? "view.fullscreen.toggle" : null,
@@ -1333,6 +1337,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
             ariaLabel={searchCopy.ariaLabel}
           />
           <PlexFilter
+            viewSession={documentSession.plexView}
             index={plugin.index}
             center={page}
             revision={renderRevision}
@@ -1401,11 +1406,8 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
 
       <main className="kplex-workspace">
         <section className="kplex-graph-area" data-kplex-tooltip-boundary>
-          <div className="kplex-zone-label zone-parent">{translate("app.zoneParents")}</div>
-          <div className="kplex-zone-label zone-left">{translate("app.zoneFriendsPrevious")}</div>
-          <div className="kplex-zone-label zone-right">{translate("app.zoneChallengersNext")}</div>
-          <div className="kplex-zone-label zone-child">{translate("app.zoneChildren")}</div>
-          <PlexGraph sidecarOpen={sidecarOpen} plugin={plugin} index={plugin.index} settings={viewSettings} paintSettings={paintSettings} paintLenses={paintLenses} surface={profileSurface} hostLeaf={hostLeaf} predicate={plexFilterPredicate} lenses={compiledGraphLenses} filterLayoutMode={filterLayoutMode} predicateRevision={predicateRevision} showCrossLinks={plugin.settings.showCrossLinks} activePath={page.path} renderRevision={renderRevision} findFocusRequest={findFocusRequest}
+          {ViewLabels && <ViewLabels translate={translate} />}
+          <PlexGraph viewDefinition={plexViewDefinition} viewSession={documentSession.plexView} viewRevision={viewRevision} sidecarOpen={sidecarOpen} plugin={plugin} index={plugin.index} settings={viewSettings} paintSettings={paintSettings} paintLenses={paintLenses} surface={profileSurface} hostLeaf={hostLeaf} predicate={plexFilterPredicate} lenses={compiledGraphLenses} filterLayoutMode={filterLayoutMode} predicateRevision={predicateRevision} showCrossLinks={plugin.settings.showCrossLinks} activePath={page.path} renderRevision={renderRevision} findFocusRequest={findFocusRequest}
             footprintsControl={<PlexFootprintsPanel trail={documentSession.footprints} translate={translate}
               readRow={/** Resolve visible references only; unavailable nodes never trigger acquisition or creation. */ visit => {
                 const target = resolveActionPage(plugin.index, visit.node);
