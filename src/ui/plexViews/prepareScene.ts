@@ -11,6 +11,7 @@ import {projectRelationGroups} from "./groupRelations";
 import type {Translator} from "../../lang";
 import type {HostPlexScene} from "./scene";
 import {readViewConfiguration} from "../../core/plex/views/configuration";
+import {admitOccurrenceEditors, type OccurrenceEditorHost} from "./occurrenceEditors";
 
 type SceneRead = Pick<GraphIndex, "get" | "neighbours" | "sortNeighbours" | "titleFor" | "captureSemanticGateRead" | "isVisiblePage" | "explainRelationship">;
 export type PreparedViewScene = Readonly<{scene: HostPlexScene; projection: PlexProjection | null; failure: boolean}>;
@@ -90,7 +91,8 @@ function validateProjection(projection: PlexProjection, maximum: number): void {
 export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewRead, source: Pick<GraphIndex, "get" | "titleFor">,
   attention: string, state: unknown, settings: KplexSettings, current: () => boolean,
   editorSize?: {width: number; height: number}, matches: (node: PositionedNode) => boolean = () => true,
-  grouping?: {translate: Translator; unfolded: ReadonlySet<string>; areaHeights?: Readonly<Record<string, number>>}): PreparedViewScene {
+  grouping?: {translate: Translator; unfolded: ReadonlySet<string>; areaHeights?: Readonly<Record<string, number>>},
+  editorHost?: OccurrenceEditorHost): PreparedViewScene {
   const empty: HostPlexScene = {nodes: [], edges: [], zoneViewports: {}, zoneAreas: {}};
   try {
     const maximum = Math.min(2048, Math.max(1, settings.maxItemCount * 8 + 1));
@@ -99,8 +101,11 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
     const projection = definition.project({attention: nodeId(attention), read, maximum: settings.maxItemCount, state, configuration});
     if (!projection || !current() || !read.isCurrent()) return {scene: empty, projection: null, failure: true};
     validateProjection(projection, maximum);
+    if (definition.editorHosting === "occurrence" && editorSize) throw new Error("Occurrence editors require occurrence dimensions");
     if (editorSize && (!projection.editor || projection.occurrences.find(row => row.id === projection.editor)?.nodeId !== attention)) throw new Error("Missing attention editor anchor");
     if (projection.attention !== attention) throw new Error("View changed its admitted attention scope");
+    const boundEditors = admitOccurrenceEditors(definition, projection, read, source, editorHost);
+    const legacyEditor = definition.editorHosting === "occurrence" ? undefined : projection.editor;
     const pages = new Map<string, GraphPage>(), measurements: PlexMeasurement[] = [];
     const nodes = new Map<string, PositionedNode>();
     for (const occurrence of projection.occurrences) {
@@ -109,21 +114,24 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
       const role = occurrence.role ?? (occurrence.nodeId === projection.attention ? "center" : "child"), relation = occurrence.relation ? {page, role: occurrence.relation.role,
         relationType: occurrence.relation.relationType, typeDefinition: occurrence.relation.definition, linkDirection: occurrence.relation.direction} : null;
       const style = resolveNodeStyle(page, relation, role, settings), label = source.titleFor(page);
-      const size = occurrence.id === projection.editor && editorSize ? editorSize
+      const boundEditor = boundEditors.get(occurrence.id);
+      const size = boundEditor?.binding.dimensions ?? (occurrence.id === legacyEditor && editorSize ? editorSize
         : nodeSize(`${style.prefix ?? ""}${label}`, style.fontSize ?? 18, settings, occurrence.nodeId === projection.attention,
-          style.maxLabelLength, style.maxWidth, style.strokeWidth);
+          style.maxLabelLength, style.maxWidth, style.strokeWidth));
       const node: PositionedNode = {page, occurrenceId: occurrence.id, areaId: occurrence.areaId, representation: occurrence.representation,
         role, relationType: relation?.relationType, typeDefinition: relation?.typeDefinition, linkDirection: relation?.linkDirection, physicalPorts: occurrence.ports ?? {}, x: 0, y: 0, ...size, label, style, ...deferredNodeCounts()};
-      if (!matches(node) && occurrence.id !== projection.editor) continue;
-      nodes.set(occurrence.id, node); measurements.push({id: occurrence.id, ...size, expandedWidth: size.width, expandedReserve: 0, mini: null, envelope: null});
+      if (!matches(node) && occurrence.id !== legacyEditor && !boundEditor) continue;
+      nodes.set(occurrence.id, node); measurements.push({id: occurrence.id, ...size, expandedWidth: size.width, expandedReserve: 0,
+        ...(boundEditor ? {editor: true as const} : {}), mini: null, envelope: null});
     }
     const admitted = new Set(nodes.keys());
     if (editorSize && (!projection.editor || !admitted.has(projection.editor))) throw new Error("Unavailable editor occurrence");
-    let filtered: PlexProjection = {...projection, occurrences: projection.occurrences.filter(row => admitted.has(row.id)),
+    for (const occurrenceId of boundEditors.keys()) if (!admitted.has(occurrenceId)) throw new Error("Unavailable bound editor admission");
+    let filtered: PlexProjection = {...projection, editor: legacyEditor, occurrences: projection.occurrences.filter(row => admitted.has(row.id)),
       edges: projection.edges.filter(edge => admitted.has(edge.source) && admitted.has(edge.target))};
     if (settings.groupRelations && grouping) {
       const partitions = new Map<string, PlexOccurrence[]>();
-      for (const occurrence of filtered.occurrences) if (occurrence.groupingPartition && occurrence.id !== filtered.editor && occurrence.id !== filtered.entry) {
+      for (const occurrence of filtered.occurrences) if (occurrence.groupingPartition && occurrence.id !== filtered.editor && occurrence.id !== filtered.entry && !boundEditors.has(occurrence.id)) {
         const partition = JSON.stringify([occurrence.areaId ?? null, occurrence.groupingPartition]);
         const members = partitions.get(partition) ?? []; members.push(occurrence); partitions.set(partition, members);
       }
@@ -183,6 +191,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
     });
     const scene: HostPlexScene = {nodes: [...nodes.values()], edges, zoneViewports: {}, zoneAreas: {}, projection: filtered, areas: layout.areas,
       entryOccurrence: filtered.entry, editorOccurrence: filtered.editor, frameOccurrence: filtered.frame};
+    if (boundEditors.size) scene.boundEditors = [...boundEditors.values()];
     const areaIds = new Set<string>();
     if (layout.areas.length > 64) throw new Error("Too many view areas");
     for (const area of layout.areas) {

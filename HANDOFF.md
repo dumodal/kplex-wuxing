@@ -40,3 +40,7 @@ Small restored and closed22:33:29UTC after218: original8files,77files/74Markdown
 ## M0 first implementation checkpoint
 
 Added `PlexEditorBindings` owner (capacity1, detached frozen targets/dimensions, stable incarnations, explicit close transaction/cancellation), optional `PlexViewDefinition.editorHosting="occurrence"`, registration validation and session-owned lifetime/transition guard. No production definition opts in and no real native binding host exists yet.17 focused session/contracts/Compass goldens pass; architecture7/zero violations after renaming a type field flagged as global; repeated real build/scanner after the field rename also passed. Shared actions/scene validation/native geometry/rooted policy/restoration/native proof are next, not claimed.
+
+## M0 scene admission checkpoint
+
+`occurrenceEditors.ts` validates the unique displayed occurrence, canonical node/file path, existing opaque native file token, current visibility and injected native eligibility. `prepareViewScene` optionally takes this host proof and supplies bound dimensions plus per-measurement editor marker; legacy attention guard/layout boolean unchanged. Bound B1 is pinned through lens filtering, B2 remains ordinary; authoritative hidden/missing/stale/unsupported targets fail without attention fallback.19 focused checks, actual build/scanner/architecture pass. Renderer failure recovery must explicitly preserve/retire the bound native host; no runtime support claimed. Next: native shared actions/controller save/link routing and root-scoped session/camera/demand.

@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {plexViewModules,viewPage} from './support/plexViewFixture.mjs';
-const M=await plexViewModules(['src/ui/plexViews/prepareScene.ts','src/ui/plexViews/scene.ts','tests/support/plexViewProbe.ts']);
+const M=await plexViewModules(['src/ui/plexViews/prepareScene.ts','src/ui/plexViews/scene.ts','src/adapters/obsidian/actionNode.ts','tests/support/plexViewProbe.ts']);
 /** Finite cached canonical graph; no acquisition, storage or note-reader capability exists. */
 function fixture(maximum=10){
   const pages=new Map(['Focus.md','Root.md','Repeated.md','Hidden.md'].map(id=>{const page=viewPage(id);page.file.stat={mtime:1,ctime:1,size:1};return[id,page]}));
@@ -59,4 +59,36 @@ test('unavailable projection never publishes an empty successful scene that coul
  const result=M.prepareViewScene({...M.probeViewDefinition,project(input){const p=M.probeViewDefinition.project(input);return {...p,editor:'layout-root'}}},f.read,f.source,'Focus.md',null,f.settings,()=>true,{width:550,height:300});
  assert.equal(result.failure,true,'The existing attention editor cannot silently become another canonical document');
  const fallback=M.attentionFallbackScene(f.source,'Focus.md',f.settings,{width:550,height:300});assert.equal(fallback.editorOccurrence,'recovery-attention');assert.equal(fallback.nodes[0].page,f.source.get('Focus.md'));
+});
+
+test('bound occurrence dimensions reach shared layout independently of attention and same-note duplicates',()=>{
+ const f=fixture(),page=f.source.get('Repeated.md'),reference=M.actionNodeRef(page),measurements=[],legacyModes=[];
+ const definition={...M.probeViewDefinition,editorHosting:'occurrence',layout(projection,rows,state,legacy,context){measurements.push(rows);legacyModes.push(legacy);assert.equal(projection.editor,undefined);return M.probeViewDefinition.layout(projection,rows,state,legacy,context)}};
+ const binding={id:'binding-B1',viewId:definition.id,occurrenceId:'repeat-above',target:{nodeId:reference.identity,path:page.file.path,fileIdentity:reference.fileIdentity},dimensions:{width:660,height:370},mode:'source',closing:false};
+ const prepare=(bindings=[binding],matches=()=>true)=>M.prepareViewScene(definition,f.read,f.source,'Focus.md',null,f.settings,()=>true,undefined,matches,undefined,{bindings,supports:current=>current===page});
+ const result=prepare();assert.equal(result.failure,false);assert.equal(result.projection.attention,'Focus.md');assert.equal(result.projection.layoutRoot,'Root.md');
+ assert.equal(result.scene.boundEditors[0].page,page);assert.equal(result.scene.boundEditors[0].binding.id,'binding-B1');
+ const B1=result.scene.nodes.find(row=>row.occurrenceId==='repeat-above'),B2=result.scene.nodes.find(row=>row.occurrenceId==='repeat-below');
+ assert.equal(B1.page,B2.page);assert.equal(B1.width,660);assert.equal(B1.height,370);assert.notEqual(B2.width,660);
+ assert.equal(measurements[0].find(row=>row.id==='repeat-above').editor,true);assert.equal(measurements[0].find(row=>row.id==='repeat-below').editor,undefined);assert.deepEqual(legacyModes,[false]);
+ const pinned=prepare([binding],()=>false);assert.equal(pinned.failure,false);assert.deepEqual(pinned.scene.nodes.map(row=>row.occurrenceId),['repeat-above'],'Lens filtering pins the exact live occurrence, not both note copies');
+ const resized=prepare([{...binding,dimensions:{width:710,height:420}}]);assert.equal(resized.scene.boundEditors[0].binding.id,binding.id);assert.equal(resized.scene.nodes.find(row=>row.occurrenceId==='repeat-above').width,710);
+ const collapsed=prepare([]);assert.equal(collapsed.failure,false);assert.equal(collapsed.scene.boundEditors,undefined);assert(measurements.at(-1).every(row=>row.editor===undefined));
+});
+
+test('bound editor admission rejects missing, hidden, recreated or mismatched targets instead of retargeting attention',()=>{
+ for(const failure of ['missing-occurrence','wrong-document','wrong-native-file','wrong-view','unsupported','native-rejected','authoritative-hidden','too-many','legacy-policy']){
+  const f=fixture(),page=f.source.get('Repeated.md'),reference=M.actionNodeRef(page),definition={...M.probeViewDefinition,editorHosting:'occurrence'};
+  const binding={id:'binding',viewId:definition.id,occurrenceId:'repeat-above',target:{nodeId:reference.identity,path:page.file.path,fileIdentity:reference.fileIdentity},dimensions:{width:660,height:370},mode:'source',closing:false};
+  if(failure==='missing-occurrence')binding.occurrenceId='missing';
+  if(failure==='wrong-document')binding.target.nodeId='Focus.md';
+  if(failure==='wrong-native-file')page.file={...page.file};
+  if(failure==='wrong-view')binding.viewId='other.view';
+  if(failure==='unsupported')page.file.extension='png';
+  if(failure==='authoritative-hidden')f.source.isVisiblePage=()=>false;
+  if(failure==='legacy-policy')delete definition.editorHosting;
+  const result=M.prepareViewScene(definition,f.read,f.source,'Focus.md',null,f.settings,()=>true,undefined,()=>true,undefined,
+   {bindings:failure==='too-many'?[binding,{...binding,id:'second',occurrenceId:'repeat-below'}]:[binding],supports:()=>failure!=='native-rejected'});
+  assert.equal(result.failure,true,failure);assert.deepEqual(result.scene.nodes,[],failure);assert.equal(result.scene.boundEditors,undefined,failure);
+ }
 });

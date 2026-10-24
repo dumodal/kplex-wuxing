@@ -49,6 +49,8 @@ export type PlexProjection = Readonly<{
 }>;
 export type PlexMeasurement = Readonly<{
   id: OccurrenceId; width: number; height: number; expandedWidth: number; expandedReserve: number;
+  /** Only this occurrence has a bound expanded editor; the legacy layout boolean does not describe it. */
+  editor?: true;
   mini: {width: number; viewportHeight: number; topGap: number} | null;
   envelope: {width: number; viewportHeight: number; topGap: number} | null;
 }>;
