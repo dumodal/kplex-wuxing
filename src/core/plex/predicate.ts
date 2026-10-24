@@ -1,7 +1,15 @@
+/** Portable declarative predicate evaluation. Property capabilities remain lazy, field-scoped and owned by the caller; evaluation never acquires sources. */
 import type { GraphNodeView } from "../graph/model";
+import type {NotePropertyAvailability, NotePropertyRead} from "./noteProperties";
 
 export type GraphPredicateEvidence = Readonly<Record<string, unknown>>;
-export interface GraphPropertyProvider { getNoteProperty(node: GraphNodeView, key: string): unknown; }
+export interface GraphPropertyProvider {
+  getNoteProperty(node: GraphNodeView, key: string): unknown;
+  /** Optional availability proof for views that distinguish absent values from absent metadata. */
+  notePropertyAvailability?(node: GraphNodeView): NotePropertyAvailability;
+  /** Optional current-file/cache-fenced field read; predicate consumers retain their existing method. */
+  readNoteProperty?(node: GraphNodeView, key: string): NotePropertyRead;
+}
 const NO_PROPERTIES: GraphPropertyProvider = { getNoteProperty: () => undefined };
 
 export type GraphPredicateNamespace = "node" | "edge" | "evidence" | "note" | "file" | "this";

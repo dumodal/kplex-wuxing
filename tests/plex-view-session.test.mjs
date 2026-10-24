@@ -6,8 +6,8 @@ import ts from 'typescript';
 import {plexViewModules} from './support/plexViewFixture.mjs';
 const M=await plexViewModules(['src/application/PlexViewSession.ts','src/core/plex/views/registry.ts','src/ui/plexViews/builtins.ts','tests/support/plexViewProbe.ts','src/ui/surfaceContinuation.ts']);
 
-test('static registration validates identity/version and ships Classic only',()=>{
-  assert.deepEqual(M.builtInPlexViews.available.map(view=>view.id),['classic']);
+test('static registration validates identity/version and ships only implemented Compass/Wu Xing views',()=>{
+  assert.deepEqual(M.builtInPlexViews.available.map(view=>view.id),['classic','wuxing']);
   assert.throws(()=>new M.PlexViewRegistry([M.builtInPlexViews.resolve('classic'),M.builtInPlexViews.resolve('classic')]));
   assert.throws(()=>new M.PlexViewRegistry([M.probeViewDefinition]));
   assert.throws(()=>new M.PlexViewRegistry([{...M.builtInPlexViews.resolve('classic'),version:2}]));

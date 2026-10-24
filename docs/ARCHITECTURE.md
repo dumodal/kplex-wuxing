@@ -50,7 +50,7 @@ and exact outgoing-resource disposal. `KplexDocumentSession` retains native
 workspace/editor/Sidecar ownership. Shared actions additionally fence view
 revision; occurrence IDs remain separate from canonical endpoints. The shared
 renderer accepts explicit areas, physical ports and entry/editor/frame anchors. The editor anchor currently positions the single attention-following native editor; it is not an independent occurrence/document binding. [Occurrence editor hosting](PLEX_OCCURRENCE_EDITORS.md) is Mind Map's required M0 checkpoint, with an explicit initial capacity of one and no simultaneous-editor claim. It must extend the existing attention-following host compatibly; Wu Xing may implement and validate its complete view independently after #218.
-Classic remains the sole production definition. Corpus scoring, multihop demand
+Compass (`classic`) and Wu Xing (`wuxing`) are production definitions. Wu Xing adds optional cache-only availability-aware property reads and bounded input-transparent layout decorations. It retains the single attention-following editor; its phase regions never imply ontology writes. Corpus scoring, multihop demand
 and compact large-map rendering require explicit follow-up capabilities.
 See [the implemented contract and capability matrix](PLEX_VIEW_PLUGINS.md#16-implemented-boundary-and-capability-matrix).
 This scoped feature does not resume C15–C26 or retire compatibility facades.

@@ -10,7 +10,9 @@
 
 At its heart is the **Compass**: focus on one note, then look **north** for origins and parents, **south** for children and where an idea leads, **west** for friends and supporting connections, and **east** for challengers and transformative connections. As you navigate, these directions retain their meaning, helping you reason about your knowledge in context.
 
-Compass is the current K-Plex canvas view. K-Plex canvases are separate from Obsidian Canvas files, which remain ordinary attachment nodes.
+Choose **Compass** or **Wu Xing** in **Views and lenses → Canvas view**. Each canvas keeps its own choice. K-Plex canvases are separate from Obsidian Canvas files, which remain ordinary attachment nodes.
+
+**Wu Xing** arranges the current note and its direct relationships into five phases. Configure one classification source, phase labels and exact value mappings in **Settings → K-Plex → Canvas behavior → Views → Wu Xing**. The default property is `phase`, with values `water`, `wood`, `fire`, `earth` and `metal`. Empty phases stay visible; unmapped, conflicting and unavailable notes remain reachable under Unclassified. Counts describe the local view, and dashed cycle guides do not represent note relationships.
 
 **Explore, connect, and reshape your knowledge.** Drag notes from Obsidian's file explorer into the canvas to navigate or create relationships. Drag existing related nodes between directions to reorganize your knowledge. Open notes for editing without leaving the graph, use Graph Lenses to focus on what matters, or let Wander take you through connected ideas.
 

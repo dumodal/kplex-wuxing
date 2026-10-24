@@ -71,6 +71,8 @@ import {reflowArea} from "./plexViews/reflowArea";
 import {prepareViewScene, plexViewRead, attentionFallbackScene} from "./plexViews/prepareScene";
 import {occurrenceKey, edgeOccurrence, semanticSceneEdge, semanticEdgeForTarget, type HostPlexScene} from "./plexViews/scene";
 import {viewLabel} from "./plexViews/labels";
+import {ViewDecorations, viewDecorationCounts} from "./plexViews/ViewDecorations";
+import {createLegacyPropertyProvider} from "../adapters/obsidian/predicateContracts";
 import { DropAreaPreview } from "./components/DropAreaPreview";
 import { DoubleTapGesture } from "./components/DoubleTapGesture";
 import { ObsidianIcon } from "./ObsidianIcon";
@@ -882,15 +884,16 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const scenePolicyKey = useMemo(/** Equivalent wrappers and paint-only updates retain the actual geometry policy. */ () => classic?.policyKey(settings) ?? viewDefinition.id, [classic, viewDefinition, settings]);
   const sceneGeometryKey = useMemo(/** Compare consumed values, never mutable page identity or source clocks alone. */ () =>
     classic?.geometryKey(layoutNeighborhood, classicRead, settings) ?? "", [classic, layoutNeighborhood, classicRead, settings]);
+  const [viewPropertyRevision, refreshViewProperties] = useState(0);
   const preparedDefinitionScene = useMemo(() => {
     if (classic) return null;
     const current = viewSession?.capture() ?? (() => true);
-    const read = plexViewRead(index, current, settings.maxItemCount, activePath);
+    const read = plexViewRead(index, current, settings.maxItemCount, activePath, createLegacyPropertyProvider(plugin.app, current, node => index.get(node.id)?.file));
     return prepareViewScene(viewDefinition, read, index, activePath, viewSession?.state, settings, current, centralEditorSize,
       node => !globalFiltering || filterLayoutMode === "keep" && !settings.groupRelations || (matchesGraphPredicateNode(predicateEngine, predicate, node, neighborhood?.center)
         && matchesVisibleLensNode(predicateEngine, index, lenses, node, neighborhood?.center)),
       {translate, unfolded: unfoldedGroups.center === activePath ? unfoldedGroups.keys : new Set(), areaHeights: viewSession?.getAreaHeights()});
-  }, [classic, viewDefinition, viewRevision, viewSession, index, activePath, renderRevision, semanticRevision, settings, centralEditorSize, globalFiltering, filterLayoutMode, predicateEngine, predicate, lenses, predicateRevision, unfoldedGroups, translate]);
+  }, [classic, viewDefinition, viewRevision, viewSession, index, activePath, renderRevision, semanticRevision, settings, centralEditorSize, globalFiltering, filterLayoutMode, predicateEngine, predicate, lenses, predicateRevision, unfoldedGroups, translate, viewPropertyRevision]);
   const sceneGeometry = useMemo<HostPlexScene>(() => {
     try {
       if (preparedDefinitionScene) return preparedDefinitionScene.failure ? attentionFallbackScene(index, activePath, settings, centralEditorSize) : preparedDefinitionScene.scene;
@@ -914,7 +917,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   };
   const persistAreaHeight = (zone: string): void => {if (AREA_HEIGHT_CONFIG[zone]?.kind !== "view") void plugin.saveSettings(false);};
   const zoneTitle = (zone: string, translator: Translator, arrangement: KplexSettings["lateralArrangement"]): string =>
-    scene.areas?.find(area => area.id === zone)?.labelKey ? viewLabel(scene.areas.find(area => area.id === zone)!.labelKey, translator)
+    scene.areas?.find(area => area.id === zone)?.labelKey ? scene.areas.find(area => area.id === zone)!.label ?? viewLabel(scene.areas.find(area => area.id === zone)!.labelKey, translator)
       : classic?.title(zone, translator, arrangement) ?? zone;
   const buildZoneDisplayLayout = (zone: string, panel: ZoneViewport, nodes: PositionedNode[], filter: string,
     preferences: KplexSettings, _read: GraphIndex, centerPath: string): ZoneDisplayLayout => classic
@@ -948,6 +951,16 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     scene.nodes.filter((node) => !node.page.transient).map((node) => [node.page.path, node.page]),
   ).values()], [scene.nodes]);
   const visualPageByPath = useMemo(() => new Map(visualPages.map((page) => [page.path, page])), [visualPages]);
+  useEffect(/** Cached-field views refresh only admitted current files; real note edits retain normal index maintenance. No body read or semantic notification is requested here. */ () => {
+    if (!viewDefinition.capabilities.properties) return;
+    const current = viewSession?.capture() ?? (() => true);
+    let alive = true;
+    const ref = plugin.app.metadataCache.on("changed", /** Late metadata from a retired view or replaced native file has no presentation authority. */ file => {
+      if (!alive || !current() || visualPageByPath.get(file.path)?.file !== file || plugin.app.vault.getFileByPath(file.path) !== file) return;
+      refreshViewProperties(/** Retain the lifetime fence even if React delays this state updater. */ revision => alive && current() ? revision + 1 : revision);
+    });
+    return /** Exact view-owned listener is retired before replacement/unmount. */ () => {alive = false; plugin.app.metadataCache.offref(ref);};
+  }, [plugin, viewDefinition, viewLifetime, viewSession, visualPageByPath]);
   useEffect(/** Resolve visible imagery under one consent epoch and retire publication on teardown. */ () => {
     let cancelled = false;
     const revision = index.getNodeVisualRevision();
@@ -1620,6 +1633,11 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       const panel = scene.zoneViewports[zone];
       if (!panel) continue;
       includeRect(panel.left - 12, panel.top - 12, panel.left + panel.width + 12, panel.top + panel.height + 12);
+    }
+
+    // Empty labeled regions are part of a view's scene, even when no thought supplies their extents.
+    for (const decoration of scene.decorations ?? []) if (decoration.kind === "region") {
+      includeRect(decoration.bounds.x - 12, decoration.bounds.y - 12, decoration.bounds.x + decoration.bounds.width + 12, decoration.bounds.y + decoration.bounds.height + 12);
     }
 
     if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
@@ -3211,10 +3229,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       onCommitted: /** Publication remains durable while old view feedback is fenced. */ () => { if (current()) clearHoverIntent(true); } });
   };
 
-  /** Siblings add a direct relation only inside a real relation area; existing neighbors retain move hysteresis. */
+  /** Compass neighbors retain directional hysteresis. Other views authorize only explicit area drop roles, never ontology inferred from a phase or screen quadrant. */
   const nodeDropRole = (node: PositionedNode, position: Point, clientX: number, clientY: number, hit: Element | null): GateRole | null => {
     const currentRole = normalizedRole(node.role);
-    if (currentRole && settings.lateralArrangement !== "left") return semanticRoleForPosition(position, currentRole, NODE_RELINK_HYSTERESIS_PX / Math.max(0.3, camera.current.scale));
+    if (currentRole && classic && settings.lateralArrangement !== "left") return semanticRoleForPosition(position, currentRole, NODE_RELINK_HYSTERESIS_PX / Math.max(0.3, camera.current.scale));
     if (currentRole) {
       const area = externalFileDropTarget(clientX, clientY, hit);
       return area && area !== "center" && area !== "blocked" ? area : null;
@@ -4619,6 +4637,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     {viewFailed && <div className="kplex-view-error" role="status">{translate("view.failed")}
       <button type="button" onClick={() => viewSession?.recover()}>{translate("view.recover")}</button></div>}
     <div ref={cameraElement} className="kplex-camera" style={{ transform: `translate(${camera.current.x}px, ${camera.current.y}px) scale(${camera.current.scale})` }}>
+      {scene.decorations && <ViewDecorations decorations={scene.decorations} translate={translate}
+        counts={viewDecorationCounts(scene.decorations, scene.nodes, filterMatchedNodePaths, zoneDisplayLayouts)} />}
       <svg className="kplex-links" width="3200" height="2400" viewBox="-1600 -1200 3200 2400">
         <defs>
           <marker id="kplex-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto-start-reverse" markerUnits="strokeWidth"><path d="M1,1 L8,4.5 L1,8" fill="none" stroke="context-stroke" strokeWidth="1.4" /></marker>

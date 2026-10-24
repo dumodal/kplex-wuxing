@@ -8,6 +8,7 @@ import {viewConfigurationKey} from "../../core/plex/views/configuration";
 import {builtInPlexViews} from "./builtins";
 import {classicSettingsContribution} from "./classic/settings";
 import {viewLabel} from "./labels";
+import {wuXingSettingsContribution} from "./wuxing/settings";
 
 export type CanvasViewSettingsContext = Readonly<{
   translate: Translator;
@@ -52,4 +53,4 @@ export class CanvasViewSettingsRegistry {
   }
 }
 
-export const builtInCanvasViewSettings = new CanvasViewSettingsRegistry(builtInPlexViews, [classicSettingsContribution]);
+export const builtInCanvasViewSettings = new CanvasViewSettingsRegistry(builtInPlexViews, [classicSettingsContribution, wuXingSettingsContribution]);

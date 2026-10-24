@@ -11,6 +11,7 @@ import {projectRelationGroups} from "./groupRelations";
 import type {Translator} from "../../lang";
 import type {HostPlexScene} from "./scene";
 import {readViewConfiguration} from "../../core/plex/views/configuration";
+import type {GraphPropertyProvider} from "../../core/plex/predicate";
 
 type SceneRead = Pick<GraphIndex, "get" | "neighbours" | "sortNeighbours" | "titleFor" | "captureSemanticGateRead" | "isVisiblePage" | "explainRelationship">;
 export type PreparedViewScene = Readonly<{scene: HostPlexScene; projection: PlexProjection | null; failure: boolean}>;
@@ -28,9 +29,12 @@ export function attentionFallbackScene(source: Pick<GraphIndex, "get" | "titleFo
 }
 
 /** Expose a bounded, revision-scoped cache-only reader. Corpus/metric absence is explicit, never numerical zero. */
-export function plexViewRead(source: SceneRead, current: () => boolean, maximum: number, attention?: string): PlexViewRead {
+export function plexViewRead(source: SceneRead, current: () => boolean, maximum: number, attention?: string, properties?: GraphPropertyProvider): PlexViewRead {
   const proof = source.captureSemanticGateRead(), nodes = new Map<NodeId, GraphNodeView>();
   let operations = 0;
+  let propertyOperations = 0;
+  /** Property reads can address only previously admitted nodes and have their own finite scene-sized budget. */
+  const propertyNode = (id: NodeId): GraphNodeView | null => isCurrent() && ++propertyOperations <= Math.min(2048, maximum * 8 + 1) ? nodes.get(id) ?? null : null;
   const budget = Math.min(16_384, Math.max(16, maximum * 16));
   const isCurrent = (): boolean => current() && proof.isCurrent();
   const node = (id: NodeId): GraphNodeView | null => {
@@ -40,6 +44,13 @@ export function plexViewRead(source: SceneRead, current: () => boolean, maximum:
     const value = graphNodeViewFromLegacy(page); nodes.set(id, value); return value;
   };
   return {coverage: "cached", isCurrent, node, corpus: {available: false, reason: "unsupported"},
+    ...(properties ? {properties: {
+      /** Only admitted, current canonical nodes may ask the existing field owner for availability. */
+      availability: (id: NodeId) => {const value = propertyNode(id); return value ? properties.notePropertyAvailability?.(value) ?? "unavailable" : "unavailable";},
+      /** Selected fields share the same operation budget and lifetime as local node/relationship reads. */
+      read: (id: NodeId, field: string) => {const value = propertyNode(id); return value && field.length <= 128
+        ? properties.readNoteProperty?.(value, field) ?? {status: "unavailable" as const} : {status: "unavailable" as const};},
+    }} : {}),
     relations: (id, role) => {
       if (!node(id) || !isCurrent()) return {items: [], coverage: "unavailable", truncated: operations > budget};
       const page = source.get(id); if (!page) return {items: [], coverage: "unavailable", truncated: false};
@@ -182,7 +193,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
           typeDefinition: edge.relation.definition, linkDirection: edge.relation.direction}, settings, pages.get(edge.source)) : settings.baseLinkStyle};
     });
     const scene: HostPlexScene = {nodes: [...nodes.values()], edges, zoneViewports: {}, zoneAreas: {}, projection: filtered, areas: layout.areas,
-      entryOccurrence: filtered.entry, editorOccurrence: filtered.editor, frameOccurrence: filtered.frame};
+      entryOccurrence: filtered.entry, editorOccurrence: filtered.editor, frameOccurrence: filtered.frame, decorations: layout.decorations};
     const areaIds = new Set<string>();
     if (layout.areas.length > 64) throw new Error("Too many view areas");
     for (const area of layout.areas) {
@@ -197,6 +208,17 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
         || area.reflow.columns > 32 || area.reflow.columnGap < 0 || area.reflow.rowGap < 0)) throw new Error("Invalid area reflow");
       scene.zoneAreas[area.id] = {key: area.id, left: area.bounds.x, top: area.bounds.y, width: area.bounds.width, height: area.bounds.height, resizeEdge: area.resizeEdge ?? "bottom"};
       if (area.viewport) scene.zoneViewports[area.id] = {key: area.id, left: area.viewport.x, top: area.viewport.y, ...area.viewport};
+    }
+    const decorationIds = new Set<string>();
+    if ((layout.decorations?.length ?? 0) > 64) throw new Error("Too many view decorations");
+    for (const mark of layout.decorations ?? []) {
+      if (!mark.id || decorationIds.has(mark.id)) throw new Error("Invalid decoration identity");
+      decorationIds.add(mark.id);
+      if (mark.kind === "region") {
+        if (!Object.values(mark.bounds).every(Number.isFinite) || mark.bounds.width <= 0 || mark.bounds.height <= 0
+          || mark.labelKey.length > 128 || (mark.label?.length ?? 0) > 128 || mark.areaId && !areaIds.has(mark.areaId)) throw new Error("Invalid decoration region");
+      } else if (mark.kind !== "guide" || mark.points.length < 2 || mark.points.length > 32
+        || !mark.points.every(point => Number.isFinite(point.x) && Number.isFinite(point.y))) throw new Error("Invalid decoration guide");
     }
     return {scene, projection: filtered, failure: false};
   } catch { return {scene: empty, projection: null, failure: true}; }

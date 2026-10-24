@@ -4,6 +4,7 @@ import type {EvidenceDecision, RelationEvidence} from "../../graph/evidence";
 import type {RelationshipExplanation} from "../../graph/resolver";
 import type {LinkDirection, RelationType, Role} from "../../graph/relations";
 import type {PlexViewConfiguration, PlexViewConfigurationSchema} from "./configuration";
+import type {NotePropertyAvailability, NotePropertyRead} from "../noteProperties";
 
 export type OccurrenceId = string;
 export type AreaId = string;
@@ -27,6 +28,8 @@ export type PlexViewRead = Readonly<{
   relations: (id: NodeId, role: Role) => PlexRelationRead;
   evidence: (source: NodeId, target: NodeId) => PlexEvidenceRead;
   compare: (left: GraphNodeView, right: GraphNodeView) => number;
+  /** Optional admitted-node metadata capability; no enumeration, body reads or acquisition. */
+  properties?: Readonly<{availability: (id: NodeId) => NotePropertyAvailability; read: (id: NodeId, field: string) => NotePropertyRead}>;
   /** Unsupported corpus reads stay unavailable; an empty catalogue must never certify unlinked notes. */
   corpus: {available: false; reason: "unsupported"};
 }>;
@@ -54,14 +57,22 @@ export type PlexMeasurement = Readonly<{
 }>;
 export type PlexArea = Readonly<{
   id: AreaId; labelKey: string; bounds: ViewRect; resizeEdge?: "top" | "bottom";
+  /** User labels are literal vault configuration, never translated as catalog keys. */
+  label?: string;
   heightPreference?: {key: string; minimum: number; maximum: number};
   viewport?: ViewRect & {contentTop: number; contentHeight: number; initialScrollTop: number};
   /** Physical area action is explicit; arbitrary areas have no relationship-write meaning by default. */
   dropRole?: "parent" | "child" | "left" | "right";
   reflow?: Readonly<{columns: number; columnGap: number; rowGap: number; paddingTop?: number; paddingBottom?: number}>;
 }>;
+/** Pure presentation marks have no semantic endpoints or interaction/write authority. */
+export type PlexDecoration = Readonly<{id: string} & (
+  {kind: "region"; bounds: ViewRect; labelKey: string; label?: string; areaId?: AreaId; tint?: "water" | "wood" | "fire" | "earth" | "metal"; count?: boolean}
+  | {kind: "guide"; points: readonly ViewPoint[]}
+)>;
 export type PlexViewLayout = Readonly<{
   positions: ReadonlyMap<OccurrenceId, ViewRect>; areas: readonly PlexArea[];
+  decorations?: readonly PlexDecoration[];
 }>;
 export type PlexViewInput = Readonly<{
   attention: NodeId; read: PlexViewRead; maximum: number; state: unknown;
@@ -73,7 +84,7 @@ export interface PlexViewDefinition {
   readonly version: 1;
   readonly labelKey: string;
   readonly icon: string;
-  readonly capabilities: Readonly<{sections: boolean; descendants: boolean; editor: boolean; compact: boolean}>;
+  readonly capabilities: Readonly<{sections: boolean; descendants: boolean; editor: boolean; compact: boolean; properties?: boolean}>;
   readonly defaultState: unknown;
   readonly configuration?: PlexViewConfigurationSchema;
   /** Validate only this view's small session state; shared/native settings are not supplied. */

@@ -1,5 +1,5 @@
 /** Host-bound render payloads. Occurrence identity and physical areas stay separate from canonical write endpoints. */
-import type {PlexArea, PlexProjection} from "../../core/plex/views/contracts";
+import type {PlexArea, PlexProjection, PlexDecoration} from "../../core/plex/views/contracts";
 import type {PositionedNode, PositionedEdge} from "../../types";
 
 export type SceneViewport = {key: string; left: number; top: number; width: number; height: number;
@@ -11,6 +11,7 @@ export type HostPlexScene = {
   sectionTreeEdges?: {id: string; sourcePath: string; targetPath: string}[];
   projection?: PlexProjection;
   areas?: readonly PlexArea[];
+  decorations?: readonly PlexDecoration[];
   entryOccurrence?: string; editorOccurrence?: string; frameOccurrence?: string;
   failed?: boolean;
 };

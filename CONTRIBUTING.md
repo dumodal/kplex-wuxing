@@ -1442,7 +1442,7 @@ Direct isolated GraphIndex fixtures retain their explicit legacy constructor inp
 
 ## Internal Plex view validation
 
-Classic remains the only shipped definition. `plex-view-classic` protects the
+Compass and Wu Xing are shipped definitions. `wuxing` and `wuxing-browser` cover exact classification, metadata availability/lifetime, measured empty/dense regions, local read bounds and production rendering. `plex-view-classic` protects the
 pre-extraction membership/caps and 16-case exact geometry golden; contract/session
 checks exercise bounded cached reads, malformed output, unknown state, independent
 lifetimes and editor compatibility. `plex-view-probe` mounts the actual shared

@@ -3845,3 +3845,29 @@ button.kplex-sidecar-unfold-plex:focus-visible,
   color: var(--text-normal);
   font-size: var(--font-ui-small);
 }
+.kplex-view-decorations {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.kplex-view-region rect {
+  fill: var(--background-secondary);
+  fill-opacity: 0.24;
+  stroke: var(--background-modifier-border);
+  stroke-width: 1;
+}
+
+.kplex-view-region.is-water rect { fill: var(--color-blue); fill-opacity: 0.06; }
+.kplex-view-region.is-wood rect { fill: var(--color-green); fill-opacity: 0.06; }
+.kplex-view-region.is-fire rect { fill: var(--color-red); fill-opacity: 0.06; }
+.kplex-view-region.is-earth rect { fill: var(--color-yellow); fill-opacity: 0.06; }
+.kplex-view-region.is-metal rect { fill: var(--color-purple); fill-opacity: 0.06; }
+
+.kplex-view-region text { fill: var(--text-normal); font-size: 16px; }
+.kplex-view-region .kplex-view-region-count { fill: var(--text-muted); font-size: 11px; }
+.kplex-view-guide { stroke: var(--text-faint); stroke-width: 1; stroke-dasharray: 5 7; opacity: 0.5; }

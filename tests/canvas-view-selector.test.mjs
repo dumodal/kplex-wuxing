@@ -27,12 +27,12 @@ const mount=(owner,doc=document,extra={})=>{
 `;
 const scenario=body=>colorEditorScenario(`(async()=>{${initialize}\n${body}\nreturn true})()`);
 
-test('the production panel shows labelled disabled Compass and no unfinished definitions',async()=>{
+test('the production panel exposes Compass and Wu Xing through the production registry',async()=>{
  assert.equal(await scenario(`
  const owner=session('a',M.builtInPlexViews),ui=mount(owner);ui.open();await waitFor(ui.select);
- equal([...ui.select().options].map(option=>[option.value,option.textContent]),[['classic','Compass']],'Production options');
- check(ui.select().disabled,'Single option remains visible and disabled');
- check(ui.panel().querySelector('label[for="'+ui.select().id+'"]')?.textContent==='Canvas viewCompass','Label names the native select');
+ equal([...ui.select().options].map(option=>[option.value,option.textContent]),[['classic','Compass'],['wuxing','Wu Xing']],'Production options');
+ check(!ui.select().disabled,'Two implemented views are selectable');
+ check(ui.panel().querySelector('label[for="'+ui.select().id+'"]')?.textContent==='Canvas viewCompassWu Xing','Label names the native select');
  check(ui.panel().querySelector('.kplex-filter-section')?.classList.contains('kplex-view-selector'),'Selector comes before filters');
  equal(ui.container.querySelector('.kplex-filter-trigger').getAttribute('aria-label'),'Views and lenses','Trigger accessible name');
  equal(ui.panel().querySelector('.kplex-filter-panel-header span').textContent,'Views and lenses','Panel title');

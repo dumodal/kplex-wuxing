@@ -1,6 +1,18 @@
 # Wu Xing five-phase canvas view
 
-Prepared by Zsolt's Codex Agent, 2026-10-24. **Planning draft for the Windows agent. No runtime implementation or validation is claimed.**
+Prepared by Zsolt's Codex Agent, 2026-10-24. **Implementation in progress on Windows; final acceptance remains pending.**
+
+## Implementation checkpoint
+
+Accepted #218 merged as `998781070a9382005154f4f884ed753280a9cf52`; this branch preserves its planning head `4c2f4c3` and normally integrates that baseline at `48a33a4f0168a6277138e0fc757dab9b740cfc50`.
+
+The production definition/configuration/classifier/layout live under `src/core/plex/views/wuxing/`; its native contribution is `src/ui/plexViews/wuxing/settings.ts`. `wuxing` is registered through the existing view/settings registries. Defaults use the Markdown `phase` field and exact lower-case phase IDs; the demonstration-inspired workflow remains a configurable interpretation, not an assumed vault schema. Aliases are trimmed, case-sensitive, comma/newline-separated primitive values. Multiple matching phases conflict, and excessive source arrays remain unavailable instead of certifying a partial match.
+
+Optional `PlexViewRead.properties` delegates to `createLegacyPropertyProvider` for field-only current native file/cache reads. No property parser/cache, source scheduler or body reader is added. Optional `PlexViewLayout.decorations` carries bounded region rectangles and decorative guide segments to `ViewDecorations`; it grants no semantic edge or write authority. Empty regions participate in fitting. Property-dependent metadata listeners are admitted-file scoped and retire with their view.
+
+The attention occurrence is fixed inside its phase, outside the neighboring notes' shared scroller. This keeps the existing native editor/ports aligned during overflow scrolling. Unmapped, conflicting and unavailable lanes form the reachable Unclassified area outside the cycle. Shared grouping partitions remain phase/status-local. Type settings remain in #218's versioned namespace; per-canvas state and editor/Sidecar ownership retain their existing owners. Compass quadrant relinking is restricted to Compass; arbitrary regions require explicit drop roles.
+
+Focused pure/property/shared-view tests and Chromium production rendering checks pass at this working checkpoint. Full verification, exact-head evidence and Windows native acceptance are still pending; see HANDOFF.md for current work. This does not claim M0/independent occurrence editing, #215 baseline fixes or physical-device acceptance.
 
 ## Baseline and dependencies
 

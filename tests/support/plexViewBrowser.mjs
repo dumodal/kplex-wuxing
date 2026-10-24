@@ -1,0 +1,30 @@
+/** Compile the actual shared canvas for browser consumers. Native host constructors remain finite explicit doubles; no production scene or property behavior is replaced. */
+import {build} from 'esbuild';
+/** Each test owns a real browser and its root lifetimes; this helper only bundles source with the same native boundary. */
+export async function plexViewBrowserModules(){
+const nativeStub=`
+  class NativeBase {constructor(){} register(){} registerEvent(){} addChild(){} removeChild(){}}
+  exports.App=exports.Modal=exports.SuggestModal=exports.FuzzySuggestModal=exports.AbstractInputSuggest=exports.Component=exports.MarkdownRenderChild=
+  exports.PluginSettingTab=exports.Setting=exports.ButtonComponent=exports.ColorComponent=exports.SearchComponent=exports.ExtraButtonComponent=
+  exports.ItemView=exports.FileView=exports.TextFileView=exports.Scope=exports.WorkspaceLeaf=NativeBase;
+  exports.TFile=class TFile {};exports.TFolder=class TFolder {};
+  exports.Platform={isMobile:false,isIosApp:false};exports.Keymap={isModEvent:e=>e.metaKey||e.ctrlKey};
+  exports.getLanguage=()=> 'en';exports.getIcon=()=>null;exports.getIconIds=()=>[];exports.setIcon=()=>{};exports.setTooltip=()=>{};
+  exports.normalizePath=p=>p;exports.getAllTags=()=>[];
+  exports.Notice=class Notice {constructor(message){throw Error('Unexpected notice: '+message)}};
+  exports.Menu=class Menu {items=[];addItem(prepare){const item={setTitle(){return item},setIcon(){return item},setChecked(){return item},setDisabled(){return item},onClick(fn){item.click=fn;return item}};prepare(item);this.items.push(item);return this;}addSeparator(){return this;}};
+  exports.MarkdownRenderer={render:async()=>{}};
+`;
+return await build({stdin:{resolveDir:process.cwd(),contents:`
+  export {createElement,useSyncExternalStore} from 'react';export {createRoot} from 'react-dom/client';export {flushSync} from 'react-dom';
+  export {PlexGraph} from './src/ui/PlexGraph';export {migrateAndMergeSettings} from './src/settings';export {createTranslator} from './src/lang';
+  export {PlexViewRegistry} from './src/core/plex/views/registry';export {PlexViewSession} from './src/application/PlexViewSession';
+  export {builtInPlexViews} from './src/ui/plexViews/builtins';export {probeViewDefinition} from './tests/support/plexViewProbe';
+  export {ActionManager} from './src/application/ActionManager';export {actionNodeRef} from './src/adapters/obsidian/actionNode';
+  export {editViewConfiguration} from './src/core/plex/views/configuration';export {wuXingViewDefinition} from './src/core/plex/views/wuxing/definition';
+`},write:false,bundle:true,platform:'browser',format:'iife',globalName:'sourceModules',plugins:[{name:'finite-native-host',setup(builder){
+  builder.onResolve({filter:/^obsidian$/},()=>({path:'host',namespace:'finite'}));
+  builder.onLoad({filter:/.*/,namespace:'finite'},()=>({contents:nativeStub}));
+}}]});
+
+}

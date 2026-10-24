@@ -58,8 +58,8 @@ async function scenario(app,c){
   const productionRoot=()=>host.view.contentEl.querySelector('.kplex-app');await until(()=>productionRoot()?.querySelector('.kplex-filter-trigger'),'Production panel trigger absent');
   productionRoot().querySelector('.kplex-filter-trigger').click();
   const productionSelect=()=>host.view.containerEl.ownerDocument.querySelector('.kplex-filter-panel .kplex-view-selector select');
-  await until(productionSelect,'Production selector absent');check(productionSelect().disabled&&productionSelect().options.length===1&&productionSelect().value==='classic','Production exposes an unfinished view');
-  host.view.containerEl.ownerDocument.querySelector('.kplex-filter-panel-header button').click();cases.push({id:'production-one-option-compass'});
+  await until(productionSelect,'Production selector absent');check(!productionSelect().disabled&&JSON.stringify([...productionSelect().options].map(option=>option.value))===JSON.stringify(['classic','wuxing'])&&productionSelect().value==='classic','Production registry must expose only implemented Compass and Wu Xing');
+  host.view.containerEl.ownerDocument.querySelector('.kplex-filter-panel-header button').click();cases.push({id:'production-compass-wuxing-options'});
   const session=host.view.documentSession.plexView;session.registry=views;await p.setDocumentSyncMode(host,'off');
   host.view.centerPresentation.update({embedCentralNode:false});p.notifyNavigation(path('Focus'),host);session.select(probe.id);
   const root=()=>host.view.contentEl.querySelector('.kplex-app'),node=()=>root()?.querySelector('[data-kplex-keyboard-id="layout-root"]');
