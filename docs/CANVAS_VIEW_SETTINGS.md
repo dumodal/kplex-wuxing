@@ -1,10 +1,10 @@
 # Canvas terminology and view-specific settings
 
-Prepared by Zsolt's Codex Agent, 2026-10-24. **Planning draft; no runtime implementation in the opening commit.**
+Prepared by Zsolt's Codex Agent, 2026-10-24. **Implementation in progress; automated/native acceptance is recorded separately.** Opening commit was specification-only.
 
 ## Starting point and dependency
 
-This branch was created from accepted `main@659697a686f341497725dfb31e94a8bc2bcf2b25`. The design was reviewed against [PR #215](https://github.com/zsviczian/kplex/pull/215) at `030d0f0558c78b25be0d27fba40caca60b9361cd`, which is not yet merged at preparation time.
+This branch was created from accepted `main@659697a686f341497725dfb31e94a8bc2bcf2b25`. The design was reviewed against [PR #215](https://github.com/zsviczian/kplex/pull/215) at `030d0f0558c78b25be0d27fba40caca60b9361cd`, which was not yet merged when this specification was prepared. #215 is now accepted as `main@4b9a4f5127409829acd3abf0b617286902a68d8a`; that main was integrated normally into this branch before implementation.
 
 **Before implementing, fetch and integrate the latest accepted main into this existing branch. Confirm #215 has landed, record the actual base SHA, reread AGENTS.md, CONTRIBUTING.md, docs/ARCHITECTURE.md and the current capability matrix, and reconcile this plan with the accepted code.** Preserve this specification and concurrent edits. Do not implement against the stale planning base, force-push, merge a PR, release or deploy to a personal vault without authorization.
 
@@ -82,7 +82,7 @@ Source: [current settings definitions](https://github.com/zsviczian/kplex/blob/0
 
 Add a host/UI-side contribution keyed by the existing stable view ID. It supplies a localized page label, settings definitions, validation/defaults and a narrow read/update operation for that view's configuration. Use actual installed `SettingDefinitionItem` types and the existing native Settings lifecycle. Pure projection/layout definitions must not import Obsidian settings types or receive App/plugin/GraphIndex objects.
 
-Classic's contribution delegates to existing flat settings/profile/color owners. New views receive a bounded, versioned namespace; `canvasViewSettings[viewId]` is a proposed name, not an existing export. Do not eagerly add empty production preferences for unfinished views.
+Classic's contribution delegates to existing flat settings/profile/color owners. New views receive the bounded, versioned `canvasViewSettings[viewId]` namespace described in the implemented interface below. Do not eagerly add empty production preferences for unfinished views.
 
 Choose one authority per field:
 
@@ -118,8 +118,37 @@ Highest-value manual check: search for a moved Compass control, change it, navig
 
 ## Scope and handoff
 
-No new view implementation, new semantic policy, occurrence-editor runtime, multihop/corpus readers, external plugin loading, renderer replacement or unrelated refactoring. Keep C15–C26 paused. Do not modify #215's runtime while its final verification is closing.
+No new view implementation, new semantic policy, occurrence-editor runtime, multihop/corpus readers, external plugin loading, renderer replacement or unrelated refactoring. Keep C15–C26 paused and preserve accepted #215 behavior.
 
-The later view PRs should be planned in parallel, but #215's occurrence-editor prerequisite remains an explicit integration gate. The Mind Map agent owns that shared hosting checkpoint; the Wu Xing agent may work on isolated classification/layout fixtures while it is validated. A settings carveout alone does not prove arbitrary-node editing.
+The later view PRs can proceed independently after #218. The Mind Map agent owns M0 for arbitrary-node editing; Wu Xing can implement and validate its complete view using the existing attention-following editor without waiting for M0. A settings carveout alone does not prove arbitrary-node editing, and M0 must remain compatible with existing editor definitions.
 
 At implementation start, update the single HANDOFF.md according to the repository workflow. This durable design is not a second transient session log. Opening-draft validation is source/document review only: no runtime code or build/test pass is claimed.
+
+
+## Maintainer selector decision
+
+The primary view picker is the **Canvas view** native dropdown at the top of the existing **Views and lenses** panel, above its filtering controls and separated by the existing section border. Compass is first, retains `classic`, and remains visible with a disabled dropdown when it is the only production view. Production options come from the existing closed view registry; test-only fixtures never enter the shipped registration or bundle. The previous standalone view-selector icon is removed.
+
+`App` supplies its exact `documentSession.plexView` to `PlexFilter`. The panel captures that owner when opened; `PlexViewSelector` subscribes to the same owner and submits through its existing `canSelect`/`select`/lifetime guards. It never resolves a globally active canvas. A rejected editor-incompatible transition retains the actual view and explains why; repeated rejection restores the native select value synchronously. An unavailable or retired owner is also explained. There is no optimistic selection store or new transition lifecycle.
+
+Changing a view keeps `PlexFilter` and its existing FloatingLayer mounted. Quick filters, layout mode, enabled/persisted lenses, unsaved lens drafts and child-color/pending-save safeguards remain with their current owners. View selection is not added to the lens schema or type configuration. Other canvases retain their own root/camera/selection/editor/Sidecar ownership. Workspace restoration remains `PlexViewSession`'s existing allowlist and unknown-view fallback.
+
+Validation includes two independent sessions/documents and an actual native main/popout pair, session restoration, native-select accessibility and narrow sizing, blocked transitions, retained drafts and zero extra same-scope acquisition. These are focused correctness/work-boundary checks; no separate performance study is required. Future data demands require an explicit bounded policy.
+
+## Implemented configuration interface (pending final acceptance)
+
+- `core/plex/views/configuration.ts`: `PlexViewConfigurationSchema` declares version1 plus known field defaults/validators; `readViewConfiguration` returns `available` with detached effective values or `unavailable` with invalid/unsupported reason. `editViewConfiguration` updates one supported field against the latest accepted map.
+- `PlexViewDefinition.configuration` is the one schema authority. `PlexViewInput.configuration` and layout context carry effective configuration separately from `state`. The host always resolves that channel before generic projection/layout. Invalid/future configuration cannot become a successful empty scene; existing local recovery remains available.
+- Persisted `settings.canvasViewSettings[viewId]` is `{version:1, values:{field:value}}`. Effective reads admit at most32 namespaces,64 fields, depth8 and16,384 UTF-16 code units of encoded JSON per namespace, with a bounded traversal. Unknown IDs/fields/metadata and invalid/oversized saved payloads round-trip inertly; unsupported data is read-only rather than silently reset. Only edited fields are materialized. No empty Mind Map/Wu Xing objects are created.
+- `ui/plexViews/settingsContributions.ts`: `CanvasViewSettingsRegistry` composes native declarative pages for the existing static view registry. Contributions receive a translator and validated `key(field)` helper; their native controls use `canvasView:<viewId>:<field>`. The Compass contribution delegates to its old flat settings, six device/surface arrangement rows and existing tint action.
+- `KplexPlugin.updateCanvasViewSetting(id, field, value)` uses the existing serialized writer and incoming-settings reconciliation. It prepares against the latest accepted map, writes durably before publishing, and refreshes presentation without semantic work. The new namespace alone has explicit field-level merge domains; existing appearance/ontology/other roots retain their atomic behavior. Remote schema/map replacement retires stale field owners; independent fields/types merge, including incoming data captured during an in-flight save.
+- Native failed writes retain the committed value. A field-specific local recovery epoch extends the existing received-control keys before native Settings refresh, because the host deliberately retains focused controls with unchanged keys. Only the rejected known field is retired; delayed old handlers cannot save again and unrelated fields keep their owners. No control value or configuration is stored in that UI epoch.
+- `viewSettingsRegistry` is the finite host composition root. A test-only second view contributes an actual native setting and consumes its effective layout value; tests construct independent registries. This is an internal boundary, not an external loading SDK.
+
+Type configuration applies to all canvases of that view. Selected view, roots, folds, camera, selected occurrences and editor bindings stay per canvas/session. Existing non-Compass area heights retain their per-session workspace scope. Compass heights remain their existing flat preferences. No field is copied into both type settings and session `states`. Foreign ExcaliBrain imports and appearance-theme capture exclude the new view workflow namespace.
+
+## Authorized delivery sequence
+
+The maintainer's later steer authorizes committing/pushing #218, exact-head automated/native verification and CI, refreshing main normally, then marking ready and merging #218 without another confirmation. Read back the actual merge and post its accepted contract/validation to #220 as Zsolt's Codex Agent. Immediately continue existing #219 branch `2026-10-24-canvas-mindmap`, integrate latest accepted main and begin isolated M0 from `PLEX_OCCURRENCE_EDITORS.md`. #219 implementation/publication is authorized; merging #219/#220, releases and production-vault deployment remain unauthorized. Coordinate shared renderer/session/action/contracts with the Windows partner before M0 changes.
+
+The corrected dependency is explicit: #220 can implement and validate complete Wu Xing after #218 with the existing attention-following native editor, independently of #219/M0. M0 is required for Mind Map's arbitrary-node editing and must preserve existing Compass and non-Classic attention-following definitions without simultaneous API migration. No editor work belongs in #218.
