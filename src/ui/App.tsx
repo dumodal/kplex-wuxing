@@ -9,6 +9,7 @@
  * Action-dispatched sync/Sidecar menus resolve fresh surface-local control anchors without routing DOM events through the action manager.
  * Native follow retains the latest canonical file while hidden and suppresses fallback scenes/motion during partial hydration.
  * Directional Sidecar attachment controls project host eligibility and use the same native follow owner for inward synchronization.
+ * Sidecar modifier-clicks capture finite maximize intent; native document/fold owners perform the guarded transition.
  * Existing native File properties panes follow the active surface's central file through a leased host adapter.
  * Global Find consumes existing tag/folder/file/URL vocabulary with caller-owned native type icons;
  * current native files and captured Plex links share drop navigation without source acquisition.
@@ -55,6 +56,7 @@ import { SidecarAttachControls } from "./features/SidecarAttachControls";
 import { effectiveActionBindings } from "../core/plex/actionPreferences";
 import { formatActionBinding } from "./actionPresentation";
 import { surfaceAction } from "./surfaceActionImplementation";
+import { hasClickModifier } from "./components/modifierClick";
 import { toolbarMenuAnchor } from "./menuAnchor";
 import type { DocumentSyncMode, KplexViewSurface, NodeSortOrder, SidecarMarkdownMode, SidecarPosition } from "../settings";
 import { SearchBox } from "./features/SearchBox";
@@ -1099,7 +1101,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     "view.areas.toggle": uiAction(/** Area editing mode remains transient and surface-local. */ () => setAreaSettingsMode(value => !value)),
     "view.center-editor.toggle": uiAction(/** Existing embedded editor capability and cleanup remain graph-owned. */ () => setCentralNodeEditorEnabled(!centerMode.embedCentralNode)),
     "view.sync.choose": uiAction(/** Open the same keyboard-accessible native sync menu. */ () => showDocumentSyncMenu()),
-    "view.sidecar.toggle": uiAction(/** Toggle only the managed companion for this owning leaf. */ () => page ? plugin.toggleSidecar(hostLeaf, page) : undefined, () => surface !== "sidepanel" && Boolean(page)),
+    "view.sidecar.toggle": uiAction(/** Toggle this leaf's companion; captured modifier intent optionally folds the completed pair. */ context => page ? plugin.toggleSidecar(hostLeaf, page, context.request.id === "view.sidecar.toggle" && context.request.args?.maximize === true) : undefined, () => surface !== "sidepanel" && Boolean(page)),
     "view.sidecar.attach-from-center": uiAction(/** Reuse the eligible adjacent pane and populate it from this center. */ () => plugin.attachAdjacentSidecar(hostLeaf, "to-leaf", page),
       /** Folder/tag/ghost centers cannot populate an ordinary document pane. */ () => Boolean((page?.file || page?.url) && plugin.getAdjacentSidecarCandidate(hostLeaf))),
     "view.sidecar.attach-from-pane": uiAction(/** Preserve the pane's content and reuse native follow's partial-index demand handover. */ async () => {
@@ -1425,7 +1427,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
       </main>
 
       {sidecarAvailable && <div className={`kplex-sidecar-controls is-${sidecarEdgePosition}${sidecarOpen ? " is-open" : " is-closed"}`} aria-label={translate("app.sidecarControls")}>
-        <button type="button" className="kplex-sidecar-primary" aria-pressed={sidecarOpen} aria-label={sidecarOpen ? translate("app.closeSidecar") : translate("app.openSidecarAt", { position: physicalPositionLabel(sidecarEdgePosition, translate) })} onClick={() => runAction("view.sidecar.toggle")}><ObsidianIcon name={sidecarOpen ? closeSidecarIcon : openSidecarIcon} size={16} /></button>
+        <button type="button" className="kplex-sidecar-primary" aria-pressed={sidecarOpen} aria-label={sidecarOpen ? translate("app.closeSidecar") : translate("app.openSidecarAt", { position: physicalPositionLabel(sidecarEdgePosition, translate) })} onClick={/** Capture any modifier without changing ordinary toolbar/command toggle defaults. */ event => actions.dispatch({ id: "view.sidecar.toggle", source: "toolbar", args: { maximize: hasClickModifier(event) } })}><ObsidianIcon name={sidecarOpen ? closeSidecarIcon : openSidecarIcon} size={16} /></button>
         {adjacentSidecar && <SidecarAttachControls position={sidecarEdgePosition}
           toLeaf={Boolean(page?.file || page?.url)} toPlex={plugin.getAdjacentSidecarTarget(hostLeaf) !== null}
           toLeafLabel={translate("actions.view.sidecar.attach-from-center")} toPlexLabel={translate("actions.view.sidecar.attach-from-pane")}

@@ -3025,7 +3025,7 @@ export default class KplexPlugin extends Plugin {
       session = new PlexFoldSession(candidate, this.translator("sidecar.unfoldPlex"),
         /** A stale control/observer owns only its exact captured session. */ () => session !== null && this.isPlexFoldSessionValid(session),
         /** Window retirement restores without stealing focus or persisting folded state. */ () => { if (this.collapsedPlexHosts.get(candidate.hostLeaf) === session) this.restoreCollapsedPlex(candidate.hostLeaf); },
-        /** Native button and published command share the exact same explicit restore owner. */ () => { if (this.collapsedPlexHosts.get(candidate.hostLeaf) === session) void this.expandPlexFromSidecar(candidate.hostLeaf); });
+        /** Native modifier-click composes restoration and close through the same exact owner. */ maximize => { if (this.collapsedPlexHosts.get(candidate.hostLeaf) === session) void this.expandPlexFromSidecar(candidate.hostLeaf, maximize); });
       this.collapsedPlexHosts.set(candidate.hostLeaf, session);
       this.advancePlexFoldRevision(candidate.hostLeaf);
       if (!session.hide()) { this.restoreCollapsedPlex(candidate.hostLeaf); return false; }
@@ -3050,8 +3050,9 @@ export default class KplexPlugin extends Plugin {
     await this.togglePlexFold(candidate);
   }
 
-  /** Explicit recovery reveals the exact live view; delayed completion yields to newer native selection. */
-  async expandPlexFromSidecar(hostLeaf: WorkspaceLeaf): Promise<void> {
+  /** Explicit recovery reveals the exact live view; delayed completion yields to newer native selection.
+   * Modifier intent additionally closes only the captured managed companion after a valid reveal. */
+  async expandPlexFromSidecar(hostLeaf: WorkspaceLeaf, maximize = false): Promise<void> {
     const session = this.collapsedPlexHosts.get(hostLeaf);
     if (!session) return;
     const c = session.candidate;
@@ -3065,7 +3066,10 @@ export default class KplexPlugin extends Plugin {
     await reveal;
     if (!this.unloading && this.plexFoldRevisions.get(hostLeaf) === revision && !this.collapsedPlexHosts.has(hostLeaf) && hostLeaf.view === c.hostView
       && c.hostView.getPlexFoldGeneration() === c.generation && this.leafIsAttached(hostLeaf)
-      && this.app.workspace.getActiveViewOfType(ItemView)?.leaf === activeAfterReveal) this.app.workspace.setActiveLeaf(hostLeaf, { focus: true });
+      && this.app.workspace.getActiveViewOfType(ItemView)?.leaf === activeAfterReveal) {
+      this.app.workspace.setActiveLeaf(hostLeaf, { focus: true });
+      if (maximize && this.sidecarLeaves.get(hostLeaf) === c.sidecarLeaf) await this.closeSidecar(hostLeaf);
+    }
   }
 
   private leafRect(leaf: WorkspaceLeaf | null): DOMRect | null {
@@ -4484,8 +4488,14 @@ export default class KplexPlugin extends Plugin {
     }
   }
 
-  async openSidecar(hostLeaf: WorkspaceLeaf, page: GraphPage): Promise<void> {
+  /** Open the managed companion through existing document/layout fences. Optional modifier intent
+   * folds only this completed native pair, after its moving lease ends; superseded opens cannot fold a successor. */
+  async openSidecar(hostLeaf: WorkspaceLeaf, page: GraphPage, maximize = false): Promise<void> {
     const session = this.documentSession(hostLeaf);if (!session) return;
+    const hostView = hostLeaf.view;
+    const hostGeneration = maximize && hostView instanceof KplexView ? hostView.getPlexFoldGeneration() : null;
+    let openedLeaf: WorkspaceLeaf | null = null;
+    let openedRevision: number | undefined;
     // Opening can emit layout-change before the new split has usable geometry,
     // just like moving an existing companion. Retain ownership through that boundary.
     const alreadyMoving = this.sidecarMovingHosts.has(hostLeaf);
@@ -4505,8 +4515,14 @@ export default class KplexPlugin extends Plugin {
       if (this.documentSession(hostLeaf) !== session || session.revision !== revision || this.sidecarLeaves.get(hostLeaf) !== leaf) return;
       session.persist();
       this.notifySidecar();
+      openedLeaf = leaf; openedRevision = revision;
     } finally {
       if (!alreadyMoving && this.documentSession(hostLeaf) === session) this.sidecarMovingHosts.delete(hostLeaf);
+    }
+    if (maximize && !alreadyMoving && openedLeaf && this.documentSession(hostLeaf) === session
+      && session.revision === openedRevision && this.sidecarLeaves.get(hostLeaf) === openedLeaf
+      && hostLeaf.view === hostView && hostView instanceof KplexView && hostView.getPlexFoldGeneration() === hostGeneration) {
+      await this.collapsePlexForSidecar(hostLeaf);
     }
   }
 
@@ -4559,9 +4575,10 @@ export default class KplexPlugin extends Plugin {
     await this.releaseSidecar(hostLeaf, true);
   }
 
-  async toggleSidecar(hostLeaf: WorkspaceLeaf, page: GraphPage): Promise<void> {
+  /** Ordinary toggle preserves existing behavior; modifier-opening also folds the completed Plex group. */
+  async toggleSidecar(hostLeaf: WorkspaceLeaf, page: GraphPage, maximize = false): Promise<void> {
     if (this.isSidecarOpen(hostLeaf)) await this.closeSidecar(hostLeaf);
-    else await this.openSidecar(hostLeaf, page);
+    else await this.openSidecar(hostLeaf, page, maximize);
   }
 
   async moveSidecar(hostLeaf: WorkspaceLeaf, position: SidecarPosition, page: GraphPage): Promise<void> {

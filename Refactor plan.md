@@ -6020,3 +6020,8 @@ Native exact-build acceptance exposed retained virtual notes counted as physical
 ### 2026-10-24 - PR211 final portable and exact-artifact validation
 
 Runtime checkpoint15c6fdef144d329fba2d14ea1e4298850686bf09 passed complete npm run verify on Node22.22.2:7 release,130 core,1417 main,228 UI,357 source contracts,739 real IndexedDB/browser checks; zero failures/cancellations/skips, aggregate Node/shell exit0. Architecture, real types, official scanner and production build pass. Final build exactly matches native-tested b808dd5f1bf3db150c66efe352b73fd0fb64b2f1528d58cad60547441d66cb32 plus unchanged manifest/styles. CI439 pending. Requested UI behavior passes; older notification-count diagnostic remains failed and explicitly qualified for review. No additional manual check requested; Mac/mobile unrun. Keep PR211 draft.
+
+
+### 2026-10-24 - Sidecar modifier-click maximize implementation
+
+Base6fa936d; branch2026-10-24-sidecar-modifier-maximize. Shared stateless modifier predicate and finite action intent compose existing native open/fold and unfold/close owners. Source/session/view-generation and delayed focus guards remain; no storage/indexing/settings change. Both tooltips carry explicitly requested ALT/OPT copy in all8 locales. Focused110/110 controls pass; full renewed verification is running. Native modifier-only driver prepared and syntax checked. Foreground access is explicitly paused until maintainer says ready; native/main-window allocation remains pending, Mac/mobile unrun. Highest risk: stale layout/reveal closing a replacement pane or unsupported topology; guarded tests cover these owner boundaries, exact native checks remain necessary. See docs/validation/sidecar-modifier-maximize-2026-10-24.md. No merge/release/production deployment.

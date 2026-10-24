@@ -646,7 +646,7 @@ function foldFixture() {
     leafIsAttached:leaf=>leaf.attached,leafGroupElement:leaf=>leaf.group,splitAxis:()=>owner.axis??'width',adjacentPosition:()=>owner.geometry===false?null:'right',leafTabIsActive:leaf=>!!leaf.selected,translator:key=>key,notifySidecar:()=>calls.push('notify'),onKplexVisibilityMayHaveChanged:()=>calls.push('visibility'),
     app:{workspace:{getLeavesOfType:type=>type==='kplex'?[host]:[],activeLeaf:host,getActiveViewOfType(){return {leaf:this.activeLeaf}},iterateAllLeaves(fn){[host,sidecar,sibling].forEach(fn)},setActiveLeaf(leaf){calls.push(['focus',leaf]);this.activeLeaf=leaf},async revealLeaf(leaf){calls.push(['reveal',leaf])}}}};
   documentSessions(owner);
-  for(const name of ['advancePlexFoldRevision','setSidecarOwner','deleteSidecarOwner','restoreCollapsedPlex','restorePlexFoldBeforeReveal','isPlexFoldedForSidecar','readPlexFoldCandidate','plexFoldToken','readPlexFoldCandidates','readPlexFoldUnavailableReason','isPlexFoldCandidateCurrent','isPlexFoldSessionValid','reconcilePlexFolds','togglePlexFold','expandPlexFromSidecar'])owner[name]=method(name,{KplexView,ItemView:class{},PlexFoldSession,plexFoldIdentity,KPLEX_VIEW_TYPE:'kplex',KPLEX_SIDEPANEL_VIEW_TYPE:'sidepanel'});
+  for(const name of ['advancePlexFoldRevision','setSidecarOwner','deleteSidecarOwner','restoreCollapsedPlex','restorePlexFoldBeforeReveal','isPlexFoldedForSidecar','readPlexFoldCandidate','plexFoldToken','readPlexFoldCandidates','readPlexFoldUnavailableReason','isPlexFoldCandidateCurrent','isPlexFoldSessionValid','reconcilePlexFolds','togglePlexFold','expandPlexFromSidecar','closeSidecar','collapsePlexForSidecar'])owner[name]=method(name,{KplexView,ItemView:class{},PlexFoldSession,plexFoldIdentity,Notice:class{},KPLEX_VIEW_TYPE:'kplex',KPLEX_SIDEPANEL_VIEW_TYPE:'sidepanel'});
   return {owner,host,sidecar,sibling,root,split,hostGroup,sidecarGroup,recovery,doc,events,observers,calls,Element,KplexView};
 }
 
@@ -880,4 +880,53 @@ test('fold routing picker cancellation is inert and selection keeps the exact ca
     f.owner.restorePlexFoldBeforeReveal(b.host);f.unrelated();
     const route={state:'ambiguous',targets:[f.target(f.host),f.target(b.host)]};f.owner.executePlexFoldAction({sidecarFold:route});const stale=f.pickers[2];f.owner.deleteSidecarOwner(b.host);f.owner.setSidecarOwner(b.host,b.sidecar);stale.select(1);await new Promise(resolve=>setImmediate(resolve));assert.equal(f.owner.collapsedPlexHosts.size,0);
   }finally{f.dispose()}
+});
+
+/** Modifier recovery composes the actual restore/close owners without detaching unrelated tabs. */
+test('native recovery accepts every modifier combination and ordinary recovery keeps the companion',async()=>{
+ for(let mask=0;mask<16;mask++){
+  const f=foldFixture();let detached=0;f.sidecar.detach=()=>{detached++;f.sidecar.attached=false};
+  await f.owner.togglePlexFold(f.owner.readPlexFoldCandidate(f.host));
+  const button=f.owner.collapsedPlexHosts.get(f.host).unfoldButton;
+  button.listeners.get('click')({altKey:!!(mask&1),ctrlKey:!!(mask&2),metaKey:!!(mask&4),shiftKey:!!(mask&8)});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(f.owner.collapsedPlexHosts.size,0);assert.equal(f.doc.leases,0);
+  assert.equal(detached,mask?1:0);assert.equal(f.owner.sidecarLeaves.has(f.host),!mask);
+  assert.equal(f.owner.app.workspace.activeLeaf,f.host);assert(f.sibling.attached,'Unrelated native tabs remain open');
+ }
+});
+
+/** Superseded native reveal never closes a replacement companion or overrides newer selection. */
+test('modifier recovery rejects held-reveal ownership, generation and focus changes',async()=>{
+ for(const change of [f=>f.owner.setSidecarOwner(f.host,{...f.sidecar}),f=>f.host.view.generation++,f=>f.owner.app.workspace.setActiveLeaf(f.sidecar,{focus:true})]){
+  const f=foldFixture();let closed=0,finish;f.sidecar.detach=()=>{closed++};
+  await f.owner.togglePlexFold(f.owner.readPlexFoldCandidate(f.host));
+  f.owner.app.workspace.revealLeaf=()=>new Promise(resolve=>{finish=resolve});
+  const pending=f.owner.expandPlexFromSidecar(f.host,true);change(f);finish();await pending;
+  assert.equal(closed,0);assert(f.owner.sidecarLeaves.has(f.host));assert.equal(f.doc.leases,0);
+ }
+});
+
+/** Maximize opens only after normal layout completion and the captured view/session still match. */
+test('modifier open waits for the moving lease and rejects superseded native pairs',async()=>{
+ for(const kind of ['valid','ordinary','generation','owner','source','unsafe','already-moving']){
+  const f=foldFixture(),owner=f.owner;let finish,entered;
+  const admitted=new Promise(resolve=>{entered=resolve});let layouts=0;
+  owner.ensureSidecarLeaf=()=>f.sidecar;owner.openPageInSidecarLeaf=async()=>{};
+  owner.ensureAdjacentFileLeafSize=()=>{assert(owner.sidecarMovingHosts.has(f.host))};
+  owner.waitForWorkspaceLayout=()=>++layouts===1?new Promise(resolve=>{finish=resolve;entered()}):Promise.resolve();
+  if(kind==='already-moving')owner.sidecarMovingHosts.add(f.host);
+  const open=method('openSidecar',{KplexView:f.KplexView});
+  const pending=open.call(owner,f.host,{},kind!=='ordinary');await admitted;
+  assert(owner.sidecarMovingHosts.has(f.host));assert.equal(owner.collapsedPlexHosts.size,0);
+  if(kind==='generation')f.host.view.generation++;
+  if(kind==='owner')owner.setSidecarOwner(f.host,{...f.sidecar});
+  if(kind==='source')owner.documentSession(f.host).retire();
+  if(kind==='unsafe')f.split.appendChild(new f.Element(f.doc,'workspace-tabs'));
+  finish();await pending;
+  assert.equal(owner.collapsedPlexHosts.size,kind==='valid'?1:0,kind);
+  assert.equal(owner.sidecarMovingHosts.has(f.host),kind==='already-moving',kind);
+  if(kind==='valid')owner.restorePlexFoldBeforeReveal(f.host);
+  assert.equal(f.doc.leases,0);
+ }
 });

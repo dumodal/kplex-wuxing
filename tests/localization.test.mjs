@@ -222,7 +222,12 @@ test("Sidecar folding copy identifies the native group scope and preserves the p
   assert.equal(translate(fold.labelKey), "Fold or unfold K-Plex tab group");
   assert.match(translate(fold.descriptionKey), /Other tabs in that group are hidden too/u);
   assert.match(translate("app.foldForSidecar"), /Other tabs in this group are hidden too/u);
-  assert.equal(translate("sidecar.unfoldPlex"), "Unfold K-Plex tab group");
+  assert.equal(translate("sidecar.unfoldPlex"), "Unfold K-Plex tab group. ALT/OPT+click: close Sidecar and expand K-Plex.");
+  for (const locale of ["en", "de", "fr", "es", "nl", "ja", "zh-TW", "ru"]) {
+    const localized = localization.createTranslator(locale);
+    assert.match(localized("sidecar.unfoldPlex"), /ALT\/OPT/u);
+    assert.match(localized("app.openSidecarAt", {position: "right"}), /ALT\/OPT/u);
+  }
   assert.equal(translate("sidecar.foldPairLabel", {number: 2}), "K-Plex tab group 2");
   assert.match(translate("sidecar.foldUnavailable"), /this window/u);
   assert.match(translate("sidecar.foldUnsupportedLayout"), /K-Plex remains visible/u);
