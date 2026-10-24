@@ -415,6 +415,7 @@ for (const file of [
   "src/types.ts",
   "src/application/PlexFootprints.ts",
   "src/application/PlexViewSession.ts",
+  "src/application/PlexEditorBindings.ts",
   "src/core/plex/views/registry.ts",
   "src/ui/plexViews/builtins.ts",
   "src/ui/KplexDocumentSession.ts",

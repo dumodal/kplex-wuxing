@@ -4,7 +4,54 @@ import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import ts from 'typescript';
 import {plexViewModules} from './support/plexViewFixture.mjs';
-const M=await plexViewModules(['src/application/PlexViewSession.ts','src/core/plex/views/registry.ts','src/ui/plexViews/builtins.ts','tests/support/plexViewProbe.ts','src/ui/surfaceContinuation.ts']);
+const M=await plexViewModules(['src/application/PlexViewSession.ts','src/application/PlexEditorBindings.ts','src/core/plex/views/registry.ts','src/ui/plexViews/builtins.ts','tests/support/plexViewProbe.ts','src/ui/surfaceContinuation.ts']);
+
+const occurrenceIntent = (occurrenceId='B1',fileIdentity='native-B') => ({viewId:'test.bound',occurrenceId,
+ target:{nodeId:'B.md',path:'B.md',fileIdentity},dimensions:{width:600,height:360},mode:'source'});
+
+test('occurrence editor identity is independent of duplicate notes, caller mutation and geometry',()=>{
+ let changes=0;const owner=new M.PlexEditorBindings(()=>changes++),intent=occurrenceIntent(),opened=owner.open(intent);
+ assert.equal(opened.status,'opened');const binding=opened.binding,live=owner.capture(binding.id),future=owner.capture('occurrence-editor-2');
+ intent.target.path='C.md';intent.dimensions.width=1;
+ assert.equal(owner.bindings[0].target.path,'B.md');assert.equal(owner.bindings[0].dimensions.width,600);
+ assert.throws(()=>owner.bindings.push(binding));assert.throws(()=>{owner.bindings[0].target.path='C.md'});
+ assert.equal(owner.open(occurrenceIntent()).status,'existing');assert.equal(changes,1);
+ assert.deepEqual(owner.open(occurrenceIntent('B2')),{status:'unavailable',reason:'capacity'},'Same note in another occurrence cannot replace B1');
+ assert.deepEqual(owner.open(occurrenceIntent('B1','recreated-B')),{status:'unavailable',reason:'capacity'},'A new native incarnation cannot replace a live document');
+ assert.equal(owner.resize(binding.id,{width:720,height:420}),true);assert.equal(owner.setMode(binding.id,'preview'),true);
+ assert.equal(owner.bindings[0].id,binding.id);assert.equal(live(),true);assert.equal(future(),false);
+ const close=owner.beginClose(binding.id);assert.equal(owner.bindings[0].closing,true);assert.equal(live(),true,'Native buffer stays mounted while save is pending');
+ assert.equal(owner.resize(binding.id,{width:100,height:100}),false);assert.equal(owner.open(occurrenceIntent()).reason,'closing');
+ close.cancel();assert.equal(close.commit(),false,'A rejected save cannot later retire the editor');assert.equal(owner.bindings[0].closing,false);
+ const accepted=owner.beginClose(binding.id);assert.equal(accepted.commit(),true);assert.equal(accepted.commit(),false);assert.equal(live(),false);
+ const replacement=owner.open(occurrenceIntent('B2'));assert.notEqual(replacement.binding.id,binding.id);assert.equal(future(),false,'A pre-admission capture never gains authority');
+ const late=owner.beginClose(replacement.binding.id);owner.dispose();assert.equal(late.commit(),false);assert.equal(owner.open(occurrenceIntent()).reason,'closed');
+});
+
+test('invalid occurrence intent never acquires capacity or publishes binding state',()=>{
+ let changes=0;const owner=new M.PlexEditorBindings(()=>changes++),base=occurrenceIntent();
+ for(const bad of [null,{...base,occurrenceId:''},{...base,viewId:'../view'},{...base,mode:'unknown'},
+  {...base,target:{...base.target,fileIdentity:''}},{...base,target:{...base.target,nodeId:'x'.repeat(4097)}},
+  ...[0,-1,Infinity,NaN,100001].map(width=>({...base,dimensions:{width,height:360}}))])assert.equal(owner.open(bad).reason,'invalid-binding');
+ assert.equal(changes,0);assert.deepEqual(owner.bindings,[]);assert.equal(owner.open(base).status,'opened');
+});
+
+test('bound editor retirement is explicit while attention-following definitions remain unchanged',()=>{
+ const bound={...M.probeViewDefinition,id:'test.bound',editorHosting:'occurrence'};
+ const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.probeViewDefinition,bound]);
+ const a=new M.PlexViewSession(registry,()=>{}),b=new M.PlexViewSession(registry,()=>{});
+ a.select(bound.id);const opened=a.editors.open(occurrenceIntent()),live=a.editors.capture(opened.binding.id);
+ a.retainTransient(bound.id,{attention:'A.md',camera:{x:1,y:2,scale:1},selected:'B2',unfolded:[]});
+ a.readTransient(bound.id,'C.md');a.updateState({root:'R.md'});
+ assert.equal(live(),true,'Attention/view preference retirement does not retarget B');assert.equal(a.editors.bindings[0].target.nodeId,'B.md');
+ assert.deepEqual(b.editors.bindings,[]);a.select('classic');assert.equal(a.definition.id,bound.id,'Changing definitions requires explicit native close first');
+ const close=a.editors.beginClose(opened.binding.id);close.commit();a.select('classic');assert.equal(a.definition.id,'classic');
+ const release=a.retainEditor();a.select('test.situated');assert.equal(a.definition.id,'test.situated','Unchanged off-centre attention definition retains compatible switching');release();
+ assert.equal(M.probeViewDefinition.editorHosting,undefined);assert.equal(M.builtInPlexViews.resolve('classic').editorHosting,undefined);
+ assert.throws(()=>new M.PlexViewRegistry([...M.builtInPlexViews.available,{...bound,editorHosting:'unknown'}]));
+ assert.throws(()=>new M.PlexViewRegistry([...M.builtInPlexViews.available,{...bound,capabilities:{...bound.capabilities,editor:false}}]));
+ a.dispose();b.dispose();assert.equal(a.canSelect('classic'),false);
+});
 
 test('static registration validates identity/version and ships Classic only',()=>{
   assert.deepEqual(M.builtInPlexViews.available.map(view=>view.id),['classic']);

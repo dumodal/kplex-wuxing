@@ -1,6 +1,6 @@
 # Mind Map canvas view
 
-Prepared by Zsolt's Codex Agent, 2026-10-24. **Planning draft for the Mac agent. No implementation or runtime acceptance is claimed.**
+Prepared by Zsolt's Codex Agent, 2026-10-24. **Implementation started; M0 native hosting is not yet supported or accepted.**
 
 ## Baseline and start gate
 
@@ -124,3 +124,18 @@ A missing partner response is not a blanket block on independent work. Preserve 
 No simultaneous-editor workspace, native Obsidian Canvas replacement, manual branch-position persistence/reordering, whole-vault metrics, Ideaverse, external plugins, heading-node system, full Outline/Tree view, unrelated indexing/storage refactor or C15–C26 work.
 
 Return actual implementation/files, validated editor checkpoint, compatibility/configuration contracts, source/build identities, tests/failures/limits, cleanup and remaining decisions. Keep this PR draft until the complete Mind Map feature and its own M0 requirements are validated. Do not merge the planning document as a completed view. #220's readiness is independent of this PR.
+
+## Accepted implementation baseline and current checkpoint
+
+2026-10-25 Budapest / 2026-10-24 UTC: #218 merged as `998781070a9382005154f4f884ed753280a9cf52` after exact-head Node22.22.2 full/native verification and green CI467. This existing branch includes its latest specification `67885e6` and normally integrates accepted main. No local work was discarded.
+
+Use the accepted `PlexViewDefinition.configuration`, effective input/layout configuration and `CanvasViewSettingsRegistry`/`updateCanvasViewSetting()` interfaces documented in `CANVAS_VIEW_SETTINGS.md`. The existing registry automatically supplies Views and lenses → Canvas view. Do not add a selector/store or copy type settings into session state.
+
+M0 checkpoints, each independently reviewable:
+
+1. Opt-in occurrence-host contract and bounded per-session binding owner, with explicit capacity one, exact occurrence/document/incarnation and per-binding dimensions. Unchanged definitions retain the attention-following contract.
+2. Shared action admission, exact host file validation, per-occurrence scene measurement and stable native host geometry. Rooted navigation/camera/demand policy is separate from editor expansion.
+3. Native lifecycle integration: background ownership, retained dirty buffer/caret/focus, explicit link routing and close/save boundaries, removal/switch/migration guards.
+4. Actual R/A/B/C and duplicate-occurrence native probe plus unchanged off-centre attention-host regression. Until this passes, capability remains unsupported.
+
+Then implement M1–M3 using only accepted canonical demand/source owners and complete M4. #220 proceeds independently on its accepted attention editor; no unmerged partner code or acknowledgement is required. Mac owns only the concrete editor/root/frontier additions, not whole shared files. Final #219 merge remains unauthorized.

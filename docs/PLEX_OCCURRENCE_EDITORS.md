@@ -76,3 +76,9 @@ Retain the existing Classic geometry golden and editor/action/Sidecar tests. Run
 Publish a validated shared hosting commit and updated capability matrix before the Mind Map/Ideaverse jobs consume arbitrary-node editing. Until the native proof passes, label it **unsupported / prerequisite pending** in the matrix and handoff.
 
 This task does not implement Mind Map, Ideaverse, a multi-editor workspace, external view loading, new graph/index/storage machinery or a production deployment. It does not resume C15–C26.
+
+## M0 implementation checkpoint — intent owner only
+
+#219 now contains an optional `editorHosting: "occurrence"` policy and per-native-session `PlexEditorBindings`. Omitted policy preserves attention-following definitions. Bindings carry a stable incarnation, exact occurrence, canonical target/native-file token, opening mode and dimensions; capacity is exactly one. Native save success commits explicit close; rejected or stale close transactions retain/cannot retire the wrong binding. Definition changes are conservatively blocked until explicit collapse.
+
+This is not native editor support: shared actions, admitted scene/native validation, rooted geometry/camera/demand and actual native lifecycle remain to be wired and proved. No renderer path is allowed to infer arbitrary-node support merely from the plural collection or policy. Serializable restoration/native reacquisition is also pending.

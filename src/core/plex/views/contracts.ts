@@ -75,6 +75,8 @@ export interface PlexViewDefinition {
   readonly icon: string;
   readonly capabilities: Readonly<{sections: boolean; descendants: boolean; editor: boolean; compact: boolean}>;
   readonly defaultState: unknown;
+  /** Omit for the existing attention-following host. Occurrence hosting requires explicit shared bindings. */
+  readonly editorHosting?: "occurrence";
   readonly configuration?: PlexViewConfigurationSchema;
   /** Validate only this view's small session state; shared/native settings are not supplied. */
   restoreState(value: unknown): unknown;

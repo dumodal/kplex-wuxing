@@ -12,6 +12,9 @@ export class PlexViewRegistry {
         throw new Error("Invalid or duplicate internal Plex view definition");
       }
       if (definition.configuration) validateViewConfigurationSchema(definition.configuration);
+      if (definition.editorHosting !== undefined && (definition.editorHosting !== "occurrence" || !definition.capabilities.editor)) {
+        throw new Error("Unsupported internal editor hosting policy");
+      }
       this.definitions.set(definition.id, definition);
     }
     if (!this.definitions.has(fallbackId)) throw new Error("Missing fallback Plex view definition");

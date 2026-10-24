@@ -2,6 +2,7 @@
 import type {PlexViewDefinition} from "../core/plex/views/contracts";
 import type {PlexViewRegistry} from "../core/plex/views/registry";
 import type {NodeId} from "../core/graph/model";
+import {PlexEditorBindings} from "./PlexEditorBindings";
 
 export type PlexViewTransient = Readonly<{attention: NodeId; camera: Readonly<{x: number; y: number; scale: number}>;
   selected: string | null; unfolded: readonly string[]}>;
@@ -20,6 +21,8 @@ function savedState(value: unknown): unknown {
 }
 
 export class PlexViewSession {
+  /** Document/editor lifetime does not follow attention or definition-owned transient resources. */
+  readonly editors = new PlexEditorBindings(() => this.notify());
   private requestedId: string;
   private readonly states = new Map<string, unknown>();
   private readonly listeners = new Set<() => void>();
@@ -55,7 +58,8 @@ export class PlexViewSession {
     this.retire(); this.requestedId = id; this.notify(); this.persist();
   }
   /** An incompatible definition cannot silently destroy a live native editor. Closing it is a shared explicit action. */
-  canSelect(id: string): boolean { return !this.editorUsers || this.registry.resolve(id).capabilities.editor; }
+  canSelect(id: string): boolean { return !this.closed && (!this.editors.bindings.length || this.registry.resolve(id).id === this.definition.id)
+    && (!this.editorUsers || this.registry.resolve(id).capabilities.editor); }
   /** Lease only actual editor hosting; a compatible geometry change keeps the same native instance. */
   retainEditor(): () => void { this.editorUsers++; let alive = true; return () => {if (alive) {alive = false; this.editorUsers--;}}; }
   /** Keep bounded transient geometry/selection in this native incarnation, outside data.json/workspace serialization. */
@@ -118,7 +122,7 @@ export class PlexViewSession {
   /** Isolate a failed definition without mutating its saved preferences or native document owner. */
   recover(): void { if (this.requestedId === this.registry.fallbackId) {this.retire();this.notify();} else this.select(this.registry.fallbackId); }
   /** Permanent native close, unlike a compatible view change or React remount. */
-  dispose(): void { if (this.closed) return; this.closed = true; this.retire(); this.listeners.clear(); this.states.clear(); this.transient.clear(); this.areaHeights.clear(); }
+  dispose(): void { if (this.closed) return; this.closed = true; this.editors.dispose(); this.retire(); this.listeners.clear(); this.states.clear(); this.transient.clear(); this.areaHeights.clear(); }
   /** Every disposer runs even if another outgoing view resource fails to close. */
   private retire(): void { this.epoch++; this.generation++; for (const dispose of [...this.owned]) {this.owned.delete(dispose);try {dispose();} catch { /* resource failure cannot retain another owner's lifetime */ }} }
   /** Re-render session selection/state without semantic publication or a fake navigation visit. */
