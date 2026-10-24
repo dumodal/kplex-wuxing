@@ -2,7 +2,7 @@
 
 Prepared by Zsolt's Codex Agent on 2026-10-24.
 
-**Status: implemented foundation under validation in PR #215.** Classic is the only production definition. The original design/research below remains the rationale; section 16 records the actual implementation and capability limits. Mind Map, Ideaverse and Wu Xing remain subsequent features. Acceptance results belong in the linked validation report, not this design status.
+**Status: implemented foundation under validation in PR #215.** Arbitrary-node editor hosting is a firm requirement but is not implemented by this extraction. The [occurrence-editor prerequisite](PLEX_OCCURRENCE_EDITORS.md) blocks parallel view jobs until its real shared-host proof passes; simultaneous editors remain out of scope. Classic is the only production definition. The original design/research below remains the rationale; section 16 records the actual implementation and capability limits. Mind Map, Ideaverse and Wu Xing remain subsequent features. Acceptance results belong in the linked validation report, not this design status.
 
 Research baseline: K-Plex [`5954951`](https://github.com/zsviczian/kplex/commit/595495105f56ae8d159f71b41706157e9f24c851), after PR #214. Ideaverse reference: [`4cce3f2`](https://github.com/nickmilo/ideaverse-maps/commit/4cce3f267148cc81e2961796e9a8dc7e20ff1aa0). Recheck branch/main before implementation. Follow AGENTS.md, CONTRIBUTING.md, ARCHITECTURE.md and AGENT_WORKFLOW.md. This feature does not resume the paused general refactoring programme.
 
@@ -249,7 +249,7 @@ Move fixed neighbourhood assembly, sibling projection, area definitions, layout 
 
 ### P3 — Parameterize shared scene infrastructure
 
-Replace fixed area maps at the shared boundary with descriptors; introduce occurrence endpoint identity, explicit default selection and editor/framing anchors. Reuse shared grouping, navigation, node, connector, drag, hover and editor mechanisms. Preserve all Classic interaction semantics, including normal/expanded/section/editor modes and one-sided arrangement.
+Replace fixed area maps at the shared boundary with descriptors; introduce occurrence endpoint identity, explicit default selection and editor/framing anchors. The current editor anchor positions the attention document only; it does not establish an independently bound editor document. Complete the occurrence-editor prerequisite before claiming that capability. Reuse shared grouping, navigation, node, connector, drag, hover and editor mechanisms. Preserve all Classic interaction semantics, including normal/expanded/section/editor modes and one-sided arrangement.
 
 ### P4 — Finish lifecycle and preference compatibility
 
@@ -265,7 +265,7 @@ Complete required checks, update durable architecture references only with actua
 
 Mind Map needs bounded multihop expansion beyond the present first-level projection. Ideaverse needs a corpus and evidence-specific metrics. These are different demands on shared reads.
 
-Before handing out independent feature branches, the preparation owner must deliver a **capability matrix** against the actual index/source interfaces:
+Before handing out independent feature branches, complete the mandatory [occurrence-editor hosting prerequisite](PLEX_OCCURRENCE_EDITORS.md) and its R/A/B native proof. The preparation owner must also deliver a **capability matrix** against the actual index/source interfaces:
 
 | Need | Baseline finding | Required decision/delivery |
 | --- | --- | --- |
@@ -359,7 +359,9 @@ actions and delayed destructive work must match both native and view lifetimes.
 | Canonical nodes and local resolved relations | Revision-scoped cache-only `PlexViewRead`; bounded calls and returned incidence, visibility preserved. | Coverage is conservatively cached. Missing/budget-exhausted node reads are unavailable, never proof of absence. |
 | Evidence | Cached canonical relationship explanation DTO, preserving decisions and source provenance. | No new corpus-wide evidence/metric scan or exact global degree API. |
 | Scope preparation | Existing shared attention demand stays acquired across compatible changes; presentation demand is view-owned. | Additional multihop/frontier demand needs a separately reviewed bounded application adapter. Pure definitions cannot acquire sources. |
-| Geometry and identity | Measured thought occurrences, repeated NodeIds, arbitrary areas, physical ports, separate attention/root/entry/editor/frame. | Synthetic groups are created by the shared grouping owner; initial policy-created synthetic nodes are rejected. |
+| Geometry and identity | Measured thought occurrences, repeated NodeIds, arbitrary areas, physical ports and distinct anchor IDs/positions. | Editor document identity still follows attention. Synthetic groups are created by the shared grouping owner; initial policy-created synthetic nodes are rejected. |
+| Occurrence editor hosting | **Unsupported.** One live attention-following native editor per Plex; existing probe places it off-centre but edits attention. | Firm prerequisite: explicit admitted occurrence/document bindings, shared actions, per-occurrence dimensions and stable native hosting. Initial dependent task enforces capacity one and must pass R/A/B plus attention C, duplicate, resize/filter/collapse/switch/teardown cases. Multiple simultaneous editors are not claimed. |
+| Rooted state across attention changes | A pure definition can supply a different layout root. Current transient camera/selection/unfold state is attention-scoped. | Root/branch/editor state must survive attention changes for rooted views; move Classic attention-following policy behind compatibility and validate the dependent host before parallel view jobs. |
 | Filtering/grouping/Find/actions | Existing matching and grouping owners; explicit grouping partitions; occurrence selection/reveal; canonical activation/writes. | A connector without semantic evidence is presentation-only. No implicit ontology write from an arbitrary area. |
 | Preferences/lifetime | Per-native-session selection, small unknown-state preservation/fallback, finite area heights, synchronous disposal and epoch fences. | Static bundled registration only; no public plugin loading or ABI. |
 | Corpus/property scoring | Explicit `corpus: {available:false, reason:"unsupported"}`. | Add paged revision-scoped membership/properties and provenance-specific metrics before promising Ideaverse parity. No zero substitution. |
@@ -374,3 +376,20 @@ architectural proofs, not implementations of Mind Map, Ideaverse or Wu Xing.
 See [PR215 validation](validation/plex-view-plugins-215-2026-10-24.md) for actual
 commands, frozen baseline, failures, native evidence and remaining device limits.
 The C15–C26 structural programme remains paused.
+
+
+## 17. Maintainer steer: occurrence editor hosting
+
+Arbitrary-node editing is required for Mind Map: root R and attention A must coexist
+with an editor bound to occurrence B, and changing attention to C must not retarget
+B. Current #215 does not support this. The one-editor size, native overlay/document
+selection, camera/framing and native focus/navigation seams make safe runtime
+decoupling a separate host checkpoint rather than a guard removal.
+
+Following the maintainer's permitted closeout path, finish the verified extraction
+and complete [the bounded dependent task](PLEX_OCCURRENCE_EDITORS.md) before
+parallel view jobs. It specifies an occurrence-keyed binding collection with
+capacity one, Classic compatibility policy, real native-host reuse, independent
+root/attention/selection/editor/focus state and the five required proof cases.
+It does not implement Mind Map, simultaneous editors or new indexing machinery.
+Do not describe arbitrary-node editing as supported until that proof passes.

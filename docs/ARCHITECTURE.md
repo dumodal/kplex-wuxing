@@ -49,7 +49,7 @@ and measurements; they cannot access the plugin, GraphIndex, Vault or native lea
 and exact outgoing-resource disposal. `KplexDocumentSession` retains native
 workspace/editor/Sidecar ownership. Shared actions additionally fence view
 revision; occurrence IDs remain separate from canonical endpoints. The shared
-renderer accepts explicit areas, physical ports and entry/editor/frame anchors.
+renderer accepts explicit areas, physical ports and entry/editor/frame anchors. The editor anchor currently positions the single attention-following native editor; it is not an independent occurrence/document binding. [Occurrence editor hosting](PLEX_OCCURRENCE_EDITORS.md) is a required dependent checkpoint before parallel view jobs, with an explicit initial capacity of one and no simultaneous-editor claim.
 Classic remains the sole production definition. Corpus scoring, multihop demand
 and compact large-map rendering require explicit follow-up capabilities.
 See [the implemented contract and capability matrix](PLEX_VIEW_PLUGINS.md#16-implemented-boundary-and-capability-matrix).
