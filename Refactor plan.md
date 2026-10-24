@@ -5997,3 +5997,6 @@ Known-source events may retain only unrelated broad scope, with exact owner capt
 
 
 - 2026-10-24 PR210 final validation: unchanged a61b924 runtime /6400bb47... artifact, full real build/verification and final23 focused controls pass. All applicable exact Small native lanes pass, including real finite notifications -> natural closure, recovery/admission, SI4/5, held-background foreground/live, folder/Excalidraw, rename/gates/search and ontology. Configuration and workspace/owned-history restoration audited; historical failures and conservative leases retained. CI430 passes f4c9073 tooling/implementation; final documentation publication/check readback tracked on PR210. Recommend scoped merge review, keep draft; no merge/main write/release/production deployment, no storage redesign or Mac experiment.
+
+
+2026-10-24 ? Stable autosave gate-count checkpoint: preserve coherent read presentation across fingerprint-proved saves; keep current-policy canonical compilation identity on existing hot entries; transfer fenced native folder totals; retain four committed UI labels without renewing proof, and show structural lateral zeros. Focused real-IDB/UI/native diagnostic evidence is in docs/validation/stable-gate-counts-2026-10-24.md. Full verification/final artifact/native/CI pending; no structural refactoring or merge authorized.

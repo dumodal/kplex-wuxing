@@ -73,6 +73,8 @@
  * incidence, under the same byte ceiling, cooperative runtime and final file/cache/source fences.
  * Unaffected trusted warm incidence remains navigable across known metadata observations; local
  * folder membership certifies only structural gate presentation, never body or editing authority.
+ * Prose-only canonical commits retain coherent requested reads without renewing their authority;
+ * a current-policy hot-body marker prevents transient Eager backlog from forcing recompilation.
  * This class decides when partial cold-start or authoritative state may
  * become visible to UI readers. URL read projections reuse existing relation-cache lifetimes and
  * exact physical/cache observations, avoiding repeated high-degree evidence composition during render.
@@ -979,7 +981,11 @@ export class GraphIndex {
           if (this.state.pages.get(path)?.file !== file) this.insertCreatedFile(file);
           if (!current() || this.app.vault.getFileByPath(path) !== file || !fileRevisionMatches(file, revision)) return;
           const result = await this.patchMarkdownPaths([path], {
-            useDurableCache: true, forceRecompile: token?.file !== file || token.policyRevision !== policy, isCurrent: current,
+            // A completed Eager handover can drop the local admission token while its canonical
+            // source fingerprint remains valid. Let the ordinary exact-input no-op check run only
+            // when this existing hot entry was actually committed under the current policy.
+            useDurableCache: true, forceRecompile: token ? token.file !== file || token.policyRevision !== policy
+              : this.fieldCache.get(path)?.semanticPolicyRevision !== policy, isCurrent: current,
           });
           if (!current() || result.outcome !== "patched" || !fileRevisionMatches(file, revision)
             || this.app.vault.getFileByPath(path) !== file) return;
@@ -1300,13 +1306,22 @@ export class GraphIndex {
     if (previous) previous.dirty = true;
   }
 
+  /** A transient global source backlog does not erase this Eager source's actual canonical
+   * compilation. Its existing body entry supplies policy identity only; the ordinary patch still
+   * acquires current input and checks its exact fingerprint, native incarnation and final revision. */
+  private hasCompiledEagerSource(path: string): boolean {
+    const file = this.app.vault.getFileByPath(path);
+    return !this.isOnDemandMode() && Boolean(file && this.state.pages.get(path)?.file === file
+      && this.semanticFingerprints.has(path) && this.fieldCache.get(path)?.semanticPolicyRevision === this.semanticPolicyRevision);
+  }
+
   /** Canonicalize one visible source ahead of unrelated dirty files; a progressive writer services
    * these edits at its next complete source boundary while retaining its existing cursor. */
   refreshVisibleMarkdownPath(path: string): Promise<void> {
     const selected = this.app.vault.getFileByPath(path);
     if (this.progressiveVisibleRefresh && selected?.extension === "md" && [...this.semanticDemandCounts.keys()]
       .some(center => center === path || this.hasReadableNeighbour(center, path))) this.progressiveVisibleRefresh?.(selected);
-    if (this.usesLocalForeground()) {
+    if (this.usesLocalForeground() && !this.hasCompiledEagerSource(path)) {
       this.markOnDemandSourceDirty(path);
       for (const center of this.semanticDemandCounts.keys()) if (center === path || this.hasReadableNeighbour(center, path)) {
         this.semanticDemandRevision.set(center, (this.semanticDemandRevision.get(center) ?? 0) + 1);
@@ -1552,7 +1567,7 @@ export class GraphIndex {
     }
     this.hostPresentationRevision += 1;
     void this.refreshChangedRelationshipPairs(changedPath);
-    if (this.usesLocalForeground()) {
+    if (this.usesLocalForeground() && !this.hasCompiledEagerSource(changedPath)) {
       for (const [center, scope] of this.onDemandCachedScopes) {
         if (scope.pages.has(changedPath) || affectedTargets.has(center)) this.onDemandCachedScopes.delete(center);
       }
@@ -1582,11 +1597,8 @@ export class GraphIndex {
     }
     // Released scopes have the same source/metadata finality as active scopes. A host notification
     // can change ontology in place without advancing the plugin's physical source revision.
-    for (const [center, scope] of this.semanticScopes) if (scope.pagesByPath.has(changedPath) || affectedTargets.has(center)) {
-      this.semanticScopes.delete(center);
-      this.releasedSemanticScopePaths.delete(center);
-      this.semanticPreparationFailures.delete(center);
-    }
+    // Epochs above already close source/write authority. Keep the last coherent read while its
+    // replacement is private; the actual file commit retires changed incidence atomically.
     // A resolve/unchanged-stat notification does not invalidate unrelated complete cached incidence.
     // Retire the source and old/new targets. A physical edit or unknown revision may have changed
     // body fields/resolution outside MetadataCache's link map, so retain the conservative fallback.
@@ -2662,6 +2674,12 @@ export class GraphIndex {
       if (urlNames.has(node.id)) page.name = urlNames.get(node.id)!;
       pagesById.set(node.id, page);
       pagesByPath.set(page.path, page);
+      // A metadata save replaces facade objects, not native folder membership. Transfer only
+      // the existing topology/visibility-fenced numerical proof; never copy semantic incidence.
+      const priorFolder = page.isFolder ? this.semanticPage(page.path) : undefined;
+      const folderProof = priorFolder && this.folderGateInfo.get(priorFolder);
+      if (folderProof?.structuralRevision === this.hostStructuralRevision
+        && folderProof.coverageSignature === gateSignature) this.folderGateInfo.set(page, folderProof);
       this.preparedPageInfo.set(page, { entityId: node.id, policyRevision, settings,
         completeRelations: completeIds.has(node.id), ...(degrees.has(node.id) ? { rawDegree: degrees.get(node.id)! } : {}),
         ...(candidateGates.has(node.id) ? { gates: candidateGates.get(node.id)!, gateCoverageSignature: gateSignature } : {}) });
@@ -2952,6 +2970,14 @@ export class GraphIndex {
       if (page) return page;
     }
     if (this.retiredHostTagPaths.has(path)) return undefined;
+    // An observed edit closes current-scope certification immediately, but not the last displayed
+    // coherent read. Real source publication below retires it; no-op saves keep its badge/role
+    // presentation while fresh proof prepares. Native deletion/rename and policy retirement still
+    // own their existing explicit scope cleanup and every write keeps the current epoch fences.
+    for (const scope of this.semanticScopes.values()) if (scope.policyRevision === this.semanticPolicyRevision) {
+      const previous = scope.pagesByPath.get(path);
+      if (previous && (!previous.file || this.app.vault.getFileByPath(path) === previous.file)) return previous;
+    }
     const tagPreview = this.hostPreviewScopes.get(path)?.pages.get(path);
     if (tagPreview?.isTag && !this.hasCurrentCanonicalTag(path)) return tagPreview;
     // A finite current-center cover is independently readable while the global baseline is
@@ -5637,6 +5663,10 @@ export class GraphIndex {
       && Boolean(oldSource?.file && this.app.vault.getFileByPath(commit.sourcePath) === oldSource.file
         && this.snapshotFileRevisions.has(oldSource));
     publishPreparedState();
+    const committedBody = this.fieldCache.get(commit.sourcePath);
+    if (committedBody?.semanticSignature && (commit.semanticChanged || commit.unchangedSource)) {
+      committedBody.semanticPolicyRevision = this.semanticPolicyRevision;
+    }
     for (const [center, retained] of this.retainedLocalScopes) if (retained.state.pages.has(commit.sourcePath)) {
       this.retainedLocalScopes.delete(center); this.onDemandHostScopes.delete(center); this.onDemandCachedScopes.delete(center);
     }
@@ -5655,8 +5685,8 @@ export class GraphIndex {
     }
     // A coherent older scope may remain readable during repair, but cannot shadow a newer atomic
     // file publication. Retire only affected overlays; source readiness owns their bounded refresh.
-    for (const [center, scope] of this.semanticScopes) if (scope.pagesByPath.has(commit.sourcePath)
-      || [...scope.completePaths].some(path => commit.touchedPagePaths.has(path))) {
+    for (const [center, scope] of this.semanticScopes) if (!commit.unchangedSource && (scope.pagesByPath.has(commit.sourcePath)
+      || [...scope.completePaths].some(path => commit.touchedPagePaths.has(path)))) {
       this.semanticScopes.delete(center);
       this.releasedSemanticScopePaths.delete(center);
       this.semanticPreparationFailures.delete(center);
@@ -8255,6 +8285,12 @@ export class GraphIndex {
     };
     if (source.url) {
       for (const gate of Object.values(gateStats)) { gate.complete = this.publishedUrlComplete && !this.publishedUrlCachedMetadata; gate.coverage = this.publishedUrlCachedMetadata ? "cached" : this.publishedUrlComplete ? undefined : "local"; }
+    } else if (this.preparedPageInfo.has(source)) {
+      // Requested read coverage belongs to its compiled scope, not transient global backlog.
+      // Reusing the displayed count never renews that scope's source or write certificate.
+      if (this.preparedPageInfo.get(source)?.completeRelations === false) {
+        for (const gate of Object.values(gateStats)) gate.complete = false;
+      }
     } else if ((this.usesLocalForeground() || this.retainedLocalScopeFor(source.path)) && this.onDemandBaselineReady) {
       for (const gate of Object.values(gateStats)) { gate.complete = false; gate.coverage = "local"; }
     } else if (this.cachedSnapshotPages.has(source)) {
