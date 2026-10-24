@@ -43,6 +43,7 @@ export function usePlexActions(options: {
   plugin: KplexPlugin; hostLeaf: WorkspaceLeaf; root: RefObject<HTMLDivElement | null>;
   convention: KeyConvention; center: GraphPage | undefined; graph: RefObject<GraphActionPorts | null>;
   implementations: SurfaceActionImplementations; historyBack: boolean; historyForward: boolean;
+  readViewRevision?: () => number;
   mounted: boolean; onReady?: () => void; readEscapeAction?: () => ActionId | null; onUserInteraction?: () => void;
 }): { surfaceId: string; dispatch: (request: ActionRequest) => void; readSnapshot: () => SurfaceSnapshot } {
   const [surfaceId] = useState(/** IDs are opaque and do not depend on undocumented workspace leaf IDs. */ () => `kplex-surface-${++surfaceCounter}`);
@@ -64,7 +65,7 @@ export function usePlexActions(options: {
       selected: latest.graph.current?.readSelected() ?? null,
       focusRegion: root ? plexFocusRegion(root, root.ownerDocument.activeElement) : "external",
       commandFocusRegion: commandFocusRegion.current,
-      interactionRevision: interactionRevision.current, historyBack: latest.historyBack, historyForward: latest.historyForward,
+      interactionRevision: interactionRevision.current, viewRevision: latest.readViewRevision?.(), historyBack: latest.historyBack, historyForward: latest.historyForward,
       editorAvailable: Boolean(root?.querySelector(".kplex-central-editor-content")) || latest.plugin.hasAssociatedEditor(latest.hostLeaf),
     };
   };

@@ -9,6 +9,11 @@
  * parameters remain unquoted regardless of their names. Locale catalogs inherit this classification.
  */
 export const englishCatalog = {
+  "view.classic": {"message": "Classic", "context": "Internal Plex view selection and local recovery.", "params": [], "referenceParams": []},
+  "view.choose": {"message": "Choose view", "context": "Internal Plex view selection and local recovery.", "params": [], "referenceParams": []},
+  "view.failed": {"message": "Unable to display this view.", "context": "Internal Plex view selection and local recovery.", "params": [], "referenceParams": []},
+  "view.recover": {"message": "Return to Classic", "context": "Internal Plex view selection and local recovery.", "params": [], "referenceParams": []},
+
   "actions.view.groups.toggle": {"message": "Group nodes by note type", "context": "Presentation-only relationship grouping. Names of note types remain user content.", "params": [], "referenceParams": []},
   "actions.view.groups.toggle.description": {"message": "Toggle grouping by note type within each relationship area.", "context": "Presentation-only relationship grouping. Names of note types remain user content.", "params": [], "referenceParams": []},
   "groups.notes": {"message": "Notes", "context": "Presentation-only relationship grouping. Names of note types remain user content.", "params": [], "referenceParams": []},

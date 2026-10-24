@@ -13,6 +13,7 @@
  * Revalidation retains only this mounted node's unchanged badge text as cached presentation;
  * native incarnation/value changes retire it, independently of index and relationship-write proof.
  */
+import {physicalGateStats} from "./plexViews/measurement";
 import { useId, type CSSProperties, type DragEvent as ReactDragEvent, type MouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import type { GateSide, NodeVisual, PositionedNode } from "../types";
 import { nodePaint, nodePaintFallbacks } from "../index/style";
@@ -99,7 +100,8 @@ export function ThoughtNode({
   };
 }) {
   const accessibleNameId = useId();
-  const gateLabels = useGateCountPresentation(node.page.path, node.gateStats, !!(node.page.isTag || node.page.isFolder), settings.showNeighborCount, node.page.file);
+  const gateStats = physicalGateStats(node);
+  const gateLabels = useGateCountPresentation(node.page.path, gateStats, !!(node.page.isTag || node.page.isFolder), settings.showNeighborCount, node.page.file);
   // Cached props can outlive resolution. Remove the image before React can assign a denied src.
   if (visual && !canDisplayNodeImage(visual.path, settings.allowRemoteNodeImages)) visual = undefined;
   const style = node.style;
@@ -238,16 +240,17 @@ export function ThoughtNode({
       onClick={(e: MouseEvent<HTMLButtonElement>) => { e.preventDefault(); e.stopPropagation(); sectionFold.onToggle(); }}
     />}
     {group && <span className="kplex-group-count" aria-hidden="true">{group.groupMembers?.length}</span>}
-    {!group && GATES.map((gate) => {
+    {!group && GATES.filter(gate => !node.physicalPorts || Boolean(node.physicalPorts[gate])).map((gate) => {
       // Structural nodes have no lateral relationship vocabulary, even before other counts close.
-      const structuralLateral = (node.page.isTag || node.page.isFolder) && (gate === "left" || gate === "right");
-      const stat = structuralLateral ? { visibleCount: 0, hasAny: false, complete: true } : node.gateStats[gate];
+      const semanticGate = node.physicalPorts?.[gate];
+      const structuralLateral = (node.page.isTag || node.page.isFolder) && (semanticGate ? semanticGate === "left" || semanticGate === "right" : gate === "left" || gate === "right");
+      const stat = structuralLateral ? { visibleCount: 0, hasAny: false, complete: true } : gateStats[gate];
       const gateDisabled = Boolean(node.page.transient);
       const gateLabel = physicalPositionLabel(gate, translate);
       const gateHint = node.page.isTag
         ? translate("node.gateTagDisabled", { gate: gateLabel })
         : node.page.isFolder
-          ? gate === "bottom"
+          ? (semanticGate ? semanticGate === "child" : gate === "bottom")
             ? translate("node.gateFolderChild")
             : translate("moveNode.gate")
           : stat.hasAny || stat.complete === false
