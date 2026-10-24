@@ -187,6 +187,14 @@ output follows normal source replacement. Every comparison retains family reader
 frames/chunks/postings and rejects cancellation or a changed selected head. A head-only manifest
 inspection uses a read-only transaction because it owns no chunks requiring cleanup protection.
 
+Unchanged restart host comparison uses `inspectWithLocalDependencies()` to share the clean
+dependency-owner/head selection. Its result is call-local observation, not durable publication
+authority. Legacy, repair, memory and uncertain selections retain ordinary inspection/repair.
+The subsequent metadata visit pins and authenticates normally, matches the observed revision and
+sequence before delivery, and checks them again in its existing original-connection lease-release
+transaction. Native incarnation/stat, cache/environment, cancellation and final dependency-projection
+fences remain independent. No source-head cache, schema or scheduling policy is added.
+
 A decoded body's weakly held selection avoids repeating values/body-URL validation only when the
 subsequent inspection selects the exact same durable revision and sequence. Host families remain
 independently validated, and a changed head falls back to full validation. Inventory CPU slices use
