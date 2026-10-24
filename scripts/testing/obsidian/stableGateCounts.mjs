@@ -1,7 +1,8 @@
 /**
  * Guarded native autosave/count regression. Owns two ordinary notes and a separate Plex leaf;
- * records bounded badge/scene DOM mutations during real Vault saves, then checks genuine link
- * edits. The shared driver verifies the selected disposable vault and exact installed artifact.
+ * records bounded badge/scene DOM mutations during real Vault or native-editor saves, then checks
+ * genuine link edits. Diagnostic attribution is opt-in and bounded. The shared driver verifies the
+ * selected disposable vault and exact installed artifact, and checks exact configuration cleanup.
  */
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -26,7 +27,7 @@ async function scenario(app, c) {
   const prefix = 'Kplex-Stable-Gates-' + Date.now(), owned = [], releases = [];
   const remote = require('@electron/remote'), win = remote.getCurrentWindow();
   remote.app.focus({ steal: true }); win.restore(); win.show(); win.focus();
-  let leaf, observer;
+  let leaf, observer, editorMount;
   c.progress = { phase: 'setup', saves: [], publications: [], mutations: [], work: {}, commits: [] };
   /** Source/URL and ordinary patch owners must actually finish after each save. */
   const settled = () => {
@@ -56,15 +57,34 @@ async function scenario(app, c) {
     p.notifyNavigation(source.path);
     await until(() => leaf.view.contentEl.querySelector('.kplex-role-center')?.dataset.kplexPath === source.path && settled(), 'Fixture center not settled');
     await wait(1500);
+    if (c.editor) {
+      p.settings.sidecarMarkdownMode = 'source';
+      await p.openSidecar(leaf, p.index.get(source.path));
+      editorMount = p.sidecarLeaves.get(leaf)?.view.containerEl;
+      await until(() => editorMount?.querySelector('.cm-content') && settled(), 'Native source editor not ready');
+      // Opening the native split schedules post-layout demand/count effects. Join that initial
+      // editor admission before observing ordinary saves, just as the Plex setup above settles.
+      await wait(1500);
+      await until(settled, 'Native editor layout admission did not settle');
+    }
+    c.progress.nativeEditor = !!c.editor;
     releases.push(p.index.subscribe(() => { if (c.progress.publications.length < 96) c.progress.publications.push({ kind: 'semantic', at: performance.now() }); }));
     releases.push(p.index.subscribePresentation(() => { if (c.progress.publications.length < 96) c.progress.publications.push({ kind: 'presentation', at: performance.now() }); }));
-    for (const name of ['ensureOnDemandCenter', 'publishOnDemandHostScope', 'prepareSemanticScope', 'prepareVisibleFolderGates', 'publishIncrementalFile']) {
+    for (const name of ['ensureOnDemandCenter', 'publishOnDemandHostScope', 'prepareSemanticScope', 'prepareVisibleFolderGates', 'publishIncrementalFile', ...(c.characterize ? ['hasCompiledEagerSource'] : [])]) {
       const original = p.index[name], descriptor = Object.getOwnPropertyDescriptor(p.index, name);
       c.progress.work[name] = 0;
       p.index[name] = function (...args) {
         c.progress.work[name]++;
         if (name === 'publishIncrementalFile' && c.progress.commits.length < 48) c.progress.commits.push({ semanticChanged: args[0].semanticChanged, unchangedSource: !!args[0].unchangedSource });
-        return original.apply(this, args);
+        const value = original.apply(this, args);
+        if (name === 'hasCompiledEagerSource') {
+          c.progress.routes ??= [];
+          if (c.progress.routes.length < 48) c.progress.routes.push({ result: value,
+            signature: this.fieldCache.get(args[0])?.semanticSignature !== undefined,
+            policy: this.fieldCache.get(args[0])?.semanticPolicyRevision,
+            currentPolicy: this.semanticPolicyRevision, fingerprint: this.semanticFingerprints.has(args[0]) });
+        }
+        return value;
       };
       releases.push(() => { if (descriptor) Object.defineProperty(p.index, name, descriptor); else delete p.index[name]; });
     }
@@ -72,7 +92,10 @@ async function scenario(app, c) {
       for (const r of records) {
         const element = r.target.nodeType === 1 ? r.target : r.target.parentElement;
         if (!element?.closest('.kplex-thought') || c.progress.mutations.length >= 96) continue;
-        if (element.closest('.kplex-gate-wrap') || r.type === 'childList') c.progress.mutations.push({ type: r.type, text: element.textContent?.slice(0, 100), at: performance.now() });
+        if (element.closest('.kplex-gate-wrap') || r.type === 'childList') c.progress.mutations.push({ type: r.type,
+          path: element.closest('.kplex-thought')?.dataset.kplexPath,
+          gate: element.closest('.kplex-gate-wrap')?.className,
+          text: element.textContent?.slice(0, 100), at: performance.now() });
       }
     });
     observer.observe(leaf.view.contentEl, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class', 'style'] });
@@ -82,7 +105,9 @@ async function scenario(app, c) {
       p.index.gateStats = function (page) {
         const value = original.call(this, page);
         if (c.progress.countReads.length < 160) c.progress.countReads.push({ kind: page.isFolder ? 'folder' : page.isTag ? 'tag' : page.path === source.path ? 'source' : 'target',
-          gates: value, scope: this.semanticScopes.has(source.path), local: this.onDemandHostScopes.has(source.path), foreground: this.usesLocalForeground() });
+          gates: value, ...(page.isTag ? { targets: [...page.neighbours.values()].map(row => ({ path: row.target.path,
+            physical: !!app.vault.getFileByPath(row.target.path), file: !!row.target.file })) } : {}),
+          scope: this.semanticScopes.has(source.path), local: this.onDemandHostScopes.has(source.path), foreground: this.usesLocalForeground() });
         return value;
       };
       releases.push(() => { if (descriptor) Object.defineProperty(p.index, 'gateStats', descriptor); else delete p.index.gateStats; });
@@ -90,7 +115,13 @@ async function scenario(app, c) {
     c.progress.phase = 'ordinary-saves';
     for (let i = 1; i <= 3; i++) {
       const before = snapshot(), revision = p.getIndexSourceRevision();
-      await app.vault.modify(source, body + i + '.');
+      if (c.editor) {
+        const content = editorMount.querySelector('.cm-content');
+        content.focus();
+        const modifiers = [require('process').platform === 'darwin' ? 'meta' : 'control'];
+        for (const type of ['keyDown', 'keyUp']) win.webContents.sendInputEvent({ type, keyCode: 'End', modifiers });
+        await win.webContents.insertText('\nOrdinary saved paragraph ' + i + '.\n');
+      } else await app.vault.modify(source, body + i + '.');
       await until(() => p.getIndexSourceRevision() > revision && app.metadataCache.getFileCache(source)?.sections && settled(), 'Save did not naturally settle');
       await wait(800);
       c.progress.saves.push({ before, after: snapshot() });
@@ -99,6 +130,7 @@ async function scenario(app, c) {
     c.progress.phase = 'saved';
     check(c.progress.saves.every(s => JSON.stringify(s.before) === JSON.stringify(s.after)), 'Final badge values changed on prose-only saves');
     if (!c.characterize) check(c.progress.mutations.length === 0, 'Prose saves changed badge/scene DOM: ' + JSON.stringify(c.progress.mutations));
+    if (c.editor) check(editorMount.contains(editorMount.ownerDocument.activeElement), 'Native editor focus lost');
     if (!c.characterize) for (const node of leaf.view.contentEl.querySelectorAll('.is-structural-thought')) for (const side of ['left', 'right']) {
       check(node.querySelector('.gate-wrap-' + side + ' .kplex-gate-count')?.textContent === '0', 'Structural lateral gate is not zero');
     }
@@ -152,5 +184,6 @@ await runControlledProbe('stable-gate-counts', scenario,
   'c.vaultPath=' + JSON.stringify(target.vault) + ';c.configRelative=' + JSON.stringify(relative(target.vault, target.config).replaceAll('\\', '/'))
     + ';c.originalData=' + JSON.stringify(readFileSync(join(target.pluginDir, 'data.json'), 'utf8'))
     + ';c.originalEnabled=' + JSON.stringify(readFileSync(join(target.config, 'community-plugins.json'), 'utf8'))
-    + ';c.characterize=' + JSON.stringify(process.env.KPLEX_GATE_CHARACTERIZE === 'true') + ';',
-  ['src/ui/ThoughtNode.tsx', 'src/ui/PlexGraph.tsx'], { maximumMs: 300000 });
+    + ';c.characterize=' + JSON.stringify(process.env.KPLEX_GATE_CHARACTERIZE === 'true')
+    + ';c.editor=' + JSON.stringify(process.env.KPLEX_GATE_NATIVE_EDITOR === 'true') + ';',
+  ['src/ui/ThoughtNode.tsx', 'src/ui/PlexGraph.tsx', 'src/ui/useGateCountPresentation.ts', 'src/index/HostMetadataPreview.ts'], { maximumMs: 300000 });

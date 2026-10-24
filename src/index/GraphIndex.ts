@@ -8319,6 +8319,11 @@ export class GraphIndex {
     const concreteRoles: Array<Exclude<Role, "sibling">> = ["parent", "child", "left", "right", "previous", "next"];
     for (const relation of source.neighbours.values()) {
       if (relation.isHidden) continue;
+      // Folder/tag membership requires a live physical note. A coherent cached view may retain
+      // a deleted endpoint as a virtual page for ordinary Markdown links; that does not keep it
+      // in a structural collection or let fallback counts exceed current native membership.
+      if ((source.isFolder || source.isTag) && !relation.target.isFolder && !relation.target.isTag
+        && !this.app.vault.getFileByPath(relation.target.path)) continue;
 
       // A filled gate represents semantic relationships even when the target is currently hidden.
       for (const role of concreteRoles) {

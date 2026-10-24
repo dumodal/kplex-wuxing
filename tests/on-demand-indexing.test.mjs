@@ -826,6 +826,32 @@ for (const remove of [false, true]) test('Eager requested counts retain their co
   }finally{unblock?.();release?.();o.close();}
 })()`));
 
+test('cached structural gates exclude a deleted virtual member without hiding ordinary unresolved links', async()=>scenario(`(async()=>{
+  const o=await onDemandFixture('stable-structural-native-members',{indexingMode:'eager',showFolderNodes:true,showTagNodes:true,showVirtualNodes:true}),{f,index}=o;
+  try{
+    f.add('A.md','Friend:: [[Deleted]]');f.add('Live.md','');f.add('Deleted.md','');
+    f.metadata.get('Live.md').hostTags=['#topic'];f.metadata.get('Deleted.md').hostTags=['#topic'];
+    ok(await index.initializeOnDemandBaseline(),'Actual native structural baseline');
+    equal((await index.patchMarkdownPaths(['A.md','Live.md','Deleted.md'])).outcome,'patched','Actual compiled sources and IndexedDB activation');
+    f.app.metadataCache.resolvedLinks={'A.md':{'Live.md':1}};
+    const preview=await index.hostPreview.build('A.md');ok(preview,'Actual first-order native preview');
+    const neighbor=preview.state.pages.get('Live.md');
+    equal(index.relationView(neighbor,{page:neighbor,settings:preview.settings}).gateStats.top.visibleCount,2,
+      'A captured neighbor retains both its incoming note and native folder parents');
+    const tag=index.state.pages.get('tag:topic'),folder=index.state.pages.get('folder:/'),note=index.state.pages.get('A.md');
+    const gates=page=>index.relationView(page,{page,settings:index.fullSemanticSettings}).gateStats;
+    equal(gates(tag).bottom.visibleCount,2,'Initial two live tag members');equal(gates(folder).bottom.visibleCount,3,'Initial three live folder members');
+    // Model a retained legacy/read-only cache: deletion dematerializes the note, while its old
+    // incidence remains readable until replacement. Ordinary body links may still target it.
+    f.files.delete('Deleted.md');index.state.pages.get('Deleted.md').file=null;index.relationViewCache=new WeakMap();
+    equal(gates(tag).bottom.visibleCount,1,'Deleted virtual note is not a tag member');
+    equal(gates(folder).bottom.visibleCount,2,'Deleted virtual note is not a folder member');
+    equal(gates(note).left.visibleCount,1,'Ordinary unresolved Markdown link remains visible');
+    ok(tag.neighbours.has('Deleted.md')&&folder.neighbours.has('Deleted.md'),'Read filter does not mutate cached incidence');
+    return true;
+  }finally{o.close();}
+})()`));
+
 test('foreground navigation preempts and resumes an optional URL scan without acquiring unrelated ontology', async()=>scenario(`(async()=>{
   const o=await onDemandFixture('v2-demand-preemption',{urlIndexingMode:'background'});const{f,index}=o;let release,unblock;
   try{
