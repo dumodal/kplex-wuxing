@@ -3,6 +3,11 @@
 Prepared by Zsolt's Codex Agent. Base: `894437d97bd0e21733e9072fcbecafa7e5d46e0e`
 (merged #210), branch `2026-10-24-stable-gate-counts`.
 
+Current runtime checkpoint: `15c6fdef144d329fba2d14ea1e4298850686bf09`. The exact-build
+Windows editor/count and foreground checks pass on `b808dd5f…`. Renewed complete portable
+verification and CI are running for this correction. Earlier checkpoints and failures below
+remain historical evidence; the older zero-notification diagnostic remains failed.
+
 ## Problem and correction
 
 Three real prose-only Vault saves in the guarded Windows Small vault reproduced unchanged
@@ -148,20 +153,40 @@ results are recorded below; renewed full verification is still required for thos
 
 ## Foreground acceptance findings and correction
 
-The exact09b84be/99c46109 build failed the strict three-save native lane:18 bounded text mutations remained despite identical final values. Attributed receipts locate these at folder/tag membership counters. A deleted earlier test note survived as a virtual endpoint in a coherent cached graph; ordinary Markdown links may retain that identity, but it is not a live physical tag/folder member. The canonical partial view counted it while current native membership did not. The correction filters only nonphysical note members from structural gate reads; ordinary unresolved Markdown relationships remain visible. No cached incidence is mutated or source authority renewed.
+The exact `09b84be` / `99c46109…` build failed the strict three-save native lane: 18 bounded text mutations remained despite identical final values. Attributed receipts locate these at folder/tag membership counters. A deleted earlier test note survived as a virtual endpoint in a coherent cached graph; ordinary Markdown links may retain that identity, but it is not a live physical tag/folder member. The canonical partial view counted it while current native membership did not. The correction filters only nonphysical note members from structural gate reads; ordinary unresolved Markdown relationships remain visible. No cached incidence is mutated or source authority renewed.
 
-After that correction, artifact d87d9b8c47107fca0f2cd6584dfda22a4bfbf43c898c356dc2481ffe00d41612 passed the Vault-save lane with zero mutations. Actual native-editor input then exposed a neighboring note's top gate dropping2 to a lower-bound1 and returning2. Waiting for initial editor admission did not fix it; both failed receipts remain failed. The first-order host preview supplied native folder membership only for its center, although neighboring source files were already captured. It now includes each captured owner's native folder parent using the existing structural collector/compiler. Tag facts remain center-scoped. This adds neither an owner read nor a folder scan, and retains existing source/record/byte/finality guards.
+After that correction, artifact `d87d9b8c47107fca0f2cd6584dfda22a4bfbf43c898c356dc2481ffe00d41612` passed the Vault-save lane with zero mutations. Actual native-editor input then exposed a neighboring note's top gate dropping from 2 to a lower bound of 1 and returning to 2. Waiting for initial editor admission did not fix it; both failed receipts remain failed. The first-order host preview supplied native folder membership only for its center, although neighboring source files were already captured. It now includes each captured owner's native folder parent using the existing structural collector/compiler. Tag facts remain center-scoped. This adds neither an owner read nor a folder scan, and retains existing source/record/byte/finality guards.
 
-The real-IndexedDB regression compiles actual sources, verifies both neighbor parents in the real preview, then models retained deleted incidence. Tag/folder counts exclude that virtual member while an ordinary unresolved Friend link remains visible, without mutating cached incidence. With the unchanged held-read, same-stat, source-replay and blocked-database controls,13/13 pass with zero skips. The real-dependency production build passes.
+The real IndexedDB regression compiles actual sources, verifies both neighbor parents in the real preview, then models retained deleted incidence. Tag/folder counts exclude that virtual member while an ordinary unresolved Friend link remains visible, without mutating cached incidence. With the unchanged held-read, same-stat, source-replay and blocked-database controls, **13/13** pass with zero skips. The real-dependency production build passes.
 
-Current exact build: main.js **b808dd5f1bf3db150c66efe352b73fd0fb64b2f1528d58cad60547441d66cb32**, version0.2.3. Manifest/styles hashes remain the843d327e/88b61aa5 identities above. Native Small on this build passed three actual source-editor autosaves with **zero observed badge/scene DOM mutations**, editor focus retained, structural lateral0, real link removal/addition and exact cleanup. The foreground inventory lane passed all six cases: folder tree/numeric gates, navigation, create/remove link, create node and visible edit while inventory was held. It used zero manual flushes, resumed background work and restored configuration. Final inventory107, all probe controllers removed. These are functional observations; their elapsed values are not comparative performance claims.
+Current exact build: `main.js` **b808dd5f1bf3db150c66efe352b73fd0fb64b2f1528d58cad60547441d66cb32**, version 0.2.3. Manifest/styles hashes remain the `843d327e…` / `88b61aa5…` identities above. Native Small on this build passed three actual source-editor autosaves with **zero observed badge/scene DOM mutations**, editor focus retained, structural lateral `0`, real link removal/addition and exact cleanup. The foreground inventory lane passed all six cases: folder tree/numeric gates, navigation, create/remove link, create node and visible edit while inventory was held. It used zero manual flushes, resumed background work and restored configuration. Final inventory: 107 files; all probe controllers removed. These are functional observations; their elapsed values are not comparative performance claims.
 
 Private receipts: kplex-stable-gates-final-counts, final-attribution, routing-proof, tag-targets, structural-counts, native-editor, native-editor-settled, editor-preview-fixed and final-foreground under %TEMP%. Characterization runs are diagnostics, not strict no-mutation acceptance. All unfavorable results are retained. Renewed full portable verification/CI are required for the additional runtime correction; earlier09b84be results do not silently validate these changed paths.
 
 ## Additional failed controls retained
 
-Documentation-only CI438 on unchanged09b84be runtime failed the existing URL-heavy50ms timer assertion at55.6ms. CI436 passed the identical runtime. The failure remains a failure; no assertion/deadline/threshold changed. New-head CI must independently run the original bound.
+Documentation-only CI 438 on unchanged `09b84be` runtime failed the existing URL-heavy 50 ms timer assertion at 55.6 ms. CI 436 passed the identical runtime. The failure remains a failure; no assertion/deadline/threshold changed. New-head CI must independently run the original bound.
 
-The older adaptiveFit Markdown-save lane remains failed on its separate zero-semantic-notification assertion:3 callbacks over3 saves, with0 animations, mounted DOM retained and native editor focus preserved. Canonical source publication observations in the focused lane show actual prose commits as semanticChanged:false/unchangedSource:true; broad notifications also include requested-scope/workflow publication. The retained accepted-baseline two-note trace already contains semantic callbacks (bounded receipt capped96), so callbacks alone are not an exclusive source-change oracle. An additional strict old-artifact adaptiveFit attempt could not satisfy its rendered-body-parent prerequisite; this does not establish a complete matched comparison for that older lane. Its assertion is unchanged and is **not reported as passed or waived**. Baseline and candidate failures and cleanup are preserved. The new exact-build editor/count lane directly asserts the requested zero graphical counter mutations, actual link changes, focus and cleanup, without suppressing notifications or weakening the older lane.
+The older adaptiveFit Markdown-save lane remains failed on its separate zero-semantic-notification assertion: 3 callbacks over 3 saves, with 0 animations, mounted DOM retained and native editor focus preserved. Canonical source publication observations in the focused lane show actual prose commits as `semanticChanged: false` / `unchangedSource: true`; broad notifications also include requested-scope/workflow publication. The retained accepted-baseline two-note trace already contains semantic callbacks (bounded receipt capped at 96), so callbacks alone are not an exclusive source-change oracle. An additional strict old-artifact adaptiveFit attempt could not satisfy its rendered-body-parent prerequisite; this does not establish a complete matched comparison for that older lane. Its assertion is unchanged and is **not reported as passed or waived**. Baseline and candidate failures and cleanup are preserved. The new exact-build editor/count lane directly asserts the requested zero graphical counter mutations, actual link changes, focus and cleanup, without suppressing notifications or weakening the older lane.
 
 Current state: requested graphical behavior and focused Windows interaction are demonstrated; renewed full verification/CI and review of the older notification-count qualification remain outstanding. Keep PR211 draft, do not merge/release/deploy to production.
+
+## Final local verification
+
+At runtime checkpoint `15c6fdef144d329fba2d14ea1e4298850686bf09`, complete `npm run verify`
+passed on Node **22.22.2**, including architecture/core checks, official scanner, installed
+Obsidian types and the actual-dependency production build. Suite totals: **7 release, 130 core,
+1417 main, 228 UI, 357 source contracts and 739 real IndexedDB/browser tests**, all with zero
+failures, cancellations or skips. The aggregate Node process and its PowerShell launcher both
+returned **0**. This clean run is separate from the earlier ambiguous shell outcome.
+
+The final build reproduces all three exact native-tested hashes above, including main.js
+**b808dd5f1bf3db150c66efe352b73fd0fb64b2f1528d58cad60547441d66cb32**. Documentation/tooling
+publication does not silently replace that artifact. Private full-verification receipt:
+`%TEMP%/kplex-stable-gates-final-runtime-verification.json` and `final-runtime-verify.log`.
+New native harness syntax checks also pass. Remote CI 439 is still running at this checkpoint.
+
+The requested graphical stability is demonstrated, and the implementation is ready for review
+with the separate failed legacy notification-count qualification stated above. No CPU percentage
+is claimed, and no macOS or physical mobile check was run. No extra maintainer manual test is
+requested. Keep PR211 draft; no merge, release or production deployment.
