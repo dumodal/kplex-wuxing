@@ -1269,13 +1269,19 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
       traceNativeModeMethod(c.nativeModeLeaf.view, "setState");
       (c.nativeModeTimeline ??= []).push({ phase: "source-before-mode-control", ...c.captureNativeMode() });
       // Native openFile mounts CodeMirror before its async completion commits documentView and the React mode toolbar.
-      const preview = () => root().querySelector('button[aria-label="'+p.translator("centralEditor.showPreview")+'"]');
+      // Accepted TooltipButton labels use aria-labelledby; inspect the real accessible name.
+      const editorModeControl = key => [...root().querySelectorAll(".kplex-central-editor-toolbar button")].find(button => {
+        const ids=(button.getAttribute("aria-labelledby")??"").split(/\s+/).filter(Boolean);
+        const name=ids.length?ids.map(id=>button.ownerDocument.getElementById(id)?.textContent??"").join(" ").trim():button.getAttribute("aria-label");
+        return name===p.translator(key);
+      });
+      const preview = () => editorModeControl("centralEditor.showPreview");
       await until(() => preview()?.getClientRects().length && !preview().disabled, "Native Markdown preview toggle missing"); preview().click();
       await until(() => { const view = c.nativeModeLeaf.view, container = view.previewMode?.containerEl; return view.getMode() === "preview" && container?.isConnected && container.getClientRects().length && root().querySelector(".kplex-central-editor-leaf-host")?.contains(container); }, "Owned Markdown reading representation did not mount");
       (c.nativeModeTimeline ??= []).push({ phase: "reading-mode-ready", ...c.captureNativeMode() });
       await enterRepresentation("markdown", (view, focused) => view.getMode() === "preview" && Boolean(view.previewMode?.containerEl?.contains(focused)), "Trusted editor.focus did not enter exact native Markdown preview");
       (c.nativeModeTimeline ??= []).push({ phase: "reading-mode-focused", ...c.captureNativeMode() });
-      const source = () => root().querySelector('button[aria-label="'+p.translator("centralEditor.showEditor")+'"]');
+      const source = () => editorModeControl("centralEditor.showEditor");
       await until(() => source()?.getClientRects().length && !source().disabled, "Owned native source-mode restore control missing"); source().click();
       await until(() => root().querySelector(".cm-content")?.getClientRects().length, "Owned source mode was not restored after preview");
       const companion = app.plugins.plugins["obsidian-excalidraw-plugin"];
