@@ -2970,14 +2970,6 @@ export class GraphIndex {
       if (page) return page;
     }
     if (this.retiredHostTagPaths.has(path)) return undefined;
-    // An observed edit closes current-scope certification immediately, but not the last displayed
-    // coherent read. Real source publication below retires it; no-op saves keep its badge/role
-    // presentation while fresh proof prepares. Native deletion/rename and policy retirement still
-    // own their existing explicit scope cleanup and every write keeps the current epoch fences.
-    for (const scope of this.semanticScopes.values()) if (scope.policyRevision === this.semanticPolicyRevision) {
-      const previous = scope.pagesByPath.get(path);
-      if (previous && (!previous.file || this.app.vault.getFileByPath(path) === previous.file)) return previous;
-    }
     const tagPreview = this.hostPreviewScopes.get(path)?.pages.get(path);
     if (tagPreview?.isTag && !this.hasCurrentCanonicalTag(path)) return tagPreview;
     // A finite current-center cover is independently readable while the global baseline is

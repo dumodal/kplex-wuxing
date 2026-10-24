@@ -26,7 +26,8 @@ The correction stays in the existing GraphIndex/GraphBuilder and node-presentati
 - The fingerprint no-op receipt is distinguished from a node-only repair. Such a save retains
   coherent requested read presentation while its new proof prepares. Retention never restamps
   source, maintenance, policy or relationship-write authority. Changed incidence retires it at
-  the existing atomic commit; deletion/rename and policy guards remain independent.
+  the existing atomic commit; deletion/rename and policy guards remain independent. Fresh host
+  preview priority is preserved when canonical repair is blocked.
 - Replacement requested folder facades inherit only an existing topology- and visibility-fenced
   native count proof. Semantic incidence and write authority are not copied.
 - Each mounted node retains four committed badge labels when values are unchanged and coverage
@@ -67,6 +68,15 @@ corrected to test actual count continuity. An early candidate still flashed cove
 that failure led to the bounded committed-label presentation rule. The standalone Eager fixture
 also needed Main's real foreground-patch callback after routing changed; its prior wait timed out.
 The corrected fixtures preserve the held-read, same-stat, write-authority and actual-removal checks.
+
+The first broad verification found a substantive fallback regression at checkpoint `e1a161d`:
+the new stale-scope priority rule shadowed fresh host frontmatter while database/source repair
+was blocked. That priority rule was removed; the original host-availability assertion is unchanged
+and now passes with the autosave/held-source controls (**11/11**, zero skips). The new owner fixture
+also stopped incorrectly requiring unchanged raw coverage: current proof may weaken while the UI
+retains a cached label. It still asserts unchanged values, exact fingerprint no-op publication and
+closed write authority. The separate real-React test checks badge DOM continuity without mutating
+that partial index proof. The failed broad run remains retained and requires a full corrected rerun.
 
 Native attempts exposed setup without an active Plex, teardown that closed its owned Plex before
 indexing drained, and an immediate enablement-set check before asynchronous plugin restoration
