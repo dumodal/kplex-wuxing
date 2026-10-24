@@ -1,5 +1,9 @@
 # Warm source-head selection — PR212
 
+This is the initial `af09bc4` baseline record. Main subsequently accepted #211 while final acceptance
+was running; see the [accepted-main integration record](warm-source-selection-212-main-integration-2026-10-24.md)
+for current-baseline results. Historical measurements and failures below remain unchanged.
+
 ## Decision and scope
 
 The candidate removes one redundant head-only transaction per healthy current-format owner in

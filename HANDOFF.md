@@ -22,43 +22,43 @@ Obsidian is the production host; preserve the established portable semantic, ide
 # PR212 implementation return — warm source-head selection
 
 Prepared by **Zsolt's Codex Agent**, 2026-10-24.
-Branch: `2026-10-24-warm-source-selection`; fixed accepted baseline: `af09bc42d78abe03ed0d32e0edcdf22d0ebe08ae`.
+Branch: `2026-10-24-warm-source-selection`; initial comparison baseline: `af09bc42d78abe03ed0d32e0edcdf22d0ebe08ae`; accepted integration baseline: `6fa936d6522ba45f2c6bb2dfb853671e5218b055` (merged #211).
 The equipped Mac agent implements the maintainer-authorized #212 scope. No delegation was used.
 Keep [PR212](https://github.com/zsviczian/kplex/pull/212) draft; do not merge, release or deploy to a production vault.
 
 ## Result and evidence
 
-- Shared clean dependency/head observation removes one head-only transaction per current-format warm owner. Metadata still independently pins/authenticates and checks the same revision/sequence at original-connection lease retirement. No schema, scheduler, persistent cache, count/semantic or #211 runtime change.
+- Shared clean dependency/head observation removes one head-only transaction per current-format warm owner. Metadata still independently pins/authenticates and checks the same revision/sequence at original-connection lease retirement. No schema, scheduler, persistent cache or count/semantic change from #212. Accepted #211 is included only through the normal main merge; no unmerged work is imported or modified.
 - Exceptional-owner cost: one legacy owner adds one probe transaction; the mixed two-owner control balances that against one current owner saving one transaction. Missing heads also add one probe transaction. Cold-start/legacy-heavy completion latency is unmeasured.
 - Complete 128-owner diagnostic: 777 → 649 transactions; head gets/hashes/decodes/leases equal. Three alternating timing pairs show median 4.7% elapsed / 2.7% renderer CPU gain. Third pair and its reopen regress slightly and are retained. No production-vault speedup claim.
 - All 20 bounded comparison arms passed actual restart, independent semantic/provenance parity, unchanged-head, quiet-tail, later edit and second restart closure. All profiles removed.
 - 36 focused real-IDB contracts and three measurement-harness controls passed. An independent writer during awaited SHA initially exposed a candidate finality defect; the added same-transaction retirement check fixes it. Fixture mistakes and original failures are preserved in the report/receipts.
 - Durable details: [validation report](docs/validation/warm-source-selection-212-2026-10-24.md), [sanitized receipts](docs/validation/warm-source-selection-212-2026-10-24.json), architecture/source repository contracts.
 
-## Validation and current state
+## Validation and accepted-main integration
 
-Pinned Node 22.22.2 and real dependencies/Obsidian declarations. Complete `npm run verify:obsidian`
-passed after the existing cancellation injection was moved to both genuine pre-comparison paths
-(shared selection and supported legacy ensure). All original assertions remain. The first failed
-full run is retained. The passing run includes 772 real-IDB source tests and the real build.
+Original af09bc4 acceptance remains recorded with green CI441/CI442. Final readback discovered
+accepted main 6fa936d (merged #211) and a HANDOFF conflict. The normal main merge is resolved,
+accepted runtime/test changes are preserved, and only #212's two production files differ from 6fa936d.
+Both test inventories and the accepted stable-gates native command remain present.
 
-Exact-artifact Small staging/DOM smoke, the original cached reader, new selection reader, deliberate
-cleanup-failure control, two foreground warm reloads and all six foreground inventory cases passed.
-Only existing Small was opened: 74 Markdown /76 visible files. Original settings/workspace/core and
-community enablement/artifacts were restored byte-exact; content digest unchanged. The recorded
-renderer exited and Small's original closed startup flag was restored. The registry's sticky open
-flag initially stopped restoration before file writes; renderer-exit verification resolved that
-check without changing permissions or opening another vault.
+Fresh 6fa936d comparison: all 20 arms passed, unchanged operation saving; 128-owner medians improve
+7.2% elapsed /4.2% renderer CPU. Original adverse results are retained, not relabelled. Integrated
+`verify:obsidian` passed with the real build, 228 browser UI and 775 real-IDB source tests. Exact-build
+reader/selection/cleanup controls, two foreground warm reloads and all six foreground inventory
+workflows passed. Small's fresh original settings/workspace/enablement/artifacts/content and closed
+startup state were restored after proving the exact tested renderer exited.
 
-The validation report records exact source/artifact identities, complete results, adverse samples,
-fallback overhead and native limitations. Its artifact was built from planning HEAD plus the
-measured working tree; GitHub CI checks the final committed head separately. Final scoped branch
-publication/head/CI are recorded on PR212 after this report commit. Keep the PR draft for review.
-No additional manual check is required for the scoped contracts. The deleted Brain copy remains
-unavailable; existing `kplex-test` supplied filesystem inventory only, not native scale evidence.
+Current durable evidence: [integration report](docs/validation/warm-source-selection-212-main-integration-2026-10-24.md)
+and [receipts](docs/validation/warm-source-selection-212-main-integration-2026-10-24.json). Source/artifact
+identities describe the measured pre-commit integration tree; remote CI checks the committed tree
+separately. Final integration commit/publication/head/CI are recorded on PR212 after this report commit.
+Keep the PR draft for independent review. No additional manual check is required for the scoped
+contracts. No production-scale, cold-start/legacy-heavy, Windows/minimum-host or physical-device
+speedup is claimed. Only existing Small was opened; the deleted Brain copy remains unavailable.
 
 ## Review and delivery
 
-The Mac agent is authorized to commit/push scoped work to this existing branch and update/read back the draft PR. Preserve failed evidence; preserve all existing guards including the 50 ms URL-heavy and 45 ms parser assertions. No main write, force push, #211 import/modification, merge, release, new persistent destination, large fixture or production-vault deployment.
+The Mac agent is authorized to commit/push scoped work to this existing branch and update/read back the draft PR. Preserve failed evidence; preserve all existing guards including the 50 ms URL-heavy and 45 ms parser assertions. No main write, force push, unmerged #211 import or modification, PR merge, release, new persistent destination, large fixture or production-vault deployment. A normal merge of accepted main into this dedicated branch is authorized integration work.
 
 Highest-risk review area is exact finality/resource retirement under an independent writer or failed final native transaction. Those races have focused real-IDB coverage. Native results and precise remaining limitations must be added before a merge recommendation.

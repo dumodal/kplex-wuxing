@@ -1108,13 +1108,13 @@ artifacts require `KPLEX_PROBE_ARTIFACT_DIR` plus `KPLEX_PROBE_BASELINE_REF`; th
 installed-artifact/vault guards or stage a build. Native totals are diagnostic, not CPU attribution.
 
 For PR212's complete warm-reconciliation comparison, use Node 22.22.2 and
-`node scripts/testing/warm-source-selection.mjs compare`. It pins accepted `af09bc4`, alternates
+`node scripts/testing/warm-source-selection.mjs compare`. It pins accepted `6fa936d` (merged #211), alternates
 three 128-owner pairs, and keeps 32/256-owner and small dense/legacy/shared-revision controls.
 Each bounded profile has actual restart/edit/reopen and independent semantic checks; diagnostics
 run separately from timing, and failed/adverse receipts remain in the printed temporary directory.
 After exact-build Small-vault staging, `KPLEX_CACHED_READ_SELECTION=1` on the existing native reader
 driver additionally checks the shared dependency/head observation and exact protected metadata.
-The [PR212 report](docs/validation/warm-source-selection-212-2026-10-24.md) records the measured
+The [PR212 integration report](docs/validation/warm-source-selection-212-main-integration-2026-10-24.md) records the measured
 scope, fallback costs, identities and acceptance limits. Neither lane permits a new large vault.
 
 ### Passive indexing diagnostics validation

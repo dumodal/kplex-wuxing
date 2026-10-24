@@ -71,7 +71,8 @@
     "verify:obsidian:ontology-pairs": "node scripts/testing/obsidian/ontologyPairs.mjs",
     "verify:obsidian:ontology-pair-reload": "node scripts/testing/obsidian/ontologyPairReload.mjs",
     "verify:obsidian:ontology-startup-updates": "node scripts/testing/obsidian/ontologyStartupUpdates.mjs",
-    "verify:obsidian:event-convergence": "node scripts/testing/obsidian/indexingEventConvergence.mjs"
+    "verify:obsidian:event-convergence": "node scripts/testing/obsidian/indexingEventConvergence.mjs",
+    "verify:obsidian:stable-gates": "node scripts/testing/obsidian/stableGateCounts.mjs"
   },
   "engines": {
     "node": ">=22.22.2 <23"
