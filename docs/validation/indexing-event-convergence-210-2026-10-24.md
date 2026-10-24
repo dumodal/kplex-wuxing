@@ -326,3 +326,70 @@ All6 cleanup tests then pass, zero skips; private kplex-210-native-cleanup-late.
 No production owner or matched-study executable changed. The running full local
 verification began at dca8668; this added tooling case has separate focused evidence
 and must also be included in final-head CI.
+
+
+## Full build, CI retry and additional cold control
+
+Complete pinned-Node local verification through verify:obsidian passes: architecture,
+core, official scanner, general/UI/portable/source tests,735/735 browser assertions
+with zero failures/skips, real installed Obsidian declarations and production build.
+Strict staging hashes match all three files and native open/command/DOM/error smoke
+passes on Windows10.0.26200, Obsidian1.14.5(installer1.14.0), Node22.22.2.
+The invocation started clean at dca8668; later commits change only tooling/reporting,
+while both production owner bytes remain identical to a61b924. Added tooling/cold
+cases have separate focused evidence and final-head CI remains required.
+Private full receipt: %TEMP%/kplex-210-final-verify-native.log;
+native root: %TEMP%/kplex-210-native-dca8668-20261024/.
+
+Exact installable SHA256 identities:
+
+- main.js:6400bb47c719da4cca9736c98ec6b0f56c55d211a1cbbf42751c66d5caf852bf.
+- manifest.json:3395e425860e5068e9f3b3d9a0e3d58cefd2c11dededc690beb87f60e733ed7d.
+- styles.css:88b61aa508ede97b10fbd30c957d14ba19b257aa26f5ee9f547f13faa0f43974.
+
+CI426 unchanged-head retry (job120781059688) completed success, including complete
+npm run verify and build. Its original64.8ms failure remains above. Passing retry,
+full local verification and isolated unchanged fixture show no repeatable candidate
+regression in that unchanged timed patch path; they do not erase the adverse sample.
+
+The additional fresh-storage control has no earlier complete source/dependency
+inventory. Same24 owners and fixed3 waves: baseline4 broad inventories/63 sweep
+visits/87 ensures versus candidate1 inventory/24 sweep visits/72 ensures, all final
+values correct. Candidate post-sweep ensures include24 initial resolution repairs
+and24 retained known-owner validations; baseline has24 resolution repairs and no
+separate local drain. This remains conservative repeated local work, not a claimed
+universal O(N+events) or one-ensure-per-owner bound. No additional runtime correction
+is made to discard those pending observations.
+
+The first new cold test incorrectly reused the warm36-ensure allowance and failed
+in both builds. Those receipts remain kplex-210-final-focused.log and
+kplex-210-fresh-baseline.log / kplex-210-fresh-candidate.log. The corrected cold
+control asserts the relevant one-inventory/one-sweep property directly and retains
+all ensure totals and phase partitioning; the original warm36 bound is unchanged.
+Accepted baseline fails that new property; candidate passes. Independent exact-source
+private receipts: kplex-210-cold-characterized-baseline.log and
+kplex-210-cold-characterized-candidate.log, each with adjacent test-source identities.
+All21 event/work/native-tooling controls then pass, no skips, at
+kplex-210-cold-corrected-focused.log. This is focused correctness/work evidence,
+not an extension or pooling of the already completed warm CPU cohort.
+
+## Native event probe: retained first failure
+
+The initial Windows event receipt is failed: event-convergence/
+indexing-event-convergence-210.json. It retains exactly3 real modify/metadata/resolved
+waves during inventory and sourceAtExit shows zero active/pending/tasks/writes.
+Finally failed deleting the empty owned folder through Vault.delete without force
+(ERR_FS_EISDIR). The overall result is not called a pass. Configuration/enablement
+restoration and controller removal passed, but one empty owned folder remained.
+A separate read-only realpath/symlink/empty-directory check verified that exact
+Kplex210-Events-1792819177087 directory inside Small, then guarded Vault.delete(true)
+removed it; ordinary inventory remains107 files.
+
+The driver now checks exact native folder identity/path, resolved physical child
+location and actual physical emptiness before that Windows force API, including
+hidden entries. Eight cleanup controls pass: partial creation, deletion failure,
+escaped physical target, hidden child, post-hook activation failure and no forced
+readiness calls. It also preserves functional-completion and original scenario-error
+facts before finally, so a later cleanup error cannot erase earlier evidence.
+Private focused receipt: kplex-210-native-cleanup-physical-final.log.
+An unchanged-artifact native rerun with corrected cleanup is in progress.

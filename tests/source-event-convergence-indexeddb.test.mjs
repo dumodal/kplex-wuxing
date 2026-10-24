@@ -6,18 +6,40 @@ import { chromiumHarness } from './support/browserTypeScript.mjs';
 
 const bundle = await contributorBrowserBundle();
 
-test('finite native edits retain unrelated broad-inventory work and reach actual dependency closure', /** Deliver all fixed edits in either implementation, independent of its repeated-work count. */ async () => {
+for (const seeded of [false, true]) test(`${seeded ? 'warm revalidation' : 'fresh incomplete inventory'} retains unrelated work through finite native edits and reaches actual dependency closure`, /** Deliver all fixed edits in either implementation, independent of its repeated-work count. */ async () => {
   const browser = await chromiumHarness(bundle);
   try {
     assert.equal(await browser.evaluate(contributorBrowserInitialize), true);
     const result = await browser.evaluate(`(async () => {
-      const f = await fixture('event-convergence-finite');
+      const f = await fixture('event-convergence-finite-${seeded}');
       try {
         const owners = 24, mutations = 3;
         for (let index = 0; index < owners; index++) f.add('Owner' + index + '.md', 'Value:: initial');
-        await f.acquire();
-        ok(await f.acquisition.reconcile(), 'Seed actual complete source and dependency authority');
+        if (${seeded}) {
+          await f.acquire();
+          ok(await f.acquisition.reconcile(), 'Seed actual complete source and dependency authority');
+        } else {
+          f.acquisition.start();
+          ok(!f.acquisition.hasSemanticDependencies(), 'Fresh storage has no earlier complete authority to reuse');
+        }
         f.work.reset();
+        let phase = '', sweepVisits = 0;
+        const postSweepEnsures = { resolution: 0, local: 0 };
+        f.acquisition.startupDiagnostics = {
+          phase(_kind, value) { phase = value; },
+          processed(kind) { if (kind === 'source' && phase === 'source-reconciliation') sweepVisits++; },
+          count() {}, recordWork() {}, mark() {}, beginActivity() { return 0; }, endActivity() {},
+          activityCause() {}, stopActivityPhase() {}
+        };
+        for (const [method, key] of [['repairResolutionDirtySources', 'resolution'], ['reconcileKnownImpacts', 'local']]) {
+          const original = f.acquisition[method];
+          // Forward the actual owners; cold first-time resolution repair is distinct from a sweep.
+          f.acquisition[method] = async function(...args) {
+            const before = f.work.localEnsures;
+            try { return await original.apply(this, args); }
+            finally { postSweepEnsures[key] += f.work.localEnsures - before; }
+          };
+        }
         const ensure = f.repository.ensureLocalDependencies;
         let delivered = 0;
         const outcomes = [];
@@ -49,15 +71,17 @@ test('finite native edits retain unrelated broad-inventory work and reach actual
           equal(await f.repository.visit(path, 'values', rows => { records.push(...rows); return true; }), 'ready', 'Final values authenticated');
           proof.push({ path, records });
         }
-        return { outcomes, delivered, work: f.work.snapshot(), proof, counters: f.acquisition.getCounters() };
+        return { outcomes, delivered, sweepVisits, postSweepEnsures, work: f.work.snapshot(), proof, counters: f.acquisition.getCounters() };
       } finally { f.close(); }
     })()`);
     assert.equal(result.delivered, 3);
     assert.equal(result.outcomes.at(-1), true);
     assert.deepEqual(result.proof.map(item => item.records.filter(record => record.kind === 'inline-payload').map(record => record.text)),
       [['changed-1'], ['changed-2']], 'Independent expected final content survives all repeated edits');
-    assert.ok(result.work.localEnsures <= 36,
-      'One 24-owner inventory plus bounded changed-owner repair must avoid rechecking every completed prefix');
+    assert.equal(result.work.markdownEnumerations, 1, 'Finite source events retain one actual broad inventory');
+    assert.equal(result.sweepVisits, 24, 'Each owner is visited once in the source sweep');
+    if (seeded) assert.ok(result.work.localEnsures <= 36,
+      'One 24-owner warm inventory plus bounded changed-owner repair must avoid rechecking every completed prefix');
   } finally { await browser.cleanup(); }
 });
 

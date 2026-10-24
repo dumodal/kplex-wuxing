@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import path from 'node:path';
 
 const require = createRequire(import.meta.url), ts = require('typescript');
 const text = readFileSync(new URL('../scripts/testing/obsidian/indexingEventConvergence.mjs', import.meta.url), 'utf8');
@@ -11,7 +12,7 @@ const scenario = tree.statements.find(/** Extract the exact controller rather th
 assert(scenario);
 
 /** Fail real fixture creation at a selected ordinal and count every independent cleanup capability. */
-function cleanupFixture(failAt, failDelete = false) {
+function cleanupFixture(failAt, failDelete = false, outsideFolder = false, hiddenFolderChild = false) {
   const files = new Map(), folders = new Map(), calls = { disable: 0, enable: 0, layout: 0, data: 0, deletes: 0 };
   const layout = { main: { type: 'split' } };
   const p = { initialIndexComplete: true, layoutReady: true, rebuildTimer: null, settingsWriteQueue: Promise.resolve(),
@@ -36,18 +37,28 @@ function cleanupFixture(failAt, failDelete = false) {
         const parent = folders.get(path.slice(0, path.lastIndexOf('/'))), file = { path, parent };
         files.set(path, file); parent.children.push(file); return file;
       },
-      /** Preserve object identity and expose a separately injected cleanup failure. */ async delete(item) {
+      /** Preserve object identity and expose a separately injected cleanup failure. */ async delete(item, force = false) {
         calls.deletes++;
         if (files.has(item.path)) {
           if (failDelete) throw Error('Owned deletion failure');
           files.delete(item.path); item.parent.children = item.parent.children.filter(file => file !== item);
-        } else folders.delete(item.path);
+        } else { assert.equal(force, true, 'Native Windows folder cleanup uses the guarded force API'); folders.delete(item.path); }
       },
     } };
   const win = { restore() {}, show() {}, focus() {}, isFocused: () => true, webContents: { focus() {} } };
   const remote = { app: { focus() {} }, getCurrentWindow: () => win };
+  const fs = {
+    /** Resolve only synthetic fixture paths; a separate case redirects the folder outside Small. */
+    realpathSync(value) { return outsideFolder && path.basename(value).startsWith('Kplex210-Events-')
+      ? path.join('C:\\Outside', path.basename(value)) : path.resolve(value); },
+    /** Hidden entries would prohibit force deletion just like visible native children. */
+    readdirSync() { return hiddenFolderChild ? ['.unexpected-child'] : []; }
+  };
   const run = new Function('require', 'window', 'document', 'performance', `return (${scenario.getText(tree)})`)(
-    /** Only the explicit existing native focus capability is admitted by this unit host. */name => { assert.equal(name, '@electron/remote'); return remote; },
+    /** Admit only the exact focus and physical-target guard capabilities used by the scenario. */name => {
+      if (name === 'node:fs') return fs; if (name === 'node:path') return path;
+      assert.equal(name, '@electron/remote'); return remote;
+    },
     { setTimeout: callback => { queueMicrotask(callback); return 1; } },
     { hidden: false, hasFocus: () => true, querySelector: () => null }, performance);
   const controller = { closed: false, vaultPath: 'C:\\Obsidian\\kplex-test-small', configRelative: '.obsidian', originalData: 'original bytes' };
@@ -73,6 +84,15 @@ test('native cleanup failure remains failed while independent configuration and 
   assert.equal(f.controller.progress.cleaned, false);
   assert.equal(f.controller.progress.phaseAtExit, 'fixture-preparation');
   assert.equal(f.calls.disable, 1); assert.equal(f.calls.enable, 1); assert.equal(f.calls.layout, 1); assert.equal(f.calls.data, 2);
+});
+
+for (const issue of ['escape', 'hidden-child']) test(`physical folder ${issue} prevents recursive deletion and still restores independent state`, /** Native-looking emptiness cannot authorize an escaped or physically nonempty target. */ async () => {
+  const f = cleanupFixture(1, false, issue === 'escape', issue === 'hidden-child');
+  await assert.rejects(f.run(f.app, f.controller), /Owned folder physical target/);
+  assert.equal(f.files.size, 0); assert.equal(f.folders.size, 1);
+  assert.equal(f.controller.progress.cleaned, false);
+  assert.equal(f.calls.disable, 1); assert.equal(f.calls.enable, 1);
+  assert.equal(f.calls.layout, 1); assert.equal(f.calls.data, 2);
 });
 
 test('failure after warm hooks restores prototype registration and dependency wrappers', /** Exercise the late finally path after actual hook installation, before delivering any fake event. */ async () => {

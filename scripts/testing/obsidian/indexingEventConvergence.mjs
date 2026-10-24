@@ -84,7 +84,7 @@ async function scenario(app, c) {
         /** Hold only one actual selected-owner dependency await; no validity result is fabricated. */
         const replacement = async function(...values) {
           const result = await original.apply(this, values);
-          if (!c.held && values[0] === owned[0].path) {
+          if (!c.held && values[0] === owned[0].path && p.index.sourceAcquisition.inventory) {
             c.held = true;
             c.gateState = { sourceActive: !!p.index.sourceAcquisition.inventory, restartChecked: p.index.sourceAcquisition.restartInventoryChecked };
             c.progress.gate = c.gateState;
@@ -133,9 +133,14 @@ async function scenario(app, c) {
     check(!c.eventOverflow, 'Native transition receipt overflow');
     finalComplete = { counters: p.index.getSourceAcquisitionCounters(), state: p.index.sourceAcquisition.getActivityState(), unsaved: p.index.getSourceRepositoryDiagnostics().unsaved };
     await wait(500); check(settled(), 'Quiet tail lost source completion');
+    c.progress.functionalComplete = true;
+    c.progress.summary = { finalComplete, values, lastWriteToClosureMs: closedAt - lastWrite };
     return { initialComplete, finalComplete, writes, events, gate: c.gateState, observation: probe.snapshot(),
       eventSpanMs: lastWrite - started, lastWriteToClosureMs: closedAt - lastWrite,
       limitation: 'Declared selected-owner await gate, actual native writes/events and natural completion. Functional ordering evidence, not throughput, actual paint or full application restart.' };
+  } catch (error) {
+    c.progress.scenarioError = String(error);
+    throw error;
   } finally {
     const failures = [];
     /** Independent teardown continues after any earlier assertion or cleanup failure. */
@@ -160,8 +165,13 @@ async function scenario(app, c) {
       await app.vault.delete(file);
     });
     if (folder) await clean(async () => {
-      check(app.vault.getFolderByPath(prefix) === folder && folder.children.length === 0, 'Owned folder not empty');
-      await app.vault.delete(folder);
+      check(app.vault.getFolderByPath(prefix) === folder && folder.path === prefix && folder.children.length === 0, 'Owned folder not empty');
+      // Windows requires force for this directory API. Resolve the exact test-owned target and
+      // inspect hidden entries before permitting recursive deletion; never follow an escaped path.
+      const fs = require('node:fs'), path = require('node:path');
+      const base = fs.realpathSync(c.vaultPath), absolute = fs.realpathSync(path.join(base, prefix));
+      check(path.relative(base, absolute) === prefix && fs.readdirSync(absolute).length === 0, 'Owned folder physical target is not empty inside the test vault');
+      await app.vault.delete(folder, true);
     });
     await clean(() => until(settled, 'Cleanup native events did not naturally close'));
     await clean(() => app.plugins.disablePlugin('k-plex'));

@@ -5991,3 +5991,6 @@ Known-source events may retain only unrelated broad scope, with exact owner capt
 
 
 - 2026-10-24 PR210 native-tooling cleanup: restore onLayoutReady descriptor/prototype placement after the bounded warm hook;6/6 cleanup controls now include an actual post-hook activation failure. Initial incomplete fake-counter fixture failure is retained in the validation narrative. No runtime change or comparison rerun; final/native acceptance pending.
+
+
+- 2026-10-24 PR210 acceptance progress: full real-dependency verification/build and exact Small staging/smoke pass (735/735 browser assertions); production artifact6400bb47... . CI426 unchanged retry passes, original64.8ms failure retained. Fresh-storage control confirms one broad sweep (baseline4/63 visits/87ensures; candidate1/24/72), with conservative post-sweep work explicitly retained and warm36 bound unchanged. Native event first run fails owned-folder cleanup (EISDIR), preserved and safely repaired; physical-target/hidden-child guards plus8/8 cleanup controls precede unchanged-artifact rerun. No runtime changes after a61b924.
