@@ -7,6 +7,11 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const frenchTranslations = {
+  "view.classic": "Classique",
+  "view.choose": "Choisir une vue",
+  "view.failed": "Impossible d’afficher cette vue.",
+  "view.recover": "Revenir à la vue classique",
+
   "actions.view.groups.toggle": "Regrouper les n?uds par type de note",
   "actions.view.groups.toggle.description": "Activer ou d?sactiver le regroupement par type de note dans chaque zone de relations.",
   "groups.notes": "Notes",

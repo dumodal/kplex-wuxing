@@ -16,7 +16,7 @@ test("native sessions serialize only scalar workspace intent and never retain an
   a.pendingFollow={file:{path:"Pending.md"},leaf:a.linkedDocumentLeaf,revision:0};
   a.pendingUrl={url:"https://example.com/private-pending",leaf:a.linkedDocumentLeaf,revision:0};
   for(const name of ["A.md","B.md","A.md","C.md"])a.footprints.accept(ref(name));
-  const state=a.getState();assert.deepEqual(Object.keys(state).sort(),["version","ownerId","centerPath","targetId",...Object.keys(defaults)].sort());
+  const state=a.getState();assert.deepEqual(Object.keys(state).sort(),["version","ownerId","centerPath","targetId","plexView",...Object.keys(defaults)].sort());
   const json=JSON.stringify(state);for(const privateValue of ["visits","footprints","native-A.md","Secret.md","Pending.md","private-pending","privateNativeObject","revision","restoreTask"])assert(!json.includes(privateValue));
   assert.equal(b.footprints.length,0);assert.equal(b.linkedDocumentLeaf,null);assert.equal(b.preferences.sidecarPosition,"right");assert.deepEqual(writes,[]);
   const restarted=new KplexDocumentSession(defaults,"A",()=>{});restarted.restore(JSON.parse(json));

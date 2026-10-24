@@ -7,6 +7,11 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const traditionalChineseTranslations = {
+  "view.classic": "經典",
+  "view.choose": "選擇檢視",
+  "view.failed": "無法顯示此檢視。",
+  "view.recover": "返回經典檢視",
+
   "actions.view.groups.toggle": "?????????",
   "actions.view.groups.toggle.description": "?????????????????",
   "groups.notes": "??",

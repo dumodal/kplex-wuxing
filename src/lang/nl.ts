@@ -7,6 +7,11 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const dutchTranslations = {
+  "view.classic": "Klassiek",
+  "view.choose": "Weergave kiezen",
+  "view.failed": "Deze weergave kan niet worden getoond.",
+  "view.recover": "Terug naar Klassiek",
+
   "actions.view.groups.toggle": "Knooppunten groeperen op notitietype",
   "actions.view.groups.toggle.description": "Groeperen op notitietype in elk relatiegebied aan- of uitzetten.",
   "groups.notes": "Notities",

@@ -413,6 +413,9 @@ for (const file of [
   "src/lang/index.ts",
   "src/types.ts",
   "src/application/PlexFootprints.ts",
+  "src/application/PlexViewSession.ts",
+  "src/core/plex/views/registry.ts",
+  "src/ui/plexViews/builtins.ts",
   "src/ui/KplexDocumentSession.ts",
   "src/core/plex/viewPresentation.ts",
   "src/core/plex/internalHotkeys.ts",
@@ -570,6 +573,12 @@ for (const file of [
   "src/adapters/obsidian/placeholderRelocation.ts",
   "src/ui/actionPresentation.ts",
   "src/ui/layout.ts",
+  "src/ui/plexViews/measurement.ts",
+  "src/ui/plexViews/classic/layout.ts",
+  "src/core/plex/views/classic/projection.ts",
+  "src/core/plex/views/classic/geometry.ts",
+  "src/core/plex/views/classic/definition.ts",
+  "src/core/plex/views/contracts.ts",
   "src/ui/components/collectionWindow.ts",
 ]) compile(file);
 

@@ -148,6 +148,11 @@ export type NodeVisual = {
 };
 
 export type PositionedNode = {
+  /** Independent visual occurrence; canonical page identity remains the action/write target. */
+  occurrenceId?: string;
+  areaId?: string;
+  representation?: "thought" | "point";
+  physicalPorts?: Partial<Record<GateSide, GateRole>>;
   page: GraphPage;
   role: Role | "center";
   relationType?: RelationType;
@@ -164,6 +169,11 @@ export type PositionedNode = {
 };
 
 export type PositionedEdge = {
+  kind?: "semantic" | "derived" | "decorative";
+  sourceOccurrence?: string;
+  targetOccurrence?: string;
+  sourcePort?: GateSide;
+  targetPort?: GateSide;
   /** Display-only directional wording; physical typeDefinition remains the style/filter/mutation key. */
   caption?: string;
   id: string;

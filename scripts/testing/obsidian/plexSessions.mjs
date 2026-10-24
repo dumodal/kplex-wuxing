@@ -18,7 +18,7 @@ const output=process.env.KPLEX_HOST_REPORT_DIR;assert(output&&(!existsSync(outpu
 const enabledPluginIds=JSON.parse(readFileSync(join(target.config,"community-plugins.json"),"utf8"));
 assert(Array.isArray(enabledPluginIds)&&enabledPluginIds.includes("k-plex"),"Persist plugin enablement before capturing a restart-trial baseline");
 const configuration=[join(target.pluginDir,"data.json"),join(target.config,"workspace.json"),join(target.config,"community-plugins.json"),join(target.config,"app.json")].filter(existsSync).map(path=>({path,bytes:readFileSync(path)}));
-const report={status:"running",node:process.version,startedAt:new Date().toISOString(),artifacts:{},scenarios:[],limitations:["Windows native renderer input; macOS, physical mobile/touch and screen-reader acceptance remain separate."]};
+const report={status:"running",node:process.version,platform:process.platform,startedAt:new Date().toISOString(),artifacts:{},scenarios:[],limitations:["Native Electron input; physical keyboard, mobile/touch and screen-reader acceptance remain separate."]};
 writeFileSync(join(output,"driver-source.mjs"),readFileSync(fileURLToPath(import.meta.url)));
 /** Bound exact-vault native transport; renderer errors cannot masquerade as launcher success. */
 function cli(command,...args){const r=spawnNativeSync(obsidianCliExecutable(),[`vault=${vaultName}`,command,...args],{cwd:root,encoding:"utf8",timeout:30000,maxBuffer:8*1024*1024});if(r.error||r.status!==0||/^Error:/m.test(r.stdout))throw r.error??Error(r.stderr||r.stdout);return r.stdout.trim();}
@@ -211,8 +211,11 @@ try{
   }
   assert(Date.now()<durableDeadline,"Native workspace intent did not reach disk before restart");await delay(200);
  }
+ const beforeReload=evaluate('performance.timeOrigin');
  evaluate('(()=>{delete window.__kplex187Sessions;return true})()');cli("reload");
- const end=Date.now()+45000;while(true){try{if(evaluate('Boolean(app.plugins.plugins["k-plex"]?.actionManager)'))break;}catch{}assert(Date.now()<end,"Native renderer reload unavailable");await delay(500);}
+ // CLI reload can return before the old document retires. Require a new document and ready layout,
+ // following the existing Sidecar restart lane, so its old plugin cannot satisfy readiness.
+ const end=Date.now()+45000;while(true){try{const state=evaluate('({timeOrigin:performance.timeOrigin,ready:app.workspace.layoutReady&&Boolean(app.plugins.plugins["k-plex"]?.actionManager)})');if(state.ready&&state.timeOrigin!==beforeReload){report.reload={before:beforeReload,after:state.timeOrigin};break;}}catch{}assert(Date.now()<end,"Native renderer reload unavailable");await delay(500);}
  await phase("restore",restart);report.status="passed";
 }catch(error){report.status="failed";report.error=String(error.stack??error);}
 finally{

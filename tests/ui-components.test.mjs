@@ -1324,6 +1324,14 @@ test("ActionButton rendered browser behavior", () => {
 /** Exercise production reconciliation keys and thought DOM across a mutable rename/placeholder handover. */
 function attachmentRenameBrowserEntry() {
   return `
+import {occurrenceKey,edgeOccurrence,semanticSceneEdge} from ${JSON.stringify(join(root,'src/ui/plexViews/scene.ts'))};
+import {classicViewDefinition,classicAreaDropRole,classicPorts} from ${JSON.stringify(join(root,'src/core/plex/views/classic/definition.ts'))};
+import * as classicLayout from ${JSON.stringify(join(root,'src/ui/layout.ts'))};
+const viewDefinition=classicViewDefinition,viewFailed=false,viewLifetime=0;
+const classicFixturePolicy=(layout=classicLayout.buildScene)=>({policyKey:classicLayout.sceneLayoutPolicyKey,geometryKey:classicLayout.neighborhoodSceneKey,
+  layout,sections:classicLayout.buildSectionExpandedScene,bind:classicLayout.bindSceneNeighborhood,dropRole:classicAreaDropRole});
+const classic=classicFixturePolicy();
+
 import {canDragNodeLink,startNodeLinkDrag,finishNodeLinkDrag} from ${JSON.stringify(join(root,"src/adapters/obsidian/nodeLinkDrag.ts"))};
 import React, { useId, useMemo } from "react";
 import { flushSync } from "react-dom";
@@ -1339,6 +1347,7 @@ const warnings = [], originalError = console.error;
 console.error = (...args) => { warnings.push(args.map(String).join(" ")); originalError(...args); };
 // Native icons are the only thought-rendering host boundary; this scenario has no icon effects.
 const ObsidianIcon = () => null;
+import {physicalGateStats} from ${JSON.stringify(join(root,"src/ui/plexViews/measurement.ts"))};
 import {useGateCountPresentation} from ${JSON.stringify(join(root,'src/ui/useGateCountPresentation.ts'))};
 ${uiDefinitions("src/ui/ThoughtNode.tsx", ["GATES", "ThoughtNode"])}
 
@@ -1380,7 +1389,7 @@ function Scene({ scene: sourceScene, expanded }) {
   const sectionExpansion = null, expandedScrollTop = useMemo(() => ({}), []);
   const visibleNodePaths = useMemo(() => new Set(scene.nodes.map((item) => item.page.path)), [scene.nodes]);
   const renderedNodeMap = useMemo(() => new Map(scene.nodes.map((item) => [item.page.path, { ...item }])), [scene.nodes]);
-  ${uiDefinitions("src/ui/PlexGraph.tsx", ["paintedNodeStyles", "sceneNodeKeys", "expandedClusters", "beginNativeNodeDrag", "endNativeNodeDrag", "renderNode", "renderExpandedCluster"])}
+  ${uiDefinitions("src/ui/PlexGraph.tsx", ["areaForNode", "isEditorOccurrence", "paintedNodeStyles", "sceneNodeKeys", "expandedClusters", "beginNativeNodeDrag", "endNativeNodeDrag", "renderNode", "renderExpandedCluster"])}
   const miniKeys = expandedClusters.flatMap((cluster) => cluster.children.map((child) => child.key));
   check(new Set(miniKeys).size === miniKeys.length, "expanded connector keys collide during rename");
   return <><div className="kplex-nodes">{scene.nodes.map((item) => renderNode(item, { ...item }))}</div><div>{expandedClusters.map(renderExpandedCluster)}</div></>;
@@ -1513,6 +1522,14 @@ function editorHistoryBrowserEntry(){
   const history=uiDefinitions("src/ui/structuralConnectionActions.ts",["tagMembershipPair"])+uiDefinitions("src/ui/StructuralNodeDropActions.ts",["structuralDropKind"])+uiDefinitions("src/ui/PlexGraph.tsx",["normalizedRole","startNodeDrag","relationshipDropRoles","historyRelationshipTarget","clearHistoryDragHover","updateHistoryDragHover","cancel","lostPointerCapture"]);
   const editor=uiDefinitions("src/ui/CentralNodeEditor.tsx",["CentralNodeEditor"]);
   return `
+import {occurrenceKey,edgeOccurrence,semanticSceneEdge} from ${JSON.stringify(join(root,'src/ui/plexViews/scene.ts'))};
+import {classicViewDefinition,classicAreaDropRole,classicPorts} from ${JSON.stringify(join(root,'src/core/plex/views/classic/definition.ts'))};
+import * as classicLayout from ${JSON.stringify(join(root,'src/ui/layout.ts'))};
+const viewDefinition=classicViewDefinition,viewFailed=false,viewLifetime=0;
+const classicFixturePolicy=(layout=classicLayout.buildScene)=>({policyKey:classicLayout.sceneLayoutPolicyKey,geometryKey:classicLayout.neighborhoodSceneKey,
+  layout,sections:classicLayout.buildSectionExpandedScene,bind:classicLayout.bindSceneNeighborhood,dropRole:classicAreaDropRole});
+const classic=classicFixturePolicy();
+
 import {canDragNodeLink} from ${JSON.stringify(join(root,"src/adapters/obsidian/nodeLinkDrag.ts"))};
 import {markdownZoomMode,withMarkdownZoomMode} from ${JSON.stringify(join(root,"src/core/plex/markdownZoomPreferences.ts"))};
 import React,{useEffect,useId,useLayoutEffect,useRef,useState} from "react";
@@ -1597,6 +1614,14 @@ function externalAndPinnedDropBrowserEntry() {
     "relationshipDropRoles", "historyRelationshipTarget", "clearHistoryDragHover", "updateHistoryDragHover", "openHistoryRelationshipMenu",
     "externalFileDropTarget", "dragExternalFileOver", "leaveExternalFile", "dropExternalFile", "semanticRoleForPosition", "nodeDropRole", "commitNodeAreaDrop", "relationshipDropArea", "up"]);
   return `
+import {occurrenceKey,edgeOccurrence,semanticSceneEdge} from ${JSON.stringify(join(root,'src/ui/plexViews/scene.ts'))};
+import {classicViewDefinition,classicAreaDropRole,classicPorts} from ${JSON.stringify(join(root,'src/core/plex/views/classic/definition.ts'))};
+import * as classicLayout from ${JSON.stringify(join(root,'src/ui/layout.ts'))};
+const viewDefinition=classicViewDefinition,viewFailed=false,viewLifetime=0;
+const classicFixturePolicy=(layout=classicLayout.buildScene)=>({policyKey:classicLayout.sceneLayoutPolicyKey,geometryKey:classicLayout.neighborhoodSceneKey,
+  layout,sections:classicLayout.buildSectionExpandedScene,bind:classicLayout.bindSceneNeighborhood,dropRole:classicAreaDropRole});
+const classic=classicFixturePolicy();
+
 import {getDraggedFile} from ${JSON.stringify(join(root,"src/adapters/obsidian/fileExplorerDrag.ts"))};
 import {draggedGraphPage,nodeLinkDragSource} from ${JSON.stringify(join(root,"src/adapters/obsidian/nodeLinkDrag.ts"))};
 import {captureSurfaceContinuation} from ${JSON.stringify(join(root,"src/ui/surfaceContinuation.ts"))};
@@ -2149,6 +2174,7 @@ import {canDisplayNodeImage} from ${JSON.stringify(join(root,'src/core/plex/node
 import {createTranslator} from ${JSON.stringify(join(root,'src/lang/index.ts'))};
 import {HoverPreview,bindHoverPreview} from ${JSON.stringify(join(root,'src/ui/components/hoverPreview.ts'))};
 const ObsidianIcon=()=>null;
+import {physicalGateStats} from ${JSON.stringify(join(root,"src/ui/plexViews/measurement.ts"))};
 import {useGateCountPresentation} from ${JSON.stringify(join(root,'src/ui/useGateCountPresentation.ts'))};
 ${uiDefinitions('src/ui/ThoughtNode.tsx',['GATES','ThoughtNode'])}
 const result=document.querySelector('#result'),container=document.body.appendChild(document.createElement('div')),root=createRoot(container);
@@ -2214,6 +2240,7 @@ import {effectiveLabelLimit,nodeLabelFontSize,gateDiameter} from ${JSON.stringif
 import {physicalPositionLabel} from ${JSON.stringify(join(root,'src/ui/features/positionPresentation.ts'))};
 import {canDisplayNodeImage} from ${JSON.stringify(join(root,'src/core/plex/nodeImagePolicy.ts'))};
 const ObsidianIcon=()=>null;
+import {physicalGateStats} from ${JSON.stringify(join(root,"src/ui/plexViews/measurement.ts"))};
 import {useGateCountPresentation} from ${JSON.stringify(join(root,'src/ui/useGateCountPresentation.ts'))};
 ${uiDefinitions('src/ui/ThoughtNode.tsx',['GATES','ThoughtNode'])}
 const result=document.querySelector('#result'),container=document.body.appendChild(document.createElement('div')),root=createRoot(container),noop=()=>{};
@@ -2270,9 +2297,10 @@ import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { alphaHexToCss, nodePaint, nodePaintFallbacks } from ${JSON.stringify(join(root, "src/index/style.ts"))};
 import { effectiveLabelLimit, nodeLabelFontSize, gateDiameter } from ${JSON.stringify(join(root, "src/ui/layout.ts"))};
-${uiDefinitions("src/ui/layout.ts", ["clamp", "nodeSize"])}
+${uiDefinitions("src/ui/plexViews/measurement.ts", ["clamp", "nodeSize"])}
 import { physicalPositionLabel } from ${JSON.stringify(join(root, "src/ui/features/positionPresentation.ts"))};
 const ObsidianIcon=({className,size})=><span className={"kplex-icon "+className} style={{width:size,height:size}}/>;
+import {physicalGateStats} from ${JSON.stringify(join(root,"src/ui/plexViews/measurement.ts"))};
 import {useGateCountPresentation} from ${JSON.stringify(join(root,'src/ui/useGateCountPresentation.ts'))};
 ${uiDefinitions("src/ui/ThoughtNode.tsx", ["GATES", "ThoughtNode"])}
 const result=document.querySelector("#result"),container=document.createElement("div");document.body.append(container);
@@ -2352,6 +2380,14 @@ test("long node titles and aliases retain exact rendered truncation and measured
 /** Execute the production App/scene memo owners and layout with real React reconciliation. */
 function colorPaintBrowserEntry() {
  return `
+import {occurrenceKey,edgeOccurrence,semanticSceneEdge} from ${JSON.stringify(join(root,'src/ui/plexViews/scene.ts'))};
+import {classicViewDefinition,classicAreaDropRole,classicPorts} from ${JSON.stringify(join(root,'src/core/plex/views/classic/definition.ts'))};
+import * as classicLayout from ${JSON.stringify(join(root,'src/ui/layout.ts'))};
+const viewDefinition=classicViewDefinition,viewFailed=false,viewLifetime=0;
+const classicFixturePolicy=(layout=classicLayout.buildScene)=>({policyKey:classicLayout.sceneLayoutPolicyKey,geometryKey:classicLayout.neighborhoodSceneKey,
+  layout,sections:classicLayout.buildSectionExpandedScene,bind:classicLayout.bindSceneNeighborhood,dropRole:classicAreaDropRole});
+const classic=classicFixturePolicy();
+
 import React, {useMemo,useEffect,useState} from 'react';
 import {flushSync} from 'react-dom';import {createRoot} from 'react-dom/client';
 import {buildScene as realBuildScene,sceneLayoutPolicyKey,neighborhoodSceneKey,bindSceneNeighborhood} from ${JSON.stringify(join(root,'src/ui/layout.ts'))};
@@ -2370,7 +2406,8 @@ const plugin={settings:{baseNodeStyle:{fontSize:18,textColor:'#abcdef'},centralN
 let sceneBefore,nodeBefore,inputBefore,cameraBefore;
 function NativeEditor(){useEffect(()=>{counters.mounts++},[]);return <input defaultValue='unsaved text'/>}
 function Scene({settings,paintSettings}){
- ${uiDefinitions('src/ui/PlexGraph.tsx',['scenePolicyKey','sceneGeometryKey','sceneGeometry','scene'])}
+ const activePath='Center.md';const preparedDefinitionScene=null,classic=useMemo(()=>classicFixturePolicy(buildScene),[]);
+ ${uiDefinitions('src/ui/PlexGraph.tsx',['classicRead','scenePolicyKey','sceneGeometryKey','sceneGeometry','scene'])}
  window.lastColorScene=scene;
  const visualPages=useMemo(()=>scene.nodes.map(node=>node.page),[scene.nodes]);useEffect(()=>{counters.images++},[visualPages]);
  return <div className='camera' style={{transform:'translate(17px, 23px) scale(1.25)'}}>{scene.nodes.map(node=>{const paint=nodePaint(currentNodeColorStyle(node,paintSettings),nodePaintFallbacks(node));return <div key={node.page.path} data-path={node.page.path} style={{color:paint.foreground,left:node.x,top:node.y}}>{node.role==='center'?<NativeEditor/>:node.label}</div>})}</div>;
@@ -2410,6 +2447,14 @@ function crosslinkPeekBrowserEntry(){
    ts.forEachChild(node,visit)};visit(source);assert.equal(effects.length,2);assert.equal(edgeHighlights.length,1);
  const effectCode=ts.transpileModule(effects.join('\n'),{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
  return `
+import {occurrenceKey,edgeOccurrence,semanticSceneEdge} from ${JSON.stringify(join(root,'src/ui/plexViews/scene.ts'))};
+import {classicViewDefinition,classicAreaDropRole,classicPorts} from ${JSON.stringify(join(root,'src/core/plex/views/classic/definition.ts'))};
+import * as classicLayout from ${JSON.stringify(join(root,'src/ui/layout.ts'))};
+const viewDefinition=classicViewDefinition,viewFailed=false,viewLifetime=0;
+const classicFixturePolicy=(layout=classicLayout.buildScene)=>({policyKey:classicLayout.sceneLayoutPolicyKey,geometryKey:classicLayout.neighborhoodSceneKey,
+  layout,sections:classicLayout.buildSectionExpandedScene,bind:classicLayout.bindSceneNeighborhood,dropRole:classicAreaDropRole});
+const classic=classicFixturePolicy();
+
 import React,{useCallback,useState,useMemo,useRef,useEffect} from 'react';import{flushSync}from'react-dom';import{createRoot}from'react-dom/client';
 import{ontologyConfiguration}from ${JSON.stringify(join(root,"src/core/contracts/ontologyConfiguration.ts"))};
 import{hasDirectionalCaption,directionalRelationCaption}from ${JSON.stringify(join(root,"src/core/plex/directionalRelationCaption.ts"))};
@@ -2426,7 +2471,7 @@ const pairs={A:[['B','child','ab'],['C','parent','ac'],['D','left','ad'],['E','r
 const counters={layout:0,adjacency:0},buildScene=(...args)=>{counters.layout++;return realBuildScene(...args)};
 const index={titleFor:p=>p.name,neighbourCount:()=>0,gateStats:()=>({}),neighbours:()=>[],visibleRelationshipsWithin(source,targets){counters.adjacency++;return(pairs[source.path]??[]).filter(([path])=>targets.has(path)).map(([path,role,typeDefinition])=>({page:pages.get(path),role,typeDefinition,relationType:1,linkDirection:1}))}};
 const renderRevision=0,sectionExpansion=null;
-const settings={ontologyPairingVersion:1,hierarchy:{hidden:[],parents:[],children:[],leftFriends:[],rightFriends:[],previous:[],next:[],exclusions:[]},baseNodeStyle:{fontSize:18},centralNodeStyle:{fontSize:30},baseLinkStyle:{},hierarchyLinkStyles:{ab:{showLabel:true,fontSize:12,strokeWidth:3}},noteTypeStyles:{},tagNodeStyles:{},tagStyleList:[],compactingFactor:2,horizontalCompactingFactor:2,graphDepth:1,baseFontSize:12.4,maxItemCount:100,parentColumns:2,childColumns:5,parentMaxHeight:300,childMaxHeight:400,friendMaxHeight:350,siblingMaxHeight:250,siblingRelativeSize:50,minLinkLength:18};
+const settings={compactView:false,ontologyPairingVersion:1,hierarchy:{hidden:[],parents:[],children:[],leftFriends:[],rightFriends:[],previous:[],next:[],exclusions:[]},baseNodeStyle:{fontSize:18},centralNodeStyle:{fontSize:30},baseLinkStyle:{},hierarchyLinkStyles:{ab:{showLabel:true,fontSize:12,strokeWidth:3}},noteTypeStyles:{},tagNodeStyles:{},tagStyleList:[],compactingFactor:2,horizontalCompactingFactor:2,graphDepth:1,baseFontSize:12.4,maxItemCount:100,parentColumns:2,childColumns:5,parentMaxHeight:300,childMaxHeight:400,friendMaxHeight:350,siblingMaxHeight:250,siblingRelativeSize:50,minLinkLength:18};
 const layoutNeighborhood={center:pages.get('Center'),parents:[],children:['A','B','C','D','E'].map(path=>({page:pages.get(path),role:'child',relationType:1})),leftFriends:[],rightFriends:[],siblings:[]};
 const layoutSectionExpansion=null,expandedSectionIds=new Set(),layoutRevision=0,globalFiltering=false,centralEditorSize=undefined,neighborhood=layoutNeighborhood,activePath='Center',hostLeaf={};let semanticRevision=0;
 const predicateEngine={},lenses={},paintLenses=lenses,paintSettings=settings,predicateRevision=0,graphLensEdgeStyle=()=>({}),connectDrag=null,nodeDrag=null,resizingArea=false,areaSettingsMode=false;
@@ -2435,11 +2480,13 @@ const listeners=new Set(),plugin={visible:true,subscribeKplexVisibility(fn){list
 let fixture;
 class PeekBoundary extends React.Component{state={error:null};static getDerivedStateFromError(error){return{error:String(error.stack||error)}}render(){return this.state.error?<pre data-peek-error>{this.state.error}</pre>:this.props.children}}
 function Graph(){
+ const preparedDefinitionScene=null;
  const viewport=useRef(null),hoverHighlight=useRef(null),hoverPreview=useRef(null),[hover,setHover]=useState(null),[crossLinkPeek,setCrossLinkPeek]=useState(null),[required,setRequired]=useState(true),[showCrossLinks,setShown]=useState(false),[hidden,setHidden]=useState([]);
  const viewSettings={hoverHighlightRequiresAlt:required},clearEdgeTooltip=()=>{};
- ${uiDefinitions('src/ui/PlexGraph.tsx',['scenePolicyKey','sceneGeometryKey','sceneGeometry','scene','clearHoverIntent','scheduleHoverIntent'])}
+ ${uiDefinitions('src/ui/PlexGraph.tsx',['classicRead','scenePolicyKey','sceneGeometryKey','sceneGeometry','scene','clearHoverIntent','scheduleHoverIntent'])}
  const visibleNodePaths=useMemo(()=>new Set(scene.nodes.filter(node=>!hidden.includes(node.page.path)).map(node=>node.page.path)),[scene.nodes,hidden]);
  const renderedNodeMap=useMemo(()=>new Map(scene.nodes.map(node=>[node.page.path,node])),[scene.nodes]);
+ const visibleOccurrenceIds=visibleNodePaths;
  ${uiDefinitions('src/ui/PlexGraph.tsx',['connectionCaption','visibleEdges','paintedEdges','interaction'])}
  ${effectCode}
  fixture={enter(path,gate,alt=false){scheduleHoverIntent(gate?{kind:'gate',path,gate}:{kind:'node',path},{pointerType:'mouse',isTrusted:true,altKey:alt})},key:alt=>hoverHighlight.current.modifier(alt,true),leave:()=>clearHoverIntent(true),setRequired,setShown,setHidden,scene,interaction};
@@ -2472,6 +2519,7 @@ function directionalCaptionBrowserEntry(){return `
 import React,{useCallback}from'react';import{flushSync}from'react-dom';import{createRoot}from'react-dom/client';
 import{ontologyConfiguration}from ${JSON.stringify(join(root,'src/core/contracts/ontologyConfiguration.ts'))};
 import{hasDirectionalCaption,directionalRelationCaption}from ${JSON.stringify(join(root,'src/core/plex/directionalRelationCaption.ts'))};
+import{classicPorts}from ${JSON.stringify(join(root,"src/core/plex/views/classic/definition.ts"))};
 import{gateDiameter}from ${JSON.stringify(join(root,"src/ui/layout.ts"))};
 import{LinkDirection}from ${JSON.stringify(join(root,'src/types.ts'))};
 import{alphaHexToCss,DEFAULT_RENDERED_LINK_WIDTH,NATIVE_LINK_STROKE,NATIVE_LINK_TEXT}from ${JSON.stringify(join(root,'src/index/style.ts'))};
@@ -2479,7 +2527,7 @@ ${uiDefinitions('src/ui/PlexGraph.tsx',['GATE_GAP','GENERIC_RELATION_LABELS','ga
 const result=document.querySelector('#result'),check=(value,message)=>{if(!value)throw Error(message)},page=path=>({path,style:{},x:path==='A'?0:200,y:0,width:100,height:40,page:{path}});
 let reads=0;const decisions=[{active:true,evidence:{fieldName:'replies to',definition:'replies to',declaredByPath:'B',declaredTargetPath:'A'}}],index={explainRelationship(){reads++;return{decisions}}};
 function App({reverse=false,show=true,paired=true,transient=false,folded=false,definition='replies to',mini=false}){
- const settings={ontologyPairingVersion:1,hierarchy:{hidden:[],parents:[],children:[],leftFriends:[],rightFriends:[],previous:paired?['replies to/replied by']:['replies to'],next:paired?[]:['replied by'],exclusions:[]}};
+ const settings={compactView:false,ontologyPairingVersion:1,hierarchy:{hidden:[],parents:[],children:[],leftFriends:[],rightFriends:[],previous:paired?['replies to/replied by']:['replies to'],next:paired?[]:['replied by'],exclusions:[]}};
  const sourcePath=transient?'section A':reverse?'B':'A',targetPath=transient?'target B':reverse?'A':'B';
  const sectionPage={path:'section A',transient:{kind:'section',sourcePath:'A'}},targetPage={path:'target B',transient:{kind:'section-target',sourcePath:'A',actualPath:'B'}};
  const sectionExpansion=transient?{sections:[{page:sectionPage}],explanations:new Map([[sourcePath+'\\u0000'+targetPath,{decisions}]])}:null;
