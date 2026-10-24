@@ -5997,3 +5997,26 @@ Known-source events may retain only unrelated broad scope, with exact owner capt
 
 
 - 2026-10-24 PR210 final validation: unchanged a61b924 runtime /6400bb47... artifact, full real build/verification and final23 focused controls pass. All applicable exact Small native lanes pass, including real finite notifications -> natural closure, recovery/admission, SI4/5, held-background foreground/live, folder/Excalidraw, rename/gates/search and ontology. Configuration and workspace/owned-history restoration audited; historical failures and conservative leases retained. CI430 passes f4c9073 tooling/implementation; final documentation publication/check readback tracked on PR210. Recommend scoped merge review, keep draft; no merge/main write/release/production deployment, no storage redesign or Mac experiment.
+
+
+2026-10-24 ? Stable autosave gate-count checkpoint: preserve coherent read presentation across fingerprint-proved saves; keep current-policy canonical compilation identity on existing hot entries; transfer fenced native folder totals; retain four committed UI labels without renewing proof, and show structural lateral zeros. Focused real-IDB/UI/native diagnostic evidence is in docs/validation/stable-gate-counts-2026-10-24.md. Full verification/final artifact/native/CI pending; no structural refactoring or merge authorized.
+
+
+### 2026-10-24 stable gate counters: host-notification fence review
+
+CI434 caught overbroad read retention for identity-only host observations. Retain a requested scope only across one attributed physical source revision; its predecessor revision already closes write authority. Unknown/cache-only observations preserve original scope retirement, including released history. The unchanged source-replay oracle/cancellation assertion and blocked-database/autosave/held-read controls pass12/12. The earlier full local rerun was stopped and retained as incomplete. Full final verification/native checks/CI remain pending; foreground checks require the maintainer's explicit ready response while video editing. No assertion/deadline/threshold was weakened.
+
+
+### 2026-10-24 stable gate counters: portable validation checkpoint
+
+Production09b84be passed all local test suites (7/130/1417/228/357/738), zero failures/cancellations/skips, and a clean separately recorded actual-dependency build on Node22.22.2. Preserve the aggregate PowerShell exit1 qualification: no failure message after the build, underlying Node exit not captured, and normal npm stderr notices reproduced NativeCommandError handling in the separate build whose explicit Node exit was0. Exact main.js99c46109ef310ce17e72f3e1d08a762bada44c9ee5aff52d14191a65fe340a87 awaits final native staging/checks. CI436 passed complete verification at09b84be (run40076257890). Maintainer was notified native checks are ready; wait for explicit ready while video editing. Source/publication/freshness, bounded cache/label lifetimes, localization and original recovery assertions reviewed. No scheduling/storage/schema/default changes or CPU benchmark claim. Final Windows automation pending; macOS/mobile unrun, no extra manual test requested. See the stable-gate-counts validation report.
+
+
+### 2026-10-24 - PR211 foreground count continuity correction
+
+Native exact-build acceptance exposed retained virtual notes counted as physical structural members, and previews omitting captured neighbor folder parents. GraphIndex filters nonphysical note members only for structural reads; HostMetadataPreview includes existing captured-owner native folder facts, with no added owner reads/scans. Real IndexedDB regression and unchanged controls13/13 pass; actual production build/scanner pass. Main artifact b808dd5f1bf3db150c66efe352b73fd0fb64b2f1528d58cad60547441d66cb32 passes3 actual-editor autosaves with0 observed gate/scene DOM changes and all6 held-inventory foreground cases. Cleanup107 original files/controllers removed. Full renewed verification and CI pending. Older adaptiveFit zero-notification assertion remains failed3 callbacks with0 animations, DOM/focus retained; no threshold waived. Detailed limitations/failures live in docs/validation/stable-gate-counts-2026-10-24.md. No additional manual check requested; automated native requested behavior is demonstrated, foreground released for video editing. PR remains draft; no merge/release/deployment.
+
+
+### 2026-10-24 - PR211 final portable and exact-artifact validation
+
+Runtime checkpoint15c6fdef144d329fba2d14ea1e4298850686bf09 passed complete npm run verify on Node22.22.2:7 release,130 core,1417 main,228 UI,357 source contracts,739 real IndexedDB/browser checks; zero failures/cancellations/skips, aggregate Node/shell exit0. Architecture, real types, official scanner and production build pass. Final build exactly matches native-tested b808dd5f1bf3db150c66efe352b73fd0fb64b2f1528d58cad60547441d66cb32 plus unchanged manifest/styles. CI439 pending. Requested UI behavior passes; older notification-count diagnostic remains failed and explicitly qualified for review. No additional manual check requested; Mac/mobile unrun. Keep PR211 draft.
