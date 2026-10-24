@@ -92,3 +92,13 @@ test('bound editor admission rejects missing, hidden, recreated or mismatched ta
   assert.equal(result.failure,true,failure);assert.deepEqual(result.scene.nodes,[],failure);assert.equal(result.scene.boundEditors,undefined,failure);
  }
 });
+
+test('rooted scene input keeps layout root separate from attention and central sizing',()=>{
+ const f=fixture(),seen=[],definition={...M.probeViewDefinition,navigation:'rooted',project(input){seen.push({attention:input.attention,root:input.layoutRoot});return M.probeViewDefinition.project(input)}};
+ const result=M.prepareViewScene(definition,f.read,f.source,'Focus.md',null,f.settings,()=>true,undefined,()=>true,
+  {translate:value=>value,unfolded:new Set(),layoutRoot:'Root.md'});
+ assert.equal(result.failure,false);assert.deepEqual(seen,[{attention:'Focus.md',root:'Root.md'}]);
+ assert.equal(result.scene.nodes.find(row=>row.occurrenceId==='layout-root').role,'center');assert.equal(result.scene.nodes.find(row=>row.occurrenceId==='look-here').role,'child');
+ assert.equal(f.prepare(definition).failure,true,'A rooted definition cannot silently replace its admitted root');
+ const legacy=f.prepare();assert.equal(legacy.failure,false);assert.equal(legacy.scene.nodes.find(row=>row.occurrenceId==='look-here').role,'center','Omitted rooted policy preserves legacy attention styling');
+});

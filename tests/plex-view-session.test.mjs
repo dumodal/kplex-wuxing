@@ -53,6 +53,23 @@ test('bound editor retirement is explicit while attention-following definitions 
  a.dispose();b.dispose();assert.equal(a.canSelect('classic'),false);
 });
 
+test('rooted sessions retain independent roots and transient geometry while branch removal is preflighted',()=>{
+ const rooted={...M.probeViewDefinition,id:'test.rooted',navigation:'rooted',editorHosting:'occurrence'},registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,rooted]);
+ const a=new M.PlexViewSession(registry,()=>{}),b=new M.PlexViewSession(registry,()=>{});a.select(rooted.id);b.select(rooted.id);
+ a.ensureRoot('R.md');b.ensureRoot('S.md');a.ensureRoot('C.md');assert.equal(a.layoutRoot('C.md'),'R.md');assert.equal(b.layoutRoot('C.md'),'S.md');
+ a.retainTransient(rooted.id,{attention:'A.md',scope:'R.md',camera:{x:12,y:34,scale:0.8},selected:'B2',unfolded:['branch-B']});
+ const saved=a.readTransient(rooted.id,'C.md');assert.equal(saved.camera.x,12);assert.equal(saved.selected,'B2');assert.deepEqual(saved.unfolded,['branch-B']);
+ const c=new M.PlexViewSession(registry,()=>{});c.restore(JSON.parse(JSON.stringify(a.getState())));assert.equal(c.layoutRoot('C.md'),'R.md');
+ const binding=a.editors.open({...occurrenceIntent(),viewId:rooted.id}).binding;
+ assert.equal(a.setRoot('C.md'),false);assert.equal(a.layoutRoot('C.md'),'R.md');
+ assert.equal(a.updateState({removeB:true}),false,'An unmounted/unguarded host cannot remove a binding');
+ const release=a.guardState(state=>!state?.removeB);assert.equal(a.updateState({removeB:true}),false);assert.equal(a.updateState({removeB:false}),true);
+ release();a.guardState(()=>{throw Error('Unavailable preflight')});assert.equal(a.updateState({removeB:false}),false);
+ a.editors.beginClose(binding.id).commit();assert.equal(a.setRoot('C.md'),true);assert.equal(a.readTransient(rooted.id,'C.md'),undefined,'Explicit reroot retires old root geometry');
+ a.select('classic');assert.equal(a.layoutRoot('A.md'),'A.md');assert.equal(a.setRoot('R.md'),false,'Legacy attention policy cannot acquire rooted state');
+ a.dispose();b.dispose();c.dispose();
+});
+
 test('static registration validates identity/version and ships Classic only',()=>{
   assert.deepEqual(M.builtInPlexViews.available.map(view=>view.id),['classic']);
   assert.throws(()=>new M.PlexViewRegistry([M.builtInPlexViews.resolve('classic'),M.builtInPlexViews.resolve('classic')]));

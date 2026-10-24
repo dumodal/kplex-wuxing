@@ -698,6 +698,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     neighbours: (page: GraphPage, role: Role) => index.neighbours(page, role), neighbourCount: (page: GraphPage) => index.neighbourCount(page),
     gateStats: (page: GraphPage) => index.gateStats(page), visibleRelationshipsWithin: (source: GraphPage, paths: ReadonlySet<string>) => index.visibleRelationshipsWithin(source, paths)}), [index]);
   const viewLifetime = viewSession?.getLifetime() ?? 0;
+  const rooted = viewDefinition.navigation === "rooted";
+  const sceneScope = rooted ? viewSession?.layoutRoot(nodeId(activePath)) ?? activePath : activePath;
+  useLayoutEffect(/** Retain root demand before an outgoing attention effect releases its lease. */ () => {
+    if (!rooted || !viewSession) return;
+    viewSession.ensureRoot(nodeId(activePath));
+    return index.acquireSemanticDemand(sceneScope);
+  }, [index, viewSession, viewDefinition.id, rooted, sceneScope]);
   const [findQuery, setFindQuery] = useState("");
   const [findIncludePath, setFindIncludePath] = useState(false);
   const [findCursor, setFindCursor] = useState(0);
@@ -829,19 +836,19 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     : projectedSectionExpansion, [projectedSectionExpansion, optimisticRelink]);
   const neighborhood = effectiveSectionExpansion?.centerNeighborhood ?? effectivePersistentNeighborhood;
   const globalFiltering = predicate !== null || lenses.lenses.some((lens) => lens.mode === "include" || lens.mode === "exclude");
-  const [unfoldedGroups, setUnfoldedGroups] = useState<{ center: string; keys: ReadonlySet<string> }>({ center: activePath, keys: new Set() });
+  const [unfoldedGroups, setUnfoldedGroups] = useState<{ center: string; keys: ReadonlySet<string> }>({ center: sceneScope, keys: new Set() });
   useEffect(/** Navigation and disabling grouping retire only this view's unfolded buckets. */ () => {
-    setUnfoldedGroups(current => current.center === activePath && current.keys.size === 0 ? current : { center: activePath, keys: new Set() });
-  }, [activePath, settings.groupRelations]);
+    setUnfoldedGroups(current => current.center === sceneScope && current.keys.size === 0 ? current : { center: sceneScope, keys: new Set() });
+  }, [sceneScope, settings.groupRelations]);
   /** Project only this already admitted neighborhood, using the current view's unfolded keys. */
   const projectGroups = (value: Neighborhood): Neighborhood => settings.groupRelations
-    ? (classic?.group(value, settings.lateralArrangement === "left", unfoldedGroups.center === activePath ? unfoldedGroups.keys : new Set(), translate) ?? value)
+    ? (classic?.group(value, settings.lateralArrangement === "left", unfoldedGroups.center === sceneScope ? unfoldedGroups.keys : new Set(), translate) ?? value)
     : value;
   /** Unfold in place without navigation, history, source acquisition or a semantic write. */
   const unfoldGroup = (page: GraphPage): void => {
     if (page.transient?.kind !== "group") return;
     const key = page.transient.sectionId;
-    setUnfoldedGroups(current => ({ center: activePath, keys: new Set([...(current.center === activePath ? current.keys : []), key]) }));
+    setUnfoldedGroups(current => ({ center: sceneScope, keys: new Set([...(current.center === sceneScope ? current.keys : []), key]) }));
   };
 
   // Keep the optimistic role in place until the authoritative rebuilt graph actually agrees.
@@ -872,13 +879,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         neighborhood: project(section.neighborhood),
       })),
     };
-  }, [effectiveSectionExpansion, globalFiltering, filterLayoutMode, predicateEngine, index, predicate, lenses, predicateRevision, settings.groupRelations, settings.lateralArrangement, unfoldedGroups, activePath, translate]);
+  }, [effectiveSectionExpansion, globalFiltering, filterLayoutMode, predicateEngine, index, predicate, lenses, predicateRevision, settings.groupRelations, settings.lateralArrangement, unfoldedGroups, activePath, sceneScope, translate]);
   const layoutNeighborhood = useMemo(() => {
     if (!neighborhood) return null;
     const filtered = globalFiltering && (filterLayoutMode === "reflow" || settings.groupRelations) && !layoutSectionExpansion
       ? filterNeighborhoodForLenses(neighborhood, neighborhood.center, predicateEngine, index, predicate, lenses) : neighborhood;
     return projectGroups(filtered);
-  }, [neighborhood, globalFiltering, filterLayoutMode, layoutSectionExpansion, predicateEngine, index, predicate, lenses, predicateRevision, settings.groupRelations, settings.lateralArrangement, unfoldedGroups, activePath, translate]);
+  }, [neighborhood, globalFiltering, filterLayoutMode, layoutSectionExpansion, predicateEngine, index, predicate, lenses, predicateRevision, settings.groupRelations, settings.lateralArrangement, unfoldedGroups, activePath, sceneScope, translate]);
   const scenePolicyKey = useMemo(/** Equivalent wrappers and paint-only updates retain the actual geometry policy. */ () => classic?.policyKey(settings) ?? viewDefinition.id, [classic, viewDefinition, settings]);
   const sceneGeometryKey = useMemo(/** Compare consumed values, never mutable page identity or source clocks alone. */ () =>
     classic?.geometryKey(layoutNeighborhood, classicRead, settings) ?? "", [classic, layoutNeighborhood, classicRead, settings]);
@@ -889,8 +896,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     return prepareViewScene(viewDefinition, read, index, activePath, viewSession?.state, settings, current, centralEditorSize,
       node => !globalFiltering || filterLayoutMode === "keep" && !settings.groupRelations || (matchesGraphPredicateNode(predicateEngine, predicate, node, neighborhood?.center)
         && matchesVisibleLensNode(predicateEngine, index, lenses, node, neighborhood?.center)),
-      {translate, unfolded: unfoldedGroups.center === activePath ? unfoldedGroups.keys : new Set(), areaHeights: viewSession?.getAreaHeights()});
-  }, [classic, viewDefinition, viewRevision, viewSession, index, activePath, renderRevision, semanticRevision, settings, centralEditorSize, globalFiltering, filterLayoutMode, predicateEngine, predicate, lenses, predicateRevision, unfoldedGroups, translate]);
+      {translate, unfolded: unfoldedGroups.center === sceneScope ? unfoldedGroups.keys : new Set(), areaHeights: viewSession?.getAreaHeights(), layoutRoot: rooted ? nodeId(sceneScope) : undefined});
+  }, [classic, viewDefinition, viewRevision, viewSession, index, activePath, renderRevision, semanticRevision, settings, centralEditorSize, globalFiltering, filterLayoutMode, predicateEngine, predicate, lenses, predicateRevision, unfoldedGroups, translate, rooted, sceneScope]);
   const sceneGeometry = useMemo<HostPlexScene>(() => {
     try {
       if (preparedDefinitionScene) return preparedDefinitionScene.failure ? attentionFallbackScene(index, activePath, settings, centralEditorSize) : preparedDefinitionScene.scene;
@@ -1119,8 +1126,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   };
   const sceneTransitionTimer = useRef<number | null>(null);
   const sceneTransitionTimerWindow = useRef<Window | null>(null);
-  const transitionPath = useRef(activePath);
-  const pathChangedThisRender = transitionPath.current !== activePath;
+  const transitionPath = useRef(sceneScope);
+  const pathChangedThisRender = transitionPath.current !== sceneScope;
   const touchLongPress = useRef<{
     pointerId: number;
     startX: number;
@@ -1253,12 +1260,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   };
 
   useEffect(/** Reset outline state for a changed center or animation preference, retaining it when only navigation origin changes. */ () => {
-    transitionPath.current = activePath;
+    transitionPath.current = sceneScope;
     setSectionExpanded(false);
     setSectionExpansion(null);
     setExpandedSectionIds(new Set());
     sectionFoldCenter.current = null;
-  }, [activePath, settings.animationSpeed]);
+  }, [sceneScope, settings.animationSpeed]);
 
   useEffect(/** Passive follow has no transition timer or arrival delay; deliberate navigation keeps its temporary transition. */ () => {
     const viewWindow = viewport.current?.ownerDocument.defaultView ?? window;
@@ -1273,7 +1280,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       sceneTransitionTimerWindow.current = null;
       setSceneTransitioning(false);
     }, settings.animationSpeed <= 0 ? 0 : Math.max(140, Math.round(620 / Math.max(0.25, settings.animationSpeed))));
-  }, [activePath, navigationOrigin, settings.animationSpeed]);
+  }, [sceneScope, navigationOrigin, settings.animationSpeed]);
 
   useEffect(() => {
     if (!centralEditorAvailable || !sectionExpanded) return;
@@ -1404,7 +1411,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const next = typeof nextOrUpdater === "function" ? nextOrUpdater(camera.current) : nextOrUpdater;
     camera.current = next;
     cameraIntentPlaced.current = true;
-    if (fitted) automaticFit.current = { path: activePath, camera: { ...next } };
+    if (fitted) automaticFit.current = { path: sceneScope, camera: { ...next } };
     else automaticFit.current = null;
     // Pointer streams on iOS can deliver substantially more events than the screen can paint.
     // Coalesce camera writes to one per animation frame, and use a 2D transform for graph-only
@@ -1474,7 +1481,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   }, [centralEditorMaximized, centralEditorAvailable, viewportSize.width, viewportSize.height]);
 
   const sceneLayoutKey = [
-    activePath,
+    sceneScope,
     centralEditorSize ? `central-editor:${centralEditorSize.width}:${centralEditorSize.height}` : "central-editor:-",
     scene.nodes.map((node) => `${node.role}:${node.page.path}:${node.x}:${node.y}:${node.width}:${node.height}`).join("|"),
     ...ZONES.map((zone) => {
@@ -1497,9 +1504,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const editorModeChanged = centralEditorAvailabilityRef.current !== centralEditorAvailable;
     const editorSizeKey = centralEditorSize ? `${centralEditorSize.width}:${centralEditorSize.height}` : "";
     const editorSizeChanged = centralEditorSizeKeyRef.current !== editorSizeKey;
-    const followAutomaticFit = !preserveCamera && !displayResizeLayout.current && !centralEditorMaximized
-      && automaticFit.current?.path === activePath && sameFitCamera(automaticFit.current.camera, camera.current);
-    const shouldRecenter = !preserveCamera && (!cameraIntentPlaced.current || pathChangedThisRender || editorModeChanged
+    const followAutomaticFit = !rooted && !preserveCamera && !displayResizeLayout.current && !centralEditorMaximized
+      && automaticFit.current?.path === sceneScope && sameFitCamera(automaticFit.current.camera, camera.current);
+    const shouldRecenter = !preserveCamera && (!cameraIntentPlaced.current || pathChangedThisRender || !rooted && editorModeChanged
       || (settings.allowAutozoom && editorSizeChanged && followAutomaticFit));
     if (shouldRecenter || (settings.allowAutozoom && followAutomaticFit)) {
       if (settings.allowAutozoom) fit();
@@ -1858,7 +1865,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       }
     }, 0);
     return () => window.clearTimeout(resetTimer);
-  }, [activePath, viewLifetime, viewDefinition]);
+  }, [sceneScope, viewLifetime, viewDefinition]);
 
   useEffect(/** Observe the actual pane, preserving manual/display-transition intent and fitting only the current owned scene. */ () => {
     const el = viewport.current;
@@ -1877,7 +1884,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       // Context-only theme variables can appear/disappear at responsive pane breakpoints.
       colorScope.current?.invalidate();
       if (preserveDisplayCamera || centralEditorMaximized || Date.now() < suppressAutoFitUntil.current) return;
-      if (settings.allowAutozoom && automaticFit.current?.path === activePath
+      if (settings.allowAutozoom && automaticFit.current?.path === sceneScope
         && sameFitCamera(automaticFit.current.camera, camera.current)) fitCurrentScene.current();
     };
     updateViewport();
@@ -1887,7 +1894,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const visible = (): void => { if (!el.ownerDocument.hidden && compassSync.current()) requestCameraFrame(); };
     el.ownerDocument.addEventListener("visibilitychange", visible);
     return () => {observer.disconnect(); el.ownerDocument.removeEventListener("visibilitychange", visible);};
-  }, [settings.allowAutozoom, centralEditorMaximized, displayState.revision, activePath]);
+  }, [settings.allowAutozoom, centralEditorMaximized, displayState.revision, sceneScope]);
 
   useEffect(() => {
     const el = viewport.current;
@@ -2389,7 +2396,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     return nodes;
   }, [scene.nodes, scene.zoneViewports, scene.zoneAreas, sceneNodeKeys, filterMatchedNodePaths, zoneDisplayLayouts, expandedClusters, renderedNodeMap]);
   const selection = usePlexKeyboardNavigation({
-    activePath, scopeKey: JSON.stringify([viewDefinition.id, viewLifetime, activePath]), normalMode: !viewFailed && !areaSettingsMode && !connectDrag && !nodeDrag && !resizingArea && !relationshipUpdating,
+    activePath, scopeKey: JSON.stringify([viewDefinition.id, viewLifetime, sceneScope]), normalMode: !viewFailed && !areaSettingsMode && !connectDrag && !nodeDrag && !resizingArea && !relationshipUpdating,
     nodes: keyboardNodes, entryId: scene.entryOccurrence, crossSections: plugin.settings.actionPreferences.crossSectionAtBoundary,
     reveal: /** Reveal the exact occurrence through existing overflow scroll and camera policy. */ node => {
       clearHoverIntent(true); revealFindHit(node.path, node.id);
@@ -2460,7 +2467,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   outgoingViewState.current = {selected: selection.readSelected, groups: unfoldedGroups};
   const [keyboardConnect, setKeyboardConnect] = useState<NodeRef | null>(null);
   const keyboardConnectRef = useRef<NodeRef | null>(null);
-  const typeSelection = usePlexTypeSelection({ activePath, scopeKey: JSON.stringify([viewDefinition.id, viewLifetime, activePath]), nodes: keyboardNodes, selection,
+  const typeSelection = usePlexTypeSelection({ activePath, scopeKey: JSON.stringify([viewDefinition.id, viewLifetime, sceneScope]), nodes: keyboardNodes, selection,
     normalMode: !viewFailed && !areaSettingsMode && !connectDrag && !nodeDrag && !resizingArea && !relationshipUpdating && !centralEditorMaximized && !keyboardConnect,
   });
   const visibleConnectSession = `${actionSurfaceId}:visible-connect`;
@@ -3856,7 +3863,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const restored = viewSession.readTransient(viewDefinition.id, nodeId(activePath));
     if (restored) {
       preserveCameraOnNextLayout.current = true; applyCamera(restored.camera);
-      setUnfoldedGroups({center: activePath, keys: new Set(restored.unfolded)});
+      setUnfoldedGroups({center: sceneScope, keys: new Set(restored.unfolded)});
       if (restored.selected) selection.select(restored.selected);
     } else selection.select(null);
     return viewSession.own(() => {
@@ -3864,9 +3871,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       const resize = areaResizeDrag.current;
       areaResizeDrag.current = null;
       if (resize?.changed) persistAreaHeight(resize.zone);
-      viewSession.retainTransient(viewDefinition.id, {attention: nodeId(activePath), camera: camera.current,
+      viewSession.retainTransient(viewDefinition.id, {attention: nodeId(recoveryCenter.current), scope: nodeId(sceneScope), camera: camera.current,
         selected: outgoingViewState.current.selected()?.id ?? null,
-        unfolded: outgoingViewState.current.groups.center === activePath ? [...outgoingViewState.current.groups.keys] : []});
+        unfolded: outgoingViewState.current.groups.center === sceneScope ? [...outgoingViewState.current.groups.keys] : []});
       optimisticCommitToken.current++;
       setOptimisticRelink(null); setRelationshipUpdating(false);
       setSectionExpanded(false); setSectionExpansion(null); setExpandedSectionIds(new Set());
@@ -3887,7 +3894,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       sceneTransitionTimer.current = null; sceneTransitionTimerWindow.current = null;
       finishNodeLinkDrag(plugin.app, nativeNodeDrag.current); nativeNodeDrag.current = null;
     });
-  }, [viewSession, viewLifetime, activePath]);
+  }, [viewSession, viewLifetime, sceneScope]);
 
   if (!neighborhood) return <div className="kplex-empty">{translate("graph.selectNote")}</div>;
 

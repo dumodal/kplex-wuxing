@@ -139,3 +139,5 @@ M0 checkpoints, each independently reviewable:
 4. Actual R/A/B/C and duplicate-occurrence native probe plus unchanged off-centre attention-host regression. Until this passes, capability remains unsupported.
 
 Then implement M1–M3 using only accepted canonical demand/source owners and complete M4. #220 proceeds independently on its accepted attention editor; no unmerged partner code or acknowledgement is required. Mac owns only the concrete editor/root/frontier additions, not whole shared files. Final #219 merge remains unauthorized.
+
+M0 rooted interface now implemented: optional `navigation: "rooted"`, per-session `layoutRoot()`/initial capture/explicit `setRoot()`, bounded `roots` in the existing workspace payload, and `PlexViewInput.layoutRoot`. This is separate from `editorHosting`. Rooted state survives attention updates in the actual Chromium renderer; existing attention-scoped definitions/goldens remain covered. Native occurrence hosting and its mandatory proof are still pending.

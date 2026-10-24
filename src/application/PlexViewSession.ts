@@ -1,10 +1,10 @@
 /** Per-native-surface selection and bounded restoration. Native document/editor/Sidecar lifetimes remain separate. */
 import type {PlexViewDefinition} from "../core/plex/views/contracts";
 import type {PlexViewRegistry} from "../core/plex/views/registry";
-import type {NodeId} from "../core/graph/model";
+import {nodeId, type NodeId} from "../core/graph/model";
 import {PlexEditorBindings} from "./PlexEditorBindings";
 
-export type PlexViewTransient = Readonly<{attention: NodeId; camera: Readonly<{x: number; y: number; scale: number}>;
+export type PlexViewTransient = Readonly<{attention: NodeId; scope?: NodeId; camera: Readonly<{x: number; y: number; scale: number}>;
   selected: string | null; unfolded: readonly string[]}>;
 
 /** Admit only small JSON workspace payloads; unknown view state is retained without executing it. */
@@ -29,6 +29,8 @@ export class PlexViewSession {
   private readonly owned = new Set<() => void>();
   private readonly transient = new Map<string, PlexViewTransient>();
   private readonly areaHeights = new Map<string, Readonly<Record<string, number>>>();
+  private readonly roots = new Map<string, NodeId>();
+  private stateGuard: ((state: unknown) => boolean) | null = null;
   private editorUsers = 0;
   private generation = 0;
   private epoch = 0;
@@ -62,6 +64,24 @@ export class PlexViewSession {
     && (!this.editorUsers || this.registry.resolve(id).capabilities.editor); }
   /** Lease only actual editor hosting; a compatible geometry change keeps the same native instance. */
   retainEditor(): () => void { this.editorUsers++; let alive = true; return () => {if (alive) {alive = false; this.editorUsers--;}}; }
+  /** A rooted definition retains one explicit root while ordinary attention changes independently. */
+  layoutRoot(attention: NodeId): NodeId { return this.definition.navigation === "rooted" ? this.roots.get(this.definition.id) ?? attention : attention; }
+  /** Capture initial root once, outside render; this does not acquire sources or open a document. */
+  ensureRoot(attention: NodeId): void { if (!this.roots.has(this.definition.id)) this.setRoot(attention); }
+  /** Explicit reroot cannot remove a live editor implicitly. Collapse/save must complete first. */
+  setRoot(root: NodeId): boolean {
+    if (this.closed || this.definition.navigation !== "rooted" || typeof root !== "string" || !root || root.length > 4096) return false;
+    if (this.roots.get(this.definition.id) === root) return true;
+    if (this.editors.bindings.length) return false;
+    if (this.roots.size >= 16 && !this.roots.has(this.definition.id)) return false;
+    this.roots.set(this.definition.id, root); this.notify(); this.persist(); return true;
+  }
+  /** The mounted host preflights branch-state changes against exact current editor admission. */
+  guardState(check: (state: unknown) => boolean): () => void {
+    if (this.closed) return () => {};
+    this.stateGuard = check;
+    return () => {if (this.stateGuard === check) this.stateGuard = null;};
+  }
   /** Keep bounded transient geometry/selection in this native incarnation, outside data.json/workspace serialization. */
   retainTransient(id: string, value: PlexViewTransient): void {
     if (this.closed || !this.registry.has(id) || !Object.values(value.camera).every(Number.isFinite) || value.camera.scale <= 0
@@ -70,13 +90,14 @@ export class PlexViewSession {
       const oldest: unknown = this.transient.keys().next().value;
       if (typeof oldest === "string") this.transient.delete(oldest);
     }
-    this.transient.set(id, {attention: value.attention, camera: {...value.camera}, selected: value.selected?.slice(0, 4096) ?? null,
+    this.transient.set(id, {attention: value.attention, ...(value.scope ? {scope: value.scope} : {}), camera: {...value.camera}, selected: value.selected?.slice(0, 4096) ?? null,
       unfolded: value.unfolded.slice(0, 256).filter(key => typeof key === "string" && key.length <= 4096)});
   }
   /** A new attention scope permanently retires references to the previous root; no pages or native objects are retained. */
   readTransient(id: string, attention: NodeId): PlexViewTransient | undefined {
     const value = this.transient.get(id);
-    if (value && value.attention !== attention) {this.transient.delete(id);return undefined;}
+    const expected = this.registry.resolve(id).navigation === "rooted" ? this.roots.get(id) ?? attention : attention;
+    if (value && (value.scope ?? value.attention) !== expected) {this.transient.delete(id);return undefined;}
     return value;
   }
   /** New views keep small area preferences in their own native-session namespace; Classic never writes here. */
@@ -89,20 +110,28 @@ export class PlexViewSession {
     this.areaHeights.set(this.definition.id, {...previous, [key]: height}); this.notify(); this.persist(); return true;
   }
   /** Persist one bounded view-local payload without sharing another view's transient state. */
-  updateState(value: unknown): void {
-    if (this.closed) return;
+  updateState(value: unknown): boolean {
+    if (this.closed) return false;
     let next: unknown;
     try { next = this.definition.restoreState(value); } catch { next = null; }
-    this.states.set(this.definition.id, savedState(next)); this.notify(); this.persist();
+    next = savedState(next);
+    if (this.editors.bindings.length) {
+      try { if (!this.stateGuard || !this.stateGuard(next)) return false; } catch { return false; }
+    }
+    this.states.set(this.definition.id, next); this.notify(); this.persist(); return true;
   }
   /** Native workspace allowlist excludes runtime instances, acquired scope and graph payloads. */
-  getState(): unknown { return {version: 1, id: this.requestedId, states: Object.fromEntries(this.states), areaHeights: Object.fromEntries(this.areaHeights)}; }
+  getState(): unknown { return {version: 1, id: this.requestedId, states: Object.fromEntries(this.states), areaHeights: Object.fromEntries(this.areaHeights), roots: Object.fromEntries(this.roots)}; }
   /** Restore once; malformed and unavailable IDs safely retain the built-in experience. */
   restore(value: unknown): void {
     if (this.closed || this.restored) return;
     this.restored = true;
     if (!value || typeof value !== "object" || Reflect.get(value, "version") !== 1) return;
     const id: unknown = Reflect.get(value, "id"), states: unknown = Reflect.get(value, "states");
+    const roots: unknown = Reflect.get(value, "roots");
+    if (roots && typeof roots === "object") for (const [view, root] of Object.entries(roots).slice(0, 16)) {
+      if (/^[a-z][a-z0-9.-]{0,79}$/.test(view) && typeof root === "string" && root && root.length <= 4096) this.roots.set(view, nodeId(root));
+    }
     if (states && typeof states === "object") for (const [key, state] of Object.entries(states).slice(0, 16)) {
       if (/^[a-z][a-z0-9.-]{0,79}$/.test(key)) this.states.set(key, savedState(state));
     }
@@ -122,9 +151,9 @@ export class PlexViewSession {
   /** Isolate a failed definition without mutating its saved preferences or native document owner. */
   recover(): void { if (this.requestedId === this.registry.fallbackId) {this.retire();this.notify();} else this.select(this.registry.fallbackId); }
   /** Permanent native close, unlike a compatible view change or React remount. */
-  dispose(): void { if (this.closed) return; this.closed = true; this.editors.dispose(); this.retire(); this.listeners.clear(); this.states.clear(); this.transient.clear(); this.areaHeights.clear(); }
+  dispose(): void { if (this.closed) return; this.closed = true; this.editors.dispose(); this.retire(); this.listeners.clear(); this.states.clear(); this.transient.clear(); this.areaHeights.clear(); this.roots.clear(); this.stateGuard = null; }
   /** Every disposer runs even if another outgoing view resource fails to close. */
-  private retire(): void { this.epoch++; this.generation++; for (const dispose of [...this.owned]) {this.owned.delete(dispose);try {dispose();} catch { /* resource failure cannot retain another owner's lifetime */ }} }
+  private retire(): void { this.epoch++; this.generation++; this.stateGuard = null; for (const dispose of [...this.owned]) {this.owned.delete(dispose);try {dispose();} catch { /* resource failure cannot retain another owner's lifetime */ }} }
   /** Re-render session selection/state without semantic publication or a fake navigation visit. */
   private notify(): void { this.generation++; for (const listener of this.listeners) listener(); }
 }

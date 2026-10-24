@@ -91,19 +91,21 @@ function validateProjection(projection: PlexProjection, maximum: number): void {
 export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewRead, source: Pick<GraphIndex, "get" | "titleFor">,
   attention: string, state: unknown, settings: KplexSettings, current: () => boolean,
   editorSize?: {width: number; height: number}, matches: (node: PositionedNode) => boolean = () => true,
-  grouping?: {translate: Translator; unfolded: ReadonlySet<string>; areaHeights?: Readonly<Record<string, number>>},
+  grouping?: {translate: Translator; unfolded: ReadonlySet<string>; areaHeights?: Readonly<Record<string, number>>; layoutRoot?: NodeId},
   editorHost?: OccurrenceEditorHost): PreparedViewScene {
   const empty: HostPlexScene = {nodes: [], edges: [], zoneViewports: {}, zoneAreas: {}};
   try {
     const maximum = Math.min(2048, Math.max(1, settings.maxItemCount * 8 + 1));
     const configuration = readViewConfiguration(definition, settings.canvasViewSettings === undefined ? {} : settings.canvasViewSettings);
     if (configuration.status !== "available") return {scene: empty, projection: null, failure: true};
-    const projection = definition.project({attention: nodeId(attention), read, maximum: settings.maxItemCount, state, configuration});
+    const layoutRoot = definition.navigation === "rooted" ? grouping?.layoutRoot ?? nodeId(attention) : undefined;
+    const projection = definition.project({attention: nodeId(attention), layoutRoot, read, maximum: settings.maxItemCount, state, configuration});
     if (!projection || !current() || !read.isCurrent()) return {scene: empty, projection: null, failure: true};
     validateProjection(projection, maximum);
     if (definition.editorHosting === "occurrence" && editorSize) throw new Error("Occurrence editors require occurrence dimensions");
     if (editorSize && (!projection.editor || projection.occurrences.find(row => row.id === projection.editor)?.nodeId !== attention)) throw new Error("Missing attention editor anchor");
     if (projection.attention !== attention) throw new Error("View changed its admitted attention scope");
+    if (layoutRoot && projection.layoutRoot !== layoutRoot) throw new Error("View changed its admitted root scope");
     const boundEditors = admitOccurrenceEditors(definition, projection, read, source, editorHost);
     const legacyEditor = definition.editorHosting === "occurrence" ? undefined : projection.editor;
     const pages = new Map<string, GraphPage>(), measurements: PlexMeasurement[] = [];
@@ -111,12 +113,12 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
     for (const occurrence of projection.occurrences) {
       const page = occurrence.nodeId && read.node(occurrence.nodeId) ? source.get(occurrence.nodeId) : null; if (!page || page.transient) continue;
       pages.set(occurrence.id, page);
-      const role = occurrence.role ?? (occurrence.nodeId === projection.attention ? "center" : "child"), relation = occurrence.relation ? {page, role: occurrence.relation.role,
+      const role = occurrence.role ?? (occurrence.nodeId === (layoutRoot ?? projection.attention) ? "center" : "child"), relation = occurrence.relation ? {page, role: occurrence.relation.role,
         relationType: occurrence.relation.relationType, typeDefinition: occurrence.relation.definition, linkDirection: occurrence.relation.direction} : null;
       const style = resolveNodeStyle(page, relation, role, settings), label = source.titleFor(page);
       const boundEditor = boundEditors.get(occurrence.id);
       const size = boundEditor?.binding.dimensions ?? (occurrence.id === legacyEditor && editorSize ? editorSize
-        : nodeSize(`${style.prefix ?? ""}${label}`, style.fontSize ?? 18, settings, occurrence.nodeId === projection.attention,
+        : nodeSize(`${style.prefix ?? ""}${label}`, style.fontSize ?? 18, settings, occurrence.nodeId === (layoutRoot ?? projection.attention),
           style.maxLabelLength, style.maxWidth, style.strokeWidth));
       const node: PositionedNode = {page, occurrenceId: occurrence.id, areaId: occurrence.areaId, representation: occurrence.representation,
         role, relationType: relation?.relationType, typeDefinition: relation?.typeDefinition, linkDirection: relation?.linkDirection, physicalPorts: occurrence.ports ?? {}, x: 0, y: 0, ...size, label, style, ...deferredNodeCounts()};

@@ -67,6 +67,8 @@ export type PlexViewLayout = Readonly<{
 }>;
 export type PlexViewInput = Readonly<{
   attention: NodeId; read: PlexViewRead; maximum: number; state: unknown;
+  /** Present only for an opt-in rooted native session; attention remains an independent navigation target. */
+  layoutRoot?: NodeId;
   /** Type-wide configuration is separate from native-session state. */
   configuration?: PlexViewConfiguration;
 }>;
@@ -79,6 +81,8 @@ export interface PlexViewDefinition {
   readonly defaultState: unknown;
   /** Omit for the existing attention-following host. Occurrence hosting requires explicit shared bindings. */
   readonly editorHosting?: "occurrence";
+  /** Omit for attention-scoped geometry and navigation compatibility. */
+  readonly navigation?: "rooted";
   readonly configuration?: PlexViewConfigurationSchema;
   /** Validate only this view's small session state; shared/native settings are not supplied. */
   restoreState(value: unknown): unknown;

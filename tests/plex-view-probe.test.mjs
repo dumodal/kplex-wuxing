@@ -54,7 +54,8 @@ test('non-Classic definition uses the production scene, selection, Find and acti
         return {...projection,occurrences:[...projection.occurrences,{id:'extra-above',nodeId:'Other.md',areaId:'grove',groupingPartition:'upper',representation:'thought',role:'child'}]}}};
       const failedDefinition={...M.probeViewDefinition,id:'test.failed',layout(){throw Error('Deliberate scene failure')}};
       const unavailableDefinition={...M.probeViewDefinition,id:'test.unavailable',project(){return null}};
-      const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.probeViewDefinition,groupedDefinition,failedDefinition,unavailableDefinition]);const session=new M.PlexViewSession(registry,()=>{});session.select('test.situated');
+      const rootedDefinition={...M.probeViewDefinition,id:'test.rooted',navigation:'rooted'};
+      const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.probeViewDefinition,groupedDefinition,failedDefinition,unavailableDefinition,rootedDefinition]);const session=new M.PlexViewSession(registry,()=>{});session.select('test.situated');
       const actionPorts={current:null},activations=[],plugin={settings,index,translator:M.createTranslator('en'),app:{workspace:{...nativeEvents},metadataCache:{...nativeEvents,getFileCache:()=>null},vault:{getFileByPath:path=>pages.get(path)?.file??null,cachedRead:()=>{work.reads++;throw Error('Unexpected note read')}}},
         saveSettings:()=>{work.settingsWrites++;throw Error('Unexpected global settings write')},getTypographyDevice:()=> 'desktop',isKplexLeafVisible:()=>true,subscribeKplexVisibility:subscribe,subscribeNodeFlair:subscribe,getHierarchyColorRevision:()=>0,
         isActionSurfaceCurrent:()=>true,getSavedSettingsPolicy:()=>null};
@@ -133,7 +134,23 @@ test('non-Classic definition uses the production scene, selection, Find and acti
         resizedHeight,heightRestored,retainedSelection,selectionRestored,retainedCamera,cameraRestored,staleOutcome,groupCount,unfolded,normalClassicReads,configuredBefore,configuredAfter,configurationRetainedSession,failureVisible,sameShell,failureAction,recovered,unavailableFallback,remainingFailure,
         errors:[...errors],text:mount.textContent,ports:!!actionPorts.current,work:{...work}};
       releaseAction();
-      root.unmount();session.dispose();plugin.actionManager.dispose();style.remove();mount.remove();return {...snapshot,events:events.size,after:{...work}};
+      root.unmount();session.dispose();plugin.actionManager.dispose();const legacyEvents=events.size,legacyAfter={...work};
+      for(const key of Object.keys(work))work[key]=0;
+      const rootedSession=new M.PlexViewSession(registry,()=>{});rootedSession.select('test.rooted');rootedSession.setRoot('Root.md');
+      plugin.actionManager=new M.ActionManager({readCommandContext:()=>({sharedCenter:null,focusRegion:'graph'}),validateNode:()=>true});
+      props.viewSession=rootedSession;props.activePath='Focus.md';const rootedRoot=M.createRoot(mount);
+      function RootedHarness(){const revision=M.useSyncExternalStore(rootedSession.subscribe,rootedSession.getSnapshot);return M.createElement(M.PlexGraph,{...props,viewDefinition:rootedSession.definition,viewRevision:revision})}
+      M.flushSync(()=>rootedRoot.render(M.createElement(RootedHarness)));await new Promise(resolve=>setTimeout(resolve,50));
+      const releaseRootedAction=plugin.actionManager.registerSurface({id:'probe',generation:2,get implementations(){return actionPorts.current.implementations},
+       readSnapshot:()=>({mounted:true,visible:true,windowId:'test',center:M.actionNodeRef(pages.get(props.activePath)),selected:actionPorts.current.readSelected(),focusRegion:'graph',interactionRevision:0,viewRevision:rootedSession.getSnapshot()})});
+      const rootNode=mount.querySelector('[data-kplex-keyboard-id="layout-root"]');
+      await act('selection.center');await act('selection.section.up');await act('view.pan.right');await new Promise(resolve=>setTimeout(resolve,40));
+      const rootedBefore={camera:mount.querySelector('.kplex-camera').style.transform,selection:actionPorts.current.readSelected()?.occurrenceId,semantic:work.semantic};
+      props.activePath='Other.md';M.flushSync(()=>rootedRoot.render(M.createElement(RootedHarness)));await new Promise(resolve=>setTimeout(resolve,50));
+      const rootedProof={before:rootedBefore,after:{camera:mount.querySelector('.kplex-camera').style.transform,selection:actionPorts.current.readSelected()?.occurrenceId,semantic:work.semantic},
+       root:rootedSession.layoutRoot(props.activePath),rootPresent:!!rootNode,sameRootElement:mount.querySelector('[data-kplex-keyboard-id="layout-root"]')===rootNode,failed:!!mount.querySelector('.kplex-view-error')};
+      releaseRootedAction();rootedRoot.unmount();rootedSession.dispose();plugin.actionManager.dispose();rootedProof.releases=work.releases;rootedProof.events=events.size;
+      style.remove();mount.remove();return {...snapshot,events:legacyEvents,after:legacyAfter,rooted:rootedProof};
     })()`);
     assert.deepEqual(result.physicalPorts,['left']);assert.equal(result.physicalCount,'1');
     assert.deepEqual(result.errors,[]);assert.equal(result.ports,true);assert.equal(result.nodes.length,4);
@@ -150,5 +167,10 @@ test('non-Classic definition uses the production scene, selection, Find and acti
     assert.equal(result.failureAction.status,'unavailable');assert.equal(result.recovered,'classic');assert.equal(result.remainingFailure,false);
     assert.equal(result.work.settingsWrites,0);assert.equal(result.work.semantic,1);assert.equal(result.after.releases,1);assert.equal(result.after.presentation,0);assert.equal(result.events,0);
     assert.equal(result.after.reads,0);assert.equal(result.after.parses,0);assert.equal(result.after.publishes,0);
+    assert.equal(result.rooted.failed,false);assert.equal(result.rooted.rootPresent,true);assert.equal(result.rooted.root,'Root.md');assert.equal(result.rooted.sameRootElement,true);
+    assert.equal(result.rooted.before.selection,'repeat-above');assert.match(result.rooted.before.camera,/translate/);
+    assert.equal(result.rooted.after.camera,result.rooted.before.camera);assert.equal(result.rooted.after.selection,result.rooted.before.selection);
+    assert.equal(result.rooted.before.semantic,2,'Initial rooted render retains separate root and attention leases');assert.equal(result.rooted.after.semantic,3,'Attention change acquires only the new attention lease');
+    assert.equal(result.rooted.releases,3);assert.equal(result.rooted.events,0);
   } finally {await host.cleanup();}
 });

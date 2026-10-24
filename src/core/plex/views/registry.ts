@@ -15,6 +15,7 @@ export class PlexViewRegistry {
       if (definition.editorHosting !== undefined && (definition.editorHosting !== "occurrence" || !definition.capabilities.editor)) {
         throw new Error("Unsupported internal editor hosting policy");
       }
+      if (definition.navigation !== undefined && definition.navigation !== "rooted") throw new Error("Unsupported internal navigation policy");
       this.definitions.set(definition.id, definition);
     }
     if (!this.definitions.has(fallbackId)) throw new Error("Missing fallback Plex view definition");
