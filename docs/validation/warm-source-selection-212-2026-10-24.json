@@ -6466,5 +6466,14 @@
       "configurationAndOriginalArtifactsByteExact": true,
       "qualification": "The first restoration guard stopped before file writes because the app registry retained open=true after close. The exact recorded Small renderer had exited; offline restoration then succeeded and only the Small startup flag was reset. No other vault was opened or modified."
     }
+  },
+  "legacyControlQualification": {
+    "currentFormatOwners": 1,
+    "legacyOwners": 1,
+    "currentOwnerTransactionDelta": -1,
+    "legacyOwnerTransactionDelta": 1,
+    "netTransactionDelta": 0,
+    "headGetDelta": 2,
+    "qualification": "Legacy fallback adds one optional probe transaction per legacy owner. The control mixes one legacy and one current owner; it is not evidence of unchanged legacy-only latency."
   }
 }

@@ -72,11 +72,13 @@ three pairs cannot establish statistical certainty or a production-vault speedup
 | Host comparison, 32 | 130 → 98 | 96 → 96 | 96 | 32 | 32/32 |
 | Complete reconcile, 128 | 777 → 649 | 640 → 640 | 512 | 128 | 128/128 |
 | Complete dense/multichunk, 2 | 31 → 29 | 10 → 10 | 18 | 6 | 2/2 |
-| Complete supported legacy, 2 | 29 → 29 | 12 → 14 | 17 | 5 | 7/7 |
+| Complete mixed current/legacy, 2 | 29 → 29 | 12 → 14 | 17 | 5 | 7/7 |
 | Complete mixed family revisions, 2 | 21 → 19 | 10 → 10 | 8 | 2 | 3/3 |
 
-Legacy fallback gains no transactions and performs two additional head requests. No legacy gain is
-claimed. All diagnostic transactions completed with zero pending/aborted transactions. Hashes,
+The two-owner legacy control contains one current-format and one legacy owner. The current owner
+saves one transaction; the legacy owner adds one optional probe transaction, giving no net saving
+and two additional head requests in this control. A legacy-heavy inventory can therefore pay
+additional coordination cost. No legacy gain or unchanged legacy latency is claimed. All diagnostic transactions completed with zero pending/aborted transactions. Hashes,
 decode counts and leases are unchanged within each matched arm.
 
 The optional probe is not free on exceptional owners: a genuinely missing head still falls back to
