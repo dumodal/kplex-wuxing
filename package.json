@@ -56,6 +56,7 @@
     "verify:obsidian:rename": "node scripts/testing/obsidian/renameIdentity.mjs",
     "verify:obsidian:canvas-settings": "node scripts/testing/obsidian/canvasSettings.mjs",
     "verify:obsidian:plex-views": "node scripts/testing/obsidian/plexViews.mjs",
+    "verify:obsidian:occurrence-editors": "node scripts/testing/obsidian/occurrenceEditors.mjs",
     "verify:obsidian:plex-sessions": "node scripts/testing/obsidian/plexSessions.mjs",
     "verify:obsidian:sections": "node scripts/testing/obsidian/sectionExpansion.mjs",
     "verify:obsidian:label-sharpness": "node scripts/testing/obsidian/labelSharpness.mjs",

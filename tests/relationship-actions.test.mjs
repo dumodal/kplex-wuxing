@@ -595,7 +595,7 @@ test("navigation with autofit disabled recenters without resetting manual scale"
     centralEditorAvailabilityRef: { current: false }, centralEditorAvailable: false, centralEditorSize: null,
     incomingCenter: { current: null }, centralEditorSizeKeyRef: { current: "" }, previousNodeRects: { current: new Map([["prior", {}]]) },
     pathChangedThisRender: true, settings: { allowAutozoom: false, animationSpeed: 0 },
-    automaticFit: { current: null }, activePath: "Center.md", centralEditorMaximized: false,
+    automaticFit: { current: null }, activePath: "Center.md", sceneScope: "Center.md", rooted: false, centralEditorMaximized: false,
     camera: { current: camera }, sameFitCamera: (a, b) => a.x === b.x && a.y === b.y && a.scale === b.scale,
     cameraIntentPlaced: { current: true },
     fit: () => { calls.push("fit"); Object.assign(camera, { scale: 0.4, x: 90, y: 120 }); },

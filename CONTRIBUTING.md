@@ -1470,3 +1470,25 @@ owns a timestamped fixture folder and restores settings/layout/resources in
 Run existing sessions/groups/actions/workflow/sections lanes serially for Classic
 regressions. Native automation and desktop mobile emulation do not establish
 physical Windows, phone or tablet input acceptance.
+
+
+### Occurrence-editor prerequisite acceptance
+
+After exact-build staging in backed-up Small, run
+`npm run verify:obsidian:occurrence-editors` with the three explicit disposable-vault
+variables and a fresh report directory. The test-only opt-in definition uses the actual
+shared actions, scene, native Markdown controller and existing session. It checks root R,
+attention A/C and editor B1, duplicate B2/capacity one, genuinely dirty text/nonempty
+selection/focus through resize/reflow/scroll clipping, exact filtering, rejected-save and
+authoritative-removal recovery, bounded intent restoration, main/popout migration,
+external Vault rename/deletion/recreation and durable teardown. It awaits actual source
+maintenance settlement before reopening a saved document; it does not retry a rejected
+action. Production definitions remain unchanged until their own feature registers them.
+
+Run browser/native drivers serially and retain failed samples. The earlier FileManager
+rename producer stalled at the native cache-clean gate; Vault.rename exercises external
+mutation separately and does not turn that workflow into a pass. This lane's view
+recreation is not a whole-application restart, native Electron input is not physical
+mobile/Windows acceptance, and simultaneous editors are unsupported. See the
+[interim report](docs/validation/occurrence-editors-219-2026-10-25.md) for evidence,
+restoration and remaining checks.

@@ -5,6 +5,7 @@ import {join} from 'node:path';
 import {runControlledProbe} from './controlledProbe.mjs';
 import {nativeDocumentSessions} from './nativeDocumentSessions.mjs';
 
+/** Exercise the real shared occurrence host and restore every owned fixture on settled exits. */
 async function scenario(app,c){
  const p=app.plugins.plugins['k-plex'],workspace=app.workspace;
  if(!p||app.vault.getFiles().length>=1000||app.setting.isOpen)throw Error('Clean disposable Small required');
@@ -75,10 +76,15 @@ async function scenario(app,c){
   panel.querySelector('.kplex-filter-clear').click();panel.querySelector('.kplex-filter-close')?.click();if(document.querySelector('.kplex-filter-panel'))root().querySelector('.kplex-filter-trigger').click();
   cases.push({id:'exact-filter-pin-branch-removal-and-selector-guards'});c.progress={phase:'save-failure',cases};
   const save=leaf.view.save;leaf.view.save=async()=>{throw Error('Owned native save rejection')};restores.push(()=>{leaf.view.save=save});
-  const rejected=await act('editor.collapse',{bindingId:binding.id});check(rejected.status==='failed'&&instance()===leaf&&editor.getValue()===dirty.value&&!currentBinding().closing,'Failed save discarded native editor');leaf.view.save=save;
+  const rejected=await act('editor.collapse',{bindingId:binding.id});check(rejected.status==='failed'&&instance()===leaf&&editor.getValue()===dirty.value&&!currentBinding().closing,'Failed save discarded native editor');
+  const excluded=p.settings.excludeFilepaths;p.settings.excludeFilepaths=[...excluded,path('B')];p.index.notifyPresentation();
+  await until(()=>root()?.querySelector('.kplex-view-error')&&currentBinding()&&!currentBinding().closing,'Authoritative removal did not retain the rejected-save binding');
+  check(instance()===leaf&&editor.getValue()===dirty.value&&attention()===path('C')&&session.layoutRoot(path('C'))===path('R'),'Rejected save during removal lost or retargeted native buffer');
+  p.settings.excludeFilepaths=excluded;p.index.notifyPresentation();await until(()=>!root()?.querySelector('.kplex-view-error')&&instance()===leaf,'Visibility recovery replaced the native host');
+  cases.push({id:'authoritative-removal-save-failure-retains-buffer-for-explicit-recovery'});leaf.view.save=save;
   check((await act('editor.collapse',{bindingId:binding.id})).status==='completed','Explicit collapse did not complete');await until(()=>!overlay()&&!session.editors.bindings.length,'Collapsed native host remains');check((await app.vault.read(files.find(file=>file.path===path('B')))).includes('Kplex-219-dirty-geometry'),'Native collapse lost edits');
   cases.push({id:'native-save-failure-retention-and-explicit-durable-collapse'});c.progress={phase:'restoration-and-migration',cases};
-  await p.closeSidecar(host);await p.setDocumentSyncMode(host,'off');await selectB1();check((await act('editor.expand')).status==='completed','Reopen rejected');await until(()=>content()&&instance()?.view.editor,'Reopened editor absent');
+  await p.closeSidecar(host);await p.setDocumentSyncMode(host,'off');await until(()=>!p.index.hasPendingSemanticPreparation()&&!p.index.hasActiveSemanticPreparation(),'Saved removal-recovery source work did not settle');await selectB1();const reopened=await act('editor.expand');check(reopened.status==='completed','Reopen rejected: '+JSON.stringify(reopened));await until(()=>content()&&instance()?.view.editor,'Reopened editor absent');
   const saved=host.view.getState();check(!JSON.stringify(saved).includes('fileIdentity'),'Workspace contains native file token');await host.setViewState({type:'empty',active:false});await host.setViewState({type:'k-plex-react-view',state:saved,active:true});await host.view.waitUntilReady();
   session=host.view.documentSession.plexView;session.registry=testRegistry;session.recover();session.select(probe.id);await until(()=>content()&&currentBinding()&&instance()?.view.file?.path===path('B'),'Owned view restoration failed to admit B');
   check(session.layoutRoot(path('C'))===path('R')&&attention()===path('C'),'Restoration changed root or attention');cases.push({id:'bounded-editor-intent-restores-after-native-view-recreation',applicationRestart:false});
@@ -88,10 +94,10 @@ async function scenario(app,c){
   const parents=[];workspace.iterateRootLeaves(candidate=>{if(candidate!==host&&candidate.view.containerEl.ownerDocument===document&&candidate.view.containerEl.isConnected)parents.push(candidate.parent)});check(parents.length,'Main native parent absent');host.parent.removeChild(host);parents[0].insertChild(parents[0].children.length,host);await workspace.revealLeaf(host);await host.view.waitUntilReady();
   await until(()=>host.view.contentEl.ownerDocument===document&&instance()?.view.editor?.getValue().includes('Kplex-219-dirty-migration'),'Main migration lost B');
   check((await act('editor.collapse',{bindingId:currentBinding().id})).status==='completed','Post-migration collapse rejected');check((await app.vault.read(files.find(file=>file.path===path('B')))).includes('Kplex-219-dirty-migration'),'Migration did not persist native buffer');cases.push({id:'dirty-popout-main-native-migration-and-durable-close'});
-  c.progress={phase:'rename-and-delete',cases};await selectB1();check((await act('editor.expand')).status==='completed','Rename control reopen rejected');await until(()=>content()&&instance()?.view.editor,'Rename control editor absent');
-  const B=files.find(file=>file.path===path('B'));await markDirty(instance().view.editor,'Kplex-219-dirty-rename');await app.fileManager.renameFile(B,path('B-renamed'));
+  c.progress={phase:'rename-and-delete',cases};const m=app.metadataCache;const cacheGate={clean:m.isCacheClean(),inProgress:m.inProgressTaskCount,queued:m.linkResolverQueue.items.length,running:m.linkResolverQueue.runnable.isRunning()};c.progress={...c.progress,cacheGate};await selectB1();check((await act('editor.expand')).status==='completed','Rename control reopen rejected');await until(()=>content()&&instance()?.view.editor,'Rename control editor absent');
+  const B=files.find(file=>file.path===path('B'));await markDirty(instance().view.editor,'Kplex-219-dirty-rename');await app.vault.rename(B,path('B-renamed'));
   await until(()=>!session.editors.bindings.length&&!overlay(),'Renamed occurrence was not safely retired');check((await app.vault.read(B)).includes('Kplex-219-dirty-rename')&&!app.vault.getFileByPath(path('B')),'Rename lost edits or recreated old identity');
-  await app.fileManager.renameFile(B,path('B'));await until(()=>root()?.querySelector('[data-kplex-keyboard-id="repeat-above"]')&&!root().querySelector('.kplex-view-error'),'Renamed-back occurrence not ready');cases.push({id:'external-rename-flushes-bound-document-without-old-path-resurrection'});
+  await app.vault.rename(B,path('B'));await until(()=>root()?.querySelector('[data-kplex-keyboard-id="repeat-above"]')&&!root().querySelector('.kplex-view-error'),'Renamed-back occurrence not ready');cases.push({id:'external-rename-flushes-bound-document-without-old-path-resurrection'});
   await selectB1();check((await act('editor.expand')).status==='completed','Deletion control reopen rejected');await until(()=>content()&&instance()?.view.editor,'Deletion control editor absent');
   const deletedBinding=currentBinding(),deletedRef={identity:deletedBinding.target.nodeId,path:deletedBinding.target.path,fileIdentity:deletedBinding.target.fileIdentity,kind:'file'};await markDirty(instance().view.editor,'Kplex-219-dirty-deletion');await app.vault.delete(B,true);
   await until(()=>!session.editors.bindings.length&&!overlay(),'Deleted occurrence retained a live editor');await wait(2300);
@@ -106,7 +112,7 @@ async function scenario(app,c){
   check(legacy.editorHosting===undefined&&legacy.navigation===undefined,'Compatibility probe adopted M0');cases.push({id:'unchanged-off-centre-attention-definition-and-Compass-native-compatibility'});
   await host.setViewState({type:'empty',active:false});await untilSaved(files.find(file=>file.path===path('C')),'Kplex-219-legacy-attention');
   check(![...embedded].some(owned=>owned.view.containerEl.isConnected)&&!session.editors.bindings.length&&!session.canSelect('classic'),'Native teardown retained an editor owner');cases.push({id:'native-teardown-persists-content-and-releases-editor-owners'});
-  c.progress={phase:'complete',cases};return{cases,capacity:1,limits:['One live editor per canvas.','Native Electron automation; no physical mobile/Windows acceptance.','Owned view recreation is not a whole-application restart.']};
+  c.progress={phase:'complete',cases};return{cases,cacheGate,capacity:1,limits:['One live editor per canvas.','Native Electron automation; no physical mobile/Windows acceptance.','Owned view recreation is not a whole-application restart.','External rename uses Vault.rename; the separate FileManager cache-gate failure remains unpassed.']};
  }catch(error){failure=error;c.progress={...c.progress,cases,diagnostic:{attention:host?.view.documentSession?.centerPath,binding:session?.editors.bindings.map(item=>({id:item.id,occurrence:item.occurrenceId,closing:item.closing})),status:root()?.querySelector('.kplex-central-editor-status')?.textContent,failed:!!root()?.querySelector('.kplex-view-error')}};throw error}
  finally{
   const errors=[];const clean=async(label,action)=>{try{await action();cleanup.push({label,status:'passed'})}catch(error){errors.push(label+': '+String(error));cleanup.push({label,status:'failed'})}c.progress={...c.progress,cleanup}};

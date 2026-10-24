@@ -28,7 +28,7 @@ function callback(name, dependencies) {
 
 /** Supply an asymmetric displayed scene and real camera application/fit/layout owners. */
 function graphFixture() {
-  const ctx={camera:{current:{x:0,y:0,scale:1}},automaticFit:{current:null},activePath:'Center.md',
+  const ctx={camera:{current:{x:0,y:0,scale:1}},automaticFit:{current:null},activePath:'Center.md',rooted:false,
     cameraIntentPlaced:{current:false},
     centralEditorOverlayElement:{current:null},cameraWritePending:{current:false},compassCenter:{current:null},compassSync:{current:()=>false},requestCameraFrame:()=>{},
     cameraFrame:{current:1},cameraElement:{current:null},syncCentralEditorOverlay:()=>{},
@@ -40,7 +40,7 @@ function graphFixture() {
   ctx.viewport={current:{clientWidth:800,clientHeight:600,clientLeft:0,clientTop:0,getBoundingClientRect:()=>({left:0,top:0}),ownerDocument:{defaultView:{getComputedStyle:()=>({transformOrigin:'100px 50px'})}},querySelectorAll:()=>[
     {classList:{contains:value=>value==='kplex-role-center'},dataset:{kplexPath:ctx.activePath},getBoundingClientRect:()=>({left:300,top:250,width:200,height:100})}]}};
   /** Rebind render-owned callbacks after navigation just as React composition does. */
-  ctx.render=()=>{ctx.classic=true;ctx.areaForNode=callback('areaForNode',ctx);ctx.framingOccurrence=callback('framingOccurrence',ctx);ctx.applyCamera=callback('applyCamera',ctx);ctx.flushCameraTransform=callback('flushCameraTransform',ctx);ctx.fit=callback('fit',ctx);ctx.layout=callback('layout',ctx);};
+  ctx.render=()=>{ctx.sceneScope=ctx.rooted ? 'Root.md' : ctx.activePath;ctx.classic=true;ctx.areaForNode=callback('areaForNode',ctx);ctx.framingOccurrence=callback('framingOccurrence',ctx);ctx.applyCamera=callback('applyCamera',ctx);ctx.flushCameraTransform=callback('flushCameraTransform',ctx);ctx.fit=callback('fit',ctx);ctx.layout=callback('layout',ctx);};
   ctx.render();return ctx;
 }
 
@@ -88,11 +88,11 @@ test('same-center navigation-origin changes retain outline expansion while genui
   /** Locate the production owner instead of recreating its outline policy. */
   const visit=node=>{
     if(ts.isCallExpression(node)&&node.expression.getText(source)==='useEffect'
-      &&node.arguments[0]?.getText(source).includes('transitionPath.current = activePath'))effect=node;
+      &&node.arguments[0]?.getText(source).includes('transitionPath.current = sceneScope'))effect=node;
     ts.forEachChild(node,visit);
   };
   visit(source);assert(effect);
-  const ctx={activePath:'Center.md',navigationOrigin:'follow',settings:{animationSpeed:1},transitionPath:{current:'Center.md'},sectionFoldCenter:{current:'Center.md'},
+  const ctx={activePath:'Center.md',sceneScope:'Center.md',navigationOrigin:'follow',settings:{animationSpeed:1},transitionPath:{current:'Center.md'},sectionFoldCenter:{current:'Center.md'},
     setSectionExpanded(){ctx.expanded=false},setSectionExpansion(){ctx.expansion=null},setExpandedSectionIds(ids){ctx.ids=ids}};
   const js=ts.transpileModule(`const effect=${effect.arguments[0].getText(source)};const deps=${effect.arguments[1].getText(source)};`,{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
   let previous;
@@ -103,7 +103,7 @@ test('same-center navigation-origin changes retain outline expansion while genui
   };
   render();ctx.expanded=true;ctx.expansion={outline:true};ctx.ids=new Set(['section']);
   ctx.navigationOrigin='user';render();assert.equal(ctx.expanded,true);assert.deepEqual([...ctx.ids],['section']);assert(ctx.expansion);
-  ctx.activePath='Next.md';render();assert.equal(ctx.expanded,false);assert.equal(ctx.expansion,null);assert.equal(ctx.ids.size,0);
+  ctx.activePath='Next.md';ctx.sceneScope=ctx.activePath;render();assert.equal(ctx.expanded,false);assert.equal(ctx.expansion,null);assert.equal(ctx.ids.size,0);
 });
 
 test('passive follow retires a deliberate transition through its original owning window', /** Execute the production transition effect across two window identities. */ () => {
@@ -225,7 +225,14 @@ test('the actual thought-corner control forwards modifier-bearing events while s
   let corner;
   /** Confirm the rendered graph connects the corner control to the tested opening owner. */
   const graphVisit=node=>{if(ts.isJsxAttribute(node)&&node.name.text==='cornerAction')corner=node.initializer.expression.whenTrue;ts.forEachChild(node,graphVisit);};graphVisit(source);assert(corner);
-  assert.equal(corner.properties.find(p=>p.name.text==='onClick').initializer.getText(source),'openCentralEditor');
+  const routing=ts.transpileModule(`const route=${corner.properties.find(p=>p.name.text==='onClick').initializer.getText(source)};`,{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
+  for(const occurrenceEditorPolicy of [false,true]){
+    let forwarded,request;const baseNode={page:{path:'B.md'},occurrenceId:'B1'};
+    const route=Function('occurrenceEditorPolicy','openCentralEditor','runNodeAction','baseNode','occurrenceKey',`${routing};return route;`)(occurrenceEditorPolicy,event=>{forwarded=event},(...args)=>{request=args},baseNode,node=>node.occurrenceId);
+    const event={metaKey:true};route(event);
+    if(occurrenceEditorPolicy){assert.deepEqual(request,['editor.expand',baseNode.page,'B1']);assert.equal(forwarded,undefined)}
+    else{assert.equal(forwarded,event);assert.equal(request,undefined)}
+  }
   let actual;const handler=Function('cornerAction',`${output};return handler;`)({onClick:event=>{actual=event;}});
   for(let mask=0;mask<16;mask++){let prevented=false,stopped=false;const event={altKey:!!(mask&1),ctrlKey:!!(mask&2),metaKey:!!(mask&4),shiftKey:!!(mask&8),preventDefault(){prevented=true;},stopPropagation(){stopped=true;}};handler(event);assert.equal(actual,event);assert(prevented&&stopped);}
 });
