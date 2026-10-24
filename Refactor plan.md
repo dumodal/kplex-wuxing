@@ -6020,3 +6020,18 @@ Native exact-build acceptance exposed retained virtual notes counted as physical
 ### 2026-10-24 - PR211 final portable and exact-artifact validation
 
 Runtime checkpoint15c6fdef144d329fba2d14ea1e4298850686bf09 passed complete npm run verify on Node22.22.2:7 release,130 core,1417 main,228 UI,357 source contracts,739 real IndexedDB/browser checks; zero failures/cancellations/skips, aggregate Node/shell exit0. Architecture, real types, official scanner and production build pass. Final build exactly matches native-tested b808dd5f1bf3db150c66efe352b73fd0fb64b2f1528d58cad60547441d66cb32 plus unchanged manifest/styles. CI439 pending. Requested UI behavior passes; older notification-count diagnostic remains failed and explicitly qualified for review. No additional manual check requested; Mac/mobile unrun. Keep PR211 draft.
+
+
+### 2026-10-24 - Sidecar modifier-click maximize implementation
+
+Base6fa936d; branch2026-10-24-sidecar-modifier-maximize. Shared stateless modifier predicate and finite action intent compose existing native open/fold and unfold/close owners. Source/session/view-generation and delayed focus guards remain; no storage/indexing/settings change. Both tooltips carry explicitly requested ALT/OPT copy in all8 locales. Focused110/110 controls pass; full renewed verification is running. Native modifier-only driver prepared and syntax checked. Foreground access is explicitly paused until maintainer says ready; native/main-window allocation remains pending, Mac/mobile unrun. Highest risk: stale layout/reveal closing a replacement pane or unsupported topology; guarded tests cover these owner boundaries, exact native checks remain necessary. See docs/validation/sidecar-modifier-maximize-2026-10-24.md. No merge/release/production deployment.
+
+
+### 2026-10-24 - Sidecar recovery synchronous focus fence
+
+A production-owner reproducer showed same-leaf ownership ABA during a synchronous native focus callback could escape the new optional close guard. Recovery now rechecks the existing revision/generation/attachment/focus certificate after focus. Before reproducer fails; corrected focused111/111 and real-dependency build/type check pass. First full run retained as failed after Chromium bundle startup prerequisite (227/228 UI); isolated unchanged case passes1/1 without altered deadlines. Renew full verification on corrected runtime. Foreground WAIT remains explicit; no native acceptance, merge/release/production deployment.
+
+
+### 2026-10-24 - Sidecar modifier validation scope
+
+Maintainer directed proportional UI-only validation; no indexing/performance campaign. Current111 focused tests, real build/types, scanner and architecture pass. Second full local run deliberately interrupted after release/core/main/UI/source-contract checks; browser lane incomplete. Earlier startup prerequisite failure and isolated passing retry retained. Runtime/artifact unchanged at da282fe / main49dc4d0d1a599a110b9d7e3a75c4e7b62fe6c3edfcb571588c0dccc672878ea8. Highest remaining risk is native modifier delivery/allocation/cleanup; guarded Windows matrix pending explicit ready, Mac/mobile unrun. No foreground access/staging yet; no further full local verification required.

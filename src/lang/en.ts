@@ -1485,7 +1485,7 @@ export const englishCatalog = {
     params: [],
   },
   "sidecar.unfoldPlex": {
-    message: "Unfold K-Plex tab group",
+    message: "Unfold K-Plex tab group. ALT/OPT+click: close Sidecar and expand K-Plex.",
     context: "Recovery button on the surviving native Sidecar group, including when another tab is selected.",
     params: [],
   },
@@ -1850,7 +1850,7 @@ export const englishCatalog = {
     params: [],
   },
   "app.openSidecarAt": {
-    message: "Open Sidecar on the {position}",
+    message: "Open Sidecar on the {position}. ALT/OPT+click: open at full size.",
     context: "K-Plex host shell, command, toolbar, and status copy.",
     params: ["position"], referenceParams: [],
   },
