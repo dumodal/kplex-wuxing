@@ -4,8 +4,8 @@ import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import ts from 'typescript';
 import {loadPortableModules} from './support/portableTypeScript.mjs';
-const {exports: {centeredViewportFit, sameFitCamera, EmbeddedDrawingFit, centerArrivalFrames}} = loadPortableModules([
-  'src/ui/components/viewportFit.ts', 'src/adapters/obsidian/EmbeddedDrawingFit.ts', 'src/ui/components/centerArrival.ts']);
+const {exports: {centeredViewportFit, sameFitCamera, EmbeddedDrawingFit, centerArrivalFrames, hasClickModifier}} = loadPortableModules([
+  'src/ui/components/viewportFit.ts', 'src/adapters/obsidian/EmbeddedDrawingFit.ts', 'src/ui/components/centerArrival.ts', 'src/ui/components/modifierClick.ts']);
 const source=ts.createSourceFile('graph.tsx',readFileSync('src/ui/PlexGraph.tsx','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
 
 /** Run production callbacks with explicit finite composition dependencies, without a second policy. */
@@ -16,6 +16,9 @@ function callback(name, dependencies) {
     if(name!=='layout'&&ts.isVariableDeclaration(node)&&node.name.getText(source)===name&&ts.isArrowFunction(node.initializer))selected=node.initializer.getText(source);
     if(name==='layout'&&ts.isCallExpression(node)&&node.expression.getText(source)==='useLayoutEffect'
       &&node.arguments[0]?.getText(source).includes('const shouldRecenter'))selected=node.arguments[0].getText(source);
+    if(name==='sidecar'&&ts.isCallExpression(node)&&node.expression.getText(source)==='useEffect'
+      &&node.arguments[0]?.getText(source).includes('previousSidecarOpen.current === sidecarOpen'))selected=node.arguments[0].getText(source);
+    if(name==='reframeSidecarViewport'&&ts.isBinaryExpression(node)&&node.left.getText(source)==='reframeSidecarViewport.current')selected=node.right.getText(source);
     ts.forEachChild(node,visit);
   };
   visit(source);assert(selected,name);
@@ -167,6 +170,64 @@ test('manual input during an initially empty neighborhood remains authoritative 
   const ctx=graphFixture(),nodes=ctx.scene.nodes;ctx.scene.nodes=[];ctx.layout();ctx.pathChangedThisRender=false;
   ctx.applyCamera({x:123,y:91,scale:0.7});ctx.scene.nodes=nodes;ctx.render();ctx.layout();
   assert.deepEqual(ctx.camera.current,{x:123,y:91,scale:0.7});assert.equal(ctx.automaticFit.current,null);
+});
+
+test('Sidecar open/close frames the latest focal node at every pane orientation, fitting only when autozoom is enabled',()=>{
+  for(const allowAutozoom of [false,true])for(const [width,height]of [[400,600],[1200,600],[800,300],[800,900]]) {
+    const ctx=graphFixture();Object.assign(ctx.viewport.current,{isConnected:true,clientWidth:width,clientHeight:height});
+    ctx.settings.allowAutozoom=allowAutozoom;ctx.camera.current={x:91,y:83,scale:1.7};ctx.automaticFit.current=null;
+    callback('reframeSidecarViewport',ctx)();
+    const camera=ctx.camera.current;
+    assert(Math.abs(camera.x+30*camera.scale-width/2)<1e-9);assert(Math.abs(camera.y-20*camera.scale-height/2)<1e-9);
+    if(allowAutozoom)assert(ctx.automaticFit.current,'Sidecar framing renews the existing fit owner after manual movement');
+    else {assert.equal(camera.scale,1.7);assert.equal(ctx.automaticFit.current,null);}
+  }
+  for(const condition of [{isConnected:false},{clientWidth:0},{clientHeight:0}]) {
+    const ctx=graphFixture();Object.assign(ctx.viewport.current,{isConnected:true},condition);const prior={...ctx.camera.current};
+    callback('reframeSidecarViewport',ctx)();assert.deepEqual(ctx.camera.current,prior,'Hidden/retired viewports do not write the camera');
+  }
+});
+
+test('Sidecar framing waits for layout, uses the latest render and releases its owning-window frames and input listeners',()=>{
+  for(const opening of [false,true])for(const interrupt of [null,'pointerdown','wheel','keydown','navigation']) {
+    const frames=new Map(),listeners=new Map();let serial=0,framed=0;
+    const owner={requestAnimationFrame(fn){const id=++serial;frames.set(id,fn);return id;},cancelAnimationFrame(id){frames.delete(id);}};
+    const el={ownerDocument:{defaultView:owner},addEventListener(type,fn){listeners.set(type,fn);},removeEventListener(type,fn){if(listeners.get(type)===fn)listeners.delete(type);}};
+    const ctx={viewport:{current:el},previousSidecarOpen:{current:!opening},sidecarOpen:opening,reframeSidecarViewport:{current:()=>{throw Error('Stale render');}}};
+    const cleanup=callback('sidecar',ctx)();assert.equal(frames.size,1);assert.equal(listeners.size,3);
+    const first=[...frames.values()][0];frames.clear();first();assert.equal(framed,0);assert.equal(frames.size,1);
+    const retired=[...frames.values()][0];ctx.reframeSidecarViewport.current=()=>framed++;
+    if(interrupt==='navigation')cleanup();else if(interrupt)listeners.get(interrupt)();
+    frames.clear();retired();assert.equal(framed,interrupt?0:1);assert.equal(listeners.size,0);cleanup();assert.equal(frames.size,0);
+    assert.equal(callback('sidecar',ctx)(),undefined,'Unchanged ownership, unrelated notifications and ordinary splitter resizing never schedule framing');
+  }
+});
+
+test('central-editor opening accepts every modifier through the existing expansion/camera owner and retains sidepanel restrictions',()=>{
+  for(const centralEditorCanMaximize of [false,true])for(let mask=0;mask<16;mask++) {
+    const camera={x:81,y:53,scale:1.7};let enabled=false;
+    const ctx={hasClickModifier,centralEditorCanMaximize,centralEditorMaximized:false,camera:{current:camera},
+      preserveCameraOnNextLayout:{current:false},suppressAutoFitUntil:{current:0},centralEditorRestoreCamera:{current:null},restoreCentralEditorCamera:{current:false},
+      setCentralEditorMaximized(value){ctx.centralEditorMaximized=value;},onCentralNodeEditorChange(value){enabled=value;}};
+    ctx.setCentralEditorMaximizedState=callback('setCentralEditorMaximizedState',ctx);
+    callback('openCentralEditor',ctx)({altKey:!!(mask&1),ctrlKey:!!(mask&2),metaKey:!!(mask&4),shiftKey:!!(mask&8)});
+    assert.equal(enabled,true);assert.equal(ctx.centralEditorMaximized,centralEditorCanMaximize&&mask!==0);
+    if(ctx.centralEditorMaximized){assert.deepEqual(ctx.centralEditorRestoreCamera.current,camera);ctx.setCentralEditorMaximizedState=callback('setCentralEditorMaximizedState',ctx);ctx.setCentralEditorMaximizedState(false);assert.equal(ctx.restoreCentralEditorCamera.current,true);}
+    else assert.equal(ctx.centralEditorRestoreCamera.current,null,'Ordinary opening and unsupported expansion do not claim the camera');
+  }
+});
+
+test('the actual thought-corner control forwards modifier-bearing events while stopping native navigation/bubbling',()=>{
+  const file=ts.createSourceFile('ThoughtNode.tsx',readFileSync('src/ui/ThoughtNode.tsx','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let selected;
+  /** Read the actual button callback, without duplicating its modifier transport. */
+  const visit=node=>{if(ts.isJsxElement(node)&&node.openingElement.attributes.properties.some(a=>a.name?.text==='className'&&a.initializer?.text==='kplex-thought-corner-action'))selected=node.openingElement.attributes.properties.find(a=>a.name?.text==='onClick').initializer.expression;ts.forEachChild(node,visit);};visit(file);assert(selected);
+  const output=ts.transpileModule(`const handler=${selected.getText(file)};`,{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
+  let corner;
+  /** Confirm the rendered graph connects the corner control to the tested opening owner. */
+  const graphVisit=node=>{if(ts.isJsxAttribute(node)&&node.name.text==='cornerAction')corner=node.initializer.expression.whenTrue;ts.forEachChild(node,graphVisit);};graphVisit(source);assert(corner);
+  assert.equal(corner.properties.find(p=>p.name.text==='onClick').initializer.getText(source),'openCentralEditor');
+  let actual;const handler=Function('cornerAction',`${output};return handler;`)({onClick:event=>{actual=event;}});
+  for(let mask=0;mask<16;mask++){let prevented=false,stopped=false;const event={altKey:!!(mask&1),ctrlKey:!!(mask&2),metaKey:!!(mask&4),shiftKey:!!(mask&8),preventDefault(){prevented=true;},stopPropagation(){stopped=true;}};handler(event);assert.equal(actual,event);assert(prevented&&stopped);}
 });
 
 /** Use explicit animation-frame batches to expose cancellation and native state changes without sleeps. */

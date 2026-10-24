@@ -19,53 +19,18 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR212 implementation return — warm source-head selection
+# Assignment: UI refinements for Sidecar, visibility and central editor
 
-Prepared by **Zsolt's Codex Agent**, 2026-10-24.
-Branch: `2026-10-24-warm-source-selection`; initial comparison baseline: `af09bc42d78abe03ed0d32e0edcdf22d0ebe08ae`; first accepted integration baseline: `6fa936d6522ba45f2c6bb2dfb853671e5218b055` (#211); latest accepted main: `d48f76641df149dd5bb4d000fe9764251ece9807` (#213).
-The equipped Mac agent implements the maintainer-authorized #212 scope. No delegation was used.
-Keep [PR212](https://github.com/zsviczian/kplex/pull/212) draft; do not merge, release or deploy to a production vault.
+Prepared by Zsolt's Codex Agent. Branch2026-10-24-sidecar-viewport-center; draft PR214; accepted base d48f76641df149dd5bb4d000fe9764251ece9807 (PR213 merged). Do not resume indexing/storage or broad performance work.
 
-## Result and evidence
+Completed: Sidecar open/close reframes via existing autozoom or preserves zoom and centers the focal node;9 visibility toggles use3/2/1 responsive columns with subtle theme dividers. Latest addition: original modifier-bearing central-node editor corner clicks reuse existing expanded-editor/camera owner; normal clicks and unsupported sidepanel behavior remain. Exact ALT/Opt hint is maintained in8 catalogs per maintainer request.
 
-- Shared clean dependency/head observation removes one head-only transaction per current-format warm owner. Metadata still independently pins/authenticates and checks the same revision/sequence at original-connection lease retirement. No schema, scheduler, persistent cache or count/semantic change from #212. Accepted #211 is included only through the normal main merge; no unmerged work is imported or modified.
-- Exceptional-owner cost: one legacy owner adds one probe transaction; the mixed two-owner control balances that against one current owner saving one transaction. Missing heads also add one probe transaction. Cold-start/legacy-heavy completion latency is unmeasured.
-- Complete 128-owner diagnostic: 777 → 649 transactions; head gets/hashes/decodes/leases equal. Three alternating timing pairs show median 4.7% elapsed / 2.7% renderer CPU gain. Third pair and its reopen regress slightly and are retained. No production-vault speedup claim.
-- All 20 bounded comparison arms passed actual restart, independent semantic/provenance parity, unchanged-head, quiet-tail, later edit and second restart closure. All profiles removed.
-- 36 focused real-IDB contracts and three measurement-harness controls passed. An independent writer during awaited SHA initially exposed a candidate finality defect; the added same-transaction retirement check fixes it. Fixture mistakes and original failures are preserved in the report/receipts.
-- Durable details: [validation report](docs/validation/warm-source-selection-212-2026-10-24.md), [sanitized receipts](docs/validation/warm-source-selection-212-2026-10-24.json), architecture/source repository contracts.
+TooltipButton uses referenced accessible labels and the existing shared hover/long-press owner for all central-editor toolbar buttons. No native aria-label/title candidate on those controls/toolbar. Source audit found expanded mini-thought rows also combined native aria-label+title: retain the full path title and reference a full accessible name instead.7 remaining native JSX title elements have0 overlapping aria/shared markers. Preserve deliberate image/filename/select/iframe titles; do not erase accessibility for native third-party content.
 
-## Final accepted-main integration status
+Current validation:40/40 camera/modifier/localization,10/10 Chromium tooltip including native accessibility-tree name,4/4 affected editor/node/rename/preview browser cases,7/7 architecture and0 violations, official scanner and real production build/types on Node22.22.2. Earlier Sidecar UI8/8 and visibility/divider CSS receipts remain. Initial source-fixture duplicate cancel selection3/4 is retained; the new cleanup has a precise name and unchanged assertions pass4/4. Full details in docs/validation/sidecar-viewport-center-2026-10-24.md. No broad verify/performance campaign.
 
-Main accepted #211 /6fa936d and then #213 /d48f766 during validation. Normal branch merges preserve
-both accepted changes and resolve only HANDOFF; the test commands are retained. No unmerged work or
-PR history is modified. Relative to d48f766, only #212's two production files differ. The user has
-agreed to hold main unchanged through final CI.
+Pre-integration main.js e197ef623724d3271bfafbd5459152653d00f63f182b8a218fe00c660d1ec1f9; manifest843d327e4a634a6e28cd645be8c533adc873a1ac1c6498502b5ca44e70120109; styles0ece0916859bcda0203dc5dcbb3906ce1d932a2fbceb47a5dccd4076cd83f381. Prior f438 Sidecar-only artifact is historical, not the new native target.
 
-All three measured cohorts remain separately identified: initial af09bc4, accepted 6fa936d and
-latest d48f766. Each twenty-arm comparison passed semantic/provenance, quiet/edit/reopen and cleanup
-checks. Latest 128-owner medians improve 7.7% elapsed /4.1% renderer CPU; one transaction is saved
-per clean current-format owner. Earlier adverse samples and failures remain retained. The latest
-two cohorts' executable bundles are byte-identical; no timing variation is attributed to #213.
+Foreground WAIT persists until a new explicit ready. No staging/reload/foreground/native acceptance performed. After ready, use only existing guarded disposable Small and exact artifacts; cover4 Sidecar positions/both autozoom states, modifier expansion/restoration, one tooltip, editor focus and independent cleanup in main/popout. Native timing and physical Mac/mobile remain unverified. Estimated5-10minutes native access. Do not create vault/profile, restart application or deploy production.
 
-Complete latest `verify:obsidian` passed with real build, 1,425 functional /228 browser UI /357
-portable source /775 real-IDB source tests. Native exact-build smoke, reader/selection and deliberate
-cleanup-failure controls, two foreground warm reloads and all six foreground workflows passed.
-Small's fresh settings/workspace/enablement/artifacts/content digest and originally closed startup
-state were restored after proving the exact tested renderer exited. An idle test worker delayed
-the full suite but exited without intervention; no process kill, weakened assertion or deadline
-extension manufactured a pass.
-
-Current durable evidence: [integration report](docs/validation/warm-source-selection-212-main-integration-2026-10-24.md)
-and [receipts](docs/validation/warm-source-selection-212-main-integration-2026-10-24.json). Source/artifact
-identities describe each actual pre-commit tree. Final integrated branch head/publication/remote CI
-are recorded on PR212 after this report commit; historical CI441/CI442 remain valid only for their
-recorded tree. Keep the PR draft for independent review; no additional manual test is required for
-the scoped contracts. No cold-start, legacy-heavy or production-vault speedup is claimed; only
-existing Small was opened. The deleted Brain copy remains unavailable.
-
-## Review and delivery
-
-The Mac agent is authorized to commit/push scoped work to this existing branch and update/read back the draft PR. Preserve failed evidence; preserve all existing guards including the 50 ms URL-heavy and 45 ms parser assertions. No main write, force push, unmerged #211 import or modification, PR merge, release, new persistent destination, large fixture or production-vault deployment. A normal merge of accepted main into this dedicated branch is authorized integration work.
-
-Highest-risk review area is exact finality/resource retirement under an independent writer or failed final native transaction. Those races have focused real-IDB coverage. Native results and precise remaining limitations must be added before a merge recommendation.
+The maintainer now explicitly authorizes resolving conflicts with accepted main, merging PR214, then switching/fetching main. Main a57f5109e75678bbb9b13eb55bbd4c29c85938f4 includes accepted PR212; its reader implementation and durable reports remain intact. The only textual conflict was this transient handoff, resolved with the current UI assignment and this integration note. Integrated real-dependency build/types and40 focused checks pass. Integrated main.js797072ba2bb04fd672f8af2fc633d59a5dfefeb7df0eee931154130c487260fd, manifest/styles unchanged. UI inputs match validated6e8116e and reader owners match accepted main exactly. Publish the normal merge checkpoint, merge PR214 and verify main reachability. Native checks remain unrun; do not label them passed. No release or production deployment authorized. Comments signed Zsolt's Codex Agent; raw receipts private.

@@ -1221,6 +1221,7 @@ const russianTranslations = {
   "explain.inlineRelationshipAtLine": "Встроенное отношение в строке {line}",
   "explain.linkAtLine": "Ссылка в строке {line}",
   "app.useCentralNodeEditor": "Использовать редактор как центральный узел",
+  "app.useCentralNodeEditorExpandedHint": "Использовать редактор как центральный узел. ALT/Opt — открыть в расширенном режиме редактора.",
   "app.useNormalCentralNode": "Использовать обычный центральный узел",
   "centralEditor.toolbar": "Редактор центральной заметки",
   "centralEditor.showPreview": "Показать режим чтения",

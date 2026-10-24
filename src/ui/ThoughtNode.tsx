@@ -8,6 +8,7 @@
  * A separately referenced accessible name avoids Obsidian's competing node tooltip; visible labels
  * retain the compact browser title, while gate hints and explicit page previews keep their owners.
  * Optional native body dragging preserves embedded editor input and delegates its host payload.
+ * Corner actions receive the original stopped click event so caller-owned modifier intent survives.
  * Relation groups replace ordinary gates with an external member count and an unfold accessible name.
  * Revalidation retains only this mounted node's unchanged badge text as cached presentation;
  * native incarnation/value changes retire it, independently of index and relationship-write proof.
@@ -85,7 +86,7 @@ export function ThoughtNode({
   cornerAction?: {
     icon: string;
     label: string;
-    onClick: () => void;
+    onClick: (event: MouseEvent<HTMLButtonElement>) => void;
   };
   translate: Translator;
   sectionFold?: {
@@ -224,7 +225,7 @@ export function ThoughtNode({
       onClick={(e: MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
         e.stopPropagation();
-        cornerAction.onClick();
+        cornerAction.onClick(e);
       }}
     ><ObsidianIcon name={cornerAction.icon} size={10} /></button>}
     {sectionFold?.hasChildren && <button

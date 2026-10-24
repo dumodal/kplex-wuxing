@@ -6035,3 +6035,28 @@ A production-owner reproducer showed same-leaf ownership ABA during a synchronou
 ### 2026-10-24 - Sidecar modifier validation scope
 
 Maintainer directed proportional UI-only validation; no indexing/performance campaign. Current111 focused tests, real build/types, scanner and architecture pass. Second full local run deliberately interrupted after release/core/main/UI/source-contract checks; browser lane incomplete. Earlier startup prerequisite failure and isolated passing retry retained. Runtime/artifact unchanged at da282fe / main49dc4d0d1a599a110b9d7e3a75c4e7b62fe6c3edfcb571588c0dccc672878ea8. Highest remaining risk is native modifier delivery/allocation/cleanup; guarded Windows matrix pending explicit ready, Mac/mobile unrun. No foreground access/staging yet; no further full local verification required.
+
+
+### 2026-10-24 - Sidecar open/close viewport centering
+
+UI-only explicit framing bridges existing per-view Sidecar ownership state to the graph camera after native layout frames. Autozoom reuses fit; disabled autozoom preserves scale and centers the focal occurrence. Input/navigation/unmount retire work/listeners; ordinary splitter/display/manual-camera policy remains. Focused18/18, headless UI8/8, architecture7/7 and0 violations, scanner and real build/types pass on Node22.22.2. Main artifact f43871726a44a8b033f45854fb3ce4f3dfbd4138610abe3a3e50e2b30d79c8a9. Retained new floating-point fixture failure and sandbox build restriction are documented, not relabeled. No performance campaign. Highest risk: native layout settling and condensed editor geometry; main/popout open/close in4 positions with autozoom on/off and modifier recovery remain pending explicit ready. Physical Mac/mobile unrun; no merge/release/production deployment. See docs/validation/sidecar-viewport-center-2026-10-24.md.
+
+
+### 2026-10-24 - Compact visibility toggles
+
+One CSS grid declaration makes the9 visibility toggles3 columns at normal panel width, retaining2-column narrower and1-column mobile layouts. Production CSS headless checks at560/440/320px measured3/2/1 columns, all9 switches visible/contained and no horizontal overflow; screenshot inspected. Scanner and real build pass; main artifact unchanged, styles37b7b319d7f6d7dc26829b551ba00289d4cce93a8a527a743394eb1b275923ff. No extra performance or native foreground work; prior Sidecar native camera checks remain pending explicit ready. No additional manual check needed for CSS sizing; native host/theme acceptance is not claimed.
+
+
+### 2026-10-24 - Visibility column dividers
+
+Added subtle native-theme column separators with clipping and preserved switch focus-ring padding. Headless production-CSS checks confirm2/1/0 visible divider positions for3/2/1 columns, all9 toggles contained and focus space retained; screenshot inspected. Scanner and real build pass. Main unchanged; styles0ece0916859bcda0203dc5dcbb3906ce1d932a2fbceb47a5dccd4076cd83f381. No additional manual check required for this reversible styling; no foreground or performance campaign.
+
+
+### 2026-10-24 - Expanded editor modifier and tooltip ownership
+
+Thought corner forwards original click; any modifier reuses camera-preserving expanded editor, ordinary and unsupported-sidepanel controls retained. Requested ALT/Opt hint in8 locales. Shared TooltipButton gives editor toolbar referenced accessible labels and one delegated hint; mini rows retain native full path title with separate full accessible names. Source audit7 title elements,0 remaining overlapping aria/shared markers. Camera/localization40/40, Chromium tooltips10/10 with accessibility-tree name, affected UI4/4, architecture7/7 and0 violations, scanner/real build pass. Initial source-fixture cancel ambiguity retained; precise Sidecar cleanup name resolves it without weakened assertions. Main e197ef623724d3271bfafbd5459152653d00f63f182b8a218fe00c660d1ec1f9. Highest risks remain native expansion/restoration and main/popout single-tooltip behavior; pending explicit foreground ready, physical mobile/Mac unrun. No performance campaign, merge/release or production deployment.
+
+
+### 2026-10-24 - PR214 accepted-main integration
+
+Maintainer authorizes resolving conflicts and merging PR214. Normal merge of accepted main a57f510 (#212) conflicts only in transient HANDOFF; current assignment/standing header retained and accepted reader implementation/reports preserved. UI inputs exactly6e8116e, reader owners exactly accepted main. Integrated actual-dependency build/types and40 focused checks pass. Main797072ba2bb04fd672f8af2fc633d59a5dfefeb7df0eee931154130c487260fd; manifest/styles unchanged. Reuse unchanged UI/headless evidence and accepted #212 reports. Native foreground checks remain unrun, no extra manual/performance campaign, no release/deployment. Merge authorized explicitly.

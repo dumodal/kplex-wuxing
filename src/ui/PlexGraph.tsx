@@ -1,5 +1,5 @@
 /**
- * Host-bound Plex scene composition, shared captured center-arrival motion and finite Wander navigation ports, layout and relationship interactions. Semantic resolution stays index/core-owned; UI labels and on-demand evidence hints use the injected translator. Navigation fits keep the central node centered and follow late geometry until manual camera input; publication and ordinary pane resizing preserve manual intent. View-owned display transitions retain camera coordinates and scene settings. Device typography stages scalar live preferences and persists after input settles; unmount flushes storage without replaying stale overrides. Area-height gestures own viewport pointer capture and persist existing presentation settings on completion or interruption. History and pinned drag targets share composer eligibility; external file drops follow the rendered area's semantic role. Theme-native area previews follow the existing drop action without intercepting capture or moving the dragged thought. Visible rows retain finite cache-only presentation demand; hidden surfaces and effect teardown release it. Geometry defers gate/count queries until a row intersects the displayed viewport, including partially clipped rows. Ordinary unfiltered scenes project cross-links for clipped visible rows; filtered and section scenes retain their established edge/count policy. Scene-local React keys capture paths before canonical pages can mutate during rename; semantic pages and actions retain their live identity. Normal-mode keyboard and exact-phrase typing selection are view-local; the displayed occurrence projection supplies all candidates and the shared selection owner reveals them without changing the center, filters or native search. Host methods own activation/rename/creation. Filtered badge numerators use revision-scoped semantic endpoint membership independently of connector routing and viewport clipping. Pane-fit native layout controls own local touch containment and bounded scrolling without changing preferences or browser range behavior. Accessible layout-wrapper hints use the shell's shared tooltip owner; inputs retain concise accessible names.
+ * Host-bound Plex scene composition, shared captured center-arrival motion and finite Wander navigation ports, layout and relationship interactions. Semantic resolution stays index/core-owned; UI labels and on-demand evidence hints use the injected translator. Navigation fits keep the central node centered and follow late geometry until manual camera input; publication and ordinary pane resizing preserve manual intent. Sidecar open/close transitions explicitly reframe the current viewport after native layout settles, with pending work retired by input, navigation or unmount. View-owned display transitions retain camera coordinates and scene settings. Device typography stages scalar live preferences and persists after input settles; unmount flushes storage without replaying stale overrides. Area-height gestures own viewport pointer capture and persist existing presentation settings on completion or interruption. History and pinned drag targets share composer eligibility; external file drops follow the rendered area's semantic role. Theme-native area previews follow the existing drop action without intercepting capture or moving the dragged thought. Visible rows retain finite cache-only presentation demand; hidden surfaces and effect teardown release it. Geometry defers gate/count queries until a row intersects the displayed viewport, including partially clipped rows. Ordinary unfiltered scenes project cross-links for clipped visible rows; filtered and section scenes retain their established edge/count policy. Scene-local React keys capture paths before canonical pages can mutate during rename; semantic pages and actions retain their live identity. Normal-mode keyboard and exact-phrase typing selection are view-local; the displayed occurrence projection supplies all candidates and the shared selection owner reveals them without changing the center, filters or native search. Host methods own activation/rename/creation. Filtered badge numerators use revision-scoped semantic endpoint membership independently of connector routing and viewport clipping. Pane-fit native layout controls own local touch containment and bounded scrolling without changing preferences or browser range behavior. Accessible layout-wrapper hints use the shell's shared tooltip owner; inputs retain concise accessible names.
  * Visual resolution and metadata refreshes retain the index consent epoch; teardown and revocation
  * reject late publication. Hover enlargement uses the same already-guarded image element.
  * Connector Hidden actions share the plugin writer; this surface owns their pending confirmation
@@ -13,6 +13,8 @@
  * Desktop thought bodies and expanded descendants export native Obsidian links; only regular
  * scene occurrences hold same-view relink authority. Touch and gates retain pointer ownership.
  * Explicit primary-modifier placeholder opening delegates folder choice to the native creation owner.
+ * Central-editor corner clicks share modifier expansion; expanded mini rows retain one native title
+ * with a separate full accessible name, avoiding competing aria-label tooltips.
  * Startup recovery remains eligible across visibility changes until its current check completes.
  */
 import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
@@ -33,7 +35,7 @@ import { ColorScope } from "../adapters/obsidian/colorScope";
 import {centerRelationCounts} from "../core/contracts/centerRecovery";
 import {startCenterWatchdog} from "./components/centerWatchdog";
 import { appearanceColorReferences, STYLE_SETTINGS_KEYS } from "../core/contracts/appearance";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent, type RefObject, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent, type RefObject, type ReactNode } from "react";
 import { createPlexContextMenu } from "./plexContextMenu";
 import { ColorSourceModal } from "./ColorSourceModal";
 import { Keymap, Menu, Notice, Platform, type WorkspaceLeaf } from "obsidian";
@@ -88,6 +90,7 @@ import { SavedRelationshipPendingError } from "../adapters/obsidian/relationship
 import { captureSurfaceContinuation } from "./surfaceContinuation";
 import { ActionTargetPicker, type ActionPickerItem, type ActionPickerEvent } from "./ActionTargetPicker";
 import type { GraphActionPorts, SurfaceActionImplementations } from "./usePlexActions";
+import { hasClickModifier } from "./components/modifierClick";
 
 type Point = { x: number; y: number };
 type HoverState =
@@ -734,7 +737,7 @@ function EdgeLabel({label,midpoint,style,background,opacity}:{label:string|null;
 }
 
 /** Compose the deterministic Plex scene; native-follow layouts land immediately while explicit navigation retains motion and central Open uses a main tab. */
-export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings, paintLenses, surface, hostLeaf, predicate, lenses, filterLayoutMode, predicateRevision, showCrossLinks, activePath, navigationOrigin = "user", onSemanticDemandAcquired, renderRevision, semanticRevision, findFocusRequest, footprintsControl, areaSettingsMode, onAreaSettingsModeChange, onApplyFindFilter, appliedFindFilterQuery, onClearFindFilter, onActivate, onWanderActivate, onOpen, onOpenInSidecar, onCentralNodeEditorChange, onCentralNodeModeChange, actionPorts, actionSurfaceId, displayState, fullscreenAvailable }: {
+export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings, paintLenses, surface, hostLeaf, predicate, lenses, filterLayoutMode, predicateRevision, showCrossLinks, activePath, navigationOrigin = "user", onSemanticDemandAcquired, renderRevision, semanticRevision, findFocusRequest, footprintsControl, areaSettingsMode, onAreaSettingsModeChange, onApplyFindFilter, appliedFindFilterQuery, onClearFindFilter, onActivate, onWanderActivate, onOpen, onOpenInSidecar, onCentralNodeEditorChange, onCentralNodeModeChange, actionPorts, actionSurfaceId, displayState, fullscreenAvailable, sidecarOpen }: {
   plugin: KplexPlugin;
   index: GraphIndex;
   settings: KplexSettings;
@@ -769,6 +772,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   actionSurfaceId: string;
   displayState: KplexDisplayModeState;
   fullscreenAvailable: boolean;
+  sidecarOpen: boolean;
 }) {
   const translate = plugin.translator;
   const [findQuery, setFindQuery] = useState("");
@@ -1081,6 +1085,9 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   const camera = useRef({ x: 0, y: 0, scale: 1 });
   const cameraIntentPlaced = useRef(false);
   const automaticFit = useRef<{ path: string; camera: FitCamera } | null>(null);
+  const miniNamePrefix = useId();
+  const previousSidecarOpen = useRef(sidecarOpen);
+  const reframeSidecarViewport = useRef<() => void>(/** Deferred native transitions use only the latest composed scene/settings. */ () => {});
   const fitCurrentScene = useRef<() => void>(/** Native resize callbacks must wait for the first composed scene fit. */ () => {});
   const [hover, setHover] = useState<HoverState>(null);
   const [crossLinkPeek, setCrossLinkPeek] = useState<Exclude<HoverState, { kind: "edge" }>>(null);
@@ -1465,6 +1472,12 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
     setCentralEditorMaximized(maximized);
   };
 
+  /** Open this center through its existing representation owner; modifiers also reuse camera-preserving expansion. */
+  const openCentralEditor = (event: MouseEvent<HTMLButtonElement>): void => {
+    if (hasClickModifier(event)) setCentralEditorMaximizedState(true);
+    onCentralNodeEditorChange(true);
+  };
+
   /** Restore the graph camera when necessary, then return the center to its compact Plex node. */
   const collapseCentralEditor = (): void => {
     if (centralEditorMaximized && centralEditorRestoreCamera.current) {
@@ -1653,6 +1666,40 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       { left: minX, top: minY, right: maxX, bottom: maxY }, maxScale), true);
   };
   fitCurrentScene.current = fit;
+  reframeSidecarViewport.current = /** Reframe only a usable native viewport; disabled autozoom retains the exact scale. */ () => {
+    const el = viewport.current;
+    if (!el || !el.isConnected || el.clientWidth <= 0 || el.clientHeight <= 0) return;
+    if (settings.allowAutozoom) fit();
+    else {
+      const center = scene.nodes.find(/** Use the focal occurrence rather than asymmetric scene bounds. */ node => node.role === "center") ?? {x: 0, y: 0};
+      applyCamera(/** Preserve zoom while translating the focal point into the new viewport center. */ current => ({...current, x: el.clientWidth / 2 - center.x * current.scale, y: el.clientHeight / 2 - center.y * current.scale}));
+    }
+    flushCameraTransform();
+  };
+
+  useEffect(/** Sidecar ownership transitions reframe once after native split/layout updates, never on ordinary renders or splitter drags. */ () => {
+    if (previousSidecarOpen.current === sidecarOpen) return;
+    previousSidecarOpen.current = sidecarOpen;
+    const el = viewport.current, owner = el?.ownerDocument.defaultView;
+    if (!el || !owner) return;
+    let retired = false;
+    let frame: number;
+    const retireSidecarFraming = /** New input or teardown outranks this pending layout intent in its original window. */ (): void => {
+      retired = true; owner.cancelAnimationFrame(frame);
+      el.removeEventListener("pointerdown", retireSidecarFraming, true); el.removeEventListener("wheel", retireSidecarFraming, true); el.removeEventListener("keydown", retireSidecarFraming, true);
+    };
+    frame = owner.requestAnimationFrame(/** Let native layout and its ResizeObserver publish the new scene dimensions first. */ () => {
+      if (retired) return;
+      frame = owner.requestAnimationFrame(/** Read the latest scene, camera and autozoom preference after the layout boundary. */ () => {
+        if (!retired) { reframeSidecarViewport.current(); retireSidecarFraming(); }
+      });
+    });
+    el.addEventListener("pointerdown", retireSidecarFraming, true);
+    el.addEventListener("wheel", retireSidecarFraming, true);
+    el.addEventListener("keydown", retireSidecarFraming, true);
+    return /** Navigation, another transition and unmount release the exact frames/listeners. */ retireSidecarFraming;
+  }, [sidecarOpen, activePath]);
+
 
   const toWorld = (clientX: number, clientY: number): Point => {
     const el = viewport.current;
@@ -4092,8 +4139,8 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       content={hasCentralEditor ? <div className="kplex-central-editor-placeholder" aria-hidden="true" /> : undefined}
       cornerAction={canOpenCentralEditor ? {
         icon: "file-text",
-        label: translate("app.useCentralNodeEditor"),
-        onClick: () => onCentralNodeEditorChange(true),
+        label: translate(centralEditorCanMaximize ? "app.useCentralNodeEditorExpandedHint" : "app.useCentralNodeEditor"),
+        onClick: openCentralEditor,
       } : undefined}
       settings={settings}
       selected={baseNode.page.path === activePath}
@@ -4287,6 +4334,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       >
         <div className="kplex-expanded-content" style={{ height: cluster.contentHeight }}>
           {cluster.children.map((child) => {
+            const accessibleNameId = `${miniNamePrefix}-${encodeURIComponent(child.key)}`;
             const maxChars = Math.min(22, effectiveLabelLimit(child.style.maxLabelLength ?? 30));
             const text = child.label.length > maxChars ? `${child.label.slice(0, Math.max(1, maxChars - 1))}…` : child.label;
             let current = paintedNodeStyles.get(child);
@@ -4304,7 +4352,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
               className={`kplex-expanded-mini-thought${cluster.parent.role === "sibling" ? " is-sibling-descendant" : ""}${findNodePaths.has(child.relation.page.path) ? " is-find-match" : ""}${keyboardSelection === child.key ? " is-keyboard-selected" : ""}`}
               data-kplex-keyboard-id={child.key}
               aria-current={keyboardSelection === child.key ? "true" : undefined}
-              aria-label={child.label}
+              aria-labelledby={accessibleNameId}
               data-kplex-path={child.relation.page.path}
               draggable={canDragNodeLink(child.relation.page)}
               onDragStart={/** A descendant is an outbound endpoint, never authority to move its parent's relation. */ (event: DragEvent<HTMLDivElement>) => beginNativeNodeDrag(child.relation.page, "child", child.label, event, event.currentTarget)}
@@ -4333,6 +4381,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
               }}
               onPointerLeave={/** Retire the exact mini-row before another graph can receive a modifier. */ () => hoverPreview.current?.clear()}
             >
+              <span id={accessibleNameId} className="kplex-accessible-name">{child.label}</span>
               <span className="kplex-expanded-mini-gate" />
               {child.style.icon && <ObsidianIcon name={child.style.icon} size={cluster.parent.role === "sibling" ? 8 * siblingScale(settings) : 8} className="kplex-expanded-mini-icon" />}
               <span className="kplex-expanded-mini-label">{text}</span>

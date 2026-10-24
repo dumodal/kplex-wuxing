@@ -1217,6 +1217,7 @@ const spanishTranslations = {
   "explain.inlineRelationshipAtLine": "Relación en línea en la línea {line}",
   "explain.linkAtLine": "Enlace en la línea {line}",
   "app.useCentralNodeEditor": "Usar editor como nodo central",
+  "app.useCentralNodeEditorExpandedHint": "Usar editor como nodo central. ALT/Opt para abrir en modo de editor ampliado.",
   "app.useNormalCentralNode": "Usar nodo central normal",
   "centralEditor.toolbar": "Editor de la nota central",
   "centralEditor.showPreview": "Mostrar vista de lectura",

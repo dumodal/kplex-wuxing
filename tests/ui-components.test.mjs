@@ -1353,7 +1353,7 @@ let styleReads=0;const measuredStyle=()=>new Proxy({textColor:"#abcdef"},{ownKey
 settings.baseNodeStyle=measuredStyle();let paintSettings=settings;
 const graphLensNodeStyle = () => ({});
 const centralEditorCapable = true, finding = false, hover = null, crossLinkPeek = null, activeNodeFlair = null, findNodePaths = new Set(), keyboardSelection = null;
-const connectionStateFor = () => "normal", onCentralNodeEditorChange = () => {}, gateKey = (path, gate) => path + ":" + gate;
+const connectionStateFor = () => "normal", onCentralNodeEditorChange = () => {}, openCentralEditor = () => {}, centralEditorCanMaximize = true, gateKey = (path, gate) => path + ":" + gate;
 const persistentPageFor = (page) => page;
 const activePath = "Editor.md", centralEditorAvailable = true, sectionExpanded = false;
 const page = (path, materialized = true) => ({ path, name: path, file: materialized ? { extension: "png", path } : null });
@@ -1374,6 +1374,7 @@ const index = { gateStats: () => gates, neighbours: () => [{ page: miniPage, rol
 const node = (page, role, x, y, height = 26) => ({ page, role, x, y, width: 180, height, style: { fontSize: 18 }, label: page.name, neighbourCount: 0, gateStats: gates });
 /** Render actual base nodes with separate zone-local/count-hydrated display copies. */
 function Scene({ scene: sourceScene, expanded }) {
+  const miniNamePrefix = useId();
   const scene = useMemo(() => ({ ...sourceScene, zoneViewports: {}, zoneAreas: {} }), [sourceScene]);
   const centralEditorPage = expanded ? centerPage : null;
   const sectionExpansion = null, expandedScrollTop = useMemo(() => ({}), []);
@@ -1413,6 +1414,8 @@ try {
   flushSync(()=>real.dispatchEvent(new MouseEvent('click',{bubbles:true,ctrlKey:true})));
   check(activated.length===beforeActivations+2,'Modified real-file click was incorrectly reserved for placeholder creation');
   const mini=container.querySelector(".kplex-expanded-mini-thought"),transfer=new DataTransfer();
+  check(!mini.hasAttribute("aria-label")&&mini.hasAttribute("title"),"Expanded rows retained competing native tooltip sources");
+  check(document.getElementById(mini.getAttribute("aria-labelledby"))?.textContent===miniPage.name,"Expanded row lost its full accessible name");
   const releasePreview=bindHoverPreview(container,hoverPreview.current),beforePreviews=previewed.length;
   flushSync(()=>mini.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse'})));
   window.dispatchEvent(new KeyboardEvent('keydown',{key:'Control',ctrlKey:true}));
@@ -1512,7 +1515,8 @@ function editorHistoryBrowserEntry(){
   return `
 import {canDragNodeLink} from ${JSON.stringify(join(root,"src/adapters/obsidian/nodeLinkDrag.ts"))};
 import {markdownZoomMode,withMarkdownZoomMode} from ${JSON.stringify(join(root,"src/core/plex/markdownZoomPreferences.ts"))};
-import React,{useEffect,useLayoutEffect,useRef,useState} from "react";
+import React,{useEffect,useId,useLayoutEffect,useRef,useState} from "react";
+import {TooltipButton} from ${JSON.stringify(join(root,"src/ui/components/TooltipButton.tsx"))};
 import {flushSync} from "react-dom";
 import {createRoot} from "react-dom/client";
 const check=(ok,message)=>{if(!ok)throw new Error(message)},result=document.querySelector("#result");
@@ -1576,8 +1580,8 @@ try{
  const props={plugin:{settings:{centralNodeMarkdownZoomModes:{}}},hostLeaf:{},page,defaultMode:"preview",allowMaximize:true,activateHostLeafOnInteraction:false,onModeChange(){},onMaximizedChange(){},onCollapse(){},onNavigate(){},translate:key=>key,onOpenMenu:button=>opened.push(button)};
  for(const maximized of [false,true]){
   flushSync(()=>root.render(React.createElement(CentralNodeEditor,{...props,maximized})));
-  const menu=container.querySelector('[aria-label="graph.openMenu"]');check(menu instanceof HTMLButtonElement&&menu.type==="button","editor menu button missing or nonsemantic");
-  check(menu.textContent==="ellipsis-vertical"&&!menu.hasAttribute("title"),"shared menu icon/accessibility changed");
+  const menu=[...container.querySelectorAll("button")].find(button=>document.getElementById(button.getAttribute("aria-labelledby"))?.textContent==="graph.openMenu");check(menu instanceof HTMLButtonElement&&menu.type==="button","editor menu button missing or nonsemantic");
+  check(menu.lastElementChild.textContent==="ellipsis-vertical"&&!menu.hasAttribute("title")&&!menu.hasAttribute("aria-label"),"shared menu icon/accessibility changed");
   check(menu.parentElement.querySelector("button:last-child")===menu,"shared menu must be the final button in both editor sizes");
   flushSync(()=>menu.click());check(opened[opened.length-1]===menu&&menu.ownerDocument===document,"editor menu did not retain actual owning button/document");
  }

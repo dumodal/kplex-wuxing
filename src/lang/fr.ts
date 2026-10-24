@@ -1217,6 +1217,7 @@ const frenchTranslations = {
   "explain.inlineRelationshipAtLine": "Relation en ligne à la ligne {line}",
   "explain.linkAtLine": "Lien à la ligne {line}",
   "app.useCentralNodeEditor": "Utiliser l’éditeur comme nœud central",
+  "app.useCentralNodeEditorExpandedHint": "Utiliser l’éditeur comme nœud central. ALT/Opt pour ouvrir en mode éditeur agrandi.",
   "app.useNormalCentralNode": "Utiliser le nœud central normal",
   "centralEditor.toolbar": "Éditeur de la note centrale",
   "centralEditor.showPreview": "Afficher le mode lecture",
