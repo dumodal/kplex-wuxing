@@ -1,5 +1,5 @@
 /**
- * Host-bound Plex scene composition, shared captured center-arrival motion and finite Wander navigation ports, layout and relationship interactions. Semantic resolution stays index/core-owned; UI labels and on-demand evidence hints use the injected translator. Navigation fits keep the central node centered and follow late geometry until manual camera input; publication and ordinary pane resizing preserve manual intent. View-owned display transitions retain camera coordinates and scene settings. Device typography stages scalar live preferences and persists after input settles; unmount flushes storage without replaying stale overrides. Area-height gestures own viewport pointer capture and persist existing presentation settings on completion or interruption. History and pinned drag targets share composer eligibility; external file drops follow the rendered area's semantic role. Theme-native area previews follow the existing drop action without intercepting capture or moving the dragged thought. Visible rows retain finite cache-only presentation demand; hidden surfaces and effect teardown release it. Geometry defers gate/count queries until a row intersects the displayed viewport, including partially clipped rows. Ordinary unfiltered scenes project cross-links for clipped visible rows; filtered and section scenes retain their established edge/count policy. Scene-local React keys capture paths before canonical pages can mutate during rename; semantic pages and actions retain their live identity. Normal-mode keyboard and exact-phrase typing selection are view-local; the displayed occurrence projection supplies all candidates and the shared selection owner reveals them without changing the center, filters or native search. Host methods own activation/rename/creation. Filtered badge numerators use revision-scoped semantic endpoint membership independently of connector routing and viewport clipping. Pane-fit native layout controls own local touch containment and bounded scrolling without changing preferences or browser range behavior. Accessible layout-wrapper hints use the shell's shared tooltip owner; inputs retain concise accessible names.
+ * Host-bound Plex scene composition, shared captured center-arrival motion and finite Wander navigation ports, layout and relationship interactions. Semantic resolution stays index/core-owned; UI labels and on-demand evidence hints use the injected translator. Navigation fits keep the central node centered and follow late geometry until manual camera input; publication and ordinary pane resizing preserve manual intent. Sidecar open/close transitions explicitly reframe the current viewport after native layout settles, with pending work retired by input, navigation or unmount. View-owned display transitions retain camera coordinates and scene settings. Device typography stages scalar live preferences and persists after input settles; unmount flushes storage without replaying stale overrides. Area-height gestures own viewport pointer capture and persist existing presentation settings on completion or interruption. History and pinned drag targets share composer eligibility; external file drops follow the rendered area's semantic role. Theme-native area previews follow the existing drop action without intercepting capture or moving the dragged thought. Visible rows retain finite cache-only presentation demand; hidden surfaces and effect teardown release it. Geometry defers gate/count queries until a row intersects the displayed viewport, including partially clipped rows. Ordinary unfiltered scenes project cross-links for clipped visible rows; filtered and section scenes retain their established edge/count policy. Scene-local React keys capture paths before canonical pages can mutate during rename; semantic pages and actions retain their live identity. Normal-mode keyboard and exact-phrase typing selection are view-local; the displayed occurrence projection supplies all candidates and the shared selection owner reveals them without changing the center, filters or native search. Host methods own activation/rename/creation. Filtered badge numerators use revision-scoped semantic endpoint membership independently of connector routing and viewport clipping. Pane-fit native layout controls own local touch containment and bounded scrolling without changing preferences or browser range behavior. Accessible layout-wrapper hints use the shell's shared tooltip owner; inputs retain concise accessible names.
  * Visual resolution and metadata refreshes retain the index consent epoch; teardown and revocation
  * reject late publication. Hover enlargement uses the same already-guarded image element.
  * Connector Hidden actions share the plugin writer; this surface owns their pending confirmation
@@ -734,7 +734,7 @@ function EdgeLabel({label,midpoint,style,background,opacity}:{label:string|null;
 }
 
 /** Compose the deterministic Plex scene; native-follow layouts land immediately while explicit navigation retains motion and central Open uses a main tab. */
-export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings, paintLenses, surface, hostLeaf, predicate, lenses, filterLayoutMode, predicateRevision, showCrossLinks, activePath, navigationOrigin = "user", onSemanticDemandAcquired, renderRevision, semanticRevision, findFocusRequest, footprintsControl, areaSettingsMode, onAreaSettingsModeChange, onApplyFindFilter, appliedFindFilterQuery, onClearFindFilter, onActivate, onWanderActivate, onOpen, onOpenInSidecar, onCentralNodeEditorChange, onCentralNodeModeChange, actionPorts, actionSurfaceId, displayState, fullscreenAvailable }: {
+export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings, paintLenses, surface, hostLeaf, predicate, lenses, filterLayoutMode, predicateRevision, showCrossLinks, activePath, navigationOrigin = "user", onSemanticDemandAcquired, renderRevision, semanticRevision, findFocusRequest, footprintsControl, areaSettingsMode, onAreaSettingsModeChange, onApplyFindFilter, appliedFindFilterQuery, onClearFindFilter, onActivate, onWanderActivate, onOpen, onOpenInSidecar, onCentralNodeEditorChange, onCentralNodeModeChange, actionPorts, actionSurfaceId, displayState, fullscreenAvailable, sidecarOpen }: {
   plugin: KplexPlugin;
   index: GraphIndex;
   settings: KplexSettings;
@@ -769,6 +769,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   actionSurfaceId: string;
   displayState: KplexDisplayModeState;
   fullscreenAvailable: boolean;
+  sidecarOpen: boolean;
 }) {
   const translate = plugin.translator;
   const [findQuery, setFindQuery] = useState("");
@@ -1081,6 +1082,8 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
   const camera = useRef({ x: 0, y: 0, scale: 1 });
   const cameraIntentPlaced = useRef(false);
   const automaticFit = useRef<{ path: string; camera: FitCamera } | null>(null);
+  const previousSidecarOpen = useRef(sidecarOpen);
+  const reframeSidecarViewport = useRef<() => void>(/** Deferred native transitions use only the latest composed scene/settings. */ () => {});
   const fitCurrentScene = useRef<() => void>(/** Native resize callbacks must wait for the first composed scene fit. */ () => {});
   const [hover, setHover] = useState<HoverState>(null);
   const [crossLinkPeek, setCrossLinkPeek] = useState<Exclude<HoverState, { kind: "edge" }>>(null);
@@ -1653,6 +1656,40 @@ export function PlexGraph({ plugin, index, settings: viewSettings, paintSettings
       { left: minX, top: minY, right: maxX, bottom: maxY }, maxScale), true);
   };
   fitCurrentScene.current = fit;
+  reframeSidecarViewport.current = /** Reframe only a usable native viewport; disabled autozoom retains the exact scale. */ () => {
+    const el = viewport.current;
+    if (!el || !el.isConnected || el.clientWidth <= 0 || el.clientHeight <= 0) return;
+    if (settings.allowAutozoom) fit();
+    else {
+      const center = scene.nodes.find(/** Use the focal occurrence rather than asymmetric scene bounds. */ node => node.role === "center") ?? {x: 0, y: 0};
+      applyCamera(/** Preserve zoom while translating the focal point into the new viewport center. */ current => ({...current, x: el.clientWidth / 2 - center.x * current.scale, y: el.clientHeight / 2 - center.y * current.scale}));
+    }
+    flushCameraTransform();
+  };
+
+  useEffect(/** Sidecar ownership transitions reframe once after native split/layout updates, never on ordinary renders or splitter drags. */ () => {
+    if (previousSidecarOpen.current === sidecarOpen) return;
+    previousSidecarOpen.current = sidecarOpen;
+    const el = viewport.current, owner = el?.ownerDocument.defaultView;
+    if (!el || !owner) return;
+    let retired = false;
+    let frame: number;
+    const cancel = /** New input or teardown outranks this pending layout intent in its original window. */ (): void => {
+      retired = true; owner.cancelAnimationFrame(frame);
+      el.removeEventListener("pointerdown", cancel, true); el.removeEventListener("wheel", cancel, true); el.removeEventListener("keydown", cancel, true);
+    };
+    frame = owner.requestAnimationFrame(/** Let native layout and its ResizeObserver publish the new scene dimensions first. */ () => {
+      if (retired) return;
+      frame = owner.requestAnimationFrame(/** Read the latest scene, camera and autozoom preference after the layout boundary. */ () => {
+        if (!retired) { reframeSidecarViewport.current(); cancel(); }
+      });
+    });
+    el.addEventListener("pointerdown", cancel, true);
+    el.addEventListener("wheel", cancel, true);
+    el.addEventListener("keydown", cancel, true);
+    return /** Navigation, another transition and unmount release the exact frames/listeners. */ cancel;
+  }, [sidecarOpen, activePath]);
+
 
   const toWorld = (clientX: number, clientY: number): Point => {
     const el = viewport.current;

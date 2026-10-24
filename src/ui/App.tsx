@@ -9,7 +9,7 @@
  * Action-dispatched sync/Sidecar menus resolve fresh surface-local control anchors without routing DOM events through the action manager.
  * Native follow retains the latest canonical file while hidden and suppresses fallback scenes/motion during partial hydration.
  * Directional Sidecar attachment controls project host eligibility and use the same native follow owner for inward synchronization.
- * Sidecar modifier-clicks capture finite maximize intent; native document/fold owners perform the guarded transition.
+ * Sidecar ownership supplies the graph with open/closed transitions for viewport reframing. Sidecar modifier-clicks capture finite maximize intent; native document/fold owners perform the guarded transition.
  * Existing native File properties panes follow the active surface's central file through a leased host adapter.
  * Global Find consumes existing tag/folder/file/URL vocabulary with caller-owned native type icons;
  * current native files and captured Plex links share drop navigation without source acquisition.
@@ -1405,7 +1405,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
           <div className="kplex-zone-label zone-left">{translate("app.zoneFriendsPrevious")}</div>
           <div className="kplex-zone-label zone-right">{translate("app.zoneChallengersNext")}</div>
           <div className="kplex-zone-label zone-child">{translate("app.zoneChildren")}</div>
-          <PlexGraph plugin={plugin} index={plugin.index} settings={viewSettings} paintSettings={paintSettings} paintLenses={paintLenses} surface={profileSurface} hostLeaf={hostLeaf} predicate={plexFilterPredicate} lenses={compiledGraphLenses} filterLayoutMode={filterLayoutMode} predicateRevision={predicateRevision} showCrossLinks={plugin.settings.showCrossLinks} activePath={page.path} renderRevision={renderRevision} findFocusRequest={findFocusRequest}
+          <PlexGraph sidecarOpen={sidecarOpen} plugin={plugin} index={plugin.index} settings={viewSettings} paintSettings={paintSettings} paintLenses={paintLenses} surface={profileSurface} hostLeaf={hostLeaf} predicate={plexFilterPredicate} lenses={compiledGraphLenses} filterLayoutMode={filterLayoutMode} predicateRevision={predicateRevision} showCrossLinks={plugin.settings.showCrossLinks} activePath={page.path} renderRevision={renderRevision} findFocusRequest={findFocusRequest}
             footprintsControl={<PlexFootprintsPanel trail={documentSession.footprints} translate={translate}
               readRow={/** Resolve visible references only; unavailable nodes never trigger acquisition or creation. */ visit => {
                 const target = resolveActionPage(plugin.index, visit.node);

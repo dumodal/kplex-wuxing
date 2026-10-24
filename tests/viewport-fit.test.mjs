@@ -16,6 +16,9 @@ function callback(name, dependencies) {
     if(name!=='layout'&&ts.isVariableDeclaration(node)&&node.name.getText(source)===name&&ts.isArrowFunction(node.initializer))selected=node.initializer.getText(source);
     if(name==='layout'&&ts.isCallExpression(node)&&node.expression.getText(source)==='useLayoutEffect'
       &&node.arguments[0]?.getText(source).includes('const shouldRecenter'))selected=node.arguments[0].getText(source);
+    if(name==='sidecar'&&ts.isCallExpression(node)&&node.expression.getText(source)==='useEffect'
+      &&node.arguments[0]?.getText(source).includes('previousSidecarOpen.current === sidecarOpen'))selected=node.arguments[0].getText(source);
+    if(name==='reframeSidecarViewport'&&ts.isBinaryExpression(node)&&node.left.getText(source)==='reframeSidecarViewport.current')selected=node.right.getText(source);
     ts.forEachChild(node,visit);
   };
   visit(source);assert(selected,name);
@@ -167,6 +170,37 @@ test('manual input during an initially empty neighborhood remains authoritative 
   const ctx=graphFixture(),nodes=ctx.scene.nodes;ctx.scene.nodes=[];ctx.layout();ctx.pathChangedThisRender=false;
   ctx.applyCamera({x:123,y:91,scale:0.7});ctx.scene.nodes=nodes;ctx.render();ctx.layout();
   assert.deepEqual(ctx.camera.current,{x:123,y:91,scale:0.7});assert.equal(ctx.automaticFit.current,null);
+});
+
+test('Sidecar open/close frames the latest focal node at every pane orientation, fitting only when autozoom is enabled',()=>{
+  for(const allowAutozoom of [false,true])for(const [width,height]of [[400,600],[1200,600],[800,300],[800,900]]) {
+    const ctx=graphFixture();Object.assign(ctx.viewport.current,{isConnected:true,clientWidth:width,clientHeight:height});
+    ctx.settings.allowAutozoom=allowAutozoom;ctx.camera.current={x:91,y:83,scale:1.7};ctx.automaticFit.current=null;
+    callback('reframeSidecarViewport',ctx)();
+    const camera=ctx.camera.current;
+    assert(Math.abs(camera.x+30*camera.scale-width/2)<1e-9);assert(Math.abs(camera.y-20*camera.scale-height/2)<1e-9);
+    if(allowAutozoom)assert(ctx.automaticFit.current,'Sidecar framing renews the existing fit owner after manual movement');
+    else {assert.equal(camera.scale,1.7);assert.equal(ctx.automaticFit.current,null);}
+  }
+  for(const condition of [{isConnected:false},{clientWidth:0},{clientHeight:0}]) {
+    const ctx=graphFixture();Object.assign(ctx.viewport.current,{isConnected:true},condition);const prior={...ctx.camera.current};
+    callback('reframeSidecarViewport',ctx)();assert.deepEqual(ctx.camera.current,prior,'Hidden/retired viewports do not write the camera');
+  }
+});
+
+test('Sidecar framing waits for layout, uses the latest render and releases its owning-window frames and input listeners',()=>{
+  for(const opening of [false,true])for(const interrupt of [null,'pointerdown','wheel','keydown','navigation']) {
+    const frames=new Map(),listeners=new Map();let serial=0,framed=0;
+    const owner={requestAnimationFrame(fn){const id=++serial;frames.set(id,fn);return id;},cancelAnimationFrame(id){frames.delete(id);}};
+    const el={ownerDocument:{defaultView:owner},addEventListener(type,fn){listeners.set(type,fn);},removeEventListener(type,fn){if(listeners.get(type)===fn)listeners.delete(type);}};
+    const ctx={viewport:{current:el},previousSidecarOpen:{current:!opening},sidecarOpen:opening,reframeSidecarViewport:{current:()=>{throw Error('Stale render');}}};
+    const cleanup=callback('sidecar',ctx)();assert.equal(frames.size,1);assert.equal(listeners.size,3);
+    const first=[...frames.values()][0];frames.clear();first();assert.equal(framed,0);assert.equal(frames.size,1);
+    const retired=[...frames.values()][0];ctx.reframeSidecarViewport.current=()=>framed++;
+    if(interrupt==='navigation')cleanup();else if(interrupt)listeners.get(interrupt)();
+    frames.clear();retired();assert.equal(framed,interrupt?0:1);assert.equal(listeners.size,0);cleanup();assert.equal(frames.size,0);
+    assert.equal(callback('sidecar',ctx)(),undefined,'Unchanged ownership, unrelated notifications and ordinary splitter resizing never schedule framing');
+  }
 });
 
 /** Use explicit animation-frame batches to expose cancellation and native state changes without sleeps. */
