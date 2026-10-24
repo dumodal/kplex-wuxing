@@ -3064,11 +3064,13 @@ export default class KplexPlugin extends Plugin {
     // Its later completion must not add a focus change after a different tab was selected.
     const activeAfterReveal = this.app.workspace.getActiveViewOfType(ItemView)?.leaf;
     await reveal;
-    if (!this.unloading && this.plexFoldRevisions.get(hostLeaf) === revision && !this.collapsedPlexHosts.has(hostLeaf) && hostLeaf.view === c.hostView
+    /** Native focus listeners can synchronously replace ownership or selection; fence both effects. */
+    const current = (active: WorkspaceLeaf | undefined): boolean => !this.unloading && this.plexFoldRevisions.get(hostLeaf) === revision && !this.collapsedPlexHosts.has(hostLeaf) && hostLeaf.view === c.hostView
       && c.hostView.getPlexFoldGeneration() === c.generation && this.leafIsAttached(hostLeaf)
-      && this.app.workspace.getActiveViewOfType(ItemView)?.leaf === activeAfterReveal) {
+      && this.app.workspace.getActiveViewOfType(ItemView)?.leaf === active;
+    if (current(activeAfterReveal)) {
       this.app.workspace.setActiveLeaf(hostLeaf, { focus: true });
-      if (maximize && this.sidecarLeaves.get(hostLeaf) === c.sidecarLeaf) await this.closeSidecar(hostLeaf);
+      if (maximize && current(hostLeaf) && this.sidecarLeaves.get(hostLeaf) === c.sidecarLeaf) await this.closeSidecar(hostLeaf);
     }
   }
 

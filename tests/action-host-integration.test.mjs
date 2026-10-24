@@ -907,6 +907,19 @@ test('modifier recovery rejects held-reveal ownership, generation and focus chan
  }
 });
 
+/** Native focus listeners may synchronously replace the same leaf's ownership before close. */
+test('modifier recovery rechecks synchronous focus callbacks before closing a companion',async()=>{
+ for(const change of [f=>f.owner.setSidecarOwner(f.host,f.sidecar),f=>f.host.view.generation++,f=>{f.owner.app.workspace.activeLeaf=f.sibling}]){
+  const f=foldFixture();let closed=0;f.sidecar.detach=()=>{closed++};
+  await f.owner.togglePlexFold(f.owner.readPlexFoldCandidate(f.host));
+  const workspace=f.owner.app.workspace,select=workspace.setActiveLeaf;
+  workspace.setActiveLeaf=function(leaf,...args){select.call(this,leaf,...args);if(leaf===f.host)change(f)};
+  await f.owner.expandPlexFromSidecar(f.host,true);
+  assert.equal(closed,0,'A focus callback superseded the captured close intent');
+  assert(f.owner.sidecarLeaves.has(f.host));assert.equal(f.doc.leases,0);
+ }
+});
+
 /** Maximize opens only after normal layout completion and the captured view/session still match. */
 test('modifier open waits for the moving lease and rejects superseded native pairs',async()=>{
  for(const kind of ['valid','ordinary','generation','owner','source','unsafe','already-moving']){

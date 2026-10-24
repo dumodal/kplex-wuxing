@@ -6025,3 +6025,8 @@ Runtime checkpoint15c6fdef144d329fba2d14ea1e4298850686bf09 passed complete npm r
 ### 2026-10-24 - Sidecar modifier-click maximize implementation
 
 Base6fa936d; branch2026-10-24-sidecar-modifier-maximize. Shared stateless modifier predicate and finite action intent compose existing native open/fold and unfold/close owners. Source/session/view-generation and delayed focus guards remain; no storage/indexing/settings change. Both tooltips carry explicitly requested ALT/OPT copy in all8 locales. Focused110/110 controls pass; full renewed verification is running. Native modifier-only driver prepared and syntax checked. Foreground access is explicitly paused until maintainer says ready; native/main-window allocation remains pending, Mac/mobile unrun. Highest risk: stale layout/reveal closing a replacement pane or unsupported topology; guarded tests cover these owner boundaries, exact native checks remain necessary. See docs/validation/sidecar-modifier-maximize-2026-10-24.md. No merge/release/production deployment.
+
+
+### 2026-10-24 - Sidecar recovery synchronous focus fence
+
+A production-owner reproducer showed same-leaf ownership ABA during a synchronous native focus callback could escape the new optional close guard. Recovery now rechecks the existing revision/generation/attachment/focus certificate after focus. Before reproducer fails; corrected focused111/111 and real-dependency build/type check pass. First full run retained as failed after Chromium bundle startup prerequisite (227/228 UI); isolated unchanged case passes1/1 without altered deadlines. Renew full verification on corrected runtime. Foreground WAIT remains explicit; no native acceptance, merge/release/production deployment.
