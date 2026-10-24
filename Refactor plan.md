@@ -5975,3 +5975,25 @@ hashproof before19:37release retained; subsequentguardedoperations neverwrite/op
 no originalfullcontentclaim. Finalremote/CI/normalmerge/reachabilityproof recordedon206/private
 checkpoint toavoidself-reference. Preservehistory/privateevidence; noHANDOFFarchive, release,
 productiondeployment, branchdelete or historyrewrite. C14accepted; C15-C26paused.
+
+
+### PR210 causal implementation checkpoint ? 2026-10-24
+
+Accepted base90032c6d7499fa4e40179110f7b5672d356aa390; newer release metadata on main preserved. Fixed24-owner/three-event production-owner real-IDB reproduction:65 dependency ensures across four baseline passes versus28 in one initial corrected pass, with exact final values. Separate actual coordinator mixed metadata/deletion backlog admits one unnecessary full builder on baseline versus zero after narrow #206 guard extension. These are work/admission observations, not CPU or proof of the historical multi-hour symptom.
+
+Known-source events may retain only unrelated broad scope, with exact owner capture/cache/environment and final event/projection checks. Global/topology/lifecycle events remain conservative; no repository/lease/count/schema/timer changes or retained proof cache. Targeted regressions include selected-owner cancellation, final-proof events, failure cleanup and independent writers. Full verification, bounded matched timing/native acceptance and merge recommendation remain pending; PR stays draft. See docs/validation/indexing-event-convergence-210-2026-10-24.md for retained failures and exact evidence. No manual test requested at this intermediate checkpoint. No merge/release/main write or Mac experiment.
+
+
+- 2026-10-24 PR210 tooling checkpoint: corrected independent-writer fixture now proves a newer durable sequence and asserts the actual superseded result outside the production catch; initial false-positive aggregate remains qualified. Native cleanup and fixed-wave/oracle lifecycle harness controls19/19; unchanged indexing and ontology bootstrap follow-up pass in isolation. Initial full browser lane732/733 and CI426 timer64.8ms failure retained, final validation pending. Bounded protocol is declared in docs/validation/indexing-event-convergence-210-2026-10-24.md; no runtime change after a61b924, no storage investigation or merge.
+
+
+- 2026-10-24 PR210 matched evidence checkpoint: all20 timing and8 separately instrumented operation arms pass fixed-input final semantic/quiet/edit/reopen/cleanup checks. Renderer CPU medians improve11.3% at96 and10.0% at384; repeated sweep owners144/576 become0/0, without changing repository storage/leases. Small adverse no-event/edit/reopen observations and process/transport limitations are retained in the validation report. Final full/native verification and CI remain pending; runtime unchanged from a61b924.
+
+
+- 2026-10-24 PR210 native-tooling cleanup: restore onLayoutReady descriptor/prototype placement after the bounded warm hook;6/6 cleanup controls now include an actual post-hook activation failure. Initial incomplete fake-counter fixture failure is retained in the validation narrative. No runtime change or comparison rerun; final/native acceptance pending.
+
+
+- 2026-10-24 PR210 acceptance progress: full real-dependency verification/build and exact Small staging/smoke pass (735/735 browser assertions); production artifact6400bb47... . CI426 unchanged retry passes, original64.8ms failure retained. Fresh-storage control confirms one broad sweep (baseline4/63 visits/87ensures; candidate1/24/72), with conservative post-sweep work explicitly retained and warm36 bound unchanged. Native event first run fails owned-folder cleanup (EISDIR), preserved and safely repaired; physical-target/hidden-child guards plus8/8 cleanup controls precede unchanged-artifact rerun. No runtime changes after a61b924.
+
+
+- 2026-10-24 PR210 final validation: unchanged a61b924 runtime /6400bb47... artifact, full real build/verification and final23 focused controls pass. All applicable exact Small native lanes pass, including real finite notifications -> natural closure, recovery/admission, SI4/5, held-background foreground/live, folder/Excalidraw, rename/gates/search and ontology. Configuration and workspace/owned-history restoration audited; historical failures and conservative leases retained. CI430 passes f4c9073 tooling/implementation; final documentation publication/check readback tracked on PR210. Recommend scoped merge review, keep draft; no merge/main write/release/production deployment, no storage redesign or Mac experiment.

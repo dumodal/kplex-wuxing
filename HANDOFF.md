@@ -19,78 +19,36 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Final acceptance return: PR206 integrated with current accepted main
+# Assignment: PR210 completed for maintainer review
 
-Prepared by **Zsolt's Codex Agent**, 2026-10-23, Europe/Budapest.
-No offline implementation/optimization assignment remains. Main validation agent owns final
-remote documentary-head CI and authorized normal merge. At this documentary checkpoint those
-are the remaining gates; exact final remote/CI/merge proof is recorded on #206/private checkpoint
-at delivery to avoid a self-referential report/commit loop. Consult actual PR state before acting.
+Prepared by Zsolt's Codex Agent,2026-10-24,Europe/Budapest.
+**State:** implementation and required applicable Windows validation completed. Keep PR draft for maintainer review; no merge/release/production deployment is authorized. Final remote checkpoint/check status is maintained on PR210.
+**Branch:** 2026-10-24-indexing-event-convergence.
+**Fixed comparison baseline:**90032c6d7499fa4e40179110f7b5672d356aa390, including accepted201/203/204/205/206/207.
+**Runtime checkpoint:**a61b92485102ac6483a37dc0a63e17bbfaa59908. All later commits are tests/tooling/reports. Final implementation/tooling f4c9073c22109d7f61eb1c512e3a3192bb183acc passes CI430.
 
-Current integrated runtime source: `823d1d3c8272be44ab5494af85445b66fd28f944`.
-Normal merge parents cf14b1c (completed first integration evidence) and accepted main
-`ea89a831aee433bfcfa2847f710ff82ebcfe158c` (merged #207, plus #201/#203/#204/#205).
-Reviewed12c911a and first normal merge95b0093 preserved. Only HANDOFF/ledger/package testlist
-conflicts; current206 assignment/header, both full histories/reports/inventories retained.
-SourceRepository exactly accepted #207 d8d6d532...809d8; #205 protected reader and #206's three
-startup owners preserved. No unmerged Windows input, custom count/lease/schema/read-plumbing
-change, rebase/force-push or207experiment/branch modification. Do not resume207causal/storagework.
-C14 accepted; structural C15-C26 paused.
+Read docs/validation/indexing-event-convergence-210-2026-10-24.md for exact identities, all pairs, failed attempts, contracts and limits. The temporary plan marker is removed. Historical reports remain intact.
 
-NEW exact artifact, Node22.22.2/real dependencies/installed Obsidian1.13.0 declarations:
-- main.js `9912395b8a7927067ba6d366e634e3839a0f374bc5473d4284291be63062b653`
-- manifest.json `3395e425860e5068e9f3b3d9a0e3d58cefd2c11dededc690beb87f60e733ed7d`
-- styles.css `88b61aa508ede97b10fbd30c957d14ba19b257aa26f5ee9f547f13faa0f43974`
-SourceCI421 passes. Full npmverify passes7architecture/130core/1395main/227DOM/357portable/
-721realIDB, zero failures/skips; separate174combined startup/discovery/recovery/count/journal/
-lease/foreground checks pass. Runtime/build inputs remain source823; later changes documentary.
+## Result
 
-Exact new-build native Small checks pass: strict staging/render, all5SI5 source/cache/reload
-cases, genuine failed-adoption recovery exactly2(false,true) with0fullbuild/mask, bounded eight-
-note selectedrepair create/edit/change/delete/lateredit and ready localinventory, held-background
-foreground navigation/edit/provenance, real native/same-stat-event/offlinealias/rename/delete.
-SI5 originalobserver failedCLIevalafterfirstcase; capturedstate ready/no sourcefailure and cleanup
-passes. Fresh native-result-file observer keeps native scenario/cleanup bytes and deadlines,
-passesall5 with0transportretry; failedreceiptretained. Stop owner initiallyconflated unload with
-saved enablement; observed loadedfalse/enabled[kplex], thennormalCLIclear +guardedclose restores
-all19Smalloriginalfiles afterregistryclosed. No productcheck/deadline weakened; privatehelpers only.
+Known source events previously retired the entire broad inventory and repeated valid prefixes. One scalar inventory-scope lifetime now survives qualifying known source events; exact per-owner native/cache/environment checks remain. Existing local repair drains changed owners/referrers before final exact event/projection checks grant readiness. Global/topology/environment/pause/unload still retire the scope. Exceptional final proof clears temporary lookup authority. No source repository read/lease/count/storage/scheduler mechanism changed.
 
-Read-only Brain activation verifies exact live database and loadednewrepair method. Actual
-fullsnapshotroute/initial/source/URLcompletion; sourcechecked/bodyreads/parses/repairs/failures0,
-allsource/write/deleteowners0. Complete vocabulary and seven strict semantic/gate/search/
-provenance hashes match both retained controls, no normalization. Original broadtag still fails
-at30.841s with2pending/256visits; no new semantic divergence/crash. Observertransporterrors0.
+The separate main coordinator correction suppresses only a demonstrated covered startup/metadata backlog with no dirty Markdown owners. Real structural/unknown work, manual/forced/cold/complete/On-demand controls remain admitted. It is not a universal fix for every historical incomplete-build report.
 
-Firstintegration95/main08 remains FROZEN: retainedS2 startup408.930s +602.128squiet /620.420CPU-s,
-ordinarywarm153.016s +603.971squiet /267.606CPU-s. Startup latecounters/12unfocusedwork samples
-qualified; warmvalid/focused/AC.0unnecessarybodyreads/parses/replacements/URLreads/fullbuilders/
-masks; cachedvaliditywork remains. Both had0selectedrepair/replacement, so newer207production
-branch was not exercised. Those CPU observations are NOT relabeled as main991 or a new statistical
-speedup. Current-source affected realIDB/native positivebranch and realcopyparity supply later
-integration evidence; no historicalmatrix rerun. Actual204reuse0 for no-replacement realcopyruns;
-native13/32matching projections are eligibility, not realizedreuse or exclusiveCPU attribution.
-Historical6ad belongsonly to independentstudy. Preserve allprevious artifacts/measurements/limits.
+Warm fixed3-wave work:24-owner causal ensures65 ->28. Three alternating matched pairs at96/384 show median renderer CPU0.430809 ->0.382293s (-11.3%) and1.550262 ->1.395461s (-10.0%). Revisited sweep owners144/576 ->0/0. Native requests3922/13284 ->3041/10243 in separate diagnostic arms. All20 timing and8 operation arms pass semantic/quiet/edit/reopen/cleanup checks.
 
-All native work/audits finish20:27:16UTC; user told Macfree again. NO furtherfocus/restart needed
-for unchanged823code. Do notstealfocus afterrelease; reestablishavailability ifsourceadvances.
-Brain K-Plex/community/Sync/Publish off; no controllers/hooks/debugger/processes, IDB methodsnative,
-no new crashreports. Copied20190contentfiles/10,956,614,603B unchanged; fresh223config/workspace
-bytes restored except intentionally retained DISABLED main991. Small CLOSED/all19originalfiles
-identical, including original Sync/enabledplugins: PREPAREOFFLINE before futureopening.
-Original Zsolt's Brain (2025) neverwritten/enabled/staged/restored/databaseopened. Its223config
-hashes matchedbefore19:37:52UTCfirstrelease; no fulloriginalcontentbaseline/claim. Later steps
-onlytargetguarded testvaults. Testcopy DB `k-plex-index-v1-6b706c65782d746573742d627261696e2d6d6163`.
+Fresh never-completed inventory: baseline4 inventories/63 sweep visits/87 ensures; candidate1/24/72. Conservative resolution/local post-sweep work remains. The new cold test initially misapplied the warm36-ensure bound; direct sweep assertions now express its actual contract. The existing warm bound and all acceptance thresholds are unchanged.
 
-Detailed phased record: docs/validation/startup-source-convergence-206-2026-10-23.md.
-Retain five206followups: broadtag; joinedtype-nameorder notuniversallycosmetic; unexplainedfirst-
-baseline+2nodes; veryearlyrecenttabfailureboth; isolatedunattributedhistoricalrenderercrash.
-Fewerpairs/power/censored/controlled-versus-naturalcandidate qualifications remain, as do207's
-maintainer-accepted reopen/storagecost, unresolvedbackendcause and no production-scalingbound.
-No newissue/PR. New private evidence kplex-206-integration-yoggyf26/dedicated restricted durable
-integrationarchive, separatefrom historical203/206seeds/archives; preserveall; NEVERarchiveHANDOFF.
+## Validation
 
-FINAL: commit/push documentaryacceptance, verifyactualremotehead +finalheadCIpass; fetchcurrent
-main andinspect/revalidateanyinterveningacceptedchange. Thenmarkready/normalmerge WITHOUTanother
-approval, verifyGHmerged/mergecommitreachablemain, preservebranches. No release/prod deployment/
-forcepush/historyrewrite/207modification. Ifgatefails keepdraft andreportpreciseblocker. Use
-Zsolt's Codex Agent in GitHubcomments. No extraheavytestsneededfordocs-onlychanges.
+- Full Node22.22.2 real-dependency verification/build through verify:obsidian passes;735/735 browser assertions, zero failures/skips. Added final controls pass23/23 separately. Official scanner and actual Obsidian types/build pass.
+- Exact installable main.js SHA256:6400bb47c719da4cca9736c98ec6b0f56c55d211a1cbbf42751c66d5caf852bf.
+- Native source-event natural convergence, recovery, seven startup-admission cases, SI4 Small functional mode, SI5 reload/recovery, held-background foreground actions, actual folder/Excalidraw/create-fill-rename, rename, tags/folders/gates/search, ontology edits during held startup and On-demand/background-URL/Responsive live updates all pass on that artifact.
+- Final Small state:107 files/88 Markdown, Eager and genuine source/URL readiness, no pending work/writers/unsaved/readers/decode/repairs/controllers. Original core/community/K-Plex bytes restored, including Sync and Excalidraw; workspace identities/history restored with only our eight event-probe recent entries removed. Two conservative persisted family leases are observed, consistent with the prior count; no expiry/reset is introduced.
+- CI426's original64.8ms against50ms failure remains recorded; its unchanged complete retry, isolated original fixture, full local verification and later CI427/428/429/430 pass. Native harness/setup failures (including folder EISDIR, profile-byte alignment and a closed-view prerequisite) remain in the report with successful cleanup/restoration follow-ups. No adverse result is erased.
+
+## Limits / next owner
+
+Return to maintainer review of draft210. No agent runtime work remains. Final documentation CI/readback is tracked in the PR. Do not merge automatically, release, write main, deploy to production, close202, resume207 storage work or touch Mac experiments/private data.
+
+The accepted comparison base remains fixed; origin/main's later6295b329 release-metadata change is preserved separately and not silently pooled into comparisons. Renderer CPU excludes Browser/storage/utility processes; native actions are functional wall observations, not paint/physical-device or native CPU acceptance. Small SI4 is not native20,015-note scale acceptance. Global uncertainty and unavailable prerequisites remain conservative; all historical202 symptoms and the broader CPU objective are not claimed solved. macOS/minimum-host/physical mobile acceptance is unrun. A focused manual finite-burst/closure plus immediate edit/navigation check in main/popout is the relevant remaining cross-platform risk check, not a new assigned Mac campaign.
