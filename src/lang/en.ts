@@ -5182,6 +5182,7 @@ export const englishCatalog = {
   },
 
   "app.useCentralNodeEditor": { message: "Use editor as central node", context: "Toolbar action that replaces the compact center thought with an embedded native Markdown view.", params: [] },
+  "app.useCentralNodeEditorExpandedHint": { message: "Use editor as central node. ALT/Opt to open in expanded editor mode.", context: "Central-node editor tooltip; the maintainer requested the literal ALT/Opt hint, while any modifier activates expansion. Shown only when expansion is available.", params: [] },
   "app.useNormalCentralNode": { message: "Use normal central node", context: "Toolbar action that restores the compact center thought instead of the embedded Markdown view.", params: [] },
   "centralEditor.toolbar": { message: "Central note editor", context: "Accessible label for controls over the Markdown view embedded in the central Plex node.", params: [] },
   "centralEditor.showPreview": { message: "Show reading view", context: "Switch the embedded central Markdown note from source editing to reading view.", params: [] },

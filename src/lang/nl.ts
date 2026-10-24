@@ -1213,6 +1213,7 @@ const dutchTranslations = {
   "explain.inlineRelationshipAtLine": "Inline-relatie op regel {line}",
   "explain.linkAtLine": "Link op regel {line}",
   "app.useCentralNodeEditor": "Editor als centraal knooppunt gebruiken",
+  "app.useCentralNodeEditorExpandedHint": "Editor als centraal knooppunt gebruiken. ALT/Opt om in de uitgebreide editormodus te openen.",
   "app.useNormalCentralNode": "Normaal centraal knooppunt gebruiken",
   "centralEditor.toolbar": "Editor voor centrale notitie",
   "centralEditor.showPreview": "Leesweergave tonen",

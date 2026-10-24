@@ -233,6 +233,11 @@ test("Sidecar folding copy identifies the native group scope and preserves the p
   assert.match(translate("sidecar.foldUnsupportedLayout"), /K-Plex remains visible/u);
 });
 
+test("central-editor modifier help retains the requested short ALT/Opt hint in all catalogs", () => {
+  assert.equal(localization.createTranslator("en")("app.useCentralNodeEditorExpandedHint"), "Use editor as central node. ALT/Opt to open in expanded editor mode.");
+  for(const locale of ["en","de","fr","es","nl","ja","zh-TW","ru"])assert.match(localization.createTranslator(locale)("app.useCentralNodeEditorExpandedHint"),/ALT\/Opt/u);
+});
+
 test("unknown keys and bad interpolation fail instead of leaking raw/blank UI", () => {
   const translate = localization.createTranslator("en");
   assert.throws(() => translate("missing.key"), /Unknown localization key/);

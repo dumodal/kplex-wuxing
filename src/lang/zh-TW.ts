@@ -1209,6 +1209,7 @@ const traditionalChineseTranslations = {
   "explain.inlineRelationshipAtLine": "第 {line} 行的行內關係",
   "explain.linkAtLine": "第 {line} 行的連結",
   "app.useCentralNodeEditor": "將編輯器設為中央節點",
+  "app.useCentralNodeEditorExpandedHint": "將編輯器設為中央節點。按住 ALT/Opt 可在展開的編輯器模式中開啟。",
   "app.useNormalCentralNode": "使用一般中央節點",
   "centralEditor.toolbar": "中央筆記編輯器",
   "centralEditor.showPreview": "顯示閱讀檢視",

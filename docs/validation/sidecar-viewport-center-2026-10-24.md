@@ -25,7 +25,7 @@ First focused attempt:17/18, because a new strict floating-point equality compar
 
 Final production SHA-256:
 
-- main.js: f43871726a44a8b033f45854fb3ce4f3dfbd4138610abe3a3e50e2b30d79c8a9
+- main.js: e197ef623724d3271bfafbd5459152653d00f63f182b8a218fe00c660d1ec1f9
 - manifest.json:843d327e4a634a6e28cd645be8c533adc873a1ac1c6498502b5ca44e70120109
 - styles.css:0ece0916859bcda0203dc5dcbb3906ce1d932a2fbceb47a5dccd4076cd83f381
 
@@ -42,3 +42,22 @@ Subtle vertical dividers now use the native background-modifier-border theme tok
 ## Remaining native evidence
 
 Foreground access remains on hold until the maintainer explicitly says ready. No staging, reload, foreground Obsidian operation or native acceptance has run. After ready, use existing guarded disposable Small and the exact artifact above: test ordinary open/close in all four positions after manual pan/zoom, with autozoom both enabled and disabled; verify focal centering and unchanged scale when disabled. Check modifier fold/unfold-close, rapid toggle/input cancellation and retained editor/focus/layout cleanup. Approximately5-10minutes of foreground work remains. Main-window/popout native layout timing and physical Mac/mobile behavior remain unverified. No merge, release or production deployment is authorized.
+
+## Central-editor modifier opening and tooltip audit
+
+The central thought's Use editor as central node corner action now forwards its original stopped click event. Any Alt, Control, Meta or Shift flag, including combinations, invokes the existing camera-preserving expanded-editor owner before enabling the existing view-local editor representation. Ordinary clicks retain normal editor opening. Existing sidepanel restrictions remain and unsupported expansion does not advertise the hint. The English tooltip reads: Use editor as central node. ALT/Opt to open in expanded editor mode. All8 catalogs maintain the new key; literal ALT/Opt is the maintainer's explicit task-specific copy choice.
+
+The editor toolbar now uses a shared host-free TooltipButton. Its accessible name is a stable referenced hidden label; only K-Plex's existing delegated tooltip owner renders its hover/long-press hint. No aria-label or HTML title remains on those buttons or their toolbar, removing the competing native Obsidian aria-label tooltip path independently of CSS suppression. The shared owner resolves referenced labels in the control's actual document. Button actions, disabled/pressed semantics, native editor lifetimes and camera restoration remain with their existing owners.
+
+The source audit covered native JSX title attributes, custom ToolButton title props, imperative tooltip calls and shared hover/long-press targets. It found one additional overlapping native path: expanded mini-thought rows had both aria-label and title. Those rows retain the existing full filename/path title and use a separate referenced full accessible name. Existing compact thought/image titles, filter select help, relation filenames and iframe accessibility titles remain; ToolButton's title prop already maps to one aria-label, and native setTooltip calls use the native owner's own aria-label mechanism. The final JSX audit reviews7 native title elements and finds0 overlapping aria-label/shared-tooltip markers. This is a source audit plus headless evidence, not a claim to have enumerated every live third-party tooltip in Obsidian.
+
+Actual additional checks on Node22.22.2:
+
+- `node --test --test-concurrency=1 tests/viewport-fit.test.mjs tests/localization.test.mjs`:40/40 pass. Tests include all16 modifier combinations, original event forwarding, sidepanel negative controls, expansion/restoration camera ownership and exact hint copy across8 locales.
+- `node --test --test-concurrency=1 tests/control-tooltips.test.mjs`:10/10 pass in real Chromium. A production TooltipButton exposes1 shared tooltip, no native aria/title candidate, updates its label, and retains its correct accessible button name verified through Chromium's accessibility tree. Existing delayed hover, owning-document, long-press and cleanup controls remain green.
+- Affected `tests/ui-components.test.mjs` cases selected by attachment rename collision, Editor shared menu, nodes retain compact and long node titles:4/4 pass. They preserve editor-menu delegation, mini-row full accessibility/title, stationary modifier previews, dragging/rename and truncation behavior.
+- Architecture:7/7,152 migrated roots,274 reachable files,0 violations. Official scanner and final actual-dependency build/types pass. No full broad verification or performance campaign.
+
+One retained initial affected-browser attempt was3/4: its source-extraction fixture found9 owners instead of8 because the prior Sidecar effect introduced another nested cancel callback. That new cleanup now has the precise name retireSidecarFraming; unchanged source-owner assertions pass4/4. The editor-menu fixture intentionally reads the referenced accessible name instead of the removed aria-label and still checks the exact icon, real button/document and delegated action. Original and corrected receipts remain private under kplex-editor-*. The earlier Sidecar-only main artifact f43871726a44a8b033f45854fb3ce4f3dfbd4138610abe3a3e50e2b30d79c8a9 remains historical; the final combined artifact above includes these editor changes.
+
+Remaining native checks also include normal versus modifier editor opening, restore/collapse, and a single tooltip in main-window/popout editor controls. Foreground WAIT persists; no such native result is claimed.

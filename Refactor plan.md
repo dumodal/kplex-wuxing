@@ -6050,3 +6050,8 @@ One CSS grid declaration makes the9 visibility toggles3 columns at normal panel 
 ### 2026-10-24 - Visibility column dividers
 
 Added subtle native-theme column separators with clipping and preserved switch focus-ring padding. Headless production-CSS checks confirm2/1/0 visible divider positions for3/2/1 columns, all9 toggles contained and focus space retained; screenshot inspected. Scanner and real build pass. Main unchanged; styles0ece0916859bcda0203dc5dcbb3906ce1d932a2fbceb47a5dccd4076cd83f381. No additional manual check required for this reversible styling; no foreground or performance campaign.
+
+
+### 2026-10-24 - Expanded editor modifier and tooltip ownership
+
+Thought corner forwards original click; any modifier reuses camera-preserving expanded editor, ordinary and unsupported-sidepanel controls retained. Requested ALT/Opt hint in8 locales. Shared TooltipButton gives editor toolbar referenced accessible labels and one delegated hint; mini rows retain native full path title with separate full accessible names. Source audit7 title elements,0 remaining overlapping aria/shared markers. Camera/localization40/40, Chromium tooltips10/10 with accessibility-tree name, affected UI4/4, architecture7/7 and0 violations, scanner/real build pass. Initial source-fixture cancel ambiguity retained; precise Sidecar cleanup name resolves it without weakened assertions. Main e197ef623724d3271bfafbd5459152653d00f63f182b8a218fe00c660d1ec1f9. Highest risks remain native expansion/restoration and main/popout single-tooltip behavior; pending explicit foreground ready, physical mobile/Mac unrun. No performance campaign, merge/release or production deployment.

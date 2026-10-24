@@ -1213,6 +1213,7 @@ const germanTranslations = {
   "explain.inlineRelationshipAtLine": "Inline-Beziehung in Zeile {line}",
   "explain.linkAtLine": "Link in Zeile {line}",
   "app.useCentralNodeEditor": "Editor als zentralen Knoten verwenden",
+  "app.useCentralNodeEditorExpandedHint": "Editor als zentralen Knoten verwenden. ALT/Opt öffnet den erweiterten Editormodus.",
   "app.useNormalCentralNode": "Normalen zentralen Knoten verwenden",
   "centralEditor.toolbar": "Editor der zentralen Notiz",
   "centralEditor.showPreview": "Leseansicht anzeigen",

@@ -1209,6 +1209,7 @@ const japaneseTranslations = {
   "explain.inlineRelationshipAtLine": "{line} 行目のインライン関係",
   "explain.linkAtLine": "{line} 行目のリンク",
   "app.useCentralNodeEditor": "中央ノードをエディターにする",
+  "app.useCentralNodeEditorExpandedHint": "中央ノードをエディターにする。ALT/Opt で拡大エディターモードを開きます。",
   "app.useNormalCentralNode": "通常の中央ノードに戻す",
   "centralEditor.toolbar": "中央ノートエディター",
   "centralEditor.showPreview": "閲覧ビューを表示",
