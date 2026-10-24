@@ -1,4 +1,13 @@
-# PR210 indexing event convergence — implementation in progress
+# PR210 indexing event convergence — validation and review
+
+**Disposition:** recommend merging as a scoped improvement after maintainer review.
+The PR remains draft and is not merged. Final implementation/tooling CI430 passed
+at `f4c9073c22109d7f61eb1c512e3a3192bb183acc`; final documentation-checkpoint CI
+and remote publication are recorded on the PR. Runtime bytes remain those of
+`a61b92485102ac6483a37dc0a63e17bbfaa59908`, artifact `6400bb47…` below.
+All required applicable Windows lanes pass, including natural event convergence,
+recovery and exact configuration restoration. This does not establish that every
+historical #202 symptom is fixed, nor complete the broader indexing CPU objective.
 
 Prepared by Zsolt's Codex Agent. Accepted comparison baseline:
 `90032c6d7499fa4e40179110f7b5672d356aa390`, including accepted #206/#207.
@@ -67,9 +76,9 @@ candidate admits zero. Dirty owners, real structural/unknown reasons, manual,
 forced, cold, completed startup and On-demand controls retain admission.
 This does not establish or claim a fix for repeated incomplete full-build results.
 
-## Validation and remaining gates
+## Intermediate validation and failures (historical)
 
-- Pinned Node22.22.2 and real installed Obsidian declarations: affected typecheck
+- Pinned Node 22.22.2 and real installed Obsidian declarations: affected typecheck
   passes. Targeted coordinator controls pass 24/24, zero failures/skips.
 - Nine new real-IDB event controls pass, including extra/expired resolver, rename,
   delete/recreate, pause, unload, selected-owner same-stat and final-proof events.
@@ -147,7 +156,7 @@ closure, oracle parity, retained negative controls and applicable green checks;
 better timing cannot excuse stale facts or false readiness. No numeric acceptance
 threshold or production timeout is changed.
 
-## Verification in progress
+## Initial complete verification and CI failures (historical)
 
 Published implementation checkpoint `a61b92485102ac6483a37dc0a63e17bbfaa59908`
 failed CI426 in the existing URL-heavy post-parse graph-patch timer assertion:
@@ -198,7 +207,7 @@ replaced file. Supported ordering remains conservative in delete/recreate contro
 
 ## Completed matched browser comparison
 
-All20 timing arms and all8 separate operation-diagnostic arms pass. Three pairs
+All 20 timing arms and all 8 separate operation-diagnostic arms pass. Three pairs
 alternate baseline/candidate order for each principal cell; every event-heavy arm
 delivers exactly3 waves with the same final documents. No arm is excluded.
 The native Windows validation remains separate and pending.
@@ -233,8 +242,8 @@ of independent medians to invent an individual-run interval.
 |384 /2|1.549199 /1.366638|1976.5 /1732.7|554.3 /447.5|1018.3 /887.4|
 |384 /3|1.630634 /1.510776|2103.4 /1969.2|555.9 /466.5|1108.7 /1011.6|
 
-Median renderer CPU:0.430809 ->0.382293 seconds (-11.3%) at96 owners;
-1.550262 ->1.395461 (-10.0%) at384. Median work elapsed:548.6 ->474.2ms
+Median renderer CPU:0.430809 ->0.382293 seconds (-11.3%) at 96 owners;
+1.550262 ->1.395461 (-10.0%) at 384. Median work elapsed:548.6 ->474.2ms
 (-13.6%) and1984.9 ->1814.7ms (-8.6%). Main-thread TaskDuration medians
 are0.289676 /0.258733 and1.047071 /0.940510 seconds, separately from process CPU.
 The third384 pair is slower in both builds than the first two and is retained.
@@ -261,7 +270,7 @@ Both arms do the same native mutations; the candidate can coalesce the supersede
 first edit of owner0 with its third edit before durable acquisition. All final
 facts agree with fresh host compilation. It does not skip a requested foreground
 edit. Recorded checked/reused-body counters actually rise from101/98 to102/100
-at96 and389/386 to390/388 at384 because they include local repair; they are not
+at 96 and389/386 to390/388 at 384 because they include local repair; they are not
 unique sweep visits. Likewise candidate reader pairs and decodes rise slightly.
 The improvement is elimination of repeated inventory prefixes, not universal
 reduction of every counter or removal of leases. Both diagnostic arms have zero
@@ -289,7 +298,7 @@ reader add/release pairs. All three raw controls are retained:
 |3|0.059739 /0.060225|70.8 /72.4|
 
 Candidate control CPU is consistently0.486?0.628ms higher; small additional exact
-fences are not free. Do not present this as an improvement. All500ms quiet tails
+fences are not free. Do not present this as an improvement. All 500ms quiet tails
 remain closed with zero additional inspections, ensures or completion calls.
 Event-heavy quiet CPU ranges:96 baseline0.001658?0.002603s, candidate0.000881?0.001265s;
 384 baseline0.002077?0.003215s, candidate0.000959?0.001239s.
@@ -301,17 +310,17 @@ Event-heavy quiet CPU ranges:96 baseline0.001658?0.002603s, candidate0.000881?0.
 |Same-DB acquisition/connection reopen CPU seconds|0.151604 /0.148091|0.502666 /0.506749|
 |Reopen transport-inclusive wall ms|193.301 /190.827|680.763 /657.126|
 
-The small adverse later-edit CPU at96 and reopen CPU at384 are retained. These
+The small adverse later-edit CPU at 96 and reopen CPU at 384 are retained. These
 phases include IPC/metric transport in their wall observations and do not isolate
 native indexedDB.open. They preserve exact final semantic digests and complete
 cleanup; they are not #207 storage/restart measurements.
 
 Diagnostic20ms heartbeat maximum gaps range20.1?21.5ms baseline and20.1?20.4ms
-candidate at96;50.2?55.7ms baseline and47.4?52.6ms candidate at384. Those gaps
+candidate at 96;50.2?55.7ms baseline and47.4?52.6ms candidate at 384. Those gaps
 include the nominal20ms period and are not direct task-block durations, actual
 paint, native interaction latency or a replacement for existing strict50ms tests.
-Sampled heap endpoints span20.90?21.81MiB baseline /19.77?22.18MiB candidate at96,
-and19.41?40.83 /7.74?41.00MiB at384. No allocation, true peak or GC attribution is
+Sampled heap endpoints span20.90?21.81MiB baseline /19.77?22.18MiB candidate at 96,
+and19.41?40.83 /7.74?41.00MiB at 384. No allocation, true peak or GC attribution is
 established. Browser/storage CPU and global OS cache/heap equivalence remain
 unmeasured. No forced GC, global cache changes or altered scheduling were used.
 
@@ -322,7 +331,7 @@ its function identity. A late activation failure control now reaches both instal
 hooks and proves their retirement plus independent fixture/configuration cleanup.
 Its first unit attempt failed before that boundary because the fake index omitted
 getSourceAcquisitionCounters; the fixture was completed, not the assertion relaxed.
-All6 cleanup tests then pass, zero skips; private kplex-210-native-cleanup-late.log.
+All 6 cleanup tests then pass, zero skips; private kplex-210-native-cleanup-late.log.
 No production owner or matched-study executable changed. The running full local
 verification began at dca8668; this added tooling case has separate focused evidence
 and must also be included in final-head CI.
@@ -334,7 +343,7 @@ Complete pinned-Node local verification through verify:obsidian passes: architec
 core, official scanner, general/UI/portable/source tests,735/735 browser assertions
 with zero failures/skips, real installed Obsidian declarations and production build.
 Strict staging hashes match all three files and native open/command/DOM/error smoke
-passes on Windows10.0.26200, Obsidian1.14.5(installer1.14.0), Node22.22.2.
+passes on Windows10.0.26200, Obsidian1.14.5(installer1.14.0), Node 22.22.2.
 The invocation started clean at dca8668; later commits change only tooling/reporting,
 while both production owner bytes remain identical to a61b924. Added tooling/cold
 cases have separate focused evidence and final-head CI remains required.
@@ -353,7 +362,7 @@ full local verification and isolated unchanged fixture show no repeatable candid
 regression in that unchanged timed patch path; they do not erase the adverse sample.
 
 The additional fresh-storage control has no earlier complete source/dependency
-inventory. Same24 owners and fixed3 waves: baseline4 broad inventories/63 sweep
+inventory. Same 24 owners and fixed3 waves: baseline4 broad inventories/63 sweep
 visits/87 ensures versus candidate1 inventory/24 sweep visits/72 ensures, all final
 values correct. Candidate post-sweep ensures include24 initial resolution repairs
 and24 retained known-owner validations; baseline has24 resolution repairs and no
@@ -392,4 +401,118 @@ escaped physical target, hidden child, post-hook activation failure and no force
 readiness calls. It also preserves functional-completion and original scenario-error
 facts before finally, so a later cleanup error cannot erase earlier evidence.
 Private focused receipt: kplex-210-native-cleanup-physical-final.log.
-An unchanged-artifact native rerun with corrected cleanup is in progress.
+At that checkpoint the unchanged-artifact native rerun was in progress; its
+subsequent passing result and the remaining native acceptance are recorded below.
+
+
+## Completed exact-build Windows acceptance
+
+Every lane below used installed main.js6400bb47c719da4cca9736c98ec6b0f56c55d211a1cbbf42751c66d5caf852bf,
+serially, in the existing guarded Small vault. They are functional/interaction
+checks, not native CPU comparisons. No production code changed after a61b924.
+
+| Lane | Actual result / private receipt under the native root |
+| --- | --- |
+| Strict full verification, production build, staging and native smoke | Pass; verify/report.json and kplex-210-final-verify-native.log.735/735 browser assertions, zero failures/skips; real installed dependencies/types. |
+| Final event/proof/diagnostic/native-cleanup controls | Pass23/23, zero skips; kplex-210-final-all-focused.log. Includes the additional fresh inventory and physical target guards. |
+| Real finite source events and natural completion | Pass; event-convergence-fixed-cleanup/indexing-event-convergence-210.json. Three actual modify, three metadata and three resolved notifications occurred during inventory. |
+| Metadata-unavailable recovery | Pass; recovery-profile-visible/driver/startup-source-recovery-206.json. False adoption followed by automatic true adoption after actual metadata restoration; zero full builds. |
+| Startup admission, including before-view controls | Pass seven cases; admission-profile/driver/startup-admission-195.json plus profile-restoration.json. Actual disabled/eligible sessions, real Settings controls, native dormant events, concurrent main/sidebar opening and explicit closed rebuild remain distinct. |
+| SI4 settings | Pass14 steps; si4/si4-native.json. Existing documented required-files0 Small mode,88 ordinary Markdown plus five owned fixtures; this is functional evidence, not20,015-note native scale acceptance. Zero reads/parses/acquisitions/full builds; actual gates, labels, search, policy/provenance and stale writes remain checked. |
+| SI5 reload/recovery | Pass; si5/report.json. Changed policy, missing/corrupt acceleration and corrupt requested source recover with zero semantic body reads/parses; offline edit reads/parses exactly one changed source. |
+| Held-inventory foreground | Pass; foreground/report.json. Real navigation, relationship create/remove, node creation, visible editing and folder/gate consumers work while unrelated inventory is held; no broad flush used. |
+| Folder / Excalidraw / create-fill-rename | Pass; folder-wave/report.json. Includes actual ordinary Markdown, valid Excalidraw scene loaded in its real companion view, and native create/fill/rename with preserved object identity. No Templater-plugin claim. |
+| Rename and recovery | Pass; rename/rename-identity.json. Both Eager and On-demand, native FileManager and K-Plex modal, aliases/titles, host link rewrites, repeated move, warm reload and original state restoration. |
+| Tags, folders, exact gates and search | Pass; gates-owned-copy/report.json. Existing root fixtures differed from the checked-in originals, so an owned prefixed copy was used. Existing notes were not overwritten. |
+| Ontology edits during remaining startup work | Pass; ontology/ontology-startup-updates-190.json. Stationary view, actual native writes and owned semantic commits precede release of the remaining source, with physical provenance intact. |
+| On-demand / background URL / Responsive live updates | Pass; live-profile/driver/report.json plus profile-restoration.json. Find, physical creation, local explicit relationships, recent sync and genuine queue drain while unrelated P3 work remains held. |
+
+The native event trace retains one genuine global resolution invalidation and one
+false inventory result; cancellation was not suppressed or reclassified as success.
+There are three inventory admissions (one false, two true) and successful adoption.
+After the last of the fixed three writes, all asserted source/semantic/URL/cache
+conditions close naturally at9973.7ms; write delivery span299.3ms. The declared
+selected-owner await establishes event ordering only. This is not pooled with the
+headless renderer timing cohort or described as a ten-second throughput benchmark.
+New warm-plugin counters are reported in that receipt; the older plugin instance's
+preparation counters are not subtracted across the reload.
+
+Held-inventory foreground wall observations: folder/gates35.1ms, navigation6.9ms,
+create-link161.0ms, remove-link117.6ms, create-node24.0ms and visible-edit122.8ms.
+These include awaited native operations, not task-block durations or actual paint.
+Existing functional deadlines and the separate strict URL-heavy50ms assertion
+remain unchanged. The live-update lane uses the already documented workspace-ready
+variant while holding P3. The original very-early recent-tab guard limitation from
+#206/#207 remains a limitation; this does not claim acceptance during workspace
+reassociation or physical-device input/paint.
+
+### Native preparation failures and restoration
+
+The first recovery attempt refused the existing profile before fixture creation:
+Sync and the Excalidraw companion were enabled. A proposed batch isolation command
+was rejected by automatic approval review because its finally would leave Sync
+disabled; it did not execute. Revised per-lane isolation restores both original
+modules and configuration independently on every exit, using the documented
+[Obsidian CLI core/community filters](https://obsidian.md/help/cli).
+
+The first isolated functional recovery assertions succeeded, but its overall
+Enablement-bytes guard failed: actual disabled modules and the saved profile were
+not yet aligned. Its failed receipt remains recovery-profile-restored/. A second
+attempt first stabilized that saved profile, but normal plugin reload had closed
+all Plex surfaces; fixture settlement then failed its unchanged45-second prerequisite.
+That failure remains recovery-profile-stable/. Both attempts restored all module
+flags, original configuration bytes and107 files; no failed result becomes a pass.
+
+The final preparation verifies the actual isolated profile on disk and in memory,
+then opens the real Plex surface before starting the unchanged driver. It passes
+all fault/recovery assertions and its enablement/data guards; the independent outer
+finally restores Sync, Excalidraw, layout and original configuration. See
+recovery-profile-visible/restoration.json. This preparation/reload is functional
+setup, not a measured startup/CPU arm and not a policy change.
+
+Final audit: final-audit.json and workspace-restoration.json. Native inventory is
+107 files /88 Markdown; Eager and genuine initial/source/URL readiness are true.
+Pending known/resolution/impact work, fan-out, source/repository/cache writers,
+unsaved sources, pending deletes, in-process readers/decode reservations, snapshot
+persist timer, scheduler lanes and test controllers are all zero. Durable local
+count state is complete with pending0; repair/impact stores and primary dirty count
+are zero. The audit observes two conservative persisted family leases, consistent
+with the count in prior reports; their identities were not rechecked. No
+expiry/reset/deletion was introduced to remove them.
+
+Core-plugin, community-plugin and K-Plex data bytes exactly match the first recovery
+preparation backup. Sync is enabled and both original community plugins are enabled.
+Workspace pane/session/active identities and the prior recent-file list are restored;
+only eight recent entries for the two explicitly owned event-probe directories are
+removed. The saved workspace matches that exact cleanup target after ordinary host
+saving; no unrelated historical entries are removed. All test-owned physical
+artifacts are absent. Normal future polling/orphan maintenance remains scheduled;
+this task is not a long idle/physical storage investigation.
+
+## Review recommendation and limits
+
+Recommend merging #210 as a scoped event-convergence improvement after maintainer
+review. The reproduced defect is whole-inventory invalidation by unrelated known
+source events. The correction retains that inventory lifetime while validating
+individual owners and draining current pending work before an exact final fence.
+Matched renderer CPU and actual repeated work improve, final semantics agree with
+an independent host compilation, and required applicable Windows contracts pass.
+CI430 passes at final implementation/tooling f4c9073; final documentation-checkpoint
+CI/publication readback is linked on the PR. Do not merge automatically.
+
+This does not prove all older #202 patterns survive or are fixed. Global resolver,
+Date/Daily Notes, topology and selected in-flight owner changes remain conservative.
+Unchanged missing metadata/storage or a genuinely endless mutation stream can remain
+incomplete. First-time indexing retains conservative post-sweep validation; do not
+claim a universal one-pass total or universal O(N+events) work bound. The mixed
+backlog test proves one specific covered competing-build admission, not elimination
+of all historical incomplete builds with real structural obligations.
+
+Renderer-only synthetic CPU, bounded sample sizes, observer/transport overhead,
+Small-vault functional scope, heap endpoint sampling, and unrun minimum-host/macOS/
+physical mobile acceptance remain explicit limits. A useful manual cross-platform
+check is a finite edit/metadata burst while initial source work is active, followed
+by genuine completion and an immediate edit/navigation in main and popout contexts.
+No new Mac experiment is assigned. No repository read/lease/count/schema/scheduler
+redesign, #207 storage follow-up, main write, merge, release, #202 closure or production
+deployment is included. The broader indexing CPU objective remains open.
