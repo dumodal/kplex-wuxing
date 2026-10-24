@@ -6000,3 +6000,8 @@ Known-source events may retain only unrelated broad scope, with exact owner capt
 
 
 2026-10-24 ? Stable autosave gate-count checkpoint: preserve coherent read presentation across fingerprint-proved saves; keep current-policy canonical compilation identity on existing hot entries; transfer fenced native folder totals; retain four committed UI labels without renewing proof, and show structural lateral zeros. Focused real-IDB/UI/native diagnostic evidence is in docs/validation/stable-gate-counts-2026-10-24.md. Full verification/final artifact/native/CI pending; no structural refactoring or merge authorized.
+
+
+### 2026-10-24 stable gate counters: host-notification fence review
+
+CI434 caught overbroad read retention for identity-only host observations. Retain a requested scope only across one attributed physical source revision; its predecessor revision already closes write authority. Unknown/cache-only observations preserve original scope retirement, including released history. The unchanged source-replay oracle/cancellation assertion and blocked-database/autosave/held-read controls pass12/12. The earlier full local rerun was stopped and retained as incomplete. Full final verification/native checks/CI remain pending; foreground checks require the maintainer's explicit ready response while video editing. No assertion/deadline/threshold was weakened.

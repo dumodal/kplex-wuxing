@@ -1597,8 +1597,15 @@ export class GraphIndex {
     }
     // Released scopes have the same source/metadata finality as active scopes. A host notification
     // can change ontology in place without advancing the plugin's physical source revision.
-    // Epochs above already close source/write authority. Keep the last coherent read while its
-    // replacement is private; the actual file commit retires changed incidence atomically.
+    // Retain a coherent read only across one attributed source revision: its old source revision
+    // already closes write authority. An identity-only resolver/cache notification has no such
+    // fence and must retire the scope, including released history, before fresh preparation.
+    for (const [center, scope] of this.semanticScopes) if ((scope.pagesByPath.has(changedPath) || affectedTargets.has(center))
+      && (!knownMetadataChange || scope.sourceRevision !== previousSourceRevision)) {
+      this.semanticScopes.delete(center);
+      this.releasedSemanticScopePaths.delete(center);
+      this.semanticPreparationFailures.delete(center);
+    }
     // A resolve/unchanged-stat notification does not invalidate unrelated complete cached incidence.
     // Retire the source and old/new targets. A physical edit or unknown revision may have changed
     // body fields/resolution outside MetadataCache's link map, so retain the conservative fallback.

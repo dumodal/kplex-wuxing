@@ -23,7 +23,10 @@ The correction stays in the existing GraphIndex/GraphBuilder and node-presentati
   an already compiled Eager owner use the ordinary foreground patch path. Actual input parsing,
   source acquisition, fingerprint comparison and final revision checks remain mandatory. Cold,
   evicted and changed-policy inputs cannot borrow the marker. Node-only repairs do not stamp it.
-- The fingerprint no-op receipt is distinguished from a node-only repair. Such a save retains
+- The fingerprint no-op receipt is distinguished from a node-only repair. An exactly attributed
+  source revision can retain its predecessor read because the old revision closes write authority.
+  Identity-only resolver/cache notifications still retire affected scopes, including released history.
+  Such a save retains
   coherent requested read presentation while its new proof prepares. Retention never restamps
   source, maintenance, policy or relationship-write authority. Changed incidence retires it at
   the existing atomic commit; deletion/rename and policy guards remain independent. Fresh host
@@ -77,6 +80,21 @@ also stopped incorrectly requiring unchanged raw coverage: current proof may wea
 retains a cached label. It still asserts unchanged values, exact fingerprint no-op publication and
 closed write authority. The separate real-React test checks badge DOM continuity without mutating
 that partial index proof. The failed broad run remains retained and requires a full corrected rerun.
+
+That local broad run completed with **1416/1417** tests passing and the unchanged blocked-database
+assertion failing. CI run **433** independently reproduced that regression and also reported a
+Chromium startup timeout before the hotkey-search browser scenario could run. The latter is an
+unrun scenario, not an assertion pass; its retained log records browser startup/DBus diagnostics.
+The first correction was published as `4603e5eb75e1f7120badb22dbfc2af74e35a0a17`. CI run **434**
+passed the earlier blocked-database assertion and reached source replay, where the unchanged
+production-owner oracle caught overbroad retention after an identity-only host notification.
+Retention is now limited to an exactly attributed source revision whose predecessor revision
+already closes write authority. Unknown/cache-only observations preserve the original scope
+retirement behavior. The original source-replay cancellation/oracle assertions are unchanged.
+Focused source-replay/blocked-database/autosave/held-read controls pass **12/12**, zero skips.
+The second full local run was deliberately interrupted after this new CI finding; it is retained
+as incomplete, not a pass. A complete run on the narrowed implementation is required.
+No test assertion, deadline or acceptance threshold changed.
 
 Native attempts exposed setup without an active Plex, teardown that closed its owned Plex before
 indexing drained, and an immediate enablement-set check before asynchronous plugin restoration
