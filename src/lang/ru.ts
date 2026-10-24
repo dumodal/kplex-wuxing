@@ -1382,6 +1382,14 @@ const russianTranslations = {
   "footprints.copying": "Копирование...",
   "footprints.copied": "Скопировано в буфер обмена.",
   "footprints.copyFailed": "Не удалось скопировать. Попробуйте ещё раз.",
+  "actions.editor.expand": "Открыть редактор узла",
+  "actions.editor.expand.description": "Редактировать выбранный узел на месте.",
+  "actions.editor.collapse": "Закрыть редактор узла",
+  "actions.editor.collapse.description": "Сохранить и закрыть редактор узла этого холста.",
+  "actions.editor.resize": "Изменить размер редактора",
+  "actions.editor.resize.description": "Изменить размер открытого редактора узла.",
+  "actions.editor-capacity": "Закройте текущий редактор узла, прежде чем открывать другой.",
+  "actions.editor-save-failed": "Не удалось сохранить. Редактор остаётся открытым.",
 } as const satisfies LocaleTranslationMap;
 
 export const russianCatalog = buildLocaleCatalog(russianTranslations);

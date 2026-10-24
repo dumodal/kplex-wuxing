@@ -70,6 +70,30 @@ test('rooted sessions retain independent roots and transient geometry while bran
  a.dispose();b.dispose();c.dispose();
 });
 
+test('workspace editor restoration carries bounded intent but never grants a stored native file token authority',()=>{
+ const bound={...M.probeViewDefinition,id:'test.bound',editorHosting:'occurrence'},registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,bound]);
+ const a=new M.PlexViewSession(registry,()=>{});a.select(bound.id);a.editors.open(occurrenceIntent());
+ const saved=JSON.parse(JSON.stringify(a.getState()));assert.equal(JSON.stringify(saved).includes('native-B'),false);assert.equal(JSON.stringify(saved).includes('occurrence-editor-'),false);
+ const b=new M.PlexViewSession(registry,()=>{});b.restore(saved);assert.deepEqual(b.editors.bindings,[],'Restoration alone creates no live editor');
+ assert.deepEqual(b.readEditorIntent(),{viewId:bound.id,occurrenceId:'B1',target:{nodeId:'B.md',path:'B.md'},dimensions:{width:600,height:360},mode:'source'});
+ const intent=b.readEditorIntent();intent.target.path='C.md';assert.equal(b.readEditorIntent().target.path,'B.md');
+ const opened=b.editors.open({...b.readEditorIntent(),target:{...b.readEditorIntent().target,fileIdentity:'fresh-native-B'}});
+ assert.equal(opened.binding.target.fileIdentity,'fresh-native-B');assert.equal(b.readEditorIntent(),null);b.editors.beginClose(opened.binding.id).commit();assert.equal(b.readEditorIntent(),null,'Collapse cannot revive the saved editor');
+ for(const editors of [{version:2,bindings:[{future:true}]},{version:1,bindings:[saved.editors.bindings[0],saved.editors.bindings[0]]},
+  {version:1,bindings:[{...saved.editors.bindings[0],occurrenceId:'x'.repeat(4097)}]},
+  {version:1,bindings:[{...saved.editors.bindings[0],dimensions:{width:Infinity,height:360}}]}]){
+  const c=new M.PlexViewSession(registry,()=>{});c.restore({...saved,editors});assert.equal(c.readEditorIntent(),null);assert.deepEqual(c.editors.bindings,[]);c.dispose();
+ }
+ const future={version:2,bindings:[{future:true}]},c=new M.PlexViewSession(registry,()=>{});c.restore({...saved,editors:future});assert.deepEqual(c.getState().editors,future,'Unsupported intent round-trips inertly');
+ a.dispose();b.dispose();c.dispose();
+});
+
+test('root restoration at capacity still captures a stable active root',()=>{
+ const rooted={...M.probeViewDefinition,id:'test.rooted',navigation:'rooted'},registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,rooted]);
+ const session=new M.PlexViewSession(registry,()=>{});session.restore({version:1,id:rooted.id,roots:Object.fromEntries(Array.from({length:16},(_,i)=>['future.'+i,'R'+i]))});
+ session.ensureRoot('Actual.md');session.ensureRoot('Other.md');assert.equal(session.layoutRoot('Other.md'),'Actual.md');assert.equal(Object.keys(session.getState().roots).length,16);session.dispose();
+});
+
 test('static registration validates identity/version and ships Classic only',()=>{
   assert.deepEqual(M.builtInPlexViews.available.map(view=>view.id),['classic']);
   assert.throws(()=>new M.PlexViewRegistry([M.builtInPlexViews.resolve('classic'),M.builtInPlexViews.resolve('classic')]));

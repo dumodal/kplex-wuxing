@@ -6,6 +6,8 @@ export type PlexEditorDimensions = Readonly<{width: number; height: number}>;
 export type PlexEditorIntent = Readonly<{viewId: string; occurrenceId: string; target: PlexEditorDocument;
   dimensions: PlexEditorDimensions; mode: "preview" | "source"}>;
 export type PlexEditorBinding = PlexEditorIntent & Readonly<{id: string; closing: boolean}>;
+/** Workspace intent excludes native incarnation tokens and editor buffers. The host must reacquire identity. */
+export type SavedPlexEditorIntent = Omit<PlexEditorIntent, "target"> & Readonly<{target: Readonly<{nodeId: NodeId; path: string}>}>;
 export type PlexEditorAdmission = Readonly<{status: "opened" | "existing"; binding: PlexEditorBinding}
   | {status: "unavailable"; reason: "closed" | "invalid-binding" | "capacity" | "closing"}>;
 
@@ -34,8 +36,10 @@ export class PlexEditorBindings {
         && previous.target.fileIdentity === intent.target.fileIdentity) return {status: "existing", binding: previous};
       return {status: "unavailable", reason: "capacity"};
     }
-    const binding: PlexEditorBinding = Object.freeze({...intent, id: `occurrence-editor-${++this.sequence}`, closing: false,
-      target: Object.freeze({...intent.target}), dimensions: Object.freeze({...intent.dimensions})});
+    const binding: PlexEditorBinding = Object.freeze({viewId: intent.viewId, occurrenceId: intent.occurrenceId, mode: intent.mode,
+      id: `occurrence-editor-${++this.sequence}`, closing: false,
+      target: Object.freeze({nodeId: intent.target.nodeId, path: intent.target.path, fileIdentity: intent.target.fileIdentity}),
+      dimensions: Object.freeze({width: intent.dimensions.width, height: intent.dimensions.height})});
     this.current = Object.freeze([binding]); this.changed(); return {status: "opened", binding};
   }
   /** Geometry cannot reopen/rebind a native editor or change its incarnation. */
@@ -43,7 +47,7 @@ export class PlexEditorBindings {
     const binding = this.current.find(item => item.id === id);
     if (this.closed || !binding || binding.closing || !validDimensions(dimensions)) return false;
     if (binding.dimensions.width === dimensions.width && binding.dimensions.height === dimensions.height) return true;
-    this.current = Object.freeze([Object.freeze({...binding, dimensions: Object.freeze({...dimensions})})]); this.changed(); return true;
+    this.current = Object.freeze([Object.freeze({...binding, dimensions: Object.freeze({width: dimensions.width, height: dimensions.height})})]); this.changed(); return true;
   }
   /** Native mode changes belong to the bound document, independently of attention/default settings. */
   setMode(id: string, mode: "preview" | "source"): boolean {

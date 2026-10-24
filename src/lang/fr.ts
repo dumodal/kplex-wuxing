@@ -1378,6 +1378,14 @@ const frenchTranslations = {
   "footprints.copying": "Copie en cours...",
   "footprints.copied": "Copié dans le presse-papiers.",
   "footprints.copyFailed": "Impossible de copier. Réessayez.",
+  "actions.editor.expand": "Ouvrir l’éditeur du nœud",
+  "actions.editor.expand.description": "Modifier le nœud sélectionné sur place.",
+  "actions.editor.collapse": "Fermer l’éditeur du nœud",
+  "actions.editor.collapse.description": "Enregistrer et fermer l’éditeur de ce canevas.",
+  "actions.editor.resize": "Redimensionner l’éditeur",
+  "actions.editor.resize.description": "Redimensionner l’éditeur ouvert du nœud.",
+  "actions.editor-capacity": "Fermez l’éditeur actuel avant d’en ouvrir un autre.",
+  "actions.editor-save-failed": "L’enregistrement a échoué. L’éditeur reste ouvert.",
 } as const satisfies LocaleTranslationMap;
 
 export const frenchCatalog = buildLocaleCatalog(frenchTranslations);

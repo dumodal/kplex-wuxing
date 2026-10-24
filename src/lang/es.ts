@@ -1378,6 +1378,14 @@ const spanishTranslations = {
   "footprints.copying": "Copiando...",
   "footprints.copied": "Copiado al portapapeles.",
   "footprints.copyFailed": "No se pudo copiar. Inténtalo de nuevo.",
+  "actions.editor.expand": "Abrir editor del nodo",
+  "actions.editor.expand.description": "Edita el nodo seleccionado en su lugar.",
+  "actions.editor.collapse": "Cerrar editor del nodo",
+  "actions.editor.collapse.description": "Guarda y cierra el editor del nodo de este lienzo.",
+  "actions.editor.resize": "Cambiar tamaño del editor",
+  "actions.editor.resize.description": "Cambia el tamaño del editor abierto del nodo.",
+  "actions.editor-capacity": "Cierra el editor actual antes de abrir otro.",
+  "actions.editor-save-failed": "No se pudo guardar el editor. Sigue abierto.",
 } as const satisfies LocaleTranslationMap;
 
 export const spanishCatalog = buildLocaleCatalog(spanishTranslations);

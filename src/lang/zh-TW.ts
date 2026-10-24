@@ -1370,6 +1370,14 @@ const traditionalChineseTranslations = {
   "footprints.copying": "正在複製...",
   "footprints.copied": "已複製到剪貼簿。",
   "footprints.copyFailed": "無法複製。請重試。",
+  "actions.editor.expand": "開啟節點編輯器",
+  "actions.editor.expand.description": "直接編輯選取的節點。",
+  "actions.editor.collapse": "關閉節點編輯器",
+  "actions.editor.collapse.description": "儲存並關閉此畫布的節點編輯器。",
+  "actions.editor.resize": "調整節點編輯器大小",
+  "actions.editor.resize.description": "調整已開啟的節點編輯器大小。",
+  "actions.editor-capacity": "請先關閉目前的節點編輯器，再開啟另一個。",
+  "actions.editor-save-failed": "無法儲存。編輯器仍保持開啟。",
 } as const satisfies LocaleTranslationMap;
 
 export const traditionalChineseCatalog = buildLocaleCatalog(traditionalChineseTranslations);

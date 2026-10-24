@@ -1374,6 +1374,14 @@ const germanTranslations = {
   "footprints.copying": "Wird kopiert...",
   "footprints.copied": "In die Zwischenablage kopiert.",
   "footprints.copyFailed": "Kopieren fehlgeschlagen. Erneut versuchen.",
+  "actions.editor.expand": "Knoteneditor öffnen",
+  "actions.editor.expand.description": "Die ausgewählte Notiz direkt im Canvas bearbeiten.",
+  "actions.editor.collapse": "Knoteneditor schließen",
+  "actions.editor.collapse.description": "Den Knoteneditor dieses Canvas speichern und schließen.",
+  "actions.editor.resize": "Knoteneditor skalieren",
+  "actions.editor.resize.description": "Die Größe des geöffneten Knoteneditors ändern.",
+  "actions.editor-capacity": "Schließe den aktuellen Knoteneditor, bevor du einen anderen öffnest.",
+  "actions.editor-save-failed": "Speichern fehlgeschlagen. Der Editor bleibt geöffnet.",
 } as const satisfies LocaleTranslationMap;
 
 export const germanCatalog = buildLocaleCatalog(germanTranslations);

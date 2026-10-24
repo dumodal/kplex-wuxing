@@ -5336,6 +5336,14 @@ export const englishCatalog = {
   "footprints.copying": {"message":"Copying...","context":"Explicit session-trail Markdown clipboard action; show success only after native fulfillment.","params":[],"referenceParams":[]},
   "footprints.copied": {"message":"Copied to clipboard.","context":"Explicit session-trail Markdown clipboard action; show success only after native fulfillment.","params":[],"referenceParams":[]},
   "footprints.copyFailed": {"message":"Could not copy. Try again.","context":"Explicit session-trail Markdown clipboard action; show success only after native fulfillment.","params":[],"referenceParams":[]},
+  "actions.editor.expand": {"message":"Open node editor","context":"Shared occurrence editor action or explicit native save/capacity result.","params":[],"referenceParams":[]},
+  "actions.editor.expand.description": {"message":"Edit the selected node directly in this canvas.","context":"Shared occurrence editor action or explicit native save/capacity result.","params":[],"referenceParams":[]},
+  "actions.editor.collapse": {"message":"Close node editor","context":"Shared occurrence editor action or explicit native save/capacity result.","params":[],"referenceParams":[]},
+  "actions.editor.collapse.description": {"message":"Save and close this canvas’s node editor.","context":"Shared occurrence editor action or explicit native save/capacity result.","params":[],"referenceParams":[]},
+  "actions.editor.resize": {"message":"Resize node editor","context":"Shared occurrence editor action or explicit native save/capacity result.","params":[],"referenceParams":[]},
+  "actions.editor.resize.description": {"message":"Change the size of the editor in this node.","context":"Shared occurrence editor action or explicit native save/capacity result.","params":[],"referenceParams":[]},
+  "actions.editor-capacity": {"message":"Close the current node editor before opening another.","context":"Shared occurrence editor action or explicit native save/capacity result.","params":[],"referenceParams":[]},
+  "actions.editor-save-failed": {"message":"The editor could not be saved. It remains open.","context":"Shared occurrence editor action or explicit native save/capacity result.","params":[],"referenceParams":[]},
 } as const;
 
 export type EnglishCatalog = typeof englishCatalog;

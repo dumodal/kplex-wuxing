@@ -141,3 +141,6 @@ M0 checkpoints, each independently reviewable:
 Then implement M1–M3 using only accepted canonical demand/source owners and complete M4. #220 proceeds independently on its accepted attention editor; no unmerged partner code or acknowledgement is required. Mac owns only the concrete editor/root/frontier additions, not whole shared files. Final #219 merge remains unauthorized.
 
 M0 rooted interface now implemented: optional `navigation: "rooted"`, per-session `layoutRoot()`/initial capture/explicit `setRoot()`, bounded `roots` in the existing workspace payload, and `PlexViewInput.layoutRoot`. This is separate from `editorHosting`. Rooted state survives attention updates in the actual Chromium renderer; existing attention-scoped definitions/goldens remain covered. Native occurrence hosting and its mandatory proof are still pending.
+
+
+M0 native integration is implemented and eight actual Mac native cases pass; stronger external-mutation/teardown controls and final full verification remain pending. See [the interim evidence and preserved failed sample](validation/occurrence-editors-219-2026-10-25.md). No production definition opts into occurrence hosting yet. M1–M3 remain unimplemented; this checkpoint is not a completed Mind Map.

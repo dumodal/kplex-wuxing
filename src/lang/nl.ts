@@ -1374,6 +1374,14 @@ const dutchTranslations = {
   "footprints.copying": "Bezig met kopiëren...",
   "footprints.copied": "Gekopieerd naar het klembord.",
   "footprints.copyFailed": "Kopiëren mislukt. Probeer opnieuw.",
+  "actions.editor.expand": "Knooppunteditor openen",
+  "actions.editor.expand.description": "Bewerk het geselecteerde knooppunt op zijn plaats.",
+  "actions.editor.collapse": "Knooppunteditor sluiten",
+  "actions.editor.collapse.description": "Sla de knooppunteditor van dit canvas op en sluit deze.",
+  "actions.editor.resize": "Knooppunteditor vergroten of verkleinen",
+  "actions.editor.resize.description": "Wijzig de afmetingen van de geopende knooppunteditor.",
+  "actions.editor-capacity": "Sluit de huidige knooppunteditor voordat je een andere opent.",
+  "actions.editor-save-failed": "Opslaan is mislukt. De editor blijft open.",
 } as const satisfies LocaleTranslationMap;
 
 export const dutchCatalog = buildLocaleCatalog(dutchTranslations);

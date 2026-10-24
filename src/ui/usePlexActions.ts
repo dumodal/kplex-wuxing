@@ -30,6 +30,7 @@ export interface GraphActionPorts {
   highlightWander?: (destination: WanderDestination) => boolean;
   clearWander?: () => void;
   navigateWander?: (destination: WanderDestination) => boolean;
+  readEditorBindingId?: () => string | undefined;
   readSelected: () => { node: NodeRef; occurrenceId: string } | null;
   normalMode: boolean;
   clearSelection?: () => void;
@@ -66,6 +67,7 @@ export function usePlexActions(options: {
       focusRegion: root ? plexFocusRegion(root, root.ownerDocument.activeElement) : "external",
       commandFocusRegion: commandFocusRegion.current,
       interactionRevision: interactionRevision.current, viewRevision: latest.readViewRevision?.(), historyBack: latest.historyBack, historyForward: latest.historyForward,
+      editorBindingId: latest.graph.current?.readEditorBindingId?.(),
       editorAvailable: Boolean(root?.querySelector(".kplex-central-editor-content")) || latest.plugin.hasAssociatedEditor(latest.hostLeaf),
     };
   };

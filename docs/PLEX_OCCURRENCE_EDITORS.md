@@ -73,7 +73,7 @@ Retain the existing Classic geometry golden and editor/action/Sidecar tests. Run
 
 ## Exit and exclusions
 
-Publish a validated shared hosting commit and updated capability matrix before the Mind Map/Ideaverse jobs consume arbitrary-node editing. Until the native proof passes, label it **unsupported / prerequisite pending** in the matrix and handoff.
+Publish a validated shared hosting commit and updated capability matrix before Mind Map/Ideaverse consume arbitrary-node editing. Wu Xing can complete its attention-following editor independently. Until the native proof passes, label it **unsupported / prerequisite pending** in the matrix and handoff.
 
 This task does not implement Mind Map, Ideaverse, a multi-editor workspace, external view loading, new graph/index/storage machinery or a production deployment. It does not resume C15–C26.
 
@@ -88,3 +88,10 @@ The next shared scene checkpoint adds `admitOccurrenceEditors` and an optional h
 The rooted-session checkpoint adds optional `navigation: "rooted"` independently of editor hosting. `PlexViewSession` owns bounded per-definition workspace roots; ordinary attention changes retain the root, camera, selection, grouping and scroll scope. Explicit reroot refuses a live editor. A mounted host can guard proposed branch state before publication; without a current guard, state changes with a live binding are refused. The shared renderer retains one existing root demand lease independently of attention and releases it on scope retirement. `PlexViewInput.layoutRoot` and scene admission enforce the root; root-sized thought styling no longer follows attention in an opted-in rooted scene.
 
 21 focused checks and the actual shared Chromium renderer probe pass, including all previous legacy assertions and explicit useful selection/camera observations through attention change, plus balanced root/attention demand teardown. Actual build/scanner/architecture pass. This is browser/portable rooted-state evidence, not the outstanding native occurrence-editor proof. Native actions/host, close/save/link routing, binding restoration and real R/A/B/C dirty-state acceptance remain pending.
+
+
+## Native integration interim checkpoint
+
+The optional host now routes shared `editor.expand`, `editor.collapse` and `editor.resize` through the existing session/action/native-controller owners. It validates the exact occurrence and current canonical/native file, measures only that occurrence, keeps a stable native component through ordinary geometry changes, and serializes bounded intent without native tokens. Explicit collapse awaits native save; a rejected save retains the binding. Legacy attention-following definitions need no changes.
+
+Eight actual Mac native cases pass on the runtime identified in the [interim report](validation/occurrence-editors-219-2026-10-25.md). A stronger second run passed the first seven cases and precise clipped placement, then stalled before physical rename inside Obsidian FileManager's metadata-cache-clean gate. Its normal cleanup also timed out; independent guarded restoration succeeded. This is not a passing rename/deletion/teardown result or full M0 acceptance. The next bounded experiment compares that host gate with accepted main; no indexing scheduler change is justified. Full verification and exact-head CI remain pending.

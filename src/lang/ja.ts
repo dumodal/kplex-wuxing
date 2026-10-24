@@ -1370,6 +1370,14 @@ const japaneseTranslations = {
   "footprints.copying": "コピー中...",
   "footprints.copied": "クリップボードにコピーしました。",
   "footprints.copyFailed": "コピーできませんでした。もう一度お試しください。",
+  "actions.editor.expand": "ノードエディターを開く",
+  "actions.editor.expand.description": "選択したノードをその場で編集します。",
+  "actions.editor.collapse": "ノードエディターを閉じる",
+  "actions.editor.collapse.description": "このキャンバスのノードエディターを保存して閉じます。",
+  "actions.editor.resize": "ノードエディターのサイズを変更",
+  "actions.editor.resize.description": "開いているノードエディターのサイズを変更します。",
+  "actions.editor-capacity": "別のエディターを開く前に、現在のエディターを閉じてください。",
+  "actions.editor-save-failed": "保存できませんでした。エディターは開いたままです。",
 } as const satisfies LocaleTranslationMap;
 
 export const japaneseCatalog = buildLocaleCatalog(japaneseTranslations);
