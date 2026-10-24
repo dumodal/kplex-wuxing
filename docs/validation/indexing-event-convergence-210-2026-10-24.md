@@ -74,12 +74,16 @@ This does not establish or claim a fix for repeated incomplete full-build result
 - Nine new real-IDB event controls pass, including extra/expired resolver, rename,
   delete/recreate, pause, unload, selected-owner same-stat and final-proof events.
 - Independent review found temporary broad lookup authority could survive an
-  exceptional final proof. The failure path now clears it; explicit throw and a
-  verified second-connection activation reject readiness. The first writer probe
-  lacked an explicit post-write selected-head observation and returned an
-  unfavorable unexpected completion; it is retained. The revised control asserts
-  a genuinely newer durable head, original projection identity and unchanged
-  original-connection activation count before testing final rejection.
+  exceptional final proof. The failure path now clears it. The independent-writer
+  fixture initially used unchanged physical stats without an observed event, so
+  acquisition legitimately reused the old head. Its unexpected completion is
+  retained. Adding head assertions inside the intercepted production owner then
+  produced a false positive: reconciliation caught the assertion as a failure.
+  Consequently the published 80/80 aggregate does not establish independent-writer
+  coverage. The corrected fixture changes physical input, retains actual selected
+  sequences and the proof outcome, and asserts those facts outside the production
+  catch boundary. The corrected control now passes, including an observed newer
+  durable sequence and actual `superseded` proof result.
 - A Date-registry change between owners could be absorbed by overwriting earlier
   observations. Acquisition now rejects contradictory observations before that
   overwrite, checking only the current owner's fields. Final/idle checks still
@@ -87,8 +91,8 @@ This does not establish or claim a fix for repeated incomplete full-build result
 - Current focused checkpoint: **80/80 passed, zero failures/skips**, including all
   12 event/proof/failure/environment real-IDB controls, 44 acquisition contracts
   and 24 coordinator controls. Private receipt: `%TEMP%/kplex-210-checkpoint-2.log`.
-  Earlier broad run retained 185/186 passes; the one writer-probe failure preceded
-  the explicit durable-head/connection assertions above. No result is discarded.
+  Earlier broad run retained 185/186 passes; the writer-fixture qualifications above
+  apply to that result and the later 80/80 aggregate. No result is discarded.
 - Existing affected real-IDB/portable run: 150/151 passed. One old test required
   unconditional local-event cancellation. Its updated expectation requires the
   current scoped sweep to drain the event, retain exact durable values/body-work
@@ -101,3 +105,92 @@ This does not establish or claim a fix for repeated incomplete full-build result
 
 The PR remains draft. Raw receipts stay private. #207's accepted storage limitation
 is not reopened. No merge, main write, release or production deployment.
+
+## Bounded comparative protocol (declared before timing)
+
+The separate `scripts/testing/indexing-event-convergence.mjs` runner compares exact
+baseline source with the current acquisition source in otherwise identical browser
+bundles. It pins source, tooling, oracle and executable bundle hashes. Main's narrow
+admission guard has separate coordinator/native checks; it is outside this browser
+CPU comparison. No runtime file is changed to select an arm.
+
+After harness tests and a 16-owner smoke pair, collect one detailed native-request
+diagnostic pair per cell, separately from timing. Timing uses a settled eight-owner
+no-event control pair, three matched pairs with 16 owners and a broad pass but no
+concurrent source events, and three matched pairs each at 96 and 384 owners with
+exactly three fixed-position edit/metadata/known-resolver waves. Alternate arm order
+between pairs. Every arm starts in a fresh owned Chromium profile/database with
+closed seeded authority, and must deliver the same final documents and reach actual
+source, journal, lease and semantic closure. Keep failures and partial receipts.
+
+Measure each arm's cumulative renderer ProcessTime and main-thread TaskDuration
+endpoints, elapsed work, last-event-to-closure interval and exact repeated work.
+Browser/storage/utility CPU is unmeasured; do not add workers to renderer totals.
+Equal bounded fixture counters and a 20 ms diagnostic heartbeat are included in
+both timing arms. The independent semantic oracle/database enumeration is outside
+timing. Heap endpoints are neither allocation nor peak memory. No other build,
+test suite or native indexing run may overlap timing.
+
+Use existing production flush joins with an explicit 16-join/45-second fixture
+bound, retaining every cancelled/incomplete outcome. These joins do not establish
+automatic native convergence. A separate guarded Windows scenario uses real Vault
+writes and MetadataCache notifications, passively observes natural completion and
+does not call flush/reconcile/trigger. A declared dependency-await gate establishes
+functional event ordering only. Keep responsiveness requirements unchanged.
+
+After each measured work interval, observe a separate 500 ms quiet tail, perform
+the same subsequent edit, reopen acquisition/connection on the same database and
+verify full final semantics, cleanup and absence of shifted lease/journal debt.
+This is not a browser-restart/storage-growth study or full application startup.
+Accept useful reduction only with exact mutation equivalence, genuine final
+closure, oracle parity, retained negative controls and applicable green checks;
+better timing cannot excuse stale facts or false readiness. No numeric acceptance
+threshold or production timeout is changed.
+
+## Verification in progress
+
+Published implementation checkpoint `a61b92485102ac6483a37dc0a63e17bbfaa59908`
+failed CI426 in the existing URL-heavy post-parse graph-patch timer assertion:
+64.8 ms against the unchanged 50 ms requirement. Causal reachability and an
+appropriate unchanged-check follow-up are pending; this is not relabeled a pass.
+Read-only review confirms that the fixture loads both changed production owners.
+The timed block directly calls patchMarkdownPaths -> patchMarkdownFiles -> acquire;
+that path, parser, repository, scheduler and test are unchanged against the fixed
+baseline. Modified reconcile/admission methods are not directly called by that
+block, but earlier fixture state/timers prevent claiming causal impossibility.
+One unchanged-head CI retry is running. After the local suite, run the entire
+unchanged indexing fixture in isolation; its top-level script has no case filter.
+If the failure repeats, compare the identical accepted-baseline fixture before
+attributing it or changing production code. The 50 ms assertion remains intact.
+The full local run separately encountered a Chromium fixture bootstrap failure
+before the production bundle loaded in the ontology-settings on-demand case.
+The run continues to completion; preserve the failed receipt and rerun the exact
+case before attributing it. Neither failure is silently excluded.
+Native driver cleanup tests pass 5/5, including partial setup, independently failed
+teardown and explicit absence of readiness-forcing calls. This is tooling evidence,
+not native acceptance. The driver retains bounded partial event/writes/probe state
+on failures and qualifies write acknowledgements by owner and event position.
+
+The initial full local run completed its browser lane at **732/733**, zero skips;
+the single failure was the bootstrap receipt above. Prior verification stages
+passed, but npm verification exited failed before the final build. The entire
+unchanged indexing fixture then passed in isolation, as did the exact ontology
+case (1/1, no skipped cases in its filtered receipt). Corrected event controls and
+both harnesses pass **19/19**, zero skips. Private receipts:
+`%TEMP%/kplex-210-verify-a61.log`, `kplex-210-indexing-isolated.log`,
+`kplex-210-ontology-isolated.log`, `kplex-210-tooling-controls.log`.
+One passing isolated run does not replace final complete verification or CI.
+
+The 16-owner tooling smoke pair passes both arms, including semantic oracle,
+quiet tail, subsequent edit, connection/acquisition reopen and complete resource
+retirement. Private receipts: `%TEMP%/kplex-source-event-210-64TRY5/`.
+Its renderer CPU is 0.121754/0.106979 seconds and elapsed160.8/127.9 ms
+(baseline/candidate); this is a single smoke pair, not the matched study claim.
+
+Qualification limit: the source-event predicate proves current live Markdown
+TFile equality, not historical incarnation membership by itself. Observed native
+create/delete/rename notifications independently invalidate topology; captured old
+TFiles also fail the Vault identity fence. The final dependency projection is not
+an independent replacement for native topology notifications. No safety claim is
+made for an entirely missing create/delete notification on a newly inserted or
+replaced file. Supported ordering remains conservative in delete/recreate controls.

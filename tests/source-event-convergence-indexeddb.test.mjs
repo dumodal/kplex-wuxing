@@ -200,7 +200,7 @@ for (const fault of ['throw', 'independent-writer']) {
         try {
           f.add('A.md', 'Value:: initial'); await f.acquire();
           ok(await f.acquisition.reconcile(), 'Seed closed authority');
-          let phase = '', injected = false;
+          let phase = '', injected = false, evidence;
           f.acquisition.startupDiagnostics = {
             phase(_lane, value) { phase = value; }, recordWork() {}, count() {}, processed() {}, mark() {},
             beginActivity() { return 0; }, endActivity() {}, stopActivityPhase() {}, activityCause() {}
@@ -209,24 +209,36 @@ for (const fault of ['throw', 'independent-writer']) {
           f.repository.completeLocalDependencyInventory = async function(...args) {
             if (phase === 'dependency-final-validation' && !injected) {
               injected = true;
-              ok(f.acquisition.localDependencyAuthorityReady, 'Actual broad drain temporarily owns local lookup');
-              ok(!f.acquisition.hasSemanticDependencies(), 'Temporary scope is not semantic readiness');
+              evidence = { temporaryScope: f.acquisition.localDependencyAuthorityReady,
+                semanticReady: f.acquisition.hasSemanticDependencies() };
               if (fault === 'throw') throw Error('Owned final proof failure');
               const before = (await f.repository.inspect('A.md')).head;
               const pass = f.repository.localInventoryProjections.get(args[1]);
-              ok(pass, 'Final proof retains its original captured repository projection');
               writer = await fixture(name);
-              writer.add('A.md', 'Value:: independently-activated');
-              await writer.acquire(); ok(await writer.repository.flush(), 'Second writer genuinely commits');
+              const changedFile = writer.add('A.md', 'Value:: independently-activated');
+              changedFile.stat.mtime++;
+              changedFile.stat.size = writer.texts.get(changedFile.path).length;
+              await writer.acquire(); const saved = await writer.repository.flush();
               const after = (await writer.repository.inspect('A.md')).head;
-              ok(after.sequence > before.sequence, 'Independent writer selects a genuinely newer durable head ' + JSON.stringify({before, after}));
-              ok(f.repository.sourceActivationRevision === pass.activations, 'Original connection did not own the independent activation');
+              Object.assign(evidence, { saved, before: before.sequence, after: after.sequence, projection: !!pass,
+                originalConnectionUnchanged: !!pass && f.repository.sourceActivationRevision === pass.activations });
+              const proofReason = await complete.apply(this, args);
+              evidence.proofReason = proofReason;
+              return proofReason;
             }
             return complete.apply(this, args);
           };
           f.app.metadataCache.trigger('resolved');
           equal(await f.acquisition.reconcile(), false, 'Final broad proof rejected');
           ok(injected, 'Fault reached its actual final boundary');
+          // These assertions run outside the production catch boundary. A failed inner fixture
+          // assertion must never masquerade as the expected product rejection.
+          ok(evidence?.temporaryScope && !evidence.semanticReady, 'Actual temporary scope retained no semantic readiness');
+          if (fault === 'independent-writer') {
+            ok(evidence.saved && evidence.after > evidence.before, 'Writer genuinely selected a new durable source');
+            ok(evidence.projection && evidence.originalConnectionUnchanged, 'Original projection excludes the independent activation');
+            equal(evidence.proofReason, 'superseded', 'Actual repository sequence fence rejected the write');
+          }
           equal(f.acquisition.localDependencyAuthorityReady, false, 'Failure retires temporary lookup scope');
           ok(!f.acquisition.hasSemanticDependencies(), 'Failure cannot promote readiness');
           f.repository.completeLocalDependencyInventory = complete;

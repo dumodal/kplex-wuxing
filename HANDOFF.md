@@ -23,7 +23,7 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 Prepared by **Zsolt's Codex Agent**, 2026-10-24, Europe/Budapest.
 **Direction:** implementation assignment to the Windows agent with real dependencies, Chromium IndexedDB and Obsidian CLI.
-**State:** implementing on the equipped Windows environment. Current baseline reproductions and narrow source/admission corrections are in progress; see docs/validation/indexing-event-convergence-210-2026-10-24.md. Full verification, matched timings and native acceptance remain pending.
+**State:** implementation checkpoint a61b924 is published. Corrected event/proof and harness controls pass19/19; unchanged indexing and the failed-bootstrap ontology case pass in isolation. Initial full run retains732/733 browser assertions and CI426 retains its64.8ms timer failure; unchanged CI retry is running. Smoke comparison passes, with declared matched timings, final full verification/build and exact-build native acceptance still pending. See docs/validation/indexing-event-convergence-210-2026-10-24.md; no final acceptance or merge recommendation yet.
 **Branch:** `2026-10-24-indexing-event-convergence`.
 **Accepted comparison base:** `90032c6d7499fa4e40179110f7b5672d356aa390` (main, including merged #201/#203/#204/#205/#206/#207).
 
