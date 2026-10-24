@@ -6030,3 +6030,8 @@ Base6fa936d; branch2026-10-24-sidecar-modifier-maximize. Shared stateless modifi
 ### 2026-10-24 - Sidecar recovery synchronous focus fence
 
 A production-owner reproducer showed same-leaf ownership ABA during a synchronous native focus callback could escape the new optional close guard. Recovery now rechecks the existing revision/generation/attachment/focus certificate after focus. Before reproducer fails; corrected focused111/111 and real-dependency build/type check pass. First full run retained as failed after Chromium bundle startup prerequisite (227/228 UI); isolated unchanged case passes1/1 without altered deadlines. Renew full verification on corrected runtime. Foreground WAIT remains explicit; no native acceptance, merge/release/production deployment.
+
+
+### 2026-10-24 - Sidecar modifier validation scope
+
+Maintainer directed proportional UI-only validation; no indexing/performance campaign. Current111 focused tests, real build/types, scanner and architecture pass. Second full local run deliberately interrupted after release/core/main/UI/source-contract checks; browser lane incomplete. Earlier startup prerequisite failure and isolated passing retry retained. Runtime/artifact unchanged at da282fe / main49dc4d0d1a599a110b9d7e3a75c4e7b62fe6c3edfcb571588c0dccc672878ea8. Highest remaining risk is native modifier delivery/allocation/cleanup; guarded Windows matrix pending explicit ready, Mac/mobile unrun. No foreground access/staging yet; no further full local verification required.
