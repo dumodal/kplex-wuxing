@@ -1,0 +1,267 @@
+/** Real IndexedDB event convergence through production acquisition; only native host facts are doubled. */
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { contributorBrowserBundle, contributorBrowserInitialize } from './support/contributorBrowserFixture.mjs';
+import { chromiumHarness } from './support/browserTypeScript.mjs';
+
+const bundle = await contributorBrowserBundle();
+
+test('finite native edits retain unrelated broad-inventory work and reach actual dependency closure', /** Deliver all fixed edits in either implementation, independent of its repeated-work count. */ async () => {
+  const browser = await chromiumHarness(bundle);
+  try {
+    assert.equal(await browser.evaluate(contributorBrowserInitialize), true);
+    const result = await browser.evaluate(`(async () => {
+      const f = await fixture('event-convergence-finite');
+      try {
+        const owners = 24, mutations = 3;
+        for (let index = 0; index < owners; index++) f.add('Owner' + index + '.md', 'Value:: initial');
+        await f.acquire();
+        ok(await f.acquisition.reconcile(), 'Seed actual complete source and dependency authority');
+        f.work.reset();
+        const ensure = f.repository.ensureLocalDependencies;
+        let delivered = 0;
+        const outcomes = [];
+        f.repository.ensureLocalDependencies = async function(...args) {
+          const result = await ensure.apply(this, args);
+          if (delivered < mutations && args[0] === 'Owner' + (6 + delivered * 6) + '.md') {
+            const file = f.files.get(delivered % 2 ? 'Owner0.md' : 'Owner23.md');
+            f.texts.set(file.path, 'Value:: changed-' + delivered);
+            f.app.vault.trigger('modify', file);
+            f.app.metadataCache.trigger('changed', file);
+            f.app.metadataCache.trigger('resolved');
+            delivered++;
+          }
+          return result;
+        };
+        // Genuine unscoped uncertainty starts the broad route; subsequent file events are local.
+        f.app.metadataCache.trigger('resolved');
+        for (let attempt = 0; attempt < mutations + 2; attempt++) {
+          const ready = await f.acquisition.reconcile();
+          outcomes.push(ready);
+          if (ready && delivered === mutations) break;
+        }
+        ok(await f.repository.flush(), 'Every durable source/count/reclamation writer closes');
+        ok(f.acquisition.hasSemanticDependencies(), 'Final authority is actual dependency completion');
+        equal(delivered, mutations, 'Fixed mutation cardinality');
+        const proof = [];
+        for (const path of ['Owner0.md', 'Owner23.md']) {
+          const records = [];
+          equal(await f.repository.visit(path, 'values', rows => { records.push(...rows); return true; }), 'ready', 'Final values authenticated');
+          proof.push({ path, records });
+        }
+        return { outcomes, delivered, work: f.work.snapshot(), proof, counters: f.acquisition.getCounters() };
+      } finally { f.close(); }
+    })()`);
+    assert.equal(result.delivered, 3);
+    assert.equal(result.outcomes.at(-1), true);
+    assert.deepEqual(result.proof.map(item => item.records.filter(record => record.kind === 'inline-payload').map(record => record.text)),
+      [['changed-1'], ['changed-2']], 'Independent expected final content survives all repeated edits');
+    assert.ok(result.work.localEnsures <= 36,
+      'One 24-owner inventory plus bounded changed-owner repair must avoid rechecking every completed prefix');
+  } finally { await browser.cleanup(); }
+});
+
+for (const change of ['extra-resolved', 'expired-resolver', 'delete-recreate', 'rename', 'pause', 'unload']) {
+  test(`${change} still retires broad inventory scope`, /** Deliver genuine host-shaped invalidation during a real dependency await. */ async () => {
+    const browser = await chromiumHarness(bundle);
+    try {
+      assert.equal(await browser.evaluate(contributorBrowserInitialize), true);
+      assert.equal(await browser.evaluate(`(async () => {
+        const f = await fixture('event-scope-${change}'), change = ${JSON.stringify(change)};
+        try {
+          for (let i = 0; i < 4; i++) f.add('Owner' + i + '.md', 'Value:: original');
+          await f.acquire(); ok(await f.acquisition.reconcile(), 'Seed closed authority');
+          const ensure = f.repository.ensureLocalDependencies;
+          let injected = false;
+          f.repository.ensureLocalDependencies = async function(...args) {
+            const result = await ensure.apply(this, args);
+            if (!injected && args[0] === 'Owner1.md') {
+              injected = true;
+              const file = f.files.get('Owner3.md');
+              if (change === 'extra-resolved') f.app.metadataCache.trigger('resolved');
+              if (change === 'expired-resolver') {
+                f.app.metadataCache.trigger('changed', file);
+                await new Promise(done => setTimeout(done, 75));
+                f.app.metadataCache.trigger('resolved');
+              }
+              if (change === 'delete-recreate') {
+                f.files.delete(file.path); f.app.vault.trigger('delete', file);
+                const replacement = f.add(file.path, 'Value:: recreated');
+                f.app.vault.trigger('create', replacement); f.app.metadataCache.trigger('changed', replacement);
+                f.app.metadataCache.trigger('resolved');
+              }
+              if (change === 'rename') {
+                f.files.delete(file.path); const text = f.texts.get(file.path), cache = f.metadata.get(file.path);
+                file.path = 'Moved.md'; file.name = 'Moved.md'; file.basename = 'Moved';
+                f.files.set(file.path, file); f.texts.set(file.path, text); f.metadata.set(file.path, cache);
+                f.app.vault.trigger('rename', file, 'Owner3.md'); f.app.metadataCache.trigger('resolved');
+              }
+              if (change === 'pause') f.acquisition.pauseInventory();
+              if (change === 'unload') f.acquisition.close();
+            }
+            return result;
+          };
+          f.app.metadataCache.trigger('resolved');
+          equal(await f.acquisition.reconcile(), false, 'Global/topology/lifecycle change rejects the old sweep');
+          ok(injected, 'Required event delivered');
+          ok(!f.acquisition.hasSemanticDependencies(), 'Retired sweep grants no authority');
+          f.repository.ensureLocalDependencies = ensure;
+          if (change !== 'unload') {
+            ok(await f.acquisition.reconcile(), 'Finite invalidation recovers through a new valid sweep');
+            ok(await f.repository.flush(), 'Persistence and tombstones close');
+          }
+          return true;
+        } finally { f.close(); }
+      })()`), true);
+    } finally { await browser.cleanup(); }
+  });
+}
+
+test('a same-stat edit of the selected owner rejects its held inspection', /** An unrelated-scope lifetime cannot revive the changed owner's selected result. */ async () => {
+  const browser = await chromiumHarness(bundle);
+  try {
+    assert.equal(await browser.evaluate(contributorBrowserInitialize), true);
+    assert.equal(await browser.evaluate(`(async () => {
+      const f = await fixture('event-selected-owner');
+      try {
+        const file = f.add('A.md', 'Value:: before');
+        await f.acquire(); ok(await f.acquisition.reconcile(), 'Seed authority');
+        const inspect = f.repository.inspect; let injected = false;
+        f.repository.inspect = async function(...args) {
+          const result = await inspect.apply(this, args);
+          if (!injected && args[0] === file.path) {
+            injected = true; f.texts.set(file.path, 'Value:: after');
+            f.app.vault.trigger('modify', file); f.app.metadataCache.trigger('changed', file);
+            f.app.metadataCache.trigger('resolved');
+          }
+          return result;
+        };
+        f.app.metadataCache.trigger('resolved');
+        equal(await f.acquisition.reconcile(), false, 'Changed selected owner remains conservatively cancelled');
+        ok(!f.acquisition.hasSemanticDependencies(), 'No stale readiness');
+        f.repository.inspect = inspect;
+        ok(await f.acquisition.reconcile(), 'Current owner recovers');
+        const values = [];
+        equal(await f.repository.visit(file.path, 'values', rows => { values.push(...rows); return true; }), 'ready', 'Current family authenticated');
+        equal(values.filter(row => row.kind === 'inline-payload').map(row => row.text), ['after'], 'Same-stat final value exact');
+        return true;
+      } finally { f.close(); }
+    })()`), true);
+  } finally { await browser.cleanup(); }
+});
+
+test('final dependency completion keeps exact event revision and never publishes readiness during its await', /** Intercept only the production final phase; no readiness or revision is injected. */ async () => {
+  const browser = await chromiumHarness(bundle);
+  try {
+    assert.equal(await browser.evaluate(contributorBrowserInitialize), true);
+    assert.equal(await browser.evaluate(`(async () => {
+      const f = await fixture('event-final-proof');
+      try {
+        const file = f.add('A.md', 'Value:: before');
+        await f.acquire(); ok(await f.acquisition.reconcile(), 'Seed authority');
+        let phase = '', injected = false;
+        f.acquisition.startupDiagnostics = {
+          phase(_lane, value) { phase = value; }, recordWork() {}, count() {}, processed() {}, mark() {},
+          beginActivity() { return 0; }, endActivity() {}, stopActivityPhase() {}, activityCause() {}
+        };
+        const complete = f.repository.completeLocalDependencyInventory;
+        f.repository.completeLocalDependencyInventory = async function(...args) {
+          if (phase === 'dependency-final-validation' && !injected) {
+            injected = true;
+            ok(!f.acquisition.hasSemanticDependencies(), 'Final proof await cannot expose early semantic readiness');
+            const result = await complete.apply(this, args);
+            f.texts.set(file.path, 'Value:: after-final');
+            f.app.vault.trigger('modify', file); f.app.metadataCache.trigger('changed', file);
+            f.app.metadataCache.trigger('resolved');
+            return result;
+          }
+          return complete.apply(this, args);
+        };
+        f.app.metadataCache.trigger('resolved');
+        equal(await f.acquisition.reconcile(), false, 'Newer final-phase event cannot cross publication');
+        ok(injected && !f.acquisition.hasSemanticDependencies(), 'Actual invalidation remains pending');
+        f.repository.completeLocalDependencyInventory = complete;
+        ok(await f.acquisition.reconcile(), 'New exact observation closes naturally');
+        ok(await f.repository.flush(), 'All durable work closes');
+        return true;
+      } finally { f.close(); }
+    })()`), true);
+  } finally { await browser.cleanup(); }
+});
+
+for (const fault of ['throw', 'independent-writer']) {
+  test(`a final broad ${fault} cannot retain temporary local lookup authority`, /** Reject final coverage using a declared fault or a genuine second-connection activation. */ async () => {
+    const browser = await chromiumHarness(bundle);
+    try {
+      assert.equal(await browser.evaluate(contributorBrowserInitialize), true);
+      assert.equal(await browser.evaluate(`(async () => {
+        const name = 'event-final-${fault}', f = await fixture(name), fault = ${JSON.stringify(fault)};
+        let writer;
+        try {
+          f.add('A.md', 'Value:: initial'); await f.acquire();
+          ok(await f.acquisition.reconcile(), 'Seed closed authority');
+          let phase = '', injected = false;
+          f.acquisition.startupDiagnostics = {
+            phase(_lane, value) { phase = value; }, recordWork() {}, count() {}, processed() {}, mark() {},
+            beginActivity() { return 0; }, endActivity() {}, stopActivityPhase() {}, activityCause() {}
+          };
+          const complete = f.repository.completeLocalDependencyInventory;
+          f.repository.completeLocalDependencyInventory = async function(...args) {
+            if (phase === 'dependency-final-validation' && !injected) {
+              injected = true;
+              ok(f.acquisition.localDependencyAuthorityReady, 'Actual broad drain temporarily owns local lookup');
+              ok(!f.acquisition.hasSemanticDependencies(), 'Temporary scope is not semantic readiness');
+              if (fault === 'throw') throw Error('Owned final proof failure');
+              const before = (await f.repository.inspect('A.md')).head;
+              const pass = f.repository.localInventoryProjections.get(args[1]);
+              ok(pass, 'Final proof retains its original captured repository projection');
+              writer = await fixture(name);
+              writer.add('A.md', 'Value:: independently-activated');
+              await writer.acquire(); ok(await writer.repository.flush(), 'Second writer genuinely commits');
+              const after = (await writer.repository.inspect('A.md')).head;
+              ok(after.sequence > before.sequence, 'Independent writer selects a genuinely newer durable head ' + JSON.stringify({before, after}));
+              ok(f.repository.sourceActivationRevision === pass.activations, 'Original connection did not own the independent activation');
+            }
+            return complete.apply(this, args);
+          };
+          f.app.metadataCache.trigger('resolved');
+          equal(await f.acquisition.reconcile(), false, 'Final broad proof rejected');
+          ok(injected, 'Fault reached its actual final boundary');
+          equal(f.acquisition.localDependencyAuthorityReady, false, 'Failure retires temporary lookup scope');
+          ok(!f.acquisition.hasSemanticDependencies(), 'Failure cannot promote readiness');
+          f.repository.completeLocalDependencyInventory = complete;
+          if (fault === 'throw') ok(await f.acquisition.reconcile(), 'Later healthy proof remains available');
+          return true;
+        } finally { writer?.close(); f.close(); }
+      })()`), true);
+    } finally { await browser.cleanup(); }
+  });
+}
+
+test('an event-free Date environment change between completed owners cannot be absorbed by the next owner', /** The host registry changes at an actual owner boundary without a resolver notification. */ async () => {
+  const browser = await chromiumHarness(bundle);
+  try {
+    assert.equal(await browser.evaluate(contributorBrowserInitialize), true);
+    assert.equal(await browser.evaluate(`(async () => {
+      const f = await fixture('event-environment-between-owners');
+      try {
+        f.add('A.md', '', { Due: '2026-01-01' }); f.add('B.md', '', { Due: '2026-01-01' });
+        await f.acquire(); ok(await f.acquisition.reconcile(), 'Seed non-Date observations');
+        const ensure = f.repository.ensureLocalDependencies; let changed = false;
+        f.repository.ensureLocalDependencies = async function(...args) {
+          const result = await ensure.apply(this, args);
+          if (!changed && args[0] === 'A.md') { changed = true; f.app.dateFields.add('Due'); }
+          return result;
+        };
+        f.app.metadataCache.trigger('resolved');
+        equal(await f.acquisition.reconcile(), false, 'Earlier owner cannot retain its obsolete environment');
+        ok(changed && !f.acquisition.hasSemanticDependencies(), 'Environment change remains a real prerequisite');
+        f.repository.ensureLocalDependencies = ensure;
+        ok(await f.acquisition.reconcile(), 'New environment closes through ordinary reconciliation');
+        const expected = await f.repository.observationDigest(JSON.stringify({ daily: f.app.daily, dates: ['Due'] }));
+        for (const path of ['A.md', 'B.md']) equal((await f.repository.inspect(path)).head.observation.environment, expected, 'Every completed owner uses current Date semantics');
+        return true;
+      } finally { f.close(); }
+    })()`), true);
+  } finally { await browser.cleanup(); }
+});

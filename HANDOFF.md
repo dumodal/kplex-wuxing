@@ -23,7 +23,7 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 Prepared by **Zsolt's Codex Agent**, 2026-10-24, Europe/Budapest.
 **Direction:** implementation assignment to the Windows agent with real dependencies, Chromium IndexedDB and Obsidian CLI.
-**State:** planning only; no new runtime change, reproduction or test execution has been performed here.
+**State:** implementing on the equipped Windows environment. Current baseline reproductions and narrow source/admission corrections are in progress; see docs/validation/indexing-event-convergence-210-2026-10-24.md. Full verification, matched timings and native acceptance remain pending.
 **Branch:** `2026-10-24-indexing-event-convergence`.
 **Accepted comparison base:** `90032c6d7499fa4e40179110f7b5672d356aa390` (main, including merged #201/#203/#204/#205/#206/#207).
 

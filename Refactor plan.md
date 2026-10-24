@@ -5975,3 +5975,10 @@ hashproof before19:37release retained; subsequentguardedoperations neverwrite/op
 no originalfullcontentclaim. Finalremote/CI/normalmerge/reachabilityproof recordedon206/private
 checkpoint toavoidself-reference. Preservehistory/privateevidence; noHANDOFFarchive, release,
 productiondeployment, branchdelete or historyrewrite. C14accepted; C15-C26paused.
+
+
+### PR210 causal implementation checkpoint ? 2026-10-24
+
+Accepted base90032c6d7499fa4e40179110f7b5672d356aa390; newer release metadata on main preserved. Fixed24-owner/three-event production-owner real-IDB reproduction:65 dependency ensures across four baseline passes versus28 in one initial corrected pass, with exact final values. Separate actual coordinator mixed metadata/deletion backlog admits one unnecessary full builder on baseline versus zero after narrow #206 guard extension. These are work/admission observations, not CPU or proof of the historical multi-hour symptom.
+
+Known-source events may retain only unrelated broad scope, with exact owner capture/cache/environment and final event/projection checks. Global/topology/lifecycle events remain conservative; no repository/lease/count/schema/timer changes or retained proof cache. Targeted regressions include selected-owner cancellation, final-proof events, failure cleanup and independent writers. Full verification, bounded matched timing/native acceptance and merge recommendation remain pending; PR stays draft. See docs/validation/indexing-event-convergence-210-2026-10-24.md for retained failures and exact evidence. No manual test requested at this intermediate checkpoint. No merge/release/main write or Mac experiment.
