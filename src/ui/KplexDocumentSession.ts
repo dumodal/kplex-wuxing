@@ -62,13 +62,17 @@ export class KplexDocumentSession {
   restore(value: unknown): void {
     if (this.initialized || this.disposed) return;
     this.initialized = true;
-    try {this.restoreInitialState(value);} finally {for (const listener of this.restoreListeners) listener();}
+    try {
+      this.restoreInitialState(value);
+      // Initial setState may arrive after React mounts. Publish view selection only after native
+      // document intent is coherent; duplicated leaves still copy view state without a Sidecar claim.
+      if (value && typeof value === "object" && Reflect.get(value, "version") === 1) this.plexView.restore(Reflect.get(value, "plexView"));
+    } finally {for (const listener of this.restoreListeners) listener();}
   }
 
   /** Decode only the first native state for this incarnation, never replay another surface's live ownership. */
   private restoreInitialState(value: unknown): void {
     if (!value || typeof value !== "object" || Reflect.get(value, "version") !== 1) return;
-    this.plexView.restore(Reflect.get(value, "plexView"));
     const center: unknown = Reflect.get(value, "centerPath");
     if (typeof center === "string" && center) this.centerPath = center;
     this.restored = true;

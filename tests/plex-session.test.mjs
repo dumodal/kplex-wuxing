@@ -62,3 +62,12 @@ test("native view keeps the memory owner across React migration and excludes tra
   assert(!migration.includes("documentSession.dispose"));assert.match(view,/this.plugin.onKplexViewClosed\(this.leaf, this.documentSession\);\s*this.documentSession.dispose\(\)/);
   assert(!main.slice(main.indexOf("reportBug(origin"),main.indexOf("private searchTargetLeaf")).includes("footprints"));
 });
+
+test("view restoration subscribers observe fully restored native document intent",()=>{
+  const session=new KplexDocumentSession(defaults,"A",()=>assert.fail("Restoration must not persist")),observed=[];
+  session.plexView.subscribe(()=>observed.push({center:session.centerPath,target:session.targetId,mode:session.preferences.documentSyncMode,open:session.preferences.sidecarOpen,restored:session.restored}));
+  session.restore({version:1,ownerId:"A",centerPath:"Restored.md",targetId:"native-sidecar",documentSyncMode:"pinned",sidecarOpen:true,plexView:{version:1,id:"classic",states:{}}});
+  assert.deepEqual(observed,[{center:"Restored.md",target:"native-sidecar",mode:"pinned",open:true,restored:true}]);
+  const duplicate=new KplexDocumentSession(defaults,"copy",()=>{});duplicate.restore(session.getState());
+  assert.equal(duplicate.centerPath,"Restored.md");assert.equal(duplicate.targetId,null);assert.equal(duplicate.preferences.sidecarOpen,false);
+});
