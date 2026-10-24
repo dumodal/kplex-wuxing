@@ -6,11 +6,11 @@ Prepared by Zsolt's Codex Agent, 2026-10-24. **Planning draft for the Windows ag
 
 Planning branch: `2026-10-24-canvas-wuxing`, created from accepted `main@659697a686f341497725dfb31e94a8bc2bcf2b25`. Reviewed foundation: [#215](https://github.com/zsviczian/kplex/pull/215) at `030d0f0558c78b25be0d27fba40caca60b9361cd`.
 
-Depends on [Canvas settings #218](https://github.com/zsviczian/kplex/pull/218) and the **isolated M0 occurrence-editor/rooted-session checkpoint** owned by the [Mac/Mind Map assignment #219](https://github.com/zsviczian/kplex/pull/219). It does not depend on completing the Mind Map product layout.
+**Current maintainer direction: #219 and #220 are independent feature jobs after [Canvas settings #218](https://github.com/zsviczian/kplex/pull/218) merges. #220 has no dependency on #219, M0, or any unmerged Mind Map commit.** This explicitly supersedes earlier blanket statements in the PRs, comments and #215 planning documents requiring M0 before both views' native integration. The occurrence-editor safety requirements remain applicable to consumers implementing independently bound editors; that enhancement remains in Mind Map's scope.
 
 **Before implementation, fetch and integrate latest accepted main into this existing branch. Confirm #215 and #218 have landed, record the actual base SHA, reread AGENTS.md, CONTRIBUTING.md and the accepted architecture/settings contracts, and update this plan to match them.** Preserve concurrent changes. Do not assume the planning base or proposed API names are current.
 
-Pure phase classification, layout and configuration fixtures can proceed while Mac validates M0. Production/native integration must wait for the accepted shared hosting checkpoint. This preserves #215's explicit prerequisite; do not independently implement another native editor or silently downgrade to attention-only hosting. No merge, force-push, release or personal-vault deployment without authorization.
+Until #218 merges, do not implement #220. Check its actual GitHub merge status approximately every 20 minutes using a supported waiting facility, honoring rate limits. If it closes unmerged, report the blocker. Once it merges, proceed with the complete Wu Xing implementation, including production registration, Windows native integration, testing and review preparation. Do not stop at fixtures or wait for a message, acknowledgement, M0 milestone or merge from #219. No merge, force-push, release or personal-vault deployment without authorization.
 
 ## Goal
 
@@ -45,15 +45,15 @@ flowchart LR
 
 Dashed arrows here mean **phase order only**. The implementation arranges five regions around a ring/pentagon; actual note connectors still require canonical relationship evidence. Names, explanatory labels and source values are configurable; the user can keep the phase names without adopting these example meanings.
 
-## W0 — Agree shared interfaces before touching common files
+## W0 — Extend the accepted shared boundary narrowly
 
-Read #219's current M0 contract and #218's effective settings/configuration contract. The Mac agent owns editor bindings, rooted session policy, shared occurrence editor actions and native lifecycle. The Windows agent owns a narrow cached-property bridge and noninteractive background/decorations contribution, after agreement on their interface.
+Use #218's accepted view/settings/selector contracts. The Mac agent owns Mind Map's M0 editor extension, rooted-session policy and frontier traversal. The Windows agent owns Wu Xing and the narrow cached-property/background contributions it needs. Reading #219 helps avoid overlapping edits; it is not an implementation or acceptance gate.
 
 The reviewed #215 `PlexViewRead` exposes nodes, relations and evidence, but no arbitrary-property accessor. Reuse the existing `GraphPropertyProvider` and [`createLegacyPropertyProvider`](https://github.com/zsviczian/kplex/blob/030d0f0558c78b25be0d27fba40caca60b9361cd/src/adapters/obsidian/predicateContracts.ts) for field-scoped metadata-cache reads. Add only the explicit availability/lifetime adapter needed by this consumer; pure definitions never receive App, GraphIndex, TFile or a complete frontmatter object.
 
 Expose view labels/tints/cycle guides through a small shared background contribution rendered by the existing host. It is input-transparent and theme-aware. #215 rejects policy-created synthetic nodes and reserves synthetic grouping for the shared owner: do not fabricate indexed notes or synthetic thought nodes to draw empty phase regions. Do not fork the renderer or place a private application inside the canvas.
 
-Publish the interface agreement and isolated capability commits on the PR before changing `contracts.ts`, `prepareScene`, `PlexGraph`, contributions or session/action owners. These files have one agreed editor at a time.
+Prefer focused new modules and additive optional capabilities with safe defaults for existing views. Publish the narrow interface proposal before touching shared contract/renderer wiring; coordinate overlapping changes at function/interface level rather than reserving whole shared files until M0 finishes. Lack of a partner response is not a blanket stop condition: proceed against accepted main with a backward-compatible change, avoiding the partner's owned editor/session internals. Flag a genuine unavoidable conflict specifically while continuing independent work.
 
 ## W1 — Local admitted scope and classification
 
@@ -87,19 +87,23 @@ Use measured thought/editor bounds to avoid overlap, with bounded overflow/reflo
 
 Phase guides and region tints are decorative. Note connectors are canonical semantic relationships with actual endpoints, provenance and physical ports independent of phase placement. Never fabricate an edge from one phase to the next or expose relink/unlink on a decorative guide. Arbitrary phase areas have no semantic drop role by default.
 
-Clicking a note uses ordinary shared activation and document synchronization for that canvas. In-place editing uses M0's shared occurrence actions and exact binding; focus elsewhere cannot silently retarget a live editor. A local-neighborhood change that would remove that editor must use M0's explicit safe transition policy. Keep native editor, Sidecar, independent window focus and history/Footprints under their current owners. Do not require Wu Xing to duplicate Mind Map's click-to-edit policy to reuse the editor capability.
+**Editor behavior for this PR:** reuse the existing single attention-following native editor and Sidecar supplied by accepted main. The view's editor anchor positions the current attention document within its mapped phase; it must not bind a different document or claim independent occurrence editing. Explicit note activation may change attention and the displayed editor document through the existing native save/navigation lifecycle. Merely moving selection, hovering, reclassifying, resizing or repainting must not retarget the editor or redirect Sidecar. Validate content preservation and existing switch/filter/teardown guards.
+
+Do not remove the attention-equality guard, implement M0 locally, disable the existing editor merely to avoid testing, or wait for #219 to supply new hosting. Opening B while attention remains A, keeping B pinned as attention changes to C, and multiple simultaneous editors are outside this first Wu Xing version. Future adoption of a merged editor enhancement is separate optional work. Keep native editor, Sidecar, independent window focus and history/Footprints under their current owners; Mind Map's click-to-edit behavior is not imposed on Wu Xing.
 
 No phase/status writes from dragging or merely selecting a note. Existing explicit relationship commands may remain available through shared controls when their canonical targets are eligible, but never infer their meaning from a phase position.
 
-## W3 — Type-specific settings
+## W3 — Type-specific settings and independent canvases
 
-Register stable ID `wuxing` and user-facing **Wu Xing** in #218's accepted contribution mechanism under Canvas behavior > Views. The page description can explain five-phase local exploration in one sentence.
+Register stable ID `wuxing` and user-facing **Wu Xing** in #218's accepted contribution mechanism under Canvas behavior > Views. Registration must also expose Wu Xing in the shared **Views and lenses → Canvas view** dropdown; do not add another selector or hard-code options into shared UI. The page description can explain five-phase local exploration in one sentence.
 
 Initial configuration: classification source and field, five labels/value aliases, cycle order/starting phase, spacing/region size and whether to show subtle phase guides/tints. Keep the first version small: use existing native input/dropdown/list/color components, searchable selectors where existing capabilities support them, and short plain labels. Follow the existing style-manager UX for any genuinely needed mapping manager; do not invent a separate modal/toolbar system.
 
 Reuse global themes/palette/native color resolution. Phase color is an optional presentation accent, not a replacement for node-type styles or lens overrides; labels and shapes must distinguish phases without color alone. Reuse shared editor defaults, visibility, safety limits and input preferences rather than duplicating them.
 
-Type configuration applies to all canvases using this view through #218's serialized writer. Current attention, camera, expanded groups and editor bindings remain local session state. Changing mappings must not change the canonical ontology or another view's settings. Preserve unknown/future payloads and existing external-settings synchronization; field-level updates must not overwrite the other agent's type namespace.
+Type configuration applies to all canvases using this view through #218's serialized writer. Selected view, current attention, camera, expanded groups and native editor/Sidecar ownership remain local session state. Changing mappings must not change the canonical ontology or another view's settings. Preserve unknown/future payloads and existing external-settings synchronization; field-level updates must not overwrite another type's namespace.
+
+Compass and Wu Xing must run simultaneously in separate tabs/windows. The selector targets the canvas that opened the panel even after focus moves elsewhere. Switching one canvas cannot change another's view, root, camera or companion. Preserve lens definitions, active filters, unsaved lens drafts and independent workspace restoration. Test with Compass and Wu Xing on this branch; a test-only additional view may cover more cases. Do not require a finished Mind Map to prove independence.
 
 ## W4 — Fixtures and acceptance
 
@@ -112,22 +116,27 @@ Required checks:
 - Display-only configuration, hover, camera, tint and classification cause no note-body reads, parses or semantic rebuilds. Actual note edits use normal owners. No whole-vault enumeration for this local view.
 - Guides remain noninteractive/non-writable; semantic connectors retain evidence and role meaning regardless of screen position. No inferred status/ontology mutation from phase movement.
 - Shared lens/Find/grouping/keyboard/activation/Sidecar behavior and separate canvas sessions work; closing one does not release another's demand or editor.
-- After M0 acceptance, arbitrary occurrence editor/caret/dirty-state survives layout and attention changes subject to explicit scene-retirement policy. Capacity-one is truthful. No local editor implementation.
-- Phase mapping settings round-trip and synchronize without changing Compass or Mind Map configuration. Settings search/deep links/localization use the accepted #218 framework.
+- Existing attention-following editor opens the correct document at its phase anchor; dirty text/caret survive ordinary resize/reflow, explicit navigation preserves content through the current save lifecycle, and safe filter/switch/teardown behavior is retained. No M0 or #219 commit is required for this native proof.
+- Wu Xing appears through shared registry/selector/settings contributions. Two canvases retain different selected views and independent restoration across main/popout ownership changes.
+- Phase mapping settings round-trip and synchronize without changing Compass or other view configuration. Settings search/deep links/localization use the accepted #218 framework.
 - Node22.22.2 `npm run verify`, focused pure classifier/layout/property-lifetime/session/browser tests, actual Windows native modifier/clipboard/editor/Sidecar/popout checks and exact-head CI pass. Report mobile emulation and physical-device evidence separately.
 
-Highest-value manual checks: edit a phase property and see the correct local move while saved content remains correct; navigate a sparse/unknown local scene with keyboard and Find; run an editor alongside independent canvas/Sidecar pairs across close/reopen. Preserve #215's documented baseline extra-tab/combined-editor failures and distinguish them from new regressions.
+Keep performance checks proportional: retain existing verification/scaling guards and focused bounded-work/no-extra-read assertions; do not add an unrelated full indexing benchmark campaign. Correctness failures remain failures.
+
+Highest-value manual checks: edit a phase property and see the correct local move while saved content remains correct; navigate a sparse/unknown local scene with keyboard and Find; run the existing attention editor alongside independent canvas/Sidecar pairs across close/reopen. Preserve #215's documented baseline extra-tab/combined-editor failures and distinguish them from new regressions.
 
 ## Parallel communication and integration
 
-The partner is [Mind Map #219](https://github.com/zsviczian/kplex/pull/219). Read its PR and current M0 contract at kickoff, before shared-interface changes and before native integration. Fetch remote work read-only as needed. Commit/push coherent milestones (agreed interface, classifier/layout, property bridge, native integration, validation), then post a short PR message signed **Zsolt's Codex Agent** with SHA/link, capability, tests actually run and remaining dependency.
+The partner is [Mind Map #219](https://github.com/zsviczian/kplex/pull/219), not a prerequisite. Both agents build and validate against accepted main after #218, without consuming the other's unmerged implementation. Each PR must be independently reviewable and ready for integration in either order; the second integration must reconcile current main and rerun affected checks.
 
-A commit being visible does not make it accepted. The integration owner must land the isolated shared checkpoint on main or explicitly approve exact dependency commits. Do not automatically merge/cherry-pick the entire Mind Map branch, implement a competing M0, or repeatedly modify shared files while the Mac agent is editing them. If the host prerequisite is unavailable, complete fixture-level work and report the gate honestly.
+Read the partner's PR at kickoff, before overlapping shared-interface edits and before final integration. Post concise comments signed **Zsolt's Codex Agent** for coherent checkpoints: exact commit link, changed capability/interface, tests actually run and any concrete conflict. Fetch partner work read-only when helpful. Comments are coordination records, not an assumed live messaging channel or a release gate.
 
-Keep each branch's HANDOFF.md focused on its own assignment; cross-agent contracts/decisions live on the PRs. The user may revise both feature scopes after #218; refresh the drafts against that actual result before proceeding. No timer-based commit noise or promise of asynchronous communication outside an active implementation session.
+Keep #220's property/decorations extensions additive, narrowly wired and backward-compatible. Do not implement the partner's editor/session redesign, overwrite its branch or consume its moving head. No automatic mutual merges, unapproved cherry-picks or assumption that a pushed checkpoint is accepted. Shared-file conflict prevention must not recreate a blanket wait for M0; continue independent work and report only a specific unavoidable collision.
+
+Keep each branch's HANDOFF.md focused on its own assignment; cross-agent decisions live on the PRs. Superseded M0-blocking comments are historical. When reconciling inherited planning docs, clarify that independent editor bindings are required for Mind Map, not for this attention-following Wu Xing scope, without weakening editor safety or changing historical validation evidence.
 
 ## Exclusions and delivery
 
-No relative-grandparent/grandchild mode, multiple simultaneous editors, automatic phase assignment, between-phase overlap, phase-changing drag/drop, astrology-derived classification, full-vault metrics, 3D/forces/continuous animation, private parsing/indexing, external plugin loading or C15–C26 refactor.
+No independently pinned arbitrary-occurrence editors, relative-grandparent/grandchild mode, multiple simultaneous editors, automatic phase assignment, between-phase overlap, phase-changing drag/drop, astrology-derived classification, full-vault metrics, 3D/forces/continuous animation, private parsing/indexing, external plugin loading or C15–C26 refactor.
 
-Return the actual phase/settings contract, agreed shared capability commits, source/build identities, tests and failures, cleanup receipts and up to three necessary manual checks. Keep the PR draft until the view and shared hosting prerequisite are validated. The opening planning document itself is not a completed feature.
+Return the actual phase/settings/editor contract, source/build identities, tests and failures, cleanup receipts and up to three necessary manual checks. Deliver a complete production-integrated Wu Xing PR against accepted main plus this branch, without #219/M0 as an outstanding gate. Keep the PR unmerged for review; do not declare readiness if required validation remains incomplete. The opening planning document itself is not a completed feature.
