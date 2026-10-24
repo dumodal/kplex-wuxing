@@ -10,6 +10,14 @@ final numbers but repeated transient zero/unknown/lower-bound badges. The bounde
 reached its 96-mutation cap. The root folder's child count also temporarily fell from its
 native total to the smaller induced scope. Tag/folder lateral gates displayed unknown counts.
 
+The retained baseline install was the accepted #210 artifact
+`6400bb47c719da4cca9736c98ec6b0f56c55d211a1cbbf42751c66d5caf852bf`, built from
+runtime checkpoint `a61b92485102ac6483a37dc0a63e17bbfaa59908` (packaged version 0.2.2).
+Its production `src/` tree is unchanged at this branch's merged-main base `894437d`;
+the current package version is 0.2.3. Baseline and candidate are therefore explicitly different
+artifacts, not interchangeable packaging identities. The guarded baseline observation restored
+settings, plugin enablement and fixtures. Native host: Obsidian 1.14.5, installer 1.14.0.
+
 An ordinary edit temporarily invalidates global source completion. A previously compiled
 Eager source could then enter the local bootstrap path; after handover discarded the local
 admission token, forced compilation bypassed the existing source-fingerprint no-op check.
@@ -45,6 +53,12 @@ maintenance algorithm is changed. Freshness validation still runs; this is not a
 
 ## Completed evidence and remaining gates
 
+- Current production checkpoint: `09b84bea808f73b1074e06d8bfc4b1fc721e2858`. The complete
+  local verification sequence reached and passed every test suite: **7 release, 130 core,
+  1417 main regression, 228 UI, 357 source-contract and 738 real IndexedDB/browser tests**;
+  every suite reports zero failures, cancellations and skips. Architecture, installed-type and
+  official scanner checks passed. The actual dependency production build separately recorded
+  Node exit status **0** on Node 22.22.2. See the aggregate-shell qualification below.
 - Node **22.22.2**, installed dependencies and actual Obsidian declarations: affected typecheck
   and official scanner pass. Full On-demand/Eager production-owner real-Chromium IndexedDB file:
   **125/125**, zero failures/skips. Focused held-read/same-stat/removal controls: **10/10**.
@@ -55,10 +69,17 @@ maintenance algorithm is changed. Freshness validation still runs; this is not a
   three identical-structure prose saves produced **zero observed badge/scene DOM mutations**;
   structural lateral zeros, subsequent real link removal/addition, fixture removal and exact
   settings/enablement restoration passed. The original 107-file inventory was restored.
-- The final native-incarnation UI reset has since passed its browser control; final full verification,
-  exact-final-build native checks and CI are pending. Do not describe the diagnostic hash as the
-  final production artifact. The maintainer is using the foreground PC for video editing; background
-  portable verification may continue, but native focus must be coordinated before final checks.
+- Exact final build, version 0.2.3, has SHA-256 identities:
+  `main.js` **99c46109ef310ce17e72f3e1d08a762bada44c9ee5aff52d14191a65fe340a87**;
+  `manifest.json` **843d327e4a634a6e28cd645be8c533adc873a1ac1c6498502b5ca44e70120109**;
+  `styles.css` **88b61aa508ede97b10fbd30c957d14ba19b257aa26f5ee9f547f13faa0f43974**.
+  This build has **not yet been staged or accepted natively**. The earlier diagnostic hash is not
+  interchangeable with it. [CI run **436**](https://github.com/zsviczian/kplex/actions/runs/40076257890)
+  **passed complete verification** at the exact production checkpoint `09b84be`.
+- The maintainer is using the foreground PC for video editing. They requested notification when
+  native checks are ready, followed by waiting for an explicit ready response. That notification
+  has been given. Final native gate, ordinary editor-save and foreground checks remain pending;
+  no foreground focus/reload has been attempted during this background-only interval.
 
 Private receipts are under `%TEMP%/kplex-stable-counts-*` and `%TEMP%/kplex-stable-gates-*`.
 No vault contents or paths from a personal vault are published.
@@ -93,8 +114,18 @@ already closes write authority. Unknown/cache-only observations preserve the ori
 retirement behavior. The original source-replay cancellation/oracle assertions are unchanged.
 Focused source-replay/blocked-database/autosave/held-read controls pass **12/12**, zero skips.
 The second full local run was deliberately interrupted after this new CI finding; it is retained
-as incomplete, not a pass. A complete run on the narrowed implementation is required.
+as incomplete, not a pass. The narrowed implementation subsequently passed all complete local
+test suites listed above and the clean separate production build.
 No test assertion, deadline or acceptance threshold changed.
+
+The last aggregate local launcher reported shell exit **1** after entering its final build,
+without a test/build failure message in the retained log. Its underlying Node exit was not saved,
+so this is **not relabeled a clean aggregate-command pass**. A separate identical build saved an
+explicit Node exit **0** and reproduced PowerShell `NativeCommandError` treatment of normal npm
+stderr notices. That control is consistent with shell stderr/status handling, rather than a
+failed build. All constituent check receipts and both launch outcomes are retained privately;
+independent CI remains a separate acceptance result. No full-suite retry or smaller fixture was
+used to conceal this outcome.
 
 Native attempts exposed setup without an active Plex, teardown that closed its owned Plex before
 indexing drained, and an immediate enablement-set check before asynchronous plugin restoration
@@ -108,3 +139,11 @@ still occur. Some previously uncompiled neighbors legitimately compile on first 
 DOM observer ignores status chrome and unrelated non-gate attribute changes; its zero result is not
 a claim that React never executes or that every browser task disappears. macOS and physical mobile
 checks are unrun. Historical #202 investigations and #207's accepted storage tradeoff are untouched.
+
+Source review covered the existing semantic/publication owners, exact file/input/policy fences,
+bounded hot-cache and view-local label lifetimes, original cancellation/recovery assertions,
+translation reuse and hook cleanup. No duplicate parser/classifier, persistent cache, settings
+default, command, storage schema, timer or scheduling policy was introduced. The report remains
+an implementation/portable-validation checkpoint, with final native acceptance pending foreground
+availability; it is not a completed merge recommendation. No extra maintainer manual test is
+requested: the remaining Windows checks can be automated once foreground access is available.
