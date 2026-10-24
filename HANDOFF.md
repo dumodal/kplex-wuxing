@@ -29,4 +29,6 @@ Validation:18/18 focused camera/Sidecar tests,8/8 headless Chromium display/Side
 
 Foreground WAIT persists: do not stage/reload/access Obsidian until the maintainer explicitly says ready. Native open/close geometry checks are unrun; after ready use only existing guarded disposable Small, exact artifact and independent cleanup. Cover4 positions, both autozoom states, manual initial camera, modifier fold/unfold-close and cancelled transitions. Estimated5-10minutes native work. Main/popout native timing and physical Mac/mobile unverified.
 
-Publish validated checkpoint/draft PR and verify remote. Do not merge/release/deploy production. Comments signed Zsolt's Codex Agent; raw logs private.
+Additional requested UI change: visibility toggles use3 columns when horizontal space allows. A single CSS auto-fit declaration with160px minimum produces3x3 at the normal560px panel;2 columns at440px and existing mobile1-column at320px. Headless Chromium measured all9 switches visible/contained with no overflow, screenshot inspected; scanner and real build pass. Styles SHA-25637b7b319d7f6d7dc26829b551ba00289d4cce93a8a527a743394eb1b275923ff. Main/manifest unchanged.
+
+Publish validated checkpoint/draft PR214 and verify remote. Do not merge/release/deploy production. Comments signed Zsolt's Codex Agent; raw logs private.

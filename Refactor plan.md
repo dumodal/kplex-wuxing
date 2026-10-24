@@ -6040,3 +6040,8 @@ Maintainer directed proportional UI-only validation; no indexing/performance cam
 ### 2026-10-24 - Sidecar open/close viewport centering
 
 UI-only explicit framing bridges existing per-view Sidecar ownership state to the graph camera after native layout frames. Autozoom reuses fit; disabled autozoom preserves scale and centers the focal occurrence. Input/navigation/unmount retire work/listeners; ordinary splitter/display/manual-camera policy remains. Focused18/18, headless UI8/8, architecture7/7 and0 violations, scanner and real build/types pass on Node22.22.2. Main artifact f43871726a44a8b033f45854fb3ce4f3dfbd4138610abe3a3e50e2b30d79c8a9. Retained new floating-point fixture failure and sandbox build restriction are documented, not relabeled. No performance campaign. Highest risk: native layout settling and condensed editor geometry; main/popout open/close in4 positions with autozoom on/off and modifier recovery remain pending explicit ready. Physical Mac/mobile unrun; no merge/release/production deployment. See docs/validation/sidecar-viewport-center-2026-10-24.md.
+
+
+### 2026-10-24 - Compact visibility toggles
+
+One CSS grid declaration makes the9 visibility toggles3 columns at normal panel width, retaining2-column narrower and1-column mobile layouts. Production CSS headless checks at560/440/320px measured3/2/1 columns, all9 switches visible/contained and no horizontal overflow; screenshot inspected. Scanner and real build pass; main artifact unchanged, styles37b7b319d7f6d7dc26829b551ba00289d4cce93a8a527a743394eb1b275923ff. No extra performance or native foreground work; prior Sidecar native camera checks remain pending explicit ready. No additional manual check needed for CSS sizing; native host/theme acceptance is not claimed.
