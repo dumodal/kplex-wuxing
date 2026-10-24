@@ -5985,3 +5985,6 @@ Known-source events may retain only unrelated broad scope, with exact owner capt
 
 
 - 2026-10-24 PR210 tooling checkpoint: corrected independent-writer fixture now proves a newer durable sequence and asserts the actual superseded result outside the production catch; initial false-positive aggregate remains qualified. Native cleanup and fixed-wave/oracle lifecycle harness controls19/19; unchanged indexing and ontology bootstrap follow-up pass in isolation. Initial full browser lane732/733 and CI426 timer64.8ms failure retained, final validation pending. Bounded protocol is declared in docs/validation/indexing-event-convergence-210-2026-10-24.md; no runtime change after a61b924, no storage investigation or merge.
+
+
+- 2026-10-24 PR210 matched evidence checkpoint: all20 timing and8 separately instrumented operation arms pass fixed-input final semantic/quiet/edit/reopen/cleanup checks. Renderer CPU medians improve11.3% at96 and10.0% at384; repeated sweep owners144/576 become0/0, without changing repository storage/leases. Small adverse no-event/edit/reopen observations and process/transport limitations are retained in the validation report. Final full/native verification and CI remain pending; runtime unchanged from a61b924.

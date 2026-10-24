@@ -194,3 +194,123 @@ TFiles also fail the Vault identity fence. The final dependency projection is no
 an independent replacement for native topology notifications. No safety claim is
 made for an entirely missing create/delete notification on a newly inserted or
 replaced file. Supported ordering remains conservative in delete/recreate controls.
+
+
+## Completed matched browser comparison
+
+All20 timing arms and all8 separate operation-diagnostic arms pass. Three pairs
+alternate baseline/candidate order for each principal cell; every event-heavy arm
+delivers exactly3 waves with the same final documents. No arm is excluded.
+The native Windows validation remains separate and pending.
+Private receipts: %TEMP%/kplex-source-event-210-UndSZN/ (timing) and
+%TEMP%/kplex-source-event-210-CoGOyj/ (native-operation diagnostics).
+
+Production-source comparison is fixed at90032c6d versus the unchanged a61b924
+implementation, collected at tooling head dca8668a73321f5b7e06691374c01afe164ad847.
+Exact sourceAcquisition SHA256:
+
+- Baseline: 3743783a22db2a5c09a83b7c79d9bed8b7e6008148fd241a4326e505076979c6.
+- Candidate: 35ad86c9061bde1a184d20923efcf3b3db38e6ca984711861318a6035d3b69a3.
+- Baseline executable test bundle: 57d24a7887dd92073061b4592f92662860afebd65a0711040052c1c81550887b.
+- Candidate executable test bundle: 133b3ce25b5b5b5253c122d2729a0c336a84218e2e043001df1a9e8f343cba7b.
+
+These are browser test executables, not the installable production main.js.
+Runner hash12ea00499d79eb011d83f447aa290dc6eb2a29c676527afd3ec4cc52c8bae756;
+fixture1c88d1a47178563ddab3be7eff815bbb5555d04882dc78a2c8fb88b6e4fcdcda;
+independent oracle9ce0471d6263b527f0ceae08abca03fa28051aa8eac472e305ef71e2b9f8a081.
+
+Every CPU value below subtracts that arm's own raw cumulative metric endpoints.
+Elapsed and last-event intervals are browser-side; CPU covers renderer process
+threads only. Values are baseline / candidate, in pair order, with no subtraction
+of independent medians to invent an individual-run interval.
+
+| Owners / pair | Renderer CPU seconds | Work elapsed ms | Last event to closure ms | Event delivery span ms |
+| --- | --- | --- | --- | --- |
+|96 /1|0.428468 /0.380878|548.6 /473.6|182.3 /174.8|265.7 /199.6|
+|96 /2|0.430809 /0.382929|540.6 /474.4|179.2 /157.5|261.8 /213.5|
+|96 /3|0.440271 /0.382293|556.1 /474.2|179.8 /171.5|276.1 /199.0|
+|384 /1|1.550262 /1.395461|1984.9 /1814.7|550.7 /473.3|1032.3 /937.4|
+|384 /2|1.549199 /1.366638|1976.5 /1732.7|554.3 /447.5|1018.3 /887.4|
+|384 /3|1.630634 /1.510776|2103.4 /1969.2|555.9 /466.5|1108.7 /1011.6|
+
+Median renderer CPU:0.430809 ->0.382293 seconds (-11.3%) at96 owners;
+1.550262 ->1.395461 (-10.0%) at384. Median work elapsed:548.6 ->474.2ms
+(-13.6%) and1984.9 ->1814.7ms (-8.6%). Main-thread TaskDuration medians
+are0.289676 /0.258733 and1.047071 /0.940510 seconds, separately from process CPU.
+The third384 pair is slower in both builds than the first two and is retained.
+These small deterministic fixtures do not establish production-vault scaling or
+reproduce the historical multi-hour totals.
+
+### Actual repeated work and native operations
+
+| Same3-wave workload |96 baseline|96 candidate|384 baseline|384 candidate|
+| --- | ---: | ---: | ---: | ---: |
+|Broad inventories|4|1|4|1|
+|Sweep owner visits / unique owners|240 /96|96 /96|960 /384|384 /384|
+|Revisited sweep owners|144|0|576|0|
+|Dependency ensures|243|102|963|390|
+|Repeated ensures beyond unique owners|147|6|579|6|
+|All repository inspections|341|198|1349|774|
+|Body reads / parses / activations|3 /3 /3|2 /2 /2|3 /3 /3|2 /2 /2|
+|Native requests (diagnostic)|3922|3041|13284|10243|
+|Native transactions, all committed|1858|1563|7043|5884|
+|Committed reader adds / releases|300 /300|302 /302|1164 /1164|1166 /1166|
+|Family decodes|407|411|1559|1563|
+
+Both arms do the same native mutations; the candidate can coalesce the superseded
+first edit of owner0 with its third edit before durable acquisition. All final
+facts agree with fresh host compilation. It does not skip a requested foreground
+edit. Recorded checked/reused-body counters actually rise from101/98 to102/100
+at96 and389/386 to390/388 at384 because they include local repair; they are not
+unique sweep visits. Likewise candidate reader pairs and decodes rise slightly.
+The improvement is elimination of repeated inventory prefixes, not universal
+reduction of every counter or removal of leases. Both diagnostic arms have zero
+aborted/pending transactions, balanced committed lease release, no observer
+overflow, and no final reader/decode/journal/impact debt.
+
+Baseline activity outcomes are cancelled/cancelled/cancelled/complete; candidate
+has one complete activity. Explicit flush may join more than one activity, so
+outcomes of a flush call are not activity counts. This synthetic joining protocol
+still requires independent native automatic-convergence evidence.
+
+### Controls, quiet tail and subsequent work
+
+The settled8-owner no-event control performs zero inspections, ensures, native
+requests or transactions in either arm. CPU0.000927 /0.001107s and elapsed0.2 /0.2ms
+are transport/instrumentation-scale observations, not a meaningful idle-speed claim.
+The16-owner broad/no-concurrent-edit control retains identical work:16 sweep visits,
+16 ensures,32 inspections,424 native requests,248 committed transactions and48/48
+reader add/release pairs. All three raw controls are retained:
+
+|Pair|Renderer CPU seconds B /C|Work elapsed ms B /C|
+| --- | --- | --- |
+|1|0.057528 /0.058105|69.1 /68.5|
+|2|0.058640 /0.059268|70.2 /67.7|
+|3|0.059739 /0.060225|70.8 /72.4|
+
+Candidate control CPU is consistently0.486?0.628ms higher; small additional exact
+fences are not free. Do not present this as an improvement. All500ms quiet tails
+remain closed with zero additional inspections, ensures or completion calls.
+Event-heavy quiet CPU ranges:96 baseline0.001658?0.002603s, candidate0.000881?0.001265s;
+384 baseline0.002077?0.003215s, candidate0.000959?0.001239s.
+
+|Subsequent phase median|96 B /C|384 B /C|
+| --- | --- | --- |
+|Identical later edit renderer CPU seconds|0.018867 /0.019644|0.021095 /0.020835|
+|Later edit transport-inclusive wall ms|30.768 /31.681|30.777 /31.709|
+|Same-DB acquisition/connection reopen CPU seconds|0.151604 /0.148091|0.502666 /0.506749|
+|Reopen transport-inclusive wall ms|193.301 /190.827|680.763 /657.126|
+
+The small adverse later-edit CPU at96 and reopen CPU at384 are retained. These
+phases include IPC/metric transport in their wall observations and do not isolate
+native indexedDB.open. They preserve exact final semantic digests and complete
+cleanup; they are not #207 storage/restart measurements.
+
+Diagnostic20ms heartbeat maximum gaps range20.1?21.5ms baseline and20.1?20.4ms
+candidate at96;50.2?55.7ms baseline and47.4?52.6ms candidate at384. Those gaps
+include the nominal20ms period and are not direct task-block durations, actual
+paint, native interaction latency or a replacement for existing strict50ms tests.
+Sampled heap endpoints span20.90?21.81MiB baseline /19.77?22.18MiB candidate at96,
+and19.41?40.83 /7.74?41.00MiB at384. No allocation, true peak or GC attribution is
+established. Browser/storage CPU and global OS cache/heap equivalence remain
+unmeasured. No forced GC, global cache changes or altered scheduling were used.
