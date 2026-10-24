@@ -314,3 +314,15 @@ Sampled heap endpoints span20.90?21.81MiB baseline /19.77?22.18MiB candidate at9
 and19.41?40.83 /7.74?41.00MiB at384. No allocation, true peak or GC attribution is
 established. Browser/storage CPU and global OS cache/heap equivalence remain
 unmeasured. No forced GC, global cache changes or altered scheduling were used.
+
+
+Native tooling cleanup follow-up: restore the original own-property descriptor or
+prototype location of workspace.onLayoutReady after the warm hook, in addition to
+its function identity. A late activation failure control now reaches both installed
+hooks and proves their retirement plus independent fixture/configuration cleanup.
+Its first unit attempt failed before that boundary because the fake index omitted
+getSourceAcquisitionCounters; the fixture was completed, not the assertion relaxed.
+All6 cleanup tests then pass, zero skips; private kplex-210-native-cleanup-late.log.
+No production owner or matched-study executable changed. The running full local
+verification began at dca8668; this added tooling case has separate focused evidence
+and must also be included in final-head CI.

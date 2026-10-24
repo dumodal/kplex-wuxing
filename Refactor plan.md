@@ -5988,3 +5988,6 @@ Known-source events may retain only unrelated broad scope, with exact owner capt
 
 
 - 2026-10-24 PR210 matched evidence checkpoint: all20 timing and8 separately instrumented operation arms pass fixed-input final semantic/quiet/edit/reopen/cleanup checks. Renderer CPU medians improve11.3% at96 and10.0% at384; repeated sweep owners144/576 become0/0, without changing repository storage/leases. Small adverse no-event/edit/reopen observations and process/transport limitations are retained in the validation report. Final full/native verification and CI remain pending; runtime unchanged from a61b924.
+
+
+- 2026-10-24 PR210 native-tooling cleanup: restore onLayoutReady descriptor/prototype placement after the bounded warm hook;6/6 cleanup controls now include an actual post-hook activation failure. Initial incomplete fake-counter fixture failure is retained in the validation narrative. No runtime change or comparison rerun; final/native acceptance pending.

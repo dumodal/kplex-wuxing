@@ -75,6 +75,31 @@ test('native cleanup failure remains failed while independent configuration and 
   assert.equal(f.calls.disable, 1); assert.equal(f.calls.enable, 1); assert.equal(f.calls.layout, 1); assert.equal(f.calls.data, 2);
 });
 
+test('failure after warm hooks restores prototype registration and dependency wrappers', /** Exercise the late finally path after actual hook installation, before delivering any fake event. */ async () => {
+  const f = cleanupFixture(99), p = f.app.plugins.plugins['k-plex'];
+  const original = f.app.workspace.onLayoutReady;
+  Object.setPrototypeOf(f.app.workspace, { onLayoutReady: original });
+  delete f.app.workspace.onLayoutReady;
+  const ensure = async () => 'ready';
+  p.index.getSourceAcquisitionCounters = () => ({});
+  p.index.sourceAcquisition.repository = { ensureLocalDependencies: ensure };
+  p.activateView = async () => { throw Error('Owned warm activation failure'); };
+  let retired = 0;
+  f.controller.probeFactory = () => ({ snapshot: () => ({ observed: true }), stop: () => { retired++; } });
+  for (const owner of [f.app.vault, f.app.metadataCache]) {
+    owner.on = () => ({}); owner.offref = () => {};
+  }
+  const enable = f.app.plugins.enablePlugin;
+  f.app.plugins.enablePlugin = async () => { await enable(); f.app.workspace.onLayoutReady(() => {}); };
+  await assert.rejects(f.run(f.app, f.controller), /Owned warm activation failure/);
+  assert.equal(f.files.size, 0); assert.equal(f.folders.size, 0);
+  assert.equal(f.app.workspace.onLayoutReady, original);
+  assert.equal(Object.hasOwn(f.app.workspace, 'onLayoutReady'), false, 'Prototype ownership is restored');
+  assert.equal(p.index.sourceAcquisition.repository.ensureLocalDependencies, ensure);
+  assert.equal(retired, 1); assert.equal(f.controller.progress.observation.observed, true);
+  assert.equal(f.controller.progress.cleaned, true);
+});
+
 test('native event acceptance does not force reconciliation, resolver closure or source readiness', /** Inspect actual call expressions, not string comments or helper names. */ () => {
   const forbidden = [];
   /** Native file writes and observations may schedule product work only through real host owners. */

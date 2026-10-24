@@ -32,6 +32,7 @@ async function scenario(app, c) {
   const layout = app.workspace.getLayout(), initialFiles = app.vault.getFiles().length;
   const prefix = 'Kplex210-Events-' + Date.now(), owned = [], listeners = [], ownerIds = new WeakMap();
   const originalLayoutReady = app.workspace.onLayoutReady;
+  const layoutReadyDescriptor = Object.getOwnPropertyDescriptor(app.workspace, 'onLayoutReady');
   let folder, probe, restoreEnsure, layoutReplacement, initialComplete, finalComplete, released = false;
   const gate = new Promise(resolve => { c.release = () => { released = true; resolve(); }; });
   const events = [], writes = [], maxEvents = 96;
@@ -150,7 +151,10 @@ async function scenario(app, c) {
     for (const dispose of listeners.reverse()) await clean(dispose);
     if (restoreEnsure) await clean(restoreEnsure);
     if (probe) await clean(() => probe.stop());
-    if (app.workspace.onLayoutReady === layoutReplacement) app.workspace.onLayoutReady = originalLayoutReady;
+    if (app.workspace.onLayoutReady === layoutReplacement) {
+      if (layoutReadyDescriptor) Object.defineProperty(app.workspace, 'onLayoutReady', layoutReadyDescriptor);
+      else delete app.workspace.onLayoutReady;
+    }
     for (const file of owned.reverse()) await clean(async () => {
       check(app.vault.getFileByPath(file.path) === file && file.path.startsWith(prefix + '/'), 'Owned file identity changed');
       await app.vault.delete(file);
