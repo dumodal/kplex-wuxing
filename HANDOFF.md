@@ -22,7 +22,7 @@ Obsidian is the production host; preserve the established portable semantic, ide
 # PR212 implementation return — warm source-head selection
 
 Prepared by **Zsolt's Codex Agent**, 2026-10-24.
-Branch: `2026-10-24-warm-source-selection`; initial comparison baseline: `af09bc42d78abe03ed0d32e0edcdf22d0ebe08ae`; accepted integration baseline: `6fa936d6522ba45f2c6bb2dfb853671e5218b055` (merged #211).
+Branch: `2026-10-24-warm-source-selection`; initial comparison baseline: `af09bc42d78abe03ed0d32e0edcdf22d0ebe08ae`; first accepted integration baseline: `6fa936d6522ba45f2c6bb2dfb853671e5218b055` (#211); latest accepted main: `d48f76641df149dd5bb4d000fe9764251ece9807` (#213).
 The equipped Mac agent implements the maintainer-authorized #212 scope. No delegation was used.
 Keep [PR212](https://github.com/zsviczian/kplex/pull/212) draft; do not merge, release or deploy to a production vault.
 
@@ -35,27 +35,34 @@ Keep [PR212](https://github.com/zsviczian/kplex/pull/212) draft; do not merge, r
 - 36 focused real-IDB contracts and three measurement-harness controls passed. An independent writer during awaited SHA initially exposed a candidate finality defect; the added same-transaction retirement check fixes it. Fixture mistakes and original failures are preserved in the report/receipts.
 - Durable details: [validation report](docs/validation/warm-source-selection-212-2026-10-24.md), [sanitized receipts](docs/validation/warm-source-selection-212-2026-10-24.json), architecture/source repository contracts.
 
-## Validation and accepted-main integration
+## Final accepted-main integration status
 
-Original af09bc4 acceptance remains recorded with green CI441/CI442. Final readback discovered
-accepted main 6fa936d (merged #211) and a HANDOFF conflict. The normal main merge is resolved,
-accepted runtime/test changes are preserved, and only #212's two production files differ from 6fa936d.
-Both test inventories and the accepted stable-gates native command remain present.
+Main accepted #211 /6fa936d and then #213 /d48f766 during validation. Normal branch merges preserve
+both accepted changes and resolve only HANDOFF; the test commands are retained. No unmerged work or
+PR history is modified. Relative to d48f766, only #212's two production files differ. The user has
+agreed to hold main unchanged through final CI.
 
-Fresh 6fa936d comparison: all 20 arms passed, unchanged operation saving; 128-owner medians improve
-7.2% elapsed /4.2% renderer CPU. Original adverse results are retained, not relabelled. Integrated
-`verify:obsidian` passed with the real build, 228 browser UI and 775 real-IDB source tests. Exact-build
-reader/selection/cleanup controls, two foreground warm reloads and all six foreground inventory
-workflows passed. Small's fresh original settings/workspace/enablement/artifacts/content and closed
-startup state were restored after proving the exact tested renderer exited.
+All three measured cohorts remain separately identified: initial af09bc4, accepted 6fa936d and
+latest d48f766. Each twenty-arm comparison passed semantic/provenance, quiet/edit/reopen and cleanup
+checks. Latest 128-owner medians improve 7.7% elapsed /4.1% renderer CPU; one transaction is saved
+per clean current-format owner. Earlier adverse samples and failures remain retained. The latest
+two cohorts' executable bundles are byte-identical; no timing variation is attributed to #213.
+
+Complete latest `verify:obsidian` passed with real build, 1,425 functional /228 browser UI /357
+portable source /775 real-IDB source tests. Native exact-build smoke, reader/selection and deliberate
+cleanup-failure controls, two foreground warm reloads and all six foreground workflows passed.
+Small's fresh settings/workspace/enablement/artifacts/content digest and originally closed startup
+state were restored after proving the exact tested renderer exited. An idle test worker delayed
+the full suite but exited without intervention; no process kill, weakened assertion or deadline
+extension manufactured a pass.
 
 Current durable evidence: [integration report](docs/validation/warm-source-selection-212-main-integration-2026-10-24.md)
 and [receipts](docs/validation/warm-source-selection-212-main-integration-2026-10-24.json). Source/artifact
-identities describe the measured pre-commit integration tree; remote CI checks the committed tree
-separately. Final integration commit/publication/head/CI are recorded on PR212 after this report commit.
-Keep the PR draft for independent review. No additional manual check is required for the scoped
-contracts. No production-scale, cold-start/legacy-heavy, Windows/minimum-host or physical-device
-speedup is claimed. Only existing Small was opened; the deleted Brain copy remains unavailable.
+identities describe each actual pre-commit tree. Final integrated branch head/publication/remote CI
+are recorded on PR212 after this report commit; historical CI441/CI442 remain valid only for their
+recorded tree. Keep the PR draft for independent review; no additional manual test is required for
+the scoped contracts. No cold-start, legacy-heavy or production-vault speedup is claimed; only
+existing Small was opened. The deleted Brain copy remains unavailable.
 
 ## Review and delivery
 

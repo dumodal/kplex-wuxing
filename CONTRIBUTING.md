@@ -1108,7 +1108,7 @@ artifacts require `KPLEX_PROBE_ARTIFACT_DIR` plus `KPLEX_PROBE_BASELINE_REF`; th
 installed-artifact/vault guards or stage a build. Native totals are diagnostic, not CPU attribution.
 
 For PR212's complete warm-reconciliation comparison, use Node 22.22.2 and
-`node scripts/testing/warm-source-selection.mjs compare`. It pins accepted `6fa936d` (merged #211), alternates
+`node scripts/testing/warm-source-selection.mjs compare`. It pins accepted `d48f766` (merged #211/#213), alternates
 three 128-owner pairs, and keeps 32/256-owner and small dense/legacy/shared-revision controls.
 Each bounded profile has actual restart/edit/reopen and independent semantic checks; diagnostics
 run separately from timing, and failed/adverse receipts remain in the printed temporary directory.

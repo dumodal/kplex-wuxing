@@ -1,6 +1,10 @@
-# PR212 — acceptance after merged #211
+# PR212 — accepted-main integration acceptance
 
-## Baseline and integration
+The first sections preserve the completed `6fa936d` acceptance. Main subsequently accepted #213 as
+`d48f76641df149dd5bb4d000fe9764251ece9807`; the latest integration section below records that pass
+separately. No historical timing, artifact identity or failure is reassigned to another tree.
+
+## First integration: merged #211
 
 Prepared by **Zsolt's Codex Agent**. Accepted main advanced to
 `6fa936d6522ba45f2c6bb2dfb853671e5218b055` (merged #211) during final PR212 acceptance.
@@ -18,7 +22,7 @@ command, and all new warm-selection test entries. No schema, scheduler, compiler
 or gate semantics are changed by the resolution. The original exact-head/lease-retirement contract,
 focused tests and failure analysis remain in the initial report. C15–C26 remain paused.
 
-## Fresh current-baseline comparison
+## 6fa936d comparison
 
 Node 22.22.2; `node scripts/testing/warm-source-selection.mjs compare`, now pinned to 6fa936d.
 Same predeclared serial 32/128/256-owner matrix, three alternating 128-owner pairs and bounded
@@ -34,7 +38,7 @@ source/bundle hash, transaction/request total, semantic digest, follow-up edit/r
 | 128, pair 3 | A, F | 158.421 | 148.097 | 114.844 | 110.279 |
 | 256 owners | A, F | 319.415 | 282.686 | 224.419 | 205.528 |
 
-Current-baseline 128-owner medians improve **7.2% elapsed / 4.2% renderer CPU**. This is a small
+6fa936d 128-owner medians improve **7.2% elapsed / 4.2% renderer CPU**. This is a small
 synthetic workload, not a production-vault percentage. The earlier adverse pair remains retained;
 the different cohort medians are not attributed to #211. Renderer CPU excludes Browser/storage
 process CPU; detailed accounting remains separate from primary timing.
@@ -52,7 +56,7 @@ head requests. Genuinely missing heads also add one probe transaction before ord
 Empty-cache cold-start and legacy-heavy latency are unmeasured. All adverse follow-up observations
 remain in the receipts, including the slightly slower 256-owner edit (16.521/16.567 ms).
 
-## Integrated verification and native acceptance
+## 6fa936d verification and native acceptance
 
 Integrated **`npm run verify:obsidian` passed** with Node 22.22.2, actual dependencies/Obsidian
 typings and the real production build. All per-command groups passed: architecture 7, core 130,
@@ -105,3 +109,63 @@ production-vault deployment is authorized. Production-scale speedup, Windows/min
 physical-device acceptance remain unclaimed. No additional manual check is required for the scoped
 source contracts. Recommend the narrow correction for independent review with the measured
 current-format benefit and explicit legacy/missing-head costs.
+
+
+## Latest integration: accepted #213 /d48f766
+
+Main advanced again after the 6fa936d checks completed. Accepted #213 changes Sidecar modifier-click
+UI/actions and their translations/tests, not either #212 production file. A normal merge preserves
+all accepted changes and resolves only HANDOFF. No source/history of #213 is modified.
+
+The same twenty-arm comparison is repeated against d48f766 with fresh serial profiles. All arms
+pass exact head/semantic/provenance, quiet closure, normal edit, actual reopen and profile cleanup.
+The [latest receipt section](warm-source-selection-212-main-integration-2026-10-24.json) retains all
+observations and executable/source identities alongside the 6fa936d and initial af09bc4 records.
+
+| Complete unchanged pass | Order | Baseline ms | Candidate ms | Baseline renderer CPU ms | Candidate renderer CPU ms |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 32 owners | A, F | 48.428 | 44.761 | 42.423 | 38.051 |
+| 128, pair 1 | A, F | 161.786 | 144.798 | 115.239 | 107.193 |
+| 128, pair 2 | F, A | 156.229 | 148.578 | 111.213 | 110.448 |
+| 128, pair 3 | A, F | 161.002 | 149.053 | 115.205 | 110.517 |
+| 256 owners | A, F | 305.515 | 299.959 | 219.477 | 213.933 |
+
+Latest 128-owner medians improve **7.7% elapsed /4.1% renderer CPU**. The one-transaction-per-clean-
+owner reduction, unchanged authentication/request totals and legacy/missing-head tradeoffs remain
+identical. Differences between cohort gains are not attributed to either accepted UI change, and
+no production-scale, cold-start or legacy-heavy speedup is claimed. The original adverse samples
+remain retained; this is accepted-baseline integration, not outcome-selected retrying.
+
+The d48f766 and 6fa936d benchmark bundles are **byte-for-byte identical**, confirming the accepted
+Sidecar change is outside the timed workload. The repeated results still retain every sample;
+variation is not attributed to a source change in the measured operation.
+
+Combined **`npm run verify:obsidian` passed** with pinned Node 22.22.2, actual installed typings,
+real build, and all per-command groups: architecture 7, core 130, functional **1,425**, browser UI
+**228**, portable sources **357**, real-IndexedDB sources **775**. An idle Node test worker delayed
+this run after its final passed test, then exited without intervention. Read-only process metadata
+showed 0 CPU at that observation; its retention cause is unproven. No worker was killed, assertion
+changed or deadline extended to obtain this pass.
+
+Latest exact built/staged `main.js` SHA-256:
+`2c883e0ebec3b86a0fbb6c8500bd91dae535610d79cbb7c49cdb55091062b686`.
+It was built from the pre-commit d48f766 integration tree on HEAD `30c37d3`, with its dirty build-ID
+marker. Actual source/bundle/artifact hashes are pinned; no later clean-commit attribution is made.
+
+All latest exact-build native checks passed again: registered command/rendered DOM/error smoke;
+the sixteen-source protected component (32 transactions/48 hashes), sixteen-source shared selection
+(48 transactions/48 head gets/48 hashes), and expected-failure cleanup with zero owned reader/decode/
+lease debt. Both warm reloads retain exact selected heads/settings, with zero source Markdown
+reads/parses/repairs and zero full builds (3.151/3.163 s functional observations). All six foreground
+inventory workflows pass, resume normally and make zero source flush joins. These are awaited API/
+DOM observations, not synchronous-blocking, paint or production-vault speedup measurements.
+
+Fresh Small restoration passed: settings/workspace/core/community enablement/original artifacts
+byte-exact; 74 Markdown /76 visible files and their content digest unchanged; exact tested renderer
+exited and original closed startup flag restored. No other native vault was opened or modified.
+The user agreed to hold main stable through the final CI window.
+
+The accepted-main merges, conflict resolution and current evidence are published on the existing
+branch. Final integrated head and complete CI are verified after this report commit and recorded
+on PR212; earlier green CI441/CI442 are not promoted to this latest application bundle. Keep the
+PR draft for independent review, with no PR merge/release/production deployment.

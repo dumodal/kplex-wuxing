@@ -18,7 +18,7 @@ import { sourceEventBrowserInitialize } from '../../tests/support/sourceEventWor
 import { collect, hostOracle, semanticView } from '../../tests/support/cachedSourceFixture.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const baseline = '6fa936d6522ba45f2c6bb2dfb853671e5218b055';
+const baseline = 'd48f76641df149dd5bb4d000fe9764251ece9807';
 const runtimeFiles = ['src/index/SourceRepository.ts', 'src/adapters/obsidian/sourceAcquisition.ts'];
 const minimumFreeBytes = 2 * 1024 ** 3, maximumProfileBytes = 256 * 1024 ** 2;
 /** Pin source/bundle evidence without exposing any personal vault path or content. */
