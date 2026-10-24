@@ -2,7 +2,7 @@
 
 Prepared by Zsolt's Codex Agent on 2026-10-24.
 
-**Status: proposed implementation plan.** The opening draft PR contains this design and an agent assignment, not a completed extraction. Names below are proposed internal contracts unless explicitly identified as existing. The initial implementation ships the existing view through the new boundary; Mind Map, Ideaverse and Wu Xing are subsequent features.
+**Status: implemented foundation under validation in PR #215.** Classic is the only production definition. The original design/research below remains the rationale; section 16 records the actual implementation and capability limits. Mind Map, Ideaverse and Wu Xing remain subsequent features. Acceptance results belong in the linked validation report, not this design status.
 
 Research baseline: K-Plex [`5954951`](https://github.com/zsviczian/kplex/commit/595495105f56ae8d159f71b41706157e9f24c851), after PR #214. Ideaverse reference: [`4cce3f2`](https://github.com/nickmilo/ideaverse-maps/commit/4cce3f267148cc81e2961796e9a8dc7e20ff1aa0). Recheck branch/main before implementation. Follow AGENTS.md, CONTRIBUTING.md, ARCHITECTURE.md and AGENT_WORKFLOW.md. This feature does not resume the paused general refactoring programme.
 
@@ -322,3 +322,55 @@ No runtime implementation, build, automated tests or Obsidian validation were pe
 Validate the internal boundary with Classic, Mind Map and at least one non-tree view before committing to a public contract. External registration can then add version/capability negotiation, namespaced settings migration, bounded work, explicit disposal, safe fallback and documented read/action privileges. Keep read, derived presentation, navigation and writes distinct, consistent with #132.
 
 Third-party JavaScript in the Obsidian process should not be advertised as a security sandbox merely because it uses a narrow API. Distribution, trust/consent, dependency compatibility and update handling need their own design. Loading/downloading external code is outside this PR.
+
+
+## 16. Implemented boundary and capability matrix
+
+The runtime baseline is accepted main `659697a686f341497725dfb31e94a8bc2bcf2b25`.
+`src/core/plex/views/` owns the finite internal definition/registry contracts and
+Classic projection/geometry. `GraphIndex.getNeighborhood()` delegates to the same
+`projectClassicNeighborhood()` policy used by Classic's portable projection;
+classification, visibility, provenance and canonical publication remain index/core-owned.
+The host Classic adapter premeasures existing thoughts, calls the definition's
+layout and binds canonical pages/styles, sibling edges, sections and cross-links.
+Existing `ui/layout.ts` and `ui/relationGroups.ts` exports remain delegates.
+
+`ui/plexViews/` supplies bounded cache-only reads, measurement, occurrence/edge
+binding, grouping and area repacking. The Classic contribution owns fixed areas,
+legacy heights, grouping partitions, labels, compass tint geometry and layout
+controls. The shared renderer consumes arbitrary area descriptors and explicit
+entry/editor/frame occurrence IDs. Attention and layout root stay distinct.
+Canonical semantic edges retain exact occurrence and node endpoints; derived or
+decorative edges cannot use relationship writers. Gate write intents and count
+placement follow explicitly declared physical ports.
+
+`PlexViewSession` belongs to each existing native document session. It owns static
+view selection, bounded JSON preferences and namespaced area heights through the
+native workspace writer. Camera/selection/unfolded groups stay transient in that
+session and retire on attention change. Global pins/history, Footprints, Sidecars,
+native editors, the shared shell and Classic flat/device/surface settings retain
+their existing owners. A live editor prevents selecting an incompatible view;
+compatible changes and a failed/unavailable policy retain its native host. The first host anchors the existing attention document to an admitted occurrence of that document; changing the edited canonical document is not a layout operation. Scene recovery
+uses only the current canonical attention and offers Classic locally. Prepared
+actions and delayed destructive work must match both native and view lifetimes.
+
+| Capability | Actual first implementation | Limit / prerequisite for another view |
+| --- | --- | --- |
+| Canonical nodes and local resolved relations | Revision-scoped cache-only `PlexViewRead`; bounded calls and returned incidence, visibility preserved. | Coverage is conservatively cached. Missing/budget-exhausted node reads are unavailable, never proof of absence. |
+| Evidence | Cached canonical relationship explanation DTO, preserving decisions and source provenance. | No new corpus-wide evidence/metric scan or exact global degree API. |
+| Scope preparation | Existing shared attention demand stays acquired across compatible changes; presentation demand is view-owned. | Additional multihop/frontier demand needs a separately reviewed bounded application adapter. Pure definitions cannot acquire sources. |
+| Geometry and identity | Measured thought occurrences, repeated NodeIds, arbitrary areas, physical ports, separate attention/root/entry/editor/frame. | Synthetic groups are created by the shared grouping owner; initial policy-created synthetic nodes are rejected. |
+| Filtering/grouping/Find/actions | Existing matching and grouping owners; explicit grouping partitions; occurrence selection/reveal; canonical activation/writes. | A connector without semantic evidence is presentation-only. No implicit ontology write from an arbitrary area. |
+| Preferences/lifetime | Per-native-session selection, small unknown-state preservation/fallback, finite area heights, synchronous disposal and epoch fences. | Static bundled registration only; no public plugin loading or ABI. |
+| Corpus/property scoring | Explicit `corpus: {available:false, reason:"unsupported"}`. | Add paged revision-scoped membership/properties and provenance-specific metrics before promising Ideaverse parity. No zero substitution. |
+| Compact large-map layer | Explicitly unsupported. Point occurrences fail locally. | Shared compact rendering must be reviewed before full-vault Emergence. Detailed DOM thoughts are not a scale claim. |
+
+The test-only situated definition has three arbitrary areas, two independently
+selectable occurrences of one canonical note, an off-centre attention/editor,
+a different layout root and a decorative guide. It imports no Classic policy and
+is never registered in the production selector. Its browser/native fixtures are
+architectural proofs, not implementations of Mind Map, Ideaverse or Wu Xing.
+
+See [PR215 validation](validation/plex-view-plugins-215-2026-10-24.md) for actual
+commands, frozen baseline, failures, native evidence and remaining device limits.
+The C15–C26 structural programme remains paused.

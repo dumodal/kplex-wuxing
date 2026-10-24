@@ -19,69 +19,40 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Assignment: extract the Classic Plex as the first internal view plugin
+# Assignment: PR215 Classic view foundation — final validation
 
-Prepared by Zsolt's Codex Agent on 2026-10-24.
+Zsolt's Codex Agent, 2026-10-24. Active checkpoint, not final acceptance.
 
-## Transfer state and identity
+## Identity and authority
 
-**Prepared for implementation.** Research/preparation agent -> implementation agent -> Obsidian-equipped validation agent. This is a feature-foundation assignment, not resumption of the paused general refactor.
+- Repo `/Users/zsviczian/GitHub/kplex`, branch `2026-10-24-plex-view-plugins`, draft <https://github.com/zsviczian/kplex/pull/215>. User requested implementation; no merge/release/production deployment authorized.
+- Accepted main `659697a686f341497725dfb31e94a8bc2bcf2b25`, rechecked unchanged on GitHub. Runtime/tests/harness committed as `211c7e485f95f1ed75221655697ca009fc9cab6b`. Maintainer explicitly requested commit/push of solution plus interim report at18:30UTC; separate interim documentation commit is being published. Verify remote head after push.
+- User approved native foreground **Available when needed**. Existing Small only; no new vault or subagents authorized. C15–C26 remains paused.
+- Node22.22.2 at `/Users/zsviczian/.local/share/fnm/node-versions/v22.22.2/installation/bin`; prefix PATH for all verification.
 
-- Branch: `2026-10-24-plex-view-plugins`.
-- Accepted starting main: `595495105f56ae8d159f71b41706157e9f24c851`, after PR #214. Branch starting SHA was read back and verified.
-- Opening changes: `docs/PLEX_VIEW_PLUGINS.md` and this assignment only. No production code or test changes have been made by the preparation agent.
-- Durable design and source/research references: [Internal Plex view plugins](docs/PLEX_VIEW_PLUGINS.md). Ideaverse research is pinned to `4cce3f267148cc81e2961796e9a8dc7e20ff1aa0`.
-- Resume the existing branch, verify its current head/diff and inspect any incoming dirty files before editing. Do not assume main is unchanged or overwrite concurrent work. Inspect actual Node/dependency/browser/Obsidian capabilities; do not inherit another assignment's test results.
+## Implementation and evidence
 
-## Objective
+Classic projection/geometry and host contributions extracted behind internal view contracts; shared scene handles arbitrary areas, occurrences distinct from canonical IDs, entry/editor/frame and physical semantic ports. Per-native-document sessions own bounded view preferences/lifetimes and retain shared shell/editor/Sidecar owners. Only Classic ships. Test-only situated definition mounts actual Chromium renderer and native session; advanced multihop/corpus metrics/compact rendering remain explicit prerequisites. See design section16 and validation report for complete boundaries.
 
-Make the present parent/child/friend/challenger/sibling behaviour the built-in `classic` Plex view definition. Keep the current default experience and all shared interactions intact. A future Mind Map or Ideaverse definition should plug into the same host without copying PlexGraph, indexing, search, lenses, actions, editor or Sidecar owners.
+Immutable16-case geometry golden, membership and original indexing/parser bounds remain unchanged. Third full portable attempt passed architecture/core/1442 functional/230 browser/357 source/775 real-IDB and real build; native smoke timed out with theme migration notice, then identical-hash smoke passed after Done. Separate editor and pairs native lanes,15 sessions and grouping pass. Combined editor-plus-two-pairs fails before any view switch on both candidate and exact accepted659 control; no combined acceptance claim.
 
-The first implementation ships Classic only. The registry and selector infrastructure are exercised with a test-only alternative definition, not unfinished public views. Follow the design's P0-P5 checkpoints, with focused reviewable changes and tests rather than a large unverified folder move.
+Late fixes: live action snapshot reads session revision synchronously; held tag writer reports cancelled if no write happened; native picker permits expected focus-return interaction while retaining view/root/document/attention/file and direct epoch fences. Focused session7/7 and structural23/23 pass. Native sessions readiness now requires changed document timeOrigin, within original deadline. Typing-badge native test compares enclosing toolbar instead of Find inside it, same1px tolerance; accepted main reproduces old failure (8px badge/toolbar,33.921875px Find). Failed samples retained.
 
-## Mandatory boundaries
+## Active commands and exact native state
 
-Keep shared: canonical source/index/relationship authority, bounded demand preparation, property/evidence access, lenses and predicate matching, search/Find, grouping mechanics, measurement/styles, node/connector primitives, keyboard/action ownership, navigation, editor lifecycle, native sync and Sidecar/workspace ownership.
+- Final-source `npm run verify:obsidian` attempt4 runs in exec session52778. Log `/private/tmp/kplex-215-verify-native-4.log`; report `/private/tmp/kplex-215-native/verify-4/report.json`. At18:31UTC it passed release/architecture/core/scanner/indexing,1445 functional,230 Chromium and357 portable source tests; real-IDB suite progressing after20,015-owner case. It began at dirty2de5bf8 before implementation commit; no runtime behavior changed since launch. No concurrent native/browser drivers.
+- New picker fix built successfully once; attempt4 rebuilds final source before exact staging. Earlier native-tested candidate main a02c3a4 is stale for picker change. Do not reuse its hash assertion to stage final code.
+- **Small currently has accepted baseline db896c12 staged** for matched action control, until attempt4 final staging replaces it. Baseline runtime exact659 archive at `/private/tmp/kplex-215-accepted-baseline`; driver only diagnostic edit. Baseline actions original assertion fails, cleanup/config pass, report `/private/tmp/kplex-215-native/baseline-actions/report.json`.
+- Original Small was CLOSED with0.1.3 installed. Before first CLI open, `/private/tmp/kplex-215-native/before.json` and `backup/` captured exact8 artifact/settings/workspace files plus visible76 files/74Markdown digest and startup state. Never overwrite backup.
+- Small `/Users/zsviczian/Obsidian/kplex-test-small`, config `.obsidian`, currently open; no production vault touched. Actual host1.15.0 installer1.14.0/Electron43.3.0/Chrome150/Node24.18.1 native; CLI22.22.2.
 
-Move behind Classic: fixed neighbourhood buckets and sibling projection, area IDs/labels/tints/bounds/sizing, geometry and framing policy, Classic grouping partitions, physical gate mapping and Classic-specific controls. Existing compatibility entry points may delegate to the extracted implementation; do not duplicate it.
+## Next actions
 
-Use existing NodeId/GraphNodeView. Distinguish canonical nodes from repeated view occurrences, semantic edges from derived/decorative connectors, arbitrary areas from semantic roles, and attention from layout root/selection/editor anchor. Pure core policy must not import Obsidian, DOM, GraphIndex or host-bound GraphPage types.
+1. Observe actual attempt4 result. Preserve failure if any; fix cause without waiving guards.
+2. Once aggregate report PASS, run `/private/tmp/kplex-215-native-final-sequence.mjs` with requiredNode/escalation. It requires verify4 PASS, runs serial view editor/pairs, sessions, groups, workflows, actions, sections and writes fresh `*-final` reports/logs. Stops at failure. No driver active now besides verify4.
+3. Apply/announce read `obsidian-device-emulation` skill and run existing `verify:obsidian:action-devices` serially with fresh reportdir. Actual emulation/classification/geometry and cleanup, no physical-device claims.
+4. Review final code/report, renew affected checks only if changed. Search production source/dist for test probe markers. Finish report/Refactor plan (contains nonUTF8 legacybyte; append preserving originalbytes)/design/contributor/handoff docs with actual final identities/results.
+5. Run `/private/tmp/kplex-215-native-restore.mjs` only after all native lanes. It reacquires exact Small PID, rejects active controllers/floating popouts, closes only Small, waits exit and restores8 original bytes plus content digest and original closed startup state. Must complete before delivery. Clipboard limitations remain explicit; no prior clipboard read/restore claim.
+6. Implementation211c7e4 and interim documentation are being committed/pushed per explicit user instruction. Verify remote publication and update existing draft PR around implemented scope/interim results. Continue remaining checks, publish final report and obtain green exact-final-head CI. No merge/ready/release.
 
-Do not rewrite the parser, resolver, source repository, scheduler or index publication system. Do not copy Ideaverse's scanner or full application. Do not introduce public plugin loading, GQL, a marketplace, a new general rendering engine or all three product views in this assignment. Do not change global ontology when selecting a view.
-
-Preserve existing memoization/lazy presentation/count work, partial coverage, cancellation and synchronous publication. View registration/layout/paint cannot read notes. Switching a same-scope view must not trigger a rebuild or extra parsing. A new scope must acquire only explicit bounded demand through existing owners.
-
-Keep legacy Classic settings and device/surface precedence authoritative in this PR; new namespaces must not force a broad data migration. Keep global saved history/pins and session-only Footprints as accepted in #31/#187. Keep native leaves/editors and the shared shell alive across compatible view changes.
-
-## First implementation actions
-
-1. Read AGENTS.md, CONTRIBUTING.md, docs/ARCHITECTURE.md, docs/AGENT_WORKFLOW.md and the design. Trace the current callers rather than relying only on this baseline.
-2. Characterize Classic geometry, membership/order/caps, sibling derivation, grouping, Keep/Reflow, expanded/heading/editor modes, gates/cross-links, area filters and settings precedence before extraction.
-3. Introduce the definition/registry and narrow read/scene boundary. Extract Classic policy from src/ui/PlexGraph.tsx, src/ui/layout.ts, src/ui/relationGroups.ts and GraphIndex.getNeighborhood through portable policy and host adapters. Preserve the classifier and source owner.
-4. Parameterize shared area, occurrence, keyboard-entry, editor/framing and physical-port contracts. Preserve shared ActionManager delivery, menus, drag/drop, hover, tooltips, search, native editing and Sidecar.
-5. Implement lifecycle, fallback and state compatibility. Prove a test-only view with three arbitrary areas, duplicate canonical-node occurrences, off-centre attention/editor anchor, a distinct layout root and a decorative edge uses the same infrastructure without Classic imports.
-6. Complete P5 validation and record the actual capability matrix from design section 12. A registry-only wrapper is not a completed extraction.
-
-## Preparation for two feature agents
-
-Mind Map and Ideaverse agents must receive a specific validated shared commit. Do not let each invent an index adapter, settings scheme or action system.
-
-The current source-backed model does not establish that every needed corpus metric is already exposed. Verify bounded multihop expansion for Mind Map and corpus/provenance/property coverage for Ideaverse. Exact body/up/related counts, navigation suppression and linked-line density differ from generic neighbour counts. Unknown metrics must stay unavailable, not zero. Large Emergence maps also need compact rendering rather than thousands of detailed DOM cards.
-
-Keep those shared capability gaps explicit. Deliver minimal necessary adapters in a separate reviewed prerequisite if they exceed the Classic extraction. The Ideaverse agent may work on pure scoring/layout fixtures meanwhile, but must not ship a private whole-vault scanner. Reference parity versus a deliberately reduced scoring profile requires an explicit decision.
-
-Parallel feature scope after that gate: Agent A implements Mind Map; Agent B implements Ideaverse Emergence, with Gravity later. Wu Xing remains the next real consumer; the non-centred contract probe covers its main architectural requirement now.
-
-## Validation and return
-
-Follow the acceptance matrix in the design and the repository's current commands. Use `npm run verify` with Node 22.22.2 and real dependencies, relevant browser tests, and exact-build native validation through the guarded disposable Obsidian workflow. Preserve goldens/assertions; explain intentional differences rather than regenerating expected output to hide them.
-
-Priority native checks: independent Plex/Sidecar pairs and popouts during switch/close/reopen; native editor focus and Mac/Windows modifier actions; dense-scene touch/scroll and cancellation on tablet/phone. No production deployment, merge or release is authorized by this handoff. Native foreground access remains subject to the existing workflow and explicit readiness; do not inherit prior permission.
-
-Return the actual changed files, contract choices, compatibility/performance observations, commands and environment versions, results/failures/unavailable checks, cleanup state, remaining shared capability gaps, and the next precise validation action. Review architecture, TSDoc, reusable components, localization, owning-document lifecycle and access boundaries independently of green tests. Update durable architecture records only with implemented, reviewed decisions.
-
-## Preparation evidence and limits
-
-The preparation agent inspected authenticated GitHub source/instructions and related issue decisions, researched official TheBrain documentation and the pinned Ideaverse implementation, and prepared this design/assignment. TheBrain's exact v15 desktop interactions were not exercised; version-specific evidence limits are in the design.
-
-No runtime implementation, production build, automated test run, Obsidian validation, device acceptance or performance measurement has been performed for this new assignment. Earlier Sidecar/indexing test receipts are historical and are not acceptance evidence for the extraction.
+Progress updates: same Markdown checklist at least10min, commentary within60sec during work. Latest remaining ETA40–70minutes as of18:29UTC; revise on material native/CI failures. Required physical Windows/phone/tablet unrun; native combined editor/pairs limitation is reproduced baseline, not silently passed.
