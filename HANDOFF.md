@@ -19,40 +19,46 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Assignment: PR215 Classic view foundation — final validation
+# Assignment: PR215 Classic foundation — restoration correction validation
 
-Zsolt's Codex Agent, 2026-10-24. Active checkpoint, not final acceptance.
+Zsolt's Codex Agent,2026-10-24 18:50UTC. Active checkpoint; final acceptance pending.
 
-## Identity and authority
+## Identity and authorization
 
-- Repo `/Users/zsviczian/GitHub/kplex`, branch `2026-10-24-plex-view-plugins`, draft <https://github.com/zsviczian/kplex/pull/215>. User requested implementation; no merge/release/production deployment authorized.
-- Accepted main `659697a686f341497725dfb31e94a8bc2bcf2b25`, rechecked unchanged on GitHub. Runtime/tests/harness committed as `211c7e485f95f1ed75221655697ca009fc9cab6b`. Maintainer explicitly requested commit/push of solution plus interim report at18:30UTC; separate interim documentation commit is being published. Verify remote head after push.
-- User approved native foreground **Available when needed**. Existing Small only; no new vault or subagents authorized. C15–C26 remains paused.
-- Node22.22.2 at `/Users/zsviczian/.local/share/fnm/node-versions/v22.22.2/installation/bin`; prefix PATH for all verification.
+- Repo `/Users/zsviczian/GitHub/kplex`, branch `2026-10-24-plex-view-plugins`, draft PR215. Accepted main659697a unchanged; merge/release/production vault deployment NOT authorized. C15–C26 paused; no subagents.
+- User explicitly requested **commit and push solution and interim report** at18:30UTC. Implementation211c7e4 plus reportda6c90c pushed/read back; PR body now implemented/interim, remains draft. CI458/run40121120055 running on da6c90c.
+- New runtime correction committed c24fa9a208e86854e9612d1f250bc05a1c89168c; native failure diagnostics38d4340. Second interim documentation commit being prepared/pushed. Keep remote head verified.
+- User approved native foreground **Available when needed**. Only existing `kplex-test-small` `/Users/zsviczian/Obsidian/kplex-test-small`, config `.obsidian`. No new vault.
+- Required CLI Node22.22.2 PATH `/Users/zsviczian/.local/share/fnm/node-versions/v22.22.2/installation/bin`. Native Obsidian1.15.0 installer1.14.0/Electron43.3/Chrome150/nativeNode24.18.1.
 
-## Implementation and evidence
+## Current implementation and actual results
 
-Classic projection/geometry and host contributions extracted behind internal view contracts; shared scene handles arbitrary areas, occurrences distinct from canonical IDs, entry/editor/frame and physical semantic ports. Per-native-document sessions own bounded view preferences/lifetimes and retain shared shell/editor/Sidecar owners. Only Classic ships. Test-only situated definition mounts actual Chromium renderer and native session; advanced multihop/corpus metrics/compact rendering remain explicit prerequisites. See design section16 and validation report for complete boundaries.
+Classic-only shipped registry; portable projection/geometry plus host contributions, generic areas/occurrences/anchors/ports, bounded per-document preferences/lifetimes/recovery and actual test-only situated browser/native probe. See design section16/report for unsupported multihop/corpus/compact prerequisites. Frozen16-case geometry and original indexing/parser guards unchanged.
 
-Immutable16-case geometry golden, membership and original indexing/parser bounds remain unchanged. Third full portable attempt passed architecture/core/1442 functional/230 browser/357 source/775 real-IDB and real build; native smoke timed out with theme migration notice, then identical-hash smoke passed after Done. Separate editor and pairs native lanes,15 sessions and grouping pass. Combined editor-plus-two-pairs fails before any view switch on both candidate and exact accepted659 control; no combined acceptance claim.
+Attempt4 complete `verify:obsidian` PASS: architecture7/core130/functional1445/Chromium230/source357/real-IDB775/scanner/build/types/exact native smoke. Artifactbc05e96d9c8b109674809b529127997687fb747c76e0ebe8f4f8b587751354ce; manifestc28f6157/stylesec5b05c7. Its source receipt began dirty2de5bf8;211c7e4/da6c90c committed during run.
 
-Late fixes: live action snapshot reads session revision synchronously; held tag writer reports cancelled if no write happened; native picker permits expected focus-return interaction while retaining view/root/document/attention/file and direct epoch fences. Focused session7/7 and structural23/23 pass. Native sessions readiness now requires changed document timeOrigin, within original deadline. Typing-badge native test compares enclosing toolbar instead of Find inside it, same1px tolerance; accepted main reproduces old failure (8px badge/toolbar,33.921875px Find). Failed samples retained.
+Native bc05: editor lane PASS; workflows-final8 scenarios,51 trusted keys/11 canonical writes PASS, cleanup/config PASS. Earlier sessions-2 all15 and grouping pass retained. Two pair lane cleanup failures (view-policies-final,view-pairs-cleanup-attribution) attribute60s rejection to Vault.delete(emptyFolder), folder alreadygone, no owned resources/settings differences; native app.js getZoomFactor error captured, also historically documented in PR187. No timeout change or claimed fix.
 
-## Active commands and exact native state
+Native interaction fixture was degenerate:1097px viewport, left445.5547/right541.5234, main65.921875/graph~42/Find width0. Original backup right sidebar was collapsed; do not claim it originally consumed width. Public collapse both sides (receipt interaction-fixture.json, before-interaction-fixture.json) gives usable main. `view-policies-wide` editor AND pairs PASS all cleanup. `sessions-wide` passes13 interactions then fails exact native tab inventory after reload; cleanup/config PASS. Expected/actual inventory now captured by harness. Initial actions symmetry failure reproduced exact accepted659; measures toolbar edge now same1px tolerance plus retained/extended overlap checks. Narrow-fixture actions overlap and sections ctrl-wheel remain failed samples.
 
-- Final-source `npm run verify:obsidian` attempt4 runs in exec session52778. Log `/private/tmp/kplex-215-verify-native-4.log`; report `/private/tmp/kplex-215-native/verify-4/report.json`. At18:31UTC it passed release/architecture/core/scanner/indexing,1445 functional,230 Chromium and357 portable source tests; real-IDB suite progressing after20,015-owner case. It began at dirty2de5bf8 before implementation commit; no runtime behavior changed since launch. No concurrent native/browser drivers.
-- New picker fix built successfully once; attempt4 rebuilds final source before exact staging. Earlier native-tested candidate main a02c3a4 is stale for picker change. Do not reuse its hash assertion to stage final code.
-- **Small currently has accepted baseline db896c12 staged** for matched action control, until attempt4 final staging replaces it. Baseline runtime exact659 archive at `/private/tmp/kplex-215-accepted-baseline`; driver only diagnostic edit. Baseline actions original assertion fails, cleanup/config pass, report `/private/tmp/kplex-215-native/baseline-actions/report.json`.
-- Original Small was CLOSED with0.1.3 installed. Before first CLI open, `/private/tmp/kplex-215-native/before.json` and `backup/` captured exact8 artifact/settings/workspace files plus visible76 files/74Markdown digest and startup state. Never overwrite backup.
-- Small `/Users/zsviczian/Obsidian/kplex-test-small`, config `.obsidian`, currently open; no production vault touched. Actual host1.15.0 installer1.14.0/Electron43.3.0/Chrome150/Node24.18.1 native; CLI22.22.2.
+**Proven production defect found:** PlexViewSession.restore notified subscribers before native center/target/Sidecar preferences restored. Actual-owner test before log `/private/tmp/kplex-215-restoration-order-before.log` FAILS observing null/default/false; c24fa9a moves view publication after native scalar decode. After13/13 session checks and actual build PASS. Native inventory causality remains UNPROVEN. New build main f86f94ddb54c44e83162af823ad5579c64d75be7067c61ddcdebe0359c5d12b0.
+
+## Active work / native state
+
+- Complete `npm run verify:obsidian` attempt5 RUNNING exec35530, log `/private/tmp/kplex-215-verify-native-5.log`, report dir `/private/tmp/kplex-215-native/verify-5`. Started at dirtyda6c90c before c24fa9a commit; no runtime behavior changed after launch. No concurrent native/browser drivers.
+- Small OPEN, currently installed old candidatebc05 until attempt5 stages newf86. `dist` alreadyf86 from focused build. Do NOT run old artifact native scripts until verify5 completes/stages.
+- All prior native sequences exited:93244,90452,94485. Current old wide sequence results stop at sessions-wide. No active native controller; last driver cleanup confirmed. Both sidebars currently collapsed as interaction fixture, native source layout original help note. Native rendererPID43171 (reacquire, never assume for cleanup).
+- Original Small CLOSED with0.1.3 installed. `/private/tmp/kplex-215-native/before.json` and `backup/` captured8 exact artifact/config/workspace files and76files/74Markdown content digest BEFORE first open. Do not overwrite. Original right sidebar collapsed; final byte restore required.
 
 ## Next actions
 
-1. Observe actual attempt4 result. Preserve failure if any; fix cause without waiving guards.
-2. Once aggregate report PASS, run `/private/tmp/kplex-215-native-final-sequence.mjs` with requiredNode/escalation. It requires verify4 PASS, runs serial view editor/pairs, sessions, groups, workflows, actions, sections and writes fresh `*-final` reports/logs. Stops at failure. No driver active now besides verify4.
-3. Apply/announce read `obsidian-device-emulation` skill and run existing `verify:obsidian:action-devices` serially with fresh reportdir. Actual emulation/classification/geometry and cleanup, no physical-device claims.
-4. Review final code/report, renew affected checks only if changed. Search production source/dist for test probe markers. Finish report/Refactor plan (contains nonUTF8 legacybyte; append preserving originalbytes)/design/contributor/handoff docs with actual final identities/results.
-5. Run `/private/tmp/kplex-215-native-restore.mjs` only after all native lanes. It reacquires exact Small PID, rejects active controllers/floating popouts, closes only Small, waits exit and restores8 original bytes plus content digest and original closed startup state. Must complete before delivery. Clipboard limitations remain explicit; no prior clipboard read/restore claim.
-6. Implementation211c7e4 and interim documentation are being committed/pushed per explicit user instruction. Verify remote publication and update existing draft PR around implemented scope/interim results. Continue remaining checks, publish final report and obtain green exact-final-head CI. No merge/ready/release.
+1. Finish second interim docs/report and push c24fa9a/38d4340 plus docs, verify PR head/read-back, update PR body/new CI. User authorized this explicitly.
+2. Observe attempt5 actual result. Preserve failures; no arbitrary timeout/retry/outlier waiver. Native source fix requires renewed exact artifact receipt.
+3. After verify5 PASS, prepare fresh serial native script from `/private/tmp/kplex-215-native-final-sequence.mjs`, change receipt toverify5, all report names to new unique names. Use public sidebar collapse before interaction fixtures and record actual main width. Native drivers serial only. Rerun sessions with new inventory diagnostics, editor/pairs, groups/workflows/actions/sections. Fixture setup is not a production geometry fix.
+4. With usable width consider combined native editor+two-pairs lane (`KPLEX_PLEX_VIEW_NATIVE_LANE=combined`) to revisit old before-switch failure reproduced on accepted baseline under prior conditions. Do not claim prior combined accepted limitation caused by width without actual run. Private `/private/tmp/kplex-215-native-shell-control.mjs` exists but UNRUN; no need stage baseline again unless comparison justified.
+5. Announce/apply read `obsidian-device-emulation` skill, run existing action-devices lane with actual app.emulateMobile/width/classification and restore. Physical Windows/phone/tablet unavailable.
+6. Finish final report/architecture/design/contributor/Refactor-plan/handoff evidence. Refactor plan has legacy nonUTF8byte: append bytes preserving original, do not rewrite whole file as UTF8. Production src/dist must lack test probe markers.
+7. Run `/private/tmp/kplex-215-native-restore.mjs` after all native work. Exact Small identity/controller/popout guard, close only Small, wait renderer exit, restore8 original bytes/content digest and originally-closed registry flag. MUST complete. Clipboard checks replace OS clipboard; original contents were not read/restored, state limitation honestly.
+8. Publish final evidence and green exact-final-head CI. Keep PR draft unless applicable acceptance/approval; no merge/release.
 
-Progress updates: same Markdown checklist at least10min, commentary within60sec during work. Latest remaining ETA40–70minutes as of18:29UTC; revise on material native/CI failures. Required physical Windows/phone/tablet unrun; native combined editor/pairs limitation is reproduced baseline, not silently passed.
+Progress protocol: same checklist at least10min, commentary within60sec. Last user ETA45–75min at18:48UTC after proven runtime correction. Last checklist18:42UTC. Continue work, do not end after interim publication.

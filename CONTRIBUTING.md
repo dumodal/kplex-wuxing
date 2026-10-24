@@ -1448,7 +1448,12 @@ action cancellation and failure recovery. All belong to normal `npm run verify`.
 
 After exact-build `verify:obsidian` staging in backed-up Small, run
 `npm run verify:obsidian:plex-views` with the three explicit test-vault variables
-and a fresh report directory. It temporarily replaces one test session's static
+and a fresh report directory. Back up the native workspace and establish a usable
+main-pane width before interaction checks: expanded test sidebars can leave a
+42px graph with zero-width Find controls. Public sidebar collapse methods may
+prepare this disposable fixture; restore its original layout afterward. Record
+actual viewport/main-pane dimensions rather than counting clipped controls as a
+pass. It temporarily replaces one test session's static
 registry with the portable test definition, then restores it. Two serial lanes
 check the native editor/caret through dirty switches/failure and independent
 Plex/Sidecar pairs separately. Both check same-scope zero-source-work switches,
