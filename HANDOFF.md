@@ -19,14 +19,53 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Assignment: Sidecar modifier-click maximize
+# PR212 implementation return — warm source-head selection
 
-Prepared by Zsolt's Codex Agent. Base6fa936d6522ba45f2c6bb2dfb853671e5218b055; branch2026-10-24-sidecar-modifier-maximize; draft PR213. Runtime checkpoint da282fe044063082ad439f12e183f595a33c4fb8. Read docs/validation/sidecar-modifier-maximize-2026-10-24.md. Do not resume unrelated indexing/storage work.
+Prepared by **Zsolt's Codex Agent**, 2026-10-24.
+Branch: `2026-10-24-warm-source-selection`; initial comparison baseline: `af09bc42d78abe03ed0d32e0edcdf22d0ebe08ae`; first accepted integration baseline: `6fa936d6522ba45f2c6bb2dfb853671e5218b055` (#211); latest accepted main: `d48f76641df149dd5bb4d000fe9764251ece9807` (#213).
+The equipped Mac agent implements the maintainer-authorized #212 scope. No delegation was used.
+Keep [PR212](https://github.com/zsviczian/kplex/pull/212) draft; do not merge, release or deploy to a production vault.
 
-Implementation complete: any alt/ctrl/meta/shift flag on Open Sidecar passes a validated transient maximize boolean through the existing action manager. Successful normal open/layout then folds the exact managed pair. Modified native Unfold reveals Plex and closes only its captured managed companion after the existing ownership/generation/focus guards, including the new post-focus reentry fence. Ordinary clicks and commands remain unchanged. All8 catalogs advertise the requested ALT/OPT hint.
+## Result and evidence
 
-Scoped validation:111/111 focused UI/action/native-owner/localization tests, actual-dependency production build/types, scanner and architecture pass on Node22.22.2. Final main.js SHA-25649dc4d0d1a599a110b9d7e3a75c4e7b62fe6c3edfcb571588c0dccc672878ea8. The first broad run failed a Chromium bundle-startup prerequisite; unchanged isolated retry passes. The second broad run was deliberately interrupted at the maintainer's scope steering after release/architecture/core/scanner/main/UI/source-contract stages passed; real browser checks incomplete. Preserve both logs, do not relabel either as complete verification. No performance campaign or renewed full verification is required for this UI-only change. No assertions/deadlines weakened.
+- Shared clean dependency/head observation removes one head-only transaction per current-format warm owner. Metadata still independently pins/authenticates and checks the same revision/sequence at original-connection lease retirement. No schema, scheduler, persistent cache or count/semantic change from #212. Accepted #211 is included only through the normal main merge; no unmerged work is imported or modified.
+- Exceptional-owner cost: one legacy owner adds one probe transaction; the mixed two-owner control balances that against one current owner saving one transaction. Missing heads also add one probe transaction. Cold-start/legacy-heavy completion latency is unmeasured.
+- Complete 128-owner diagnostic: 777 → 649 transactions; head gets/hashes/decodes/leases equal. Three alternating timing pairs show median 4.7% elapsed / 2.7% renderer CPU gain. Third pair and its reopen regress slightly and are retained. No production-vault speedup claim.
+- All 20 bounded comparison arms passed actual restart, independent semantic/provenance parity, unchanged-head, quiet-tail, later edit and second restart closure. All profiles removed.
+- 36 focused real-IDB contracts and three measurement-harness controls passed. An independent writer during awaited SHA initially exposed a candidate finality defect; the added same-transaction retirement check fixes it. Fixture mistakes and original failures are preserved in the report/receipts.
+- Durable details: [validation report](docs/validation/warm-source-selection-212-2026-10-24.md), [sanitized receipts](docs/validation/warm-source-selection-212-2026-10-24.json), architecture/source repository contracts.
 
-IMPORTANT: maintainer answered Wait until I say ready. No foreground Obsidian access, staging/reload or native probe until a new explicit ready. Modifier-only native driver is syntax checked but unrun. After ready, verify exact runtime inputs/artifacts against kplex-modifier-sidecar-scoped-verification.json, stage through the existing guarded runner, then run KPLEX_SIDECAR_MODIFIER_ONLY=true in existing disposable Small with fresh report directories and independent exact cleanup. Approximately5minutes of native access remains. Do not create another vault/profile, restart the application or deploy to production.
+## Final accepted-main integration status
 
-Next: complete guarded native checks when authorized, update report/draftPR with actual results and remote checkpoint. No merge/release authorized; raw traces private; sign GitHub comments Zsolt's Codex Agent.
+Main accepted #211 /6fa936d and then #213 /d48f766 during validation. Normal branch merges preserve
+both accepted changes and resolve only HANDOFF; the test commands are retained. No unmerged work or
+PR history is modified. Relative to d48f766, only #212's two production files differ. The user has
+agreed to hold main unchanged through final CI.
+
+All three measured cohorts remain separately identified: initial af09bc4, accepted 6fa936d and
+latest d48f766. Each twenty-arm comparison passed semantic/provenance, quiet/edit/reopen and cleanup
+checks. Latest 128-owner medians improve 7.7% elapsed /4.1% renderer CPU; one transaction is saved
+per clean current-format owner. Earlier adverse samples and failures remain retained. The latest
+two cohorts' executable bundles are byte-identical; no timing variation is attributed to #213.
+
+Complete latest `verify:obsidian` passed with real build, 1,425 functional /228 browser UI /357
+portable source /775 real-IDB source tests. Native exact-build smoke, reader/selection and deliberate
+cleanup-failure controls, two foreground warm reloads and all six foreground workflows passed.
+Small's fresh settings/workspace/enablement/artifacts/content digest and originally closed startup
+state were restored after proving the exact tested renderer exited. An idle test worker delayed
+the full suite but exited without intervention; no process kill, weakened assertion or deadline
+extension manufactured a pass.
+
+Current durable evidence: [integration report](docs/validation/warm-source-selection-212-main-integration-2026-10-24.md)
+and [receipts](docs/validation/warm-source-selection-212-main-integration-2026-10-24.json). Source/artifact
+identities describe each actual pre-commit tree. Final integrated branch head/publication/remote CI
+are recorded on PR212 after this report commit; historical CI441/CI442 remain valid only for their
+recorded tree. Keep the PR draft for independent review; no additional manual test is required for
+the scoped contracts. No cold-start, legacy-heavy or production-vault speedup is claimed; only
+existing Small was opened. The deleted Brain copy remains unavailable.
+
+## Review and delivery
+
+The Mac agent is authorized to commit/push scoped work to this existing branch and update/read back the draft PR. Preserve failed evidence; preserve all existing guards including the 50 ms URL-heavy and 45 ms parser assertions. No main write, force push, unmerged #211 import or modification, PR merge, release, new persistent destination, large fixture or production-vault deployment. A normal merge of accepted main into this dedicated branch is authorized integration work.
+
+Highest-risk review area is exact finality/resource retirement under an independent writer or failed final native transaction. Those races have focused real-IDB coverage. Native results and precise remaining limitations must be added before a merge recommendation.

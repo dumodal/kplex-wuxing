@@ -220,6 +220,16 @@ An ordinary `visit(metadata)` can instead prepare that same chunk/page inside it
 
 The registered source view owns an unconsumed preview, including during close before the pin promise resumes. Family consumption takes and clears that ownership; release clears any remaining reservation before its existing idempotent lease-retirement promise. Failed native deletion still leaves conservative durable protection. Dense/legacy/oversized cases issue no speculative chunk request, although their metadata pin's write-transaction scope includes chunk/posting stores. This is a bounded coordination reduction, not fewer leases/hashes or a new reclamation policy. See the [PR205 validation record](validation/cached-source-read-batching-205-2026-10-23.md) for measured scope and limits.
 
+`inspectWithLocalDependencies()` returns a clean readonly dependency-owner/head selection to the
+restart host caller without a preceding head-only transaction. This call-local observation grants
+no family protection. Exceptional owners retain the original inspect-then-ensure fallback, including
+legacy primary authentication before derivative repair. An optional expected head on `visit()`
+requires a saved matching revision/sequence before consumption, then matches it again while deleting
+that reader's leases in the existing original-connection transaction. Abort, failed final read,
+cancellation or a newer local memory/deletion overlay cannot return ready. Facts consumed before the
+final result remain private. Normal visits keep their original release scope; no receipt is cached
+and no lease is transferred between calls.
+
 One short transaction rechecks the expected head and family counts, increments `source-sequence` and selects the complete head. Same-source work has one active and one replaceable pending producer; an obsolete independent writer loses the compare-and-swap. A canceled or unloaded writer cannot select a head after its fence fails. Intentionally canceled transactions are distinguished from unexpected aborts, which enter storage-degraded recovery.
 
 Disk and live publication are **not one transaction**. A committed head can become older than the current Vault observation before live publication; the caller must reject live publication and reconcile again. Conversely, storage failure can retain validated neutral facts in memory and let the separately validated live graph proceed with unsaved status and no durable sequence. This does not start a graph-wide failure/rebuild loop.

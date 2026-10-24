@@ -11,6 +11,8 @@
  * durable legacy UNKNOWN-impact journal for storage compatibility; no inverse resolver is invented.
  * Restart resolver closes validate canonical output before rewriting sources. Exact-head body-read
  * certificates avoid duplicate decoding and weak ownership does not retain parsed bodies at rest.
+ * Restart host comparison shares a clean dependency/head observation, then independently pins
+ * authenticated metadata under that exact head/sequence; native and final inventory fences remain.
  * Uncertain resolver comparisons authenticate resolution once under their selected reader; partial
  * inspection never permits a host-current shortcut without complete family validation.
  * Source-backed search retains only bounded changed-owner endpoint incidence until publication;
@@ -75,7 +77,7 @@ import { mergeFileMetadata } from "../../index/fieldParser";
 import type { BodyCacheRequest, BodyCacheStamp, KplexIndexedDbCache } from "../../index/IndexedDbCache";
 import { SOURCE_BODY_PARSER_VERSION, SOURCE_DECODE_BUDGET_BYTES, SOURCE_FAMILIES, SOURCE_MAX_BATCH_RECORDS, SourceFactError, sourceFieldNames, sourceValueSteps, type SourceFamily, type SourceFamilyManifest,
   type SourceObservation, type SourcePhysical, type SourceReason, type StoredMetadataFact, type StoredSourceFact } from "../../index/SourceFacts";
-import type { SourceFamilyProducer, SourceInspection, SourceRepositoryDiagnostics, SourceLocalInventoryProjection } from "../../index/SourceRepository";
+import type { SourceFamilyProducer, SourceInspection, SourceRepositoryDiagnostics, SourceLocalInventoryProjection, SourceHeadExpectation } from "../../index/SourceRepository";
 import { sourceLocalDependencyKey, sourceLocalResolverDependencyKey, sourceLocalResolverPathDependencyKey } from "../../index/SourceLocalDependencies";
 import { createObsidianMetadataSourceHost, normalizedBodyUrl, ObsidianMetadataSourceCollector, type ObsidianMetadataSourceSettings } from "./metadataSourceCollector";
 import { entityFactForFile, entityFactForFolder, ObsidianStructuralPatchSourceCollector,
@@ -584,13 +586,14 @@ export class ObsidianSourceAcquisition {
       record.kind === "alias" || record.kind === "tag" || record.kind === "file-parent" || record.kind === "host-literal");
   }
 
-  /** Read only one selected source's durable host-significant metadata family. */
-  private async durableHostInventory(sourceId: string, current: () => boolean): Promise<Readonly<{ reason: SourceReason; facts: StoredMetadataFact[] }>> {
+  /** Read one protected host-significant metadata family, optionally bound to an earlier head observation. */
+  private async durableHostInventory(sourceId: string, current: () => boolean,
+    expected?: SourceHeadExpectation): Promise<Readonly<{ reason: SourceReason; facts: StoredMetadataFact[] }>> {
     const facts: StoredMetadataFact[] = [];
     const reason = await this.repository.visit(sourceId, "metadata", (records) => {
       for (const record of records) if (record.kind === "alias" || record.kind === "tag" || record.kind === "file-parent" || record.kind === "host-literal") facts.push(record);
       return current();
-    }, current);
+    }, current, expected);
     return { reason, facts };
   }
 
@@ -761,15 +764,15 @@ export class ObsidianSourceAcquisition {
       const capture = this.capture(file);
       /** A local event retires this owner's result even when unrelated inventory work remains valid. */
       const ownerCurrent = (): boolean => this.current(capture, current);
-      // Share the top-level inspection between dependency upgrade and host comparison. Dependencies
-      // must also be upgraded for owners whose MetadataCache is not available yet, and all upgrades
-      // must finish before the deferred resolution fan-out below can query their memberships.
-      const inspection = await this.repository.inspect(file.path, [], ownerCurrent);
+      // A clean dependency check already selects this head. Exceptional/legacy owners retain normal
+      // inspection and repair; metadata still acquires its own protected, exact-head family read.
+      // Dependency upgrades also precede missing MetadataCache and deferred referrer fan-out.
+      const selected = await this.repository.inspectWithLocalDependencies(file.path, order, markdownOrder, ownerCurrent);
       if (!ownerCurrent()) return false;
+      const inspection = selected.inspection;
       const head = inspection.head;
       if (inspection.saved && head?.state === "complete") {
-        const reason = await this.repository.ensureLocalDependencies(file.path, order, markdownOrder, ownerCurrent);
-        if (!ownerCurrent() || reason !== "ready") return false;
+        if (selected.dependencyReason !== "ready") return false;
         await checkpoint();
         if (!ownerCurrent()) return false;
       }
@@ -809,9 +812,10 @@ export class ObsidianSourceAcquisition {
         this.startupDiagnostics?.processed("source", file.path);
         continue;
       }
-      const durable = await this.durableHostInventory(file.path, ownerCurrent);
+      const durable = await this.durableHostInventory(file.path, ownerCurrent, inspection.saved ? inspection.expected : undefined);
       await this.backgroundCheckpoint?.();
       if (!ownerCurrent() || this.app.metadataCache.getFileCache(file) !== cache) return false;
+      if (durable.reason === "superseded") return false;
       this.inventoryProgress?.();
       const sameFacts = durable.reason === "ready" && JSON.stringify(durable.facts) === JSON.stringify(now);
       this.startupDiagnostics?.count("source", "physicalRevisionComparisons");
