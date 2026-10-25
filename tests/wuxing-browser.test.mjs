@@ -39,6 +39,8 @@ test('production Wu Xing decorates real local notes, refreshes cached fields, re
  check(region('conflicting').textContent.includes('1 shown locally')&&region('unavailable').textContent.includes('1 shown locally'),'Conflict and metadata absence stay distinct');
  check(mount.querySelectorAll('.kplex-view-guide').length===5,'Decorative guides rendered');check(getComputedStyle(mount.querySelector('.kplex-view-decorations')).pointerEvents==='none','Decorations cannot capture input');
  const attention=getNode('Focus.md'),beforeTop=attention.style.top,camera=mount.querySelector('.kplex-camera').style.transform;
+ const viewportBounds=mount.querySelector('.kplex-plex').getBoundingClientRect(),attentionBounds=attention.getBoundingClientRect();
+ check(Math.abs(attentionBounds.x+attentionBounds.width/2-viewportBounds.x-viewportBounds.width/2)<3&&Math.abs(attentionBounds.y+attentionBounds.height/2-viewportBounds.y-viewportBounds.height/2)<3,'Autozoom-off navigation must center the off-origin attention occurrence');
  fields.get('Focus.md').phase='fire';for(const ref of [...events])if(ref?.name==='changed')ref.callback(pages.get('Focus.md').file);await wait();
  check(getNode('Focus.md')===attention,'Cached reclassification retained occurrence DOM identity');check(attention.style.top!==beforeTop,'Cached property event moved the phase anchor');check(mount.querySelector('.kplex-camera').style.transform===camera,'Property event preserved manual camera');
  check(region('fire').textContent.includes('1 shown locally'),'Reclassification updates counts');

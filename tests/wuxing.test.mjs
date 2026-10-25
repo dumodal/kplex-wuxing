@@ -103,7 +103,7 @@ test('type settings validate order, persist field edits independently and preser
 test('existing property owner distinguishes missing cache/field and never reads other fields or note bodies',()=>{
  const file={path:'note.md',extension:'md',stat:{mtime:1,size:1}},node=phase('opaque',undefined);node.file={path:file.path,extension:'md',mtime:1,size:1};
  let cache=null,live=true,currentFile=file,otherReads=0;
- const app={vault:{getFileByPath:()=>currentFile,read:()=>{throw Error('Body read')},cachedRead:()=>{throw Error('Body read')}},metadataCache:{getFileCache:()=>cache}};
+ const app={vault:{getFileByPath:path=>currentFile?.path===path?currentFile:null,read:()=>{throw Error('Body read')},cachedRead:()=>{throw Error('Body read')}},metadataCache:{getFileCache:()=>cache}};
  const provider=M.createLegacyPropertyProvider(app,()=>live,()=>file);
  assert.equal(provider.readNoteProperty(node,'phase').status,'unavailable');
  cache={};assert.deepEqual(provider.readNoteProperty(node,'phase'),{status:'available',value:undefined});
@@ -112,7 +112,8 @@ test('existing property owner distinguishes missing cache/field and never reads 
  currentFile={...file,stat:{...file.stat}};assert.equal(provider.readNoteProperty(node,'phase').status,'unavailable','Same-path/stat replacement cannot stand in for the canonical native file');
  currentFile=file;file.stat.mtime=2;assert.equal(provider.notePropertyAvailability(node),'unavailable');
  file.stat.mtime=1;cache={frontmatter:{get phase(){live=false;return 'water'}}};assert.equal(provider.readNoteProperty(node,'phase').status,'unavailable','A result retired during a synchronous getter is rejected');
- live=true;file.path='renamed.md';assert.equal(provider.readNoteProperty(node,'phase').status,'unavailable');
+ live=true;cache={frontmatter:{phase:'water'}};file.path='renamed.md';assert.equal(provider.readNoteProperty(node,'phase').status,'unavailable');
+ file.path='note.md';currentFile=null;assert.equal(provider.readNoteProperty(node,'phase').status,'unavailable','Deletion cannot return a retained field');
 });
 
 test('scene property capability rejects unadmitted reads, bounded exhaustion and late publication',()=>{

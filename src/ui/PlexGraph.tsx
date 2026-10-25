@@ -1518,8 +1518,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       if (settings.allowAutozoom) fit();
       else {
         const el = viewport.current;
-        // Recenter navigation while retaining the user's zoom when automatic fitting is disabled.
-        if (el) applyCamera((current) => ({ ...current, x: el.clientWidth / 2, y: el.clientHeight / 2 }));
+        // Retain zoom while centering the actual framing occurrence. Situated views do not place attention at the world origin.
+        if (el) {
+          const center = framingOccurrence() ?? {x: 0, y: 0};
+          applyCamera(/** Navigation owns translation only when autozoom is disabled. */ current => ({...current,
+            x: el.clientWidth / 2 - center.x * current.scale, y: el.clientHeight / 2 - center.y * current.scale}));
+        }
       }
     }
 

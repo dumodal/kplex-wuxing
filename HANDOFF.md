@@ -21,7 +21,7 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 # Wu Xing PR220 implementation
 
-Zsolt's Codex Agent, 2026-10-25 Budapest. State: implementing in the Windows equipped environment; no subagents.
+Zsolt's Codex Agent, 2026-10-25 Budapest. State: complete implementation and serial Windows native checks; final clean-head verification/CI and outer restoration pending. No subagents.
 
 ## Identity and authority
 
@@ -49,4 +49,10 @@ Production W0–W3 implementation and focused test coverage complete at the firs
 
 Includes native registry/settings integration and eight catalogs, current docs and optional current-file/cache-fenced property/decorations boundaries. A bounded admitted-file metadata listener handles presentation-only field changes. Attention/editor is fixed inside the phase above the shared neighbor scroller. Compass-only quadrant relinking is now explicitly guarded; other areas require a declared drop role. No independently bound editor or M0 code is consumed.
 
-Read-only CLI preflight confirms `C:\Obsidian\kplex-test-small`, Obsidian1.14.5(installer1.14.0). No native writes/staging/tests yet. Next: full verification, guarded exact-build Windows driver, editor/independent canvas/Sidecar/clipboard/modifier checks, resource restoration and final PR evidence.
+Complete Node22.22.2 verify:obsidian passed at the earlier checkpoint:7 architecture/130 core/1454 functional/242 Chromium/357 source/775 real IndexedDB, scanner/build and exact-hash native smoke. Native editor validation then exposed off-origin attention centering with autozoom disabled. The narrow PlexGraph correction centers the existing framing occurrence while retaining scale; Compass remains origin-centered. Actual Chromium camera regression and real build pass. Eight catalogs now retain real UTF-8 translations; a focused Unicode assertion prevents the earlier encoding corruption.
+
+Corrected artifact SHA256 `af16af2f83bb3e9c52fa9c19acd0b876be36f40ff54fb0602ef82786194c65ef` passes nine Windows native editor cases, including actual OS Ctrl+V/A/C with trusted exact-editor keys, dirty content/caret/focus through reclassification/resize/compatible switches, normal asynchronous save after explicit navigation, and source/remount identity across popout/main migration. Seven pair/selector cases pass with both main/popout native file-backed Sidecars using supported loaded-document attachment, captured-opening-owner selection after focus moves, independent camera/attention/editor/Sidecar and owned native view restoration, plus trusted OS Home/native select change. Original failed attempts remain retained: native opening must finish before dirty insertion; asynchronous save completion is observed rather than forced; migration must await the new host generation; offscreen window coordinates are unsuitable for OS input.
+
+Fresh popout Sidecar creation stays a failed check: it opens an empty leaf. An isolated real build of exact accepted main9987810 reproduces this in unchanged Compass before any Wu Xing switch; its control cleanup passes. Loaded-document attachment is a separate supported workflow, not a pass for fresh creation. #215 full-app extra-tab/combined-editor failures remain unclaimed. Mac/mobile/minimum-host checks unrun.
+
+All native controllers restored their own settings/layout/clipboard/fixtures. Outer private backup still holds nine original files and107 content hashes; restore with `wuxingResources.mjs restore` after final clean verification/native smoke. Current main remains9987810; partner219 remains unmerged and read-only. Next: freeze/push this checkpoint, run final clean Node22.22.2 verify:obsidian and exact-head CI, preserve ordered receipts, restore the outer baseline and publish review evidence. No merge/release/personal-vault deployment.

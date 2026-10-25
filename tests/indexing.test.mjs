@@ -584,6 +584,13 @@ for (const file of [
   "src/core/plex/views/classic/geometry.ts",
   "src/core/plex/views/classic/definition.ts",
   "src/core/plex/views/contracts.ts",
+  "src/core/plex/noteProperties.ts",
+  "src/core/plex/views/wuxing/classification.ts",
+  "src/core/plex/views/wuxing/configuration.ts",
+  "src/core/plex/views/wuxing/projection.ts",
+  "src/core/plex/views/wuxing/layout.ts",
+  "src/core/plex/views/wuxing/definition.ts",
+  "src/ui/plexViews/wuxing/settings.ts",
   "src/ui/components/collectionWindow.ts",
 ]) compile(file);
 

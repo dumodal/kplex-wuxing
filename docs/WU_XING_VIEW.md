@@ -12,7 +12,7 @@ Optional `PlexViewRead.properties` delegates to `createLegacyPropertyProvider` f
 
 The attention occurrence is fixed inside its phase, outside the neighboring notes' shared scroller. This keeps the existing native editor/ports aligned during overflow scrolling. Unmapped, conflicting and unavailable lanes form the reachable Unclassified area outside the cycle. Shared grouping partitions remain phase/status-local. Type settings remain in #218's versioned namespace; per-canvas state and editor/Sidecar ownership retain their existing owners. Compass quadrant relinking is restricted to Compass; arbitrary regions require explicit drop roles.
 
-Focused pure/property/shared-view tests and Chromium production rendering checks pass at this working checkpoint. Full verification, exact-head evidence and Windows native acceptance are still pending; see HANDOFF.md for current work. This does not claim M0/independent occurrence editing, #215 baseline fixes or physical-device acceptance.
+Focused pure/property/shared-view tests and Chromium production rendering pass. The earlier full verify:obsidian passed7/130/1454/242/357/775; the corrected camera/UTF-8 build passes Windows native editor9 and independent main/popout selector/Sidecar7 cases, including actual OS clipboard and selector keys. Final clean-head verification/CI and outer cleanup remain pending; see the validation report and HANDOFF.md. Fresh popout Sidecar creation reproduces as an empty leaf on exact accepted main9987810; loaded-document attachment passes separately. No M0/independent occurrence editing, #215 baseline fix, full-app restart or physical-device pass is claimed.
 
 ## Baseline and dependencies
 
