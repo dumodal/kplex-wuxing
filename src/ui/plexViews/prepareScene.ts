@@ -6,7 +6,7 @@ import {nodeId, type NodeId, type GraphNodeView} from "../../core/graph/model";
 import type {PlexViewDefinition, PlexViewRead, PlexProjection, PlexMeasurement, PlexOccurrence, PlexViewEdge} from "../../core/plex/views/contracts";
 import {RelationType, type GraphPage, type PositionedNode, type PositionedEdge, type Role, type Neighbour} from "../../types";
 import {resolveNodeStyle, resolveLinkStyle} from "../../index/style";
-import {deferredNodeCounts, nodeSize} from "./measurement";
+import {deferredNodeCounts, nodeSize, nodeBadgeSize} from "./measurement";
 import {projectRelationGroups} from "./groupRelations";
 import type {Translator} from "../../lang";
 import type {HostPlexScene} from "./scene";
@@ -16,6 +16,8 @@ import {admitOccurrenceEditors, type OccurrenceEditorHost} from "./occurrenceEdi
 import {boundedViewState} from "../../core/plex/views/state";
 import {hierarchyPathClosure} from "../../core/plex/views/hierarchy";
 import {validCanvasViewText} from "../../core/plex/views/presentation";
+import {validPlexNodeBadge, nodeBadgeBounds, boundedViewColors} from "../../core/plex/views/decorations";
+import {canvasViewText} from "./labels";
 
 type SceneRead = Pick<GraphIndex, "get" | "neighbours" | "sortNeighbours" | "titleFor" | "captureSemanticGateRead" | "isVisiblePage" | "explainRelationship">
   & Partial<Pick<GraphIndex, "viewScopeCoverage" | "cachedViewRelation">>;
@@ -104,8 +106,11 @@ export function plexViewRead(source: SceneRead, current: () => boolean, maximum:
 function validateProjection(projection: PlexProjection, maximum: number, definition: PlexViewDefinition): void {
   if (projection.occurrences.length > maximum || projection.edges.length > maximum * 8) throw new Error("View projection exceeds its bound");
   const ids = new Map(projection.occurrences.map(row => [row.id, row]));
+  if (projection.occurrences.filter(row => row.badge).length > 16) throw new Error("Too many node badges");
   if (ids.size !== projection.occurrences.length) throw new Error("Duplicate view occurrence");
   for (const occurrence of projection.occurrences) {
+    if (occurrence.badge && (definition.capabilities.badges !== true || !validPlexNodeBadge(occurrence.badge))
+      || occurrence.description !== undefined && !validCanvasViewText(occurrence.description)) throw new Error("Invalid node decoration");
     if (!occurrence.id || occurrence.id.length > 4096 || occurrence.synthetic || occurrence.representation !== "thought"
       || occurrence.areaId && ["__proto__", "constructor", "prototype"].includes(occurrence.areaId)) throw new Error("Unsupported view occurrence");
     const peer = occurrence.peerPort;
@@ -161,6 +166,8 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
     if (!projection || !current() || !read.isCurrent()) return {scene: empty, projection: null, failure: true};
     validateProjection(projection, maximum, definition);
     if (projection.heading !== undefined && projection.heading !== null && !validCanvasViewText(projection.heading)) throw new Error("Invalid canvas heading");
+    if (projection.status !== undefined && !validCanvasViewText(projection.status)) throw new Error("Invalid canvas status");
+    if (definition.colorReferences) boundedViewColors(definition.colorReferences(configuration));
     if (definition.editorHosting === "occurrence" && editorSize) throw new Error("Occurrence editors require occurrence dimensions");
     if (editorSize && (!projection.editor || projection.occurrences.find(row => row.id === projection.editor)?.nodeId !== attention)) throw new Error("Missing attention editor anchor");
     if (projection.attention !== attention) throw new Error("View changed its admitted attention scope");
@@ -184,7 +191,14 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
       const size = boundEditor?.binding.dimensions ?? (occurrence.id === legacyEditor && editorSize ? editorSize
         : nodeSize(`${style.prefix ?? ""}${label}`, style.fontSize ?? 18, settings, isRoot,
           style.maxLabelLength, style.maxWidth, style.strokeWidth));
+      const translate = grouping?.translate;
+      const description = occurrence.description && (translate ? canvasViewText(occurrence.description, translate) : "literal" in occurrence.description ? occurrence.description.literal : occurrence.description.key);
+      const badge = occurrence.badge && {label: translate ? canvasViewText(occurrence.badge.label, translate) : "literal" in occurrence.badge.label ? occurrence.badge.label.literal : occurrence.badge.label.key,
+        ...(occurrence.badge.description ? {description: translate ? canvasViewText(occurrence.badge.description, translate)
+          : "literal" in occurrence.badge.description ? occurrence.badge.description.literal : occurrence.badge.description.key} : {}), background: occurrence.badge.background};
+      const viewBadge = badge && {...badge, ...nodeBadgeSize(badge.label, settings)};
       const node: PositionedNode = {page, occurrenceId: occurrence.id, areaId: occurrence.areaId, representation: occurrence.representation,
+        ...(viewBadge ? {viewBadge} : {}), ...(description ? {viewDescription: description} : {}),
         role, relationType: relation?.relationType, typeDefinition: relation?.typeDefinition, linkDirection: relation?.linkDirection,
         ...(occurrence.branch ? {branch: occurrence.branch, semanticSourceId: occurrence.branch.parent ? occurrences.get(occurrence.branch.parent)?.nodeId : undefined} : {}),
         physicalPorts: occurrence.ports ?? {}, peerPort: occurrence.peerPort, x: 0, y: 0, ...size, label, style, ...deferredNodeCounts()};
@@ -192,6 +206,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
       if (matching || occurrence.id === legacyEditor || boundEditor) matched.add(occurrence.id);
       if (!matching && occurrence.id !== legacyEditor && !boundEditor && !definition.hierarchy) continue;
       nodes.set(occurrence.id, node); measurements.push({id: occurrence.id, ...size, expandedWidth: size.width, expandedReserve: 0,
+        ...(viewBadge ? {badge: {width: viewBadge.width, height: viewBadge.height}} : {}),
         ...(boundEditor ? {editor: true as const} : {}), mini: null, envelope: null});
     }
     if (definition.hierarchy) {
@@ -278,6 +293,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
     });
     const scene: HostPlexScene = {nodes: [...nodes.values()], edges, zoneViewports: {}, zoneAreas: {}, projection: filtered, areas: layout.areas,
       entryOccurrence: filtered.entry, editorOccurrence: filtered.editor, frameOccurrence: filtered.frame, decorations: layout.decorations};
+    scene.badgeBounds = [...nodes].flatMap(([id, node]) => node.viewBadge ? [{occurrenceId: id, bounds: nodeBadgeBounds(node, node.viewBadge)}] : []);
     if (boundEditors.size) scene.boundEditors = [...boundEditors.values()];
     const areaIds = new Set<string>();
     if (layout.areas.length > 64) throw new Error("Too many view areas");
@@ -303,6 +319,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
       if (!mark.id || decorationIds.has(mark.id)) throw new Error("Invalid decoration identity");
       decorationIds.add(mark.id);
       if (mark.kind === "region") {
+        if (mark.color !== undefined) boundedViewColors([mark.color]);
         if (!Object.values(mark.bounds).every(Number.isFinite) || mark.bounds.width <= 0 || mark.bounds.height <= 0
           || mark.labelKey.length > 128 || (mark.label?.length ?? 0) > 128 || mark.areaId && !areaIds.has(mark.areaId)) throw new Error("Invalid decoration region");
       } else if (mark.kind !== "guide" || mark.points.length < 2 || mark.points.length > 32

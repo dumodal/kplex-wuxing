@@ -1,8 +1,10 @@
 /** Compile the actual shared canvas for browser consumers. Native host constructors remain finite explicit doubles; no production scene or property behavior is replaced. */
 import {build} from 'esbuild';
+import {nativeDomHelpers} from './nativeColorControls.mjs';
 /** Each test owns a real browser and its root lifetimes; this helper only bundles source with the same native boundary. */
 export async function plexViewBrowserModules({captureNotices=false}={}){
 const nativeStub=`
+  ${nativeDomHelpers}
   class NativeBase {constructor(){} register(){} registerEvent(){} addChild(){} removeChild(){}}
   exports.App=exports.Modal=exports.SuggestModal=exports.FuzzySuggestModal=exports.AbstractInputSuggest=exports.Component=exports.MarkdownRenderChild=
   exports.PluginSettingTab=exports.Setting=exports.ButtonComponent=exports.ColorComponent=exports.SearchComponent=exports.ExtraButtonComponent=
@@ -21,9 +23,10 @@ return await build({stdin:{resolveDir:process.cwd(),contents:`
   export {PlexViewRegistry} from './src/core/plex/views/registry';export {PlexViewSession} from './src/application/PlexViewSession';
   export {builtInPlexViews} from './src/ui/plexViews/builtins';export {probeViewDefinition} from './tests/support/plexViewProbe';
   export {ActionManager} from './src/application/ActionManager';export {actionNodeRef} from './src/adapters/obsidian/actionNode';
-  export {editViewConfiguration} from './src/core/plex/views/configuration';export {wuXingViewDefinition} from './src/core/plex/views/wuxing/definition';
+  export {editViewConfiguration, editViewConfigurationAt} from './src/core/plex/views/configuration';export {wuXingViewDefinition} from './src/core/plex/views/wuxing/definition';
   export {mindMapViewDefinition} from './src/core/plex/views/mindmap/definition';
   export {builtInCanvasViewSettings} from './src/ui/plexViews/settingsContributions';
+  export {CanvasViewContributionController} from './src/ui/plexViews/CanvasViewContributionController';
   export {compileGraphPredicate} from './src/core/plex/predicate';
   export {WanderController} from './src/application/WanderController';export {exampleViewDefinition} from './src/core/plex/views/example';
 `},write:false,bundle:true,platform:'browser',format:'iife',globalName:'sourceModules',plugins:[{name:'finite-native-host',setup(builder){

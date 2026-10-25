@@ -16,7 +16,7 @@ export class PlexViewRegistry {
         || typeof definition.icon !== "string" || !/^[a-z][a-z0-9-]{0,79}$/.test(definition.icon)
         || !definition.capabilities || typeof definition.capabilities !== "object" || Array.isArray(definition.capabilities)
         || [definition.capabilities.sections, definition.capabilities.descendants, definition.capabilities.editor,
-          definition.capabilities.compact, definition.capabilities.properties].some(/** Omitted optional capabilities are unavailable. */ value => value !== undefined && typeof value !== "boolean")
+          definition.capabilities.compact, definition.capabilities.properties, definition.capabilities.badges].some(/** Omitted optional capabilities are unavailable. */ value => value !== undefined && typeof value !== "boolean")
         || typeof definition.restoreState !== "function" || typeof definition.project !== "function" || typeof definition.layout !== "function"
         || definition.reduceState !== undefined && typeof definition.reduceState !== "function"
         || definition.colorReferences !== undefined && typeof definition.colorReferences !== "function"

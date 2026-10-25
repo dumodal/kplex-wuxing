@@ -3899,3 +3899,27 @@ button.kplex-sidecar-unfold-plex:focus-visible,
   font-size: var(--font-ui-small);
   pointer-events: none;
 }
+.kplex-view-status {
+  position: absolute;
+  z-index: 3;
+  top: 38px;
+  left: 12px;
+  max-width: 70%;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+.kplex-node-badge {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--background-modifier-border);
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: var(--font-semibold);
+  pointer-events: none;
+}
+.kplex-node-badge > span { overflow: hidden; text-overflow: ellipsis; }

@@ -3,6 +3,8 @@ import type {PlexDecoration} from "../../core/plex/views/contracts";
 import type {Translator} from "../../lang";
 import {viewLabel} from "./labels";
 import type {PositionedNode} from "../../types";
+import {colorValueCss} from "../../adapters/obsidian/colorPresentation";
+import {useId} from "react";
 
 /** Count admitted filtered rows, including offscreen overflow, without invoking node/relationship readers. Ungrouped fixed occurrences can sit inside a region without belonging to its scroll surface. */
 export function viewDecorationCounts(decorations: readonly PlexDecoration[], nodes: readonly PositionedNode[], admitted: ReadonlySet<string>,
@@ -20,12 +22,15 @@ export function viewDecorationCounts(decorations: readonly PlexDecoration[], nod
 
 /** Render local shown counts supplied by the shared visible-occurrence owner, including expanded group membership. */
 export function ViewDecorations({decorations, counts, translate}: {decorations: readonly PlexDecoration[]; counts: ReadonlyMap<string, number>; translate: Translator}) {
+  const prefix = useId();
   return <svg className="kplex-view-decorations" aria-hidden="true" focusable="false">
-    {decorations.map(/** Regions and guides are deliberately outside the interactive semantic edge renderer. */ mark => mark.kind === "guide"
+    {decorations.map(/** Regions and guides are deliberately outside the interactive semantic edge renderer. */ (mark, index) => mark.kind === "guide"
       ? <polyline key={mark.id} className="kplex-view-guide" points={mark.points.map(point => `${point.x},${point.y}`).join(" ")} fill="none" />
       : <g key={mark.id} data-kplex-decoration={mark.id} className={`kplex-view-region${mark.tint ? ` is-${mark.tint}` : ""}`}>
-        <rect x={mark.bounds.x} y={mark.bounds.y} width={mark.bounds.width} height={mark.bounds.height} rx="14" />
-        <text x={mark.bounds.x + 16} y={mark.bounds.y + 25}>{mark.label ?? viewLabel(mark.labelKey, translate)}</text>
+        <defs><clipPath id={`${prefix}-${index}`}><rect x={mark.bounds.x + 12} y={mark.bounds.y + 4} width={Math.max(0, mark.bounds.width - 24)} height="44" /></clipPath></defs>
+        <rect x={mark.bounds.x} y={mark.bounds.y} width={mark.bounds.width} height={mark.bounds.height} rx="14"
+          style={mark.color ? {fill: colorValueCss(mark.color, "var(--background-secondary)"), stroke: colorValueCss(mark.color, "var(--background-modifier-border)")} : undefined} />
+        <text clipPath={`url(#${prefix}-${index})`} x={mark.bounds.x + 16} y={mark.bounds.y + 25}>{mark.label ?? viewLabel(mark.labelKey, translate)}</text>
         {mark.count && <text className="kplex-view-region-count" x={mark.bounds.x + 16} y={mark.bounds.y + 44}>
           {translate("view.shownLocally", {count: counts.get(mark.areaId ?? "") ?? 0})}
         </text>}

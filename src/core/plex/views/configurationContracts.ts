@@ -12,7 +12,9 @@ export type PlexViewConfigurationSchema = Readonly<{
   version: number;
   fields: Readonly<Record<string, Readonly<{defaultValue: unknown; validate: (value: unknown) => boolean;
     /** Opt in to independent stable-key entries. Each entry stays atomic; arrays never deep-merge. */
-    entries?: true}>>>;
+    entries?: true;
+    /** Missing stable entries inherit their declared default, materialized only when edited. */
+    inheritEntries?: true}>>>;
   migrations?: readonly PlexViewConfigurationMigration[];
 }>;
 

@@ -13,6 +13,8 @@ export type HostPlexScene = {
   projection?: PlexProjection;
   areas?: readonly PlexArea[];
   decorations?: readonly PlexDecoration[];
+  /** World rectangles are fit-only; the shared ThoughtNode paints its own attached badge. */
+  badgeBounds?: readonly Readonly<{occurrenceId: string; bounds: import("../../core/plex/views/contracts").ViewRect}>[];
   entryOccurrence?: string; editorOccurrence?: string; frameOccurrence?: string;
   boundEditors?: readonly AdmittedOccurrenceEditor[];
   /** A bounded cached connector pass stopped early; it makes no completeness claim. */

@@ -6238,3 +6238,6 @@ B1 closeout adds the explicit collection-reset guard: restoring view defaults re
 
 
 2026-10-25 PR220 C1: bounded Facets templates/schema2 legacy migration, independent preset intent/explicit deletion replacement, cache-only property/type/tag classification and centered direct projection/measured3-7-region policy. Optional shared badge/color metadata/bounds added for real Facets consumer; host composition not yet shipped.17 focused/core130/architecture7 zero violations/build/scanner pass. Existing JSON/scene/property/area bounds retained; no parser/index/scheduler/private renderer or mutation owner. C2 production UI/editor integration and D-F remain pending; C15-C26 paused.
+
+
+2026-10-25 PR220 C2a: production Facets registration/shared badge, color, status and captured preset controls; optional inherited stable default entries use existing queue.66 policy/selector +48 settings/localization/camera +5 actual renderer regressions, real build/scanner, architecture7 zero violations. Native manager/D/E/F/final-head Windows remain pending. No structural refactor or vault deployment.

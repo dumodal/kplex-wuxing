@@ -62,7 +62,9 @@ import {appendOccurrenceCrossLinks} from "./plexViews/crossLinks";
 import { centeredViewportFit, sameFitCamera, zoomedViewportCamera, type FitCamera } from "./components/viewportFit";
 import { projectFilteredGateCounts } from "./filteredGateCounts";
 import { LayoutControls } from "./components/LayoutControls";
-import {readViewConfiguration} from "../core/plex/views/configuration";
+import {readViewConfiguration, readViewConfigurationAt} from "../core/plex/views/configuration";
+import {boundedViewColors} from "../core/plex/views/decorations";
+import {canvasViewText} from "./plexViews/labels";
 import type {CanvasViewContributionController} from "./plexViews/CanvasViewContributionController";
 import type {CanvasViewLayoutControl} from "./plexViews/contributionContracts";
 import {CanvasViewLayoutControls} from "./plexViews/CanvasViewLayoutControls";
@@ -757,16 +759,25 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const paintedNodeStyles = useMemo(/** Reuse resolved colors for stable scene occurrences across hover/count/scroll renders. */ () => new WeakMap<object, NodeStyle>(), [paintSettings]);
   const colorScope = useRef<ColorScope | null>(null);
   const compassRefresh = useRef<() => void>(/** Context can initialize before layout has captured a center. */ () => {});
+  const [badgeColorRevision, setBadgeColorRevision] = useState(0);
   // This fixed-length inventory compares current appearance owners, not cloned presentation facades.
   // Ordinary source/status publications therefore never enumerate configured styles or probe CSS.
-  const colorConfiguration = useMemo(/** Capture configured source identities once per actual appearance change. */ () => ({
+  const baseColorConfiguration = useMemo(/** Capture configured source identities once per actual appearance change. */ () => ({
     preferences: plugin.settings.colorPreferences, references: [...appearanceColorReferences(plugin.settings), ...(plugin.settings.colorPreferences.compass.enabled ? COMPASS_DIRECTIONS.map(/** Validate the four public direction defaults only while tint is enabled. */ direction => ({kind: "theme" as const, variable: COMPASS_COLOR_VARIABLES[direction]})) : [])],
   }), STYLE_SETTINGS_KEYS.map(key => plugin.settings[key]));
+  const viewColors = useMemo(/** Registered configuration supplies finite color identities only; failed policies stay locally unavailable. */ () => {
+    if (!viewDefinition.colorReferences) return [];
+    try {return boundedViewColors(viewDefinition.colorReferences(readViewConfiguration(viewDefinition, plugin.settings.canvasViewSettings)));} catch {return [];}
+  }, [viewDefinition, plugin.settings.canvasViewSettings]);
+  const viewColorSignature = JSON.stringify(viewColors);
+  const colorConfiguration = useMemo(/** Equal configured colors retain the same scope even when numeric layout preferences change. */ () => ({
+    preferences: baseColorConfiguration.preferences, references: [...baseColorConfiguration.references, ...viewColors], observeContext: viewDefinition.capabilities.badges === true,
+  }), [baseColorConfiguration, viewColorSignature, viewDefinition.capabilities.badges]);
   useLayoutEffect(/** Bind exact owner CSS after commit, retaining scene geometry and public token inheritance. */ () => {
     if (colorScope.current) { colorScope.current.update(colorConfiguration); return; }
     const root = viewport.current; if (!root) return;
     colorScope.current = new ColorScope(root, colorConfiguration, {
-      onChange: /** Reuse this scope revision for the one numeric opacity input. */ () => compassRefresh.current(),
+      onChange: /** Contrast-aware decorations and Compass reuse this single owning-document CSS context. */ () => {compassRefresh.current();setBadgeColorRevision(revision => revision + 1);},
       subscribeCss: changed => { const ref = plugin.app.workspace.on("css-change", changed); return () => plugin.app.workspace.offref(ref); },
     });
   }, [plugin, colorConfiguration]);
@@ -1789,6 +1800,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     for (const decoration of scene.decorations ?? []) if (decoration.kind === "region") {
       includeRect(decoration.bounds.x - 12, decoration.bounds.y - 12, decoration.bounds.x + decoration.bounds.width + 12, decoration.bounds.y + decoration.bounds.height + 12);
     }
+    for (const badge of scene.badgeBounds ?? []) includeRect(badge.bounds.x - 4, badge.bounds.y - 4, badge.bounds.x + badge.bounds.width + 4, badge.bounds.y + badge.bounds.height + 4);
 
     if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
       applyCamera({ x: el.clientWidth / 2, y: el.clientHeight / 2, scale: 1 }, true);
@@ -4685,6 +4697,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       key={JSON.stringify([viewDefinition.id, viewLifetime, sceneNodeKeys.get(baseNode)])}
       node={nodeForDisplay}
       translate={translate}
+      badgeColorRevision={badgeColorRevision}
       branchStatus={visibleEdgeProjection.limited && baseNode === navigationNode() ? translate("mindmap.limited") : baseNode.branch?.reference ? translate("mindmap.reference") : baseNode.branch?.status === "loading" ? translate("mindmap.loading")
         : baseNode.branch?.status === "limited" ? translate("mindmap.limited") : baseNode.branch?.status === "partial" ? translate("mindmap.partial")
         : baseNode.branch?.status === "unavailable" ? translate("mindmap.unavailable") : undefined}
@@ -5113,6 +5126,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     }}
   >
     {!centralEditorMaximized && !displayState.zen && <CanvasViewHeading heading={scene.projection?.heading} translate={translate} />}
+    {scene.projection?.status && <div className="kplex-view-status" role="status">{canvasViewText(scene.projection.status, translate)}</div>}
     {keyboardConnect && <div className="kplex-find kplex-connection-session" role="status">
       <span><strong>{translate("actions.connectFrom", { origin: connectionOrigin ? index.titleFor(connectionOrigin) : keyboardConnect.path })}</strong> · {connectionSearchHint
         ? translate("actions.connectHint", { submit: "Enter", search: connectionSearchHint, cancel: "Escape" })
@@ -5310,7 +5324,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         simplifiedHint={`${translate("layout.simplifiedHelp")} ${translate("layout.arrangementScope", {
           device: translate(`typography.${typographyDevice}`), surface: translate(lateralArrangementSurface(surface) === "leaf" ? "layout.mainTab" : "layout.sidepanel"),
         })}`} />}
-      <CanvasViewLayoutControls controls={contributedLayoutControls} configuration={configuredLayout} translate={translate} onChange={changeViewLayoutValue} />
+      <CanvasViewLayoutControls controls={contributedLayoutControls} configuration={configuredLayout} translate={translate} onChange={changeViewLayoutValue}
+        readValue={control => readViewConfigurationAt(viewDefinition, settings.canvasViewSettings ?? {}, control)} />
       <div className="kplex-typography-group">
       <div className="kplex-typography-scope">
         <span>{translate("typography.scopeHint", { device: translate(`typography.${typographyDevice}`),

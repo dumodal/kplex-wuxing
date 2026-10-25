@@ -53,6 +53,13 @@ export function nodeSize(
   return { width, height: settings.wrapNodeLabels ? Math.max(singleLineHeight, twoLineHeight) : singleLineHeight };
 }
 
+/** Small non-wrapping node adornment uses the same label/font measurement pipeline. Full copy
+ * stays accessible while the visible badge clips to its finite measured width. */
+export function nodeBadgeSize(label: string, settings: KplexSettings): {width: number; height: number; fontSize: number} {
+  const measured = nodeSize(label, 18, settings, false, 80, 336, 0), fontSize = nodeLabelFontSize(18, false, settings.baseFontSize);
+  return {width: Math.max(56, Math.min(300, measured.width - 36)), height: Math.ceil(fontSize * 1.6 + 8), fontSize};
+}
+
 /** Keep geometry count-free when requested; provisional zero values never certify absent edges. */
 export function countsForLayout(page: GraphPage, index: Pick<GraphIndex, "neighbourCount" | "gateStats">, deferred: boolean): Pick<PositionedNode, "neighbourCount" | "gateStats"> {
   if (page.transient?.kind === "group") return { neighbourCount: 0, gateStats: {

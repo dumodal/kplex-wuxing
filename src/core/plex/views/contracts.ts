@@ -130,7 +130,7 @@ export interface PlexViewDefinition {
   readonly version: typeof CANVAS_VIEW_API_VERSION;
   readonly labelKey: string;
   readonly icon: string;
-  readonly capabilities: Readonly<{sections?: boolean; descendants?: boolean; editor?: boolean; compact?: boolean; properties?: boolean}>;
+  readonly capabilities: Readonly<{sections?: boolean; descendants?: boolean; editor?: boolean; compact?: boolean; properties?: boolean; badges?: boolean}>;
   readonly defaultState: unknown;
   /** Omit for the existing attention-following host. Occurrence hosting requires explicit shared bindings. */
   readonly editorHosting?: "occurrence";

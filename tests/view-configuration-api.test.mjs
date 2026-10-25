@@ -17,6 +17,24 @@ test('defaults remain read-only and old scalar edits retain their public API',()
  const next=M.editViewConfiguration(d,empty,'spacing',40);assert.deepEqual(next,{[d.id]:{version:1,values:{spacing:40}}});assert.deepEqual(empty,{});
 });
 
+test('optional entry defaults seed only the edited entry and rebase leaf edits',()=>{
+ const d=definition();Object.assign(d.configuration.fields.library,{entries:true,inheritEntries:true});
+ M.validateViewConfigurationSchema(d.configuration);
+ const initial=stored(d);initial[d.id].values.library={};const before=structuredClone(initial);
+ const a={field:'library',path:['alpha','name']},b={field:'library',path:['beta','colors']};
+ const expected=M.readViewConfigurationAt(d,initial,a);assert.deepEqual(expected,{present:true,value:'Alpha'});
+ assert.deepEqual(M.readViewConfiguration(d,initial).values.library,{});assert.deepEqual(initial,before);
+ let next=M.editViewConfigurationAt(d,initial,b,{kind:'set',value:['violet']});
+ assert.deepEqual(Object.keys(next[d.id].values.library),['beta']);
+ next=M.editViewConfigurationAt(d,next,a,{kind:'set',value:'Renamed'},expected);
+ assert.deepEqual(next[d.id].values.library.alpha,{name:'Renamed',colors:['red','blue']});
+ assert.deepEqual(next[d.id].values.library.beta.colors,['violet']);assert.deepEqual(initial,before);
+ next[d.id].values.library.alpha={name:'Future',colors:[]};
+ assert.deepEqual(M.readViewConfigurationAt(d,next,{field:'library',path:['alpha','absent']}),{present:false});
+ const bad=definition();bad.configuration.fields.library.inheritEntries=true;
+ assert.throws(()=>M.validateViewConfigurationSchema(bad.configuration));
+});
+
 test('increasing migrations preserve unknown values, detach inputs and become idempotent when committed',()=>{
  let calls=0;const d=definition(2,[{from:1,to:2,migrate:values=>{calls++;return{...values,spacing:values.oldSpacing}}}]);
  const original={[d.id]:{version:1,opaque:'wrapper',values:{oldSpacing:70,unknownFuture:{x:1}}}},before=structuredClone(original);

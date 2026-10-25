@@ -23,6 +23,16 @@ export function configurationLeaf(value: unknown, path: readonly (string | numbe
   return {present: true, value};
 }
 
+/** Seed only an addressed missing default entry. Unknown/future and existing entries remain
+ * atomic; this never fills missing members within an existing entry or persists during a read. */
+export function configurationEntryValue(value: unknown, defaults: unknown, inherit: boolean | undefined,
+  path: readonly (string | number)[]): unknown {
+  const key = path[0];
+  return inherit && typeof key === "string" && configurationRecord(value) && configurationRecord(defaults)
+    && !Object.prototype.hasOwnProperty.call(value, key) && Object.prototype.hasOwnProperty.call(defaults, key)
+    ? {...value, [key]: defaults[key]} : value;
+}
+
 /** Compare an opening leaf only; sibling edits cannot invalidate or overwrite this leaf. */
 export function configurationExpected(actual: ViewConfigurationExpected, expected?: ViewConfigurationExpected): boolean {
   return expected === undefined || actual.present === expected.present

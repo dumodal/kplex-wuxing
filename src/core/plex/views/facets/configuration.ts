@@ -31,7 +31,7 @@ function migrateWuXing(values: Readonly<Record<string, unknown>>): Readonly<Reco
 
 export const facetsConfigurationSchema: PlexViewConfigurationSchema = {version: 2,
   migrations: [{from: 1, to: 2, migrate: migrateWuXing}], fields: {
-    presets: {entries: true, defaultValue: FACET_TEMPLATES, validate: validFacetLibrary},
+    presets: {entries: true, inheritEntries: true, defaultValue: FACET_TEMPLATES, validate: validFacetLibrary},
     presetOrder: {defaultValue: [...FACET_TEMPLATE_ORDER], validate: validFacetOrder},
   }};
 

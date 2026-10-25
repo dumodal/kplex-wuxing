@@ -59,3 +59,7 @@ export const initializeColorDom = `(()=>{
  window.scope=createDiv();scope.className='kplex-app';document.body.append(scope);window.preferences=sourceModules.defaultColorPreferences();
  return true;
 })()`;
+
+/** The same finite Obsidian DOM spellings for actual canvas/color renderers. No modal,
+ * palette, production CSS or graph behavior is installed by this helper subset. */
+export const nativeDomHelpers = initializeColorDom.slice(initializeColorDom.indexOf(' function decorate'), initializeColorDom.indexOf(' const migrations'));

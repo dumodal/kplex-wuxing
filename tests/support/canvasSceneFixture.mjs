@@ -4,6 +4,7 @@ export const canvasSceneFixture=`
 const M=sourceModules,check=(value,message)=>{if(!value)throw Error(message)},wait=()=>new Promise(resolve=>setTimeout(resolve,70));
 const style=document.createElement('style');style.textContent=${JSON.stringify(readFileSync('styles.css','utf8'))};document.head.append(style);
 const pages=new Map(['A.md','B.md','C.md'].map(path=>[path,{path,name:path,file:{path,name:path,extension:'md',basename:path,stat:{mtime:1,ctime:1,size:1}},url:null,isFolder:false,isTag:false,aliases:[],tags:[],styleTags:[],primaryStyleTag:null,noteType:null,maxLabelLength:30,neighbours:new Map()}]));
+const fieldCaches=new Map([...pages.keys()].map(path=>[path,{frontmatter:{phase:'water'}}]));
 const work={acquisitions:0,releases:0,properties:0,body:0,scans:0,gateReads:0},events=new Set(),subscribe=fn=>{events.add(fn);return()=>events.delete(fn)};
 const nativeEvents={on:(name,callback)=>{const ref={name,callback};events.add(ref);return ref},offref:ref=>events.delete(ref)};
 let prepared=true,visible=true;
@@ -17,7 +18,7 @@ const index={isVisiblePage:()=>true,get:path=>pages.get(path),titleFor:page=>pag
  gateStats:unavailableCounts,neighbourCount:()=>0,subscribe,subscribePresentation:subscribe,visibleRelationshipsWithin:()=>[],explainRelationship:()=>null,
  getNeighborhood:path=>({center:pages.get(path),parents:rows(pages.get(path),'parent'),children:rows(pages.get(path),'child'),leftFriends:[],rightFriends:[],siblings:[]})};
 const plugin={settings,index,viewSettingsRegistry:M.builtInCanvasViewSettings,translator:M.createTranslator('en'),app:{workspace:{...nativeEvents},
- metadataCache:{...nativeEvents,getFileCache:()=>{work.properties++;return{frontmatter:{phase:'water'}}}},vault:{getFileByPath:path=>pages.get(path)?.file??null,cachedRead:()=>{work.body++;throw Error('Unexpected body read')},getMarkdownFiles:()=>{work.scans++;throw Error('Unexpected inventory')}}},
+ metadataCache:{...nativeEvents,getFileCache:file=>{work.properties++;return fieldCaches.get(file.path)}},vault:{getFileByPath:path=>pages.get(path)?.file??null,cachedRead:()=>{work.body++;throw Error('Unexpected body read')},getMarkdownFiles:()=>{work.scans++;throw Error('Unexpected inventory')}}},
  saveSettings:async()=>{},getTypographyDevice:()=> 'desktop',isKplexLeafVisible:()=>visible,subscribeKplexVisibility:subscribe,subscribeNodeFlair:subscribe,
  getHierarchyColorRevision:()=>0,isActionSurfaceCurrent:()=>true,getSavedSettingsPolicy:()=>null};
 plugin.actionManager=new M.ActionManager({readCommandContext:()=>({sharedCenter:null,focusRegion:'graph'}),validateNode:()=>true});

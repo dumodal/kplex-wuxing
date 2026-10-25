@@ -4,7 +4,7 @@ import type {PlexViewConfiguration, PlexViewConfigurationSchema, ViewConfigurati
   ViewConfigurationExpected, ViewConfigurationMigrationResult} from './configurationContracts';
 import {configurationJson as json, configurationRecord as record, viewConfigurationId, viewConfigurationKey, viewConfigurationEntryKey, VIEW_CONFIGURATION_LIMITS} from './configurationValues';
 import {upgradeConfigurationPayload, validateConfigurationMigrations} from './configurationMigrations';
-import {configurationExpected, configurationLeaf, editConfigurationLeaf, validViewConfigurationAddress} from './configurationPaths';
+import {configurationEntryValue, configurationExpected, configurationLeaf, editConfigurationLeaf, validViewConfigurationAddress} from './configurationPaths';
 export type {PlexViewConfiguration, PlexViewConfigurationSchema, PlexViewConfigurationMigration, ViewConfigurationAddress,
   ViewConfigurationEdit, ViewConfigurationExpected, ViewConfigurationMigrationResult} from './configurationContracts';
 export {viewConfigurationKey, VIEW_CONFIGURATION_LIMITS} from './configurationValues';
@@ -38,7 +38,8 @@ export function validateViewConfigurationSchema(schema: PlexViewConfigurationSch
   const defaults: Record<string, unknown> = {};
   for (const [key, field] of Object.entries(schema.fields)) {
     if (!viewConfigurationKey(key) || !field.validate(field.defaultValue) || field.entries !== undefined
-      && (field.entries !== true || !record(field.defaultValue) || !Object.keys(field.defaultValue).every(viewConfigurationEntryKey))) throw new Error("Invalid view configuration default");
+      && (field.entries !== true || !record(field.defaultValue) || !Object.keys(field.defaultValue).every(viewConfigurationEntryKey))
+      || field.inheritEntries !== undefined && (field.inheritEntries !== true || field.entries !== true)) throw new Error("Invalid view configuration default");
     defaults[key] = field.defaultValue;
   }
   json(defaults);
@@ -83,9 +84,11 @@ export function migrateViewConfiguration(definition: Readonly<{id: string; confi
 /** Read one registered effective field/path without materializing defaults in saved data. */
 export function readViewConfigurationAt(definition: Readonly<{id: string; configuration?: PlexViewConfigurationSchema}>, stored: unknown,
   address: ViewConfigurationAddress): ViewConfigurationExpected {
+  if (!validViewConfigurationAddress(address)) return {present: false};
   const effective = readViewConfiguration(definition, stored);
+  const field = definition.configuration?.fields[address.field];
   return validViewConfigurationAddress(address) && effective.status === 'available' && Object.prototype.hasOwnProperty.call(effective.values, address.field)
-    ? configurationLeaf(effective.values[address.field], address.path ?? []) : {present: false};
+    ? configurationLeaf(configurationEntryValue(effective.values[address.field], field?.defaultValue, field?.inheritEntries, address.path ?? []), address.path ?? []) : {present: false};
 }
 
 /** Apply one bounded leaf operation to the latest map, preserving sibling presets/views and
@@ -99,13 +102,15 @@ export function editViewConfigurationAt(definition: Readonly<{id: string; config
   const migration = migrateViewConfiguration(definition, stored);
   if (migration.status === 'unavailable') throw new Error('View configuration migration is unavailable');
   if (!Object.prototype.hasOwnProperty.call(stored, definition.id) && Object.keys(stored).length >= VIEW_CONFIGURATION_LIMITS.views) throw new Error('View configuration exceeds its bound');
-  const actual = configurationLeaf(effective.values[address.field], address.path ?? []);
+  const field = schema.fields[address.field];
+  const current = configurationEntryValue(effective.values[address.field], field.defaultValue, field.inheritEntries, address.path ?? []);
+  const actual = configurationLeaf(current, address.path ?? []);
   if (!configurationExpected(actual, expected)) throw new Error('View configuration changed');
   const previous = migration.settings[definition.id], payload = record(previous) ? previous : {version: schema.version, values: {}};
   const values = record(payload.values) ? payload.values : {}, nextValues = {...values};
   if (edit.kind === 'remove' && !address.path?.length) delete nextValues[address.field];
   else {
-    const value = editConfigurationLeaf(effective.values[address.field], address.path ?? [], edit);
+    const value = editConfigurationLeaf(current, address.path ?? [], edit);
     if (!schema.fields[address.field].validate(value)) throw new Error('Invalid view configuration field');
     nextValues[address.field] = value;
   }

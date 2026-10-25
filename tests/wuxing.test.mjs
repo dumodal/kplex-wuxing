@@ -1,10 +1,11 @@
-/** Wu Xing policy/property-lifetime regressions use actual implementation modules and finite host facts. No body parser, inventory, scheduler or acquisition capability is supplied. */
+/** Historical Wu Xing policy/property-lifetime regressions (Facets migration compatibility) use actual implementation modules and finite host facts. No body parser, inventory, scheduler or acquisition capability is supplied. */
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {plexViewModules,viewPage} from './support/plexViewFixture.mjs';
 const M=await plexViewModules(['src/core/plex/views/wuxing/configuration.ts','src/core/plex/views/wuxing/classification.ts',
- 'src/core/plex/views/wuxing/definition.ts','src/core/plex/views/wuxing/layout.ts','src/ui/plexViews/prepareScene.ts',
+ 'src/core/plex/views/wuxing/definition.ts','src/core/plex/views/wuxing/projection.ts','src/core/plex/views/wuxing/layout.ts','src/ui/plexViews/prepareScene.ts',
  'src/adapters/obsidian/predicateContracts.ts','src/adapters/obsidian/graphContracts.ts','src/core/plex/views/configuration.ts','src/ui/plexViews/scene.ts']);
+const legacyDefinition={...M.wuXingViewDefinition,configuration:M.wuXingConfigurationSchema,project:M.projectWuXing};
 const config=values=>M.wuXingConfiguration({status:'available',values});
 const phase=(id,value)=>({id,name:id,kind:'document',resolution:'resolved',path:'notes/'+id+'.md',url:null,aliases:[],tags:[],noteType:null,
  primaryStyleTag:null,styleTags:[],maxLabelLength:30,file:{path:'notes/'+id+'.md',extension:'md',mtime:1,size:1},value});
@@ -48,7 +49,7 @@ test('one explicit source is used without property/type/tag fallback; unavailabl
 
 test('local projection reads six bounded direct roles, deduplicates canonical notes and retains evidence-bearing endpoints',()=>{
  const f=localFixture(2),original=f.read.relations;f.read.relations=(id,role)=>role==='parent'?{coverage:'cached',truncated:false,items:[{node:f.nodes.get('opaque:a'),role,relationType:1,direction:1}]}:original(id,role);
- const p=M.wuXingViewDefinition.project(f.input);
+ const p=legacyDefinition.project(f.input);
  assert.equal(p.occurrences.length,3);assert.equal(p.edges.length,3);assert.equal(p.truncated,true);
  assert.equal(p.editor,p.entry);assert.equal(p.occurrences.find(row=>row.id===p.entry).nodeId,'opaque:attention');
  assert.equal(p.occurrences.find(row=>row.nodeId==='opaque:a').areaId,'wuxing.wood');
@@ -57,11 +58,11 @@ test('local projection reads six bounded direct roles, deduplicates canonical no
  assert.equal(f.work().fieldReads,3,'One selected field per deduplicated note');
  assert.equal(f.work().availabilityReads,0);
  assert.equal(f.work().relationReads,5);
- f.retire();assert.equal(M.wuXingViewDefinition.project(f.input),null);
+ f.retire();assert.equal(legacyDefinition.project(f.input),null);
 });
 
 test('measured ring keeps all five empty phases and outside unclassified lanes; no areas overlap with a large native editor',()=>{
- const f=localFixture(),p=M.wuXingViewDefinition.project(f.input);
+ const f=localFixture(),p=legacyDefinition.project(f.input);
  const measured=p.occurrences.map(row=>({id:row.id,width:row.id===p.editor?720:180,height:row.id===p.editor?430:56,expandedWidth:180,expandedReserve:0,mini:null,envelope:null}));
  const first=M.layoutWuXing(p,measured,config({})),second=M.layoutWuXing(p,measured,config({}));
  assert.deepEqual(first,second,'Same facts/measurements yield exact geometry');
@@ -83,7 +84,7 @@ test('measured ring keeps all five empty phases and outside unclassified lanes; 
 });
 
 test('dense phases use bounded visible height and shared overflow without dropping admitted notes',()=>{
- const f=localFixture(),p=M.wuXingViewDefinition.project(f.input),attention=p.occurrences[0];
+ const f=localFixture(),p=legacyDefinition.project(f.input),attention=p.occurrences[0];
  const occurrences=[attention,...Array.from({length:300},(_,i)=>({id:'dense'+i,nodeId:'opaque:'+i,representation:'thought',areaId:'wuxing.wood',groupingPartition:'wuxing.wood'}))];
  const measured=occurrences.map(row=>({id:row.id,width:180,height:56,expandedWidth:180,expandedReserve:0,mini:null,envelope:null}));
  const layout=M.layoutWuXing({...p,occurrences,edges:[]},measured,config({regionHeight:200}));
@@ -92,7 +93,7 @@ test('dense phases use bounded visible height and shared overflow without droppi
 });
 
 test('type settings validate order, persist field edits independently and preserve future payloads',()=>{
- const definition=M.wuXingViewDefinition;
+ const definition=legacyDefinition;
  assert.equal(M.readViewConfiguration(definition,{}).status,'available');
  let stored=M.editViewConfiguration(definition,{other:{version:9,values:{future:true}}},'waterValues','記憶');
  stored=M.editViewConfiguration(definition,stored,'fireLabel','Goals');

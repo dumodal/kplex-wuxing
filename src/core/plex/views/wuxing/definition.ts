@@ -1,16 +1,28 @@
-/** Production Wu Xing definition composes local classification/projection and measured layout. Shared host infrastructure retains editing, source demand, styling and interactions. */
+/** Facets retains the persisted wuxing identity. Shared host owners retain measurement,
+ * native attention-following editing, cached facts and all effects. */
 import type {PlexViewDefinition} from "../contracts";
-import {wuXingConfigurationSchema, wuXingConfiguration} from "./configuration";
-import {projectWuXing} from "./projection";
-import {layoutWuXing} from "./layout";
+import {facetsConfigurationSchema, facetLibrary} from "../facets/configuration";
+import {projectFacets} from "../facets/projection";
+import {layoutFacets} from "../facets/layout";
+import {facetState, resolveFacetPreset, restoreFacetState, reduceFacetState, orderedFacetPresets} from "../facets/state";
 
 export const wuXingViewDefinition: PlexViewDefinition = {
   id: "wuxing", version: 1, labelKey: "view.wuxing", icon: "orbit",
-  capabilities: {sections: false, descendants: false, editor: true, compact: false, properties: true}, defaultState: null,
-  configuration: wuXingConfigurationSchema,
-  /** All Wu Xing preferences are type-wide; no shadow configuration enters session state. */
-  restoreState: () => null,
-  project: projectWuXing,
-  /** Layout consumes only measured occurrences and validated effective type configuration. */
-  layout: (projection, measurements, _preferences, _editor, context) => layoutWuXing(projection, measurements, wuXingConfiguration(context?.configuration)),
+  capabilities: {sections: false, descendants: false, editor: true, compact: false, properties: true, badges: true},
+  defaultState: {version: 1, preset: "wuxing"}, configuration: facetsConfigurationSchema,
+  restoreState: restoreFacetState, reduceState: reduceFacetState, project: projectFacets,
+  /** Resolve the same captured preset without source reads or session mutation. */
+  layout: (projection, measurements, state, _editor, context) => {
+    const library = facetLibrary(context?.configuration);
+    if (!library) throw new Error("Unavailable Facets configuration");
+    const intent = facetState(state), selected = resolveFacetPreset(library, intent?.preset);
+    return layoutFacets(projection, measurements, selected.id, selected.preset, context?.areaHeights,
+      !!intent && (selected.status === "ready" || selected.status === "replaced"));
+  },
+  /** Configured colors join the existing owning-document theme and palette projection. */
+  colorReferences: configuration => {
+    const library = facetLibrary(configuration);
+    return library ? orderedFacetPresets(library).flatMap(({preset}) => [preset.conflictingColor, preset.unassignedColor,
+      ...preset.order.map(id => preset.categories[id].color)]) : [];
+  },
 };

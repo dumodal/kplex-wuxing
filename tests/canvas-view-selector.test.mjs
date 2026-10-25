@@ -44,7 +44,7 @@ test('a one-definition panel shows labelled disabled Compass and no test definit
 test('production selection exposes localized Compass, Mind Map and Wu Xing definitions',async()=>{
  assert.equal(await scenario(`
  const owner=session('a',M.builtInPlexViews),ui=mount(owner);ui.open();await waitFor(ui.select);
- equal([...ui.select().options].map(option=>[option.value,option.textContent]),[['classic','Compass'],['mindmap','Mind Map'],['wuxing','Wu Xing']],'Production definitions only');
+ equal([...ui.select().options].map(option=>[option.value,option.textContent]),[['classic','Compass'],['mindmap','Mind Map'],['wuxing','Facets']],'Production definitions only');
  check(!ui.select().disabled,'Implemented second production definition enables selection');ui.change('mindmap');
  check(ui.select().value==='mindmap'&&owner.definition.navigation==='rooted'&&owner.definition.editorHosting==='occurrence','Actual selected Mind Map contract');
  equal([writes.sources,writes.lenses,writes.filter,writes.settings],[0,0,0,0],'Registration/selection alone never acquires or mutates shared owners');ui.close();
@@ -138,7 +138,7 @@ test('two canvas panels retain owning-document and session identity across focus
 test('production registry exposes all three accepted definitions through the same captured selector',async()=>{
  assert.equal(await scenario(`
  const owner=session('a',M.builtInPlexViews),ui=mount(owner);ui.open();await waitFor(ui.select);
- equal([...ui.select().options].map(option=>[option.value,option.textContent]),[['classic','Compass'],['mindmap','Mind Map'],['wuxing','Wu Xing']],'Production registry options');
+ equal([...ui.select().options].map(option=>[option.value,option.textContent]),[['classic','Compass'],['mindmap','Mind Map'],['wuxing','Facets']],'Production registry options');
  check(!ui.select().disabled,'Implemented definitions selectable');ui.change('wuxing');check(owner.definition.id==='wuxing','Captured owner selects Wu Xing');ui.close();
  `),true);
 });
