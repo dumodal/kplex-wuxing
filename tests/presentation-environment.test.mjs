@@ -456,7 +456,7 @@ test("persisted layout keys and node-open leaf modes remain stable with canonica
       addSeparator() {return this;}
     }
     const showMenu = productionArrow("src/ui/PlexGraph.tsx", "showNodeContextMenuAt", {
-      viewDefinition: {hierarchy: undefined},
+      viewDefinition: {hierarchy: undefined, capabilities: {}},
       touchDoubleTap: {current: {reset() {}}}, persistentPageFor: () => page,
       neighborhood: null, activePath: "Other.md", canExpandCentralSections: () => false,
       Menu: MenuDouble, actionNodeRef: nodeModule.exports.actionNodeRef, actionSurfaceId: "owning-surface", sceneNodeKeys: new Map(),

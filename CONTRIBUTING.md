@@ -1442,7 +1442,7 @@ Direct isolated GraphIndex fixtures retain their explicit legacy constructor inp
 
 ## Internal Plex view validation
 
-The evolving [canvas-view API reference](docs/CANVAS_VIEW_API.md) records implemented pure settings/migration and host writer contracts for the expanded Facets assignment. It distinguishes current tested capabilities from pending UI/section work; the final developer guide/conformance example follows that implementation.
+The [canvas-view API reference](docs/CANVAS_VIEW_API.md) and [developer guide](docs/CANVAS_VIEW_DEVELOPER_GUIDE.md) document the public pure/host entries, captured settings/session ownership, measured rendering, availability-aware predicates, shared targets and optional section snapshots. Executable columns and section-conformance policies import those entries; section conformance is included in the host-free check and does not enable production Mind Map sections. The [sample vault](tests/fixtures/facets-vault/README.md) contains the five supplied presets plus custom State. Keep final exact-head/native evidence separate from implementation and browser conformance in the [validation record](docs/validation/facets-220-2026-10-25.md).
 
 Compass, Mind Map and Wu Xing are registered production views. Their validation reports retain exact source/runtime attribution and host limits. `wuxing` and `wuxing-browser` cover classification, property lifetime, measured regions and production rendering; `plex-view-classic` protects the
 pre-extraction membership/caps and 16-case exact geometry golden; contract/session

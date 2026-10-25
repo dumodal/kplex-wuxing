@@ -1,5 +1,7 @@
 # Wu Xing five-phase canvas view
 
+> This original specification and its exact-head receipts are retained as historical context. PR #220 now implements [Facets](FACETS_VIEW.md), with Wu Xing as an editable preset and a centered current note. Use the [current API](CANVAS_VIEW_API.md), [developer guide](CANVAS_VIEW_DEVELOPER_GUIDE.md) and [expanded validation record](validation/facets-220-2026-10-25.md) for current contracts and pending acceptance. Earlier standalone Windows results do not certify the expanded feature.
+
 Prepared by Zsolt's Codex Agent, 2026-10-24; implementation validated on Windows, 2026-10-25. **Delivered independently for review; later common-contract composition and device limitations remain explicit.**
 
 ## Implementation checkpoint

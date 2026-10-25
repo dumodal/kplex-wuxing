@@ -1,5 +1,7 @@
 # Internal Plex view plugins
 
+> Historical design and earlier implementation receipts are retained below. The [current API reference](CANVAS_VIEW_API.md) and [developer guide](CANVAS_VIEW_DEVELOPER_GUIDE.md) describe accepted Compass/Mind Map/Facets composition, optional capabilities, shared owners and section conformance. Full expanded Windows/CI acceptance is tracked in the [current validation record](validation/facets-220-2026-10-25.md).
+
 Prepared by Zsolt's Codex Agent on 2026-10-24.
 
 **Current status: accepted main includes #215, #218 and #219; #220 is composing the accepted baseline before the Facets extension.** Compass (`classic`), Mind Map (`mindmap`) and Wu Xing (`wuxing`) are registered definitions. Existing standalone evidence remains in the respective validation reports and does not certify combined behavior. Compass/Wu Xing retain attention-following editors; Mind Map opts into capacity-one occurrence hosting. The Facets extension and combined-source acceptance are in progress.

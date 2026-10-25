@@ -49,9 +49,9 @@ and measurements; they cannot access the plugin, GraphIndex, Vault or native lea
 and exact outgoing-resource disposal. `KplexDocumentSession` retains native
 workspace/editor/Sidecar ownership. Shared actions additionally fence view
 revision; occurrence IDs remain separate from canonical endpoints. The shared
-renderer accepts explicit areas, physical ports and entry/editor/frame anchors. The editor anchor currently positions the single attention-following native editor; it is not an independent occurrence/document binding. [Occurrence editor hosting](PLEX_OCCURRENCE_EDITORS.md) is Mind Map's required M0 checkpoint, with an explicit initial capacity of one and no simultaneous-editor claim. It must extend the existing attention-following host compatibly; Wu Xing may implement and validate its complete view independently after #218.
-Compass (`classic`) and Wu Xing (`wuxing`) are production definitions. Wu Xing adds optional cache-only availability-aware property reads and bounded input-transparent layout decorations. It retains the single attention-following editor; its phase regions never imply ontology writes. Corpus scoring, multihop demand
-and compact large-map rendering require explicit follow-up capabilities.
+renderer accepts explicit areas, physical ports and entry/editor/frame anchors. Compass and Facets retain the existing single attention-following native editor. Accepted Mind Map uses the shared capacity-one occurrence host; it does not introduce a second editor implementation or authorize simultaneous editors. Both off-origin framing and rooted/manual/restored camera guards remain part of the shared host.
+Production definitions are Compass (`classic`), Mind Map (`mindmap`) and Facets (`wuxing`, retaining its stored identity). Facets presets reuse cached-property availability, the shared predicate/lens owner, measured badges/colors, explicit native assignment actions and input-transparent model decorations. Pure policy never writes note metadata or classifies a phase-derived model guide as canonical evidence. Corpus scoring, arbitrary multihop demand
+and compact large-map rendering require explicit follow-up capabilities. The [API reference](CANVAS_VIEW_API.md) and [developer guide](CANVAS_VIEW_DEVELOPER_GUIDE.md) identify the current public entries and executable examples.
 See [the implemented contract and capability matrix](PLEX_VIEW_PLUGINS.md#16-implemented-boundary-and-capability-matrix).
 This scoped feature does not resume C15–C26 or retire compatibility facades.
 
@@ -66,7 +66,9 @@ The native **Canvas view** select is part of **Views and lenses**. It captures t
 opening session, subscribes to its successful selection, rechecks editor/lifetime
 guards and leaves the panel/draft mounted across compatible transitions. The existing
 registry supplies production options; disabled Compass remains visible when alone.
-Same-scope selection and new type configuration do not acquire or rebuild sources.
+Same-scope selection and new type configuration do not acquire or rebuild sources. Shared controlled condition rows serve lenses and native Facets rule drafts; availability-aware evaluation explicitly distinguishes current/candidate properties and unknown inputs without changing legacy boolean matching.
+
+Optional section snapshots adapt the existing explicit `SectionExpansion` owner for one source revision. Ordinary shared node measurement/tree/fold rendering and validated physical source anchors retain canonical note/occurrence/evidence identities. Native editors cannot be replaced by section rows. Production Facets/Mind Map keep sections disabled; the non-Classic conformance policy proves the reusable boundary without claiming a shipped Mind Map section mode.
 
 ## Action dispatch boundary
 

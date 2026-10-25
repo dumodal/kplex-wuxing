@@ -1,6 +1,6 @@
 # Facets and canvas-view API: implementation specification
 
-Current assignment: accepted-main integration and checkpoints B/C/D are published; E/F and final expanded acceptance remain in progress. Accepted base26623c8393bddc0c3bcac39468078ec20ceccbc8; prior validated220 head016919893b13a99867a14336680debb29d1b6f54 is preserved. The following maintainer requirements supersede the earlier Wu Xing-only scope; prior validation records remain historical and do not certify this extension. Actual implemented interfaces/results are recorded in CANVAS_VIEW_API.md and docs/validation/facets-220-2026-10-25.md; the complete developer guide remains required.
+Current assignment: accepted-main integration, checkpoints B/C/D/E and the F1 section boundary are published. Developer/API/end-user guides and the five-preset/custom-State sample are prepared; complete verification, authentic native screenshots and final expanded Windows/CI acceptance remain in progress. Accepted base26623c8393bddc0c3bcac39468078ec20ceccbc8; prior validated220 head016919893b13a99867a14336680debb29d1b6f54 is preserved. The following maintainer requirements supersede the earlier Wu Xing-only scope; prior validation records remain historical and do not certify this extension. Current contracts are in CANVAS_VIEW_API.md and CANVAS_VIEW_DEVELOPER_GUIDE.md; ordered receipts are in docs/validation/facets-220-2026-10-25.md.
 
 ## Functional reference: Dumo's fixed Wu Xing prototype
 

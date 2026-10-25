@@ -10,9 +10,9 @@
 
 At its heart is the **Compass**: focus on one note, then look **north** for origins and parents, **south** for children and where an idea leads, **west** for friends and supporting connections, and **east** for challengers and transformative connections. As you navigate, these directions retain their meaning, helping you reason about your knowledge in context.
 
-Choose **Compass** or **Wu Xing** in **Views and lenses → Canvas view**. Each canvas keeps its own choice. K-Plex canvases are separate from Obsidian Canvas files, which remain ordinary attachment nodes.
+Choose **Compass**, **Mind Map** or **Facets** in **Views and lenses → Canvas view**. Each canvas keeps its own choice. K-Plex canvases are separate from Obsidian Canvas files, which remain ordinary attachment nodes.
 
-**Wu Xing** arranges the current note and its direct relationships into five phases. Configure one classification source, phase labels and exact value mappings in **Settings → K-Plex → Canvas behavior → Views → Wu Xing**. The default property is `phase`, with values `water`, `wood`, `fire`, `earth` and `metal`. Empty phases stay visible; unmapped, conflicting and unavailable notes remain reachable under Unclassified. Counts describe the local view, and dashed cycle guides do not represent note relationships.
+**Facets** keeps the current note centered with a category badge and arranges its direct relationships in configurable regions. Choose the editable Wu Xing, ACE, PARA, GTD or eACCESS preset, or create your own three-to-seven-category preset under **Settings → K-Plex → Canvas behavior → Views → Facets**. Empty categories and Unassigned/Conflicting notes remain reachable. Wu Xing's optional relative labels and generating/regulating guides explain a model; recorded note relationships remain separate. See the [Facets guide and sample vault](docs/FACETS.md).
 
 **Explore, connect, and reshape your knowledge.** Drag notes from Obsidian's file explorer into the canvas to navigate or create relationships. Drag existing related nodes between directions to reorganize your knowledge. Open notes for editing without leaving the graph, use Graph Lenses to focus on what matters, or let Wander take you through connected ideas.
 
@@ -437,7 +437,7 @@ If classic ExcaliBrain is installed and running, K-Plex can import its ontology 
 
 K-Plex and classic ExcaliBrain can coexist while you migrate.
 
-Select **Views and lenses** (the funnel button) to choose a **Canvas view** and manage filters. Compass is currently the only view, so its selector is disabled. Each canvas owns its own view choice; saved lenses remain separate.
+Select **Views and lenses** (the funnel button) to choose **Compass**, **Mind Map** or **Facets** and manage filters. Facets also exposes the current canvas's preset there. Each canvas owns its view choice; saved lenses, filters and unsaved lens drafts remain separate.
 
 ## Settings
 
