@@ -1,8 +1,8 @@
 /** Native attention-editor acceptance for Wu Xing. Uses only test-owned notes, the existing editor controller and exact window; no alternative editor binding or production instrumentation is installed. */
 export async function acceptWuXingEditor(x){
- const {app,p,c,workspace,native,host,restores,cases,path,root,check,wait,until,choose,panel,reveal,quiet}=x;
+ const {app,p,c,workspace,native,host,restores,cases,path,root,check,wait,until,localReady,choose,panel,reveal,quiet}=x;
  const tab=p.settingsTab,session=host.view.documentSession.plexView;
- const stop=quiet();await p.updateCanvasViewSetting('wuxing','spacing',80);await until(()=>!p.index.hasPendingSemanticPreparation()&&!p.index.hasActiveSemanticPreparation(),'Configuration did not settle');await wait(200);stop('type-configuration-zero-source-work');
+ const stop=quiet();await p.updateCanvasViewSetting('wuxing','spacing',80);await until(localReady,'Configuration local proof/active work did not settle');await wait(200);stop('type-configuration-zero-source-work');
  p.openSettings();await until(()=>tab.containerEl.isConnected,'Native Settings absent');
  for(const key of ['settings.ui.plex.behavior','view.wuxing','wuxing.water']){check(tab.openSettingsPage(p.translator(key)),'Native view settings page absent: '+key);await wait(80)}
  // Native declarative subpages can live outside PluginSettingTab.containerEl. Use the owning Settings document, as the existing accepted settings driver does.
@@ -21,6 +21,24 @@ export async function acceptWuXingEditor(x){
  const overlay=root(host).querySelector('.kplex-central-editor-overlay');check(overlay?.getBoundingClientRect().width>0,'Editor phase anchor has no native bounds');
  const visibleBounds=root(host).querySelector('.kplex-plex').getBoundingClientRect(),openingBounds=overlay.getBoundingClientRect();
  check(openingBounds.left+openingBounds.width/2>=visibleBounds.left&&openingBounds.left+openingBounds.width/2<=visibleBounds.right&&openingBounds.top+openingBounds.height/2>=visibleBounds.top&&openingBounds.top+openingBounds.height/2<=visibleBounds.bottom,'Autozoom-off native editor opening is outside the canvas viewport');
+ const cameraBeforeExpansion=root(host).querySelector('.kplex-camera').style.transform,expandedDocument=editor.getValue(),expandedCursor=JSON.stringify(editor.getCursor());
+ const namedButton=label=>[...element.querySelectorAll('button')].find(button=>(button.getAttribute('aria-labelledby')??'').split(/\s+/).map(id=>button.ownerDocument.getElementById(id)?.textContent??'').join(' ')===label);
+ const maximize=namedButton(p.translator('centralEditor.maximize'));check(maximize,'Existing native editor expansion control absent');maximize.click();
+ await until(()=>overlay.classList.contains('is-maximized'),'Native editor did not expand');await wait(80);
+ const centeredExpanded=()=>{const box=overlay.getBoundingClientRect(),viewport=root(host).querySelector('.kplex-plex').getBoundingClientRect();
+  c.progress={phase:'expanded-native-phase-anchor',cases,geometry:{centerX:box.x+box.width/2-viewport.x,centerY:box.y+box.height/2-viewport.y,viewportWidth:viewport.width,viewportHeight:viewport.height}};
+  check(Math.abs(c.progress.geometry.centerX-viewport.width/2)<3&&Math.abs(c.progress.geometry.centerY-viewport.height/2)<3,'Expanded Wu Xing attention editor is not centered in the owning viewport')};
+ centeredExpanded();await p.updateCanvasViewSetting('wuxing','waterValues','water-not-mapped');await wait(100);centeredExpanded();
+ const expandedPhase=root(host).querySelector('[data-kplex-decoration="wuxing.unmapped"] rect').getBoundingClientRect(),movedEditor=overlay.getBoundingClientRect();
+ check(movedEditor.left>=expandedPhase.left-1&&movedEditor.right<=expandedPhase.right+1&&movedEditor.top>=expandedPhase.top-1&&movedEditor.bottom<=expandedPhase.bottom+1,'Expanded editor did not follow actual phase reclassification');
+ await p.updateCanvasViewSetting('wuxing','waterValues','water');await wait(100);centeredExpanded();
+ const expandedNativeBounds=native.getBounds(),expandedViewportSize={width:root(host).clientWidth,height:root(host).clientHeight};
+ native.setBounds({...expandedNativeBounds,width:Math.max(1000,expandedNativeBounds.width-120),height:Math.max(700,expandedNativeBounds.height-50)});
+ await until(()=>root(host).clientWidth!==expandedViewportSize.width||root(host).clientHeight!==expandedViewportSize.height,'Expanded native resize did not change the viewport');await wait(100);centeredExpanded();
+ native.setBounds(expandedNativeBounds);await until(()=>root(host).clientWidth===expandedViewportSize.width&&root(host).clientHeight===expandedViewportSize.height,'Expanded native viewport did not restore');await wait(100);centeredExpanded();
+ const restore=namedButton(p.translator('centralEditor.restore'));check(restore,'Native editor restore control absent');restore.click();await until(()=>!overlay.classList.contains('is-maximized'),'Native editor did not restore');
+ await wait(100);check(root(host).querySelector('.kplex-central-editor-content')===element&&leaf.view.editor===editor&&editor.getValue()===expandedDocument&&JSON.stringify(editor.getCursor())===expandedCursor,'Expansion replaced the native editor/document/content/caret');
+ check(root(host).querySelector('.kplex-camera').style.transform===cameraBeforeExpansion,'Expansion did not restore the exact pre-expansion camera');cases.push({id:'native-attention-editor-expanded-reclassified-resized-and-restored-at-phase-anchor'});
  const marker='\nKplex-220-dirty-content\n';editor.replaceRange(marker,editor.getCursor('to'));const line=editor.getValue().split('\n').findIndex(text=>text.includes('Kplex-220-dirty-content'));editor.setCursor({line,ch:8});
  const value=editor.getValue(),cursor=JSON.stringify(editor.getCursor());
  const dirtyAtReclassification=!(await app.vault.read(app.vault.getFileByPath(path('Memory')))).includes(marker.trim());check(dirtyAtReclassification,'Dirty native editor precondition was not observed');
@@ -44,8 +62,13 @@ export async function acceptWuXingEditor(x){
  await p.updateCanvasViewSetting('wuxing','fireValues','fire,water');await wait(100);check(leaf.view.file.path===path('Memory')&&p.sidecarLeaves.get(host)===side&&side.view.file.path===path('Memory'),'Mapping redirected native documents');
  cases.push({id:'selection-and-phase-mapping-preserve-editor-and-owned-sidecar'});
  await p.closeSidecar(host);await reveal(host);content.focus();editor.setCursor(editor.lastLine(),editor.getLine(editor.lastLine()).length);
- const clipboard=require('electron').clipboard,originalClipboard=clipboard.availableFormats().map(format=>({format,bytes:clipboard.readBuffer(format)}));
- restores.push(()=>{clipboard.clear();for(const item of originalClipboard)clipboard.writeBuffer(item.format,item.bytes)});
+ // Follow the existing support-report driver's guarded text/empty policy. Raw writeBuffer does
+ // not certify restoration of standard native formats; never replace rich/custom clipboard data.
+ const clipboard=require('electron').clipboard,formats=clipboard.availableFormats();
+ check(formats.length===0||formats.length===1&&formats[0]==='text/plain','Clipboard has rich/custom formats; leave it untouched');
+ const originalClipboard={empty:formats.length===0,text:clipboard.readText(),formats};
+ restores.push(()=>{if(originalClipboard.empty)clipboard.clear();else clipboard.writeText(originalClipboard.text);
+  if(clipboard.readText()!==originalClipboard.text||JSON.stringify(clipboard.availableFormats())!==JSON.stringify(originalClipboard.formats))throw Error('Original native clipboard text/formats were not restored');cases.push({id:'native-clipboard-original-text-and-formats-restored',originalEmpty:originalClipboard.empty})});
  const paste='Kplex-220-native-clipboard-'+Date.now(),keys=[];clipboard.writeText(paste);
  const keyDown=event=>{if(event.ctrlKey)keys.push({key:event.key,trusted:event.isTrusted,inEditor:element.contains(event.target)})};element.ownerDocument.addEventListener('keydown',keyDown,true);restores.push(()=>element.ownerDocument.removeEventListener('keydown',keyDown,true));
  if(c.osInput){c.progress={phase:'await-os-paste',cases,pasteReady:true};await until(()=>editor.getValue().includes(paste),'OS paste did not reach exact native editor',120000)}

@@ -1475,7 +1475,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     if (!el) return;
     if (displayResizePending.current || displayResizeLayout.current) return;
     if (centralEditorMaximized && centralEditorAvailable) {
-      applyCamera({ x: el.clientWidth / 2, y: el.clientHeight / 2, scale: 1 });
+      const center = centralEditorNode ?? {x: 0, y: 0};
+      applyCamera({ x: el.clientWidth / 2 - center.x, y: el.clientHeight / 2 - center.y, scale: 1 });
       flushCameraTransform();
       return;
     }
@@ -1484,7 +1485,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     applyCamera(centralEditorRestoreCamera.current);
     centralEditorRestoreCamera.current = null;
     flushCameraTransform();
-  }, [centralEditorMaximized, centralEditorAvailable, viewportSize.width, viewportSize.height]);
+  }, [centralEditorMaximized, centralEditorAvailable, centralEditorNode?.x, centralEditorNode?.y, viewportSize.width, viewportSize.height]);
 
   const sceneLayoutKey = [
     activePath,
@@ -1613,7 +1614,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const el = viewport.current;
     if (!el) return;
     if (centralEditorMaximized) {
-      applyCamera({ x: el.clientWidth / 2, y: el.clientHeight / 2, scale: 1 }, true);
+      const center = centralEditorNode ?? {x: 0, y: 0};
+      applyCamera({ x: el.clientWidth / 2 - center.x, y: el.clientHeight / 2 - center.y, scale: 1 }, true);
       return;
     }
 
@@ -1655,10 +1657,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       { left: minX, top: minY, right: maxX, bottom: maxY }, maxScale), true);
   };
   fitCurrentScene.current = fit;
-  reframeSidecarViewport.current = /** Reframe only a usable native viewport; disabled autozoom retains the exact scale. */ () => {
+  reframeSidecarViewport.current = /** Reframe only a usable native viewport; ordinary disabled autozoom retains scale, while explicit maximization owns its full-size editor frame. */ () => {
     const el = viewport.current;
     if (!el || !el.isConnected || el.clientWidth <= 0 || el.clientHeight <= 0) return;
-    if (settings.allowAutozoom) fit();
+    if (centralEditorMaximized || settings.allowAutozoom) fit();
     else {
       const center = framingOccurrence() ?? {x: 0, y: 0};
       applyCamera(/** Preserve zoom while translating the focal point into the new viewport center. */ current => ({...current, x: el.clientWidth / 2 - center.x * current.scale, y: el.clientHeight / 2 - center.y * current.scale}));

@@ -15,6 +15,11 @@ async function scenario(app,c){
  const path=name=>folder+'/'+name+'.md',check=(value,message)=>{if(c.closed||!value)throw Error(message)};
  const wait=async ms=>{check(true,'Retired controller');await new Promise(resolve=>window.setTimeout(resolve,ms));check(true,'Retired controller')};
  const until=async(read,message,maximumMs=20000)=>{const end=Date.now()+maximumMs;while(!read()){check(Date.now()<end,message);await wait(40)}};
+ // The production view consumes cached revision-scoped relationships, not a complete corpus.
+ // Global semantic pending is retained as a diagnostic; current local proof and zero active work
+ // are required in addition to the exact fixture relationships asserted below.
+ const localReady=()=>!p.rebuildTask&&p.rebuildTimer===null&&p.dirtyMarkdownPaths.size===0
+  &&!p.index.hasActiveSemanticPreparation()&&p.index.captureSemanticGateRead().isCurrent();
  const center=host=>host.view.documentSession.centerPath;
  const observe=(owner,key,work,label=key)=>{const previous=owner[key];check(typeof previous==='function','Observation owner missing: '+key);owner[key]=function(...args){work[label]=(work[label]??0)+1;return previous.apply(this,args)};const restore=()=>{owner[key]=previous};restores.push(restore);return restore};
  const quiet=()=>{const work={reads:0,parses:0,acquisitions:0,rebuilds:0},readers=[];
@@ -29,7 +34,10 @@ async function scenario(app,c){
  };
  try{
   native.restore();if(c.osInput)native.setBounds({x:20,y:20,width:1400,height:1000});native.show();native.focus();native.webContents.focus();if(process.platform==='darwin')remote.app.focus({steal:true});await until(()=>!document.hidden,'Foreground unavailable');
-  workspace.leftSplit.collapse();workspace.rightSplit.collapse();await until(()=>!p.isStartupInitializing()&&!p.index.hasPendingSemanticPreparation()&&!p.index.hasActiveSemanticPreparation(),'Startup/source preparation did not settle before fixture writes');
+  workspace.leftSplit.collapse();workspace.rightSplit.collapse();await until(()=>!p.isStartupInitializing()&&!p.index.hasActiveSemanticPreparation(),'Startup owner/active work did not settle before fixture writes');
+  // With no demand, global pending can describe an unprepared dormant subject. It must not be
+  // misreported as ready or require a whole-vault completion before this cached local-view test.
+  c.progress={phase:'pre-demand-readiness',pending:p.index.hasPendingSemanticPreparation(),active:p.index.hasActiveSemanticPreparation()};
   createdFolder=await app.vault.createFolder(folder);
   const child=p.settings.hierarchy.children[0];check(child,'Configured child ontology required');
   const phase={Memory:'water',Concept:'wood',Concept2:'wood',Goal:'fire',Review:'earth',Method:'metal',Conflict:['water','wood'],Unmapped:null};
@@ -38,16 +46,18 @@ async function scenario(app,c){
    const yaml=Object.entries(frontmatter).map(([key,value])=>JSON.stringify(key)+': '+JSON.stringify(value)).join('\n');
    const file=await app.vault.create(path(name),'---\n'+yaml+'\n---\n# '+name+'\n\nDisposable Wu Xing native fixture.\n');files.push(file);p.index.insertCreatedFile(file);releases.push(p.index.acquireSemanticDemand(file.path));
   }
-  await until(()=>files.every(file=>app.metadataCache.getFileCache(file))&&!p.index.hasPendingSemanticPreparation()&&!p.index.hasActiveSemanticPreparation(),'Fixture did not settle');
+  await until(()=>files.every(file=>app.metadataCache.getFileCache(file))&&!p.index.hasActiveSemanticPreparation(),'Fixture metadata/active work did not settle');
   Object.assign(p.settings,{canvasViewSettings:{},maxItemCount:100,documentSyncMode:'off',sidecarOpen:false,embedCentralNode:false,autoOpenCentralDocument:false,followActiveFile:false,centralNodeMarkdownMode:'source',animationSpeed:0,graphDepth:1,renderSiblings:false,showPageNodes:true,showInferredNodes:true,showFolderNodes:false,showTagNodes:false,graphLenses:[],applyPowerFilter:false});p.index.notifyPresentation();
   await until(()=>p.index.neighbours(p.index.get(path('Memory')),'child').length>=7,'Canonical direct relationships absent');
   const host=workspace.getLeaf('tab');hosts.push(host);await host.setViewState({type:'k-plex-react-view',active:true});await host.view.waitUntilReady();await p.setDocumentSyncMode(host,'off');
-  host.view.centerPresentation.update({embedCentralNode:false,centralNodeMarkdownMode:'source'});p.notifyNavigation(path('Memory'),host);await until(()=>center(host)===path('Memory')&&root(host)?.querySelector('.kplex-filter-trigger'),'Attention did not render');await choose(host,'wuxing');
+  host.view.centerPresentation.update({embedCentralNode:false,centralNodeMarkdownMode:'source'});p.notifyNavigation(path('Memory'),host);await until(()=>center(host)===path('Memory')&&root(host)?.querySelector('.kplex-filter-trigger'),'Attention did not render');
+  await until(localReady,'Requested local cached proof/active work did not settle');
+  cases.push({id:'requested-local-cache-proof',current:true,coverage:'cached',globalSemanticPending:p.index.hasPendingSemanticPreparation()});await choose(host,'wuxing');
   await until(()=>root(host).querySelectorAll('.kplex-view-region').length===8&&!root(host).querySelector('.kplex-view-error'),'Wu Xing production scene absent');panel(host).querySelector('.kplex-filter-panel-header button').click();
   check(root(host).querySelectorAll('.kplex-view-guide').length===5,'Decorative cycle absent');
   check(root(host).querySelector('[data-kplex-decoration="wuxing.conflicting"]').textContent.includes('1'),'Conflicting list missing');
   cases.push({id:'production-registry-five-phases-canonical-links',regions:8,semanticConnectors:root(host).querySelectorAll('[data-kplex-edge-id]').length});
-  const context={app,p,c,workspace,remote,native,bounds,host,hosts,files,releases,restores,cases,path,root,center,check,wait,until,choose,panel,reveal,observe,quiet};
+  const context={app,p,c,workspace,remote,native,bounds,host,hosts,files,releases,restores,cases,path,root,center,check,wait,until,localReady,choose,panel,reveal,observe,quiet};
   c.progress={phase:c.lane,cases};
   if(c.lane==='editor')await c.acceptEditor(context);else await c.acceptPairs(context);
   return {lane:c.lane,cases,cleanup,host:{node:process.version,electron:process.versions.electron,chrome:process.versions.chrome,hidden:document.hidden},limits:['Windows native automation is separate from macOS and physical mobile acceptance.','#215 extra-tab application restart/combined two-editor-pair baseline failures are not claimed fixed.']};

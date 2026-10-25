@@ -1,6 +1,6 @@
 /** Independent Compass/Wu Xing native session proof. Uses actual per-canvas selectors, native popout/Sidecars and view-state restoration; whole-application extra-tab behavior remains its recorded baseline limitation. */
 export async function acceptWuXingPairs(x){
- const {app,p,c,workspace,host,hosts,cases,path,root,center,check,wait,until,choose,panel,reveal,quiet}=x;
+ const {app,p,c,workspace,host,hosts,cases,path,root,center,check,wait,until,localReady,choose,panel,reveal,quiet}=x;
  const companion=workspace.getLeaf('window');hosts.push(companion);await companion.setViewState({type:'k-plex-react-view',active:true});await companion.view.waitUntilReady();await p.setDocumentSyncMode(companion,'off');
  companion.view.centerPresentation.update({embedCentralNode:false});p.notifyNavigation(path('Goal'),companion);
  await until(()=>center(companion)===path('Goal')&&root(companion)?.querySelector('.kplex-filter-trigger')&&companion.view.containerEl.ownerDocument!==document,'Independent native popout absent');
@@ -28,9 +28,13 @@ export async function acceptWuXingPairs(x){
  const snapshot=leaf=>({state:JSON.stringify(session(leaf).getState()),attention:center(leaf),camera:root(leaf).querySelector('.kplex-camera')?.style.transform,
   selected:root(leaf).querySelector('.is-keyboard-selected')?.dataset.kplexKeyboardId??null,editor:root(leaf).querySelector('.kplex-central-editor-content'),sidecar:p.sidecarLeaves.get(leaf),sidecarFile:p.sidecarLeaves.get(leaf)?.view.file});
  const same=(leaf,before)=>{const after=snapshot(leaf);return Object.keys(before).every(key=>before[key]===after[key])};
- await until(()=>!p.index.hasPendingSemanticPreparation()&&!p.index.hasActiveSemanticPreparation(),'Independent demand did not settle');await p.settingsWriteQueue;await wait(300);
+ // Native window focus can cause Obsidian's own Sidecar cachedRead. Establish that native
+ // context first; the strict zero-work interval below covers only the captured view selection.
+ await choose(host,'wuxing');await until(localReady,'Independent cached proof/active work did not settle');await p.settingsWriteQueue;await wait(300);
+ const chooseCaptured=async id=>{const select=panel(host)?.querySelector('.kplex-view-selector select');check(select,'Captured main selector absent');
+  select.value=id;select.dispatchEvent(new select.ownerDocument.defaultView.Event('change',{bubbles:true}));await until(()=>session(host).definition.id===id&&select.value===id,'Captured main view selection failed')};
  const other=snapshot(companion),stop=quiet();
- await choose(host,'classic');check(same(companion,other),'Switching main changed the popout session/camera/editor/Sidecar');await choose(host,'wuxing');check(same(companion,other),'Returning main changed popout state');
+ await chooseCaptured('classic');check(same(companion,other),'Switching main changed the popout session/camera/editor/Sidecar');await chooseCaptured('wuxing');check(same(companion,other),'Returning main changed popout state');
  stop('main-popout-per-canvas-selection-zero-source-work');
  const first=snapshot(host);await choose(companion,'wuxing');check(same(host,first),'Popout selection changed main state');await choose(companion,'classic');check(same(host,first),'Popout return changed main state');
  cases.push({id:'native-compass-wuxing-main-popout-independent-canvas-and-sidecar-state'});

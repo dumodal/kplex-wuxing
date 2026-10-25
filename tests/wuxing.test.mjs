@@ -66,6 +66,8 @@ test('measured ring keeps all five empty phases and outside unclassified lanes; 
  const first=M.layoutWuXing(p,measured,config({})),second=M.layoutWuXing(p,measured,config({}));
  assert.deepEqual(first,second,'Same facts/measurements yield exact geometry');
  assert.equal(first.areas.length,8);assert.equal(first.decorations.filter(mark=>mark.kind==='guide').length,5);
+ assert(first.areas.every(area=>!area.heightPreference&&!area.dropRole),'Classification areas have neither per-area editing intent nor a semantic relationship-drop role');
+ assert(first.areas.every(area=>area.viewport&&area.reflow),'Non-editable phases still use shared bounded viewport/filter/reflow owners');
  for(let i=0;i<first.areas.length;i++)for(let j=i+1;j<first.areas.length;j++){
   const a=first.areas[i].bounds,b=first.areas[j].bounds;
   assert(a.x+a.width<=b.x||b.x+b.width<=a.x||a.y+a.height<=b.y||b.y+b.height<=a.y,`Areas overlap: ${i}/${j}`);
