@@ -7,6 +7,7 @@ import {layoutFacets} from "../facets/layout";
 import {facetState, resolveFacetPreset, restoreFacetState, reduceFacetState, orderedFacetPresets} from "../facets/state";
 import {facetPropertyAssignments} from "../facets/assignment";
 import {compileFacetRules} from "../facets/rules";
+import {facetFlowLabels} from "../facets/flow";
 
 export const wuXingViewDefinition: PlexViewDefinition = {
   id: "wuxing", version: 1, labelKey: "view.wuxing", icon: "orbit",
@@ -16,6 +17,11 @@ export const wuXingViewDefinition: PlexViewDefinition = {
   defaultState: {version: 1, preset: "wuxing"}, configuration: facetsConfigurationSchema,
   restoreState: restoreFacetState, reduceState: reduceFacetState, project: projectFacets,
   propertyAssignments: facetPropertyAssignments,
+  /** Pure caption declarations reuse host measurement without reading note fields. */
+  decorationLabels: (state, configuration) => {
+    const library = facetLibrary(configuration), intent = facetState(state);if (!library || !intent) return [];
+    const selected = resolveFacetPreset(library, intent.preset);return facetFlowLabels(selected.preset, selected.id, intent);
+  },
   /** Declare syntax dependencies only; actual admitted field/evidence reads remain lazy. */
   propertyDependencies: (state, configuration) => {
     const library = facetLibrary(configuration), intent = facetState(state);
@@ -31,7 +37,7 @@ export const wuXingViewDefinition: PlexViewDefinition = {
     if (!library) throw new Error("Unavailable Facets configuration");
     const intent = facetState(state), selected = resolveFacetPreset(library, intent?.preset);
     return layoutFacets(projection, measurements, selected.id, selected.preset, context?.areaHeights,
-      !!intent && (selected.status === "ready" || selected.status === "replaced"), context?.areaWidths, intent);
+      !!intent && (selected.status === "ready" || selected.status === "replaced"), context?.areaWidths, intent, context?.decorationMeasurements);
   },
   /** Configured colors join the existing owning-document theme and palette projection. */
   colorReferences: configuration => {

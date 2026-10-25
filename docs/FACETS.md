@@ -30,6 +30,10 @@ Concentric categories are distinct rounded rectangular bands with genuine inner 
 
 Diagnostics are combined by default, with each note's own status chip. **Configure Canvas Layout → Combine diagnostics** changes only this canvas. The preset editor sets the shared default, dock side, separate-area orientation, status order and empty-area visibility. Combined and separate modes retain independent sizes. Dropping into the combined Diagnostics area never means clearing a property; use the explicit category actions or a writable, separately labeled Unassigned area.
 
+In **Workflow guides**, configure decorative arrows for vertical and horizontal layouts. Choose forward, backward or both directions, an arrow, plain line or no line, and an optional caption at the start, middle or end of its outer rail. Enable individual adjacent-category overrides when needed; turning one off restores the preset defaults. A blank overridden caption intentionally suppresses the inherited caption. The logical category sequence stays the same when its geometry is reversed, so a forward workflow can point upward or leftward.
+
+Guides route outside category regions on the side away from the focused editor. Captions use the shared measured text treatment and are bounded to 80 characters; long visible copy stays clipped to its measured background. They never create relationships or receive graph editing actions. Concentric/quadrant layouts use their category geometry without workflow rails; circular Wu Xing retains its distinct generating and regulating cycles.
+
 The supplied [sample vault](../tests/fixtures/facets-vault/README.md) includes all five presets plus a custom four-category **State** example (`seed`, `research`, `draft`, `published`; [screenshot](images/facets/state.png)). It contains Markdown/configuration only, with no executable plugin. Use a separate disposable copy with the matching reviewed build; do not overwrite an existing vault's settings.
 
 ![Wu Xing preset in Obsidian, with the current note centered and separate category and diagnostic regions](images/facets/wuxing.png)

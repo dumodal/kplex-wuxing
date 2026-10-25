@@ -5535,6 +5535,22 @@ export const englishCatalog = {
   "facets.focus": {message:"Focused note",context:"Native layout schematic.",params:[]},
   "facets.bandSizeHelp": {message:"In concentric layouts, width and height set horizontal and vertical band thickness. Notes scroll in each band's top strip.",context:"Honest dimensions for shared concentric area controls.",params:[]},
   "facets.areaSizeHelp": {message:"Optional default: {minimum}–{maximum}. Leave blank to inherit. Canvas resize handles override this default.",context:"Exact optional per-area preset size.",params:["minimum","maximum"],referenceParams:[]},
+  "facets.flow": {message:"Workflow guides",context:"Detached preset decorative flow controls.",params:[]},
+  "facets.flowHelp": {message:"Decorative guides in vertical and horizontal layouts. Direction follows category order. These arrows never create or prove note relationships.",context:"Read-only workflow interpretation.",params:[]},
+  "facets.flowDirection": {message:"Flow direction",context:"Relative to displayed category sequence.",params:[]},
+  "facets.flowForward": {message:"Forward",context:"Decorative guide direction.",params:[]},
+  "facets.flowBackward": {message:"Backward",context:"Decorative guide direction.",params:[]},
+  "facets.flowBoth": {message:"Both directions",context:"Decorative guide direction.",params:[]},
+  "facets.flowStyle": {message:"Guide style",context:"Decorative line and arrow policy.",params:[]},
+  "facets.flowArrow": {message:"Arrow",context:"Decorative guide style.",params:[]},
+  "facets.flowLine": {message:"Plain line",context:"Decorative guide style.",params:[]},
+  "facets.flowNone": {message:"No line or arrow",context:"Caption may remain visible.",params:[]},
+  "facets.flowCaption": {message:"Caption",context:"Inert bounded decorative guide text.",params:[]},
+  "facets.flowCaptionPosition": {message:"Caption position",context:"Placement on the outer decorative rail.",params:[]},
+  "facets.flowStart": {message:"Start",context:"Decorative caption position.",params:[]},
+  "facets.flowMiddle": {message:"Middle",context:"Decorative caption position.",params:[]},
+  "facets.flowEnd": {message:"End",context:"Decorative caption position.",params:[]},
+  "facets.flowPair": {message:"Override {source} → {target}",context:"Descriptive category labels; toggle a stable pair override.",params:["source","target"],referenceParams:[]},
 } as const;
 
 export type EnglishCatalog = typeof englishCatalog;

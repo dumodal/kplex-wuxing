@@ -1573,6 +1573,22 @@ const dutchTranslations = {
   "facets.focus": "Gefocuste notitie",
   "facets.bandSizeHelp": "Bij concentrische indelingen bepalen breedte en hoogte de horizontale en verticale banddikte. Notities scrollen in de bovenste strook van elke band.",
   "facets.areaSizeHelp": "Optionele standaard: {minimum}–{maximum}. Laat leeg om over te nemen. Formaatgrepen op het canvas overschrijven deze waarde.",
+  "facets.flow": "Workflowhulplijnen",
+  "facets.flowHelp": "Decoratieve hulplijnen in verticale en horizontale indelingen. De richting volgt de categorievolgorde. Deze pijlen maken of bewijzen geen notitierelaties.",
+  "facets.flowDirection": "Stroomrichting",
+  "facets.flowForward": "Vooruit",
+  "facets.flowBackward": "Achteruit",
+  "facets.flowBoth": "Beide richtingen",
+  "facets.flowStyle": "Hulplijnstijl",
+  "facets.flowArrow": "Pijl",
+  "facets.flowLine": "Gewone lijn",
+  "facets.flowNone": "Geen lijn of pijl",
+  "facets.flowCaption": "Bijschrift",
+  "facets.flowCaptionPosition": "Positie van bijschrift",
+  "facets.flowStart": "Begin",
+  "facets.flowMiddle": "Midden",
+  "facets.flowEnd": "Einde",
+  "facets.flowPair": "{source} → {target} aanpassen",
 } as const satisfies LocaleTranslationMap;
 
 export const dutchCatalog = buildLocaleCatalog(dutchTranslations);

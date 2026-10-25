@@ -3,7 +3,7 @@ import type {GraphIndex} from "../../index/GraphIndex";
 import type {KplexSettings} from "../../settings";
 import {graphNodeViewFromLegacy} from "../../adapters/obsidian/graphContracts";
 import {nodeId, type NodeId, type GraphNodeView} from "../../core/graph/model";
-import type {PlexViewDefinition, PlexViewRead, PlexProjection, PlexMeasurement, PlexOccurrence, PlexViewEdge, PlexViewPropertyDependencies, PlexNodeBadge} from "../../core/plex/views/contracts";
+import type {PlexViewDefinition, PlexViewRead, PlexProjection, PlexMeasurement, PlexOccurrence, PlexViewEdge, PlexViewPropertyDependencies, PlexNodeBadge, PlexDecorationTextSize} from "../../core/plex/views/contracts";
 import {RelationType, type GraphPage, type PositionedNode, type PositionedEdge, type Role, type Neighbour} from "../../types";
 import {resolveNodeStyle, resolveLinkStyle} from "../../index/style";
 import {deferredNodeCounts, nodeSize, nodeBadgeSize} from "./measurement";
@@ -323,7 +323,16 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
       const represented = new Set(filtered.occurrences.flatMap(row => row.nodeId ? [row.nodeId] : []));
       filtered = {...filtered, preparation: {parents: filtered.preparation.parents.filter(id => represented.has(id))}};
     }
-    const layout = definition.layout(filtered, measurements, state, Boolean(editorSize), {areaHeights: grouping?.areaHeights ?? {}, areaWidths: grouping?.areaWidths ?? {}, configuration});
+    const decorationMeasurements = new Map<string, PlexDecorationTextSize>(), labels = definition.decorationLabels?.(state, configuration) ?? [];
+    const labelList: unknown = labels;
+    if (!Array.isArray(labelList) || labels.length > 32) throw new Error("Too many decoration labels");
+    for (const label of labels) {
+      if (!label || typeof label.id !== "string" || !label.id || label.id.length > 128 || decorationMeasurements.has(label.id)
+        || !validCanvasViewText(label.label) || "literal" in label.label && label.label.literal.length > 80) throw new Error("Invalid decoration label");
+      const text = grouping?.translate ? canvasViewText(label.label, grouping.translate) : "literal" in label.label ? label.label.literal : label.label.key;
+      decorationMeasurements.set(label.id, nodeBadgeSize(text, settings));
+    }
+    const layout = definition.layout(filtered, measurements, state, Boolean(editorSize), {areaHeights: grouping?.areaHeights ?? {}, areaWidths: grouping?.areaWidths ?? {}, configuration, decorationMeasurements});
     if (!current() || !read.isCurrent()) return {scene: empty, projection: null, failure: true};
     for (const [id, node] of nodes) {
       const rect = layout.positions.get(id);
@@ -414,6 +423,11 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
       } else if (mark.kind !== "guide" || mark.points.length < 2 || mark.points.length > 32
         || !mark.points.every(point => Number.isFinite(point.x) && Number.isFinite(point.y))
         || mark.directed !== undefined && typeof mark.directed !== "boolean"
+        || mark.direction !== undefined && mark.direction !== "forward" && mark.direction !== "backward" && mark.direction !== "both"
+        || mark.stroke !== undefined && mark.stroke !== "line" && mark.stroke !== "none"
+        || mark.caption !== undefined && (!validCanvasViewText(mark.caption.label) || "literal" in mark.caption.label && mark.caption.label.literal.length > 80
+          || !Object.values(mark.caption.bounds).every(Number.isFinite) || mark.caption.bounds.width <= 0 || mark.caption.bounds.width > 1000
+          || mark.caption.bounds.height <= 0 || mark.caption.bounds.height > 200 || !Number.isFinite(mark.caption.fontSize) || mark.caption.fontSize < 1 || mark.caption.fontSize > 80)
         || mark.variant !== undefined && mark.variant !== "generating" && mark.variant !== "regulating") throw new Error("Invalid decoration guide");
     }
     if (sectionHost && !sectionHost.isCurrent()) throw new Error("Retired section revision");

@@ -19,6 +19,7 @@ import {renderDiagnosticSettings} from "./diagnosticSettings";
 import {renderFacetLayoutSettings} from "./layoutSettings";
 import {renderAreaSizeSettings} from "./areaSizeSettings";
 import {FACET_DIAGNOSTIC_ORDER} from "../../../core/plex/views/facets/presentation";
+import {renderFacetFlowSettings} from "./flowSettings";
 
 export class FacetPresetEditor extends StyleEditorModal {
   private draft: FacetPreset;
@@ -60,6 +61,7 @@ export class FacetPresetEditor extends StyleEditorModal {
   /** Rebuild only after explicit structure changes; ordinary typing never replaces/focuses input. */
   private render(): void {
     const body = this.body;if (!body) return;
+    const flowOpen = body.querySelector<HTMLDetailsElement>(".kplex-facet-flow-settings")?.open ?? false;
     for (const root of this.ruleRoots.splice(0)) root.unmount();
     this.colors?.dispose();body.empty();const t = this.translate;
     this.colors = new StyleColorControls(this.app, this.options.colors, () => this.canEdit() && this.owner());
@@ -73,13 +75,17 @@ export class FacetPresetEditor extends StyleEditorModal {
       if (!this.canEdit()) return;this.draft = preset;this.render();
     }, t);
     new Setting(body).setName(t("facets.start")).addDropdown(input => input.addOptions(Object.fromEntries(this.draft.order.map(id => [id, canvasViewText(facetCategoryLabel(this.draft.categories[id], id), t)])))
-      .setValue(this.draft.start).onChange(start => {this.draft = {...this.draft, start};this.validate();}));
+      .setValue(this.draft.start).onChange(start => {this.draft = {...this.draft, start};this.render();}));
     for (const [field, label, minimum, maximum, step] of [["spacing", "wuxing.spacing", 24, 200, 8],
       ["regionWidth", "wuxing.width", 200, 640, 20], ["regionHeight", "wuxing.height", 160, 600, 20]] as const)
       new Setting(body).setName(t(label)).addSlider(input => input.setLimits(minimum, maximum, step).setValue(this.draft[field]).setDynamicTooltip()
         .onChange(value => {this.draft = {...this.draft, [field]: value};this.validate();}));
     for (const [field, label] of [["guides", "wuxing.guides"], ["tints", "wuxing.tints"]] as const)
       new Setting(body).setName(t(label)).addToggle(input => input.setValue(this.draft[field]).onChange(value => {this.draft = {...this.draft, [field]: value};this.validate();}));
+    renderFacetFlowSettings(body, /** Read current sibling layout/preset edits. */ () => this.draft,
+      /** Guide settings stay inside the same atomic guarded preset Save. */ (preset, structural) => {
+        if (!this.canEdit()) return;this.draft = preset;if (structural) this.render();else this.validate();
+      }, t, flowOpen);
     renderDiagnosticSettings(body, /** Read current sibling edits before merging one dock control. */ () => this.draft.diagnostics, t, /** Retain all dock edits in this exact guarded native draft. */ (diagnostics, structural) => {
       if (!this.canEdit()) return;
       this.draft = {...this.draft, diagnostics};if (structural) this.render();else this.validate();
@@ -135,7 +141,10 @@ export class FacetPresetEditor extends StyleEditorModal {
       .addButton(button => button.setButtonText(t("common.delete")).setDisabled(this.draft.order.length <= 3).onClick(() => {
         if (!this.canEdit() || this.draft.order.length <= 3) return;
         const categories = {...this.draft.categories};delete categories[id];const order = this.draft.order.filter(key => key !== id);
-        this.draft = {...this.draft, categories, order, start: this.draft.start === id ? order[0] : this.draft.start};this.render();
+        const sizes = {...this.draft.areaSizes?.categories};delete sizes[id];
+        this.draft = {...this.draft, categories, order, start: this.draft.start === id ? order[0] : this.draft.start,
+          ...(this.draft.areaSizes ? {areaSizes: {...this.draft.areaSizes, categories: sizes}} : {}),
+          ...(this.draft.flowOverrides ? {flowOverrides: this.draft.flowOverrides.filter(/** Only references to the explicitly deleted category retire. */ pair => pair.source !== id && pair.target !== id)} : {})};this.render();
       }));
   }
   /** Current drafts preserve unknown category fields while changing one explicit value. */

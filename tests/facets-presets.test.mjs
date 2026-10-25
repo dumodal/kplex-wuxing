@@ -9,7 +9,7 @@ const M=await plexViewModules(['src/core/plex/views/facets/contracts.ts','src/co
  'src/core/plex/views/configuration.ts','src/core/plex/views/facets/projection.ts','src/core/plex/views/facets/layout.ts',
  'src/core/plex/views/decorations.ts','src/core/plex/views/facets/presentation.ts',
  'src/core/plex/views/facets/assignment.ts','src/core/plex/views/wuxing/definition.ts','src/core/plex/views/registry.ts',
- 'src/core/contracts/areaGeometry.ts']);
+ 'src/core/contracts/areaGeometry.ts','src/core/plex/views/facets/flow.ts']);
 const definition={id:'wuxing',configuration:M.facetsConfigurationSchema};
 const available=stored=>M.readViewConfiguration(definition,stored),library=stored=>M.facetLibrary(available(stored));
 const node={id:'A',kind:'document',file:{extension:'md'},noteType:'water',tags:['wood']};
@@ -28,6 +28,32 @@ function diagnosticScene(additional=0){
  const measure=p=>p.occurrences.map(row=>({id:row.id,width:160,height:44,expandedWidth:160,expandedReserve:0,mini:null,envelope:null,...(row.badge?{badge:{width:120,height:24}}:{})}));
  return {values,work,project,measure};
 }
+
+test('measured workflow guides preserve logical direction through both axes, reversal, anchors and caption positions',()=>{
+ const f=diagnosticScene(),projection=f.project(),measured=f.measure(projection),before=JSON.stringify(projection),base=M.FACET_TEMPLATES.wuxing;
+ for(const layout of ['horizontal','vertical'])for(const reverse of [false,true])for(const focusAnchor of ['top','bottom','left','right'])for(const direction of ['forward','backward','both'])for(const style of ['arrow','line','none'])for(const captionPosition of ['start','middle','end']){
+  const preset={...base,layout,reverse,focusAnchor,flow:{direction,style,caption:'A bounded workflow caption',captionPosition}},labels=M.facetFlowLabels(preset,'wuxing'),sizes=new Map(labels.map(label=>[label.id,{width:220,height:28,fontSize:12}]));
+  const result=M.layoutFacets(projection,measured,'wuxing',preset,{},true,{},undefined,sizes),guides=result.decorations.filter(mark=>mark.kind==='guide');assert.equal(guides.length,4);
+  for(const guide of guides){
+   assert.equal(guide.direction,style==='arrow'?direction:undefined);assert.equal(guide.stroke,style==='none'?'none':'line');assert.equal(guide.source,undefined);assert.equal(guide.targetNode,undefined);
+   const a=guide.points[0],b=guide.points.at(-1),delta=layout==='horizontal'?b.x-a.x:b.y-a.y;assert(reverse?delta<0:delta>0,'Forward logical sequence follows actual physical reversal');
+   assert.equal(guide.caption.bounds.width,220);assert.equal(guide.caption.fontSize,12);
+   const fraction=captionPosition==='start'?.2:captionPosition==='end'?.8:.5,center=layout==='horizontal'?guide.caption.bounds.x+110:guide.caption.bounds.y+14;
+   assert(Math.abs(center-((layout==='horizontal'?a.x:a.y)+(layout==='horizontal'?b.x-a.x:b.y-a.y)*fraction))<1e-9,'Caption follows its requested rail fraction within floating-point precision');
+   for(const point of guide.points)assert(!M.areaContains({x:-80,y:-22,width:160,height:44},point),'Guide points stay outside the attention editor');
+   assert(!M.areaContains(guide.caption.bounds,{x:0,y:0}),'Caption never covers attention');
+  }
+  const dock=result.areas.find(area=>area.id===M.facetCombinedAreaId('wuxing'));assert(dock.bounds.x>Math.max(...guides.map(mark=>mark.caption.bounds.x+mark.caption.bounds.width)),'Diagnostics dock accounts for measured caption extents');
+  assert.equal(JSON.stringify(projection),before);
+ }
+});
+
+test('flow pair overrides retain identities and blank-caption inheritance without executable data',()=>{
+ const preset={...M.FACET_TEMPLATES.ace,layout:'horizontal',guides:true,flow:{caption:'Default',direction:'both'},flowOverrides:[{source:'add',target:'connect',caption:'',style:'line'}]};
+ assert.equal(M.isFacetPreset(preset),true);assert.equal(M.facetFlowStyle(preset,'connect','add').caption,'');assert.equal(M.facetFlowStyle(preset,'connect','add').direction,'both');
+ assert.equal(M.facetFlowLabels(preset,'ace').length,1);assert.equal(M.facetFlowId('add','connect'),M.facetFlowId('connect','add'));
+ for(const change of [{flow:{caption:'x'.repeat(81)}},{flow:{direction:'execute'}},{flow:{script:'bad'}},{flowOverrides:[{source:'add',target:'missing'}]}, {flowOverrides:[{source:'add',target:'connect'},{source:'connect',target:'add'}]}])assert.equal(M.isFacetPreset({...preset,...change}),false);
+});
 
 test('all five measured layouts retain one attention editor, category identities and canonical edges',()=>{
  const f=diagnosticScene(),projection=f.project(),measure=f.measure(projection),before=JSON.stringify(projection);

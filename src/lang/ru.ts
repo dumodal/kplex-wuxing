@@ -1581,6 +1581,22 @@ const russianTranslations = {
   "facets.focus": "Текущая заметка",
   "facets.bandSizeHelp": "В концентрической компоновке ширина и высота задают горизонтальную и вертикальную толщину полосы. Заметки прокручиваются в верхней части каждой полосы.",
   "facets.areaSizeHelp": "Необязательное значение: {minimum}–{maximum}. Пустое поле наследует настройку. Изменение размера на холсте заменяет это значение.",
+  "facets.flow": "Направляющие процесса",
+  "facets.flowHelp": "Декоративные направляющие вертикальной и горизонтальной компоновок. Направление следует порядку категорий. Эти стрелки не создают и не доказывают связи заметок.",
+  "facets.flowDirection": "Направление потока",
+  "facets.flowForward": "Вперёд",
+  "facets.flowBackward": "Назад",
+  "facets.flowBoth": "В обе стороны",
+  "facets.flowStyle": "Стиль направляющей",
+  "facets.flowArrow": "Стрелка",
+  "facets.flowLine": "Простая линия",
+  "facets.flowNone": "Без линии и стрелки",
+  "facets.flowCaption": "Подпись",
+  "facets.flowCaptionPosition": "Положение подписи",
+  "facets.flowStart": "Начало",
+  "facets.flowMiddle": "Середина",
+  "facets.flowEnd": "Конец",
+  "facets.flowPair": "Настроить {source} → {target}",
 } as const satisfies LocaleTranslationMap;
 
 export const russianCatalog = buildLocaleCatalog(russianTranslations);

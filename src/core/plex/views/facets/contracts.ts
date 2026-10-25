@@ -5,6 +5,9 @@ export type FacetSource = "property" | "type" | "tag" | "rules";
 export type FacetLayout = "circular" | "concentric" | "vertical" | "horizontal" | "quadrants";
 export type FacetFocusAnchor = "top" | "bottom" | "left" | "right";
 export type FacetAreaSize = Readonly<{width?: number; height?: number}>;
+export type FacetFlowStyle = Readonly<{direction?: "forward" | "backward" | "both"; style?: "arrow" | "line" | "none";
+  caption?: string; captionPosition?: "start" | "middle" | "end"}>;
+export type FacetFlowOverride = Readonly<{source: string; target: string} & FacetFlowStyle>;
 export type FacetDiagnosticStatus = "unassigned" | "conflicting" | "checking" | "unresolved";
 export type FacetDiagnostics = Readonly<{combined?: boolean; side?: "top" | "right" | "bottom" | "left";
   orientation?: "horizontal" | "vertical"; showEmpty?: boolean; order?: readonly FacetDiagnosticStatus[]}>;
@@ -22,6 +25,7 @@ export type FacetPreset = Readonly<{version: 1; name: string; nameKey?: string; 
   layout?: FacetLayout; focusAnchor?: FacetFocusAnchor; reverse?: boolean;
   /** Stable defaults are separate from the existing per-canvas area dimension maps. */
   areaSizes?: Readonly<{categories?: Readonly<Record<string, FacetAreaSize>>; diagnostics?: Readonly<Record<string, FacetAreaSize>>}>;
+  flow?: FacetFlowStyle; flowOverrides?: readonly FacetFlowOverride[];
   conflictingColor: ColorValue; unassignedColor: ColorValue}>;
 /** Explicit deletion replacements also cover closed/restored canvases without editing their
  * opaque saved intent. They never reclassify or rewrite a note. Unknown future entries stay inert. */

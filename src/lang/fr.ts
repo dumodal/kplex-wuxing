@@ -1577,6 +1577,22 @@ const frenchTranslations = {
   "facets.focus": "Note ciblée",
   "facets.bandSizeHelp": "En disposition concentrique, la largeur et la hauteur définissent l’épaisseur horizontale et verticale des bandes. Les notes défilent dans leur partie supérieure.",
   "facets.areaSizeHelp": "Valeur facultative : {minimum}–{maximum}. Laissez vide pour hériter. Le redimensionnement du canevas remplace cette valeur.",
+  "facets.flow": "Guides de flux",
+  "facets.flowHelp": "Guides décoratifs des dispositions verticales et horizontales. La direction suit l’ordre des catégories. Ces flèches ne créent ni ne prouvent de relations entre notes.",
+  "facets.flowDirection": "Direction du flux",
+  "facets.flowForward": "Vers l’avant",
+  "facets.flowBackward": "Vers l’arrière",
+  "facets.flowBoth": "Les deux directions",
+  "facets.flowStyle": "Style du guide",
+  "facets.flowArrow": "Flèche",
+  "facets.flowLine": "Ligne simple",
+  "facets.flowNone": "Sans ligne ni flèche",
+  "facets.flowCaption": "Légende",
+  "facets.flowCaptionPosition": "Position de la légende",
+  "facets.flowStart": "Début",
+  "facets.flowMiddle": "Milieu",
+  "facets.flowEnd": "Fin",
+  "facets.flowPair": "Personnaliser {source} → {target}",
 } as const satisfies LocaleTranslationMap;
 
 export const frenchCatalog = buildLocaleCatalog(frenchTranslations);

@@ -106,6 +106,9 @@ export type PlexMeasurement = Readonly<{
 /** A bounded canvas-owned dimension. Optional value describes the editable dimension when
  * an area's frame is larger than its usable band thickness or other measured content. */
 export type PlexAreaDimension = Readonly<{key: string; minimum: number; maximum: number; value?: number}>;
+/** Optional bounded text inputs use the shared measurement pipeline before pure layout. */
+export type PlexDecorationText = Readonly<{id: string; label: CanvasViewText}>;
+export type PlexDecorationTextSize = Readonly<{width: number; height: number; fontSize: number}>;
 /** Optional disjoint rounded band. Bounds describe its outer frame; the inner rounded hole
  * excludes focus/inner categories from hits, highlights, counts and drop authority. */
 export type PlexAreaShape = AreaBandShape;
@@ -131,7 +134,8 @@ export type PlexArea = Readonly<{
 /** Pure presentation marks have no semantic endpoints or interaction/write authority. */
 export type PlexDecoration = Readonly<{id: string} & (
   {kind: "region"; bounds: ViewRect; shape?: PlexAreaShape; labelKey: string; label?: string; description?: CanvasViewText; areaId?: AreaId; tint?: "water" | "wood" | "fire" | "earth" | "metal"; color?: ColorValue; count?: boolean}
-  | {kind: "guide"; points: readonly ViewPoint[]; directed?: boolean; variant?: "generating" | "regulating"}
+  | {kind: "guide"; points: readonly ViewPoint[]; directed?: boolean; direction?: "forward" | "backward" | "both"; stroke?: "line" | "none";
+    caption?: Readonly<{label: CanvasViewText; bounds: ViewRect; fontSize: number}>; variant?: "generating" | "regulating"}
 )>;
 export type PlexViewLayout = Readonly<{
   positions: ReadonlyMap<OccurrenceId, ViewRect>; areas: readonly PlexArea[];
@@ -183,6 +187,8 @@ export interface PlexViewDefinition {
   /** Optional dependency declaration enlarges only the existing finite read frame's budgets.
    * No data is read by declaring it; old consumers keep their previous budget and signature. */
   readonly propertyDependencies?: (state: unknown, configuration: PlexViewConfiguration) => PlexViewPropertyDependencies;
+  /** Bounded plain decoration labels are measured without a source reader or private renderer. */
+  readonly decorationLabels?: (state: unknown, configuration: PlexViewConfiguration) => readonly PlexDecorationText[];
   /** Optional pure presentation-state actions. The session still validates/persists bounded state
    * and protects native editors; this reducer receives no host or file mutation capability. */
   readonly reduceState?: (state: unknown, action: PlexViewStateAction, configuration: PlexViewConfiguration) => PlexViewStateResult;
@@ -192,5 +198,6 @@ export interface PlexViewDefinition {
   project(input: PlexViewInput): PlexProjection | null;
   /** Layout has no source reader, scheduling or subscription capability. */
   layout(projection: PlexProjection, measurements: readonly PlexMeasurement[], preferences: unknown, editor: boolean,
-    context?: Readonly<{areaHeights: Readonly<Record<string, number>>; areaWidths?: Readonly<Record<string, number>>; configuration?: PlexViewConfiguration}>): PlexViewLayout;
+    context?: Readonly<{areaHeights: Readonly<Record<string, number>>; areaWidths?: Readonly<Record<string, number>>;
+      decorationMeasurements?: ReadonlyMap<string, PlexDecorationTextSize>; configuration?: PlexViewConfiguration}>): PlexViewLayout;
 }

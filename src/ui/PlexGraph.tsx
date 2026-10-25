@@ -1830,8 +1830,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     }
 
     // Empty labeled regions are part of a view's scene, even when no thought supplies their extents.
-    for (const decoration of scene.decorations ?? []) if (decoration.kind === "region") {
-      includeRect(decoration.bounds.x - 12, decoration.bounds.y - 12, decoration.bounds.x + decoration.bounds.width + 12, decoration.bounds.y + decoration.bounds.height + 12);
+    for (const decoration of scene.decorations ?? []) {
+      if (decoration.kind === "region") includeRect(decoration.bounds.x - 12, decoration.bounds.y - 12, decoration.bounds.x + decoration.bounds.width + 12, decoration.bounds.y + decoration.bounds.height + 12);
+      else {
+        if (decoration.stroke !== "none") for (const point of decoration.points) includeRect(point.x - 12, point.y - 12, point.x + 12, point.y + 12);
+        const bounds = decoration.caption?.bounds;if (bounds) includeRect(bounds.x - 4, bounds.y - 4, bounds.x + bounds.width + 4, bounds.y + bounds.height + 4);
+      }
     }
     for (const badge of scene.badgeBounds ?? []) includeRect(badge.bounds.x - 4, badge.bounds.y - 4, badge.bounds.x + badge.bounds.width + 4, badge.bounds.y + badge.bounds.height + 4);
 

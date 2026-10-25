@@ -3,7 +3,7 @@
 export {CANVAS_VIEW_API_VERSION} from "./contracts";
 export type {CanvasViewText, PlexNodeBadge, PlexViewStateAction, PlexViewStateResult, PlexViewDefinition, PlexViewInput,
   PlexViewRead, PlexProjection, PlexOccurrence, PlexViewEdge, PlexViewRelation, PlexRelationRead, PlexEvidenceRead,
-  PlexMeasurement, PlexArea, PlexAreaDimension, PlexDecoration, PlexViewLayout, PlexViewScopeRead, PhysicalPort, OccurrenceId,
+  PlexMeasurement, PlexArea, PlexAreaDimension, PlexDecoration, PlexDecorationText, PlexDecorationTextSize, PlexViewLayout, PlexViewScopeRead, PhysicalPort, OccurrenceId,
   AreaId, ViewPoint, ViewRect, ViewCoverage, PlexDropMeaning, PlexViewPropertyDependencies, PlexAreaShape} from "./contracts";
 export {GraphPredicateEngine, compileGraphPredicate} from "../predicate";
 export type {GraphPredicateContext, GraphPredicateResult, GraphPredicateRead, GraphPredicateDependencies} from "../predicate";

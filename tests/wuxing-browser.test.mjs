@@ -7,6 +7,28 @@ import {plexViewBrowserModules} from './support/plexViewBrowser.mjs';
 import {canvasSceneFixture} from './support/canvasSceneFixture.mjs';
 const output=await plexViewBrowserModules();
 
+test('production measured flow captions and arrow policies remain decorative across reversed linear layouts',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ document.body.style.setProperty('--text-faint','#888888');document.body.style.setProperty('--text-muted','#999999');
+ fieldCaches.get('A.md').frontmatter.phase='wood';fieldCaches.get('B.md').frontmatter.phase='metal';const ui=await mount(M.wuXingViewDefinition),before={...work};
+ const focus=ui.container.querySelector('[data-kplex-path="A.md"]'),camera=ui.container.querySelector('.kplex-camera').style.transform,relations=JSON.stringify(rows(pages.get('A.md'),'child').map(row=>[row.page.path,row.role,row.typeDefinition]));
+ for(const layout of ['horizontal','vertical'])for(const reverse of [false,true])for(const style of ['arrow','line','none']){
+  const preset={...structuredClone(M.FACET_TEMPLATES.wuxing),layout,reverse,flow:{direction:'both',style,caption:'Review <script>never executes</script>',captionPosition:'end'}};
+  settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:preset});ui.props.settings={...settings};ui.props.paintSettings=ui.props.settings;ui.render();await wait();
+  const guides=[...ui.container.querySelectorAll('.kplex-view-guide')],captions=[...ui.container.querySelectorAll('.kplex-view-guide-caption')];check(guides.length===4&&captions.length===4,'Shared renderer admits four measured adjacent guides/captions');
+  check(guides.every(guide=>style==='arrow'?guide.hasAttribute('marker-start')&&guide.hasAttribute('marker-end'):!guide.hasAttribute('marker-start')&&!guide.hasAttribute('marker-end')),'Arrowheads follow the declared line policy');
+  check(guides.every(guide=>style==='none'?getComputedStyle(guide).stroke==='none':getComputedStyle(guide).stroke!=='none'),'No-line policy leaves only the optional caption');
+  check(captions.every(caption=>caption.textContent.includes('<script>never executes</script>')&&!caption.querySelector('script')&&Number(caption.querySelector('rect').getAttribute('width'))>0),'Captions use measured literal text with no HTML execution');
+  for(const guide of guides){const points=guide.points,a=points.getItem(0),b=points.getItem(points.numberOfItems-1),delta=layout==='horizontal'?b.x-a.x:b.y-a.y;check(reverse?delta<0:delta>0,'Forward logical sequence follows geometric reversal')}
+  check(ui.container.querySelector('[data-kplex-path="A.md"]')===focus&&ui.container.querySelector('.kplex-camera').style.transform===camera,'Decorations preserve focus and manual camera');
+ }
+ check(JSON.stringify(rows(pages.get('A.md'),'child').map(row=>[row.page.path,row.role,row.typeDefinition]))===relations,'Canonical relationship evidence is unchanged');
+ check(work.body===before.body&&work.scans===before.scans&&work.acquisitions===before.acquisitions,'Caption/style/axis changes acquire no source work');
+ ui.close();plugin.actionManager.dispose();check(events.size===0,'Shared decoration subscriptions retire');style.remove();return true;
+ })()`),true)}finally{await host.cleanup()}
+});
+
 test('captured shared layout dropdown preserves two canvases and paints true concentric holes',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}

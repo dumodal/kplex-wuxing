@@ -1569,6 +1569,22 @@ const japaneseTranslations = {
   "facets.focus": "注目ノート",
   "facets.bandSizeHelp": "同心レイアウトでは、幅と高さは帯の横方向と縦方向の厚さです。ノートは各帯の上部でスクロールします。",
   "facets.areaSizeHelp": "任意の既定値：{minimum}–{maximum}。空欄で継承します。キャンバスでのサイズ変更はこの値を上書きします。",
+  "facets.flow": "ワークフローガイド",
+  "facets.flowHelp": "縦・横レイアウトの装飾ガイドです。方向はカテゴリの順序に従います。矢印はノート間の関係を作成・証明しません。",
+  "facets.flowDirection": "フローの方向",
+  "facets.flowForward": "順方向",
+  "facets.flowBackward": "逆方向",
+  "facets.flowBoth": "双方向",
+  "facets.flowStyle": "ガイドのスタイル",
+  "facets.flowArrow": "矢印",
+  "facets.flowLine": "直線",
+  "facets.flowNone": "線も矢印もなし",
+  "facets.flowCaption": "キャプション",
+  "facets.flowCaptionPosition": "キャプションの位置",
+  "facets.flowStart": "始点",
+  "facets.flowMiddle": "中央",
+  "facets.flowEnd": "終点",
+  "facets.flowPair": "{source} → {target} を個別設定",
 } as const satisfies LocaleTranslationMap;
 
 export const japaneseCatalog = buildLocaleCatalog(japaneseTranslations);

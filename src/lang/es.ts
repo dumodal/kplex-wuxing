@@ -1577,6 +1577,22 @@ const spanishTranslations = {
   "facets.focus": "Nota enfocada",
   "facets.bandSizeHelp": "En disposiciones concéntricas, la anchura y la altura definen el grosor horizontal y vertical de cada banda. Las notas se desplazan en su franja superior.",
   "facets.areaSizeHelp": "Valor opcional: {minimum}–{maximum}. Déjalo vacío para heredar. Los controles del lienzo anulan este valor.",
+  "facets.flow": "Guías de flujo",
+  "facets.flowHelp": "Guías decorativas en disposiciones verticales y horizontales. La dirección sigue el orden de categorías. Estas flechas no crean ni demuestran relaciones entre notas.",
+  "facets.flowDirection": "Dirección del flujo",
+  "facets.flowForward": "Adelante",
+  "facets.flowBackward": "Atrás",
+  "facets.flowBoth": "Ambas direcciones",
+  "facets.flowStyle": "Estilo de guía",
+  "facets.flowArrow": "Flecha",
+  "facets.flowLine": "Línea simple",
+  "facets.flowNone": "Sin línea ni flecha",
+  "facets.flowCaption": "Texto",
+  "facets.flowCaptionPosition": "Posición del texto",
+  "facets.flowStart": "Inicio",
+  "facets.flowMiddle": "Centro",
+  "facets.flowEnd": "Final",
+  "facets.flowPair": "Personalizar {source} → {target}",
 } as const satisfies LocaleTranslationMap;
 
 export const spanishCatalog = buildLocaleCatalog(spanishTranslations);

@@ -1,6 +1,6 @@
 /** Deterministic measured3–7-region packing around one attention/editor envelope. Existing host
  * owners retain clipping/reflow/resizing/camera. Guides remain decorative without endpoints. */
-import type {PlexProjection, PlexMeasurement, PlexViewLayout, PlexArea, PlexDecoration, ViewRect, CanvasViewText} from "../contracts";
+import type {PlexProjection, PlexMeasurement, PlexViewLayout, PlexArea, PlexDecoration, ViewRect, CanvasViewText, PlexDecorationTextSize} from "../contracts";
 import type {FacetPreset, FacetCanvasState} from "./contracts";
 import {measuredAreaGrid, measuredAreaColumns} from "../areaLayout";
 import {nodeBadgeBounds, nodeBadgeInsets} from "../decorations";
@@ -9,6 +9,7 @@ import {facetAreaId, facetCombinedAreaId} from "./projection";
 import {facetPresetAssignments} from "./assignment";
 import {facetDiagnostics, facetLayout, facetLayoutOrder} from "./presentation";
 import {facetCategoryFrames} from "./layoutStrategies";
+import {layoutFacetFlows} from "./flow";
 
 /** Reuse the shared measured grid and native area reflow owner. Fixed attention never belongs
  * to a scroll surface, and empty regions retain their visible bounds and controls. */
@@ -30,7 +31,8 @@ function pack(id: string, bounds: ViewRect, projection: PlexProjection, measured
 /** Ring radius separates neighboring region diagonals and reserves the center's actual editor
  * plus badge envelope. Preset-scoped area overrides never leak to another preset/category. */
 export function layoutFacets(projection: PlexProjection, measured: readonly PlexMeasurement[], presetId: string, preset: FacetPreset,
-  areaHeights: Readonly<Record<string, number>> = {}, editable = true, areaWidths: Readonly<Record<string, number>> = {}, state?: FacetCanvasState | null): PlexViewLayout {
+  areaHeights: Readonly<Record<string, number>> = {}, editable = true, areaWidths: Readonly<Record<string, number>> = {}, state?: FacetCanvasState | null,
+  decorationMeasurements?: ReadonlyMap<string, PlexDecorationTextSize>): PlexViewLayout {
   const measurements = new Map(measured.map(row => [row.id, row])), attention = measurements.get(projection.entry);
   const assignments = new Set(editable ? facetPresetAssignments(presetId, preset).map(target => target.id) : []);
   if (!attention || preset.order.length < 3 || preset.order.length > 7) throw new Error("Invalid Facets center/categories");
@@ -68,6 +70,7 @@ export function layoutFacets(projection: PlexProjection, measured: readonly Plex
       areaId: id, count: true, ...(frame.shape ? {shape: frame.shape} : {}), ...(description ? {description} : {}), ...(preset.tints ? {color: category.color} : {})});
   }
   const wuxing = preset.interpretation === "wuxing" && facetHasWuXingPhases(preset);
+  decorations.push(...layoutFacetFlows(preset, order, strategy.frames, layout.effective, decorationMeasurements));
   const cycle: readonly string[] = wuxing ? FACET_WUXING_CYCLE : order;
   if (preset.guides && layout.effective === "circular") for (const step of wuxing && preset.regulatingGuides ? [1, 2] : [1]) for (let index = 0; index < cycle.length; index++) {
     const aIndex = order.indexOf(cycle[index]), bIndex = order.indexOf(cycle[(index + step) % cycle.length]);
@@ -91,7 +94,10 @@ export function layoutFacets(projection: PlexProjection, measured: readonly Plex
   // routes are decorative, but still occupy space and must not run through diagnostic cards.
   const diagnostics = facetDiagnostics(preset, presetId, state), centerBounds = {x: -attention.width / 2, y: -attention.height / 2, width: attention.width, height: attention.height};
   const footprint = [...areas.map(/** Area rectangles already include their bounded scroll surfaces. */ area => area.bounds), centerBounds, ...(badge ? [badge] : [])];
-  for (const mark of decorations) if (mark.kind === "guide") for (const point of mark.points) footprint.push({x: point.x - 12, y: point.y - 12, width: 24, height: 24});
+  for (const mark of decorations) if (mark.kind === "guide") {
+    if (mark.stroke !== "none") for (const point of mark.points) footprint.push({x: point.x - 12, y: point.y - 12, width: 24, height: 24});
+    if (mark.caption) footprint.push(mark.caption.bounds);
+  }
   const left = Math.min(...footprint.map(rect => rect.x)), right = Math.max(...footprint.map(rect => rect.x + rect.width));
   const top = Math.min(...footprint.map(rect => rect.y)), bottom = Math.max(...footprint.map(rect => rect.y + rect.height));
   const combinedId = facetCombinedAreaId(presetId), combinedVisible = diagnostics.showEmpty !== false || projection.occurrences.some(row => row.areaId === combinedId);

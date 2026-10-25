@@ -21,6 +21,20 @@ const initialize=`
 `;
 const scenario=body=>colorEditorScenario(`(async()=>{${initialize}\n${body}\ntab.hide();return true})()`);
 
+test('native workflow defaults and stable pair overrides compose without editing relationship data',async()=>{
+ assert.equal(await scenario(`
+ const m=manager(),editor=edit(m,'ACE'),select=(key,value,index=0)=>{const node=fields(editor,t(key))[index];node.value=value;node.dispatchEvent(new Event('change',{bubbles:true}))};
+ select('facets.layout','horizontal');editor.contentEl.querySelector('.kplex-facet-flow-settings').open=true;
+ select('facets.flowDirection','both');select('facets.flowStyle','line');input(fields(editor,t('facets.flowCaption'))[0],'Default workflow');
+ const pair=fields(editor,t('facets.flowPair',{source:'Add',target:'Connect'}))[0];pair.checked=true;pair.dispatchEvent(new Event('change',{bubbles:true}));
+ check(editor.contentEl.querySelector('.kplex-facet-flow-settings').open,'Pair edits preserve the open native disclosure');
+ input(fields(editor,t('facets.flowCaption'))[1],'');select('facets.flowDirection','backward',1);
+ equal(p.writes,[],'Workflow remains inert detached configuration');await save(editor);await drain();
+ const preset=disk.canvasViewSettings.wuxing.values.presets.ace;equal(preset.flow,{direction:'both',style:'line',caption:'Default workflow'},'Sequential default fields compose');equal(preset.flowOverrides,[{source:'add',target:'connect',caption:'',direction:'backward'}],'Pair stores explicit fields only, including an intentional blank caption');
+ equal(preset.categories,M.FACET_TEMPLATES.ace.categories,'Guide editing never changes recognizers or assignment values');close(m);
+ `),true);
+});
+
 test('native layout defaults preview anchors and preserve exact independent area defaults through one save',async()=>{
  assert.equal(await scenario(`
  const m=manager(),editor=edit(m,'PARA'),select=(key,value)=>{const node=fields(editor,t(key))[0];node.value=value;node.dispatchEvent(new Event('change',{bubbles:true}))};
