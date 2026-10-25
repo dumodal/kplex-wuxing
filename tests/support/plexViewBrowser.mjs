@@ -28,6 +28,11 @@ return await build({stdin:{resolveDir:process.cwd(),contents:`
   export {editViewConfiguration, editViewConfigurationAt} from './src/core/plex/views/configuration';export {wuXingViewDefinition} from './src/core/plex/views/wuxing/definition';
   export {mindMapViewDefinition} from './src/core/plex/views/mindmap/definition';
   export {FACET_TEMPLATES} from './src/core/plex/views/facets/templates';
+  export {sectionViewProbeDefinition} from './tests/support/sectionViewProbe';
+  export {createPlexSectionViewContext} from './src/ui/plexViews/sections';
+  export {buildCentralSectionExpansion,projectCentralSectionExpansion} from './src/index/SectionExpansion';
+  export {plexViewRead,prepareViewScene} from './src/ui/plexViews/prepareScene';
+  export {plexSectionReference,plexSectionAnchor,visiblePlexSection} from './src/core/plex/views/sections';
   export {builtInCanvasViewSettings} from './src/ui/plexViews/settingsContributions';
   export {CanvasViewContributionController} from './src/ui/plexViews/CanvasViewContributionController';
   export {CanvasPropertyAssignmentActions} from './src/ui/CanvasPropertyAssignmentActions';

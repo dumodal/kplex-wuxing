@@ -58,6 +58,8 @@ export type CentralSectionExpansion = {
   sections: ExpandedSection[];
   explanations: Map<string, RelationshipExplanation>;
   projectionSource: SectionProjectionSource;
+  /** Captured source identity for optional revision-scoped view anchors. No content is retained. */
+  sourceRevision?: Readonly<{file: TFile; path: string; mtime: number; size: number}>;
 };
 
 type HeadingRange = { id: string; heading: string; level: number; line: number; start: number; end: number; subpath: string; parentId: string | null };
@@ -255,6 +257,7 @@ export async function buildCentralSectionExpansion(
 ): Promise<CentralSectionExpansion | null> {
   const file = centerPage.file;
   if (!file || file.extension !== "md") return null;
+  const sourceRevision = file.stat ? {file, path: file.path, mtime: file.stat.mtime, size: file.stat.size} : undefined;
   const content = await plugin.app.vault.cachedRead(file);
   if (!shouldContinue()) return null;
   const headings = scanHeadings(content);
@@ -460,7 +463,7 @@ export async function buildCentralSectionExpansion(
   }
 
   return {
-    centerPath: centerPage.path, centerNeighborhood, sections, explanations,
+    centerPath: centerPage.path, centerNeighborhood, sections, explanations, sourceRevision,
     projectionSource: {
       centerPage, centerEvidence, sections: projectionSections,
       linkPlacements,
@@ -670,5 +673,5 @@ export function projectCentralSectionExpansion(
     });
   }
 
-  return { centerPath: expansion.centerPath, centerNeighborhood, sections, explanations, projectionSource: source };
+  return { centerPath: expansion.centerPath, centerNeighborhood, sections, explanations, projectionSource: source, sourceRevision: expansion.sourceRevision };
 }

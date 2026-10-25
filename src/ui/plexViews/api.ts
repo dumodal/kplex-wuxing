@@ -6,6 +6,8 @@ export type {CanvasViewManagerContext} from "./managerContracts";
 export {PredicateConditions} from "../predicates/PredicateConditions";
 export {PredicateRuleEditor} from "../predicates/PredicateRuleEditor";
 export type {PredicateSuggestions} from "../predicates/PredicateRuleEditor";
+export {createPlexSectionViewContext} from "./sections";
+export type {PlexSectionViewContext} from "./sections";
 export type {CanvasViewContributionContext, CanvasViewCommand, CanvasViewMenuItem, CanvasViewChoice,
   CanvasViewLayoutControl, CapturedCanvasViewCommand, CanvasViewCommandOutcome} from "./contributionContracts";
 export {CanvasViewContributionController} from "./CanvasViewContributionController";

@@ -1324,7 +1324,7 @@ test("ActionButton rendered browser behavior", () => {
 /** Exercise production reconciliation keys and thought DOM across a mutable rename/placeholder handover. */
 function attachmentRenameBrowserEntry() {
   return `
-import {occurrenceKey,edgeOccurrence,semanticSceneEdge} from ${JSON.stringify(join(root,'src/ui/plexViews/scene.ts'))};
+import {occurrenceKey,edgeOccurrence,edgePhysicalOccurrence,semanticSceneEdge} from ${JSON.stringify(join(root,'src/ui/plexViews/scene.ts'))};
 import {classicViewDefinition,classicAreaDropRole,classicPorts} from ${JSON.stringify(join(root,'src/core/plex/views/classic/definition.ts'))};
 import * as classicLayout from ${JSON.stringify(join(root,'src/ui/layout.ts'))};
 const viewDefinition=classicViewDefinition,viewFailed=false,viewLifetime=0,viewSession=undefined,badgeColorRevision=0;
@@ -1534,7 +1534,7 @@ function editorHistoryBrowserEntry(){
   const history=uiDefinitions("src/ui/structuralConnectionActions.ts",["tagMembershipPair"])+uiDefinitions("src/ui/StructuralNodeDropActions.ts",["structuralDropKind"])+uiDefinitions("src/ui/PlexGraph.tsx",["normalizedRole","startNodeDrag","relationshipDropRoles","historyRelationshipTarget","clearHistoryDragHover","updateHistoryDragHover","cancel","lostPointerCapture"]);
   const editor=uiDefinitions("src/ui/CentralNodeEditor.tsx",["CentralNodeEditor"]);
   return `
-import {occurrenceKey,edgeOccurrence,semanticSceneEdge} from ${JSON.stringify(join(root,'src/ui/plexViews/scene.ts'))};
+import {occurrenceKey,edgeOccurrence,edgePhysicalOccurrence,semanticSceneEdge} from ${JSON.stringify(join(root,'src/ui/plexViews/scene.ts'))};
 import {classicViewDefinition,classicAreaDropRole,classicPorts} from ${JSON.stringify(join(root,'src/core/plex/views/classic/definition.ts'))};
 import * as classicLayout from ${JSON.stringify(join(root,'src/ui/layout.ts'))};
 const viewDefinition=classicViewDefinition,viewFailed=false,viewLifetime=0;
@@ -1626,7 +1626,7 @@ function externalAndPinnedDropBrowserEntry() {
     "relationshipDropRoles", "historyRelationshipTarget", "clearHistoryDragHover", "updateHistoryDragHover", "openHistoryRelationshipMenu",
     "beginNativeNodeDrag", "endNativeNodeDrag", "nativeDragRelationship", "navigationNode", "isDraggedNode", "dropOriginAt", "externalFileDropTarget", "propertyAssignmentAt", "dragExternalFileOver", "leaveExternalFile", "dropExternalFile", "semanticRoleForPosition", "nodeDropRole", "commitNodeAreaDrop", "relationshipDropArea", "up"]);
   return `
-import {occurrenceKey,edgeOccurrence,semanticSceneEdge} from ${JSON.stringify(join(root,'src/ui/plexViews/scene.ts'))};
+import {occurrenceKey,edgeOccurrence,edgePhysicalOccurrence,semanticSceneEdge} from ${JSON.stringify(join(root,'src/ui/plexViews/scene.ts'))};
 import {classicViewDefinition,classicAreaDropRole,classicPorts} from ${JSON.stringify(join(root,'src/core/plex/views/classic/definition.ts'))};
 import * as classicLayout from ${JSON.stringify(join(root,'src/ui/layout.ts'))};
 const viewDefinition=classicViewDefinition,viewFailed=false,viewLifetime=0;
@@ -2435,7 +2435,7 @@ test("long node titles and aliases retain exact rendered truncation and measured
 /** Execute the production App/scene memo owners and layout with real React reconciliation. */
 function colorPaintBrowserEntry() {
  return `
-import {occurrenceKey,edgeOccurrence,semanticSceneEdge} from ${JSON.stringify(join(root,'src/ui/plexViews/scene.ts'))};
+import {occurrenceKey,edgeOccurrence,edgePhysicalOccurrence,semanticSceneEdge} from ${JSON.stringify(join(root,'src/ui/plexViews/scene.ts'))};
 import {classicViewDefinition,classicAreaDropRole,classicPorts} from ${JSON.stringify(join(root,'src/core/plex/views/classic/definition.ts'))};
 import * as classicLayout from ${JSON.stringify(join(root,'src/ui/layout.ts'))};
 const viewDefinition=classicViewDefinition,viewFailed=false,viewLifetime=0;
@@ -2502,7 +2502,7 @@ function crosslinkPeekBrowserEntry(){
    ts.forEachChild(node,visit)};visit(source);assert.equal(effects.length,2);assert.equal(edgeHighlights.length,1);
  const effectCode=ts.transpileModule(effects.join('\n'),{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
  return `
-import {occurrenceKey,edgeOccurrence,semanticSceneEdge} from ${JSON.stringify(join(root,'src/ui/plexViews/scene.ts'))};
+import {occurrenceKey,edgeOccurrence,edgePhysicalOccurrence,semanticSceneEdge} from ${JSON.stringify(join(root,'src/ui/plexViews/scene.ts'))};
 import {classicViewDefinition,classicAreaDropRole,classicPorts} from ${JSON.stringify(join(root,'src/core/plex/views/classic/definition.ts'))};
 import * as classicLayout from ${JSON.stringify(join(root,'src/ui/layout.ts'))};
 const viewDefinition=classicViewDefinition,viewFailed=false,viewLifetime=0;
@@ -2573,6 +2573,7 @@ test('transient crosslink paint uses mounted projection/highlight/SVG owners wit
 /** Render the actual caption callback and shared SVG labels for ordinary and transient endpoints. */
 function directionalCaptionBrowserEntry(){return `
 import React,{useCallback}from'react';import{flushSync}from'react-dom';import{createRoot}from'react-dom/client';
+import{edgePhysicalOccurrence}from ${JSON.stringify(join(root,'src/ui/plexViews/scene.ts'))};
 import{ontologyConfiguration}from ${JSON.stringify(join(root,'src/core/contracts/ontologyConfiguration.ts'))};
 import{hasDirectionalCaption,directionalRelationCaption}from ${JSON.stringify(join(root,'src/core/plex/directionalRelationCaption.ts'))};
 import{classicPorts}from ${JSON.stringify(join(root,"src/core/plex/views/classic/definition.ts"))};

@@ -23,7 +23,8 @@ const plugin={settings,index,viewSettingsRegistry:M.builtInCanvasViewSettings,tr
  getHierarchyColorRevision:()=>0,isActionSurfaceCurrent:()=>true,getSavedSettingsPolicy:()=>null};
 plugin.actionManager=new M.ActionManager({readCommandContext:()=>({sharedCenter:null,focusRegion:'graph'}),validateNode:()=>true});
 const mount=async definition=>{
- const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.exampleViewDefinition]),session=new M.PlexViewSession(registry,()=>{});session.select(definition.id);
+ const registered=[...M.builtInPlexViews.available,M.exampleViewDefinition];if(!registered.some(row=>row.id===definition.id))registered.push(definition);
+ const registry=new M.PlexViewRegistry(registered),session=new M.PlexViewSession(registry,()=>{});session.select(definition.id);
  const container=document.createElement('div');container.className='kplex-app';container.style.cssText='width:1200px;height:900px;position:relative';document.body.append(container);
  const root=M.createRoot(container),ports={current:null},moves=[];
  const props={plugin,index,settings,paintSettings:settings,paintLenses:{lenses:[]},surface:'leaf',hostLeaf:{},predicate:null,lenses:{lenses:[]},filterLayoutMode:'keep',predicateRevision:0,

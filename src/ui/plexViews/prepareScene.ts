@@ -19,6 +19,8 @@ import {validCanvasViewText} from "../../core/plex/views/presentation";
 import {validPlexNodeBadge, nodeBadgeBounds, boundedViewColors} from "../../core/plex/views/decorations";
 import {canvasViewText} from "./labels";
 import {validPropertyAssignment} from "../../core/plex/views/propertyAssignment";
+import {plexSectionReference, visiblePlexSection, plexSectionAnchor} from "../../core/plex/views/sections";
+import type {PlexSectionViewContext} from "./sections";
 import {validPlexDropMeaning, plexAreaDropMeaning} from "../../core/plex/views/dropTargets";
 
 type SceneRead = Pick<GraphIndex, "get" | "neighbours" | "sortNeighbours" | "titleFor" | "captureSemanticGateRead" | "isVisiblePage" | "explainRelationship">
@@ -151,7 +153,8 @@ function validateProjection(projection: PlexProjection, maximum: number, definit
     if (!edge.id || edges.has(edge.id) || !ids.has(edge.source) || !ids.has(edge.target)
       || !ports.has(edge.sourcePort) || !ports.has(edge.targetPort)) throw new Error("Invalid occurrence endpoint");
     edges.add(edge.id);
-    if (edge.kind === "semantic" && (ids.get(edge.source)?.nodeId !== edge.sourceNode || ids.get(edge.target)?.nodeId !== edge.targetNode
+    if (edge.kind === "semantic" && (ids.get(edge.source)?.section || ids.get(edge.target)?.section
+      || ids.get(edge.source)?.nodeId !== edge.sourceNode || ids.get(edge.target)?.nodeId !== edge.targetNode
       || edge.relation.node.id !== edge.targetNode)) throw new Error("Semantic edge does not match its canonical endpoints");
   }
 }
@@ -160,7 +163,8 @@ function validateProjection(projection: PlexProjection, maximum: number, definit
 export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewRead, source: Pick<GraphIndex, "get" | "titleFor">,
   attention: string, state: unknown, settings: KplexSettings, current: () => boolean,
   editorSize?: {width: number; height: number}, matches: (node: PositionedNode) => boolean = () => true,
-  grouping?: {translate: Translator; unfolded: ReadonlySet<string>; areaHeights?: Readonly<Record<string, number>>; layoutRoot?: NodeId; retainedScopes?: readonly NodeId[]},
+  grouping?: {translate: Translator; unfolded: ReadonlySet<string>; areaHeights?: Readonly<Record<string, number>>; layoutRoot?: NodeId; retainedScopes?: readonly NodeId[];
+    sections?: PlexSectionViewContext | null},
   editorHost?: OccurrenceEditorHost): PreparedViewScene {
   const empty: HostPlexScene = {nodes: [], edges: [], zoneViewports: {}, zoneAreas: {}};
   try {
@@ -171,11 +175,23 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
     if (!Array.isArray(propertyAssignments) || propertyAssignments.length > 32 || !propertyAssignments.every(validPropertyAssignment)
       || new Set(propertyAssignments.map(target => target.id)).size !== propertyAssignments.length) throw new Error("Invalid property assignment targets");
     const layoutRoot = definition.navigation === "rooted" ? grouping?.layoutRoot ?? nodeId(attention) : undefined;
+    const requestedSections = definition.capabilities.sections === true ? grouping?.sections : undefined;
+    const sectionHost = !editorSize && !editorHost?.bindings.length && requestedSections?.isCurrent() ? requestedSections : null;
     const projection = definition.project({attention: nodeId(attention), layoutRoot, retainedScopes: grouping?.retainedScopes,
       editors: editorHost?.bindings.map(binding => ({occurrenceId: binding.occurrenceId, nodeId: binding.target.nodeId})),
-      read, maximum: settings.maxItemCount, state, configuration});
+      read, maximum: settings.maxItemCount, state, configuration,
+      ...(requestedSections !== undefined ? {sections: sectionHost ? {status: "available", snapshot: sectionHost.snapshot}
+        : {status: "unavailable", reason: editorSize || editorHost?.bindings.length ? "editor" : "source"}} : {})});
     if (!projection || !current() || !read.isCurrent()) return {scene: empty, projection: null, failure: true};
     validateProjection(projection, maximum, definition);
+    const sectionOccurrences = new Map<string, string>();
+    for (const occurrence of projection.occurrences) if (occurrence.section) {
+      if (!sectionHost || !plexSectionReference(sectionHost.snapshot, occurrence.section)
+        || occurrence.nodeId !== occurrence.section.documentId || !sectionHost.snapshot.visible.includes(occurrence.section.sectionId)
+        || sectionOccurrences.has(occurrence.section.sectionId) || occurrence.id === projection.editor || occurrence.id === projection.entry
+        || occurrence.id === projection.root) throw new Error("Invalid section row occurrence");
+      sectionOccurrences.set(occurrence.section.sectionId, occurrence.id);
+    }
     if (projection.heading !== undefined && projection.heading !== null && !validCanvasViewText(projection.heading)) throw new Error("Invalid canvas heading");
     if (projection.status !== undefined && !validCanvasViewText(projection.status)) throw new Error("Invalid canvas status");
     if (definition.colorReferences) boundedViewColors(definition.colorReferences(configuration));
@@ -192,9 +208,11 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
     const nodes = new Map<string, PositionedNode>();
     const occurrences = new Map(projection.occurrences.map(row => [row.id, row])), matched = new Set<string>();
     for (const occurrence of projection.occurrences) {
-      const page = occurrence.nodeId && read.node(occurrence.nodeId) ? source.get(occurrence.nodeId) : null; if (!page || page.transient) continue;
+      const canonical = occurrence.nodeId && read.node(occurrence.nodeId) ? source.get(occurrence.nodeId) : null;
+      const page = canonical && occurrence.section ? sectionHost?.page(occurrence.section) : canonical;
+      if (!page || page.transient && !occurrence.section) continue;
       pages.set(occurrence.id, page);
-      const isRoot = layoutRoot ? occurrence.id === rootOccurrence : occurrence.nodeId === projection.attention;
+      const isRoot = !occurrence.section && (layoutRoot ? occurrence.id === rootOccurrence : occurrence.nodeId === projection.attention);
       const role = occurrence.role ?? (isRoot ? "center" : "child"), relation = occurrence.relation ? {page, role: occurrence.relation.role,
         relationType: occurrence.relation.relationType, typeDefinition: occurrence.relation.definition, linkDirection: occurrence.relation.direction} : null;
       const style = resolveNodeStyle(page, relation, role, settings), label = source.titleFor(page);
@@ -213,7 +231,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
         role, relationType: relation?.relationType, typeDefinition: relation?.typeDefinition, linkDirection: relation?.linkDirection,
         ...(occurrence.branch ? {branch: occurrence.branch, semanticSourceId: occurrence.branch.parent ? occurrences.get(occurrence.branch.parent)?.nodeId : undefined} : {}),
         physicalPorts: occurrence.ports ?? {}, peerPort: occurrence.peerPort, x: 0, y: 0, ...size, label, style, ...deferredNodeCounts()};
-      const matching = matches(node);
+      const matching = occurrence.section ? true : matches(node);
       if (matching || occurrence.id === legacyEditor || boundEditor) matched.add(occurrence.id);
       if (!matching && occurrence.id !== legacyEditor && !boundEditor && !definition.hierarchy) continue;
       nodes.set(occurrence.id, node); measurements.push({id: occurrence.id, ...size, expandedWidth: size.width, expandedReserve: 0,
@@ -235,7 +253,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
     if (settings.groupRelations && grouping) {
       const partitions = new Map<string, PlexOccurrence[]>();
       const branchParents = definition.hierarchy ? new Set(filtered.occurrences.flatMap(row => row.branch?.parent ? [row.branch.parent] : [])) : null;
-      for (const occurrence of filtered.occurrences) if (occurrence.groupingPartition && occurrence.id !== filtered.root
+      for (const occurrence of filtered.occurrences) if (!occurrence.section && occurrence.groupingPartition && occurrence.id !== filtered.root
         && occurrence.id !== filtered.editor && occurrence.id !== filtered.entry && !branchParents?.has(occurrence.id) && !boundEditors.has(occurrence.id)) {
         const partition = JSON.stringify([occurrence.areaId ?? null, occurrence.groupingPartition]);
         const members = partitions.get(partition) ?? []; members.push(occurrence); partitions.set(partition, members);
@@ -295,15 +313,33 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
     const edges: PositionedEdge[] = filtered.edges.map(edge => {
       const semantic = edge.kind === "semantic", role: Role = semantic ? edge.relation.role : "child";
       const target = pages.get(edge.target)!;
+      const physicalSection = (reference: typeof edge.sourceSection): string | undefined => {
+        if (!reference) return undefined;
+        if (edge.kind !== "semantic" || !sectionHost || reference.documentId !== edge.sourceNode || !plexSectionReference(sectionHost.snapshot, reference)) throw new Error("Invalid physical section endpoint");
+        const visible = visiblePlexSection(sectionHost.snapshot, reference), occurrence = visible && sectionOccurrences.get(visible.sectionId);
+        const proven = plexSectionAnchor(sectionHost.snapshot, edge.targetNode, edge.relation.role);
+        if (visible?.sectionId !== proven?.sectionId) throw new Error("Unproven physical section endpoint");
+        return occurrence && nodes.has(occurrence) ? occurrence : undefined;
+      };
+      const sourceSectionOccurrence = physicalSection(edge.sourceSection);
       return {id: edge.id, kind: edge.kind, sourceOccurrence: edge.source, targetOccurrence: edge.target,
         sourcePath: semantic ? edge.sourceNode : pages.get(edge.source)!.path, targetPath: semantic ? edge.targetNode : target.path,
         sourcePort: edge.sourcePort, targetPort: edge.targetPort, role, relationType: semantic ? edge.relation.relationType : RelationType.INFERRED,
+        ...(sourceSectionOccurrence ? {sourceSectionOccurrence} : {}),
         typeDefinition: semantic ? edge.relation.definition : undefined, direction: semantic ? edge.relation.direction : null,
         style: semantic ? resolveLinkStyle({page: target, role, relationType: edge.relation.relationType,
           typeDefinition: edge.relation.definition, linkDirection: edge.relation.direction}, settings, pages.get(edge.source)) : settings.baseLinkStyle};
     });
     const scene: HostPlexScene = {nodes: [...nodes.values()], edges, zoneViewports: {}, zoneAreas: {}, projection: filtered, areas: layout.areas,
       entryOccurrence: filtered.entry, editorOccurrence: filtered.editor, frameOccurrence: filtered.frame, decorations: layout.decorations, propertyAssignments};
+    if (sectionHost) scene.sectionTreeEdges = [...sectionOccurrences].flatMap(([id, targetOccurrence]) => {
+      const row = sectionHost.snapshot.rows.find(row => row.id === id)!;
+      const parent = row.parent && visiblePlexSection(sectionHost.snapshot, {...sectionHost.snapshot, sectionId: row.parent});
+      const sourceOccurrence = parent ? sectionOccurrences.get(parent.sectionId) : filtered.root ?? filtered.entry;
+      const sourcePage = sourceOccurrence && pages.get(sourceOccurrence), targetPage = pages.get(targetOccurrence);
+      return sourceOccurrence && sourcePage && targetPage ? [{id: `section-tree-${targetOccurrence}`, sourceOccurrence, targetOccurrence,
+        sourcePath: sourcePage.path, targetPath: targetPage.path}] : [];
+    });
     scene.badgeBounds = [...nodes].flatMap(([id, node]) => node.viewBadge ? [{occurrenceId: id, bounds: nodeBadgeBounds(node, node.viewBadge)}] : []);
     if (boundEditors.size) scene.boundEditors = [...boundEditors.values()];
     const areaIds = new Set<string>();
@@ -343,6 +379,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
         || mark.directed !== undefined && typeof mark.directed !== "boolean"
         || mark.variant !== undefined && mark.variant !== "generating" && mark.variant !== "regulating") throw new Error("Invalid decoration guide");
     }
+    if (sectionHost && !sectionHost.isCurrent()) throw new Error("Retired section revision");
     return {scene, projection: filtered, failure: false};
   } catch { return {scene: empty, projection: null, failure: true}; }
 }

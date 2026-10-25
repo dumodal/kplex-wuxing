@@ -12,6 +12,8 @@ export type {NotePropertyAvailability, NotePropertyRead} from "../noteProperties
 export {evaluatePortablePredicateContexts} from "../lens";
 export type {GraphNodeView, NodeId} from "../../graph/model";
 export type {ColorValue} from "../../contracts/colorValue";
+export type {PlexSectionRef, PlexSectionRow, PlexSectionSnapshot, PlexSectionRead, PlexSectionProvenance} from "./sections";
+export {validPlexSectionSnapshot, plexSectionReference, visiblePlexSection, plexSectionAnchor} from "./sections";
 export {PlexViewRegistry} from "./registry";
 export {readViewConfiguration, readViewConfigurationAt, editViewConfiguration, editViewConfigurationAt,
   resetViewConfiguration, migrateViewConfiguration, removeViewConfiguration, VIEW_CONFIGURATION_LIMITS} from "./configuration";

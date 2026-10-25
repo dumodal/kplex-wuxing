@@ -181,6 +181,8 @@ export type PositionedEdge = {
   kind?: "semantic" | "derived" | "decorative";
   sourceOccurrence?: string;
   targetOccurrence?: string;
+  /** Measured sub-node geometry only; canonical occurrence/path/edit endpoints stay unchanged. */
+  sourceSectionOccurrence?: string;
   sourcePort?: GateSide;
   targetPort?: GateSide;
   /** Display-only directional wording; physical typeDefinition remains the style/filter/mutation key. */

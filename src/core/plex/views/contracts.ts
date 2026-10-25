@@ -7,6 +7,7 @@ import type {PlexViewConfiguration, PlexViewConfigurationSchema} from "./configu
 import type {NotePropertyAvailability, NotePropertyRead} from "../noteProperties";
 import type {ColorValue} from "../../contracts/colorValue";
 import type {PlexPropertyAssignment} from "./propertyAssignment";
+import type {PlexSectionRef, PlexSectionRead} from "./sections";
 
 /** Policy API compatibility, independent of configuration and session payload schema versions. */
 export const CANVAS_VIEW_API_VERSION = 1 as const;
@@ -67,6 +68,8 @@ export type PlexOccurrence = Readonly<{
   /** Optional semantic context for existing styles/lenses. It does not determine physical placement. */
   role?: Role; relation?: PlexViewRelation;
   groupingPartition?: string;
+  /** A measured transient row of one explicit document; it is never an editor or another note. */
+  section?: PlexSectionRef;
   /** Explicit occurrence hierarchy; canonical child semantics remain in real edge references. */
   branch?: PlexBranch;
   ports?: Partial<Record<PhysicalPort, "parent" | "child" | "left" | "right">>;
@@ -75,6 +78,8 @@ export type PlexOccurrence = Readonly<{
 } & ({nodeId: NodeId; synthetic?: never} | {nodeId?: never; synthetic: {kind: "group"; members: readonly OccurrenceId[]}})>;
 export type PlexViewEdge = Readonly<{
   id: string; source: OccurrenceId; target: OccurrenceId; sourcePort: PhysicalPort; targetPort: PhysicalPort;
+  /** Physical sub-node attachment only; canonical occurrence/evidence endpoints stay intact. */
+  sourceSection?: PlexSectionRef;
 } & ({kind: "semantic"; sourceNode: NodeId; targetNode: NodeId; relation: PlexViewRelation}
   | {kind: "derived" | "decorative"; evidence?: readonly {sourceNode: NodeId; targetNode: NodeId; relation: PlexViewRelation}[]})>;
 export type PlexProjection = Readonly<{
@@ -129,6 +134,8 @@ export type PlexViewInput = Readonly<{
   editors?: readonly Readonly<{occurrenceId: OccurrenceId; nodeId: NodeId}>[];
   /** Type-wide configuration is separate from native-session state. */
   configuration?: PlexViewConfiguration;
+  /** Supplied only for explicitly expanded, current, single-document section presentation. */
+  sections?: PlexSectionRead;
 }>;
 /** Bounded dependency declaration, never an acquisition request or property inventory. */
 export type PlexViewPropertyDependencies = Readonly<{fields: readonly string[]; evidence?: boolean}>;

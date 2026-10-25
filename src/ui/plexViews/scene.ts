@@ -10,7 +10,7 @@ export type SceneAreaBounds = {key: string; left: number; top: number; width: nu
 export type HostPlexScene = {
   nodes: PositionedNode[]; edges: PositionedEdge[];
   zoneViewports: Partial<Record<string, SceneViewport>>; zoneAreas: Partial<Record<string, SceneAreaBounds>>;
-  sectionTreeEdges?: {id: string; sourcePath: string; targetPath: string}[];
+  sectionTreeEdges?: {id: string; sourcePath: string; targetPath: string; sourceOccurrence?: string; targetOccurrence?: string}[];
   projection?: PlexProjection;
   areas?: readonly PlexArea[];
   decorations?: readonly PlexDecoration[];
@@ -31,6 +31,10 @@ export function occurrenceKey(node: PositionedNode): string { return node.occurr
 /** Canonical paths are never overloaded with a visual connector's occurrence endpoint. */
 export function edgeOccurrence(edge: PositionedEdge, endpoint: "source" | "target"): string {
   return endpoint === "source" ? edge.sourceOccurrence ?? edge.sourcePath : edge.targetOccurrence ?? edge.targetPath;
+}
+/** Geometry/clipping may use a measured section row without changing canonical action identity. */
+export function edgePhysicalOccurrence(edge: PositionedEdge, endpoint: "source" | "target"): string {
+  return (endpoint === "source" ? edge.sourceSectionOccurrence : undefined) ?? edgeOccurrence(edge, endpoint);
 }
 /** Non-semantic connectors have no relationship-write authority, even when both endpoints are real notes. */
 export function semanticSceneEdge(edge: PositionedEdge): boolean { return !edge.kind || edge.kind === "semantic"; }

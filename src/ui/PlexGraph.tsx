@@ -88,7 +88,8 @@ import {plexViewContributionFor} from "./plexViews/contributions";
 import {reflowArea} from "./plexViews/reflowArea";
 import {prepareViewScene, plexViewRead, attentionFallbackScene} from "./plexViews/prepareScene";
 import {resolveOccurrenceEditorPage} from "./plexViews/occurrenceEditors";
-import {occurrenceKey, edgeOccurrence, semanticSceneEdge, semanticEdgeForTarget, type HostPlexScene} from "./plexViews/scene";
+import {occurrenceKey, edgeOccurrence, edgePhysicalOccurrence, semanticSceneEdge, semanticEdgeForTarget, type HostPlexScene} from "./plexViews/scene";
+import {createPlexSectionViewContext} from "./plexViews/sections";
 import {viewLabel} from "./plexViews/labels";
 import {ViewDecorations, viewDecorationCounts} from "./plexViews/ViewDecorations";
 import {createLegacyPropertyProvider} from "../adapters/obsidian/predicateContracts";
@@ -598,8 +599,8 @@ function Edge({
   onLeave: () => void;
   onContextMenu: (event: MouseEvent<SVGPathElement>) => void;
 }) {
-  const source = nodes.get(edge.sourceOccurrence ?? edge.sourcePath);
-  const target = nodes.get(edge.targetOccurrence ?? edge.targetPath);
+  const source = nodes.get(edgePhysicalOccurrence(edge, "source"));
+  const target = nodes.get(edgePhysicalOccurrence(edge, "target"));
   if (!source || !target) return null;
 
   const gates = gatesForEdge(edge);
@@ -862,7 +863,15 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     ? projectCentralSectionExpansion(plugin, index, sectionExpansion)
     : null, [sectionExpansion, plugin, index, sectionProjectionRevision, renderRevision, semanticRevision]);
   const [expandedSectionIds, setExpandedSectionIds] = useState<Set<string>>(new Set());
+  const sectionRevision = useRef({source: sectionExpansion, value: 0});
+  if (sectionRevision.current.source !== sectionExpansion) sectionRevision.current = {source: sectionExpansion, value: sectionRevision.current.value + 1};
   const sectionFoldCenter = useRef<string | null>(null);
+  useLayoutEffect(/** Unsupported views retire only outline presentation; native editors keep
+   * their existing document/save lifecycle and are never replaced with a section tree. */ () => {
+    if (viewDefinition.capabilities.sections === true) return;
+    setSectionExpanded(false);setSectionExpansion(null);
+    setExpandedSectionIds(current => current.size ? new Set() : current);sectionFoldCenter.current = null;
+  }, [viewDefinition.capabilities.sections, viewLifetime]);
   const [sceneTransitioning, setSceneTransitioning] = useState(false);
   const [sceneMotion] = useState(() => new ElementMotion());
   const suppressLayoutMotionUntil = useRef(0);
@@ -952,11 +961,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     try {viewDependencies = viewDefinition.propertyDependencies?.(state, readViewConfiguration(viewDefinition, settings.canvasViewSettings));} catch { /* Invalid declarations retain the original finite read budget. */ }
     const read = plexViewRead(index, current, settings.maxItemCount, activePath, viewDefinition.hierarchy ? 256 : 0,
       propertyProvider ? {...propertyProvider, viewDependencies} : undefined);
+    const sections = viewDefinition.capabilities.sections === true && sectionExpanded
+      ? effectiveSectionExpansion && createPlexSectionViewContext(effectiveSectionExpansion, `section-${sectionRevision.current.value}`, expandedSectionIds, index, current) : undefined;
     return prepareViewScene(viewDefinition, read, index, activePath, state, settings, current, centralEditorSize,
       node => !globalFiltering || filterLayoutMode === "keep" && !settings.groupRelations || (matchesGraphPredicateNode(predicateEngine, predicate, node, predicateCenter)
         && matchesVisibleLensNode(predicateEngine, index, lenses, node, predicateCenter)),
       {translate, unfolded: unfoldedGroups.center === sceneScope ? unfoldedGroups.keys : new Set(), areaHeights: viewSession?.getAreaHeights(), layoutRoot: rooted ? nodeId(sceneScope) : undefined,
-        retainedScopes: hierarchyDemand.held},
+        retainedScopes: hierarchyDemand.held, ...(sections !== undefined ? {sections} : {})},
       occurrenceEditorPolicy ? {bindings, supports: supportsBoundEditor} : undefined);
   };
   const branchPreflight = useRef<(state: unknown) => boolean>(() => false);
@@ -964,7 +975,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   useLayoutEffect(/** Refuse a branch-state mutation before it can remove the exact live editor occurrence. */ () =>
     viewSession?.guardState(state => branchPreflight.current(state)), [viewSession, viewLifetime]);
   const preparedDefinitionScene = useMemo(() => classic ? null : prepareSelectedDefinition(viewSession?.state),
-    [classic, viewDefinition, viewRevision, viewSession, index, activePath, renderRevision, semanticRevision, settings, centralEditorSize, globalFiltering, filterLayoutMode, predicateEngine, predicate, lenses, predicateRevision, unfoldedGroups, translate, rooted, sceneScope, occurrenceEditorPolicy, predicateCenter, hierarchyDemand.revision, viewPropertyRevision]);
+    [classic, viewDefinition, viewRevision, viewSession, index, activePath, renderRevision, semanticRevision, settings, centralEditorSize, globalFiltering, filterLayoutMode, predicateEngine, predicate, lenses, predicateRevision, unfoldedGroups, translate, rooted, sceneScope, occurrenceEditorPolicy, predicateCenter, hierarchyDemand.revision, viewPropertyRevision, effectiveSectionExpansion, expandedSectionIds, sectionExpanded]);
   useLayoutEffect(/** Only an actually admitted selected scene can request finite source frontiers or commit stable side/fold intent. */ () => {
     if (!viewDefinition.hierarchy || !viewSession) return;
     const current = viewSession.capture();
@@ -1239,6 +1250,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const measuredViewport = useRef({ width: 0, height: 0 });
   const suppressAutoFitUntil = useRef(0);
   const updateSectionFolds = (updater: (current: Set<string>) => Set<string>): void => {
+    if (viewDefinition.capabilities.sections !== true || !sectionExpansion) return;
     // Folding is an outline operation, not navigation. Preserve the user's exact viewport while
     // the transient section scene reflows around the changed subtree.
     preserveCameraOnNextLayout.current = true;
@@ -1248,6 +1260,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     setExpandedSectionIds(updater);
   };
   const toggleCentralSections = (): void => {
+    if (viewDefinition.capabilities.sections !== true || centralEditorAvailable) return;
     preserveCameraOnNextLayout.current = true;
     suppressAutoFitUntil.current = Date.now() + 2500;
     setSectionExpanded((current) => !current);
@@ -2712,7 +2725,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
 
   /** Ordinary scenes acquire cross-links only for clipped visible rows; filtering retains the full-scene edge/count policy. */
   const visibleEdgeProjection = useMemo(() => {
-    const edges = scene.edges.filter((edge) => visibleOccurrenceIds.has(edgeOccurrence(edge, "source")) && visibleOccurrenceIds.has(edgeOccurrence(edge, "target")));
+    const edges = scene.edges.filter((edge) => visibleOccurrenceIds.has(edgePhysicalOccurrence(edge, "source")) && visibleOccurrenceIds.has(edgePhysicalOccurrence(edge, "target")));
     const crossLinks = !classic && showCrossLinks && !globalFiltering ? appendOccurrenceCrossLinks(
       scene.nodes.filter(node => visibleOccurrenceIds.has(occurrenceKey(node))).map(node => renderedNodeMap.get(occurrenceKey(node)) ?? node), edges, index, settings) : {limited: false};
     if (classic && showCrossLinks && !globalFiltering && !layoutSectionExpansion && neighborhood) {
@@ -3853,6 +3866,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   };
   /** Reuse current section-fold state and descendant policy for pointer, menu and keyboard routes. */
   const applySectionAction = (page: GraphPage, id: "section.toggle-level" | "section.fold-descendants" | "section.unfold-descendants"): void => {
+    if (viewDefinition.capabilities.sections !== true) return;
     const section = sectionExpansion?.sections.find(candidate => candidate.id === page.transient?.sectionId);
     if (!section?.childIds.length) return;
     const descendants = new Set<string>();
@@ -4231,9 +4245,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       const rect = element?.getBoundingClientRect() ?? viewport.current?.getBoundingClientRect();
       if (rect) showNodeContextMenuAt(node, rect.left + rect.width / 2, rect.top + rect.height / 2, occurrence);
     }, context => Boolean(graphActionPage(context))),
-    "sections.toggle": graphAction(/** Reuse current center Markdown projection folding. */ () => toggleCentralSections(), () => canExpandCentralSections(persistentNeighborhood?.center, activePath) && !centralEditorAvailable),
-    "sections.fold-all": graphAction(/** Fold only this center's current section projection. */ () => updateSectionFolds(() => new Set()), () => Boolean(sectionExpansion)),
-    "sections.unfold-all": graphAction(/** Expand only actual current sections with children. */ () => updateSectionFolds(() => new Set(sectionExpansion?.sections.filter(section => section.childIds.length).map(section => section.id))), () => Boolean(sectionExpansion)),
+    "sections.toggle": graphAction(/** Reuse current center Markdown projection folding. */ () => toggleCentralSections(), () => viewDefinition.capabilities.sections === true && canExpandCentralSections(persistentNeighborhood?.center, activePath) && !centralEditorAvailable),
+    "sections.fold-all": graphAction(/** Fold only this center's current section projection. */ () => updateSectionFolds(() => new Set()), () => viewDefinition.capabilities.sections === true && Boolean(sectionExpansion)),
+    "sections.unfold-all": graphAction(/** Expand only actual current sections with children. */ () => updateSectionFolds(() => new Set(sectionExpansion?.sections.filter(section => section.childIds.length).map(section => section.id))), () => viewDefinition.capabilities.sections === true && Boolean(sectionExpansion)),
     "view.zoom-in": graphAction(/** Keep existing platform clamp and zoom increment. */ () => zoomFromCenter(Math.min(Platform.isIosApp ? IOS_MAX_ZOOM : MAX_ZOOM, camera.current.scale * 1.15))),
     "view.zoom-out": graphAction(/** Keep existing minimum and zoom decrement. */ () => zoomFromCenter(Math.max(.3, camera.current.scale / 1.15))),
     "view.fit": graphAction(/** Reuse the camera owner's current displayed-scene fitting policy. */ () => fit()),
@@ -4288,7 +4302,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   for (const id of ["section.toggle-level", "section.fold-descendants", "section.unfold-descendants"] as const) {
     graphImplementations[id] = graphAction(/** Section intents share the menu/pointer expansion owner. */ context => {
       const page = graphActionPage(context); if (page) applySectionAction(page, id);
-    }, context => graphActionPage(context)?.transient?.kind === "section");
+    }, context => viewDefinition.capabilities.sections === true && graphActionPage(context)?.transient?.kind === "section");
   }
   for (const id of ["relationship.details", "relationship.relink", "relationship.unlink", "relationship.hide"] as const) {
     graphImplementations[id] = {
@@ -4509,7 +4523,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const persistent = persistentPageFor(page);
     const isCenter = node.role === "center" && page.path === neighborhood?.center.path;
     const isMarkdown = Boolean(persistent?.file?.extension === "md");
-    const canExpand = canExpandCentralSections(persistent, activePath);
+    const canExpand = viewDefinition.capabilities.sections === true && canExpandCentralSections(persistent, activePath);
     const menu = new Menu();
     if (page.transient?.kind === "group") {
       menu.addItem(item => item.setTitle(translate("groups.unfold", { name: page.name, count: page.transient?.groupMembers?.length ?? 0 }))
@@ -5275,8 +5289,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
           <marker id="kplex-bar" markerWidth="8" markerHeight="10" refX="4" refY="5" orient="auto-start-reverse" markerUnits="strokeWidth"><path d="M4,1 L4,9" stroke="context-stroke" strokeWidth="1.8" /></marker>
         </defs>
         {(scene.sectionTreeEdges ?? []).map((treeEdge) => {
-          const source = renderedNodeMap.get(treeEdge.sourcePath) ?? scene.nodes.find((node) => node.page.path === treeEdge.sourcePath);
-          const target = renderedNodeMap.get(treeEdge.targetPath) ?? scene.nodes.find((node) => node.page.path === treeEdge.targetPath);
+          const source = renderedNodeMap.get(treeEdge.sourceOccurrence ?? treeEdge.sourcePath) ?? scene.nodes.find((node) => node.page.path === treeEdge.sourcePath);
+          const target = renderedNodeMap.get(treeEdge.targetOccurrence ?? treeEdge.targetPath) ?? scene.nodes.find((node) => node.page.path === treeEdge.targetPath);
           if (!source || !target || !visibleNodePaths.has(source.page.path) || !visibleNodePaths.has(target.page.path)) return null;
           // Folder-tree geometry: each parent owns a vertical spine from its small bottom-left
           // structural port; the child receives one horizontal L-branch at its left-center edge.
