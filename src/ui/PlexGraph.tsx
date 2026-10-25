@@ -1,5 +1,6 @@
 /**
  * Host-bound Plex scene composition, shared captured center-arrival motion and finite Wander navigation ports, layout and relationship interactions. Semantic resolution stays index/core-owned; UI labels and on-demand evidence hints use the injected translator. Navigation fits keep the central node centered and follow late geometry until manual camera input; publication and ordinary pane resizing preserve manual intent. Sidecar open/close transitions explicitly reframe the current viewport after native layout settles, with pending work retired by input, navigation or unmount. View-owned display transitions retain camera coordinates and scene settings. Device typography stages scalar live preferences and persists after input settles; unmount flushes storage without replaying stale overrides. Area-height gestures own viewport pointer capture and persist existing presentation settings on completion or interruption. History and pinned drag targets share composer eligibility; external file drops follow the rendered area's semantic role. Theme-native area previews follow the existing drop action without intercepting capture or moving the dragged thought. Visible rows retain finite cache-only presentation demand; hidden surfaces and effect teardown release it. Geometry defers gate/count queries until a row intersects the displayed viewport, including partially clipped rows. Ordinary unfiltered scenes project cross-links for clipped visible rows; filtered and section scenes retain their established edge/count policy. Scene-local React keys capture paths before canonical pages can mutate during rename; semantic pages and actions retain their live identity. Normal-mode keyboard and exact-phrase typing selection are view-local; the displayed occurrence projection supplies all candidates and the shared selection owner reveals them without changing the center, filters or native search. Host methods own activation/rename/creation. Filtered badge numerators use revision-scoped semantic endpoint membership independently of connector routing and viewport clipping. Pane-fit native layout controls own local touch containment and bounded scrolling without changing preferences or browser range behavior. Accessible layout-wrapper hints use the shell's shared tooltip owner; inputs retain concise accessible names.
+ * Hierarchy Find selects and reveals exact occurrences without activating attention or opening an editor.
  * Visual resolution and metadata refreshes retain the index consent epoch; teardown and revocation
  * reject late publication. Hover enlargement uses the same already-guarded image element.
  * Connector Hidden actions share the plugin writer; this surface owns their pending confirmation
@@ -2494,13 +2495,6 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const dy = rect.top < bounds.top + 48 ? bounds.top + 48 - rect.top : rect.bottom > bounds.bottom - 32 ? bounds.bottom - 32 - rect.bottom : 0;
     if (dx || dy) applyCamera((current) => ({ ...current, x: current.x + dx, y: current.y + dy }));
   };
-  useEffect(/** Typing/cycling reveals a hit without changing the center or history. */ () => {
-    if (!centralEditorMaximized && findPaths.length) {
-      const hit = findOccurrences.get(findPaths[((findCursor % findPaths.length) + findPaths.length) % findPaths.length]);
-      if (hit) revealFindHit(hit.path, hit.occurrenceId);
-    }
-  }, [findQuery, findCursor, findHitKey, centralEditorMaximized]);
-
   const keyboardNodes = useMemo<PlexKeyboardNode[]>(/** Select displayed rows, retaining overflow positions but excluding filtered-out nodes. */ () => {
     const nodes: PlexKeyboardNode[] = [];
     for (const node of scene.nodes) {
@@ -2532,6 +2526,15 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       clearHoverIntent(true); revealFindHit(node.path, node.id);
     },
   });
+  useEffect(/** Hierarchy Find selects its exact displayed hit without activation; legacy Find retains reveal-only behavior. */ () => {
+    if (!centralEditorMaximized && findPaths.length) {
+      const hit = findOccurrences.get(findPaths[((findCursor % findPaths.length) + findPaths.length) % findPaths.length]);
+      if (hit) {
+        if (viewDefinition.hierarchy && hit.occurrenceId) selection.select(hit.occurrenceId);
+        else revealFindHit(hit.path, hit.occurrenceId);
+      }
+    }
+  }, [findQuery, findCursor, findHitKey, centralEditorMaximized, viewDefinition, viewLifetime, sceneScope]);
   /** Cancel passive-follow motion immediately; deliberate navigation captures its live source rectangle. */
   const prepareNavigation = (identity: string, origin: "user" | "wander" | "follow"): void => {
     if (origin === "follow") {

@@ -166,6 +166,10 @@ test('non-Classic definition uses the production scene, selection, Find and acti
       const mismatched=await act('branch.toggle',{...branchTarget,node:M.actionNodeRef(pages.get('Other.md'))});
       const toggleOutcome=await act('branch.toggle',branchTarget);await new Promise(resolve=>setTimeout(resolve,30));
       const expandedHierarchy={semantic:work.semantic,nodes:mount.querySelectorAll('[data-kplex-keyboard-id]').length,failed:!!mount.querySelector('.kplex-view-error')};
+      const hierarchyFind=mount.querySelector('.kplex-find');M.flushSync(()=>hierarchyFind.querySelector('button').click());
+      const hierarchyFindInput=hierarchyFind.querySelector('input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(hierarchyFindInput,'Repeated');
+      M.flushSync(()=>hierarchyFindInput.dispatchEvent(new Event('input',{bubbles:true})));await new Promise(resolve=>setTimeout(resolve,20));
+      const hierarchyFindProof={selected:actionPorts.current.readSelected()?.occurrenceId,attention:props.activePath,root:hierarchySession.layoutRoot(props.activePath),editors:hierarchySession.editors.bindings.length};
       settings.canvasViewSettings=M.editViewConfiguration(M.mindMapViewDefinition,settings.canvasViewSettings,'horizontalSpacing',160);props.renderRevision++;renderHierarchy();await new Promise(resolve=>setTimeout(resolve,20));
       props.activePath='Other.md';renderHierarchy();await new Promise(resolve=>setTimeout(resolve,20));const attentionHierarchy={semantic:work.semantic,root:hierarchySession.layoutRoot(props.activePath)};
       M.flushSync(()=>mount.querySelector('[aria-label="Collapse one generation"]').click());await new Promise(resolve=>setTimeout(resolve,20));
@@ -174,7 +178,7 @@ test('non-Classic definition uses the production scene, selection, Find and acti
       const heldBranch=plugin.actionManager.prepare({id:'branch.toggle',source:'local-menu',surfaceId:'probe',target:branchTarget});
       const rerootOutcome=await act('view.root.selected',{kind:'explicit',node:M.actionNodeRef(pages.get('Other.md'))});await new Promise(resolve=>setTimeout(resolve,20));
       const staleBranch=heldBranch.state==='accepted'?await heldBranch.run():null,rerooted=hierarchySession.layoutRoot(props.activePath);
-      releaseHierarchyAction();hierarchyRoot.unmount();hierarchySession.dispose();plugin.actionManager.dispose();const hierarchyProof={initial:initialHierarchy,expanded:expandedHierarchy,attention:attentionHierarchy,collapsed:collapsedHierarchy,after:{...work},events:events.size,errors:[...errors],mismatched,toggleOutcome,keyboard:keyboardHierarchy,rerootOutcome,staleBranch,rerooted};
+      releaseHierarchyAction();hierarchyRoot.unmount();hierarchySession.dispose();plugin.actionManager.dispose();const hierarchyProof={initial:initialHierarchy,expanded:expandedHierarchy,attention:attentionHierarchy,collapsed:collapsedHierarchy,after:{...work},events:events.size,errors:[...errors],mismatched,toggleOutcome,find:hierarchyFindProof,keyboard:keyboardHierarchy,rerootOutcome,staleBranch,rerooted};
       style.remove();mount.remove();return {...snapshot,events:legacyEvents,after:legacyAfter,rooted:rootedProof,hierarchy:hierarchyProof};
     })()`);
     assert.deepEqual(result.physicalPorts,['left']);assert.equal(result.physicalCount,'1');
@@ -201,6 +205,7 @@ test('non-Classic definition uses the production scene, selection, Find and acti
     assert.deepEqual(result.hierarchy.attention,{semantic:4,root:'Root.md'},'Geometry settings do not reacquire frontiers, attention adds only its independent lease');
     assert.deepEqual(result.hierarchy.collapsed,{semantic:4,releases:2,nodes:2});assert.equal(result.hierarchy.after.releases,result.hierarchy.after.semantic);assert.equal(result.hierarchy.events,0);assert.deepEqual(result.hierarchy.errors,[]);
     assert.equal(result.hierarchy.mismatched.status,'unavailable');assert.equal(result.hierarchy.toggleOutcome.status,'completed');assert.deepEqual(result.hierarchy.keyboard,{editors:0,root:'Root.md'});
+    assert.deepEqual(result.hierarchy.find,{selected:JSON.stringify(['Root.md','Repeated.md']),attention:'Focus.md',root:'Root.md',editors:0},'Hierarchy Find selects and reveals its exact occurrence without activation or editor opening');
     assert.equal(result.hierarchy.rerootOutcome.status,'completed');assert.equal(result.hierarchy.rerooted,'Other.md');assert.notEqual(result.hierarchy.staleBranch?.status,'completed');
     assert.equal(result.hierarchy.after.reads,0);assert.equal(result.hierarchy.after.parses,0);assert.equal(result.hierarchy.after.publishes,0);assert.equal(result.hierarchy.after.settingsWrites,0);
   } finally {await host.cleanup();}
