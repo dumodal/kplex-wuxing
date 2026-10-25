@@ -7,7 +7,7 @@
     "CI487": "success",
     "run": 40167016881
   },
-  "newScopeFinalValidation": "pending",
+  "newScopeFinalValidation": "Pending clean complete verification and final-head CI after source feedback-owner assertion correction.",
   "nativeSamples": [
     {
       "sample": "native-interactions-1",
@@ -340,7 +340,7 @@
     "status": "passed"
   },
   "timer": "Prior bounded follow-up did not reproduce55ms; production parser and45/50ms guards unchanged.",
-  "productionNoteWrites": "Not permitted; production inspection/deployment remains pending for new source.",
+  "productionNoteWrites": "Strictly forbidden. Authorized main.js/styles.css-only test deployment and read-only production visual/native-selector check completed with zero observed Vault create/modify/delete/rename events; no note content/identities published.",
   "outerDisposableRestoration": "Pending until remaining native checks complete.",
   "fullSamples": [
     {
@@ -381,6 +381,25 @@
         "Attachment rename callback fixture lacked new projection/navigation/occurrence dependencies; original style/DOM assertions retained.",
         "Crosslink peek callback fixture omitted visibleEdgeProjection memo dependency; original Alt/geometry/focus/visibility assertions retained."
       ]
+    },
+    {
+      "head": "dd0883bcd8348cbe5d39da75d7c510baf72fa866",
+      "status": "failed",
+      "artifact": "b55b03fee35a69bb0377c82432428008216b65a3ceb527638cfdada5eae5e774",
+      "indexing": "P1-P17 passed;45/50ms guards unchanged",
+      "functional": {
+        "passed": 1498,
+        "failed": 0
+      },
+      "browser": {
+        "passed": 246,
+        "failed": 0
+      },
+      "sources": {
+        "passed": 356,
+        "failed": 1
+      },
+      "cause": "SI4 source assertion required the former one-argument refreshSavedSettings call. Now requires the explicit true feedback-owner argument; all semantic/lifetime/no-parser checks retained. Production unchanged. Failed full/log retained."
     }
   ],
   "feedbackOwnerCorrection": {
@@ -1097,12 +1116,74 @@
   "finalNativeCount": 56,
   "remoteSamples": [
     {
+      "CI": 488,
+      "head": "2e2fcbb0c25c4be6755e43ba96c7a6692174392d",
+      "run": 40170198627,
+      "job": 121099308652,
+      "status": "failed",
+      "cause": "Missing areaLayout in isolated indexing fixture inventory; failed before indexing assertions."
+    },
+    {
+      "CI": 489,
+      "head": "31d6fa10ddac2420c015a97135b441d2ea1f7dc7",
+      "run": 40170332254,
+      "job": 121099692291,
+      "status": "failed",
+      "cause": "Duplicate actual-failure generic/dialog notice:1497/1498 functional. Fixed feedback ownership, original assertion retained."
+    },
+    {
+      "CI": 490,
+      "head": "5ccde10a8d8b205f0bd2698d00f0810d24da710c",
+      "run": 40170706464,
+      "job": 121100775152,
+      "status": "failed",
+      "cause": "Functional1498 pass;browser243/246: old pending notice expectation and two missing callback fixture dependencies. Corrected with privacy/paint/focus/identity assertions retained."
+    },
+    {
       "CI": 491,
       "head": "5db6b7c301b2127e4c5f3ea8ed5b8390c216cb97",
       "run": 40171386730,
       "job": 121102752378,
       "status": "failed",
       "cause": "Chromium startup timeout before native-hotkey-search assertions; functional1497/1498, no responsiveness guard failure. Cause of bootstrap timeout remains unproven; no timeout/guard/assertion was changed."
+    },
+    {
+      "CI": 493,
+      "head": "dd0883bcd8348cbe5d39da75d7c510baf72fa866",
+      "run": 40172263173,
+      "job": 121105417980,
+      "status": "failed",
+      "cause": "Functional1498/browser246 pass;sources356/357: stale one-argument refreshSavedSettings source assertion. Same failure reproduced locally; explicit true feedback-owner assertion now required."
     }
-  ]
+  ],
+  "productionReadonly": {
+    "view": "mindmap",
+    "rootMatchesAttention": true,
+    "nodes": 26,
+    "bindings": 0,
+    "panels": 0,
+    "counts": {
+      "create": 0,
+      "modify": 0,
+      "delete": 0,
+      "rename": 0
+    },
+    "observerRemoved": true,
+    "visual": "Native screenshot verified parent grid above root, bottom child gate and left peer gate. Trusted native Compass→Mind Map selection retained current note.",
+    "at": "2026-10-25T07:24:37.335Z",
+    "artifacts": {
+      "main.js": "b55b03fee35a69bb0377c82432428008216b65a3ceb527638cfdada5eae5e774",
+      "styles.css": "783480a9cfae6de540d0ade75ecf59fc5b3240bee44ba2cf69b2b2c561cdff1f"
+    },
+    "files": [
+      "main.js",
+      "styles.css"
+    ],
+    "sourceRuntime": "5db6b7c301b2127e4c5f3ea8ed5b8390c216cb97",
+    "publishedHead": "dd0883bcd8348cbe5d39da75d7c510baf72fa866",
+    "notesEdited": false,
+    "privateNoteDataPublished": false,
+    "originalAssetBackupsRetained": true,
+    "limitation": "Visual/selector check during ordinary progressive hydration, not corpus completeness, a performance study or physical cross-window drag acceptance."
+  }
 }
