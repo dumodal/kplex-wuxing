@@ -33,6 +33,86 @@ const flatten=(items,path=[])=>items.flatMap(item=>[...('control'in item?[{...it
 `;
 const scenario=body=>colorEditorScenario(`(async()=>{${initialize}\n${body}\nreturn true})()`);
 
+const presetInitialize=`
+const template={one:{name:'One',colors:['red']},two:{name:'Two',colors:['blue']}};
+const presets={...second,id:'org.example.presets',configuration:{version:2,migrations:[{from:1,to:2,migrate:values=>({...values,presets:{...copy(template),one:{...copy(template.one),name:values.legacyName??'One'}}})}],fields:{
+ presets:{entries:true,defaultValue:template,validate:value=>!!value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).length<=16&&Object.values(value).every(row=>row&&typeof row.name==='string'&&Array.isArray(row.colors))},
+ spacing:{defaultValue:24,validate:value=>typeof value==='number'&&value>=12&&value<=200},
+}}};
+const presetHost=async()=>{const p=await create();p.viewSettingsRegistry=new M.CanvasViewSettingsRegistry(new M.PlexViewRegistry([...views.available,presets]),[]);return p};
+const name=entry=>({field:'presets',path:[entry,'name']});
+`;
+/** These use the production plugin writer/reconciliation prototypes, not a second settings model. */
+const presetScenario=body=>scenario(presetInitialize+body);
+
+test('scoped queued preset edits preserve sibling entries, namespaces and normal presentation-only ownership',async()=>{
+ assert.equal(await presetScenario(`
+ const p=await presetHost();let release;p.settingsWriteQueue=new Promise(resolve=>release=resolve);
+ const first=p.updateCanvasViewConfiguration(presets.id,name('one'),{kind:'set',value:'Edited one'}),queuedSecond=p.updateCanvasViewConfiguration(presets.id,name('two'),{kind:'set',value:'Edited two'});
+ release();await Promise.all([first,queuedSecond]);equal(disk.canvasViewSettings[presets.id],{version:2,values:{presets:{one:{name:'Edited one',colors:['red']},two:{name:'Edited two',colors:['blue']}}}},'Both queued entries retained');
+ equal([p.work.semantic,p.work.invalidate],[0,0],'Scoped config does not rebuild semantics');equal(p.readCanvasViewConfiguration(presets.id).values.presets,disk.canvasViewSettings[presets.id].values.presets,'Live read agrees with durable state');
+ `),true);
+});
+
+test('a received sibling preset rebases under an unstarted scoped save without being overwritten',async()=>{
+ assert.equal(await presetScenario(`
+ const p=await presetHost();await p.updateCanvasViewConfiguration(presets.id,{field:'presets'},{kind:'set',value:template});
+ const a=p.receivedSettingsOwner('canvasViewSettings:'+presets.id+':presets:one'),container=p.receivedSettingsOwner('canvasViewSettings:'+presets.id+':presets');
+ let release;p.settingsWriteQueue=new Promise(resolve=>release=resolve);
+ const save=p.updateCanvasViewConfiguration(presets.id,name('one'),{kind:'set',value:'Local one'},{present:true,value:'One'});
+ const incoming=copy(disk);incoming.canvasViewSettings[presets.id].values.presets.two.name='Remote two';disk=incoming;p.onExternalSettingsChange();await p.settingsReconciliation.reading;
+ release();await save;await drain(p);
+ equal(disk.canvasViewSettings[presets.id].values.presets,{one:{name:'Local one',colors:['red']},two:{name:'Remote two',colors:['blue']}},'Different preset updates compose');check(a()&&!container(),'Entry owner survives sibling change; whole collection draft retires');
+ `),true);
+});
+
+test('a received same-preset change and A-B-A retire old entry owners without blocking siblings',async()=>{
+ assert.equal(await presetScenario(`
+ const p=await presetHost();await p.updateCanvasViewConfiguration(presets.id,{field:'presets'},{kind:'set',value:template});
+ const before=copy(disk),own=p.receivedSettingsOwner('canvasViewSettings:'+presets.id+':presets:one'),otherOwner=p.receivedSettingsOwner('canvasViewSettings:'+presets.id+':presets:two');
+ let release;p.settingsWriteQueue=new Promise(resolve=>release=resolve);const save=p.updateCanvasViewConfiguration(presets.id,name('one'),{kind:'set',value:'Stale'}).then(()=>false,()=>true);
+ const incoming=copy(disk);incoming.canvasViewSettings[presets.id].values.presets.one.name='Remote';disk=incoming;p.onExternalSettingsChange();await p.settingsReconciliation.reading;release();check(await save,'Same-entry queued save refused');await drain(p);
+ equal(disk.canvasViewSettings[presets.id].values.presets.one.name,'Remote','Incoming value retained');await receive(p,before);check(!own()&&otherOwner(),'A-B-A stays stale only for its own entry');
+ `),true);
+});
+
+test('whole-view reset observes descendant epochs while a one-leaf reset retains other presets',async()=>{
+ assert.equal(await presetScenario(`
+ const p=await presetHost();await p.updateCanvasViewConfiguration(presets.id,name('one'),{kind:'set',value:'Custom one'});await p.updateCanvasViewConfiguration(presets.id,name('two'),{kind:'set',value:'Custom two'});
+ await p.resetCanvasViewConfiguration(presets.id,name('one'));equal(disk.canvasViewSettings[presets.id].values.presets.two.name,'Custom two','One reset cannot erase another preset');equal(disk.canvasViewSettings[presets.id].values.presets.one.name,'One','Owned default restored');
+ await p.updateCanvasViewConfiguration(presets.id,{field:'presets',path:['custom']},{kind:'set',value:{name:'User preset',colors:['orange']}});await p.resetCanvasViewConfiguration(presets.id);equal(disk.canvasViewSettings[presets.id].values.presets.custom,{name:'User preset',colors:['orange']},'View reset retains other user presets');
+ let release;p.settingsWriteQueue=new Promise(resolve=>release=resolve);const reset=p.resetCanvasViewConfiguration(presets.id).then(()=>false,()=>true);
+ const incoming=copy(disk);incoming.canvasViewSettings[presets.id].values.presets.two.name='Remote two';disk=incoming;p.onExternalSettingsChange();await p.settingsReconciliation.reading;release();check(await reset,'Whole-view stale reset refused');await drain(p);equal(disk.canvasViewSettings[presets.id].values.presets.two.name,'Remote two','Descendant receipt retained');
+ `),true);
+});
+
+test('explicit schema migration is durable, idempotent and retains unknown fields/other views',async()=>{
+ assert.equal(await presetScenario(`
+ const p=await presetHost(),incoming=copy(disk);incoming.canvasViewSettings={[presets.id]:{version:1,opaque:'retain',values:{legacyName:'Migrated',future:{keep:true}}},'future.view':{version:9,values:{untouched:true}}};await receive(p,incoming);
+ equal(p.readCanvasViewConfiguration(presets.id).values.presets.one.name,'Migrated','Pure preview interprets old data');const count=p.writes.length;
+ await p.migrateCanvasViewConfiguration(presets.id);equal(disk.canvasViewSettings[presets.id].version,2,'Registered upgrade persisted');equal(disk.canvasViewSettings[presets.id].opaque,'retain','Wrapper retained');equal(disk.canvasViewSettings[presets.id].values.future,{keep:true},'Unknown values retained');equal(disk.canvasViewSettings['future.view'],incoming.canvasViewSettings['future.view'],'Unknown extension retained');
+ await p.migrateCanvasViewConfiguration(presets.id);check(p.writes.length===count+1,'Repeated migration does not rewrite');equal([p.work.semantic,p.work.invalidate],[0,0],'Migration is configuration-only');
+ `),true);
+});
+
+test('failed migration/storage and unsupported future payloads never publish authoritative defaults',async()=>{
+ assert.equal(await presetScenario(`
+ const p=await presetHost();await p.updateCanvasViewConfiguration(presets.id,name('one'),{kind:'set',value:'Durable'});const before=copy(disk),live=copy(p.settings.canvasViewSettings),save=p.saveData;p.saveData=async()=>{throw Error('Expected scoped disk rejection')};
+ let rejected=false;try{await p.updateCanvasViewConfiguration(presets.id,name('one'),{kind:'set',value:'Rejected'})}catch{rejected=true}check(rejected,'Storage rejection surfaced');equal(disk,before,'Disk predecessor preserved');equal(p.settings.canvasViewSettings,live,'No optimistic authoritative settings');
+ p.saveData=save;const future=copy(disk);future.canvasViewSettings[presets.id].version=9;await receive(p,future);const writes=p.writes.length;
+ for(const run of [()=>p.migrateCanvasViewConfiguration(presets.id),()=>p.resetCanvasViewConfiguration(presets.id),()=>p.updateCanvasViewConfiguration(presets.id,name('one'),{kind:'set',value:'Downgrade'})]){let refused=false;try{await run()}catch{refused=true}check(refused,'Future payload refused')}
+ check(p.writes.length===writes,'Future data never rewritten');equal(disk.canvasViewSettings[presets.id],future.canvasViewSettings[presets.id],'Future payload preserved');
+ `),true);
+});
+
+test('scoped submission detaches drafts and refuses a definition retired before queue execution',async()=>{
+ assert.equal(await presetScenario(`
+ const p=await presetHost(),address=name('one'),edit={kind:'set',value:'Captured'};let release;p.settingsWriteQueue=new Promise(resolve=>release=resolve);
+ const save=p.updateCanvasViewConfiguration(presets.id,address,edit);address.path[0]='two';edit.value='Changed after submit';release();await save;equal(disk.canvasViewSettings[presets.id].values.presets.one.name,'Captured','Captured request immutable');equal(disk.canvasViewSettings[presets.id].values.presets.two.name,'Two','Sibling not retargeted');
+ p.settingsWriteQueue=new Promise(resolve=>release=resolve);const retiring=p.updateCanvasViewConfiguration(presets.id,name('one'),{kind:'set',value:'Late'}).then(()=>false,()=>true);p.viewSettingsRegistry=registry;release();check(await retiring,'Missing definition retired queued operation');equal(disk.canvasViewSettings[presets.id].values.presets.one.name,'Captured','No retired write');
+ `),true);
+});
+
 test('production Mind Map contributes nine localized native fields and persists type settings independently of canvas intent',async()=>{
  assert.equal(await scenario(`
  const p=await create();p.viewSettingsRegistry=M.builtInCanvasViewSettings;const tab=new M.KplexSettingTab({},p),rows=flatten(tab.getSettingDefinitions());
