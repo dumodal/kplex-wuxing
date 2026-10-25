@@ -6226,3 +6226,6 @@ B1 closeout adds the explicit collection-reset guard: restoring view defaults re
 
 
 2026-10-25 PR220 B2: public pure and host/UI canvas-view exports; bounded optional contribution descriptors and exact-session dispatcher, shared native menus, captured panel choices, addressed Settings/live rails and heading semantics. Executable owner-qualified columns example uses public entries only. Existing session, writer, measurement, native editor and camera owners retained. Focused78 pass; architecture7 zero violations and repository indexing/startup/watchdog/section fixture pass; final build/scanner rerun. Expanded Facets/native/final-source acceptance remains pending; C15-C26 stays paused.
+
+
+2026-10-25 PR220/issue221: shared Wander readiness uses existing local attention certificate and canonical identity rather than rendered physical/numerical gate completeness. Actual negative renderer reproduction; production registry plus public example start/highlight/navigate/arrive and retain rooted intent. Focused46 pass, real build/scanner pass; no source/count work from readiness. Final Windows/source-head coverage pending. Existing controller/route/editor/camera ownership retained; C15-C26 paused.

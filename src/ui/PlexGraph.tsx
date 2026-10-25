@@ -855,7 +855,6 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const navigationOccurrence = useRef<{ identity: string; id: string } | null>(null);
   const wanderMotion = useRef(false);
   const wanderSelection = useRef<{ center: string; previous: string | null; owned: string } | null>(null);
-  const renderedCenterGates = useRef<{ identity: string; stats: PositionedNode["gateStats"] } | null>(null);
   const previousNodeRects = useRef<Map<string, { left: number; top: number; width: number; height: number }>>(new Map());
   const [layoutRevision, setLayoutRevision] = useState(0);
   const [optimisticRelink, setOptimisticRelink] = useState<{ targetPath: string; role: GateRole } | null>(null);
@@ -2645,11 +2644,14 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const readWanderScene = (): WanderScene => {
     const root = viewport.current;
     const center = persistentNeighborhood?.center;
-    const gates = renderedCenterGates.current?.identity === center?.path ? renderedCenterGates.current?.stats : null;
-    return { center: root?.isConnected && center ? center.path : null,
-      ready: Boolean(root?.isConnected && plugin.isKplexLeafVisible(hostLeaf) && center && !sceneTransitioning && !pathChangedThisRender
-        && !sceneMotion.isRunning() && !nodeDrag && !connectDrag && !areaSettingsMode && !relationshipUpdating
-        && gates && Object.values(gates).every(/** Cached or unavailable incidence waits for existing local demand; global completeness is unnecessary. */ gate => !gate.countUnavailable && (gate.complete || gate.coverage === "local"))), candidates: wanderCandidates };
+    // Numerical/physical gate coverage is independent of navigable local incidence. A view may
+    // omit gates or keep a rooted layout while attention moves. Read the existing cache-only
+    // certificate for attention instead; this never acquires sources or requires corpus readiness.
+    const currentCenter = center?.path === activePath && index.get(activePath) === center;
+    const prepared = currentCenter && index.viewScopeCoverage(activePath).prepared;
+    return { center: root?.isConnected && currentCenter ? center.path : null,
+      ready: Boolean(root?.isConnected && plugin.isKplexLeafVisible(hostLeaf) && prepared && !viewFailed && !scene.failed && !sceneTransitioning && !pathChangedThisRender
+        && !sceneMotion.isRunning() && !nodeDrag && !connectDrag && !areaSettingsMode && !relationshipUpdating), candidates: wanderCandidates };
   };
   /** Revalidate occurrence, visibility and native incarnation after anticipation or an index publication. */
   const resolveWanderDestination = (destination: WanderDestination): GraphPage | null => {
@@ -4631,9 +4633,6 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       },
     }) : {};
     const countedDisplayNode = hydrateCounts && (!displayNode.physicalPorts || Object.keys(displayNode.physicalPorts).length > 0) ? projectNodeCounts(displayNode, index) : displayNode;
-    // Layout counts are deliberately deferred placeholders. Reuse the center's actual render-time
-    // coverage for autonomous readiness without querying counts/acquiring sources in timer polls.
-    if (baseNode.role === "center") renderedCenterGates.current = { identity: baseNode.page.path, stats: countedDisplayNode.gateStats };
     let colorStyle = paintedNodeStyles.get(baseNode);
     if (!colorStyle) {colorStyle = currentNodeColorStyle(baseNode, paintSettings); paintedNodeStyles.set(baseNode, colorStyle);}
     const styledDisplayNode = { ...countedDisplayNode, style: { ...colorStyle, ...lensNodeStyle },

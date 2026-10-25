@@ -1380,8 +1380,6 @@ ${uiDefinitions("src/ui/PlexGraph.tsx", ["isPlaceholderFolderGesture", "activate
 const manager={draggable:null,dragLink:(event,linktext,sourcePath,title,source)=>({type:"link",linktext,sourcePath,title,source}),onDragStart(event,value){this.draggable=value},onDragEnd(){this.draggable=null}};
 const previewed=[];
 const plugin={triggerHoverPreview:(page,target,event)=>previewed.push({page,target,ctrl:event.ctrlKey}),actionManager:{dispatch:request=>materialized.push(request),readSnapshot:()=>({mounted:true,viewRevision:0,interactionRevision:0,center:{identity:activePath}})},app:{dragManager:manager,vault:{getFileByPath:path=>[centerPage,attachmentPage,placeholderPage,sentinelPage,miniPage].find(page=>page.file?.path===path)?.file??null}}};
-// The production center renderer publishes already-rendered local gate coverage for readiness.
-const renderedCenterGates = { current: null };
 const gates = Object.fromEntries(["top", "bottom", "left", "right"].map((gate) => [gate, { visibleCount: 0, hasAny: false, complete: true }]));
 const index = {get:path=>[centerPage,attachmentPage,placeholderPage,sentinelPage,miniPage].find(page=>page.path===path), gateStats: () => gates, neighbours: () => [{ page: miniPage, role: "child", relationType: 1 }], titleFor: (page) => page.name };
 const node = (page, role, x, y, height = 26) => ({ page, role, x, y, width: 180, height, style: { fontSize: 18 }, label: page.name, neighbourCount: 0, gateStats: gates });

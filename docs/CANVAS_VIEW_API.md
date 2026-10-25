@@ -86,6 +86,8 @@ Native Settings `context.key(field, path?)` and live rails address the same sche
 
 Shared badges, property-assignment targets/actions and measured section sub-anchors remain pending in PR220. Existing shared navigation, area capability, exact-occurrence drag transport and saved/published relationship completion remain authoritative. These presentation commands do not replace those owners. Final native acceptance applies to the final published head.
 
+Wander is shared base behavior for every view, not an opt-in gate capability. It uses admitted displayed canonical occurrences, the existing local attention-scope certificate, shared selection/reveal and normal activation. Complete corpus/numerical gate counts and a rendered center-role node are not prerequisites. Rooted layouts retain their navigation policy as attention moves. Unprepared/failed/hidden/stale scenes and active interaction/motion still decline; readiness never requests sources or gate counts.
+
 ## Current validation
 
 The implemented configuration batch passes 45 pure/actual Settings-host Chromium tests, including independent queued/received presets, stale same-preset and container epochs, A→B→A, reset scope, durable/idempotent migration, future payloads, disk rejection and retired registration. Architecture/core/scanner/build are separate gates. Native migration/preset UI and the remaining expanded API/Facets acceptance are still pending; see [the current validation record](validation/facets-220-2026-10-25.md).

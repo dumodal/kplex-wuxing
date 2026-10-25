@@ -25,6 +25,7 @@ return await build({stdin:{resolveDir:process.cwd(),contents:`
   export {mindMapViewDefinition} from './src/core/plex/views/mindmap/definition';
   export {builtInCanvasViewSettings} from './src/ui/plexViews/settingsContributions';
   export {compileGraphPredicate} from './src/core/plex/predicate';
+  export {WanderController} from './src/application/WanderController';export {exampleViewDefinition} from './src/core/plex/views/example';
 `},write:false,bundle:true,platform:'browser',format:'iife',globalName:'sourceModules',plugins:[{name:'finite-native-host',setup(builder){
   builder.onResolve({filter:/^obsidian$/},()=>({path:'host',namespace:'finite'}));
   builder.onLoad({filter:/.*/,namespace:'finite'},()=>({contents:nativeStub}));
