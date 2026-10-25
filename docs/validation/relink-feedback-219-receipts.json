@@ -1,5 +1,5 @@
 {
-  "status": "focused-native-pass-full-restoration-pending",
+  "status": "full-native-pass-restored-user-state-fixed-test-bundle-retained",
   "parent": "358a0a6f0bec37b8f719cb98fad557cbf615190d",
   "live": {
     "artifact": "88c3f3221b403471e5ae6c7a728f44f4e163a93c609f54195d83ae567f0013d2",
@@ -246,5 +246,100 @@
       "startedAt": "2026-10-25T10:27:00.927Z",
       "completedAt": "2026-10-25T10:27:07.130Z"
     }
-  ]
+  ],
+  "recordedAt": "2026-10-25T10:53:42.893834+00:00",
+  "full": {
+    "status": "passed",
+    "source": {
+      "revision": "ef59f1c765ea87dbe3978d65feb4843c4f132c8f",
+      "dirty": false,
+      "node": "v22.22.2",
+      "os": "darwin 23.5.0"
+    },
+    "startedAt": "2026-10-25T10:28:35.724Z",
+    "completedAt": "2026-10-25T10:50:38.961Z",
+    "tapCounts": [
+      7,
+      130,
+      1503,
+      247,
+      357,
+      777
+    ],
+    "total": 3021,
+    "failures": 0,
+    "skips": 0,
+    "artifacts": {
+      "sourceHashes": {
+        "main.js": "c2c5ec6ac40308fce0123ae56ede29cc45f048c651a576bcc22fde9041900a44",
+        "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+        "styles.css": "783480a9cfae6de540d0ade75ecf59fc5b3240bee44ba2cf69b2b2c561cdff1f"
+      },
+      "pluginVersion": "0.2.4",
+      "stagedHashes": {
+        "main.js": "c2c5ec6ac40308fce0123ae56ede29cc45f048c651a576bcc22fde9041900a44",
+        "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+        "styles.css": "783480a9cfae6de540d0ade75ecf59fc5b3240bee44ba2cf69b2b2c561cdff1f"
+      }
+    },
+    "nativeSmoke": [
+      {
+        "id": "open-kplex",
+        "status": "passed",
+        "assertions": [
+          "plugin command registered",
+          "rendered .kplex-app contains K-Plex",
+          "no captured JavaScript errors"
+        ],
+        "elapsedMs": 76
+      }
+    ]
+  },
+  "restoration": {
+    "status": "passed",
+    "mainLayoutOriginalFieldsRetained": true,
+    "normalization": "Four peer-side memo entries and editors:null added on warm reopening; original workspace fields retained",
+    "at": "2026-10-25T10:52:49.743Z",
+    "content": {
+      "files": 77,
+      "markdown": 74,
+      "bytes": 362163,
+      "digest": "5ac78b7d56961fa523a4bc6c8a96db8fe119cd0db28140b8b6ea4f2e5d8778f6"
+    },
+    "userRelationshipEditsPreserved": true,
+    "contentHashesMatched": 77,
+    "configByteMatches": {
+      "workspace.json": false,
+      "community-plugins.json": true,
+      "core-plugins.json": true,
+      "app.json": true,
+      "plugins/k-plex/data.json": true
+    },
+    "mainLayoutMatched": false,
+    "controllers": 0,
+    "floating": 0,
+    "ownedFixtureFolders": 0,
+    "updating": false,
+    "canonicalChildConfirmed": true,
+    "retainedCorrectedTestArtifacts": {
+      "main.js": "c2c5ec6ac40308fce0123ae56ede29cc45f048c651a576bcc22fde9041900a44",
+      "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+      "styles.css": "783480a9cfae6de540d0ade75ecf59fc5b3240bee44ba2cf69b2b2c561cdff1f"
+    },
+    "productionTouched": false
+  },
+  "offlineRestoration": {
+    "status": "passed",
+    "completedAt": "2026-10-25T10:51:22.371Z",
+    "configurationFilesRestored": 5,
+    "retainedCorrectedBuild": true,
+    "content": {
+      "files": 77,
+      "markdown": 74,
+      "bytes": 362163,
+      "digest": "5ac78b7d56961fa523a4bc6c8a96db8fe119cd0db28140b8b6ea4f2e5d8778f6"
+    }
+  },
+  "otherViews": "Shared non-Classic relink completion path, including Wu Xing after integration; no Wu Xing runtime tested here. Compass guard unchanged.",
+  "CI": "Not awaited per maintainer instruction. No pass claimed for pending publication checks."
 }
