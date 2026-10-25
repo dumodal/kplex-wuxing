@@ -1,23 +1,32 @@
 /**
  * Native Obsidian link-drag boundary for Plex nodes. Desktop HTML drag events use the same
  * guarded DragManager.dragLink/onDragStart pair as native links; touch/gate gestures remain
- * caller-owned. Only one captured node reference and a view-owner token live for the gesture.
+ * caller-owned. One captured canonical node, displayed occurrence/relationship and view-owner
+ * lifetime live only for the gesture.
  * Reading a drop resolves that exact existing node, with no enumeration, acquisition or writes.
  */
 import type { App } from "obsidian";
 import type { NodeRef } from "../../core/plex/actions";
 import { tagDisplayName } from "../../core/graph/presentation";
-import type { GraphPage, Role } from "../../types";
+import type { GraphPage, LinkDirection, RelationType, Role } from "../../types";
 import { actionNodeRef, resolveActionPage } from "./actionNode";
 import { getDraggedFile } from "./fileExplorerDrag";
 import {canonicalWebUrl, webUrlOrigin} from "./urlIdentity";
 
-/** Native, transient source metadata; owner identity distinguishes an internal move from a copy. */
+/** Captured canonical relationship context, never permission to mutate without current scene admission. */
+export type NodeLinkDragRelationship = Readonly<{origin: NodeRef; role: Role; direction?: LinkDirection | null;
+  relationType?: RelationType; typeDefinition?: string}>;
+
+/** One displayed source and its existing canvas lifetime; no occurrence registry or graph snapshot is retained. */
+export type NodeLinkDragOccurrence = Readonly<{id: string; current: () => boolean; relationship?: NodeLinkDragRelationship}>;
+
+/** Native, transient source metadata; exact occurrence and owner distinguish an internal move from a copy. */
 export type NodeLinkDragSource = Readonly<{
   kind: "kplex-node-link";
   owner: object;
   node: NodeRef;
   role: Role | "center";
+  occurrence?: NodeLinkDragOccurrence;
 }>;
 
 type NativeDraggable = { type: string; title: string; icon: string; source?: unknown };
@@ -49,11 +58,12 @@ export function canDragNodeLink(page: GraphPage): boolean {
  * tags use standard HTML text and the same bounded captured identity for Plex consumers.
  * @returns The exact source token to retire on drag end, or null when no drag was accepted.
  */
-export function startNodeLinkDrag(app: App, page: GraphPage, event: DragEvent, owner: object, role: Role | "center", title: string, sourcePath: string): NodeLinkDragSource | null {
+export function startNodeLinkDrag(app: App, page: GraphPage, event: DragEvent, owner: object, role: Role | "center", title: string, sourcePath: string,
+  occurrence?: NodeLinkDragOccurrence): NodeLinkDragSource | null {
   const manager = dragManager(app);
   if (!event.dataTransfer || !canDragNodeLink(page) || manager?.draggable || plainTagDrags.has(app)) return null;
   if (page.file && app.vault.getFileByPath(page.file.path) !== page.file) return null;
-  const source: NodeLinkDragSource = { kind: "kplex-node-link", owner, node: actionNodeRef(page), role };
+  const source: NodeLinkDragSource = { kind: "kplex-node-link", owner, node: actionNodeRef(page), role, ...(occurrence ? {occurrence} : {}) };
   try {
     if (page.isTag) {
       event.dataTransfer.setData("text/plain", `#${tagDisplayName(page.path, true).replace(/^#/, "")}`);
@@ -86,6 +96,12 @@ export function nodeLinkDragSource(app: App): NodeLinkDragSource | null {
   if (typeof node.identity !== "string" || typeof node.path !== "string"
     || !["file", "url", "ghost", "tag"].includes(node.kind ?? "")) return null;
   return source as NodeLinkDragSource;
+}
+
+/** Legacy exports remain usable copies; only a live captured occurrence can grant source-side mutation authority. */
+export function isNodeLinkDragCurrent(source: NodeLinkDragSource | null): boolean {
+  try {return Boolean(source?.occurrence && typeof source.occurrence.id === "string" && source.occurrence.id
+    && typeof source.occurrence.current === "function" && source.occurrence.current());} catch {return false;}
 }
 
 /** Resolve exact native files, captured Plex identities and single existing web/tag links without scans, parsing note bodies or creating targets. Selected cold files may use the existing physical-search facade; only accepted navigation materializes them. */

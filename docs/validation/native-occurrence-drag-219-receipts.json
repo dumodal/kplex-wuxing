@@ -1,0 +1,97 @@
+{
+  "recordedAt": "2026-10-25",
+  "parent": "360758a4c0198bcec0203fadc3a61cbd670b2687",
+  "status": "focused-and-build-pass; new native/full/final-CI pending",
+  "priorScope": {
+    "head": "360758a4c0198bcec0203fadc3a61cbd670b2687",
+    "verifyObsidian": "passed",
+    "tests": 3015,
+    "CI": 494,
+    "run": 40173234927,
+    "conclusion": "success",
+    "artifact": "b55b03fee35a69bb0377c82432428008216b65a3ceb527638cfdada5eae5e774",
+    "validatesNewDragCorrection": false
+  },
+  "samples": [
+    {
+      "name": "native-source-negative-1",
+      "status": "failed",
+      "kind": "expected application regression",
+      "error": "Second C→B native drag selected first R→B and opened relink",
+      "source": "unchanged360758a"
+    },
+    {
+      "name": "native-source-full-renderer-negative-1",
+      "status": "failed",
+      "kind": "fixture setup",
+      "error": "Incorrect cleanup method masked evaluation error; exact owned Chrome/profile independently retired, bundle/log preserved"
+    },
+    {
+      "name": "native-source-full-renderer-negative-2",
+      "status": "failed",
+      "kind": "fixture setup",
+      "error": "Evaluation string SyntaxError; cleanup passed"
+    },
+    {
+      "name": "native-source-routing-positive-1",
+      "status": "failed",
+      "tests": 2,
+      "cause": "Old owner representation assertion and native file stand-ins without path; existing semantic/rename/style/DOM assertions retained"
+    },
+    {
+      "name": "native-source-routing-positive-2",
+      "status": "passed",
+      "tests": 2
+    },
+    {
+      "name": "native-source-full-renderer-positive-1",
+      "status": "failed",
+      "cause": "Cross-canvas assertion before both targets were admitted to explicit viewport; scheduling/product cause not claimed"
+    },
+    {
+      "name": "native-source-full-renderer-positive-2",
+      "status": "passed",
+      "tests": 1,
+      "controls": 4
+    },
+    {
+      "name": "native-source-focused-1",
+      "status": "passed",
+      "tests": 14
+    },
+    {
+      "name": "native-source-focused-2",
+      "status": "passed",
+      "tests": 14,
+      "fullRendererControls": 8
+    },
+    {
+      "name": "native-source-routing-positive-3",
+      "status": "passed",
+      "tests": 2,
+      "controls": "Second-copy root creation plus explicit C-area legitimate relink; unchanged editor dragover/drop and legacy copies"
+    }
+  ],
+  "currentChecks": {
+    "architecture": {
+      "passed": 7,
+      "violations": 0
+    },
+    "core": {
+      "passed": 130
+    },
+    "scanner": "passed",
+    "build": "passed"
+  },
+  "runtimeSource": {
+    "src/ui/PlexGraph.tsx": "898c58c76539153aabe7b4f51b339b60517fd78a06f248a0341199c1dc630819",
+    "src/adapters/obsidian/nodeLinkDrag.ts": "cb2d1e5cd8ec2796efb699e801298d9edd4f58176b436e0fa2cfd436205f8920"
+  },
+  "native": "pending",
+  "full": "pending",
+  "finalCI": "pending",
+  "production": "No additional deployment; production remains prior b55b03f test assets; notes strictly read-only.",
+  "outerRestoration": "pending",
+  "combinedWuXingMindMap": "pending deliberate accepted-main integration; no moving branch consumed",
+  "guardChanges": false
+}

@@ -1,7 +1,7 @@
 /** Native Mind Map interaction acceptance using only its caller's disposable fixture. Shared UI/action/drag owners remain real; captured method observations and trusted renderer inputs are reported separately. Cleanup belongs to the enclosing controlled probe. */
 
 /** Exercise measured parent controls, F4 destinations and bidirectional native body drops without installing a test view or writing outside the owned fixture. */
-export async function acceptMindMapInteractions({app,p,c,host,hosts,restores,path,root,session,nodes,act,check,wait,until,clickNative,cases}) {
+export async function acceptMindMapInteractions({app,p,c,host,hosts,restores,path,root,session,nodes,act,check,wait,until,clickNative,cases,instance}) {
  const doc=root(host).ownerDocument,win=doc.defaultView.require('@electron/remote').getCurrentWindow();
  /** Deliver actual owning-window keyboard events, including the public F4 shortcut. */
  const key=code=>{for(const type of ['keyDown','keyUp'])win.webContents.sendInputEvent({type,keyCode:code})};
@@ -69,6 +69,7 @@ export async function acceptMindMapInteractions({app,p,c,host,hosts,restores,pat
  modal.close();await until(()=>!modal.modalEl.isConnected,'Cancelled composer did not close');
  check(!p.index.neighbours(p.index.get(path('R')),'parent').some(row=>row.page.path===path('C')),'Cancelled area drop wrote a relation');
  cases.push({id:'trusted-cross-view-parent-area-shared-composer',cancelledWithoutWrite:true,sourceCanvasRetained:true});
+ await c.acceptNativeDrag({app,p,c,host,compass,restores,path,root,session,nodes,act,check,wait,until,clickNative,drag,opened,cases,instance});
  /** Capture the intended owning canvas before submitting its keyboard shortcut. */
  async function workspaceFocus(){app.workspace.setActiveLeaf(host,{focus:true});win.show();win.focus();win.webContents.focus();root(host).focus();await wait(50)}
 }

@@ -46,7 +46,7 @@ import { ColorSourceModal } from "./ColorSourceModal";
 import { Keymap, Menu, Notice, Platform, type WorkspaceLeaf } from "obsidian";
 import { addNativeSubmenu } from "../adapters/obsidian/nativeSubmenu";
 import { getDraggedFile } from "../adapters/obsidian/fileExplorerDrag";
-import { canDragNodeLink, draggedGraphPage, finishNodeLinkDrag, nodeLinkDragSource, startNodeLinkDrag, type NodeLinkDragSource } from "../adapters/obsidian/nodeLinkDrag";
+import { canDragNodeLink, draggedGraphPage, finishNodeLinkDrag, isNodeLinkDragCurrent, nodeLinkDragSource, startNodeLinkDrag, type NodeLinkDragRelationship, type NodeLinkDragSource } from "../adapters/obsidian/nodeLinkDrag";
 import { urlEmbed } from "./features/urlEmbed";
 import type KplexPlugin from "../main";
 import type { KplexDisplayModeState } from "./KplexDisplayModes";
@@ -3306,7 +3306,19 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const id = gate?.closest<HTMLElement>("[data-kplex-keyboard-id]")?.dataset.kplexKeyboardId
       ?? (area ? scene.areas?.find(row => row.id === area.zone)?.dropOrigin : undefined);
     const node = id ? scene.nodes.find(row => (gate ? sceneNodeKeys.get(row) ?? occurrenceKey(row) : occurrenceKey(row)) === id) : navigationNode();
-    return node && !node.page.transient && index.get(node.page.path) === node.page ? node.page : undefined;
+    return node && !node.page.transient && index.get(node.page.path) === node.page
+      && (!node.page.file || plugin.app.vault.getFileByPath(node.page.file.path) === node.page.file) ? node.page : undefined;
+  };
+
+  /** Only one real primary incoming edge can describe a displayed occurrence's removal context. Cross-links, groups and ambiguous incidence grant no move authority. */
+  const nativeDragRelationship = (node: PositionedNode): NodeLinkDragRelationship | undefined => {
+    const incoming = scene.edges.filter(edge => semanticSceneEdge(edge) && !edge.isCrossLink
+      && edgeOccurrence(edge, "target") === occurrenceKey(node) && edge.targetPath === node.page.path && edge.role === node.role);
+    if (incoming.length !== 1) return undefined;
+    const edge = incoming[0], origin = index.get(edge.sourcePath);
+    if (!origin || origin.transient || origin.file && plugin.app.vault.getFileByPath(origin.file.path) !== origin.file) return undefined;
+    return {origin: actionNodeRef(origin), role: edge.role, direction: edge.direction,
+      relationType: edge.relationType, typeDefinition: edge.typeDefinition};
   };
 
   /** Accept native files or captured Plex links; same-view node drags retain relinking semantics. */
@@ -3322,8 +3334,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     // Empty canvas uses App's navigation fallback; preview that same action at the center.
     if (!hit) { setExternalDropZone("center"); return; }
     const origin = dropOriginAt(event.clientX, event.clientY, event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY));
+    const source = nodeLinkDragSource(plugin.app);
     const eligible = hit === "center" ? true
-      : hit !== "blocked" && origin && target && (structuralAreaDrop(origin, target, hit) || relationshipDropRoles(origin, target, hit).includes(hit));
+      : hit !== "blocked" && origin && target && (structuralAreaDrop(origin, target, hit)
+        ? !source || isNodeLinkDragCurrent(source) : relationshipDropRoles(origin, target, hit).includes(hit));
     setExternalDropZone(hit !== "blocked" && eligible ? hit : null);
     event.preventDefault();
     event.stopPropagation();
@@ -3386,23 +3400,30 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     if (occurrenceEditorPolicy && (event.target as Element | null)?.closest(".kplex-central-editor-overlay")) return;
     const target = draggedGraphPage(plugin.app, index, event);
     if (!target && (nodeLinkDragSource(plugin.app) || !getDraggedFile(plugin.app))) return;
+    const source = nodeLinkDragSource(plugin.app);
     const structuralHit = externalFileDropTarget(event.clientX, event.clientY, event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY));
     const structuralOrigin = dropOriginAt(event.clientX, event.clientY, event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY));
     if (structuralHit === "center" && target) {event.preventDefault(); event.stopPropagation(); onActivate(target, "destination"); return;}
     if (target && structuralOrigin && structuralHit && structuralHit !== "center" && structuralHit !== "blocked" && structuralAreaDrop(structuralOrigin, target, structuralHit)) {
-      event.preventDefault(); event.stopPropagation(); plugin.openStructuralNodeDrop(structuralOrigin, target, {immediateMove: event.altKey}); return;
-    }
-    const source = nodeLinkDragSource(plugin.app);
-    if (source?.owner === viewport.current) {
-      event.preventDefault();
-      event.stopPropagation();
-      const original = scene.nodes.find(node => node.page === target && node.role === source.role);
-      if (!original) return;
-      suppressActivateUntil.current = Date.now() + 220;
-      if (openHistoryRelationshipMenu(original.page, event.clientX, event.clientY, event.currentTarget.ownerDocument)) return;
-      const role = externalFileDropTarget(event.clientX, event.clientY, event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY));
-      if (role && role !== "center" && role !== "blocked") commitNodeAreaDrop(original, role, dropOriginAt(event.clientX, event.clientY, event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY)));
+      event.preventDefault(); event.stopPropagation();
+      if (!source || isNodeLinkDragCurrent(source)) plugin.openStructuralNodeDrop(structuralOrigin, target, {immediateMove: event.altKey});
       return;
+    }
+    if (source?.owner === viewport.current && nativeNodeDrag.current === source && isNodeLinkDragCurrent(source)) {
+      const originals = scene.nodes.filter(node => sceneNodeKeys.get(node) === source.occurrence?.id && node.page === target && node.role === source.role);
+      const original = originals.length === 1 ? originals[0] : undefined;
+      const captured = source.occurrence?.relationship, current = original && nativeDragRelationship(original);
+      // The exact source, current primary edge and target origin must all agree. Otherwise the
+      // explicit canonical target below may authorize creation, never removal of another edge.
+      if (original && captured && current && structuralOrigin && captured.origin.identity === structuralOrigin.path
+        && captured.origin.identity === current.origin.identity && captured.origin.kind === current.origin.kind
+        && captured.origin.fileIdentity === current.origin.fileIdentity && captured.origin.path === current.origin.path
+        && captured.role === current.role && captured.direction === current.direction
+        && captured.relationType === current.relationType && captured.typeDefinition === current.typeDefinition) {
+        event.preventDefault(); event.stopPropagation(); suppressActivateUntil.current = Date.now() + 220;
+        if (structuralHit && structuralHit !== "center" && structuralHit !== "blocked") commitNodeAreaDrop(original, structuralHit, structuralOrigin, true);
+        return;
+      }
     }
     const hit = externalFileDropTarget(event.clientX, event.clientY, event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY));
     if (!hit) return;
@@ -3431,9 +3452,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   };
 
   /** Share the exact durable/optimistic composer path between touch relinks and native body drops. */
-  const commitNodeAreaDrop = (original: PositionedNode, nextRole: GateRole, origin = navigationNode()?.page): void => {
+  const commitNodeAreaDrop = (original: PositionedNode, nextRole: GateRole, origin = navigationNode()?.page,
+    relink = Boolean(classic || original.semanticSourceId === origin?.path)): void => {
     const center = origin;
-    const currentRole = classic || original.semanticSourceId === center?.path ? normalizedRole(original.role) : null;
+    const currentRole = relink ? normalizedRole(original.role) : null;
     // Moving within the shared list never turns an existing challenger into a friend.
     if (classic && settings.lateralArrangement === "left" && nextRole === "left" && currentRole === "right") return;
     if (!center || nextRole === currentRole || !relationshipDropRoles(center, original.page, nextRole).includes(nextRole)) return;
@@ -4502,15 +4524,28 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   };
 
   /**
-   * Preserve the rendered source while synchronously handing its payload to Obsidian. Regular
-   * scene rows use the viewport's move authority; projected descendants use their own occurrence
-   * token, so dropping them in this Plex adds a relation rather than moving their parent's edge.
+   * Capture the actual rendered DOM occurrence before handing its payload to Obsidian. The one
+   * existing canvas owner/lifetime and exact canonical source fence removal authority. Descendant
+   * strips without one admitted primary scene edge remain copy-only, with their own displayed key.
    */
-  const beginNativeNodeDrag = (page: GraphPage, role: Role | "center", label: string, event: DragEvent<HTMLDivElement>, occurrenceOwner?: object): void => {
-    const owner = occurrenceOwner ?? viewport.current;
+  const beginNativeNodeDrag = (page: GraphPage, role: Role | "center", label: string, event: DragEvent<HTMLDivElement>): void => {
+    const owner = viewport.current, element = event.currentTarget, id = element.dataset.kplexKeyboardId;
     if (!owner) { event.preventDefault(); return; }
     clearHoverIntent(true);
-    nativeNodeDrag.current = startNodeLinkDrag(plugin.app, page, event.nativeEvent, owner, role, label, navigationNode()?.page.file?.path ?? "");
+    const candidates = scene.nodes.filter(node => sceneNodeKeys.get(node) === id && node.page === page && node.role === role);
+    const currentView = viewSession?.capture() ?? (() => true);
+    const currentSurface = captureSurfaceContinuation(() => viewport.current, () => plugin.actionManager.readSnapshot(actionSurfaceId), {checkInteraction: false});
+    const reference = actionNodeRef(page), document = element.ownerDocument;
+    const selector = id ? `[data-kplex-keyboard-id="${CSS.escape(id)}"]` : "";
+    let source: NodeLinkDragSource | null = null;
+    source = startNodeLinkDrag(plugin.app, page, event.nativeEvent, owner, role, label, navigationNode()?.page.file?.path ?? "", id ? {id,
+      relationship: candidates.length === 1 ? nativeDragRelationship(candidates[0]) : undefined,
+      current: /** A retired gesture, filtered/removed row, migrated document or replaced native file cannot regain source authority. */ () => Boolean(source && nativeNodeDrag.current === source
+        && currentView() && currentSurface() && element.isConnected && owner.contains(element) && element.ownerDocument === document
+        && element.dataset.kplexKeyboardId === id && owner.querySelectorAll(selector).length === 1 && resolveActionPage(index, reference) === page
+        && page.path === reference.identity && page.path === reference.path
+        && (!page.file || plugin.app.vault.getFileByPath(page.file.path) === page.file))} : undefined);
+    nativeNodeDrag.current = source;
     if (!nativeNodeDrag.current) event.preventDefault();
   };
 
@@ -4593,7 +4628,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       onActivate={/** Capture the clicked occurrence; explicit placeholder folder gestures retain their target. */ (_node, event) => {if (!viewFailed) activateNode(baseNode.page, sceneNodeKeys.get(baseNode), event);}}
       onOpen={/** Modified placeholder clicks already opened the one in-place creation dialog. */ (_, event) => { if (!viewFailed && !isPlaceholderFolderGesture(baseNode.page, event)) openNode(baseNode.page); }}
       nativeDraggable={!viewFailed && canDragNodeLink(baseNode.page) && !hasCentralEditor}
-      onNativeDragStart={/** A rooted hierarchy exports its exact note as a copy, never a fabricated attention-to-child move. */ (_, event) => beginNativeNodeDrag(baseNode.page, baseNode.role, baseNode.label, event, viewDefinition.hierarchy ? baseNode : undefined)}
+      onNativeDragStart={/** The actual displayed key and primary semantic context travel through the shared native payload. */ (_, event) => beginNativeNodeDrag(baseNode.page, baseNode.role, baseNode.label, event)}
       onNativeDragEnd={endNativeNodeDrag}
       onHoverNode={(_, event) => { if (!connectDrag && !nodeDrag) scheduleHoverIntent({ kind: "node", path: baseNode.page.path }, event); }}
       onHoverGate={(_, gate, event) => { if (!connectDrag && !nodeDrag) scheduleHoverIntent({ kind: "gate", path: baseNode.page.path, gate }, event); }}
@@ -4796,7 +4831,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
               aria-labelledby={accessibleNameId}
               data-kplex-path={child.relation.page.path}
               draggable={canDragNodeLink(child.relation.page)}
-              onDragStart={/** A descendant is an outbound endpoint, never authority to move its parent's relation. */ (event: DragEvent<HTMLDivElement>) => beginNativeNodeDrag(child.relation.page, "child", child.label, event, event.currentTarget)}
+              onDragStart={/** A descendant exports its exact displayed key without acquiring another occurrence's primary-edge authority. */ (event: DragEvent<HTMLDivElement>) => beginNativeNodeDrag(child.relation.page, "child", child.label, event)}
               onDragEnd={endNativeNodeDrag}
               style={{
                 left: child.localX - child.width / 2,
