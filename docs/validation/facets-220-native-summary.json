@@ -1,7 +1,7 @@
 {
   "scope": "Windows trusted Electron/CDP in authorized disposable Small; no physical OS drag or OS clipboard claim",
   "priorRuntime": "ced282594854ea548275a0941166fc7a642da42b",
-  "cogRuntime": "This checkpoint; main.js 558588b7c36c050b279f9e710b4bd753d1ff612c0b84d453cece13a0caea2401",
+  "cogRuntime": "444dc1cfcfa56e34741624ff69b271e72999f654",
   "reports": [
     {
       "sample": "features-10",
@@ -316,5 +316,175 @@
       ],
       "cleanup": "passed"
     }
-  ]
+  ],
+  "finalRuntime": "444dc1cfcfa56e34741624ff69b271e72999f654; following checkpoint changes documentation only",
+  "refreshedReports": [
+    {
+      "sample": "pairs",
+      "name": "wuxing-220-pairs",
+      "status": "passed",
+      "startedAt": "2026-10-25T20:29:41.215Z",
+      "completedAt": "2026-10-25T20:29:46.013Z",
+      "automationNode": "v22.22.2",
+      "obsidian": "1.14.5 (installer 1.14.0)",
+      "host": {
+        "node": "v24.18.1",
+        "electron": "43.3.0",
+        "chrome": "150.0.7871.212",
+        "hidden": false
+      },
+      "artifacts": {
+        "main.js": "558588b7c36c050b279f9e710b4bd753d1ff612c0b84d453cece13a0caea2401",
+        "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+        "styles.css": "2a6ae92ec96f864ea701f62eea6232da247d80d5ba218cf38ac8c20a0f8fad55"
+      },
+      "driver": {
+        "transport": "beb7677649f8ae6ae390c0df25b4a025a48777b5fbfc5e36c25f7fe252b8a0d3",
+        "scenario": "48cd2506670517ea6f85d3a690cc7ea9f63f090d92c8e387d13c4ac7a9772355",
+        "definitions": "d834f51bdaf9dd32d31a62d369efcc694ef99ab47168039e22f9af9cdfe26995"
+      },
+      "cases": [
+        "requested-local-cache-proof",
+        "production-registry-five-phases-canonical-links",
+        "sidecar-explicit-loaded-native-document-attachment",
+        "sidecar-explicit-loaded-native-document-attachment",
+        "main-popout-per-canvas-selection-zero-source-work",
+        "native-compass-wuxing-main-popout-independent-canvas-and-sidecar-state",
+        "opening-canvas-selector-owner-survives-window-focus-change",
+        "other-canvas-switch-preserves-native-editor",
+        "other-canvas-switch-preserves-native-editor",
+        "independent-owned-native-workspace-view-restoration",
+        "windows-native-view-select-keyboard"
+      ],
+      "cleanup": "passed"
+    },
+    {
+      "sample": "settings",
+      "name": "canvas-settings-218",
+      "status": "passed",
+      "startedAt": "2026-10-25T20:29:46.142Z",
+      "completedAt": "2026-10-25T20:29:52.036Z",
+      "automationNode": "v22.22.2",
+      "obsidian": "1.14.5 (installer 1.14.0)",
+      "artifacts": {
+        "main.js": "558588b7c36c050b279f9e710b4bd753d1ff612c0b84d453cece13a0caea2401",
+        "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+        "styles.css": "2a6ae92ec96f864ea701f62eea6232da247d80d5ba218cf38ac8c20a0f8fad55"
+      },
+      "driver": {
+        "transport": "beb7677649f8ae6ae390c0df25b4a025a48777b5fbfc5e36c25f7fe252b8a0d3",
+        "scenario": "8a301ba772628e2fa9e7eb1cc48ce176a871fe66e9c8b5118ceeba035aadacb1",
+        "definitions": "95e87881578a54ecfb2df6cfb5fcac2ef87fce3be720e811b1b97152c585e18f"
+      },
+      "cases": [
+        "production-registered-views",
+        "native-legacy-slider-save",
+        "native-tint-action-start",
+        "native-edit-click-delivery",
+        "native-tint-action-complete",
+        "main-shared-compass-native-controls-and-area-tint",
+        "main-test-contribution-to-effective-native-view",
+        "production-mindmap-native-settings-save",
+        "native-type-configuration-zero-work",
+        "native-contributed-save-failure-rolls-back-control",
+        "native-contributed-control-recovers-after-storage-failure",
+        "main-native-search-and-moved-control-focus",
+        "main-native-back-navigation",
+        "native-tint-action-start",
+        "native-edit-click-delivery",
+        "native-tint-action-complete",
+        "native-settings-popout-control-focus-and-tint",
+        "native-mounted-panel-and-unsaved-lens-draft-retained",
+        "native-same-scope-draft-switch-zero-work",
+        "native-incompatible-editor-transition-rejected",
+        "native-main-popout-independent-selection-focus-and-camera",
+        "native-select-key-delivery",
+        "native-owning-document-select-keyboard",
+        "native-main-popout-switch-keyboard-zero-work",
+        "native-owned-view-reload-independent-workspace-selection"
+      ],
+      "cleanup": "passed"
+    },
+    {
+      "sample": "interactions",
+      "name": "mindmap-219-interactions",
+      "status": "passed",
+      "startedAt": "2026-10-25T20:29:52.100Z",
+      "completedAt": "2026-10-25T20:30:08.767Z",
+      "automationNode": "v22.22.2",
+      "obsidian": "1.14.5 (installer 1.14.0)",
+      "artifacts": {
+        "main.js": "558588b7c36c050b279f9e710b4bd753d1ff612c0b84d453cece13a0caea2401",
+        "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+        "styles.css": "2a6ae92ec96f864ea701f62eea6232da247d80d5ba218cf38ac8c20a0f8fad55"
+      },
+      "driver": {
+        "transport": "beb7677649f8ae6ae390c0df25b4a025a48777b5fbfc5e36c25f7fe252b8a0d3",
+        "scenario": "1ba7c80ded5ecaad2ab2adfdde17eb824b9c76d751ef4b1014ebc3128ef2781a",
+        "definitions": "2b1739e523829702bec62b8d6c47ab0792c3da1ff01f747ebc3633d663324a53"
+      },
+      "cases": [
+        "trusted-parent-columns-and-height-scroll",
+        "production-mindmap-canonical-cross-links",
+        "trusted-f4-result-reroots-owning-map",
+        "trusted-bidirectional-compass-mindmap-center-drops",
+        "trusted-cross-view-parent-area-shared-composer",
+        "trusted-native-second-occurrence-additive-save",
+        "trusted-native-parent-child-relink-feedback-settles",
+        "trusted-native-occurrence-editor-text-drop",
+        "trusted-native-parent-child-relink-feedback-settles",
+        "trusted-native-parent-child-relink-feedback-settles"
+      ],
+      "cleanup": "passed"
+    },
+    {
+      "sample": "navigation",
+      "name": "mindmap-219-navigation",
+      "status": "passed",
+      "startedAt": "2026-10-25T20:30:08.829Z",
+      "completedAt": "2026-10-25T20:30:14.707Z",
+      "automationNode": "v22.22.2",
+      "obsidian": "1.14.5 (installer 1.14.0)",
+      "artifacts": {
+        "main.js": "558588b7c36c050b279f9e710b4bd753d1ff612c0b84d453cece13a0caea2401",
+        "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+        "styles.css": "2a6ae92ec96f864ea701f62eea6232da247d80d5ba218cf38ac8c20a0f8fad55"
+      },
+      "driver": {
+        "transport": "beb7677649f8ae6ae390c0df25b4a025a48777b5fbfc5e36c25f7fe252b8a0d3",
+        "scenario": "1ba7c80ded5ecaad2ab2adfdde17eb824b9c76d751ef4b1014ebc3128ef2781a",
+        "definitions": "e8fa4f129e09d8aceb928a9c3ca9a0594e0def139c0fd72c4cd21b1d12f0f7de"
+      },
+      "cases": [
+        "native-SVG-bottom-child-outward-peer-and-top-parent-origins",
+        "trusted-primary-toggles-child-and-peer-context-without-editor-or-reroot",
+        "native-selector-current-node-entry-and-pins-history-reroot",
+        "trusted-bottom-left-density-rails-share-durable-type-settings",
+        "native-cycle-reference-reveals-earlier-occurrence-and-notice"
+      ],
+      "cleanup": "passed"
+    }
+  ],
+  "editorRerun": {
+    "runtime": "444dc1cfcfa56e34741624ff69b271e72999f654",
+    "status": "stopped-at-safety-guard",
+    "reason": "Clipboard has rich/custom formats; left untouched",
+    "completedAt": "2026-10-25T20:29:02.308Z",
+    "completedCases": [
+      "requested-local-cache-proof",
+      "production-registry-five-phases-canonical-links",
+      "type-configuration-zero-source-work",
+      "native-settings-preset-manager-durable-multilingual-label",
+      "native-attention-editor-expanded-reclassified-resized-and-restored-at-phase-anchor",
+      "attention-native-editor-phase-reclassification-resize-compatible-switch",
+      "selection-and-phase-mapping-preserve-editor-and-owned-sidecar"
+    ],
+    "artifacts": {
+      "main.js": "558588b7c36c050b279f9e710b4bd753d1ff612c0b84d453cece13a0caea2401",
+      "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+      "styles.css": "2a6ae92ec96f864ea701f62eea6232da247d80d5ba218cf38ac8c20a0f8fad55"
+    },
+    "cleanup": "passed",
+    "priorFullPass": "ced2825, editor-11,12 cases; retained separately, not relabelled as final runtime"
+  }
 }

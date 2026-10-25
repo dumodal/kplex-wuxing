@@ -21,9 +21,9 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 # PR #220: current implementation and validation handoff
 
-Main validation agent to maintainer; implementation, commits, pushes and PR updates authorized. Keep #220 draft/open/unmerged. No release or personal-vault deployment.
+Main validation agent to maintainer; implementation, commits, pushes and PR updates authorized. Maintainer now authorizes merge of #220 after testing, then implementation of #222 from accepted main. Keep #222 unmerged. No release or personal-vault deployment.
 
-- Branch: 2026-10-24-canvas-wuxing. Accepted integration baseline: main 26623c8393bddc0c3bcac39468078ec20ceccbc8, accepted #219 5754fc571f78f23231ea488a93e2397d477da44e, merge 0406844. Current prior published head: ced282594854ea548275a0941166fc7a642da42b. This checkpoint adds native acceptance corrections, authentic screenshots and targeted settings cogs.
+- Branch: 2026-10-24-canvas-wuxing. Accepted integration baseline: main 26623c8393bddc0c3bcac39468078ec20ceccbc8, accepted #219 5754fc571f78f23231ea488a93e2397d477da44e, merge 0406844. Published runtime head: 444dc1cfcfa56e34741624ff69b271e72999f654. This documentation-only checkpoint records refreshed native acceptance; runtime artifacts are unchanged.
 - Equipped environment: real dependencies, Node22.22.2, Chromium, GitHub and Windows Obsidian CLI. No offline-agent transfer or pending partner adoption. Runtime host Obsidian1.14.5 / Electron43.3.0; renderer Node24.18.1 differs from build/automation Node22.22.2.
 - A-F implemented: versioned optional view contracts/conformance; shared captured contributions/settings; Facets presets and centered measured layout/badge; guarded shared assignment/drop/Undo; existing predicate authoring with bounded availability; optional shared section/anchor proof and documented follow-up. See docs/FACETS_VIEW.md, CANVAS_VIEW_API.md, CANVAS_VIEW_DEVELOPER_GUIDE.md and FACETS.md. Production Mind Map/Facets do not declare sections support.
 - Latest targeted request: adjacent view/preset selectors with responsive wrap, view cog to native view page, preset cog to the existing exact preset editor. Optional settings target uses the same captured controller, native manager/color/modal lifetime and queued settings writer. All eight locales updated. No competing owner.
@@ -33,7 +33,7 @@ Main validation agent to maintainer; implementation, commits, pushes and PR upda
 
 ## Remaining work
 
-Run final clean-head npm run verify:obsidian and exact-head CI; refresh affected exact-build native receipts; update PR with actual A-F status/tests/limits and exact pushed head. Required source-browser scaling guards remain unchanged. Final outer restoration still required after testing.
+Finish full verify:obsidian started on clean444dc1c and exact final-head CI; record terminal results on PR220. Refreshed pairs11/settings25/interactions10/navigation5 all pass on main558588b7, plus features42. Editor rerun completed seven cases then safely stopped on rich/custom clipboard; leave it untouched and retain prior full ced2825 pass separately. No weakening. Restore outer backup, update PR actual results/limits, then merge220 with expected exact head. Fetch accepted main into existing222 branch before any implementation. Reread accepted contracts, publish startingSHA/plan/ETA and preserve this standing header on the222 handoff. No222 merge. Required source-browser scaling guards remain unchanged.
 
 ## Resource ownership and limitations
 
