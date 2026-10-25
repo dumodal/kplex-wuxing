@@ -792,3 +792,34 @@ for (const mode of ["refreshing", "preview-failed", "source-replaced", "target-r
     }
   });
 }
+
+/** A native import without removal authority must stay additive through the real canonical writer, not merely select a create-shaped dialog. */
+test('additive-only existing-target commit preserves other ontology declarations and bodies',async()=>{
+ const origin=page('R.md'),target=page('B.md'),other=page('C.md');origin.neighbours=new Map([[target.path,{direction:1}]]);
+ const frontmatter={children:['[[B]]','[[Unrelated]]'],parent:['[[OtherParent]]'],untouched:'keep'},otherSource={children:['[[B]]']},beforeOther=JSON.stringify(otherSource),events=[];
+ const context={app:{vault:{getFileByPath:path=>[origin,target,other].find(page=>page.path===path)?.file??null}},translator:key=>key,index:{withForegroundPriority:async work=>work(),prepareRelationshipPair:async()=>{events.push('prepare');return true},isSemanticWriteReady:()=>true,get:path=>[origin,target,other].find(page=>page.path===path),gateNeighbourPaths:()=>new Set(),isConnected:()=>true},
+  managedMetadataWrites:new Map(),pruneManagedMetadataWrites(){},referenceForPage:()=> '[[B]]',valueContainsTarget:value=>JSON.stringify(value).includes('[[B]]'),
+  mutateRelationshipMetadata:async(file,fields,update)=>{assert.equal(file,origin.file);assert.deepEqual([...fields],['parent']);events.push('append');update(frontmatter)},
+  relinkCentralNeighbour:()=>assert.fail('Additive import cannot acquire implicit relink authority'),writeRelationship:()=>assert.fail('Additive import cannot clear other ontology fields'),removeTargetFromValue:()=>assert.fail('Other declarations must not be removed')};
+ for(const name of ['prepareRelationshipMutation','publishSavedRelationship','addRelationshipOntology','appendRelationshipReference'])context[name]=productionFunction('src/main.ts',name,{normalizeFieldName:actualNormalizeFieldName,SavedRelationshipPendingError:class extends Error{}});
+ const commit=productionFunction('src/main.ts','createRelationToPage',{Notice:class{}});
+ const result=await commit.call(context,origin,'parent',target,'parent',undefined,true);
+ assert.equal(result.state,'saved-published');assert.deepEqual(frontmatter,{children:['[[B]]','[[Unrelated]]'],parent:['[[OtherParent]]','[[B]]'],untouched:'keep'});assert.equal(JSON.stringify(otherSource),beforeOther);assert.deepEqual(events,['prepare','append','prepare']);
+});
+
+/** Existing Compass/explorer callers retain the accepted connected-pair policy unless they explicitly request non-removal. */
+test('legacy existing-target creation retains automatic relink by default',async()=>{
+ const origin=page('R.md'),target=page('B.md'),calls=[];origin.neighbours=new Map([[target.path,{direction:1}]]);
+ const context={translator:key=>key,index:{withForegroundPriority:async work=>work(),gateNeighbourPaths:()=>new Set(),isConnected:()=>true},prepareRelationshipMutation:async()=>[origin,target],relinkCentralNeighbour:async(...args)=>{calls.push(args);return{state:'saved-published',page:target}},addRelationshipOntology:()=>assert.fail('Legacy caller unexpectedly became additive'),writeRelationship:()=>assert.fail('Connected legacy pair must use its canonical relink owner')};
+ const result=await productionFunction('src/main.ts','createRelationToPage',{Notice:class{}}).call(context,origin,'parent',target,'parents');assert.equal(result.state,'saved-published');assert.deepEqual(calls,[[origin,target,'parent','parents',1]]);
+});
+
+/** Non-Markdown origins use the existing inverse-storage owner without clearing the Markdown target's other declarations. */
+test('additive-only inverse endpoint storage preserves the target ontology',async()=>{
+ const origin=page('https://example.com/source'),target=page('B.md');origin.file=null;origin.url=origin.path;origin.neighbours=new Map([[target.path,{direction:1}]]);
+ const frontmatter={children:['[[OtherChild]]'],parents:['[[OtherParent]]']},events=[];
+ const context={translator:key=>key,app:{vault:{getFileByPath:path=>path===target.path?target.file:null}},index:{withForegroundPriority:async work=>work(),prepareRelationshipPair:async(...paths)=>{events.push(['prepare',...paths]);return true},isSemanticWriteReady:()=>true,get:path=>path===origin.path?origin:path===target.path?target:undefined,gateNeighbourPaths:()=>new Set(),isConnected:()=>true},managedMetadataWrites:new Map(),pruneManagedMetadataWrites(){},inverseOntologyField:()=> 'children',referenceForPage:(page,file)=>{assert.equal(page,origin);assert.equal(file,target.file);return origin.url},valueContainsTarget:()=>false,mutateRelationshipMetadata:async(file,fields,update)=>{assert.equal(file,target.file);assert.deepEqual([...fields],['children']);update(frontmatter)},relinkCentralNeighbour:()=>assert.fail('Inverse import must not relink'),writeRelationship:()=>assert.fail('Inverse import must not clear other properties')};
+ for(const name of ['prepareRelationshipMutation','publishSavedRelationship','addRelationshipOntology','appendRelationshipReference'])context[name]=productionFunction('src/main.ts',name,{normalizeFieldName:actualNormalizeFieldName,SavedRelationshipPendingError:class extends Error{}});
+ const result=await productionFunction('src/main.ts','createRelationToPage',{Notice:class{}}).call(context,origin,'parent',target,'parents',undefined,true);
+ assert.equal(result.state,'saved-published');assert.deepEqual(frontmatter,{children:['[[OtherChild]]',origin.url],parents:['[[OtherParent]]']});assert.deepEqual(events,[['prepare',origin.path,target.path],['prepare',target.path,origin.path]]);
+});

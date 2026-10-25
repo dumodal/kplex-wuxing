@@ -1,6 +1,6 @@
 # Native desktop occurrence drag correction — PR219
 
-Zsolt's Codex Agent,2026-10-25. Existing branch `2026-10-24-canvas-mindmap`, accepted main `9987810`, parent `360758a`. **Interim: focused/build checks pass; affected native, new complete verification and exact-final-head CI remain required.** No merge, release, force-push or additional production deployment is authorized.
+Zsolt's Codex Agent,2026-10-25. Existing branch `2026-10-24-canvas-mindmap`, accepted main `9987810`, parent `360758a`. **Interim: focused/build checks pass; native Save exposed an additional implicit-relink gap, now corrected through the existing append-only owner. New native/full/final CI remain required.** No merge, release, force-push or additional production deployment is authorized.
 
 ## Diagnosis and bounded correction
 
@@ -32,3 +32,15 @@ Later accepted-main composition must keep numeric hierarchy budget fifth/default
 Standalone Compass/Mind Map and test-definition checks do not certify combined Wu Xing/Mind Map behavior. Once both changes are deliberately integrated, smoke different views simultaneously, cross-view drops, unsupported area-mode retirement, cross-links and independent editor/camera/session ownership. That combined-only check remains pending; it is not a hidden dependency or permission to merge partner code.
 
 Parser/helper45/50ms and all bounded-work guards are unchanged. FileManager cache-clean, fresh-popout Sidecar, older215 combined limits, physical Windows/mobile and OS cross-window drag remain separately documented. Finish the owned Small restoration (eight exact files,77 content hashes, originally-open state) after the new verification lanes.
+
+## Native Save and canonical freshness correction
+
+New runtime dce8020 native sample1 passed the existing5 interaction cases and the duplicate payload/create-mode assertions, then failed the driver’s obsolete relink-modal selector. Creation actually uses NewRelatedNoteModal’s React composer; the driver now waits for its ontology input/submit callback and uses its real primary Link button. Sample2 missed the prior parent-area target and navigated to C; its actual drop hit was not captured, so exact causation remains unproven. Sample3 requires rendered root R and settled source/target geometry and records trusted drop hits/payloads; its parent-area case passes. All three samples independently clean up successfully.
+
+Sample3 then fails a real requested invariant after actual Save: R→B’s child declaration was removed despite UI mode=create and a correct second C→B payload. createRelationToPage intentionally auto-relinks an already-connected pair, and its normal writer clears that target from other ontology fields. Choosing a create-shaped dialog alone was therefore insufficient. A second preserved negative at the production writer boundary reproduces this implicit relink. No native/full acceptance is claimed for bcf33da/dce8020.
+
+The bounded fix adds ephemeral RelatedNoteInvocation.additiveOnly (defaultfalse), captured by the existing composer. Existing-target submits pass an optional sixth additiveOnly argument through createRelationToPage; true reuses addRelationshipOntology/appendRelationshipReference, the existing pair-preparation/metadata/publication owners, and no second writer. Other declarations and body evidence remain. Defaults preserve legacy Compass/explorer automatic relink. Native foreign/stale/ambiguous imports and native history/pin copies request non-removal; a legitimately admitted same-canvas primary move still uses relink. Inverse Markdown storage is covered. No persisted settings/schema/view-definition change.
+
+An additional real HTML-payload negative changes the canonical relationship before React repaints and reproduces stale removal permission. nativeDragRelationship now compares the current cached canonical row/physical definition/type/direction/actual semantic role, and requires certified pair readiness before removal. Capture can retain exact cached context without certifying it; uncertified pairs remain additive. Previous/next canonical roles survive Compass’s physical left/right placement. These reads never start acquisition.
+
+128 focused adapter/composer/writer/full-renderer TAP cases pass, including10 actual full-renderer controls;2 callback cases pass with real HTML previous/next compatibility, explicit source-owned area relink, exact copy-only descendants and native-editor handoff. Real build passes corresponding final source. Native actual Save/editor drop, clean complete verification, exact-head CI and outer restoration still follow. Earlier source/CI/native evidence is not selected as a substitute.

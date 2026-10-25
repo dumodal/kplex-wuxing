@@ -10,9 +10,13 @@ export async function acceptMindMapInteractions({app,p,c,host,hosts,restores,pat
  /** Reuse the reviewed trusted HTML drag transport; Chromium supplies its payload, and finally releases the debugger. */
  const drag=async(from,to)=>{
   check(!app.dragManager.draggable,'Competing native drag');win.show();win.focus();win.webContents.focus();
-  const receipt=await c.htmlDrag({contents:win.webContents,from:typeof from==='function'?center(from()):from,to:typeof to==='function'?center(to()):to,
+  const drops=[];/** Observe actual delivery before React consumes it; no payload or handler is replaced. */
+  const observe=event=>{const source=app.dragManager.draggable?.source,hit=doc.elementFromPoint(event.clientX,event.clientY);drops.push({trusted:event.isTrusted,x:event.clientX,y:event.clientY,hitClass:typeof hit?.className==='string'?hit.className:null,gate:hit?.closest('[data-kplex-gate]')?.dataset.kplexGate,occurrence:hit?.closest('[data-kplex-keyboard-id]')?.dataset.kplexKeyboardId,insideParent:!!parentPanel()?.contains(hit),root:session(host).layoutRoot(path('A')),sourceKind:source?.kind,sourceId:source?.occurrence?.id,canonicalSource:source?.node?.identity,relationshipOrigin:source?.occurrence?.relationship?.origin.identity});c.progress={...c.progress,nativeDrops:drops}};
+  doc.addEventListener('drop',observe,true);
+  try{const receipt=await c.htmlDrag({contents:win.webContents,from:typeof from==='function'?center(from()):from,to:typeof to==='function'?center(to()):to,
    input:(type,point,modifiers=[])=>win.webContents.sendInputEvent({type,x:point.x,y:point.y,button:'left',clickCount:1,modifiers}),wait,until});
-  await wait(80);check(!win.webContents.debugger.isAttached(),'Native drag debugger leaked');return receipt;
+   await wait(80);check(!win.webContents.debugger.isAttached(),'Native drag debugger leaked');return{...receipt,drops};
+  }finally{doc.removeEventListener('drop',observe,true)}
  };
  const parentPanel=()=>root(host).querySelector('.kplex-zone-parent');
  check(parentPanel(),'Measured parent area absent');check(Number(parentPanel().querySelector('.kplex-zone-count').textContent)===13,'Parent area lost available occurrences');
@@ -52,7 +56,9 @@ export async function acceptMindMapInteractions({app,p,c,host,hosts,restores,pat
  const inward=await drag(compassCenter,mapCenter);await until(()=>session(host).layoutRoot(path('C'))===path('C'),'Compass center drop did not reroot Mind Map');
  check(compass.view.documentSession.centerPath===path('C'),'Destination drop changed source canvas');
  cases.push({id:'trusted-bidirectional-compass-mindmap-center-drops',outward,inward,physicalCrossWindowGesture:false});
- session(host).setRoot(path('R'));await act(host,'view.fit');await act(host,'view.areas.toggle');await until(frame,'Parent target frame absent');
+ session(host).setRoot(path('R'));await until(()=>nodes(host).find(node=>node.dataset.kplexKeyboardId==='root')?.dataset.kplexPath===path('R'),'Parent target root not rendered');await act(host,'view.fit');await act(host,'view.areas.toggle');await until(frame,'Parent target frame absent');
+ let geometry,stableSince=Date.now();
+ await until(()=>{const rect=frame()?.getBoundingClientRect(),source=compassCenter()?.getBoundingClientRect(),key=JSON.stringify([rect?.toJSON(),source?.toJSON(),root(host).querySelector('.kplex-camera')?.style.transform]);if(key!==geometry){geometry=key;stableSince=Date.now()}return nodes(host).find(node=>node.dataset.kplexKeyboardId==='root')?.dataset.kplexPath===path('R')&&Date.now()-stableSince>=120},'Parent target/source geometry did not settle');
  const opened=[],open=p.openRelationModal;
  p.openRelationModal=function(options){check(options.origin.path.startsWith(path('').slice(0,-3))&&options.fixedTarget?.path.startsWith(path('').slice(0,-3)),'Drop attempted a non-fixture relationship');const modal=open.call(this,options);opened.push({modal,options});return modal};
  restores.push(()=>{p.openRelationModal=open;for(const value of opened)value.modal.close()});
@@ -63,12 +69,12 @@ export async function acceptMindMapInteractions({app,p,c,host,hosts,restores,pat
   const hit=doc.elementFromPoint(x,y);if(hit&&parentPanel().contains(hit)&&!hit.closest('[data-kplex-path], [data-kplex-gate], button, input, .kplex-zone-tools'))point={x,y};
  }
  check(point,'No blank parent-area drop pixel');c.progress={...c.progress,areaTarget:{point,hit:doc.elementFromPoint(point.x,point.y)?.className}};
- await drag(compassCenter,point);await until(()=>opened.length===1&&opened[0].modal.modalEl.isConnected,'Semantic parent-area drop did not open shared composer');
+ const parentDelivery=await drag(compassCenter,point);await until(()=>opened.length===1&&opened[0].modal.modalEl.isConnected,'Semantic parent-area drop did not open shared composer');
  const {modal,options}=opened[0];c.progress={...c.progress,areaDrop:{origin:options.origin.path,target:options.fixedTarget?.path,role:options.semanticRole,mode:options.mode,point,frame:bounds.toJSON(),hit:doc.elementFromPoint(point.x,point.y)?.className}};
  check(options.origin.path===path('R')&&options.fixedTarget.path===path('C')&&options.semanticRole==='parent'&&options.mode==='create','Area drop lost canonical root/target/role '+JSON.stringify(c.progress.areaDrop));
  modal.close();await until(()=>!modal.modalEl.isConnected,'Cancelled composer did not close');
  check(!p.index.neighbours(p.index.get(path('R')),'parent').some(row=>row.page.path===path('C')),'Cancelled area drop wrote a relation');
- cases.push({id:'trusted-cross-view-parent-area-shared-composer',cancelledWithoutWrite:true,sourceCanvasRetained:true});
+ cases.push({id:'trusted-cross-view-parent-area-shared-composer',cancelledWithoutWrite:true,sourceCanvasRetained:true,delivery:parentDelivery});
  await c.acceptNativeDrag({app,p,c,host,compass,restores,path,root,session,nodes,act,check,wait,until,clickNative,drag,opened,cases,instance});
  /** Capture the intended owning canvas before submitting its keyboard shortcut. */
  async function workspaceFocus(){app.workspace.setActiveLeaf(host,{focus:true});win.show();win.focus();win.webContents.focus();root(host).focus();await wait(50)}

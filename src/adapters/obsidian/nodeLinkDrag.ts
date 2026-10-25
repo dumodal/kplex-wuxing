@@ -98,7 +98,7 @@ export function nodeLinkDragSource(app: App): NodeLinkDragSource | null {
   return source as NodeLinkDragSource;
 }
 
-/** Legacy exports remain usable copies; only a live captured occurrence can grant source-side mutation authority. */
+/** Check the owning gesture/occurrence lifetime only. Consumers must separately validate current canonical relationship context before permitting removal. */
 export function isNodeLinkDragCurrent(source: NodeLinkDragSource | null): boolean {
   try {return Boolean(source?.occurrence && typeof source.occurrence.id === "string" && source.occurrence.id
     && typeof source.occurrence.current === "function" && source.occurrence.current());} catch {return false;}

@@ -862,3 +862,10 @@ test("raw or twice-decoded Markdown cache spellings cannot authorize a relocatio
     assert.equal(f.texts.get(f.source.path),original);
   }
 });
+
+/** Non-removal intent must reach the actual existing-target commit after ontology preparation; UI mode alone is insufficient. */
+test('native additive-only invocation survives the shared existing-target composer',async()=>{
+ const origin=page('R.md'),target=page('B.md'),calls=[],commits=[];
+ const link=production('linkExisting',{origin,selectedTarget:target,role:'parent',continuation:'another',session:{additiveOnly:true,isSessionOpen:()=>true,setWriting(){}},beginWrite:()=>true,prepareField:async()=> 'parents',refreshCapturedPage:(_plugin,page)=>page,busyRef:{current:true},setBusy(){},reportFailure:assert.fail,complete:async(...args)=>commits.push(args),plugin:{createRelationToPage:async(...args)=>{calls.push(args);return{state:'saved-published',page:target}}}});
+ await link();assert.deepEqual(calls,[[origin,'parent',target,'parents',undefined,true]]);assert.deepEqual(commits,[[target,'another',false]]);
+});

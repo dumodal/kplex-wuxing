@@ -24,8 +24,10 @@ export async function acceptNativeOccurrenceDrag({app,p,c,host,compass,restores,
  const {modal,options}=opened[count],source=captured.at(-1);
  check(source?.trusted&&source.id==='b-second'&&source.origin===ids.c&&source.role==='child','Native HTML payload lost exact second occurrence/source');
  check(options.mode==='create'&&options.origin.path===ids.r&&options.fixedTarget.path===ids.b&&options.semanticRole==='parent'&&options.existingDirection===undefined,'Second occurrence borrowed first R→B relink authority');
- const field=modal.modalEl.querySelector('#kplex-relation-modal-field'),parent=p.settings.hierarchy.parents[0];check(parent&&[...field.options].some(option=>option.value===parent),'Parent ontology field unavailable');field.value=parent;field.dispatchEvent(new field.ownerDocument.defaultView.Event('change',{bubbles:true}));
- await until(()=>modal.modalEl.querySelector('button.mod-cta')?.disabled===false,'Native additive save unavailable');await clickNative(()=>modal.modalEl.querySelector('button.mod-cta'));
+ const parent=p.defaultOntologyField('parent');
+ await until(()=>modal.modalEl.querySelector('.kplex-add-related-ontology-search input')?.value===parent&&typeof modal.submitCallback==='function','Canonical creation composer/ontology not ready');
+ check(p.ontologyFieldsForRole('parent').some(field=>field.toLocaleLowerCase()===parent.toLocaleLowerCase()),'Parent ontology field unavailable');
+ await until(()=>modal.modalEl.querySelector('button[data-kplex-primary-action="true"]')?.disabled===false,'Native additive save unavailable');await clickNative(()=>modal.modalEl.querySelector('button[data-kplex-primary-action="true"]'));
  await until(()=>!modal.modalEl.isConnected,'Native additive save did not settle');
  await until(()=>JSON.stringify(app.metadataCache.getFileCache(file(ids.r))?.frontmatter?.[parent]).includes('B'),'Added parent declaration absent');
  check(JSON.stringify(app.metadataCache.getFileCache(file(ids.r)).frontmatter[child])===JSON.stringify(childrenBefore),'Existing R→B child declaration was removed');

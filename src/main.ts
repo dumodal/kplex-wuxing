@@ -5545,7 +5545,8 @@ export default class KplexPlugin extends Plugin {
     }, target.path);
   }
 
-  private async addRelationshipOntology(storageFile: TFile, target: GraphPage, field: string): Promise<void> {
+  /** Append one explicit ontology through the existing metadata/publication owner, preserving other declarations and optional caller spelling. */
+  private async addRelationshipOntology(storageFile: TFile, target: GraphPage, field: string, referenceOverride?: string): Promise<void> {
     if (!this.index.isSemanticWriteReady(storageFile.path, target.path)
       && !(await this.index.prepareRelationshipPair(storageFile.path, target.path, this.index.get(target.path) ? undefined : target))) {
       throw new Error(this.translator("relation.preparingRelationship"));
@@ -5555,7 +5556,7 @@ export default class KplexPlugin extends Plugin {
     this.pruneManagedMetadataWrites();
     this.managedMetadataWrites.set(storageFile.path, Date.now() + 15000);
     const desiredNormalized = normalizeFieldName(field);
-    const reference = this.referenceForPage(target, storageFile);
+    const reference = referenceOverride ?? this.referenceForPage(target, storageFile);
 
     await this.mutateRelationshipMetadata(storageFile, new Set([desiredNormalized]), (frontmatter: Record<string, unknown>) => {
       this.appendRelationshipReference(frontmatter, storageFile, target, field, reference);
@@ -5604,8 +5605,9 @@ export default class KplexPlugin extends Plugin {
     return this.createRelationToPage(origin, semanticRole, selectedPage, selectedField);
   }
 
-  /** Persist an existing-target relationship under exact current pair authority, then await canonical saved publication. */
-  async createRelationToPage(origin: GraphPage, semanticRole: RelationshipRole, target: GraphPage, selectedField: string, referenceOverride?: string): Promise<RelationshipWriteResult> {
+  /** Persist under exact current pair authority. Native imports without removal authority reuse the existing append-only ontology owner; legacy callers retain automatic relink. */
+  async createRelationToPage(origin: GraphPage, semanticRole: RelationshipRole, target: GraphPage, selectedField: string, referenceOverride?: string,
+    additiveOnly = false): Promise<RelationshipWriteResult> {
     return this.index.withForegroundPriority(async () => {
       const originPath = origin.path;
       const targetPath = target.path;
@@ -5617,18 +5619,20 @@ export default class KplexPlugin extends Plugin {
         return { state: "unavailable" };
       }
 
-      // A target connected through another gate remains a valid drag target. Treat that gesture
-      // as a relink so the new YAML relationship becomes authoritative over any stale body link.
-      if (this.index.isConnected(origin, target.path)) {
+      // Legacy creation keeps its automatic-relink policy. An import without source removal
+      // authority must instead append, even when this canonical pair already has another role.
+      if (!additiveOnly && this.index.isConnected(origin, target.path)) {
         return this.relinkCentralNeighbour(origin, target, semanticRole, selectedField, origin.neighbours.get(target.path)?.direction ?? null);
       }
 
       if (origin.file?.extension === "md") {
-        await this.writeRelationship(origin.file, target, selectedField, referenceOverride);
+        if (additiveOnly) await this.addRelationshipOntology(origin.file, target, selectedField, referenceOverride);
+        else await this.writeRelationship(origin.file, target, selectedField, referenceOverride);
         await this.publishSavedRelationship(origin.path, target.path);
       } else if (target.file?.extension === "md") {
         const inverseField = this.inverseOntologyField(selectedField, semanticRole);
-        await this.writeRelationship(target.file, origin, inverseField);
+        if (additiveOnly) await this.addRelationshipOntology(target.file, origin, inverseField);
+        else await this.writeRelationship(target.file, origin, inverseField);
         await this.publishSavedRelationship(target.path, origin.path);
       } else {
         new Notice(this.translator("notice.dragOriginRequiresMarkdownTarget"), 2800);

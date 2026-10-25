@@ -3238,14 +3238,14 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   };
 
   /** A gate states its role directly; body drops on history or pinned chips offer the remaining eligible roles. */
-  const openHistoryRelationshipMenu = (origin: GraphPage, clientX: number, clientY: number, ownerDocument: Document, semanticRole?: GateRole, immediateMove = false): boolean => {
+  const openHistoryRelationshipMenu = (origin: GraphPage, clientX: number, clientY: number, ownerDocument: Document, semanticRole?: GateRole, immediateMove = false, additiveOnly = false): boolean => {
     const hit = historyRelationshipTarget(origin, clientX, clientY, ownerDocument, semanticRole);
     if (!hit) return false;
     const { target } = hit;
     if (plugin.openStructuralNodeDrop(origin, target, {immediateMove})) return true;
     const current = captureSurfaceContinuation(() => viewport.current, () => plugin.actionManager.readSnapshot(actionSurfaceId));
     if (semanticRole) {
-      plugin.openRelationModal({ hostLeaf, mode: "create", origin, fixedTarget: target, semanticRole,
+      plugin.openRelationModal({ hostLeaf, mode: "create", origin, fixedTarget: target, semanticRole, ...(additiveOnly ? {invocation: {additiveOnly: true}} : {}),
         onCommitted: /** Retire hover only when this captured graph intent still owns the view. */ () => { if (current()) clearHoverIntent(true); } });
       return true;
     }
@@ -3267,6 +3267,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
           origin,
           fixedTarget: target,
           semanticRole: relation.role,
+          ...(additiveOnly ? {invocation: {additiveOnly: true}} : {}),
           onCommitted: /** Durable completion cannot alter a subsequently navigated/interacted graph. */ () => { if (current()) clearHoverIntent(true); },
         })));
     }
@@ -3310,14 +3311,21 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       && (!node.page.file || plugin.app.vault.getFileByPath(node.page.file.path) === node.page.file) ? node.page : undefined;
   };
 
-  /** Only one real primary incoming edge can describe a displayed occurrence's removal context. Cross-links, groups and ambiguous incidence grant no move authority. */
-  const nativeDragRelationship = (node: PositionedNode): NodeLinkDragRelationship | undefined => {
+  /** Capture one primary edge/current canonical row; removal additionally requires a certified pair. No acquisition or geometry-derived relationship authority. */
+  const nativeDragRelationship = (node: PositionedNode, requireReady = true): NodeLinkDragRelationship | undefined => {
     const incoming = scene.edges.filter(edge => semanticSceneEdge(edge) && !edge.isCrossLink
       && edgeOccurrence(edge, "target") === occurrenceKey(node) && edge.targetPath === node.page.path && edge.role === node.role);
     if (incoming.length !== 1) return undefined;
     const edge = incoming[0], origin = index.get(edge.sourcePath);
     if (!origin || origin.transient || origin.file && plugin.app.vault.getFileByPath(origin.file.path) !== origin.file) return undefined;
-    return {origin: actionNodeRef(origin), role: edge.role, direction: edge.direction,
+    if (requireReady && !index.isSemanticWriteReady(origin.path, node.page.path)) return undefined;
+    // Compass places previous/next at its left/right gates; retain the actual canonical role,
+    // rather than treating the physical placement as relationship evidence.
+    const roles: Role[] = edge.role === "left" ? ["left", "previous"] : edge.role === "right" ? ["right", "next"] : [edge.role];
+    const canonical = roles.flatMap(role => index.neighbours(origin, role)).filter(row => row.page === node.page
+      && row.relationType === edge.relationType && row.typeDefinition === edge.typeDefinition && row.linkDirection === edge.direction);
+    if (canonical.length !== 1) return undefined;
+    return {origin: actionNodeRef(origin), role: canonical[0].role, direction: edge.direction,
       relationType: edge.relationType, typeDefinition: edge.typeDefinition};
   };
 
@@ -3375,7 +3383,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       event.preventDefault();
       event.stopPropagation();
       const page = draggedGraphPage(plugin.app, index, event);
-      if (page) openHistoryRelationshipMenu(page, event.clientX, event.clientY, ownerDocument, undefined, event.altKey);
+      const source = nodeLinkDragSource(plugin.app);
+      if (page && (!source || isNodeLinkDragCurrent(source))) openHistoryRelationshipMenu(page, event.clientX, event.clientY, ownerDocument, undefined, event.altKey, Boolean(source));
       suppressActivateUntil.current = Date.now() + 220;
     };
     /** Clear feedback on completion/cancellation without handling the drop itself. */
@@ -3434,7 +3443,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const origin = dropOriginAt(event.clientX, event.clientY, event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY));
     if (hit === "blocked" || !origin || !target || !relationshipDropRoles(origin, target, hit).includes(hit)) return;
     const current = captureSurfaceContinuation(() => viewport.current, () => plugin.actionManager.readSnapshot(actionSurfaceId));
-    plugin.openRelationModal({ hostLeaf, mode: "create", origin, fixedTarget: target, semanticRole: hit,
+    plugin.openRelationModal({ hostLeaf, mode: "create", origin, fixedTarget: target, semanticRole: hit, ...(source ? {invocation: {additiveOnly: true}} : {}),
       onCommitted: /** Publication remains durable while old view feedback is fenced. */ () => { if (current()) clearHoverIntent(true); } });
   };
 
@@ -3465,6 +3474,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     plugin.openRelationModal({
       hostLeaf, mode: currentRole ? "relink" : "create", origin: center, fixedTarget: original.page,
       existingDirection: currentRole ? original.linkDirection : undefined, semanticRole: nextRole,
+      ...(!currentRole ? {invocation: {additiveOnly: true}} : {}),
       onCommitStart: /** A retired gesture cannot install optimistic presentation. */ role => {
         if (!current()) return;
         setOptimisticRelink({ targetPath: original.page.path, role });
@@ -4539,7 +4549,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const selector = id ? `[data-kplex-keyboard-id="${CSS.escape(id)}"]` : "";
     let source: NodeLinkDragSource | null = null;
     source = startNodeLinkDrag(plugin.app, page, event.nativeEvent, owner, role, label, navigationNode()?.page.file?.path ?? "", id ? {id,
-      relationship: candidates.length === 1 ? nativeDragRelationship(candidates[0]) : undefined,
+      relationship: candidates.length === 1 ? nativeDragRelationship(candidates[0], false) : undefined,
       current: /** A retired gesture, filtered/removed row, migrated document or replaced native file cannot regain source authority. */ () => Boolean(source && nativeNodeDrag.current === source
         && currentView() && currentSurface() && element.isConnected && owner.contains(element) && element.ownerDocument === document
         && element.dataset.kplexKeyboardId === id && owner.querySelectorAll(selector).length === 1 && resolveActionPage(index, reference) === page

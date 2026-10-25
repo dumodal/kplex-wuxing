@@ -1634,7 +1634,7 @@ const check=(ok,message)=>{if(!ok)throw new Error(message)},result=document.quer
 try {
  const origin={path:"Origin.md",file:{path:"Origin.md",extension:"md"}},target={path:"Dropped.md",file:{path:"Dropped.md",extension:"md"}};
  const pages=new Map([[origin.path,origin],[target.path,target]]),filePaths=new Set([origin.path,target.path]),blocked=new Map();
- const index={get:path=>pages.get(path),gateNeighbourPaths:(page,gate)=>blocked.get(gate)||new Set()};
+ const index={get:path=>pages.get(path),isSemanticWriteReady:()=>true,neighbours:(page,role)=>(scene.edges??[]).filter(edge=>edge.sourcePath===page.path&&edge.role===role).map(edge=>({page:pages.get(edge.targetPath),role:edge.role,relationType:edge.relationType,typeDefinition:edge.typeDefinition,linkDirection:edge.direction})),gateNeighbourPaths:(page,gate)=>blocked.get(gate)||new Set()};
  const calls=[],navigated=[],destinationIntents=[],hostLeaf={id:"owning-leaf"},actionSurfaceId="drop-fixture";
  const snapshot={mounted:true,interactionRevision:1,center:{identity:origin.path}};let shown=null,hoverCleared=0;
  const plugin={app:{dragManager:{draggable:{type:"file",file:{path:target.path}}},vault:{getFileByPath:path=>filePaths.has(path)?pages.get(path)?.file??{path}:null}},
@@ -1755,14 +1755,25 @@ try {
  scene.areas[0].dropOrigin=undefined;pages.set(origin.path,origin);
  scene.edges=[{kind:"semantic",sourcePath:origin.path,targetPath:target.path,sourceOccurrence:"map-root",targetOccurrence:"copy-one",role:"child",direction:1,relationType:1,typeDefinition:"Child"},{kind:"semantic",sourcePath:cPage.path,targetPath:target.path,sourceOccurrence:"c",targetOccurrence:"copy-two",role:"child",direction:1,relationType:1,typeDefinition:"Child"}];
  other.removeAttribute("data-kplex-gate");other.dataset.kplexKeyboardId="copy-two";other.dataset.kplexPath=target.path;other.draggable=true;
- const startHandler=event=>beginNativeNodeDrag(target,"child","B",{nativeEvent:event,currentTarget:other,preventDefault:()=>event.preventDefault()});other.addEventListener("dragstart",startHandler);
+ let displayedDragRole="child";const startHandler=event=>beginNativeNodeDrag(target,displayedDragRole,"B",{nativeEvent:event,currentTarget:other,preventDefault:()=>event.preventDefault()});other.addEventListener("dragstart",startHandler);
  const transfer=new DataTransfer();other.dispatchEvent(new DragEvent("dragstart",{bubbles:true,cancelable:true,dataTransfer:transfer}));
  const captured=plugin.app.dragManager.draggable?.source;check(captured,"Actual drag-start failed to capture source");
  const prior=calls.length;dropExternalFile(event(310,70));
  check(calls.length===prior+1&&calls.at(-1).mode==="create"&&calls.at(-1).origin===origin&&calls.at(-1).fixedTarget===target&&calls.at(-1).existingDirection===undefined,"Desktop second C→B copy borrowed first R→B relink authority: "+JSON.stringify({mode:calls.at(-1)?.mode,origin:calls.at(-1)?.origin.path}));
  endNativeNodeDrag();scene.areas[0].dropOrigin="c";other.dispatchEvent(new DragEvent("dragstart",{bubbles:true,cancelable:true,dataTransfer:new DataTransfer()}));dropExternalFile(event(310,70));
  check(calls.at(-1).mode==="relink"&&calls.at(-1).origin===cPage&&calls.at(-1).fixedTarget===target,"Explicit C area failed to retain the second occurrence's legitimate relationship");
- endNativeNodeDrag();scene.areas[0].dropOrigin=undefined;other.removeEventListener("dragstart",startHandler);
+ endNativeNodeDrag();scene.areas[0].dropOrigin=undefined;
+ // Compass combines sequential roles into physical left/right placement; capture their real role.
+ classic=classicFixturePolicy();occurrenceEditorPolicy=false;
+ for(const [displayRole,semanticRole]of [["left","previous"],["right","next"]]){
+  const id="sequential-"+semanticRole,row={...first,role:displayRole,occurrenceId:id};scene.nodes=[rootOccurrence,row];sceneNodeKeys.clear();sceneNodeKeys.set(rootOccurrence,"map-root");sceneNodeKeys.set(row,id);
+  scene.edges=[{kind:"semantic",sourcePath:origin.path,targetPath:target.path,sourceOccurrence:"map-root",targetOccurrence:id,role:displayRole,direction:1,relationType:1,typeDefinition:"Sequential"}];
+  index.neighbours=(page,role)=>page===origin&&role===semanticRole?[{page:target,role:semanticRole,linkDirection:1,relationType:1,typeDefinition:"Sequential"}]:[];
+  other.dataset.kplexKeyboardId=id;displayedDragRole=displayRole;other.dispatchEvent(new DragEvent("dragstart",{bubbles:true,cancelable:true,dataTransfer:new DataTransfer()}));
+  check(plugin.app.dragManager.draggable?.source.occurrence.relationship?.role===semanticRole,"Compass sequential canonical role was replaced by physical placement");dropExternalFile(event(310,70));
+  check(calls.at(-1).mode==="relink"&&calls.at(-1).origin===origin,"Compass sequential primary move lost its existing authority");endNativeNodeDrag();
+ }
+ other.removeEventListener("dragstart",startHandler);
  result.dataset.status="passed";result.textContent="External and pinned drop behavior passed";
 }catch(error){result.dataset.status="failed";result.textContent=String(error.stack||error)}
 `;
