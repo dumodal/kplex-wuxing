@@ -6247,3 +6247,5 @@ B1 closeout adds the explicit collection-reset guard: restoring view defaults re
 
 
 2026-10-25 PR220 D: shared explicit drop meanings and native property assignment/Undo use existing transport, actions, FileManager/convergence and native editor owner.141 affected +final25/35/41 overlapping targeted checks, build/scanner/architecture pass. Full npm test1570 first-lane pass;3 browser fixture/intent failures corrected and focused rerun green, final full rerun pending. Highest risks: actual Windows native buffer/content/focus, metadata field edits and cross-view source identity; final exact-head native verification required. No structural refactor or production deployment.
+
+2026-10-25 #220 portability checkpoint: replace host-only structuredClone in pure property assignment with a bounded primitive/list copy; reject unplanned nested values. Node22.22.2 core130 and assignment26 pass; real build passes. Final E/F/native/CI acceptance remains pending. Highest risk: guarded assignment/Undo with list values; final Windows native testing still required. No production or test vault deployment.

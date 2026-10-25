@@ -92,6 +92,17 @@ test('new fields append and an applied absent-field undo removes only that added
  M.applyPropertyField(frontmatter,'phase',plan.after,plan.before);assert.deepEqual(frontmatter,before);
 });
 
+test('native callback copies admitted lists and rejects unplanned nested values without a host clone API',()=>{
+ const frontmatter={phase:'wood'},value=['metal','private',17,true,null];
+ M.applyPropertyField(frontmatter,'phase',present('wood'),present(value));
+ assert.deepEqual(frontmatter.phase,value);assert.notEqual(frontmatter.phase,value);
+ value.push('later');assert.equal(frontmatter.phase.length,5);
+ for(const proposed of [{phase:'fire'},[['fire']],undefined]){
+  assert.throws(()=>M.applyPropertyField(frontmatter,'phase',present(frontmatter.phase),present(proposed)));
+  assert.deepEqual(frontmatter.phase,['metal','private',17,true,null]);
+ }
+});
+
 test('runtime target bounds reject arbitrary or oversized field-write proposals',()=>{
  for(const target of [{...metal(),id:'x'.repeat(129)},{...metal(),recognized:Array(3585).fill('x')},{...metal(),matching:Array(513).fill('x')},
   {...metal(),recognized:[{}]},{...metal(),field:'tags'},{...metal(),value:''}])assert.equal(M.validPropertyAssignment(target),false);

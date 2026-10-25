@@ -72,5 +72,12 @@ export function applyPropertyField(frontmatter: Record<string, unknown>, field: 
   const selected = assignmentField(frontmatter, field);
   if (!selected || !samePropertyField(selected.snapshot, before)) throw new Error("Property changed before assignment");
   if (!after.present) delete frontmatter[selected.key];
-  else Object.defineProperty(frontmatter, selected.key, {value: structuredClone(after.value), writable: true, enumerable: true, configurable: true});
+  else {
+    const value = after.value;
+    // Plans admit only primitives and flat primitive lists. Copy the list without a host
+    // cloning API, and fail closed if an unplanned/nested value reaches the native callback.
+    if (Array.isArray(value) ? value.length > 256 || !value.every(supported) : !supported(value)) throw new Error("Unsupported property assignment value");
+    const items: readonly unknown[] | null = Array.isArray(value) ? value : null;
+    Object.defineProperty(frontmatter, selected.key, {value: items ? [...items] : value, writable: true, enumerable: true, configurable: true});
+  }
 }
