@@ -68,7 +68,7 @@ export async function acceptCanvasSelector({app,p,c,host,views,probe,files,hosts
 
  // Native select owns keyboard behavior; graph shortcuts must not intercept these trusted events.
  await reveal(host);await choose(host,'classic');const element=select(host),native=owner(doc(host)),keys=[],changes=[];
- element.scrollIntoView({block:'nearest'});element.focus();await until(()=>doc(host).hasFocus()&&doc(host).activeElement===element&&native.isFocused(),'Native select did not receive keyboard focus');const keyDocument=doc(host),observeKey=event=>keys.push({key:event.key,trusted:event.isTrusted,targetSelect:event.target===element,target: event.target?.tagName});keyDocument.addEventListener('keydown',observeKey,true);
+ element.scrollIntoView({block:'nearest'});element.focus();await until(()=>doc(host).hasFocus()&&doc(host).activeElement===element&&native.isFocused(),'Native select did not receive keyboard focus');const keyDocument=doc(host),observeKey=event=>{const receipt={key:event.key,code:event.code,trusted:event.isTrusted,targetSelect:event.target===element,target:event.target?.tagName,meta:event.metaKey,alt:event.altKey,control:event.ctrlKey,shift:event.shiftKey};keys.push(receipt);queueMicrotask(()=>{receipt.defaultPrevented=event.defaultPrevented;receipt.value=element.value;receipt.selected=session(host).definition.id})};keyDocument.addEventListener('keydown',observeKey,true);
  const observeChange=event=>changes.push({trusted:event.isTrusted,value:element.value});element.addEventListener('change',observeChange,true);
  const expected=c.osSelectKeys?probe.id:'test.blocked';
  cases.push({id:'native-select-key-delivery',transport:c.osSelectKeys?'OS_CUA':'Electron',keys,changes});
