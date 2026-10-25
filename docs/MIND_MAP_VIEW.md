@@ -1,6 +1,6 @@
 # Mind Map canvas view
 
-Prepared by Zsolt's Codex Agent, 2026-10-24. **Correction in progress after rejected product acceptance.** Earlier `342ad13` verification covered a narrower interaction model and does not establish the revised requirements below. Capacity one. Current correction/native/full-suite/CI results must be read separately; retained FileManager and fresh-popout Sidecar limits remain explicit.
+Prepared by Zsolt's Codex Agent, 2026-10-25. **Revised implementation independently verified; maintainer product review remains open.** Clean eac6dc0 passes 3,021 TAP checks, real build/native smoke; runtime CI497 passes at `9e77bf3` and final CI is not awaited; corrected runtime `88c3f32` passes 27 native functional cases. [Current correction evidence](validation/native-occurrence-drag-219-2026-10-25.md) preserves all failures and exact scopes. Capacity one; combined Wu Xing integration, FileManager/fresh-popout Sidecar and physical-device limits remain explicit. No merge/release/additional production deployment is authorized.
 
 ## Baseline and start gate
 

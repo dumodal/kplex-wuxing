@@ -1,7 +1,7 @@
 {
-  "recordedAt": "2026-10-25T09:47:29.598170+00:00",
+  "recordedAt": "2026-10-25T10:11:15.635840+00:00",
   "parent": "360758a4c0198bcec0203fadc3a61cbd670b2687",
-  "status": "runtime-focused-native-pass-full-final-ci-restoration-pending",
+  "status": "standalone-verification-complete-product-review-open",
   "priorScope": {
     "head": "360758a4c0198bcec0203fadc3a61cbd670b2687",
     "verifyObsidian": "passed",
@@ -130,10 +130,79 @@
     "src/ui/NewRelatedNoteModal.ts": "cb8c5c4d8be3fa204c1a65bcde6fd1e2d6bc0e87feef77c51efa473b9ab2c20e"
   },
   "native": "PASS: full interactions7 functional+1 staging information dismissal; production editor8; shared-host12 =27 functional. Separate focused drag-only2 overlaps full interactions. All cleanup PASS.",
-  "full": "pending",
-  "finalCI": "pending",
-  "production": "No additional deployment; production remains prior b55b03f test assets; notes strictly read-only.",
-  "outerRestoration": "pending",
+  "full": {
+    "status": "passed",
+    "source": {
+      "revision": "eac6dc0e40aa0dba732149eaf702c78cafde1de2",
+      "dirty": false,
+      "node": "v22.22.2",
+      "os": "darwin 23.5.0"
+    },
+    "startedAt": "2026-10-25T09:47:36.650Z",
+    "completedAt": "2026-10-25T10:09:44.709Z",
+    "tapCounts": [
+      7,
+      130,
+      1503,
+      247,
+      357,
+      777
+    ],
+    "tapTotal": 3021,
+    "failures": 0,
+    "skips": 0,
+    "indexing": "assertions1\u201333 +P1\u2013P17 pass;45/50ms guards unchanged",
+    "scenarios": [
+      {
+        "id": "open-kplex",
+        "status": "passed",
+        "assertions": [
+          "plugin command registered",
+          "rendered .kplex-app contains K-Plex",
+          "no captured JavaScript errors"
+        ],
+        "elapsedMs": 77
+      }
+    ],
+    "artifacts": {
+      "sourceHashes": {
+        "main.js": "88c3f3221b403471e5ae6c7a728f44f4e163a93c609f54195d83ae567f0013d2",
+        "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+        "styles.css": "783480a9cfae6de540d0ade75ecf59fc5b3240bee44ba2cf69b2b2c561cdff1f"
+      },
+      "pluginVersion": "0.2.4",
+      "stagedHashes": {
+        "main.js": "88c3f3221b403471e5ae6c7a728f44f4e163a93c609f54195d83ae567f0013d2",
+        "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+        "styles.css": "783480a9cfae6de540d0ade75ecf59fc5b3240bee44ba2cf69b2b2c561cdff1f"
+      }
+    }
+  },
+  "finalCI": "CI497 passes runtime9e77bf3; current eac6dc0 CI snapshot is retained. Final publication CI is not awaited, per the latest maintainer steer; exact status belongs to PR checks.",
+  "production": "No additional production deployment; earlier b55 assets and readonly observation remain separate historical scope.",
+  "outerRestoration": {
+    "status": "passed",
+    "completedAt": "2026-10-25T10:09:54.315Z",
+    "rendererExited": true,
+    "files": {
+      "workspace.json": "16794be9a02af5897b7278952131c9d90f73677a724a14e95787ed1693ae39bf",
+      "community-plugins.json": "4ac827989c179ea6dba2e5a878462085dc86e40328300b1b018fb91d466cbc35",
+      "core-plugins.json": "79985eff638a8a3f7fe2946dca1ed0872116d31028bb1498b0efb7ac4e11077b",
+      "app.json": "e3afdecf971ecd6f83ddb4d658e8c357bea75ca0953721d99f906518caa916f3",
+      "plugins/k-plex/data.json": "b986b4c72d7c22ef411484dbe1cb87f3a72bee65da5d78468df90140829352f9",
+      "plugins/k-plex/main.js": "a709657e06d8f893d185fbc933967266e50007424ccbab751e1410c8c286ff68",
+      "plugins/k-plex/manifest.json": "19d9ecce5557733e0ff0f2e27155e635c30158c3cfa6fbca0f11c16e4dedfd2c",
+      "plugins/k-plex/styles.css": "0135225519ad680cace5c7a35e8eab8388a3c6e6a8ead1a10a49f337324b106a"
+    },
+    "content": {
+      "files": 77,
+      "markdown": 74,
+      "bytes": 362132,
+      "digest": "36372292bd7d6d60f52dfe7eccacc4e56d223bdf602c8f0f8614502357cff162"
+    },
+    "originallyOpenRestored": true,
+    "reopenedAt": "2026-10-25T10:10:57.748Z"
+  },
   "combinedWuXingMindMap": "pending deliberate accepted-main integration; no moving branch consumed",
   "guardChanges": false,
   "nativeSamples": [
@@ -1720,9 +1789,17 @@
   },
   "runtimeCheckpoint": "9e77bf367a19b188f6c7d483bf42d1d0243a1b34",
   "runtimeCI": {
-    "run": 497,
-    "url": "https://github.com/zsviczian/kplex/actions/runs/40178589141",
-    "status": "passed"
+    "id": 40182112790,
+    "name": "Verify refactor boundaries and build",
+    "status": "in_progress",
+    "conclusion": null,
+    "run_number": 499,
+    "jobs_url": "https://api.github.com/repos/zsviczian/kplex/actions/runs/40182112790/jobs",
+    "logs_url": "https://api.github.com/repos/zsviczian/kplex/actions/runs/40182112790/logs",
+    "workflow_id": 368125094,
+    "commit": "eac6dc0e40aa0dba732149eaf702c78cafde1de2",
+    "url": "https://github.com/zsviczian/kplex/actions/runs/40182112790",
+    "waitingWaivedByMaintainer": true
   },
   "currentNativeEditor": {
     "status": "passed",
@@ -2066,5 +2143,12 @@
     "cleanup": "passed",
     "startedAt": "2026-10-25T09:46:44.066Z",
     "completedAt": "2026-10-25T09:46:53.208Z"
-  }
+  },
+  "lastPassingRuntimeCI": {
+    "commit": "9e77bf367a19b188f6c7d483bf42d1d0243a1b34",
+    "run": 497,
+    "status": "passed",
+    "url": "https://github.com/zsviczian/kplex/actions/runs/40178589141"
+  },
+  "nextOwner": "Maintainer merges219 after functionality review;220 agent then finalizes view API/MindMap/WuXing together on accepted main. CI waiting waived; combined smoke remains required in that action."
 }

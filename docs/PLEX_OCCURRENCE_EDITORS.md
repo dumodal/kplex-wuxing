@@ -1,6 +1,6 @@
 # Occurrence-based editor hosting prerequisite
 
-Status: required M0 for Mind Map after the verified #215 extraction and #218 settings/selector contract. Wu Xing is independent and may implement and validate its complete view using the existing attention-following native editor. M0 must extend that host compatibly, without requiring Compass or non-Classic attention-following definitions to adopt its new API simultaneously. The bounded ordinary-Markdown shared-host proof is validated on Mac at905b777; production Mind Map and final feature acceptance remain pending, including the documented native FileManager gate limit. Zsolt's Codex Agent, 2026-10-24, following the maintainer's corrected steer.
+Status: M0's capacity-one ordinary-Markdown host and production Mind Map integration are independently verified on corrected runtime `88c3f32`: shared-host12 and production-editor8 native cases, plus interaction7, clean local full verification (3,021 checks) at eac6dc0; runtime CI497 passes at `9e77bf3`, final CI not awaited. [Current evidence](validation/native-occurrence-drag-219-2026-10-25.md) retains failed/historical scopes. Wu Xing remains independent with its unchanged attention-following contract; no simultaneous-editor claim or adoption gate. Maintainer product review, combined integration and documented FileManager/Sidecar/physical-device limits remain open. Zsolt's Codex Agent,2026-10-25.
 
 ## Required behavior and current limit
 
