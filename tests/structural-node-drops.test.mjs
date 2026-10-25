@@ -39,6 +39,7 @@ const acceptTag=owner=>[...owner.dialogs].at(-1).options.save('tag',api.noteType
 
 /** Execute the actual JSX composition callback with finite native ports, preserving async behavior. */
 function graphCallback(name,dependencies,filename='src/ui/PlexGraph.tsx'){
+ dependencies={viewDefinition:{hierarchy:undefined},...dependencies};
  const source=ts.createSourceFile(filename,readFileSync(new URL('../'+filename,import.meta.url),'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let body;
  const visit=node=>{if(ts.isVariableDeclaration(node)&&node.name.getText(source)===name)body=node.initializer.getText(source);if(ts.isMethodDeclaration(node)&&node.name.getText(source)===name)body=(node.modifiers?.some(m=>m.kind===ts.SyntaxKind.AsyncKeyword)?'async ':'')+'function '+name+node.getText(source).slice(node.getText(source).indexOf('('));ts.forEachChild(node,visit)};visit(source);assert(body,name);
  const compiled=ts.transpileModule('const selected = '+body+';',{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;

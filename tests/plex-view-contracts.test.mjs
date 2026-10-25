@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {plexViewModules,viewPage} from './support/plexViewFixture.mjs';
-const M=await plexViewModules(['src/ui/plexViews/prepareScene.ts','src/ui/plexViews/scene.ts','tests/support/plexViewProbe.ts']);
+const M=await plexViewModules(['src/ui/plexViews/occurrenceEditors.ts','src/ui/plexViews/prepareScene.ts','src/ui/plexViews/scene.ts','src/adapters/obsidian/actionNode.ts','tests/support/plexViewProbe.ts']);
 /** Finite cached canonical graph; no acquisition, storage or note-reader capability exists. */
 function fixture(maximum=10){
   const pages=new Map(['Focus.md','Root.md','Repeated.md','Hidden.md'].map(id=>{const page=viewPage(id);page.file.stat={mtime:1,ctime:1,size:1};return[id,page]}));
@@ -59,4 +59,78 @@ test('unavailable projection never publishes an empty successful scene that coul
  const result=M.prepareViewScene({...M.probeViewDefinition,project(input){const p=M.probeViewDefinition.project(input);return {...p,editor:'layout-root'}}},f.read,f.source,'Focus.md',null,f.settings,()=>true,{width:550,height:300});
  assert.equal(result.failure,true,'The existing attention editor cannot silently become another canonical document');
  const fallback=M.attentionFallbackScene(f.source,'Focus.md',f.settings,{width:550,height:300});assert.equal(fallback.editorOccurrence,'recovery-attention');assert.equal(fallback.nodes[0].page,f.source.get('Focus.md'));
+});
+
+test('bound occurrence dimensions reach shared layout independently of attention and same-note duplicates',()=>{
+ const f=fixture(),page=f.source.get('Repeated.md'),reference=M.actionNodeRef(page),measurements=[],legacyModes=[];
+ const definition={...M.probeViewDefinition,editorHosting:'occurrence',layout(projection,rows,state,legacy,context){measurements.push(rows);legacyModes.push(legacy);assert.equal(projection.editor,undefined);return M.probeViewDefinition.layout(projection,rows,state,legacy,context)}};
+ const binding={id:'binding-B1',viewId:definition.id,occurrenceId:'repeat-above',target:{nodeId:reference.identity,path:page.file.path,fileIdentity:reference.fileIdentity},dimensions:{width:660,height:370},mode:'source',closing:false};
+ const prepare=(bindings=[binding],matches=()=>true)=>M.prepareViewScene(definition,f.read,f.source,'Focus.md',null,f.settings,()=>true,undefined,matches,undefined,{bindings,supports:current=>current===page});
+ const result=prepare();assert.equal(result.failure,false);assert.equal(result.projection.attention,'Focus.md');assert.equal(result.projection.layoutRoot,'Root.md');
+ assert.equal(result.scene.boundEditors[0].page,page);assert.equal(result.scene.boundEditors[0].binding.id,'binding-B1');
+ const B1=result.scene.nodes.find(row=>row.occurrenceId==='repeat-above'),B2=result.scene.nodes.find(row=>row.occurrenceId==='repeat-below');
+ assert.equal(B1.page,B2.page);assert.equal(B1.width,660);assert.equal(B1.height,370);assert.notEqual(B2.width,660);
+ assert.equal(measurements[0].find(row=>row.id==='repeat-above').editor,true);assert.equal(measurements[0].find(row=>row.id==='repeat-below').editor,undefined);assert.deepEqual(legacyModes,[false]);
+ const pinned=prepare([binding],()=>false);assert.equal(pinned.failure,false);assert.deepEqual(pinned.scene.nodes.map(row=>row.occurrenceId),['repeat-above'],'Lens filtering pins the exact live occurrence, not both note copies');
+ const resized=prepare([{...binding,dimensions:{width:710,height:420}}]);assert.equal(resized.scene.boundEditors[0].binding.id,binding.id);assert.equal(resized.scene.nodes.find(row=>row.occurrenceId==='repeat-above').width,710);
+ const collapsed=prepare([]);assert.equal(collapsed.failure,false);assert.equal(collapsed.scene.boundEditors,undefined);assert(measurements.at(-1).every(row=>row.editor===undefined));
+});
+
+test('bound editor admission rejects missing, hidden, recreated or mismatched targets instead of retargeting attention',()=>{
+ for(const failure of ['missing-occurrence','wrong-document','wrong-native-file','wrong-view','unsupported','native-rejected','authoritative-hidden','too-many','legacy-policy']){
+  const f=fixture(),page=f.source.get('Repeated.md'),reference=M.actionNodeRef(page),definition={...M.probeViewDefinition,editorHosting:'occurrence'};
+  const binding={id:'binding',viewId:definition.id,occurrenceId:'repeat-above',target:{nodeId:reference.identity,path:page.file.path,fileIdentity:reference.fileIdentity},dimensions:{width:660,height:370},mode:'source',closing:false};
+  if(failure==='missing-occurrence')binding.occurrenceId='missing';
+  if(failure==='wrong-document')binding.target.nodeId='Focus.md';
+  if(failure==='wrong-native-file')page.file={...page.file};
+  if(failure==='wrong-view')binding.viewId='other.view';
+  if(failure==='unsupported')page.file.extension='png';
+  if(failure==='authoritative-hidden')f.source.isVisiblePage=()=>false;
+  if(failure==='legacy-policy')delete definition.editorHosting;
+  const result=M.prepareViewScene(definition,f.read,f.source,'Focus.md',null,f.settings,()=>true,undefined,()=>true,undefined,
+   {bindings:failure==='too-many'?[binding,{...binding,id:'second',occurrenceId:'repeat-below'}]:[binding],supports:()=>failure!=='native-rejected'});
+  assert.equal(result.failure,true,failure);assert.deepEqual(result.scene.nodes,[],failure);assert.equal(result.scene.boundEditors,undefined,failure);
+ }
+});
+
+test('rooted scene input keeps layout root separate from attention and central sizing',()=>{
+ const f=fixture(),seen=[],definition={...M.probeViewDefinition,navigation:'rooted',project(input){seen.push({attention:input.attention,root:input.layoutRoot});return M.probeViewDefinition.project(input)}};
+ const result=M.prepareViewScene(definition,f.read,f.source,'Focus.md',null,f.settings,()=>true,undefined,()=>true,
+  {translate:value=>value,unfolded:new Set(),layoutRoot:'Root.md'});
+ assert.equal(result.failure,false);assert.deepEqual(seen,[{attention:'Focus.md',root:'Root.md'}]);
+ assert.equal(result.scene.nodes.find(row=>row.occurrenceId==='layout-root').role,'center');assert.equal(result.scene.nodes.find(row=>row.occurrenceId==='look-here').role,'child');
+ assert.equal(f.prepare(definition).failure,true,'A rooted definition cannot silently replace its admitted root');
+ const legacy=f.prepare();assert.equal(legacy.failure,false);assert.equal(legacy.scene.nodes.find(row=>row.occurrenceId==='look-here').role,'center','Omitted rooted policy preserves legacy attention styling');
+});
+
+
+test('native editor removal uses the same exact document proof as scene admission, including rename aliases',()=>{
+ const f=fixture(),page=f.source.get('Repeated.md'),reference=M.actionNodeRef(page);
+ const binding={id:'binding',viewId:'test.bound',occurrenceId:'B1',target:{nodeId:reference.identity,path:page.file.path,fileIdentity:reference.fileIdentity},dimensions:{width:600,height:360},mode:'source',closing:false};
+ const resolve=()=>M.resolveOccurrenceEditorPage(binding,f.source,()=>true);
+ assert.equal(resolve(),page);page.file.path='Renamed.md';assert.equal(resolve(),null,'A native rename cannot borrow the old binding path');
+ page.file.path=binding.target.path;page.path='Renamed.md';assert.equal(resolve(),null,'An old-ID alias cannot confer authority over a different canonical identity');
+ page.path=binding.target.nodeId;page.file={...page.file};assert.equal(resolve(),null,'A recreated file cannot inherit the old native token');
+});
+
+
+test('optional frontier coverage stays unavailable without a proof and limits are cache-only and lifetime-fenced',()=>{
+ const f=fixture();assert.deepEqual(f.read.scope('Root.md'),{coverage:'unavailable',prepared:false,complete:false,pending:false});
+ let calls=0;f.source.viewScopeCoverage=()=>{calls++;return{coverage:'local',prepared:true,complete:false,pending:false}};
+ const read=M.plexViewRead(f.source,()=>true,10,'Focus.md');assert.deepEqual(read.scope('Root.md'),{coverage:'local',prepared:true,complete:false,pending:false});
+ assert.equal(read.relations('Root.md','child',1).items.length,1);assert.equal(read.relations('Root.md','child',1).truncated,true);
+ assert.equal(read.relations('Root.md','child',0).coverage,'unavailable');
+ assert.equal(read.scope('Hidden.md').prepared,false);assert.equal(calls,1,'Hidden nodes never reach the scope owner');
+ f.source.viewScopeCoverage=()=>{f.retire();return{coverage:'local',prepared:true,complete:true,pending:false}};
+ assert.equal(read.scope('Root.md').complete,false,'A proof retired during a read cannot certify absence');
+});
+
+
+test('a repeated reference to the root note keeps ordinary occurrence sizing and cannot ambiguously claim the root',()=>{
+ const f=fixture(),definition={...M.probeViewDefinition,navigation:'rooted',project(input){const p=M.probeViewDefinition.project(input);return{...p,root:'layout-root',occurrences:[...p.occurrences,{id:'root-reference',nodeId:'Root.md',role:'child',representation:'thought'}]}},layout(projection,rows,...rest){const base=M.probeViewDefinition.layout(projection,rows.filter(row=>row.id!=='root-reference'),...rest),reference=rows.find(row=>row.id==='root-reference');return{...base,positions:new Map([...base.positions,['root-reference',{x:480,y:520,width:reference.width,height:reference.height}]])}}};
+ const prepare=def=>M.prepareViewScene(def,f.read,f.source,'Focus.md',null,f.settings,()=>true,undefined,()=>true,{translate:v=>v,unfolded:new Set(),layoutRoot:'Root.md'});
+ const result=prepare(definition);assert.equal(result.failure,false);const reference=result.scene.nodes.find(row=>row.occurrenceId==='root-reference');
+ const expected=M.nodeSize(reference.label,reference.style.fontSize??18,f.settings,false,reference.style.maxLabelLength,reference.style.maxWidth,reference.style.strokeWidth);
+ assert.equal(reference.width,expected.width);assert.equal(reference.height,expected.height);assert.equal(reference.role,'child');assert.equal(result.projection.root,'layout-root');
+ assert.equal(prepare({...definition,project(input){const p=definition.project(input);delete p.root;return p}}).failure,true,'Two root-note occurrences require one explicit root anchor');
 });

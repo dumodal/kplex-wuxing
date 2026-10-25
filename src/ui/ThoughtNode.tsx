@@ -12,6 +12,8 @@
  * Relation groups replace ordinary gates with an external member count and an unfold accessible name.
  * Revalidation retains only this mounted node's unchanged badge text as cached presentation;
  * native incarnation/value changes retire it, independently of index and relationship-write proof.
+ * Caller-owned branch coverage/reference labels reuse the separate fold control and its expanded
+ * accessibility state; this component owns neither traversal nor native editor expansion.
  */
 import {physicalGateStats} from "./plexViews/measurement";
 import { useId, type CSSProperties, type DragEvent as ReactDragEvent, type MouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
@@ -54,6 +56,7 @@ export function ThoughtNode({
   onNativeDragEnd,
   onContextMenu,
   sectionFold,
+  branchStatus,
   visual,
   content,
   cornerAction,
@@ -98,6 +101,8 @@ export function ThoughtNode({
     expandedTitle?: string;
     foldedTitle?: string;
   };
+  /** Optional hierarchy coverage/reference label; canonical note text and editor content are unchanged. */
+  branchStatus?: string;
 }) {
   const accessibleNameId = useId();
   const gateStats = physicalGateStats(node);
@@ -233,12 +238,14 @@ export function ThoughtNode({
     {sectionFold?.hasChildren && <button
       type="button"
       className={`kplex-section-fold-handle${sectionFold.expanded ? " is-expanded" : " is-folded"}`}
+      aria-expanded={sectionFold.expanded}
       aria-label={sectionFold.expanded
         ? (sectionFold.expandedTitle ?? translate("node.foldSectionChildren"))
         : `${sectionFold.foldedTitle ?? translate("node.unfoldSectionChildren")}${sectionFold.hiddenDescendantCount ? ` · ${translate("node.hiddenCount", { count: sectionFold.hiddenDescendantCount })}` : ""}`}
       onPointerDown={(e: ReactPointerEvent<HTMLButtonElement>) => { e.preventDefault(); e.stopPropagation(); }}
       onClick={(e: MouseEvent<HTMLButtonElement>) => { e.preventDefault(); e.stopPropagation(); sectionFold.onToggle(); }}
     />}
+    {branchStatus && <span className="kplex-thought-branch-status">{branchStatus}</span>}
     {group && <span className="kplex-group-count" aria-hidden="true">{group.groupMembers?.length}</span>}
     {!group && GATES.filter(gate => !node.physicalPorts || Boolean(node.physicalPorts[gate])).map((gate) => {
       // Structural nodes have no lateral relationship vocabulary, even before other counts close.

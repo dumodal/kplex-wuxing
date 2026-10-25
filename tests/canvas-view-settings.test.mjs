@@ -33,6 +33,30 @@ const flatten=(items,path=[])=>items.flatMap(item=>[...('control'in item?[{...it
 `;
 const scenario=body=>colorEditorScenario(`(async()=>{${initialize}\n${body}\nreturn true})()`);
 
+test('production Mind Map contributes nine localized native fields and persists type settings independently of canvas intent',async()=>{
+ assert.equal(await scenario(`
+ const p=await create();p.viewSettingsRegistry=M.builtInCanvasViewSettings;const tab=new M.KplexSettingTab({},p),rows=flatten(tab.getSettingDefinitions());
+ const controls=rows.filter(row=>row.control.key.replace(/^received:\\d+:/,'').startsWith('canvasView:mindmap:'));equal(controls.length,9,'One native control per Mind Map field');
+ for(const row of controls)equal(row.path,['Canvas behavior','Mind Map'],'Type settings route');
+ const spacing=controls.find(row=>row.control.key.endsWith(':horizontalSpacing')),arrangement=controls.find(row=>row.control.key.endsWith(':arrangement'));
+ equal(arrangement.control.options,{balanced:'Balanced',left:'Left',right:'Right'},'Localized finite arrangement');
+ const a=new M.PlexViewSession(M.builtInPlexViews,()=>{}),b=new M.PlexViewSession(M.builtInPlexViews,()=>{});a.select('mindmap');a.setRoot('R');
+ const intent=[copy(a.getState()),copy(b.getState())],signature=M.encodeIndexSettingsSignature(p.settings);
+ await tab.setControlValue(spacing.control.key,160);equal(disk.canvasViewSettings.mindmap,{version:1,values:{horizontalSpacing:160}},'Durable edited field only');
+ await tab.setControlValue(arrangement.control.key,'left');equal(M.readViewConfiguration(a.definition,p.settings.canvasViewSettings).values.horizontalSpacing,160,'Other field retained');
+ equal([a.getState(),b.getState()],intent,'Shared type settings never change either canvas choice/root');equal(M.encodeIndexSettingsSignature(p.settings),signature,'Source signature unchanged');
+ equal([p.work.semantic,p.work.invalidate],[0,0],'No semantic invalidation or refresh');
+ const incoming=copy(disk);incoming.canvasViewSettings.mindmap.values.verticalSpacing=44;incoming.canvasViewSettings['future.view']={version:9,values:{inert:true}};
+ await receive(p,incoming);equal(tab.getControlValue('canvasView:mindmap:verticalSpacing'),44,'Incoming type values synchronize');
+ await tab.setControlValue(spacing.control.key,164);equal(disk.canvasViewSettings['future.view'],incoming.canvasViewSettings['future.view'],'Future independent view retained');
+ const live=p.viewSettingsRegistry.layoutControls(a.definition);equal(live.map(row=>row.field),['parentColumns','horizontalDensity','verticalDensity'],'Bottom-left controls use the same registered type fields');equal(live.map(row=>[row.min,row.max,row.step]),[[1,3,1],[0.1,4,0.05],[0.1,4,0.05]],'Live controls share the spacious range');
+ await tab.setControlValue('canvasView:mindmap:horizontalDensity',0.1);await tab.setControlValue('canvasView:mindmap:verticalDensity',0.2);
+ equal([disk.canvasViewSettings.mindmap.values.horizontalDensity,disk.canvasViewSettings.mindmap.values.verticalDensity],[0.1,0.2],'Both spacious density axes persist independently');equal([p.work.semantic,p.work.invalidate],[0,0],'Density is presentation only');
+ await tab.setControlValue('canvasView:mindmap:parentColumns',3);equal((await p.loadData()).canvasViewSettings.mindmap.values.parentColumns,3,'Parent columns are durable type settings');equal([p.work.semantic,p.work.invalidate],[0,0],'Columns never acquire sources');
+ equal([a.getState(),b.getState()],intent,'Incoming settings cannot retarget sessions');a.dispose();b.dispose();
+ `),true);
+});
+
 test('all moved controls have one native location and original ownership/bounds',async()=>{
  assert.equal(await scenario(`
  const p=await create(),tab=new M.KplexSettingTab({},p);const definitions=tab.getSettingDefinitions(),rows=flatten(definitions);
@@ -148,5 +172,34 @@ test('received schemas retire stale native controls and queued same-field writes
  const future=copy(disk);future.canvasViewSettings['test.settings']={version:9,values:{spacing:55}};disk=future;p.onExternalSettingsChange();await p.settingsReconciliation.reading;
  release();check(await queued,'Queued field cannot overwrite a received future schema');await drain(p);
  equal(disk.canvasViewSettings,future.canvasViewSettings,'Future map is retained');equal(p.settings.canvasViewSettings,future.canvasViewSettings,'Live state receives future payload');
+ `),true);
+});
+
+/** Routine visibility/type saves can finish durably while an optional refresh is queued; only an actual failure merits a recovery notice. */
+test('routine canvas saves stay quiet during queued refresh while actual refresh failure remains actionable',async()=>{
+ assert.equal(await scenario(`
+ const p=await create();window.notices=[];let release,held=true;
+ p.index.refreshPresentationSettings=()=>held?new Promise(resolve=>release=()=>{held=false;resolve()}):Promise.resolve();
+ p.settings.renderSiblings=!p.settings.renderSiblings;
+ try{
+  await p.saveSettings(false,true);check(disk.renderSiblings===p.settings.renderSiblings,'Visibility not durable');
+  await p.updateCanvasViewSetting(second.id,'spacing',30);check(disk.canvasViewSettings[second.id].values.spacing===30,'Coalesced type setting not durable');
+  equal(window.notices,[],'Normal queued refresh must not ask the user to reload');
+ }finally{release?.()}
+ for(let i=0;i<100&&p.savedSettingsRefresh.flight;i++)await new Promise(resolve=>setTimeout(resolve,5));
+ check(!p.savedSettingsRefresh.flight,'Refresh did not settle');
+ p.index.refreshPresentationSettings=async()=>{throw Error('Expected display-refresh fault')};
+ p.settings.renderSiblings=!p.settings.renderSiblings;await p.saveSettings(false,true);
+ equal(window.notices,[p.translator('settings.savedRefreshPending')],'Actual refresh failure needs one actionable recovery notice');
+ await p.updateCanvasViewSetting(second.id,'spacing',31);equal(window.notices.length,1,'One unresolved failure episode cannot repeat recovery noise');
+ p.index.refreshPresentationSettings=async()=>{};await p.updateCanvasViewSetting(second.id,'spacing',32);
+ let reject;p.index.refreshPresentationSettings=()=>new Promise((resolve,fail)=>reject=fail);
+ await p.updateCanvasViewSetting(second.id,'spacing',33);equal(window.notices.length,1,'Normal short-wait completion is quiet even before a later rejection');
+ reject(Error('Expected late display-refresh fault'));
+ for(let i=0;i<100&&p.savedSettingsRefresh.flight;i++)await new Promise(resolve=>setTimeout(resolve,5));
+ equal(window.notices.length,2,'A real late rejection after recovery remains actionable');
+ const retiring=p.refreshSavedSettings(false,true);for(let i=0;i<100&&!p.savedSettingsRefresh.flight;i++)await new Promise(resolve=>setTimeout(resolve,5));await Promise.resolve();
+ p.unloading=true;p.savedSettingsRefresh.close();reject(Error('Expected retired display-refresh fault'));await retiring;
+ equal(window.notices.length,2,'Retired native host cannot publish late recovery noise');
  `),true);
 });

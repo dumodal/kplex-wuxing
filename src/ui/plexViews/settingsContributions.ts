@@ -1,12 +1,13 @@
-/** Static native Settings composition. Pure view definitions never import Obsidian or receive host objects. */
+/** Static native Settings and live canvas-rail composition share validated per-view configuration fields and the host queued writer. Pure view definitions never import Obsidian or receive host objects; this registry owns no session or acquisition lifecycle. */
 import type {SettingDefinition, SettingDefinitionItem, SettingDefinitionPage} from "obsidian";
 import type {DeclarativeSettingKey} from "../../settings";
-import type {Translator} from "../../lang";
+import type {Translator, PlainTranslationKey} from "../../lang";
 import type {PlexViewRegistry} from "../../core/plex/views/registry";
 import type {PlexViewDefinition} from "../../core/plex/views/contracts";
 import {viewConfigurationKey} from "../../core/plex/views/configuration";
 import {builtInPlexViews} from "./builtins";
 import {classicSettingsContribution} from "./classic/settings";
+import {mindMapSettingsContribution} from "./mindmap/settings";
 import {viewLabel} from "./labels";
 import {wuXingSettingsContribution} from "./wuxing/settings";
 
@@ -18,6 +19,9 @@ export type CanvasViewSettingsContext = Readonly<{
 export type CanvasViewSettingsContribution = Readonly<{
   id: string;
   items: (context: CanvasViewSettingsContext) => SettingDefinitionItem<DeclarativeSettingKey>[];
+  /** Optional live canvas rails address the same registered type fields as native Settings. */
+  layoutControls?: readonly Readonly<{field: string; labelKey: PlainTranslationKey; captionKey: PlainTranslationKey; hintKey?: PlainTranslationKey;
+    icon: string; min: number; max: number; step: number}>[];
 }>;
 
 /** Declarative keys contain only registered type/field identities, never saved payloads or runtime state. */
@@ -32,11 +36,20 @@ export class CanvasViewSettingsRegistry {
   constructor(readonly views: PlexViewRegistry, contributions: readonly CanvasViewSettingsContribution[]) {
     for (const contribution of contributions) {
       if (!views.has(contribution.id) || this.contributions.has(contribution.id)) throw new Error("Invalid view settings contribution");
+      for (const control of contribution.layoutControls ?? []) {
+        if (!Object.prototype.hasOwnProperty.call(views.resolve(contribution.id).configuration?.fields ?? {}, control.field)
+          || ![control.min, control.max, control.step].every(Number.isFinite) || control.max <= control.min || control.step <= 0)
+          throw new Error("Invalid view layout control");
+      }
       this.contributions.set(contribution.id, contribution);
     }
   }
   /** Never resolve an unknown settings write to the fallback definition. */
   definition(id: string): PlexViewDefinition | undefined { return this.views.has(id) ? this.views.resolve(id) : undefined; }
+  /** Static control metadata supplies no source/selection capability and never resolves a foreign definition to Compass. */
+  layoutControls(definition: PlexViewDefinition): NonNullable<CanvasViewSettingsContribution["layoutControls"]> {
+    return this.definition(definition.id) === definition ? this.contributions.get(definition.id)?.layoutControls ?? [] : [];
+  }
   /** Native page/search rendering consumes the same finite contributions; no per-view branches in the tab. */
   pages(context: Omit<CanvasViewSettingsContext, "key">): SettingDefinitionPage<DeclarativeSettingKey>[] {
     return this.views.available.flatMap(definition => {
@@ -53,4 +66,4 @@ export class CanvasViewSettingsRegistry {
   }
 }
 
-export const builtInCanvasViewSettings = new CanvasViewSettingsRegistry(builtInPlexViews, [classicSettingsContribution, wuXingSettingsContribution]);
+export const builtInCanvasViewSettings = new CanvasViewSettingsRegistry(builtInPlexViews, [classicSettingsContribution, mindMapSettingsContribution, wuXingSettingsContribution]);

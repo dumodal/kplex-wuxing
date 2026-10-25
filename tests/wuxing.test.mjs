@@ -124,7 +124,7 @@ test('scene property capability rejects unadmitted reads, bounded exhaustion and
  const source={get:id=>pages.get(id),captureSemanticGateRead:()=>({isCurrent:()=>live}),isVisiblePage:()=>true,sortNeighbours:rows=>rows,titleFor:p=>p.name,
   neighbours:()=>[],explainRelationship:()=>null};
  const properties={getNoteProperty:()=>{throw Error('Legacy unsafe absence API is not used')},readNoteProperty:()=>{calls++;return {status:'available',value:'water'}}};
- const read=M.plexViewRead(source,()=>live,1,'Focus.md',properties);
+ const read=M.plexViewRead(source,()=>live,1,'Focus.md',0,properties);
  assert.equal(read.properties.read('Child.md','phase').status,'unavailable');assert.equal(calls,0);
  read.node('Focus.md');for(let i=0;i<20;i++)read.properties.read('Focus.md','phase');assert(calls<=9);
  live=false;assert.equal(read.properties.read('Focus.md','phase').status,'unavailable');

@@ -27,17 +27,49 @@ const mount=(owner,doc=document,extra={})=>{
 `;
 const scenario=body=>colorEditorScenario(`(async()=>{${initialize}\n${body}\nreturn true})()`);
 
-test('the production panel exposes Compass and Wu Xing through the production registry',async()=>{
+test('a one-definition panel shows labelled disabled Compass and no test definitions',async()=>{
  assert.equal(await scenario(`
- const owner=session('a',M.builtInPlexViews),ui=mount(owner);ui.open();await waitFor(ui.select);
- equal([...ui.select().options].map(option=>[option.value,option.textContent]),[['classic','Compass'],['wuxing','Wu Xing']],'Production options');
- check(!ui.select().disabled,'Two implemented views are selectable');
- check(ui.panel().querySelector('label[for="'+ui.select().id+'"]')?.textContent==='Canvas viewCompassWu Xing','Label names the native select');
+ const owner=session('a',new M.PlexViewRegistry([M.classicViewDefinition])),ui=mount(owner);ui.open();await waitFor(ui.select);
+ equal([...ui.select().options].map(option=>[option.value,option.textContent]),[['classic','Compass']],'Production options');
+ check(ui.select().disabled,'Single option remains visible and disabled');
+ check(ui.panel().querySelector('label[for="'+ui.select().id+'"]')?.textContent==='Canvas viewCompass','Label names the native select');
  check(ui.panel().querySelector('.kplex-filter-section')?.classList.contains('kplex-view-selector'),'Selector comes before filters');
  equal(ui.container.querySelector('.kplex-filter-trigger').getAttribute('aria-label'),'Views and lenses','Trigger accessible name');
  equal(ui.panel().querySelector('.kplex-filter-panel-header span').textContent,'Views and lenses','Panel title');
  check(!ui.panel().textContent.includes('Probe alpha'),'Test definition is absent from production registry');
  equal(writes,{a:0,b:0,lenses:0,filter:0,settings:0,sources:0},'Opening has no write/acquisition');ui.close();
+ `),true);
+});
+
+test('production selection exposes localized Compass, Mind Map and Wu Xing definitions',async()=>{
+ assert.equal(await scenario(`
+ const owner=session('a',M.builtInPlexViews),ui=mount(owner);ui.open();await waitFor(ui.select);
+ equal([...ui.select().options].map(option=>[option.value,option.textContent]),[['classic','Compass'],['mindmap','Mind Map'],['wuxing','Wu Xing']],'Production definitions only');
+ check(!ui.select().disabled,'Implemented second production definition enables selection');ui.change('mindmap');
+ check(ui.select().value==='mindmap'&&owner.definition.navigation==='rooted'&&owner.definition.editorHosting==='occurrence','Actual selected Mind Map contract');
+ equal([writes.sources,writes.lenses,writes.filter,writes.settings],[0,0,0,0],'Registration/selection alone never acquires or mutates shared owners');ui.close();
+ `),true);
+});
+
+test('Compass and Mind Map selection and rooted intent restore independently in two owning documents',async()=>{
+ assert.equal(await scenario(`
+ const a=session('a',M.builtInPlexViews),b=session('b',M.builtInPlexViews),iframe=document.createElement('iframe');document.body.append(iframe);
+ await new Promise(resolve=>setTimeout(resolve,20));const first=mount(a),second=mount(b,iframe.contentDocument);first.open();second.open();await waitFor(()=>first.select()&&second.select());
+ first.change('mindmap');a.setRoot('R');second.select().focus();equal([first.select().value,second.select().value],['mindmap','classic'],'Focused second document cannot steal first session');
+ const state=[structuredClone(a.getState()),structuredClone(b.getState())],restoredA=session('a',M.builtInPlexViews),restoredB=session('b',M.builtInPlexViews);restoredA.restore(state[0]);restoredB.restore(state[1]);
+ equal([restoredA.definition.id,restoredA.layoutRoot('C'),restoredB.definition.id],['mindmap','R','classic'],'Independent choice and root restoration');
+ equal([writes.sources,writes.lenses,writes.filter,writes.settings],[0,0,0,0],'Selector and restoration perform no acquisition/global mutation');
+ first.close();second.close();restoredA.dispose();restoredB.dispose();iframe.remove();
+ `),true);
+});
+
+test('returning from Compass uses the opening canvas current attention rather than a stale Mind Map root',async()=>{
+ assert.equal(await scenario(`
+ let attention='First',otherAttention='Other';const a=new M.PlexViewSession(M.builtInPlexViews,()=>writes.a++,()=>attention),b=new M.PlexViewSession(M.builtInPlexViews,()=>writes.b++,()=>otherAttention);
+ const first=mount(a);first.open();await waitFor(first.select);first.change('mindmap');equal(a.layoutRoot('unused'),'First','First entry uses own current note');a.setRoot('Old-map');
+ first.change('classic');attention='Current-compass';b.select('mindmap');first.change('mindmap');
+ equal([first.select().value,a.layoutRoot('unused'),b.layoutRoot('unused')],['mindmap','Current-compass','Other'],'Explicit view selection cannot restore an unrelated old root or target globally active canvas');
+ equal([writes.sources,writes.lenses,writes.filter,writes.settings],[0,0,0,0],'Entry root is session intent without source/global mutation');first.close();b.dispose();
  `),true);
 });
 
@@ -99,5 +131,14 @@ test('two canvas panels retain owning-document and session identity across focus
  check(first.panel().querySelector('label[for="'+first.select().id+'"]')&&second.panel().querySelector('label[for="'+second.select().id+'"]'),'Each document has its own accessible label');
  equal([writes.lenses,writes.filter,writes.settings,writes.sources],[0,0,0,0],'Cross-document switching adds no unrelated work');
  first.close();check(second.panel()?.isConnected,'One canvas teardown cannot close the other panel');second.close();iframe.remove();
+ `),true);
+});
+
+
+test('production registry exposes all three accepted definitions through the same captured selector',async()=>{
+ assert.equal(await scenario(`
+ const owner=session('a',M.builtInPlexViews),ui=mount(owner);ui.open();await waitFor(ui.select);
+ equal([...ui.select().options].map(option=>[option.value,option.textContent]),[['classic','Compass'],['mindmap','Mind Map'],['wuxing','Wu Xing']],'Production registry options');
+ check(!ui.select().disabled,'Implemented definitions selectable');ui.change('wuxing');check(owner.definition.id==='wuxing','Captured owner selects Wu Xing');ui.close();
  `),true);
 });

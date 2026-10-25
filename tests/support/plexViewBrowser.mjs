@@ -22,6 +22,9 @@ return await build({stdin:{resolveDir:process.cwd(),contents:`
   export {builtInPlexViews} from './src/ui/plexViews/builtins';export {probeViewDefinition} from './tests/support/plexViewProbe';
   export {ActionManager} from './src/application/ActionManager';export {actionNodeRef} from './src/adapters/obsidian/actionNode';
   export {editViewConfiguration} from './src/core/plex/views/configuration';export {wuXingViewDefinition} from './src/core/plex/views/wuxing/definition';
+  export {mindMapViewDefinition} from './src/core/plex/views/mindmap/definition';
+  export {builtInCanvasViewSettings} from './src/ui/plexViews/settingsContributions';
+  export {compileGraphPredicate} from './src/core/plex/predicate';
 `},write:false,bundle:true,platform:'browser',format:'iife',globalName:'sourceModules',plugins:[{name:'finite-native-host',setup(builder){
   builder.onResolve({filter:/^obsidian$/},()=>({path:'host',namespace:'finite'}));
   builder.onLoad({filter:/.*/,namespace:'finite'},()=>({contents:nativeStub}));

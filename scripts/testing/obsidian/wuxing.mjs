@@ -29,7 +29,7 @@ async function scenario(app,c){
  const reveal=async host=>{const win=host.view.containerEl.ownerDocument.defaultView.require('@electron/remote').getCurrentWindow();win.restore();win.show();win.focus();win.webContents.focus();await workspace.revealLeaf(host);workspace.setActiveLeaf(host,{focus:true});await until(()=>host.view.containerEl.ownerDocument.hasFocus(),'Exact native canvas focus absent')};
  const panel=host=>host.view.containerEl.ownerDocument.querySelector('.kplex-filter-panel');
  const choose=async(host,id)=>{await reveal(host);if(!panel(host)){root(host).querySelector('.kplex-filter-trigger').click();await until(()=>panel(host)?.querySelector('.kplex-view-selector select'),'Native view selector absent')}
-  const select=panel(host).querySelector('.kplex-view-selector select');check(JSON.stringify([...select.options].map(option=>option.value))===JSON.stringify(['classic','wuxing']),'Production options differ');select.value=id;select.dispatchEvent(new select.ownerDocument.defaultView.Event('change',{bubbles:true}));
+  const select=panel(host).querySelector('.kplex-view-selector select');check(JSON.stringify([...select.options].map(option=>option.value))===JSON.stringify(['classic','mindmap','wuxing']),'Production options differ');select.value=id;select.dispatchEvent(new select.ownerDocument.defaultView.Event('change',{bubbles:true}));
   await until(()=>host.view.documentSession.plexView.definition.id===id&&select.value===id,'Owning native selection failed');
  };
  try{

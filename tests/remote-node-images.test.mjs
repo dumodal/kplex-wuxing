@@ -177,7 +177,7 @@ test('held optional refresh cannot undo immediate image revocation or trap a dur
   const refresh=index.refreshPresentationSettings.bind(index),gate=new Promise(resolve=>release=resolve),before=o.counts();
   index.refreshPresentationSettings=async()=>{await gate;return refresh()};
   try{const pending=setConsent(false);equal(settings.allowRemoteNodeImages,false,'Revocation is synchronous');await pending;
-   ok(window.imageSaveNotices.includes('settings.savedRefreshPending'),'Durable pending has truthful native feedback');
+   equal(window.imageSaveNotices,[],'Normal queued consent save must not emit a generic recovery notice');
    equal(o.counts().semanticRefreshes,before.semanticRefreshes,'No semantic refresh for consent');equal(o.counts().reads,before.reads,'No note reads');equal(o.counts().parses,before.parses,'No acquisition parsing');return true;
   }finally{release();index.refreshPresentationSettings=refresh}
  })()`),true);

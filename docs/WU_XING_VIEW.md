@@ -154,3 +154,8 @@ Keep each branch's HANDOFF.md focused on its own assignment; cross-agent decisio
 No independently pinned arbitrary-occurrence editors, relative-grandparent/grandchild mode, multiple simultaneous editors, automatic phase assignment, between-phase overlap, phase-changing drag/drop, astrology-derived classification, full-vault metrics, 3D/forces/continuous animation, private parsing/indexing, external plugin loading or C15–C26 refactor.
 
 Return the actual phase/settings/editor contract, source/build identities, tests and failures, cleanup receipts and up to three necessary manual checks. Deliver a complete production-integrated Wu Xing PR against accepted main plus this branch, without #219/M0 as an outstanding gate. Keep the PR unmerged for review; do not declare readiness if required validation remains incomplete. The opening planning document itself is not a completed feature.
+
+
+## Superseding Facets assignment
+
+After219 merged on2026-10-25, the maintainer expanded220 to configurable Facets and the shared view API. [Current specification](FACETS_VIEW.md) supersedes this five-phase-only plan. Stable stored IDwuxing and the existing configuration require migration into an editable Wu Xing preset; prior validation above remains attributed to its original source. Expanded implementation and combined-source acceptance are in progress, not certified by the earlier Wu Xing proofs.

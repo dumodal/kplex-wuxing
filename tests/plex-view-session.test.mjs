@@ -4,10 +4,110 @@ import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import ts from 'typescript';
 import {plexViewModules} from './support/plexViewFixture.mjs';
-const M=await plexViewModules(['src/application/PlexViewSession.ts','src/core/plex/views/registry.ts','src/ui/plexViews/builtins.ts','tests/support/plexViewProbe.ts','src/ui/surfaceContinuation.ts']);
+const M=await plexViewModules(['src/application/PlexViewSession.ts','src/application/PlexEditorBindings.ts','src/core/plex/views/registry.ts','src/ui/plexViews/builtins.ts','tests/support/plexViewProbe.ts','src/ui/surfaceContinuation.ts']);
 
-test('static registration validates identity/version and ships only implemented Compass/Wu Xing views',()=>{
-  assert.deepEqual(M.builtInPlexViews.available.map(view=>view.id),['classic','wuxing']);
+const occurrenceIntent = (occurrenceId='B1',fileIdentity='native-B') => ({viewId:'test.bound',occurrenceId,
+ target:{nodeId:'B.md',path:'B.md',fileIdentity},dimensions:{width:600,height:360},mode:'source'});
+
+test('explicit rooted view entry captures its owning canvas current attention instead of an older saved root',()=>{
+ let attention='A.md',otherAttention='Other.md',writes=0;
+ const a=new M.PlexViewSession(M.builtInPlexViews,()=>writes++,()=>attention),b=new M.PlexViewSession(M.builtInPlexViews,()=>{},()=>otherAttention);
+ a.select('mindmap');assert.equal(a.layoutRoot('unused'),'A.md');assert.equal(writes,1);
+ a.setRoot('Old-map.md');a.select('classic');attention='Current-compass.md';a.select('mindmap');
+ assert.equal(a.layoutRoot('unused'),'Current-compass.md');assert.equal(b.definition.id,'classic');
+ attention='Inspected.md';a.ensureRoot(attention);a.select('mindmap');assert.equal(a.layoutRoot(attention),'Current-compass.md','Ordinary attention and same selection retain the rooted map');
+ const restored=new M.PlexViewSession(M.builtInPlexViews,()=>{},()=>attention);restored.restore(JSON.parse(JSON.stringify(a.getState())));assert.equal(restored.layoutRoot(attention),'Current-compass.md','Workspace restoration keeps its explicit map state');
+ b.select('mindmap');assert.equal(b.layoutRoot('unused'),'Other.md');assert.equal(a.layoutRoot(attention),'Current-compass.md');
+ a.dispose();b.dispose();restored.dispose();
+});
+
+test('occurrence editor identity is independent of duplicate notes, caller mutation and geometry',()=>{
+ let changes=0;const owner=new M.PlexEditorBindings(()=>changes++),intent=occurrenceIntent(),opened=owner.open(intent);
+ assert.equal(opened.status,'opened');const binding=opened.binding,live=owner.capture(binding.id),future=owner.capture('occurrence-editor-2');
+ intent.target.path='C.md';intent.dimensions.width=1;
+ assert.equal(owner.bindings[0].target.path,'B.md');assert.equal(owner.bindings[0].dimensions.width,600);
+ assert.throws(()=>owner.bindings.push(binding));assert.throws(()=>{owner.bindings[0].target.path='C.md'});
+ assert.equal(owner.open(occurrenceIntent()).status,'existing');assert.equal(changes,1);
+ assert.deepEqual(owner.open(occurrenceIntent('B2')),{status:'unavailable',reason:'capacity'},'Same note in another occurrence cannot replace B1');
+ assert.deepEqual(owner.open(occurrenceIntent('B1','recreated-B')),{status:'unavailable',reason:'capacity'},'A new native incarnation cannot replace a live document');
+ assert.equal(owner.resize(binding.id,{width:720,height:420}),true);assert.equal(owner.setMode(binding.id,'preview'),true);
+ assert.equal(owner.bindings[0].id,binding.id);assert.equal(live(),true);assert.equal(future(),false);
+ const close=owner.beginClose(binding.id);assert.equal(owner.bindings[0].closing,true);assert.equal(live(),true,'Native buffer stays mounted while save is pending');
+ assert.equal(owner.resize(binding.id,{width:100,height:100}),false);assert.equal(owner.open(occurrenceIntent()).reason,'closing');
+ close.cancel();assert.equal(close.commit(),false,'A rejected save cannot later retire the editor');assert.equal(owner.bindings[0].closing,false);
+ const accepted=owner.beginClose(binding.id);assert.equal(accepted.commit(),true);assert.equal(accepted.commit(),false);assert.equal(live(),false);
+ const replacement=owner.open(occurrenceIntent('B2'));assert.notEqual(replacement.binding.id,binding.id);assert.equal(future(),false,'A pre-admission capture never gains authority');
+ const late=owner.beginClose(replacement.binding.id);owner.dispose();assert.equal(late.commit(),false);assert.equal(owner.open(occurrenceIntent()).reason,'closed');
+});
+
+test('invalid occurrence intent never acquires capacity or publishes binding state',()=>{
+ let changes=0;const owner=new M.PlexEditorBindings(()=>changes++),base=occurrenceIntent();
+ for(const bad of [null,{...base,occurrenceId:''},{...base,viewId:'../view'},{...base,mode:'unknown'},
+  {...base,target:{...base.target,fileIdentity:''}},{...base,target:{...base.target,nodeId:'x'.repeat(4097)}},
+  ...[0,-1,Infinity,NaN,100001].map(width=>({...base,dimensions:{width,height:360}}))])assert.equal(owner.open(bad).reason,'invalid-binding');
+ assert.equal(changes,0);assert.deepEqual(owner.bindings,[]);assert.equal(owner.open(base).status,'opened');
+});
+
+test('bound editor retirement is explicit while attention-following definitions remain unchanged',()=>{
+ const bound={...M.probeViewDefinition,id:'test.bound',editorHosting:'occurrence'};
+ const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.probeViewDefinition,bound]);
+ const a=new M.PlexViewSession(registry,()=>{}),b=new M.PlexViewSession(registry,()=>{});
+ a.select(bound.id);const opened=a.editors.open(occurrenceIntent()),live=a.editors.capture(opened.binding.id);
+ a.retainTransient(bound.id,{attention:'A.md',camera:{x:1,y:2,scale:1},selected:'B2',unfolded:[]});
+ a.readTransient(bound.id,'C.md');a.updateState({root:'R.md'});
+ assert.equal(live(),true,'Attention/view preference retirement does not retarget B');assert.equal(a.editors.bindings[0].target.nodeId,'B.md');
+ assert.deepEqual(b.editors.bindings,[]);a.select('classic');assert.equal(a.definition.id,bound.id,'Changing definitions requires explicit native close first');
+ const close=a.editors.beginClose(opened.binding.id);close.commit();a.select('classic');assert.equal(a.definition.id,'classic');
+ const release=a.retainEditor();a.select('test.situated');assert.equal(a.definition.id,'test.situated','Unchanged off-centre attention definition retains compatible switching');release();
+ assert.equal(M.probeViewDefinition.editorHosting,undefined);assert.equal(M.builtInPlexViews.resolve('classic').editorHosting,undefined);
+ assert.throws(()=>new M.PlexViewRegistry([...M.builtInPlexViews.available,{...bound,editorHosting:'unknown'}]));
+ assert.throws(()=>new M.PlexViewRegistry([...M.builtInPlexViews.available,{...bound,capabilities:{...bound.capabilities,editor:false}}]));
+ a.dispose();b.dispose();assert.equal(a.canSelect('classic'),false);
+});
+
+test('rooted sessions retain independent roots and transient geometry while branch removal is preflighted',()=>{
+ const rooted={...M.probeViewDefinition,id:'test.rooted',navigation:'rooted',editorHosting:'occurrence'},registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,rooted]);
+ const a=new M.PlexViewSession(registry,()=>{}),b=new M.PlexViewSession(registry,()=>{});a.select(rooted.id);b.select(rooted.id);
+ a.ensureRoot('R.md');b.ensureRoot('S.md');a.ensureRoot('C.md');assert.equal(a.layoutRoot('C.md'),'R.md');assert.equal(b.layoutRoot('C.md'),'S.md');
+ a.retainTransient(rooted.id,{attention:'A.md',scope:'R.md',camera:{x:12,y:34,scale:0.8},selected:'B2',unfolded:['branch-B']});
+ const saved=a.readTransient(rooted.id,'C.md');assert.equal(saved.camera.x,12);assert.equal(saved.selected,'B2');assert.deepEqual(saved.unfolded,['branch-B']);
+ const c=new M.PlexViewSession(registry,()=>{});c.restore(JSON.parse(JSON.stringify(a.getState())));assert.equal(c.layoutRoot('C.md'),'R.md');
+ const binding=a.editors.open({...occurrenceIntent(),viewId:rooted.id}).binding;
+ assert.equal(a.setRoot('C.md'),false);assert.equal(a.layoutRoot('C.md'),'R.md');
+ assert.equal(a.updateState({removeB:true}),false,'An unmounted/unguarded host cannot remove a binding');
+ const release=a.guardState(state=>!state?.removeB);assert.equal(a.updateState({removeB:true}),false);assert.equal(a.updateState({removeB:false}),true);
+ release();a.guardState(()=>{throw Error('Unavailable preflight')});assert.equal(a.updateState({removeB:false}),false);
+ a.editors.beginClose(binding.id).commit();assert.equal(a.setRoot('C.md'),true);assert.equal(a.readTransient(rooted.id,'C.md'),undefined,'Explicit reroot retires old root geometry');
+ a.select('classic');assert.equal(a.layoutRoot('A.md'),'A.md');assert.equal(a.setRoot('R.md'),false,'Legacy attention policy cannot acquire rooted state');
+ a.dispose();b.dispose();c.dispose();
+});
+
+test('workspace editor restoration carries bounded intent but never grants a stored native file token authority',()=>{
+ const bound={...M.probeViewDefinition,id:'test.bound',editorHosting:'occurrence'},registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,bound]);
+ const a=new M.PlexViewSession(registry,()=>{});a.select(bound.id);a.editors.open(occurrenceIntent());
+ const saved=JSON.parse(JSON.stringify(a.getState()));assert.equal(JSON.stringify(saved).includes('native-B'),false);assert.equal(JSON.stringify(saved).includes('occurrence-editor-'),false);
+ const b=new M.PlexViewSession(registry,()=>{});b.restore(saved);assert.deepEqual(b.editors.bindings,[],'Restoration alone creates no live editor');
+ assert.deepEqual(b.readEditorIntent(),{viewId:bound.id,occurrenceId:'B1',target:{nodeId:'B.md',path:'B.md'},dimensions:{width:600,height:360},mode:'source'});
+ const intent=b.readEditorIntent();intent.target.path='C.md';assert.equal(b.readEditorIntent().target.path,'B.md');
+ const opened=b.editors.open({...b.readEditorIntent(),target:{...b.readEditorIntent().target,fileIdentity:'fresh-native-B'}});
+ assert.equal(opened.binding.target.fileIdentity,'fresh-native-B');assert.equal(b.readEditorIntent(),null);b.editors.beginClose(opened.binding.id).commit();assert.equal(b.readEditorIntent(),null,'Collapse cannot revive the saved editor');
+ for(const editors of [{version:2,bindings:[{future:true}]},{version:1,bindings:[saved.editors.bindings[0],saved.editors.bindings[0]]},
+  {version:1,bindings:[{...saved.editors.bindings[0],occurrenceId:'x'.repeat(4097)}]},
+  {version:1,bindings:[{...saved.editors.bindings[0],dimensions:{width:Infinity,height:360}}]}]){
+  const c=new M.PlexViewSession(registry,()=>{});c.restore({...saved,editors});assert.equal(c.readEditorIntent(),null);assert.deepEqual(c.editors.bindings,[]);c.dispose();
+ }
+ const future={version:2,bindings:[{future:true}]},c=new M.PlexViewSession(registry,()=>{});c.restore({...saved,editors:future});assert.deepEqual(c.getState().editors,future,'Unsupported intent round-trips inertly');
+ a.dispose();b.dispose();c.dispose();
+});
+
+test('root restoration at capacity still captures a stable active root',()=>{
+ const rooted={...M.probeViewDefinition,id:'test.rooted',navigation:'rooted'},registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,rooted]);
+ const session=new M.PlexViewSession(registry,()=>{});session.restore({version:1,id:rooted.id,roots:Object.fromEntries(Array.from({length:16},(_,i)=>['future.'+i,'R'+i]))});
+ session.ensureRoot('Actual.md');session.ensureRoot('Other.md');assert.equal(session.layoutRoot('Other.md'),'Actual.md');assert.equal(Object.keys(session.getState().roots).length,16);session.dispose();
+});
+
+test('static registration validates identity/version and ships Compass, Mind Map and Wu Xing without test definitions',()=>{
+  assert.deepEqual(M.builtInPlexViews.available.map(view=>view.id),['classic','mindmap','wuxing']);
   assert.throws(()=>new M.PlexViewRegistry([M.builtInPlexViews.resolve('classic'),M.builtInPlexViews.resolve('classic')]));
   assert.throws(()=>new M.PlexViewRegistry([M.probeViewDefinition]));
   assert.throws(()=>new M.PlexViewRegistry([{...M.builtInPlexViews.resolve('classic'),version:2}]));
@@ -60,6 +160,13 @@ test('compatible editor leases, per-view heights and transient geometry survive 
   const b=new M.PlexViewSession(registry,()=>{});b.restore(saved);assert.deepEqual(b.getAreaHeights(),{groveHeight:170});assert.equal(b.readTransient('test.situated','Focus.md'),undefined);
   assert.equal(a.readTransient('test.situated','Other.md'),undefined);assert.equal(a.readTransient('test.situated','Focus.md'),undefined,'A root change permanently retires old transient state');
   release();release();a.select('test.no-editor');assert.equal(a.definition.id,'test.no-editor');a.dispose();b.dispose();
+});
+
+test('a live attention editor blocks occurrence-host selection while unchanged attention definitions remain compatible',()=>{
+ const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.probeViewDefinition]),session=new M.PlexViewSession(registry,()=>{}),release=session.retainEditor();
+ assert.equal(session.canSelect('mindmap'),false);session.select('mindmap');assert.equal(session.definition.id,'classic');
+ assert.equal(session.canSelect('test.situated'),true);session.select('test.situated');assert.equal(session.definition.id,'test.situated');
+ session.select('mindmap');assert.equal(session.definition.id,'test.situated');release();assert.equal(session.canSelect('mindmap'),true);session.select('mindmap');assert.equal(session.definition.id,'mindmap');session.dispose();
 });
 
 

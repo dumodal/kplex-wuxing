@@ -81,7 +81,7 @@ function callback(name,context) {
 test('click, touch and keyboard resolve a group to in-place unfolding without native navigation or index lookup', () => {
   const group=project(neighborhood({children:[relation(page('a')),relation(page('b'))]})).children[0].page;
   let state={center:'Center',keys:new Set()};
-  const ctx={activePath:'Center',setUnfoldedGroups:fn=>{state=fn(state)},suppressActivateUntil:{current:0},suppressSyntheticClickUntil:{current:0},
+  const ctx={activePath:'Center',sceneScope:'Center',setUnfoldedGroups:fn=>{state=fn(state)},suppressActivateUntil:{current:0},suppressSyntheticClickUntil:{current:0},
     touchDoubleTap:{current:{reset(){}}},index:{get(){throw Error('Synthetic lookup')}},persistentPageFor(){throw Error('Native endpoint')},
     scene:{nodes:[{page:group}]},sceneNodeKeys:new Map(),resolveActionPage(){throw Error('Canonical action lookup')}};
   ctx.unfoldGroup=callback('unfoldGroup',ctx);

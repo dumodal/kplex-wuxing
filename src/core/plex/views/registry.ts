@@ -12,6 +12,17 @@ export class PlexViewRegistry {
         throw new Error("Invalid or duplicate internal Plex view definition");
       }
       if (definition.configuration) validateViewConfigurationSchema(definition.configuration);
+      if (definition.editorHosting !== undefined && (definition.editorHosting !== "occurrence" || !definition.capabilities.editor)) {
+        throw new Error("Unsupported internal editor hosting policy");
+      }
+      if (definition.navigation !== undefined && definition.navigation !== "rooted") throw new Error("Unsupported internal navigation policy");
+      if (definition.navigationEntry !== undefined && (definition.navigationEntry !== "attention" || definition.navigation !== "rooted")) throw new Error("Unsupported rooted entry policy");
+      if (definition.hierarchy && (definition.navigation !== "rooted" || !Number.isInteger(definition.hierarchy.maximumScopes)
+        || definition.hierarchy.maximumScopes < 1 || definition.hierarchy.maximumScopes > 16
+        || typeof definition.hierarchy.reduce !== "function"
+        || definition.hierarchy.relations !== undefined && definition.hierarchy.relations !== "child-and-peer"
+        || !["activate", "activate-editor", "expand"].includes(definition.hierarchy.primary)
+        || definition.hierarchy.primary === "activate-editor" && definition.editorHosting !== "occurrence")) throw new Error("Unsupported hierarchy policy");
       this.definitions.set(definition.id, definition);
     }
     if (!this.definitions.has(fallbackId)) throw new Error("Missing fallback Plex view definition");

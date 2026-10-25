@@ -11,7 +11,7 @@
  * editors and native fullscreen follow the companion preference. Untouched reading-mode drawings
  * follow native viewport resizing; direct input or manual camera changes retire that fit lifetime.
  */
-import { FileView, Platform, WorkspaceLeaf, WorkspaceSplit, type App, type Scope, type TFile, type Workspace } from "obsidian";
+import { FileView, TextFileView, parseLinktext, Platform, WorkspaceLeaf, WorkspaceSplit, type App, type Scope, type TFile, type Workspace } from "obsidian";
 import { focusEmbeddedMarkdownView, registerEmbeddedMarkdownFocus, registerEmbeddedMarkdownFocusTarget } from "./embeddedMarkdownFocus";
 import { EmbeddedDrawingFit } from "./EmbeddedDrawingFit";
 import {
@@ -49,6 +49,8 @@ export interface EmbeddedMarkdownLeafController {
   activate(): void;
   focus(): boolean;
   resize(): void;
+  /** Explicit occurrence collapse saves through the current native TextFileView before detaching. */
+  close(): Promise<void>;
   dispose(): void;
 }
 
@@ -235,6 +237,7 @@ export function mountEmbeddedMarkdownLeaf(
   onDocumentViewChange?: (view: EmbeddedDocumentView) => void,
   activateHostLeafOnInteraction = false,
   preferEmbeddedDrawingFit?: () => boolean,
+  onBoundLinkNavigate?: (file: TFile, subpath: string) => void,
 ): EmbeddedMarkdownLeafController {
   const SplitConstructor = WorkspaceSplit as unknown as WorkspaceSplitConstructor;
   const LeafConstructor = WorkspaceLeaf as unknown as WorkspaceLeafConstructor;
@@ -263,6 +266,7 @@ export function mountEmbeddedMarkdownLeaf(
   split.containerEl.classList.remove("workspace-split");
   embeddedMarkdownLeaves.add(leaf);
   let disposed = false;
+  let closePromise: Promise<void> | null = null;
   embeddedScopeOwners.set(mountEl, /** Native view replacements retain the mount but change its actual parent Scope. */ () => disposed ? null : leaf.view.scope ?? null);
   let currentFile: TFile | null = null;
   let openSequence = 0;
@@ -320,6 +324,12 @@ export function mountEmbeddedMarkdownLeaf(
     if (disposed || !currentFile) return;
     const linkText = internalLinkTarget(rawTarget);
     if (!linkText) return;
+    if (onBoundLinkNavigate) {
+      const target = parseLinktext(linkText);
+      const file = target.path ? app.metadataCache.getFirstLinkpathDest(target.path, currentFile.path) : currentFile;
+      if (!file || app.vault.getFileByPath(file.path) !== file) return;
+      if (file !== currentFile) { onBoundLinkNavigate(file, target.subpath); return; }
+    }
     const embeddedLeaf: LinkOpeningLeaf = leaf;
     if (typeof embeddedLeaf.openLinkText !== "function") return;
     const sourcePath = currentFile.path;
@@ -772,6 +782,7 @@ export function mountEmbeddedMarkdownLeaf(
    * switches from the command palette or Excalidraw's own representation control.
    */
   const syncObservedDocumentView = (reconcile = true): void => {
+    if (onBoundLinkNavigate && leaf.view instanceof FileView) leaf.view.navigation = false;
     const nextView = getDocumentView();
     // View replacement can briefly expose an intermediate/null type. Wait for the final native
     // representation so the toolbar never flickers to an indeterminate state.
@@ -840,6 +851,68 @@ export function mountEmbeddedMarkdownLeaf(
       // Reasserting the real K-Plex host after the transition keeps that surface visible.
       if (activateHostLeafOnInteraction) activateInteractionLeaf();
     }
+  };
+
+  /** Synchronous legacy teardown remains shared with explicit close and migration cleanup. */
+  const dispose = (): void => {
+    if (disposed) return;
+    disposed = true;
+    drawingFit?.dispose(); drawingFit = null;
+    mountEl.removeEventListener("pointerdown", onDrawingInteraction, true);
+    mountEl.removeEventListener("wheel", onDrawingInteraction, true);
+    mountEl.removeEventListener("keydown", onDrawingInteraction, true);
+    releaseFocus();
+    releaseFocusTarget();
+    embeddedScopeOwners.delete(mountEl);
+    openSequence += 1;
+    fullscreenObserver?.disconnect();
+    documentViewObserver.disconnect();
+    restoreExcalidrawLinkRouting();
+    if (ownsScopedExcalidrawApi) scopedExcalidrawApi?.destroy?.();
+    scopedExcalidrawView = null;
+    scopedExcalidrawApi = null;
+    ownsScopedExcalidrawApi = false;
+    restoreNativeFullscreenGeometry();
+    if (fileOpenRef) app.workspace.offref(fileOpenRef);
+    viewWindow.document.removeEventListener("click", onEmbeddedLinkClick, true);
+    // Detaching an active synthetic leaf lets Obsidian reactivate the preceding document.
+    // Return command ownership to the real Plex host before that teardown can emit navigation.
+    if (app.workspace.getActiveViewOfType(FileView)?.leaf === leaf) app.workspace.setActiveLeaf(hostLeaf, { focus: false });
+    try {
+      leaf.detach();
+    } catch {
+      // The host may already have detached the leaf during window/workspace teardown.
+    }
+    embeddedMarkdownLeaves.delete(leaf);
+    split.containerEl.remove();
+    if (mountEl.isConnected) mountEl.replaceChildren();
+  };
+
+  /** A failed native save retains the mounted editor; no independent text writer or buffer is introduced. */
+  const close = (): Promise<void> => {
+    if (closePromise) return closePromise;
+    if (disposed) return Promise.resolve();
+    const nativeView = leaf.view, file = currentFile;
+    const wasInert = mountEl.inert, hadFocus = mountEl.contains(viewWindow.document.activeElement);
+    mountEl.inert = true;
+    const operation = (async (): Promise<void> => {
+      try {
+        if (file && nativeView instanceof TextFileView && nativeView.file === file
+          && app.vault.getFileByPath(file.path) === file) {
+          await nativeView.save();
+          if (!disposed && (leaf.view !== nativeView || currentFile !== file)) throw new Error("Embedded document changed during close");
+        }
+        dispose();
+      } catch (error) {
+        mountEl.inert = wasInert;
+        const active = viewWindow.document.activeElement;
+        if (hadFocus && (!active || active === viewWindow.document.body || mountEl.contains(active))) focus();
+        throw error;
+      }
+    })();
+    closePromise = operation;
+    void operation.catch(() => {if (closePromise === operation) closePromise = null;});
+    return operation;
   };
 
   return {
@@ -927,38 +1000,7 @@ export function mountEmbeddedMarkdownLeaf(
       return focus();
     },
     resize,
-    dispose() {
-      if (disposed) return;
-      disposed = true;
-      drawingFit?.dispose(); drawingFit = null;
-      mountEl.removeEventListener("pointerdown", onDrawingInteraction, true);
-      mountEl.removeEventListener("wheel", onDrawingInteraction, true);
-      mountEl.removeEventListener("keydown", onDrawingInteraction, true);
-      releaseFocus();
-      releaseFocusTarget();
-      embeddedScopeOwners.delete(mountEl);
-      openSequence += 1;
-      fullscreenObserver?.disconnect();
-      documentViewObserver.disconnect();
-      restoreExcalidrawLinkRouting();
-      if (ownsScopedExcalidrawApi) scopedExcalidrawApi?.destroy?.();
-      scopedExcalidrawView = null;
-      scopedExcalidrawApi = null;
-      ownsScopedExcalidrawApi = false;
-      restoreNativeFullscreenGeometry();
-      if (fileOpenRef) app.workspace.offref(fileOpenRef);
-      viewWindow.document.removeEventListener("click", onEmbeddedLinkClick, true);
-      // Detaching an active synthetic leaf lets Obsidian reactivate the preceding document.
-      // Return command ownership to the real Plex host before that teardown can emit navigation.
-      if (app.workspace.getActiveViewOfType(FileView)?.leaf === leaf) app.workspace.setActiveLeaf(hostLeaf, { focus: false });
-      try {
-        leaf.detach();
-      } catch {
-        // The host may already have detached the leaf during window/workspace teardown.
-      }
-      embeddedMarkdownLeaves.delete(leaf);
-      split.containerEl.remove();
-      if (mountEl.isConnected) mountEl.replaceChildren();
-    },
+    close,
+    dispose,
   };
 }

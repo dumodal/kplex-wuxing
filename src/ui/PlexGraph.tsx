@@ -1,5 +1,8 @@
 /**
  * Host-bound Plex scene composition, shared captured center-arrival motion and finite Wander navigation ports, layout and relationship interactions. Semantic resolution stays index/core-owned; UI labels and on-demand evidence hints use the injected translator. Navigation fits keep the central node centered and follow late geometry until manual camera input; publication and ordinary pane resizing preserve manual intent. Sidecar open/close transitions explicitly reframe the current viewport after native layout settles, with pending work retired by input, navigation or unmount. View-owned display transitions retain camera coordinates and scene settings. Device typography stages scalar live preferences and persists after input settles; unmount flushes storage without replaying stale overrides. Area-height gestures own viewport pointer capture and persist existing presentation settings on completion or interruption. History and pinned drag targets share composer eligibility; external file drops follow the rendered area's semantic role. Theme-native area previews follow the existing drop action without intercepting capture or moving the dragged thought. Visible rows retain finite cache-only presentation demand; hidden surfaces and effect teardown release it. Geometry defers gate/count queries until a row intersects the displayed viewport, including partially clipped rows. Ordinary unfiltered scenes project cross-links for clipped visible rows; filtered and section scenes retain their established edge/count policy. Scene-local React keys capture paths before canonical pages can mutate during rename; semantic pages and actions retain their live identity. Normal-mode keyboard and exact-phrase typing selection are view-local; the displayed occurrence projection supplies all candidates and the shared selection owner reveals them without changing the center, filters or native search. Host methods own activation/rename/creation. Filtered badge numerators use revision-scoped semantic endpoint membership independently of connector routing and viewport clipping. Pane-fit native layout controls own local touch containment and bounded scrolling without changing preferences or browser range behavior. Accessible layout-wrapper hints use the shell's shared tooltip owner; inputs retain concise accessible names.
+ * Hierarchy Find selects and reveals exact occurrences without activating attention or opening an editor.
+ * Registered view layout rails share the native Settings queued writer and measured layout pipeline;
+ * they preserve camera intent and editor instances without acquiring semantic sources.
  * Visual resolution and metadata refreshes retain the index consent epoch; teardown and revocation
  * reject late publication. Hover enlargement uses the same already-guarded image element.
  * Connector Hidden actions share the plugin writer; this surface owns their pending confirmation
@@ -16,6 +19,9 @@
  * Central-editor corner clicks share modifier expansion; expanded mini rows retain one native title
  * with a separate full accessible name, avoiding competing aria-label tooltips.
  * Startup recovery remains eligible across visibility changes until its current check completes.
+ * Opt-in rooted hierarchies retain root/attention/editor intent separately, reconcile finite frontier
+ * leases after scene admission and share exact ancestor filtering and catalog-backed branch actions.
+ * Their first current local preparation may fit once; manual/restored cameras and live editors win.
  */
 import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
 import {hasDirectionalCaption,directionalRelationCaption} from "../core/plex/directionalRelationCaption";
@@ -40,7 +46,7 @@ import { ColorSourceModal } from "./ColorSourceModal";
 import { Keymap, Menu, Notice, Platform, type WorkspaceLeaf } from "obsidian";
 import { addNativeSubmenu } from "../adapters/obsidian/nativeSubmenu";
 import { getDraggedFile } from "../adapters/obsidian/fileExplorerDrag";
-import { canDragNodeLink, draggedGraphPage, finishNodeLinkDrag, nodeLinkDragSource, startNodeLinkDrag, type NodeLinkDragSource } from "../adapters/obsidian/nodeLinkDrag";
+import { canDragNodeLink, draggedGraphPage, finishNodeLinkDrag, isNodeLinkDragCurrent, nodeLinkDragSource, startNodeLinkDrag, type NodeLinkDragRelationship, type NodeLinkDragSource } from "../adapters/obsidian/nodeLinkDrag";
 import { urlEmbed } from "./features/urlEmbed";
 import type KplexPlugin from "../main";
 import type { KplexDisplayModeState } from "./KplexDisplayModes";
@@ -52,9 +58,11 @@ import { alphaHexToCss, resolveLinkStyle, resolveNodeStyle, currentNodeColorStyl
 import { TYPOGRAPHY_FIELDS, TYPOGRAPHY_LIMITS, type TypographyValues } from "../core/plex/typographyPreferences";
 import { appendVisibleCrossLinks, presentationPage, projectNodeCounts, scrollZoneForRole, rowIntersectsViewport, effectiveLabelLimit, expandedMiniLayout, horizontalDensity, gateDiameter, siblingScale, withAreaHeightOverrides, type CenterNodeSize, type ZoneViewport, type ZoneAreaBounds } from "./layout";
 import { LayoutSlider } from "./components/LayoutSlider";
+import {appendOccurrenceCrossLinks} from "./plexViews/crossLinks";
 import { centeredViewportFit, sameFitCamera, type FitCamera } from "./components/viewportFit";
 import { projectFilteredGateCounts } from "./filteredGateCounts";
 import { LayoutControls } from "./components/LayoutControls";
+import {readViewConfiguration} from "../core/plex/views/configuration";
 import { LayoutCheckbox } from "./components/LayoutCheckbox";
 import { lateralArrangementSurface } from "./viewProfile";
 import { centerArrivalFrames, type MotionRect } from "./components/centerArrival";
@@ -62,13 +70,16 @@ import type { WanderDestination, WanderScene } from "../application/WanderContro
 import { ElementMotion } from "./components/ElementMotion";
 import { ResizableAreaFrame } from "./components/ResizableAreaFrame";
 import { ThoughtNode, type ConnectionDragState } from "./ThoughtNode";
-import {nodeId} from "../core/graph/model";
-import type {AreaId as ScrollZone, PlexViewDefinition} from "../core/plex/views/contracts";
+import {nodeId, type NodeId} from "../core/graph/model";
+import {useHierarchyDemand} from "./plexViews/useHierarchyDemand";
+import {hierarchyPathClosure} from "../core/plex/views/hierarchy";
+import type {AreaId as ScrollZone, PlexViewDefinition, PlexBranchAction} from "../core/plex/views/contracts";
 import type {PlexViewSession} from "../application/PlexViewSession";
 import {classicViewDefinition, classicPorts} from "../core/plex/views/classic/definition";
 import {plexViewContributionFor} from "./plexViews/contributions";
 import {reflowArea} from "./plexViews/reflowArea";
 import {prepareViewScene, plexViewRead, attentionFallbackScene} from "./plexViews/prepareScene";
+import {resolveOccurrenceEditorPage} from "./plexViews/occurrenceEditors";
 import {occurrenceKey, edgeOccurrence, semanticSceneEdge, semanticEdgeForTarget, type HostPlexScene} from "./plexViews/scene";
 import {viewLabel} from "./plexViews/labels";
 import {ViewDecorations, viewDecorationCounts} from "./plexViews/ViewDecorations";
@@ -87,7 +98,8 @@ import type { Translator, PlainTranslationKey } from "../lang";
 import { usePlexKeyboardNavigation, type PlexKeyboardNode } from "./usePlexKeyboardNavigation";
 import { usePlexTypeSelection } from "./usePlexTypeSelection";
 import { PlexTypeSelectionStatus } from "./features/PlexTypeSelectionStatus";
-import { type ActionContext } from "../application/ActionManager";
+import { type ActionContext, type ActionImplementation } from "../application/ActionManager";
+import type {PlexEditorBinding} from "../application/PlexEditorBindings";
 import { ACTION_DIRECTIONS, type ActionId, type ActionOutcome, type NodeRef } from "../core/plex/actions";
 import { actionNodeRef, resolveActionPage } from "../adapters/obsidian/actionNode";
 import { acceptPlexKeyEvent } from "./actionKeyboardOwnership";
@@ -95,6 +107,7 @@ import { effectiveActionBindings } from "../core/plex/actionPreferences";
 import { formatActionBinding } from "./actionPresentation";
 import { readObsidianPresentationEnvironment } from "../adapters/obsidian/presentationEnvironment";
 import { surfaceAction } from "./surfaceActionImplementation";
+import {translateActionText} from "./actionPresentation";
 import { SavedRelationshipPendingError } from "../adapters/obsidian/relationshipMetadataWrite";
 import { captureSurfaceContinuation } from "./surfaceContinuation";
 import { ActionTargetPicker, type ActionPickerItem, type ActionPickerEvent } from "./ActionTargetPicker";
@@ -129,6 +142,7 @@ type ConnectDrag = {
 };
 type NodeDrag = {
   path: string;
+  occurrenceId?: string;
   pointerId: number;
   offsetX: number;
   offsetY: number;
@@ -456,7 +470,7 @@ function matchesGraphPredicateNode(
     role: node.role,
     relationType: node.relationType,
     linkDirection: node.linkDirection,
-    sourcePath: center?.path,
+    sourcePath: node.semanticSourceId ?? center?.path,
     targetPath: node.page.path,
   });
 }
@@ -490,7 +504,7 @@ function matchesVisibleLensNode(
     role: node.role,
     relationType: node.relationType,
     linkDirection: node.linkDirection,
-    sourcePath: center?.path,
+    sourcePath: node.semanticSourceId ?? center?.path,
     targetPath: node.page.path,
   });
 }
@@ -681,7 +695,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   onApplyFindFilter: (query: string) => void;
   appliedFindFilterQuery: string | null;
   onClearFindFilter: () => void;
-  onActivate: (page: GraphPage) => void;
+  onActivate: (page: GraphPage, intent?: "destination") => void;
   onWanderActivate: (page: GraphPage) => void;
   onOpen: (page: GraphPage) => void | Promise<unknown>;
   onOpenInSidecar: (page: GraphPage) => Promise<void>;
@@ -700,6 +714,27 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     neighbours: (page: GraphPage, role: Role) => index.neighbours(page, role), neighbourCount: (page: GraphPage) => index.neighbourCount(page),
     gateStats: (page: GraphPage) => index.gateStats(page), visibleRelationshipsWithin: (source: GraphPage, paths: ReadonlySet<string>) => index.visibleRelationshipsWithin(source, paths)}), [index]);
   const viewLifetime = viewSession?.getLifetime() ?? 0;
+  const occurrenceEditorPolicy = viewDefinition.editorHosting === "occurrence";
+  const boundEditorBinding = occurrenceEditorPolicy ? viewSession?.editors.bindings[0] : undefined;
+  const pendingEditorIntent = useMemo(() => viewSession?.readEditorIntent() ?? null, [viewSession, viewRevision, viewDefinition]);
+  const boundEditorClose = useRef<{id: string; close: () => Promise<void>} | null>(null);
+  const retainedBoundEditor = useRef<{id: string; page: GraphPage; node: PositionedNode} | null>(null);
+  const automaticEditorClose = useRef<string | null>(null);
+  /** Native eligibility is current-file identity, independent of attention or layout geometry. */
+  const supportsBoundEditor = (page: GraphPage): boolean => Boolean(page.file && page.file.extension === "md" && !page.transient
+    && plugin.app.vault.getFileByPath(page.file.path) === page.file);
+  const boundEditorPage = boundEditorBinding ? resolveOccurrenceEditorPage(boundEditorBinding, index, supportsBoundEditor) : null;
+  const boundEditorConcealed = Boolean(boundEditorBinding && (!boundEditorPage || !index.isVisiblePage(boundEditorPage)));
+  const rooted = viewDefinition.navigation === "rooted";
+  const sceneScope = rooted ? viewSession?.layoutRoot(nodeId(activePath)) ?? activePath : activePath;
+  const acquireHierarchyScope = useCallback(/** Reuse the canonical demand owner; the view never starts parsing or a separate rebuild. */
+    (id: NodeId) => index.acquireSemanticDemand(id), [index]);
+  const hierarchyDemand = useHierarchyDemand(viewSession, viewDefinition, nodeId(sceneScope), acquireHierarchyScope);
+  useLayoutEffect(/** Retain root demand before an outgoing attention effect releases its lease. */ () => {
+    if (!rooted || !viewSession) return;
+    viewSession.ensureRoot(nodeId(activePath));
+    return index.acquireSemanticDemand(sceneScope);
+  }, [index, viewSession, viewDefinition.id, rooted, sceneScope]);
   const [findQuery, setFindQuery] = useState("");
   const [findIncludePath, setFindIncludePath] = useState(false);
   const [findCursor, setFindCursor] = useState(0);
@@ -756,10 +791,14 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     supportsCentralEditorFile(persistentNeighborhood?.center)
     || (persistentNeighborhood?.center.url && urlEmbed(persistentNeighborhood.center.url)),
   );
-  const centralEditorAvailable = viewDefinition.capabilities.editor && settings.embedCentralNode && centralEditorCapable;
+  const centralEditorAvailable = occurrenceEditorPolicy ? Boolean(boundEditorBinding)
+    : viewDefinition.capabilities.editor && settings.embedCentralNode && centralEditorCapable;
   useLayoutEffect(/** A live native editor blocks incompatible view transitions without changing its document owner. */ () =>
     centralEditorAvailable ? viewSession?.retainEditor() : undefined, [centralEditorAvailable, viewSession]);
-  const centralEditorCanMaximize = surface !== "sidepanel";
+  useLayoutEffect(/** Retain only the actual bound document through ordinary attention changes. */ () =>
+    boundEditorBinding ? index.acquireSemanticDemand(boundEditorBinding.target.nodeId) : undefined,
+    [index, boundEditorBinding?.id]);
+  const centralEditorCanMaximize = !occurrenceEditorPolicy && surface !== "sidepanel";
   const [centralEditorMaximized, setCentralEditorMaximized] = useState(false);
   const centralEditorAvailabilityRef = useRef(centralEditorAvailable);
   const centralEditorSizeKeyRef = useRef("");
@@ -767,7 +806,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const centralEditorRestoreCamera = useRef<{ x: number; y: number; scale: number } | null>(null);
   const restoreCentralEditorCamera = useRef(false);
   const centralEditorSize = useMemo<CenterNodeSize | undefined>(() => {
-    if (!centralEditorAvailable) return undefined;
+    if (!centralEditorAvailable || occurrenceEditorPolicy) return undefined;
     if (centralEditorCanMaximize && centralEditorMaximized && viewportSize.width > 0 && viewportSize.height > 0) {
       return {
         width: Math.max(280, viewportSize.width - 36),
@@ -782,7 +821,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       width: Math.min(availableWidth, Math.max(360, Math.min(720, settings.centerEmbedWidth))),
       height: Math.min(availableHeight, Math.max(260, Math.min(460, settings.centerEmbedHeight))),
     };
-  }, [centralEditorAvailable, centralEditorCanMaximize, centralEditorMaximized, viewportSize.width, viewportSize.height, settings.centerEmbedWidth, settings.centerEmbedHeight]);
+  }, [centralEditorAvailable, centralEditorCanMaximize, centralEditorMaximized, viewportSize.width, viewportSize.height, settings.centerEmbedWidth, settings.centerEmbedHeight, occurrenceEditorPolicy]);
   const [sectionExpanded, setSectionExpanded] = useState(false);
   const [sectionExpansion, setSectionExpansion] = useState<CentralSectionExpansion | null>(null);
   const sectionProjectionRevision = [
@@ -830,20 +869,21 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     ? { ...projectedSectionExpansion, centerNeighborhood: applyOptimisticRelink(projectedSectionExpansion.centerNeighborhood, optimisticRelink.targetPath, optimisticRelink.role) }
     : projectedSectionExpansion, [projectedSectionExpansion, optimisticRelink]);
   const neighborhood = effectiveSectionExpansion?.centerNeighborhood ?? effectivePersistentNeighborhood;
+  const predicateCenter = viewDefinition.hierarchy ? index.get(sceneScope) ?? neighborhood?.center : neighborhood?.center;
   const globalFiltering = predicate !== null || lenses.lenses.some((lens) => lens.mode === "include" || lens.mode === "exclude");
-  const [unfoldedGroups, setUnfoldedGroups] = useState<{ center: string; keys: ReadonlySet<string> }>({ center: activePath, keys: new Set() });
+  const [unfoldedGroups, setUnfoldedGroups] = useState<{ center: string; keys: ReadonlySet<string> }>({ center: sceneScope, keys: new Set() });
   useEffect(/** Navigation and disabling grouping retire only this view's unfolded buckets. */ () => {
-    setUnfoldedGroups(current => current.center === activePath && current.keys.size === 0 ? current : { center: activePath, keys: new Set() });
-  }, [activePath, settings.groupRelations]);
+    setUnfoldedGroups(current => current.center === sceneScope && current.keys.size === 0 ? current : { center: sceneScope, keys: new Set() });
+  }, [sceneScope, settings.groupRelations]);
   /** Project only this already admitted neighborhood, using the current view's unfolded keys. */
   const projectGroups = (value: Neighborhood): Neighborhood => settings.groupRelations
-    ? (classic?.group(value, settings.lateralArrangement === "left", unfoldedGroups.center === activePath ? unfoldedGroups.keys : new Set(), translate) ?? value)
+    ? (classic?.group(value, settings.lateralArrangement === "left", unfoldedGroups.center === sceneScope ? unfoldedGroups.keys : new Set(), translate) ?? value)
     : value;
   /** Unfold in place without navigation, history, source acquisition or a semantic write. */
   const unfoldGroup = (page: GraphPage): void => {
     if (page.transient?.kind !== "group") return;
     const key = page.transient.sectionId;
-    setUnfoldedGroups(current => ({ center: activePath, keys: new Set([...(current.center === activePath ? current.keys : []), key]) }));
+    setUnfoldedGroups(current => ({ center: sceneScope, keys: new Set([...(current.center === sceneScope ? current.keys : []), key]) }));
   };
 
   // Keep the optimistic role in place until the authoritative rebuilt graph actually agrees.
@@ -874,29 +914,66 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         neighborhood: project(section.neighborhood),
       })),
     };
-  }, [effectiveSectionExpansion, globalFiltering, filterLayoutMode, predicateEngine, index, predicate, lenses, predicateRevision, settings.groupRelations, settings.lateralArrangement, unfoldedGroups, activePath, translate]);
+  }, [effectiveSectionExpansion, globalFiltering, filterLayoutMode, predicateEngine, index, predicate, lenses, predicateRevision, settings.groupRelations, settings.lateralArrangement, unfoldedGroups, activePath, sceneScope, translate]);
   const layoutNeighborhood = useMemo(() => {
     if (!neighborhood) return null;
     const filtered = globalFiltering && (filterLayoutMode === "reflow" || settings.groupRelations) && !layoutSectionExpansion
       ? filterNeighborhoodForLenses(neighborhood, neighborhood.center, predicateEngine, index, predicate, lenses) : neighborhood;
     return projectGroups(filtered);
-  }, [neighborhood, globalFiltering, filterLayoutMode, layoutSectionExpansion, predicateEngine, index, predicate, lenses, predicateRevision, settings.groupRelations, settings.lateralArrangement, unfoldedGroups, activePath, translate]);
+  }, [neighborhood, globalFiltering, filterLayoutMode, layoutSectionExpansion, predicateEngine, index, predicate, lenses, predicateRevision, settings.groupRelations, settings.lateralArrangement, unfoldedGroups, activePath, sceneScope, translate]);
   const scenePolicyKey = useMemo(/** Equivalent wrappers and paint-only updates retain the actual geometry policy. */ () => classic?.policyKey(settings) ?? viewDefinition.id, [classic, viewDefinition, settings]);
   const sceneGeometryKey = useMemo(/** Compare consumed values, never mutable page identity or source clocks alone. */ () =>
     classic?.geometryKey(layoutNeighborhood, classicRead, settings) ?? "", [classic, layoutNeighborhood, classicRead, settings]);
   const [viewPropertyRevision, refreshViewProperties] = useState(0);
-  const preparedDefinitionScene = useMemo(() => {
-    if (classic) return null;
+  /** Share exact current admission between rendering, restored intent and branch-removal preflight. */
+  const prepareSelectedDefinition = (state: unknown, bindings: readonly PlexEditorBinding[] = viewSession?.editors.bindings ?? []): ReturnType<typeof prepareViewScene> => {
     const current = viewSession?.capture() ?? (() => true);
-    const read = plexViewRead(index, current, settings.maxItemCount, activePath, createLegacyPropertyProvider(plugin.app, current, node => index.get(node.id)?.file));
-    return prepareViewScene(viewDefinition, read, index, activePath, viewSession?.state, settings, current, centralEditorSize,
-      node => !globalFiltering || filterLayoutMode === "keep" && !settings.groupRelations || (matchesGraphPredicateNode(predicateEngine, predicate, node, neighborhood?.center)
-        && matchesVisibleLensNode(predicateEngine, index, lenses, node, neighborhood?.center)),
-      {translate, unfolded: unfoldedGroups.center === activePath ? unfoldedGroups.keys : new Set(), areaHeights: viewSession?.getAreaHeights()});
-  }, [classic, viewDefinition, viewRevision, viewSession, index, activePath, renderRevision, semanticRevision, settings, centralEditorSize, globalFiltering, filterLayoutMode, predicateEngine, predicate, lenses, predicateRevision, unfoldedGroups, translate, viewPropertyRevision]);
+    const read = plexViewRead(index, current, settings.maxItemCount, activePath, viewDefinition.hierarchy ? 256 : 0,
+      viewDefinition.capabilities.properties ? createLegacyPropertyProvider(plugin.app, current, node => index.get(node.id)?.file) : undefined);
+    return prepareViewScene(viewDefinition, read, index, activePath, state, settings, current, centralEditorSize,
+      node => !globalFiltering || filterLayoutMode === "keep" && !settings.groupRelations || (matchesGraphPredicateNode(predicateEngine, predicate, node, predicateCenter)
+        && matchesVisibleLensNode(predicateEngine, index, lenses, node, predicateCenter)),
+      {translate, unfolded: unfoldedGroups.center === sceneScope ? unfoldedGroups.keys : new Set(), areaHeights: viewSession?.getAreaHeights(), layoutRoot: rooted ? nodeId(sceneScope) : undefined,
+        retainedScopes: hierarchyDemand.held},
+      occurrenceEditorPolicy ? {bindings, supports: supportsBoundEditor} : undefined);
+  };
+  const branchPreflight = useRef<(state: unknown) => boolean>(() => false);
+  branchPreflight.current = state => !prepareSelectedDefinition(state).failure;
+  useLayoutEffect(/** Refuse a branch-state mutation before it can remove the exact live editor occurrence. */ () =>
+    viewSession?.guardState(state => branchPreflight.current(state)), [viewSession, viewLifetime]);
+  const preparedDefinitionScene = useMemo(() => classic ? null : prepareSelectedDefinition(viewSession?.state),
+    [classic, viewDefinition, viewRevision, viewSession, index, activePath, renderRevision, semanticRevision, settings, centralEditorSize, globalFiltering, filterLayoutMode, predicateEngine, predicate, lenses, predicateRevision, unfoldedGroups, translate, rooted, sceneScope, occurrenceEditorPolicy, predicateCenter, hierarchyDemand.revision, viewPropertyRevision]);
+  useLayoutEffect(/** Only an actually admitted selected scene can request finite source frontiers or commit stable side/fold intent. */ () => {
+    if (!viewDefinition.hierarchy || !viewSession) return;
+    const current = viewSession.capture();
+    const projection = preparedDefinitionScene && !preparedDefinitionScene.failure ? preparedDefinitionScene.projection : null;
+    hierarchyDemand.synchronize(projection);
+    if (current() && viewSession.definition === viewDefinition && viewSession.layoutRoot(nodeId(activePath)) === sceneScope
+      && projection?.stateSuggestion !== undefined) viewSession.updateState(projection.stateSuggestion);
+  }, [preparedDefinitionScene, viewDefinition, viewSession, viewLifetime, hierarchyDemand.revision]);
+  useLayoutEffect(/** Reacquire native identity and exact admission before restored intent becomes a live editor. */ () => {
+    if (!pendingEditorIntent || !viewSession || boundEditorBinding) return;
+    const page = index.get(pendingEditorIntent.target.nodeId);
+    if (!page || !supportsBoundEditor(page) || page.file?.path !== pendingEditorIntent.target.path) return;
+    const reference = actionNodeRef(page);
+    if (!reference.fileIdentity) return;
+    const candidate: PlexEditorBinding = {...pendingEditorIntent, id: "restored-intent", closing: false,
+      target: {...pendingEditorIntent.target, fileIdentity: reference.fileIdentity}};
+    if (prepareSelectedDefinition(viewSession.state, [candidate]).failure) return;
+    preserveCameraOnNextLayout.current = true;
+    viewSession.editors.open(candidate);
+  }, [pendingEditorIntent, viewSession, boundEditorBinding, renderRevision, semanticRevision, viewLifetime, settings]);
   const sceneGeometry = useMemo<HostPlexScene>(() => {
     try {
-      if (preparedDefinitionScene) return preparedDefinitionScene.failure ? attentionFallbackScene(index, activePath, settings, centralEditorSize) : preparedDefinitionScene.scene;
+      if (preparedDefinitionScene) {
+        if (preparedDefinitionScene.failure) return attentionFallbackScene(index, activePath, settings, centralEditorSize);
+        const prepared = preparedDefinitionScene.scene;
+        if (!globalFiltering || !showCrossLinks) return prepared;
+        // Filtered gate numerators describe represented semantic pairs independently of viewport clipping,
+        // just as in Compass. The same bounded cached connector pass supplies those real pairs once.
+        const edges = [...prepared.edges], result = appendOccurrenceCrossLinks(prepared.nodes, edges, index, settings);
+        return {...prepared, edges, crossLinksLimited: result.limited};
+      }
       return layoutNeighborhood && classic ? layoutSectionExpansion
         ? classic.sections(layoutSectionExpansion, classicRead, settings, expandedSectionIds, showCrossLinks, centralEditorSize, true)
         : classic.layout(layoutNeighborhood, classicRead, settings, showCrossLinks && globalFiltering, centralEditorSize, true)
@@ -924,10 +1001,20 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       ? classic.repack(zone, panel, nodes, filter, preferences, classicRead, centerPath, matchesZoneFilter)
       : reflowArea(panel, nodes, filter, matchesZoneFilter, scene.areas?.find(area => area.id === zone)?.reflow);
   const areaForNode = (node: PositionedNode): string | null => node.areaId ?? (classic ? scrollZoneForRole(node.role, settings.lateralArrangement) : null);
-  const isEditorOccurrence = (node: PositionedNode): boolean => scene.editorOccurrence
+  const hasEditableAreas = ZONES.some(zone => Boolean(AREA_HEIGHT_CONFIG[zone]));
+  useEffect(/** A compatible view change cannot leave inert area editing enabled in a decorative-only or empty scene. */ () => {
+    if (areaSettingsMode && !hasEditableAreas) onAreaSettingsModeChange(false);
+  }, [areaSettingsMode, hasEditableAreas, onAreaSettingsModeChange]);
+  const isEditorOccurrence = (node: PositionedNode): boolean => occurrenceEditorPolicy ? occurrenceKey(node) === boundEditorBinding?.occurrenceId : scene.editorOccurrence
     ? occurrenceKey(node) === scene.editorOccurrence : Boolean(classic && node.role === "center");
   const framingOccurrence = (): PositionedNode | undefined => scene.frameOccurrence
     ? scene.nodes.find(node => occurrenceKey(node) === scene.frameOccurrence) : scene.nodes.find(node => node.role === "center");
+  /** Resolve the current admitted root/entry, never a global active canvas or independent attention target. */
+  const navigationNode = (): PositionedNode | undefined => scene.nodes.find(node => occurrenceKey(node) === (scene.projection?.root ?? scene.entryOccurrence))
+    ?? (classic ? scene.nodes.find(node => node.role === "center") : undefined);
+  /** Duplicate canonical notes retain separate pointer gestures; legacy path identity remains compatible. */
+  const isDraggedNode = (node: PositionedNode): boolean => Boolean(nodeDrag && (nodeDrag.occurrenceId
+    ? occurrenceKey(node) === nodeDrag.occurrenceId : node.page.path === nodeDrag.path));
   const sceneNodeKeys = useMemo(/** Capture unique reconciliation keys for this scene without changing mutable canonical page identity. */ () => {
     const occurrences = new Map<string, number>();
     return new Map(scene.nodes.map(/** Keep renamed endpoints and new-name placeholders distinct even if geometry rebuilds before their authoritative handover. */ (node) => {
@@ -939,12 +1026,21 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       return [node, node.occurrenceId ?? JSON.stringify([path, occurrence])];
     }));
   }, [scene.nodes]);
+  const admittedBoundEditor = scene.boundEditors?.find(item => item.binding.id === boundEditorBinding?.id);
+  const admittedBoundNode = admittedBoundEditor ? scene.nodes.find(node => occurrenceKey(node) === admittedBoundEditor.binding.occurrenceId) : undefined;
+  if (admittedBoundEditor && admittedBoundNode) {
+    const previous = retainedBoundEditor.current;
+    retainedBoundEditor.current = {id: admittedBoundEditor.binding.id,
+      page: previous?.id === admittedBoundEditor.binding.id ? previous.page : {...admittedBoundEditor.page}, node: admittedBoundNode};
+  }
+  if (!boundEditorBinding) retainedBoundEditor.current = null;
+  const currentBoundHost = retainedBoundEditor.current?.id === boundEditorBinding?.id ? retainedBoundEditor.current : null;
   const centralEditorNode = useMemo(() => centralEditorAvailable
-    ? scene.nodes.find(isEditorOccurrence) ?? null
-    : null, [centralEditorAvailable, scene.nodes]);
-  const centralEditorPage = centralEditorAvailable ? persistentNeighborhood?.center ?? null : null;
-  const centralEditorGeometry = useRef({ node: centralEditorNode, page: centralEditorPage });
-  centralEditorGeometry.current = { node: centralEditorNode, page: centralEditorPage };
+    ? occurrenceEditorPolicy ? admittedBoundNode ?? currentBoundHost?.node ?? null : scene.nodes.find(isEditorOccurrence) ?? null
+    : null, [centralEditorAvailable, occurrenceEditorPolicy, scene.nodes, boundEditorBinding, admittedBoundNode]);
+  const centralEditorPage = occurrenceEditorPolicy ? currentBoundHost?.page ?? null : centralEditorAvailable ? persistentNeighborhood?.center ?? null : null;
+  const centralEditorGeometry = useRef<{node: PositionedNode | null; page: GraphPage | null; clip?: ZoneViewport}>({node: centralEditorNode, page: centralEditorPage});
+  centralEditorGeometry.current = {node: centralEditorNode, page: centralEditorPage};
   const [nodeVisuals, setNodeVisuals] = useState<Map<string, NodeVisual>>(new Map());
   const visualRefreshTimers = useRef(new Map<string, number>());
   const visualPages = useMemo(() => [...new Map(
@@ -1063,7 +1159,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const zoneScrollRefs = useRef<Partial<Record<ScrollZone, HTMLDivElement>>>({});
   const camera = useRef({ x: 0, y: 0, scale: 1 });
   const cameraIntentPlaced = useRef(false);
+  const previousCameraViewport = useRef<{width: number; height: number} | null>(null);
   const automaticFit = useRef<{ path: string; camera: FitCamera } | null>(null);
+  const hierarchyInitialFrame = useRef<{key: string; settled: boolean} | null>(null);
   const miniNamePrefix = useId();
   const previousSidecarOpen = useRef(sidecarOpen);
   const reframeSidecarViewport = useRef<() => void>(/** Deferred native transitions use only the latest composed scene/settings. */ () => {});
@@ -1095,6 +1193,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const [areaHover, setAreaHover] = useState<AreaHoverState>(null);
   const areaOutline = useRef<HoverHighlight<Exclude<AreaHoverState, null>> | null>(null);
   const [externalDropZone, setExternalDropZone] = useState<GateRole | "center" | null>(null);
+  const externalDropPoint = useRef<Point | null>(null);
   const [resizingArea, setResizingArea] = useState<ScrollZone | null>(null);
   const areaResizeDrag = useRef<AreaResizeDrag | null>(null);
   const areaResizeFrame = useRef<{ owner: Window; id: number } | null>(null);
@@ -1132,8 +1231,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   };
   const sceneTransitionTimer = useRef<number | null>(null);
   const sceneTransitionTimerWindow = useRef<Window | null>(null);
-  const transitionPath = useRef(activePath);
-  const pathChangedThisRender = transitionPath.current !== activePath;
+  const transitionPath = useRef(sceneScope);
+  const pathChangedThisRender = transitionPath.current !== sceneScope;
   const touchLongPress = useRef<{
     pointerId: number;
     startX: number;
@@ -1266,12 +1365,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   };
 
   useEffect(/** Reset outline state for a changed center or animation preference, retaining it when only navigation origin changes. */ () => {
-    transitionPath.current = activePath;
+    transitionPath.current = sceneScope;
     setSectionExpanded(false);
     setSectionExpansion(null);
     setExpandedSectionIds(new Set());
     sectionFoldCenter.current = null;
-  }, [activePath, settings.animationSpeed]);
+  }, [sceneScope, settings.animationSpeed]);
 
   useEffect(/** Passive follow has no transition timer or arrival delay; deliberate navigation keeps its temporary transition. */ () => {
     const viewWindow = viewport.current?.ownerDocument.defaultView ?? window;
@@ -1286,7 +1385,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       sceneTransitionTimerWindow.current = null;
       setSceneTransitioning(false);
     }, settings.animationSpeed <= 0 ? 0 : Math.max(140, Math.round(620 / Math.max(0.25, settings.animationSpeed))));
-  }, [activePath, navigationOrigin, settings.animationSpeed]);
+  }, [sceneScope, navigationOrigin, settings.animationSpeed]);
 
   useEffect(() => {
     if (!centralEditorAvailable || !sectionExpanded) return;
@@ -1346,7 +1445,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const overlay = centralEditorOverlayElement.current;
     // Native wheel listeners outlive the render that installed them. Read current geometry so
     // zoom works after enabling the editor or selecting a different file, without requiring pan.
-    const { node, page } = centralEditorGeometry.current;
+    const { node, page, clip } = centralEditorGeometry.current;
     if (!overlay || !node || !page) return;
     if (overlay.classList.contains("is-native-view-fullscreen")) return;
     const current = camera.current;
@@ -1357,6 +1456,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     overlay.style.width = `${width}px`;
     overlay.style.height = `${height}px`;
     overlay.style.setProperty("--kplex-editor-camera-scale", String(current.scale));
+    if (clip) {
+      const left = node.x - node.width / 2, top = node.y - node.height / 2;
+      overlay.style.clipPath = `inset(${Math.max(0, clip.top - top) * current.scale}px ${Math.max(0, left + node.width - clip.left - clip.width) * current.scale}px ${Math.max(0, top + node.height - clip.top - clip.height) * current.scale}px ${Math.max(0, clip.left - left) * current.scale}px)`;
+    } else overlay.style.removeProperty("clip-path");
   };
 
   /** Share the existing camera callback with finite center-motion paint; never poll an idle scene. */
@@ -1417,7 +1520,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const next = typeof nextOrUpdater === "function" ? nextOrUpdater(camera.current) : nextOrUpdater;
     camera.current = next;
     cameraIntentPlaced.current = true;
-    if (fitted) automaticFit.current = { path: activePath, camera: { ...next } };
+    if (fitted) automaticFit.current = { path: sceneScope, camera: { ...next } };
     else automaticFit.current = null;
     // Pointer streams on iOS can deliver substantially more events than the screen can paint.
     // Coalesce camera writes to one per animation frame, and use a 2D transform for graph-only
@@ -1458,8 +1561,34 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     onCentralNodeEditorChange(true);
   };
 
+  /** Retire only this binding after its existing native save succeeds; rejected saves retain recovery ownership. */
+  const closeBoundEditor = async (id: string): Promise<ActionOutcome> => {
+    const transaction = viewSession?.editors.beginClose(id);
+    if (!transaction) return {status: "unavailable", reasonKey: "actions.target-unavailable"};
+    try {
+      const native = boundEditorClose.current;
+      if (native?.id === id) await native.close();
+      else if (retainedBoundEditor.current?.id === id) throw new Error("Bound native host is not ready to close");
+      preserveCameraOnNextLayout.current = true;
+      return transaction.commit() ? {status: "completed"} : {status: "cancelled"};
+    } catch {
+      transaction.cancel(); new Notice(translate("actions.editor-save-failed"));
+      return {status: "failed", reasonKey: "actions.editor-save-failed"};
+    }
+  };
+  useEffect(/** Authoritative removal safely closes once; a failed save stays open for explicit recovery. */ () => {
+    if (!boundEditorBinding || boundEditorBinding.closing) return;
+    if (!boundEditorConcealed) {automaticEditorClose.current = null; return;}
+    if (automaticEditorClose.current === boundEditorBinding.id) return;
+    automaticEditorClose.current = boundEditorBinding.id;
+    void closeBoundEditor(boundEditorBinding.id);
+  }, [boundEditorBinding, boundEditorConcealed, renderRevision, semanticRevision]);
+
   /** Restore the graph camera when necessary, then return the center to its compact Plex node. */
   const collapseCentralEditor = (): void => {
+    if (occurrenceEditorPolicy && boundEditorBinding) {
+      void plugin.actionManager.dispatch({id: "editor.collapse", source: "toolbar", surfaceId: actionSurfaceId, args: {bindingId: boundEditorBinding.id}}); return;
+    }
     if (centralEditorMaximized && centralEditorRestoreCamera.current) {
       restoreCentralEditorCamera.current = false;
       applyCamera(centralEditorRestoreCamera.current);
@@ -1488,7 +1617,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   }, [centralEditorMaximized, centralEditorAvailable, centralEditorNode?.x, centralEditorNode?.y, viewportSize.width, viewportSize.height]);
 
   const sceneLayoutKey = [
-    activePath,
+    sceneScope,
     centralEditorSize ? `central-editor:${centralEditorSize.width}:${centralEditorSize.height}` : "central-editor:-",
     scene.nodes.map((node) => `${node.role}:${node.page.path}:${node.x}:${node.y}:${node.width}:${node.height}`).join("|"),
     ...ZONES.map((zone) => {
@@ -1511,9 +1640,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const editorModeChanged = centralEditorAvailabilityRef.current !== centralEditorAvailable;
     const editorSizeKey = centralEditorSize ? `${centralEditorSize.width}:${centralEditorSize.height}` : "";
     const editorSizeChanged = centralEditorSizeKeyRef.current !== editorSizeKey;
-    const followAutomaticFit = !preserveCamera && !displayResizeLayout.current && !centralEditorMaximized
-      && automaticFit.current?.path === activePath && sameFitCamera(automaticFit.current.camera, camera.current);
-    const shouldRecenter = !preserveCamera && (!cameraIntentPlaced.current || pathChangedThisRender || editorModeChanged
+    const previousViewport = previousCameraViewport.current;
+    const viewportChanged = Boolean(previousViewport && (previousViewport.width !== root.clientWidth || previousViewport.height !== root.clientHeight));
+    // Initial native/CSS layout may shrink after the first fit. A rooted map must remain visible
+    // while that fit still owns the camera; ordinary branch reflow and live editors never refit.
+    const followAutomaticFit = (!rooted || viewportChanged && !boundEditorBinding) && !preserveCamera && !displayResizeLayout.current && !centralEditorMaximized
+      && automaticFit.current?.path === sceneScope && sameFitCamera(automaticFit.current.camera, camera.current);
+    const shouldRecenter = !preserveCamera && (!cameraIntentPlaced.current || pathChangedThisRender || rooted && viewportChanged && followAutomaticFit || !rooted && editorModeChanged
       || (settings.allowAutozoom && editorSizeChanged && followAutomaticFit));
     if (shouldRecenter || (settings.allowAutozoom && followAutomaticFit)) {
       if (settings.allowAutozoom) fit();
@@ -1523,7 +1656,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         if (el) {
           const center = framingOccurrence() ?? {x: 0, y: 0};
           applyCamera(/** Navigation owns translation only when autozoom is disabled. */ current => ({...current,
-            x: el.clientWidth / 2 - center.x * current.scale, y: el.clientHeight / 2 - center.y * current.scale}));
+            x: el.clientWidth / 2 - center.x * current.scale, y: el.clientHeight / 2 - center.y * current.scale}), rooted);
         }
       }
     }
@@ -1601,6 +1734,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     }
     incomingCenter.current = null;
     previousNodeRects.current = nextRects;
+    previousCameraViewport.current = {width: root.clientWidth, height: root.clientHeight};
     centralEditorAvailabilityRef.current = centralEditorAvailable;
     centralEditorSizeKeyRef.current = editorSizeKey;
     preserveCameraOnNextLayout.current = false;
@@ -1657,6 +1791,20 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       { left: minX, top: minY, right: maxX, bottom: maxY }, maxScale), true);
   };
   fitCurrentScene.current = fit;
+  useLayoutEffect(/** A cold rooted map fits its first current local preparation once; this is not a complete-incidence claim. Manual/restored camera and live editors outrank it. */ () => {
+    if (!viewDefinition.hierarchy || !viewSession || viewSession.definition !== viewDefinition || viewSession.getLifetime() !== viewLifetime
+      || viewSession.layoutRoot(nodeId(activePath)) !== sceneScope) return;
+    const key = JSON.stringify([viewDefinition.id, viewLifetime, sceneScope]);
+    if (hierarchyInitialFrame.current?.key !== key) hierarchyInitialFrame.current = {key,
+      settled: Boolean(viewSession.readTransient(viewDefinition.id, nodeId(activePath)))};
+    const frame = hierarchyInitialFrame.current;
+    if (frame.settled || viewFailed || !index.viewScopeCoverage(sceneScope).prepared) return;
+    frame.settled = true;
+    if (!boundEditorBinding && settings.allowAutozoom && automaticFit.current?.path === sceneScope
+      && sameFitCamera(automaticFit.current.camera, camera.current)) {
+      fitCurrentScene.current(); flushCameraTransform();
+    }
+  }, [viewDefinition, viewSession, viewLifetime, sceneScope, sceneLayoutKey, renderRevision, semanticRevision, viewFailed, boundEditorBinding?.id, settings.allowAutozoom]);
   reframeSidecarViewport.current = /** Reframe only a usable native viewport; ordinary disabled autozoom retains scale, while explicit maximization owns its full-size editor frame. */ () => {
     const el = viewport.current;
     if (!el || !el.isConnected || el.clientWidth <= 0 || el.clientHeight <= 0) return;
@@ -1737,7 +1885,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       const resizeY = area.resizeEdge === "top" ? area.top : bottom;
       if (point.x >= area.left && point.x <= right) {
         const distance = Math.abs(point.y - resizeY);
-        if (distance <= threshold && (!edgeMatch || distance < edgeMatch.distance)) edgeMatch = { zone, distance };
+        if (AREA_HEIGHT_CONFIG[zone] && distance <= threshold && (!edgeMatch || distance < edgeMatch.distance)) edgeMatch = { zone, distance };
       }
       if (!emptyTarget || point.x < area.left || point.x > right || point.y < area.top || point.y > bottom) continue;
       const horizontalDistance = Math.abs(point.x - (area.left + area.width / 2)) / Math.max(1, area.width);
@@ -1882,7 +2030,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       }
     }, 0);
     return () => window.clearTimeout(resetTimer);
-  }, [activePath, viewLifetime, viewDefinition]);
+  }, [sceneScope, viewLifetime, viewDefinition]);
 
   useEffect(/** Observe the actual pane, preserving manual/display-transition intent and fitting only the current owned scene. */ () => {
     const el = viewport.current;
@@ -1901,7 +2049,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       // Context-only theme variables can appear/disappear at responsive pane breakpoints.
       colorScope.current?.invalidate();
       if (preserveDisplayCamera || centralEditorMaximized || Date.now() < suppressAutoFitUntil.current) return;
-      if (settings.allowAutozoom && automaticFit.current?.path === activePath
+      if (settings.allowAutozoom && automaticFit.current?.path === sceneScope
         && sameFitCamera(automaticFit.current.camera, camera.current)) fitCurrentScene.current();
     };
     updateViewport();
@@ -1911,7 +2059,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const visible = (): void => { if (!el.ownerDocument.hidden && compassSync.current()) requestCameraFrame(); };
     el.ownerDocument.addEventListener("visibilitychange", visible);
     return () => {observer.disconnect(); el.ownerDocument.removeEventListener("visibilitychange", visible);};
-  }, [settings.allowAutozoom, centralEditorMaximized, displayState.revision, activePath]);
+  }, [settings.allowAutozoom, centralEditorMaximized, displayState.revision, sceneScope]);
 
   useEffect(() => {
     const el = viewport.current;
@@ -2013,10 +2161,19 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     }, 180);
   };
 
+  const hierarchyMatchedOccurrences = useMemo(/** Keep/Reflow and interaction candidates use the same real ancestor closure, with exact duplicate-occurrence identity. */ () => {
+    if (!viewDefinition.hierarchy) return null;
+    const matched = scene.nodes.filter(/** A live editor is pinned exactly; matching one same-note occurrence grants no authority to another path. */ node =>
+      occurrenceKey(node) === boundEditorBinding?.occurrenceId || !globalFiltering || node.page.transient?.kind === "group"
+      || matchesGraphPredicateNode(predicateEngine, predicate, node, predicateCenter) && matchesVisibleLensNode(predicateEngine, index, lenses, node, predicateCenter));
+    return hierarchyPathClosure(scene.nodes.map(/** Reuse only the displayed, admitted parent identities. */ node => ({id: occurrenceKey(node), parent: node.branch?.parent})),
+      matched.map(/** Selection and Find retain occurrence identity. */ occurrenceKey), scene.entryOccurrence);
+  }, [viewDefinition, scene.nodes, scene.entryOccurrence, boundEditorBinding?.id, globalFiltering, predicateEngine, predicate, predicateCenter, index, lenses, predicateRevision]);
   const filterMatchedNodePaths = useMemo(() => {
+    if (hierarchyMatchedOccurrences) return new Set(scene.nodes.filter(node => hierarchyMatchedOccurrences.has(occurrenceKey(node))).map(node => node.page.path));
     const matches = new Set<string>();
     for (const node of scene.nodes) {
-      if (!globalFiltering || node.role === "center" || node.page.transient?.kind === "group" || (matchesGraphPredicateNode(predicateEngine, predicate, node, neighborhood?.center) && matchesVisibleLensNode(predicateEngine, index, lenses, node, neighborhood?.center))) matches.add(node.page.path);
+      if (!globalFiltering || node.role === "center" || node.page.transient?.kind === "group" || (matchesGraphPredicateNode(predicateEngine, predicate, node, predicateCenter) && matchesVisibleLensNode(predicateEngine, index, lenses, node, predicateCenter))) matches.add(node.page.path);
     }
     // Section headings are structural containers. If a section-level relationship matches the
     // global filter, retain its heading node so the matching result is not visually orphaned.
@@ -2028,14 +2185,17 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       }
     }
     return matches;
-  }, [scene.nodes, scene.edges, globalFiltering, predicate, lenses, predicateRevision, predicateEngine, index, neighborhood?.center, sectionExpansion]);
+  }, [scene.nodes, scene.edges, globalFiltering, predicate, lenses, predicateRevision, predicateEngine, index, predicateCenter, sectionExpansion, hierarchyMatchedOccurrences]);
 
+  const nodeMatchesCurrentFilter = (node: PositionedNode): boolean =>
+    hierarchyMatchedOccurrences ? hierarchyMatchedOccurrences.has(occurrenceKey(node))
+      : occurrenceEditorPolicy && occurrenceKey(node) === boundEditorBinding?.occurrenceId || filterMatchedNodePaths.has(node.page.path);
   const zoneDisplayLayouts = useMemo(() => {
     const layouts: Partial<Record<ScrollZone, ZoneDisplayLayout>> = {};
     for (const zone of ZONES) {
       const panel = scene.zoneViewports[zone];
       if (!panel) continue;
-      const nodes = scene.nodes.filter((node) => areaForNode(node) === zone && filterMatchedNodePaths.has(node.page.path));
+      const nodes = scene.nodes.filter((node) => areaForNode(node) === zone && nodeMatchesCurrentFilter(node));
       const layout = buildZoneDisplayLayout(zone, panel, nodes, zoneFilters[zone] ?? "", settings, index, neighborhood?.center.path ?? activePath);
       layouts[zone] = layout;
     }
@@ -2051,11 +2211,20 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       let rendered = panel && zone && local
         ? { ...node, x: panel.left + local.x, y: panel.top + local.y - (zoneScrollTop[zone] ?? 0) }
         : node;
-      if (nodeDrag?.path === node.page.path) rendered = { ...rendered, x: nodeDrag.x, y: nodeDrag.y };
+      if (nodeDrag && isDraggedNode(node)) rendered = { ...rendered, x: nodeDrag.x, y: nodeDrag.y };
       map.set(occurrenceKey(node), rendered);
     }
     return map;
   }, [scene.nodes, scene.zoneViewports, zoneDisplayLayouts, zoneScrollTop, nodeDrag]);
+
+  const displayedEditorNode = occurrenceEditorPolicy && centralEditorNode
+    ? renderedNodeMap.get(occurrenceKey(centralEditorNode)) ?? centralEditorNode : centralEditorNode;
+  const editorArea = displayedEditorNode ? areaForNode(displayedEditorNode) : null;
+  const editorClip = occurrenceEditorPolicy && editorArea ? scene.zoneViewports[editorArea] : undefined;
+  centralEditorGeometry.current = {node: displayedEditorNode, page: centralEditorPage, clip: editorClip};
+  useLayoutEffect(/** Scroll/resize update the same native host, including its actual area clipping. */ () => {
+    syncCentralEditorOverlay();
+  }, [displayedEditorNode?.x, displayedEditorNode?.y, displayedEditorNode?.width, displayedEditorNode?.height, editorClip]);
 
   useEffect(() => {
     const pending = pendingNodeFlair;
@@ -2135,8 +2304,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const visibleOccurrenceIds = useMemo(() => {
     const paths = new Set<string>();
     for (const node of scene.nodes) {
-      if (!filterMatchedNodePaths.has(node.page.path)) continue;
-      if (nodeDrag?.path === node.page.path) {
+      if (!nodeMatchesCurrentFilter(node)) continue;
+      if (isDraggedNode(node)) {
         paths.add(occurrenceKey(node));
         continue;
       }
@@ -2159,6 +2328,15 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   }, [scene.nodes, scene.zoneViewports, filterMatchedNodePaths, zoneDisplayLayouts, renderedNodeMap, nodeDrag]);
 
   const visibleNodePaths = useMemo(() => new Set(scene.nodes.filter(node => visibleOccurrenceIds.has(occurrenceKey(node))).map(node => node.page.path)), [scene.nodes, visibleOccurrenceIds]);
+  const shownPeerCounts = useMemo(/** One finite pass counts filtered peer endpoints per displayed occurrence, rather than adding semantic side totals or merging duplicate notes. */ () => {
+    const targets = new Map<string, Set<string>>();
+    if (globalFiltering) for (const edge of scene.edges) {
+      if (!edge.sourceOccurrence || !edge.targetOccurrence || !["left", "right", "previous", "next"].includes(edge.role)
+        || !visibleOccurrenceIds.has(edge.sourceOccurrence) || !visibleOccurrenceIds.has(edge.targetOccurrence)) continue;
+      const rows = targets.get(edge.sourceOccurrence) ?? new Set<string>(); rows.add(edge.targetPath); targets.set(edge.sourceOccurrence, rows);
+    }
+    return new Map([...targets].map(([id, rows]) => [id, rows.size]));
+  }, [scene.edges, globalFiltering, visibleOccurrenceIds]);
 
   const filteredGateCounts = useMemo(/** Count surviving scene pairs by canonical endpoint membership, before viewport clipping. */ () => {
     if (!globalFiltering) return null;
@@ -2171,7 +2349,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
 
     for (const baseNode of scene.nodes) {
       if (baseNode.role === "center" || baseNode.page.transient?.kind === "group" || !visibleNodePaths.has(baseNode.page.path)) continue;
-      if (nodeDrag?.path === baseNode.page.path) continue;
+      if (isDraggedNode(baseNode)) continue;
       const parent = renderedNodeMap.get(baseNode.page.path);
       if (!parent) continue;
 
@@ -2347,7 +2525,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const findOccurrences = new Map<string, {path: string; occurrenceId?: string}>();
   for (const node of scene.nodes) {
     const zone = areaForNode(node);
-    if (!filterMatchedNodePaths.has(node.page.path)) continue;
+    if (!nodeMatchesCurrentFilter(node)) continue;
     if (zone && scene.zoneViewports[zone] && !zoneDisplayLayouts[zone]?.localPositions.has(occurrenceKey(node))) continue;
     if (matchesFindNode(findQuery, node.label, node.page.path, findIncludePath)) {
       findNodePaths.add(node.page.path); findOccurrences.set(node.occurrenceId ?? node.page.path,
@@ -2381,17 +2559,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const dy = rect.top < bounds.top + 48 ? bounds.top + 48 - rect.top : rect.bottom > bounds.bottom - 32 ? bounds.bottom - 32 - rect.bottom : 0;
     if (dx || dy) applyCamera((current) => ({ ...current, x: current.x + dx, y: current.y + dy }));
   };
-  useEffect(/** Typing/cycling reveals a hit without changing the center or history. */ () => {
-    if (!centralEditorMaximized && findPaths.length) {
-      const hit = findOccurrences.get(findPaths[((findCursor % findPaths.length) + findPaths.length) % findPaths.length]);
-      if (hit) revealFindHit(hit.path, hit.occurrenceId);
-    }
-  }, [findQuery, findCursor, findHitKey, centralEditorMaximized]);
-
   const keyboardNodes = useMemo<PlexKeyboardNode[]>(/** Select displayed rows, retaining overflow positions but excluding filtered-out nodes. */ () => {
     const nodes: PlexKeyboardNode[] = [];
     for (const node of scene.nodes) {
-      if (!filterMatchedNodePaths.has(node.page.path)) continue;
+      if (!nodeMatchesCurrentFilter(node)) continue;
       const zone = areaForNode(node);
       const panel = zone ? scene.zoneViewports[zone] : undefined;
       const local = zone ? zoneDisplayLayouts[zone]?.localPositions.get(occurrenceKey(node)) : undefined;
@@ -2413,12 +2584,21 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     return nodes;
   }, [scene.nodes, scene.zoneViewports, scene.zoneAreas, sceneNodeKeys, filterMatchedNodePaths, zoneDisplayLayouts, expandedClusters, renderedNodeMap]);
   const selection = usePlexKeyboardNavigation({
-    activePath, scopeKey: JSON.stringify([viewDefinition.id, viewLifetime, activePath]), normalMode: !viewFailed && !areaSettingsMode && !connectDrag && !nodeDrag && !resizingArea && !relationshipUpdating,
+    activePath, scopeKey: JSON.stringify([viewDefinition.id, viewLifetime, sceneScope]), normalMode: !viewFailed && !areaSettingsMode && !connectDrag && !nodeDrag && !resizingArea && !relationshipUpdating,
     nodes: keyboardNodes, entryId: scene.entryOccurrence, crossSections: plugin.settings.actionPreferences.crossSectionAtBoundary,
     reveal: /** Reveal the exact occurrence through existing overflow scroll and camera policy. */ node => {
       clearHoverIntent(true); revealFindHit(node.path, node.id);
     },
   });
+  useEffect(/** Hierarchy Find selects its exact displayed hit without activation; legacy Find retains reveal-only behavior. */ () => {
+    if (!centralEditorMaximized && findPaths.length) {
+      const hit = findOccurrences.get(findPaths[((findCursor % findPaths.length) + findPaths.length) % findPaths.length]);
+      if (hit) {
+        if (viewDefinition.hierarchy && hit.occurrenceId) selection.select(hit.occurrenceId);
+        else revealFindHit(hit.path, hit.occurrenceId);
+      }
+    }
+  }, [findQuery, findCursor, findHitKey, centralEditorMaximized, viewDefinition, viewLifetime, sceneScope]);
   /** Cancel passive-follow motion immediately; deliberate navigation captures its live source rectangle. */
   const prepareNavigation = (identity: string, origin: "user" | "wander" | "follow"): void => {
     if (origin === "follow") {
@@ -2484,7 +2664,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   outgoingViewState.current = {selected: selection.readSelected, groups: unfoldedGroups};
   const [keyboardConnect, setKeyboardConnect] = useState<NodeRef | null>(null);
   const keyboardConnectRef = useRef<NodeRef | null>(null);
-  const typeSelection = usePlexTypeSelection({ activePath, scopeKey: JSON.stringify([viewDefinition.id, viewLifetime, activePath]), nodes: keyboardNodes, selection,
+  const typeSelection = usePlexTypeSelection({ activePath, scopeKey: JSON.stringify([viewDefinition.id, viewLifetime, sceneScope]), nodes: keyboardNodes, selection,
     normalMode: !viewFailed && !areaSettingsMode && !connectDrag && !nodeDrag && !resizingArea && !relationshipUpdating && !centralEditorMaximized && !keyboardConnect,
   });
   const visibleConnectSession = `${actionSurfaceId}:visible-connect`;
@@ -2499,8 +2679,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   }, [actionPorts]);
 
   /** Ordinary scenes acquire cross-links only for clipped visible rows; filtering retains the full-scene edge/count policy. */
-  const visibleEdges = useMemo(() => {
+  const visibleEdgeProjection = useMemo(() => {
     const edges = scene.edges.filter((edge) => visibleOccurrenceIds.has(edgeOccurrence(edge, "source")) && visibleOccurrenceIds.has(edgeOccurrence(edge, "target")));
+    const crossLinks = !classic && showCrossLinks && !globalFiltering ? appendOccurrenceCrossLinks(
+      scene.nodes.filter(node => visibleOccurrenceIds.has(occurrenceKey(node))).map(node => renderedNodeMap.get(occurrenceKey(node)) ?? node), edges, index, settings) : {limited: false};
     if (classic && showCrossLinks && !globalFiltering && !layoutSectionExpansion && neighborhood) {
       appendVisibleCrossLinks(scene.nodes.filter(node => visibleNodePaths.has(node.page.path)), edges,
         index, settings, neighborhood.center.path);
@@ -2517,40 +2699,43 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
           },
         });
     }
-    return edges.map((edge) => {
-      const target = scene.nodes.find((node) => node.page.path === edge.targetPath);
-      if (!target || !neighborhood) return edge;
+    return {limited: Boolean(scene.crossLinksLimited || crossLinks.limited), edges: edges.map((edge) => {
+      const target = scene.nodes.find((node) => occurrenceKey(node) === edgeOccurrence(edge, "target"));
+      if (!target || !predicateCenter) return edge;
       const lensStyle = graphLensEdgeStyle(predicateEngine, index, lenses, {
         page: target.page,
         label: target.label,
-        center: neighborhood.center,
+        center: predicateCenter,
         edge: {
           role: edge.role, relationType: edge.relationType, definition: edge.typeDefinition, linkDirection: edge.direction,
           sourcePath: edge.explanationSourcePath ?? edge.sourcePath, targetPath: edge.explanationTargetPath ?? edge.targetPath,
         },
       });
       return Object.keys(lensStyle).length ? { ...edge, style: { ...edge.style, ...lensStyle } } : edge;
-    });
-  }, [scene.edges, scene.nodes, visibleNodePaths, neighborhood, predicateEngine, index, settings, lenses,
-    predicateRevision, showCrossLinks, globalFiltering, layoutSectionExpansion, crossLinkPeek, connectDrag, nodeDrag, resizingArea, areaSettingsMode]);
+    })};
+  }, [scene.edges, scene.nodes, scene.crossLinksLimited, visibleNodePaths, visibleOccurrenceIds, renderedNodeMap, neighborhood, predicateEngine, index, settings, lenses,
+    predicateRevision, showCrossLinks, globalFiltering, layoutSectionExpansion, crossLinkPeek, connectDrag, nodeDrag, resizingArea, areaSettingsMode, predicateCenter]);
+  const visibleEdges = visibleEdgeProjection.edges;
+  const actionEdges = useMemo(/** Visible extra canonical links share the existing evidence/action owner; decorations remain excluded by each action gate. */ () =>
+    [...scene.edges, ...visibleEdges.filter(edge => edge.isCrossLink && !scene.edges.some(existing => existing.id === edge.id))], [scene.edges, visibleEdges]);
 
   useEffect(/** Scrolling/filtering/removal retires an occurrence; a later same-path row needs a new mouse entry. */ () => {
     if (crossLinkPeek && !visibleNodePaths.has(crossLinkPeek.path)) clearHoverIntent(true);
   }, [crossLinkPeek, visibleNodePaths]);
 
   const paintedEdges = useMemo(/** Re-layer visible edge colors without rebuilding their route or scene. */ () => visibleEdges.map(edge => {
-    const target = renderedNodeMap.get(edgeOccurrence(edge, "target")); if (!target || !neighborhood) return edge;
+    const target = renderedNodeMap.get(edgeOccurrence(edge, "target")); if (!target || !predicateCenter) return edge;
     if (!semanticSceneEdge(edge)) return edge;
     const current = resolveLinkStyle({page: target.page, role: edge.role, relationType: edge.relationType, typeDefinition: edge.typeDefinition, linkDirection: edge.direction}, paintSettings,
       renderedNodeMap.get(edgeOccurrence(edge, "source"))?.page);
-    const layered = graphLensEdgeStyle(predicateEngine, index, paintLenses, {page: target.page, label: target.label, center: neighborhood.center,
+    const layered = graphLensEdgeStyle(predicateEngine, index, paintLenses, {page: target.page, label: target.label, center: predicateCenter,
       edge: {role: edge.role, relationType: edge.relationType, definition: edge.typeDefinition, linkDirection: edge.direction,
         sourcePath: edge.explanationSourcePath ?? edge.sourcePath, targetPath: edge.explanationTargetPath ?? edge.targetPath}});
     const style={...edge.style,strokeColor:current.strokeColor,textColor:current.textColor,...layered};
     const sourcePath=edge.explanationSourcePath??edge.sourcePath,targetPath=edge.explanationTargetPath??edge.targetPath;
     return {...edge,style,caption:connectionCaption(edge.typeDefinition,style.showLabel,sourcePath,targetPath,
       (renderedNodeMap.get(sourcePath)??renderedNodeMap.get(edgeOccurrence(edge, "source")))?.page,(renderedNodeMap.get(targetPath)??renderedNodeMap.get(edgeOccurrence(edge, "target")))?.page)};
-  }), [visibleEdges, renderedNodeMap, neighborhood, paintSettings, predicateEngine, index, paintLenses, connectionCaption, renderRevision, semanticRevision]);
+  }), [visibleEdges, renderedNodeMap, neighborhood, paintSettings, predicateEngine, index, paintLenses, connectionCaption, renderRevision, semanticRevision, predicateCenter]);
 
   const interaction = useMemo(() => {
     const edgeIds = new Set<string>();
@@ -2678,7 +2863,6 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
 
   /** Capture direct-neighbor moves or additive sibling drops in the stable viewport drag layer. */
   const startNodeDrag = (node: PositionedNode, event: PointerEvent<HTMLDivElement>) => {
-    if (node.occurrenceId) return;
     if (event.pointerType !== "touch") touchDoubleTap.current.reset();
     const target = event.target as Element;
     if (target.closest("[data-kplex-gate], button")) return;
@@ -2702,6 +2886,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const displayed = renderedNodeMap.get(occurrenceKey(node)) ?? node;
     setNodeDrag({
       path: node.page.path,
+      occurrenceId: node.occurrenceId,
       pointerId: event.pointerId,
       offsetX: world.x - displayed.x,
       offsetY: world.y - displayed.y,
@@ -3012,7 +3197,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   };
 
   /** Complete a stationary touch synchronously; two taps open without waiting for a native dblclick. */
-  const completeTouchTap = (page: GraphPage, event: PointerEvent<HTMLDivElement>): void => {
+  const completeTouchTap = (page: GraphPage, event: PointerEvent<HTMLDivElement>, capturedOccurrence?: string): void => {
     suppressSyntheticClickUntil.current = Date.now() + 350;
     if (page.transient?.kind === "group") { unfoldGroup(page); touchDoubleTap.current.reset(); return; }
     if (page.transient?.kind === "section") {
@@ -3030,8 +3215,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       suppressNativeDoubleClickUntil.current = Date.now() + 500;
       runNodeAction("node.open", target);
     } else {
-      const occurrence = event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-kplex-keyboard-id]")?.dataset.kplexKeyboardId;
-      runNodeAction("node.activate", target, occurrence);
+      const occurrence = capturedOccurrence ?? event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-kplex-keyboard-id]")?.dataset.kplexKeyboardId;
+      activateOccurrence(target, occurrence, true);
     }
   };
 
@@ -3078,14 +3263,14 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   };
 
   /** A gate states its role directly; body drops on history or pinned chips offer the remaining eligible roles. */
-  const openHistoryRelationshipMenu = (origin: GraphPage, clientX: number, clientY: number, ownerDocument: Document, semanticRole?: GateRole, immediateMove = false): boolean => {
+  const openHistoryRelationshipMenu = (origin: GraphPage, clientX: number, clientY: number, ownerDocument: Document, semanticRole?: GateRole, immediateMove = false, additiveOnly = false): boolean => {
     const hit = historyRelationshipTarget(origin, clientX, clientY, ownerDocument, semanticRole);
     if (!hit) return false;
     const { target } = hit;
     if (plugin.openStructuralNodeDrop(origin, target, {immediateMove})) return true;
     const current = captureSurfaceContinuation(() => viewport.current, () => plugin.actionManager.readSnapshot(actionSurfaceId));
     if (semanticRole) {
-      plugin.openRelationModal({ hostLeaf, mode: "create", origin, fixedTarget: target, semanticRole,
+      plugin.openRelationModal({ hostLeaf, mode: "create", origin, fixedTarget: target, semanticRole, ...(additiveOnly ? {invocation: {additiveOnly: true}} : {}),
         onCommitted: /** Retire hover only when this captured graph intent still owns the view. */ () => { if (current()) clearHoverIntent(true); } });
       return true;
     }
@@ -3107,6 +3292,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
           origin,
           fixedTarget: target,
           semanticRole: relation.role,
+          ...(additiveOnly ? {invocation: {additiveOnly: true}} : {}),
           onCommitted: /** Durable completion cannot alter a subsequently navigated/interacted graph. */ () => { if (current()) clearHoverIntent(true); },
         })));
     }
@@ -3118,8 +3304,16 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const externalFileDropTarget = (clientX: number, clientY: number, target: Element | null): "center" | "blocked" | GateRole | null => {
     if (!target) return null;
     if (isAreaControlTarget(target) || target.closest(".kplex-find")) return "blocked";
-    const center = target.closest<HTMLElement>(".kplex-role-center[data-kplex-path]");
-    if ((center && center.dataset.kplexPath === neighborhood?.center.path) || target.closest(".kplex-central-editor-overlay")) return "center";
+    if (target.closest(".kplex-central-editor-overlay")) return occurrenceEditorPolicy ? "blocked" : "center";
+    const gate = target.closest<HTMLElement>("[data-kplex-gate]");
+    if (gate) {
+      const node = scene.nodes.find(row => (sceneNodeKeys.get(row) ?? occurrenceKey(row)) === gate.closest<HTMLElement>("[data-kplex-keyboard-id]")?.dataset.kplexKeyboardId);
+      const side = gate.dataset.kplexGate as GateSide;
+      return node?.physicalPorts !== undefined ? node.physicalPorts[side] ?? "blocked" : node ? semanticRoleForGate(side) : "blocked";
+    }
+    const center = target.closest<HTMLElement>("[data-kplex-keyboard-id]");
+    const root = navigationNode();
+    if (center && root && center.dataset.kplexKeyboardId === (sceneNodeKeys.get(root) ?? occurrenceKey(root))) return "center";
     // The viewport is a neutral geometry probe: area meaning does not change when its content
     // happens to cover the dropped pixel. The real hit still owns center/control exclusions.
     const area = areaHoverAt(clientX, clientY, viewport.current, 0);
@@ -3131,19 +3325,52 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     return !isEmptyAreaTarget(target) || target.closest("[data-kplex-path]") ? "blocked" : null;
   };
 
+  /** Resolve explicit gate/area origin in this admitted scene; an arbitrary region cannot borrow root write authority. */
+  const dropOriginAt = (clientX: number, clientY: number, target: Element | null): GraphPage | undefined => {
+    const gate = target?.closest<HTMLElement>("[data-kplex-gate]");
+    const area = !gate ? areaHoverAt(clientX, clientY, viewport.current, 0) : null;
+    const id = gate?.closest<HTMLElement>("[data-kplex-keyboard-id]")?.dataset.kplexKeyboardId
+      ?? (area ? scene.areas?.find(row => row.id === area.zone)?.dropOrigin : undefined);
+    const node = id ? scene.nodes.find(row => (gate ? sceneNodeKeys.get(row) ?? occurrenceKey(row) : occurrenceKey(row)) === id) : navigationNode();
+    return node && !node.page.transient && index.get(node.page.path) === node.page
+      && (!node.page.file || plugin.app.vault.getFileByPath(node.page.file.path) === node.page.file) ? node.page : undefined;
+  };
+
+  /** Capture one primary edge/current canonical row; removal additionally requires a certified pair. No acquisition or geometry-derived relationship authority. */
+  const nativeDragRelationship = (node: PositionedNode, requireReady = true): NodeLinkDragRelationship | undefined => {
+    const incoming = scene.edges.filter(edge => semanticSceneEdge(edge) && !edge.isCrossLink
+      && edgeOccurrence(edge, "target") === occurrenceKey(node) && edge.targetPath === node.page.path && edge.role === node.role);
+    if (incoming.length !== 1) return undefined;
+    const edge = incoming[0], origin = index.get(edge.sourcePath);
+    if (!origin || origin.transient || origin.file && plugin.app.vault.getFileByPath(origin.file.path) !== origin.file) return undefined;
+    if (requireReady && !index.isSemanticWriteReady(origin.path, node.page.path)) return undefined;
+    // Compass places previous/next at its left/right gates; retain the actual canonical role,
+    // rather than treating the physical placement as relationship evidence.
+    const roles: Role[] = edge.role === "left" ? ["left", "previous"] : edge.role === "right" ? ["right", "next"] : [edge.role];
+    const canonical = roles.flatMap(role => index.neighbours(origin, role)).filter(row => row.page === node.page
+      && row.relationType === edge.relationType && row.typeDefinition === edge.typeDefinition && row.linkDirection === edge.direction);
+    if (canonical.length !== 1) return undefined;
+    return {origin: actionNodeRef(origin), role: canonical[0].role, direction: edge.direction,
+      relationType: edge.relationType, typeDefinition: edge.typeDefinition};
+  };
+
   /** Accept native files or captured Plex links; same-view node drags retain relinking semantics. */
   const dragExternalFileOver = (event: DragEvent<HTMLDivElement>): void => {
+    // A bound occurrence editor owns its native text drop; changing dropEffect here can suppress
+    // the browser's drop before the corresponding drop handler has a chance to yield ownership.
+    if (occurrenceEditorPolicy && (event.target as Element | null)?.closest(".kplex-central-editor-overlay")) {setExternalDropZone(null); return;}
+    externalDropPoint.current = toWorld(event.clientX, event.clientY);
     const target = draggedGraphPage(plugin.app, index, event);
     const file = getDraggedFile(plugin.app);
     if (!target && (nodeLinkDragSource(plugin.app) || !file)) { setExternalDropZone(null); return; }
     const hit = externalFileDropTarget(event.clientX, event.clientY, event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY));
     // Empty canvas uses App's navigation fallback; preview that same action at the center.
     if (!hit) { setExternalDropZone("center"); return; }
-    const origin = neighborhood?.center;
+    const origin = dropOriginAt(event.clientX, event.clientY, event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY));
     const source = nodeLinkDragSource(plugin.app);
-    const internal = source?.owner === viewport.current;
-    const eligible = hit === "center" ? !internal
-      : hit !== "blocked" && origin && target && (structuralAreaDrop(origin, target, hit) || relationshipDropRoles(origin, target, hit).includes(hit));
+    const eligible = hit === "center" ? true
+      : hit !== "blocked" && origin && target && (structuralAreaDrop(origin, target, hit)
+        ? !source || isNodeLinkDragCurrent(source) : relationshipDropRoles(origin, target, hit).includes(hit));
     setExternalDropZone(hit !== "blocked" && eligible ? hit : null);
     event.preventDefault();
     event.stopPropagation();
@@ -3181,7 +3408,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       event.preventDefault();
       event.stopPropagation();
       const page = draggedGraphPage(plugin.app, index, event);
-      if (page) openHistoryRelationshipMenu(page, event.clientX, event.clientY, ownerDocument, undefined, event.altKey);
+      const source = nodeLinkDragSource(plugin.app);
+      if (page && (!source || isNodeLinkDragCurrent(source))) openHistoryRelationshipMenu(page, event.clientX, event.clientY, ownerDocument, undefined, event.altKey, Boolean(source));
       suppressActivateUntil.current = Date.now() + 220;
     };
     /** Clear feedback on completion/cancellation without handling the drop itself. */
@@ -3203,42 +3431,51 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   /** Navigate external link drops; same-view moves and additive drops use the shared composer. */
   const dropExternalFile = (event: DragEvent<HTMLDivElement>): void => {
     setExternalDropZone(null);
+    if (occurrenceEditorPolicy && (event.target as Element | null)?.closest(".kplex-central-editor-overlay")) return;
     const target = draggedGraphPage(plugin.app, index, event);
     if (!target && (nodeLinkDragSource(plugin.app) || !getDraggedFile(plugin.app))) return;
-    const structuralHit = externalFileDropTarget(event.clientX, event.clientY, event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY));
-    const structuralOrigin = neighborhood?.center;
-    if (target && structuralOrigin && structuralHit && structuralHit !== "center" && structuralHit !== "blocked" && structuralAreaDrop(structuralOrigin, target, structuralHit)) {
-      event.preventDefault(); event.stopPropagation(); plugin.openStructuralNodeDrop(structuralOrigin, target, {immediateMove: event.altKey}); return;
-    }
     const source = nodeLinkDragSource(plugin.app);
-    if (source?.owner === viewport.current) {
-      event.preventDefault();
-      event.stopPropagation();
-      const original = scene.nodes.find(node => node.page === target && node.role === source.role);
-      if (!original) return;
-      suppressActivateUntil.current = Date.now() + 220;
-      if (openHistoryRelationshipMenu(original.page, event.clientX, event.clientY, event.currentTarget.ownerDocument)) return;
-      const role = externalFileDropTarget(event.clientX, event.clientY, event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY));
-      if (role && role !== "center" && role !== "blocked") commitNodeAreaDrop(original, role);
+    const structuralHit = externalFileDropTarget(event.clientX, event.clientY, event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY));
+    const structuralOrigin = dropOriginAt(event.clientX, event.clientY, event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY));
+    if (structuralHit === "center" && target) {event.preventDefault(); event.stopPropagation(); onActivate(target, "destination"); return;}
+    if (target && structuralOrigin && structuralHit && structuralHit !== "center" && structuralHit !== "blocked" && structuralAreaDrop(structuralOrigin, target, structuralHit)) {
+      event.preventDefault(); event.stopPropagation();
+      if (!source || isNodeLinkDragCurrent(source)) plugin.openStructuralNodeDrop(structuralOrigin, target, {immediateMove: event.altKey});
       return;
+    }
+    if (source?.owner === viewport.current && nativeNodeDrag.current === source && isNodeLinkDragCurrent(source)) {
+      const originals = scene.nodes.filter(node => sceneNodeKeys.get(node) === source.occurrence?.id && node.page === target && node.role === source.role);
+      const original = originals.length === 1 ? originals[0] : undefined;
+      const captured = source.occurrence?.relationship, current = original && nativeDragRelationship(original);
+      // The exact source, current primary edge and target origin must all agree. Otherwise the
+      // explicit canonical target below may authorize creation, never removal of another edge.
+      if (original && captured && current && structuralOrigin && captured.origin.identity === structuralOrigin.path
+        && captured.origin.identity === current.origin.identity && captured.origin.kind === current.origin.kind
+        && captured.origin.fileIdentity === current.origin.fileIdentity && captured.origin.path === current.origin.path
+        && captured.role === current.role && captured.direction === current.direction
+        && captured.relationType === current.relationType && captured.typeDefinition === current.typeDefinition) {
+        event.preventDefault(); event.stopPropagation(); suppressActivateUntil.current = Date.now() + 220;
+        if (structuralHit && structuralHit !== "center" && structuralHit !== "blocked") commitNodeAreaDrop(original, structuralHit, structuralOrigin, true);
+        return;
+      }
     }
     const hit = externalFileDropTarget(event.clientX, event.clientY, event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY));
     if (!hit) return;
     if (hit === "center" && !target) return;
     event.preventDefault();
     event.stopPropagation();
-    if (hit === "center") { if (target) onActivate(target); return; }
-    const origin = neighborhood?.center;
+    if (hit === "center") { if (target) onActivate(target, "destination"); return; }
+    const origin = dropOriginAt(event.clientX, event.clientY, event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY));
     if (hit === "blocked" || !origin || !target || !relationshipDropRoles(origin, target, hit).includes(hit)) return;
     const current = captureSurfaceContinuation(() => viewport.current, () => plugin.actionManager.readSnapshot(actionSurfaceId));
-    plugin.openRelationModal({ hostLeaf, mode: "create", origin, fixedTarget: target, semanticRole: hit,
+    plugin.openRelationModal({ hostLeaf, mode: "create", origin, fixedTarget: target, semanticRole: hit, ...(source ? {invocation: {additiveOnly: true}} : {}),
       onCommitted: /** Publication remains durable while old view feedback is fenced. */ () => { if (current()) clearHoverIntent(true); } });
   };
 
   /** Compass neighbors retain directional hysteresis. Other views authorize only explicit area drop roles, never ontology inferred from a phase or screen quadrant. */
   const nodeDropRole = (node: PositionedNode, position: Point, clientX: number, clientY: number, hit: Element | null): GateRole | null => {
     const currentRole = normalizedRole(node.role);
-    if (currentRole && classic && settings.lateralArrangement !== "left") return semanticRoleForPosition(position, currentRole, NODE_RELINK_HYSTERESIS_PX / Math.max(0.3, camera.current.scale));
+    if (classic && currentRole && settings.lateralArrangement !== "left") return semanticRoleForPosition(position, currentRole, NODE_RELINK_HYSTERESIS_PX / Math.max(0.3, camera.current.scale));
     if (currentRole) {
       const area = externalFileDropTarget(clientX, clientY, hit);
       return area && area !== "center" && area !== "blocked" ? area : null;
@@ -3249,30 +3486,39 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   };
 
   /** Share the exact durable/optimistic composer path between touch relinks and native body drops. */
-  const commitNodeAreaDrop = (original: PositionedNode, nextRole: GateRole): void => {
-    const center = neighborhood?.center;
-    const currentRole = normalizedRole(original.role);
+  const commitNodeAreaDrop = (original: PositionedNode, nextRole: GateRole, origin = navigationNode()?.page,
+    relink = Boolean(classic || original.semanticSourceId === origin?.path)): void => {
+    const center = origin;
+    const currentRole = relink ? normalizedRole(original.role) : null;
     // Moving within the shared list never turns an existing challenger into a friend.
-    if (settings.lateralArrangement === "left" && nextRole === "left" && currentRole === "right") return;
+    if (classic && settings.lateralArrangement === "left" && nextRole === "left" && currentRole === "right") return;
     if (!center || nextRole === currentRole || !relationshipDropRoles(center, original.page, nextRole).includes(nextRole)) return;
     const current = captureSurfaceContinuation(() => viewport.current, () => plugin.actionManager.readSnapshot(actionSurfaceId));
     const commitRoot = viewport.current, commitDocument = commitRoot?.ownerDocument;
     const token = ++optimisticCommitToken.current;
+    /** Pending feedback belongs to this exact mounted view/token, independently of modal focus. */
+    const ownsFeedback = (): boolean => token === optimisticCommitToken.current && Boolean(commitRoot?.isConnected)
+      && viewport.current === commitRoot && commitRoot?.ownerDocument === commitDocument;
     plugin.openRelationModal({
       hostLeaf, mode: currentRole ? "relink" : "create", origin: center, fixedTarget: original.page,
       existingDirection: currentRole ? original.linkDirection : undefined, semanticRole: nextRole,
+      ...(!currentRole ? {invocation: {additiveOnly: true}} : {}),
       onCommitStart: /** A retired gesture cannot install optimistic presentation. */ role => {
         if (!current()) return;
         setOptimisticRelink({ targetPath: original.page.path, role });
         setRelationshipUpdating(true);
       },
       onCommitEnd: /** A failed write releases only its own still-mounted optimistic token. */ success => {
-        if (!success && token === optimisticCommitToken.current && commitRoot?.isConnected && viewport.current === commitRoot && commitRoot.ownerDocument === commitDocument) {
+        if (!success && ownsFeedback()) {
           setRelationshipUpdating(false);
           setOptimisticRelink(null);
         }
       },
-      onCommitted: /** Durable publication survives dialog closure; stale hover feedback does not. */ () => {
+      onCommitted: /** Confirmed non-Classic publication retires feedback without waiting on Compass-only lists; saved-pending is still pending. */ result => {
+        if (!classic && result.state === "saved-published" && ownsFeedback()) {
+          setOptimisticRelink(null);
+          setRelationshipUpdating(false);
+        }
         if (current()) clearHoverIntent(true);
       },
     });
@@ -3352,12 +3598,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     if (nodeDrag && e.pointerId === nodeDrag.pointerId) {
       const drag = nodeDrag;
       if (touchLongPress.current?.pointerId === e.pointerId) cancelTouchLongPress();
-      const original = scene.nodes.find((node) => node.page.path === drag.path);
+      const original = scene.nodes.find(isDraggedNode);
       const dragDistance = Math.hypot(e.clientX - drag.startClientX, e.clientY - drag.startClientY);
       if (drag.moved) {
         touchDoubleTap.current.reset();
         suppressActivateUntil.current = Date.now() + 220;
-        const draggedNode = renderedNodeMap.get(drag.path);
+        const draggedNode = renderedNodeMap.get(drag.occurrenceId ?? drag.path);
         if (dragDistance >= NODE_RELINK_MIN_DRAG_PX && original
           && (openHistoryRelationshipMenu(original.page, e.clientX, e.clientY, e.currentTarget.ownerDocument) || relationshipChip)) {
           setNodeDrag(null);
@@ -3371,18 +3617,20 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         if (dragDistance >= NODE_RELINK_MIN_DRAG_PX && draggedNode && original) {
           const hit = e.currentTarget.ownerDocument.elementFromPoint(e.clientX, e.clientY);
           const nextRole = nodeDropRole(original, draggedNode, e.clientX, e.clientY, hit);
-          if (nextRole) commitNodeAreaDrop(original, nextRole);
+          const drop = externalFileDropTarget(e.clientX, e.clientY, hit);
+          if (drop === "center") onActivate(original.page, "destination");
+          else if (nextRole) commitNodeAreaDrop(original, nextRole, dropOriginAt(e.clientX, e.clientY, hit));
         }
       } else if (original) {
         // Starting a potential relationship-relink drag uses pointer capture. Some Chromium/React
         // combinations then suppress the synthetic click, so make a tap explicitly navigate.
         if (e.pointerType === "touch") {
-          completeTouchTap(original.page, e);
+          completeTouchTap(original.page, e, drag.occurrenceId);
         } else {
           suppressActivateUntil.current = Date.now() + 180;
           const occurrence = sceneNodeKeys.get(original);
           if (occurrence) navigationOccurrence.current = { identity: original.page.path, id: occurrence };
-          onActivate(original.page);
+          activateOccurrence(original.page, drag.occurrenceId, true);
         }
       }
       setNodeDrag(null);
@@ -3502,7 +3750,16 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   /** Capture an explicit occurrence for menus and pointer controls using the same dispatcher as keys. */
   const runNodeAction = (id: ActionId, target: GraphPage, occurrenceId?: string): void => {
     void plugin.actionManager.dispatch({ id, source: "context-menu", surfaceId: actionSurfaceId,
-      target: { kind: "explicit", node: actionNodeRef(target), occurrenceId } });
+      target: { kind: "explicit", node: actionNodeRef(target), occurrenceId } }).then(outcome => {
+        if (["editor.expand", "branch.toggle", "branches.expand-generation", "branches.collapse-generation", "view.root.selected"].includes(id)
+          && outcome.status === "unavailable") new Notice(translateActionText(translate, outcome.reasonKey));
+      });
+  };
+  /** Generation controls address only this canvas surface; failed editor-removing transitions remain visible and unchanged. */
+  const runGenerationAction = (id: "branches.expand-generation" | "branches.collapse-generation"): void => {
+    void plugin.actionManager.dispatch({id, source: "toolbar", surfaceId: actionSurfaceId}).then(/** Refusal is a result, never an optimistic fold. */ outcome => {
+      if (outcome.status === "unavailable") new Notice(translateActionText(translate, outcome.reasonKey));
+    });
   };
   /** Reuse current section-fold state and descendant policy for pointer, menu and keyboard routes. */
   const applySectionAction = (page: GraphPage, id: "section.toggle-level" | "section.fold-descendants" | "section.unfold-descendants"): void => {
@@ -3546,7 +3803,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       if (!current()) return {status: "cancelled"};
       const sessionId = `${actionSurfaceId}:details:${++graphDialogSerial.current}`;
       const dialog = new RelationshipExplanationModal(plugin, explanation, {
-        role: edge.role, centerPath: neighborhood?.center.path, hostLeaf, initialFocus: "sources",
+        role: edge.role, centerPath: viewDefinition.hierarchy ? sourcePath : neighborhood?.center.path, hostLeaf, initialFocus: "sources",
         sourceTitle: scene.nodes.find(node => node.page.path === sourcePath)?.label,
         targetTitle: scene.nodes.find(node => node.page.path === targetPath)?.label,
       }, /** Native close/window teardown release the exact captured pair session. */ () => { graphDialogs.current.delete(dialog); plugin.actionManager.closeSession(sessionId); });
@@ -3623,13 +3880,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const pickConnection = (context: ActionContext, id: "relationship.details" | "relationship.relink" | "relationship.unlink" | "relationship.hide"): ActionOutcome | Promise<ActionOutcome> => {
     if (context.target.kind === "edge") {
       const target = context.target;
-      const edge = semanticEdgeForTarget(scene.edges, target.origin.identity, target.target.identity, target.evidenceId);
+      const edge = semanticEdgeForTarget(actionEdges, target.origin.identity, target.target.identity, target.evidenceId);
       if (!edge) return { status: "unavailable", reasonKey: "actions.target-unavailable" };
       return performEdgeAction(context, edge, id);
     }
     const page = graphActionPage(context);
     if (!page) return { status: "unavailable", reasonKey: "actions.target-unavailable" };
-    const edges = scene.edges.filter(edge => semanticSceneEdge(edge) && (edge.sourcePath === page.path || edge.targetPath === page.path));
+    const edges = actionEdges.filter(edge => semanticSceneEdge(edge) && (edge.sourcePath === page.path || edge.targetPath === page.path));
     const items = edges.flatMap(/** Capture endpoint identities now, before the native picker takes focus. */ edge => {
       const source = scene.nodes.find(node => node.page.path === edge.sourcePath)?.page ?? index.get(edge.sourcePath);
       const target = scene.nodes.find(node => node.page.path === edge.targetPath)?.page ?? index.get(edge.targetPath);
@@ -3678,14 +3935,125 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     graphDialogs.current.add(dialog); dialog.open();
     return { status: "opened", sessionId };
   };
+  /** Admit only the captured displayed occurrence with current filter, native-file and visible-area authority. */
+  const editorExpansion = (context: ActionContext): PositionedNode | null => {
+    if (!occurrenceEditorPolicy || !viewSession || context.target.kind !== "node" || !context.target.occurrenceId) return null;
+    const target = context.target, page = graphActionPage(context);
+    const node = scene.nodes.find(item => occurrenceKey(item) === target.occurrenceId);
+    if (!node || node.page !== page || !page || !supportsBoundEditor(page) || !index.isVisiblePage(page)
+      || actionNodeRef(page).path !== target.node.path || !nodeMatchesCurrentFilter(node)) return null;
+    const area = areaForNode(node);
+    if (area && scene.zoneViewports[area] && !zoneDisplayLayouts[area]?.localPositions.has(occurrenceKey(node))) return null;
+    return node;
+  };
+  /** Close/resize retain the invocation incarnation instead of inheriting a later editor opened at that occurrence. */
+  const capturedEditorId = (context: ActionContext): string | undefined =>
+    context.request.id === "editor.collapse" || context.request.id === "editor.resize"
+      ? context.request.args?.bindingId ?? context.invocationSnapshot?.editorBindingId : context.invocationSnapshot?.editorBindingId;
+  const editorExpandAction: ActionImplementation = {
+    availability: context => {
+      const node = editorExpansion(context);
+      if (!node) return {state: "disabled", reasonKey: "actions.target-unavailable"};
+      const binding = viewSession?.editors.bindings[0];
+      return binding && (binding.closing || binding.occurrenceId !== occurrenceKey(node))
+        ? {state: "disabled", reasonKey: "actions.editor-capacity"} : {state: "enabled"};
+    },
+    execute: context => {
+      const node = editorExpansion(context), file = node?.page.file;
+      if (!node || !file || !viewSession) return {status: "unavailable", reasonKey: "actions.target-unavailable"};
+      const reference = actionNodeRef(node.page);
+      if (!reference.fileIdentity) return {status: "unavailable", reasonKey: "actions.target-unavailable"};
+      preserveCameraOnNextLayout.current = true;
+      const result = viewSession.editors.open({viewId: viewDefinition.id, occurrenceId: occurrenceKey(node),
+        target: {nodeId: nodeId(reference.identity), path: file.path, fileIdentity: reference.fileIdentity},
+        dimensions: {width: Math.max(360, Math.min(720, settings.centerEmbedWidth)), height: Math.max(260, Math.min(460, settings.centerEmbedHeight))},
+        mode: settings.centralNodeMarkdownMode});
+      return result.status === "unavailable" ? {status: "unavailable", reasonKey: result.reason === "capacity" || result.reason === "closing" ? "actions.editor-capacity" : "actions.target-unavailable"}
+        : {status: "completed"};
+    },
+  };
+  const editorCollapseAction: ActionImplementation = {
+    availability: context => {
+      const binding = viewSession?.editors.bindings[0];
+      return occurrenceEditorPolicy && binding && !binding.closing && capturedEditorId(context) === binding.id
+        ? {state: "enabled"} : {state: "disabled", reasonKey: "actions.target-unavailable"};
+    },
+    execute: context => {
+      const id = capturedEditorId(context);
+      return id ? closeBoundEditor(id) : {status: "unavailable", reasonKey: "actions.target-unavailable"};
+    },
+  };
+  /** Exact selected occurrence/canonical pairing precedes a pure state reduction; neither a foreign node nor a missing row grants branch authority. */
+  const nextBranchState = (context: ActionContext, kind: PlexBranchAction["kind"]): unknown => {
+    if (!viewDefinition.hierarchy || !viewSession || viewSession.definition !== viewDefinition || viewSession.getLifetime() !== viewLifetime
+      || viewSession.layoutRoot(nodeId(activePath)) !== sceneScope) return null;
+    const prepared = prepareSelectedDefinition(viewSession.state), projection = prepared.projection;
+    if (!projection || prepared.failure) return null;
+    if (kind === "toggle") {
+      if (context.target.kind !== "node") return null;
+      const target = context.target, node = scene.nodes.find(row => occurrenceKey(row) === target.occurrenceId);
+      if (!node || graphActionPage(context) !== node.page || node.page.path !== target.node.identity) return null;
+      return viewDefinition.hierarchy.reduce(viewSession.state, projection, {kind, occurrenceId: occurrenceKey(node)});
+    }
+    return viewDefinition.hierarchy.reduce(viewSession.state, projection, {kind});
+  };
+  /** Resolve branch intent against this committed projection; only the existing session may commit guarded folds. */
+  const branchAction = (kind: PlexBranchAction["kind"]): ActionImplementation => ({
+    availability: /** Pure preflight cannot acquire scopes or remove a live native editor. */ context => {
+      const next = nextBranchState(context, kind);
+      if (!next || !viewSession) return {state: "disabled", reasonKey: "actions.target-unavailable"};
+      return viewSession.editors.bindings.length && !branchPreflight.current(next)
+        ? {state: "disabled", reasonKey: "actions.branch-editor-blocked"} : {state: "enabled"};
+    },
+    execute: /** Recheck actual current branch state and editor admission at accepted execution. */ context => {
+      const next = nextBranchState(context, kind);
+      if (!next || !viewSession) return {status: "unavailable", reasonKey: "actions.target-unavailable"};
+      preserveCameraOnNextLayout.current = true;
+      return viewSession.updateState(next) ? {status: "completed"} : {status: "unavailable", reasonKey: "actions.branch-editor-blocked"};
+    },
+  });
   const graphImplementations: SurfaceActionImplementations = {
+    "branch.toggle": branchAction("toggle"),
+    "branches.expand-generation": branchAction("expand-generation"),
+    "branches.collapse-generation": branchAction("collapse-generation"),
+    "view.root.selected": {
+      availability: /** Reroot is explicit and never implicitly closes a native editor. */ context => {
+        const page = graphActionPage(context);
+        if (!viewDefinition.hierarchy || !viewSession || !page || page.transient) return {state: "disabled", reasonKey: "actions.target-unavailable"};
+        return viewSession.editors.bindings.length && page.path !== sceneScope ? {state: "disabled", reasonKey: "actions.branch-editor-blocked"} : {state: "enabled"};
+      },
+      execute: /** The rooted session retires outgoing frontier/camera scope through its existing lifetime. */ context => {
+        const page = graphActionPage(context);
+        if (!viewDefinition.hierarchy || !viewSession || !page || page.transient) return {status: "unavailable", reasonKey: "actions.target-unavailable"};
+        return viewSession.setRoot(nodeId(page.path)) ? {status: "completed"} : {status: "unavailable", reasonKey: "actions.branch-editor-blocked"};
+      },
+    },
+    "editor.expand": editorExpandAction,
+    "editor.collapse": editorCollapseAction,
+    "editor.resize": {
+      availability: context => {
+        const binding = viewSession?.editors.bindings[0];
+        return occurrenceEditorPolicy && binding && !binding.closing && capturedEditorId(context) === binding.id && Boolean(admittedBoundEditor)
+          ? {state: "enabled"} : {state: "disabled", reasonKey: "actions.target-unavailable"};
+      },
+      execute: context => {
+        if (context.request.id !== "editor.resize" || !context.request.args || !viewSession) return {status: "unavailable", reasonKey: "actions.target-unavailable"};
+        preserveCameraOnNextLayout.current = true;
+        return viewSession.editors.resize(context.request.args.bindingId, context.request.args)
+          ? {status: "completed"} : {status: "unavailable", reasonKey: "actions.target-unavailable"};
+      },
+    },
     "selection.center": graphAction(/** Select/reveal the displayed center without changing shared navigation. */ () => selection.select(scene.entryOccurrence ?? keyboardNodes.find(node => node.section === "center")?.id ?? null)),
     "node.activate": graphAction(/** Preserve legacy Enter on the central file, with explicit activation elsewhere. */ context => {
       const page = graphActionPage(context);
       if (!page) return;
       if (page.transient?.kind === "group") { unfoldGroup(page); return; }
       if (page.transient?.kind === "section") return plugin.openSection(page, hostLeaf);
-      if (context.request.source === "local-hotkey" && page.path === activePath && page.file) return renameFrom(context);
+      if (!viewDefinition.hierarchy && context.request.source === "local-hotkey" && page.path === activePath && page.file) return renameFrom(context);
+      // A saved/search target is an explicit map destination. A displayed occurrence is inspection
+      // inside the retained map; its attention must not retarget an expanded native editor.
+      if (viewDefinition.hierarchy?.primary === "expand" && context.target.kind === "node" && !context.target.occurrenceId
+        && !viewSession?.setRoot(nodeId(page.path))) return {status: "unavailable", reasonKey: "actions.branch-editor-blocked"};
       if (context.target.kind === "node" && context.target.occurrenceId) navigationOccurrence.current = { identity: page.path, id: context.target.occurrenceId };
       onActivate(page);
       return;
@@ -3773,7 +4141,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       },
     },
     "relationship.connect": graphAction(connectFrom, context => {
-      if (context.target.kind === "edge") return (!context.target.evidenceId || Boolean(semanticEdgeForTarget(scene.edges, context.target.origin.identity, context.target.target.identity, context.target.evidenceId))) && context.target.origin.kind !== "folder" && context.target.origin.kind !== "tag" && context.target.target.kind !== "folder" && context.target.target.kind !== "tag";
+      if (context.target.kind === "edge") return (!context.target.evidenceId || Boolean(semanticEdgeForTarget(actionEdges, context.target.origin.identity, context.target.target.identity, context.target.evidenceId))) && context.target.origin.kind !== "folder" && context.target.origin.kind !== "tag" && context.target.target.kind !== "folder" && context.target.target.kind !== "tag";
       const page = graphActionPage(context); return Boolean(page && !page.isFolder && !page.isTag && !page.transient);
     }),
     "relationship.connect-visible": graphAction(/** Freeze the origin while arrows choose a target without changing center. */ context => {
@@ -3782,6 +4150,20 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       viewport.current?.closest<HTMLElement>(".kplex-app")?.focus({ preventScroll: true });
       return { status: "opened", sessionId: visibleConnectSession };
     }, context => { const page = graphActionPage(context); return Boolean(page && !page.isFolder && !page.isTag && !page.transient); }),
+  };
+  if (occurrenceEditorPolicy) graphImplementations["view.center-editor.toggle"] = {
+    availability: context => {
+      if (context.invocationSnapshot?.editorBindingId) return editorCollapseAction.availability(context);
+      const selected = context.invocationSnapshot?.selected;
+      return selected ? editorExpandAction.availability({...context, target: {kind: "node", node: selected.node, occurrenceId: selected.occurrenceId}})
+        : {state: "disabled", reasonKey: "actions.target-unavailable"};
+    },
+    execute: context => {
+      if (context.invocationSnapshot?.editorBindingId) return editorCollapseAction.execute(context);
+      const selected = context.invocationSnapshot?.selected;
+      return selected ? editorExpandAction.execute({...context, target: {kind: "node", node: selected.node, occurrenceId: selected.occurrenceId}})
+        : {status: "unavailable", reasonKey: "actions.target-unavailable"};
+    },
   };
   for (const direction of ACTION_DIRECTIONS) {
     graphImplementations[`selection.move.${direction}`] = graphAction(/** Spatial selection consumes the existing finite displayed projection. */ () => selection.move(direction, false));
@@ -3798,11 +4180,11 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   for (const id of ["relationship.details", "relationship.relink", "relationship.unlink", "relationship.hide"] as const) {
     graphImplementations[id] = {
       availability: /** Structural actions use the same endpoint capability as menus and execution, without source acquisition. */ context => {
-        if (context.target.kind === "edge") return Boolean(semanticEdgeForTarget(scene.edges, context.target.origin.identity, context.target.target.identity, context.target.evidenceId))
+        if (context.target.kind === "edge") return Boolean(semanticEdgeForTarget(actionEdges, context.target.origin.identity, context.target.target.identity, context.target.evidenceId))
           && connectionActionAllowed(id, resolveActionPage(index, context.target.origin) ?? undefined, resolveActionPage(index, context.target.target) ?? undefined)
           ? { state: "enabled" } : { state: "disabled", reasonKey: "actions.target-unavailable" };
         const page = graphActionPage(context);
-        return page && scene.edges.some(/** Only actually writable incident connections belong in the action picker. */ edge => semanticSceneEdge(edge) && (edge.sourcePath === page.path || edge.targetPath === page.path) && connectionActionAllowed(id, index.get(edge.sourcePath), index.get(edge.targetPath)))
+        return page && actionEdges.some(/** Only actually writable incident connections belong in the action picker. */ edge => semanticSceneEdge(edge) && (edge.sourcePath === page.path || edge.targetPath === page.path) && connectionActionAllowed(id, index.get(edge.sourcePath), index.get(edge.targetPath)))
           ? { state: "enabled" } : { state: "disabled", reasonKey: "actions.target-unavailable" };
       },
       execute: /** A picker exposes every displayed incident edge; selected edge actions use current evidence. */ context => pickConnection(context, id),
@@ -3828,10 +4210,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     });
   }
   actionPorts.current = {
-    implementations: viewFailed ? Object.fromEntries(Object.keys(graphImplementations).map(id => [id, {
+    implementations: viewFailed ? Object.fromEntries(Object.keys(graphImplementations).map(id => [id, id === "editor.collapse" || id === "view.root.selected" || id === "view.center-editor.toggle" && occurrenceEditorPolicy && boundEditorBinding ? graphImplementations[id as ActionId] : {
       availability: () => ({state: "disabled" as const, reasonKey: "actions.target-unavailable"}),
       execute: () => ({status: "unavailable" as const, reasonKey: "actions.target-unavailable"}),
     }])) : graphImplementations,
+    readEditorBindingId: () => viewSession?.editors.bindings[0]?.id,
+    canEditAreas: /** Read live admitted capability instead of inferring it from a view ID or a global setting. */ () => !viewFailed && hasEditableAreas,
     prepareNavigation, readWanderScene, highlightWander, clearWander,
     navigateWander: /** Accept only an exact still-displayed destination through the shared App activation path. */ destination => {
       const page = resolveWanderDestination(destination);
@@ -3880,7 +4264,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const restored = viewSession.readTransient(viewDefinition.id, nodeId(activePath));
     if (restored) {
       preserveCameraOnNextLayout.current = true; applyCamera(restored.camera);
-      setUnfoldedGroups({center: activePath, keys: new Set(restored.unfolded)});
+      setUnfoldedGroups({center: sceneScope, keys: new Set(restored.unfolded)});
       if (restored.selected) selection.select(restored.selected);
     } else selection.select(null);
     return viewSession.own(() => {
@@ -3888,12 +4272,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       const resize = areaResizeDrag.current;
       areaResizeDrag.current = null;
       if (resize?.changed) persistAreaHeight(resize.zone);
-      viewSession.retainTransient(viewDefinition.id, {attention: nodeId(activePath), camera: camera.current,
+      viewSession.retainTransient(viewDefinition.id, {attention: nodeId(recoveryCenter.current), scope: nodeId(sceneScope), camera: camera.current,
         selected: outgoingViewState.current.selected()?.id ?? null,
-        unfolded: outgoingViewState.current.groups.center === activePath ? [...outgoingViewState.current.groups.keys] : []});
+        unfolded: outgoingViewState.current.groups.center === sceneScope ? [...outgoingViewState.current.groups.keys] : []});
       optimisticCommitToken.current++;
       setOptimisticRelink(null); setRelationshipUpdating(false);
       setSectionExpanded(false); setSectionExpansion(null); setExpandedSectionIds(new Set());
+      setNodeDrag(null); setConnectDrag(null); setExternalDropZone(null);
       setSceneTransitioning(false); previousNodeRects.current.clear(); incomingCenter.current = null;
       cancelTouchLongPress(); cancelPendingGateLongPress(); clearEdgeTooltip();
       sceneMotion.cancelAll(); clearHoverIntent(true);
@@ -3911,7 +4296,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       sceneTransitionTimer.current = null; sceneTransitionTimerWindow.current = null;
       finishNodeLinkDrag(plugin.app, nativeNodeDrag.current); nativeNodeDrag.current = null;
     });
-  }, [viewSession, viewLifetime, activePath]);
+  }, [viewSession, viewLifetime, sceneScope]);
 
   if (!neighborhood) return <div className="kplex-empty">{translate("graph.selectNote")}</div>;
 
@@ -3930,6 +4315,28 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const isPlaceholderFolderGesture = (page: GraphPage, event: MouseEvent<HTMLDivElement>): boolean =>
     Boolean(Keymap.isModEvent(event.nativeEvent)) && !page.file && !page.url && !page.isFolder && !page.isTag && !page.transient;
 
+  /** The definition chooses primary branch toggling or activation. Shared branch guards refuse folds that would remove a live editor; root and attention remain unchanged. */
+  const activateOccurrence = (page: GraphPage, occurrenceId: string | undefined, primary: boolean): void => {
+    if (primary && viewDefinition.hierarchy?.primary === "expand" && occurrenceId) {
+      const node = scene.nodes.find(value => occurrenceKey(value) === occurrenceId);
+      selection.select(occurrenceId);
+      if (node?.branch && (node.branch.canExpand || node.branch.expanded)) runNodeAction("branch.toggle", page, occurrenceId);
+      return;
+    }
+    if (!primary || viewDefinition.hierarchy?.primary !== "activate-editor" || !occurrenceId || !supportsBoundEditor(page)) {
+      runNodeAction("node.activate", page, occurrenceId); return;
+    }
+    const current = viewSession?.capture() ?? (() => true), reference = actionNodeRef(page);
+    void plugin.actionManager.dispatch({id: "node.activate", source: "context-menu", surfaceId: actionSurfaceId,
+      target: {kind: "explicit", node: reference, occurrenceId}}).then(/** A retired view or rejected activation cannot authorize a late editor at a reused occurrence ID. */ outcome => {
+      if (!current() || outcome.status !== "completed") return;
+      return plugin.actionManager.dispatch({id: "editor.expand", source: "context-menu", surfaceId: actionSurfaceId,
+        target: {kind: "explicit", node: reference, occurrenceId}}).then(/** Capacity and stale-native admission retain the existing buffer and explain refusal. */ result => {
+          if (current() && result.status === "unavailable") new Notice(translateActionText(translate, result.reasonKey));
+        });
+    });
+  };
+
   /** Materialize a modified placeholder in place; ordinary clicks retain normal navigation. */
   const activateNode = (page: GraphPage, occurrenceId?: string, event?: MouseEvent<HTMLDivElement>): void => {
     if (page.transient?.kind === "group") {
@@ -3946,7 +4353,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         target: { kind: "explicit", node: actionNodeRef(target) }, args: { chooseFolder: true, preserveCenter: true } });
       return;
     }
-    runNodeAction("node.activate", target, occurrenceId);
+    activateOccurrence(target, occurrenceId, !event || !(event.ctrlKey || event.metaKey || event.shiftKey || event.altKey));
   };
 
   /** Open through mouse double-click unless a completed touch pair already performed the same action. */
@@ -3989,6 +4396,16 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       void plugin.actionManager.dispatch({ id, source: "context-menu", surfaceId: actionSurfaceId,
         target: { kind: "explicit", node: reference, occurrenceId: occurrenceId ?? sceneNodeKeys.get(node) } });
     };
+
+    if (viewDefinition.hierarchy && persistent) {
+      if (node.branch?.canExpand) menu.addItem(/** Branch disclosure is independent of native editor expansion. */ item => item
+        .setTitle(translate(node.branch?.expanded ? "mindmap.collapseBranch" : "mindmap.expandBranch")).setIcon(node.branch?.expanded ? "minus" : "plus")
+        .onClick(/** The manager rechecks the exact captured occurrence and native editor guard. */ () => runCapturedNodeAction("branch.toggle", persistent)));
+      menu.addItem(/** Explicit root choice keeps ordinary activation and Sidecar ownership separate. */ item => item
+        .setTitle(translate("actions.view.root.selected")).setIcon("git-fork")
+        .onClick(/** Native confirmation cannot borrow a new menu target. */ () => runCapturedNodeAction("view.root.selected", persistent)));
+      menu.addSeparator();
+    }
 
     const persistentFile = persistent?.file;
     if (persistentFile && persistent && page.transient?.kind !== "section") {
@@ -4149,15 +4566,28 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   };
 
   /**
-   * Preserve the rendered source while synchronously handing its payload to Obsidian. Regular
-   * scene rows use the viewport's move authority; projected descendants use their own occurrence
-   * token, so dropping them in this Plex adds a relation rather than moving their parent's edge.
+   * Capture the actual rendered DOM occurrence before handing its payload to Obsidian. The one
+   * existing canvas owner/lifetime and exact canonical source fence removal authority. Descendant
+   * strips without one admitted primary scene edge remain copy-only, with their own displayed key.
    */
-  const beginNativeNodeDrag = (page: GraphPage, role: Role | "center", label: string, event: DragEvent<HTMLDivElement>, occurrenceOwner?: object): void => {
-    const owner = occurrenceOwner ?? viewport.current;
+  const beginNativeNodeDrag = (page: GraphPage, role: Role | "center", label: string, event: DragEvent<HTMLDivElement>): void => {
+    const owner = viewport.current, element = event.currentTarget, id = element.dataset.kplexKeyboardId;
     if (!owner) { event.preventDefault(); return; }
     clearHoverIntent(true);
-    nativeNodeDrag.current = startNodeLinkDrag(plugin.app, page, event.nativeEvent, owner, role, label, neighborhood.center.file?.path ?? "");
+    const candidates = scene.nodes.filter(node => sceneNodeKeys.get(node) === id && node.page === page && node.role === role);
+    const currentView = viewSession?.capture() ?? (() => true);
+    const currentSurface = captureSurfaceContinuation(() => viewport.current, () => plugin.actionManager.readSnapshot(actionSurfaceId), {checkInteraction: false});
+    const reference = actionNodeRef(page), document = element.ownerDocument;
+    const selector = id ? `[data-kplex-keyboard-id="${CSS.escape(id)}"]` : "";
+    let source: NodeLinkDragSource | null = null;
+    source = startNodeLinkDrag(plugin.app, page, event.nativeEvent, owner, role, label, navigationNode()?.page.file?.path ?? "", id ? {id,
+      relationship: candidates.length === 1 ? nativeDragRelationship(candidates[0], false) : undefined,
+      current: /** A retired gesture, filtered/removed row, migrated document or replaced native file cannot regain source authority. */ () => Boolean(source && nativeNodeDrag.current === source
+        && currentView() && currentSurface() && element.isConnected && owner.contains(element) && element.ownerDocument === document
+        && element.dataset.kplexKeyboardId === id && owner.querySelectorAll(selector).length === 1 && resolveActionPage(index, reference) === page
+        && page.path === reference.identity && page.path === reference.path
+        && (!page.file || plugin.app.vault.getFileByPath(page.file.path) === page.file))} : undefined);
+    nativeNodeDrag.current = source;
     if (!nativeNodeDrag.current) event.preventDefault();
   };
 
@@ -4178,13 +4608,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     }
     if (connectDrag?.originPath === baseNode.page.path) highlightedGates.add(connectDrag.gate);
 
-    const lensNodeStyle = neighborhood ? graphLensNodeStyle(predicateEngine, index, paintLenses, {
+    const lensNodeStyle = predicateCenter ? graphLensNodeStyle(predicateEngine, index, paintLenses, {
       page: baseNode.page,
       label: baseNode.label,
-      center: neighborhood.center,
+      center: predicateCenter,
       edge: baseNode.role === "center" ? undefined : {
         role: baseNode.role, relationType: baseNode.relationType, definition: baseNode.typeDefinition, linkDirection: baseNode.linkDirection,
-        sourcePath: neighborhood.center.path, targetPath: baseNode.page.path,
+        sourcePath: baseNode.semanticSourceId ?? predicateCenter.path, targetPath: baseNode.page.path,
       },
     }) : {};
     const countedDisplayNode = hydrateCounts && (!displayNode.physicalPorts || Object.keys(displayNode.physicalPorts).length > 0) ? projectNodeCounts(displayNode, index) : displayNode;
@@ -4193,7 +4623,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     if (baseNode.role === "center") renderedCenterGates.current = { identity: baseNode.page.path, stats: countedDisplayNode.gateStats };
     let colorStyle = paintedNodeStyles.get(baseNode);
     if (!colorStyle) {colorStyle = currentNodeColorStyle(baseNode, paintSettings); paintedNodeStyles.set(baseNode, colorStyle);}
-    const styledDisplayNode = { ...countedDisplayNode, style: { ...colorStyle, ...lensNodeStyle } };
+    const styledDisplayNode = { ...countedDisplayNode, style: { ...colorStyle, ...lensNodeStyle },
+      ...(countedDisplayNode.peerPort ? {peerPort: {...countedDisplayNode.peerPort,
+        shownCount: globalFiltering ? shownPeerCounts.get(occurrenceKey(baseNode)) ?? 0 : undefined}} : {}) };
     const gateCounts = filteredGateCounts?.isCurrent() ? filteredGateCounts.counts.get(baseNode.page.path) : undefined;
     const nodeForDisplay = globalFiltering && gateCounts
       ? {
@@ -4207,18 +4639,22 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       }
       : styledDisplayNode;
     const hasCentralEditor = isEditorOccurrence(baseNode) && centralEditorPage !== null;
-    const canOpenCentralEditor = isEditorOccurrence(baseNode) && centralEditorCapable && !hasCentralEditor;
+    const canOpenCentralEditor = occurrenceEditorPolicy ? supportsBoundEditor(baseNode.page) && !hasCentralEditor
+      : isEditorOccurrence(baseNode) && centralEditorCapable && !hasCentralEditor;
 
     return <ThoughtNode
       key={JSON.stringify([viewDefinition.id, viewLifetime, sceneNodeKeys.get(baseNode)])}
       node={nodeForDisplay}
       translate={translate}
+      branchStatus={visibleEdgeProjection.limited && baseNode === navigationNode() ? translate("mindmap.limited") : baseNode.branch?.reference ? translate("mindmap.reference") : baseNode.branch?.status === "loading" ? translate("mindmap.loading")
+        : baseNode.branch?.status === "limited" ? translate("mindmap.limited") : baseNode.branch?.status === "partial" ? translate("mindmap.partial")
+        : baseNode.branch?.status === "unavailable" ? translate("mindmap.unavailable") : undefined}
       visual={hasCentralEditor ? undefined : nodeVisuals.get(baseNode.page.path)}
       content={hasCentralEditor ? <div className="kplex-central-editor-placeholder" aria-hidden="true" /> : undefined}
       cornerAction={canOpenCentralEditor ? {
         icon: "file-text",
-        label: translate(centralEditorCanMaximize ? "app.useCentralNodeEditorExpandedHint" : "app.useCentralNodeEditor"),
-        onClick: openCentralEditor,
+        label: translate(occurrenceEditorPolicy ? "actions.editor.expand" : centralEditorCanMaximize ? "app.useCentralNodeEditorExpandedHint" : "app.useCentralNodeEditor"),
+        onClick: event => occurrenceEditorPolicy ? runNodeAction("editor.expand", baseNode.page, occurrenceKey(baseNode)) : openCentralEditor(event),
       } : undefined}
       settings={settings}
       selected={baseNode.page.path === activePath}
@@ -4228,13 +4664,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         || (finding ? findNodePaths.has(baseNode.page.path) : interaction.nodePaths.has(baseNode.page.path)))}
       dimmed={!connectDrag && !finding && hover !== null && !interaction.nodePaths.has(baseNode.page.path)}
       highlightedGates={highlightedGates}
-      dragging={nodeDrag?.path === baseNode.page.path}
+      dragging={isDraggedNode(baseNode)}
       flair={activeNodeFlair === baseNode.page.path}
       connectionState={connectionStateFor(baseNode)}
       onActivate={/** Capture the clicked occurrence; explicit placeholder folder gestures retain their target. */ (_node, event) => {if (!viewFailed) activateNode(baseNode.page, sceneNodeKeys.get(baseNode), event);}}
       onOpen={/** Modified placeholder clicks already opened the one in-place creation dialog. */ (_, event) => { if (!viewFailed && !isPlaceholderFolderGesture(baseNode.page, event)) openNode(baseNode.page); }}
       nativeDraggable={!viewFailed && canDragNodeLink(baseNode.page) && !hasCentralEditor}
-      onNativeDragStart={/** Regular rows retain the viewport's same-view relink authority. */ (_, event) => beginNativeNodeDrag(baseNode.page, baseNode.role, baseNode.label, event)}
+      onNativeDragStart={/** The actual displayed key and primary semantic context travel through the shared native payload. */ (_, event) => beginNativeNodeDrag(baseNode.page, baseNode.role, baseNode.label, event)}
       onNativeDragEnd={endNativeNodeDrag}
       onHoverNode={(_, event) => { if (!connectDrag && !nodeDrag) scheduleHoverIntent({ kind: "node", path: baseNode.page.path }, event); }}
       onHoverGate={(_, gate, event) => { if (!connectDrag && !nodeDrag) scheduleHoverIntent({ kind: "gate", path: baseNode.page.path, gate }, event); }}
@@ -4247,7 +4683,11 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       onGatePointerDown={(_, gate, event) => startGateDrag(baseNode, gate, event)}
       onNodePointerDown={(_, event) => startNodeDrag(baseNode, event)}
       onContextMenu={(_, event) => {if (!viewFailed) showNodeContextMenu(baseNode, event);}}
-      sectionFold={baseNode.page.transient?.kind === "section" ? (() => {
+      sectionFold={baseNode.branch?.canExpand && viewDefinition.hierarchy ? {
+        hasChildren: true, expanded: baseNode.branch.expanded, hiddenDescendantCount: 0,
+        expandedTitle: translate("mindmap.collapseBranch"), foldedTitle: translate("mindmap.expandBranch"),
+        onToggle: /** Separate branch disclosure dispatches the same guarded action as menus and keys. */ () => runNodeAction("branch.toggle", baseNode.page, occurrenceKey(baseNode)),
+      } : baseNode.page.transient?.kind === "section" ? (() => {
         const section = sectionExpansion?.sections.find((candidate) => candidate.id === baseNode.page.transient?.sectionId);
         if (!section) return undefined;
         const descendants = new Set<string>();
@@ -4278,7 +4718,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const zone = areaForNode(node);
     return !zone || !scene.zoneViewports[zone];
   });
-  const draggedBaseNode = nodeDrag ? scene.nodes.find((node) => node.page.path === nodeDrag.path) ?? null : null;
+  const draggedBaseNode = nodeDrag ? scene.nodes.find(isDraggedNode) ?? null : null;
   /**
    * Use the actual captured gate occurrence rather than a path-keyed layout copy. Overflow rows,
    * borders and custom gate sizes can change its painted position. Pointer capture leaves event
@@ -4315,22 +4755,21 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const renderAreaFrame = (zone: ScrollZone, area: ZoneAreaBounds) => {
     const edgeActive = resizingArea === zone || (areaHover?.zone === zone && areaHover.edgeActive);
     const config = AREA_HEIGHT_CONFIG[zone];
-    if (!config) return null;
     return <ResizableAreaFrame
       key={zone}
       className={`kplex-area-frame kplex-area-${zone} is-edge-${area.resizeEdge}${areaSettingsMode ? " is-settings-mode" : ""}${edgeActive ? " is-active" : ""}${resizingArea === zone ? " is-resizing" : ""}`}
       left={area.left} top={area.top} width={area.width} height={area.height}
-      edge={area.resizeEdge} editing={areaSettingsMode} label={zoneTitle(zone, translate, settings.lateralArrangement)}
-      value={areaHeight(zone)} min={config.min} max={config.max}
+      edge={area.resizeEdge} editing={areaSettingsMode && Boolean(config)} label={zoneTitle(zone, translate, settings.lateralArrangement)}
+      value={areaHeight(zone)} min={config?.min ?? area.height} max={config?.max ?? area.height}
       onHeightChange={/** Persist keyboard height edits through the same presentation-only path as pointer edits. */ (height) => { if (setAreaHeight(zone, height)) persistAreaHeight(zone); }}
     />;
   };
 
   const renderScrollZone = (zone: ScrollZone, panel: ZoneViewport) => {
-    const allNodes = scene.nodes.filter((node) => areaForNode(node) === zone && nodeDrag?.path !== node.page.path);
+    const allNodes = scene.nodes.filter((node) => areaForNode(node) === zone && !isDraggedNode(node));
     const filter = zoneFilters[zone] ?? "";
     const layout = zoneDisplayLayouts[zone] ?? buildZoneDisplayLayout(zone, panel, allNodes, filter, settings, index, neighborhood?.center.path ?? activePath);
-    const displayedNodes = layout.nodes.filter((node) => nodeDrag?.path !== node.page.path);
+    const displayedNodes = layout.nodes.filter((node) => !isDraggedNode(node));
     return <div
       key={zone}
       className={`kplex-zone-panel kplex-zone-${zone}`}
@@ -4434,7 +4873,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
               aria-labelledby={accessibleNameId}
               data-kplex-path={child.relation.page.path}
               draggable={canDragNodeLink(child.relation.page)}
-              onDragStart={/** A descendant is an outbound endpoint, never authority to move its parent's relation. */ (event: DragEvent<HTMLDivElement>) => beginNativeNodeDrag(child.relation.page, "child", child.label, event, event.currentTarget)}
+              onDragStart={/** A descendant exports its exact displayed key without acquiring another occurrence's primary-edge authority. */ (event: DragEvent<HTMLDivElement>) => beginNativeNodeDrag(child.relation.page, "child", child.label, event)}
               onDragEnd={endNativeNodeDrag}
               style={{
                 left: child.localX - child.width / 2,
@@ -4483,6 +4922,20 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     preserveCameraOnNextLayout.current = true;
     setLayoutRevision((revision) => revision + 1);
     scheduleLayoutSave();
+  };
+  const contributedLayoutControls = plugin.viewSettingsRegistry.layoutControls(viewDefinition);
+  const configuredLayout = readViewConfiguration(viewDefinition, settings.canvasViewSettings ?? {});
+  /** Live view-specific rails reuse the same queued Settings writer; they never change selection or acquire graph sources. */
+  const changeViewLayoutValue = (field: string, value: number): void => {
+    if (!contributedLayoutControls.some(control => control.field === field) || viewSession?.definition !== viewDefinition) return;
+    const current = viewSession.capture();
+    sceneMotion.cancelAll(); preserveCameraOnNextLayout.current = true;
+    void plugin.updateCanvasViewSetting(viewDefinition.id, field, value).catch(/** The queued writer retains committed values on failure; report it without inventing an optimistic setting. */ error => {
+      console.error("K-Plex view layout setting was not saved", error);
+      if (current()) new Notice(translate("view.settingsSaveFailed"));
+    }).finally(/** Restore the committed scalar after rejection without remounting or stealing the native slider's focus. */ () => {
+      if (current()) setLayoutRevision(revision => revision + 1);
+    });
   };
   /** Persist only this device's arrangement context; pop-outs use the same main-tab owner as reads. */
   const changeSimplifiedLayout = (enabled: boolean): void => {
@@ -4533,14 +4986,14 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     if (!hit || !element.contains(hit) || isAreaControlTarget(hit) || hit.closest("[data-kplex-history-path], [data-kplex-pinned-path]")) return null;
     if (nodeDrag) {
       if (Math.hypot(clientX - nodeDrag.startClientX, clientY - nodeDrag.startClientY) < NODE_RELINK_MIN_DRAG_PX) return null;
-      const original = scene.nodes.find((node) => node.page.path === nodeDrag.path);
+      const original = scene.nodes.find(isDraggedNode);
       const currentRole = original ? normalizedRole(original.role) : null;
       if (!original) return null;
       const nextRole = nodeDropRole(original, nodeDrag, clientX, clientY, hit);
       return nextRole !== currentRole ? nextRole : null;
     }
     const origin = connectDrag ? index.get(connectDrag.originPath) : undefined;
-    if (!connectDrag || !origin || origin.isFolder || origin.isTag || origin.path !== neighborhood?.center.path) return null;
+    if (!connectDrag || !origin || origin.isFolder || origin.isTag || origin.path !== navigationNode()?.page.path) return null;
     const target = hit.closest<HTMLElement>("[data-kplex-path]");
     // The center's areas describe center relations, never a connection between two other nodes.
     if (target || hit.closest("[data-kplex-gate]")) return null;
@@ -4549,10 +5002,16 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const dropAreaZone = relationshipDropArea();
   const visibleAreaZone = resizingArea ?? areaHover?.zone ?? null;
   const visibleArea = visibleAreaZone ? scene.zoneAreas[visibleAreaZone] : undefined;
-  const previewCenter = centralEditorPage && centralEditorNode ? centralEditorNode : scene.nodes.find((node) => node.role === "center");
+  const previewRoot = navigationNode();
+  const previewCenter = previewRoot ? renderedNodeMap.get(occurrenceKey(previewRoot)) ?? previewRoot : undefined;
+  const previewPoint = externalDropZone ? externalDropPoint.current : connectDrag?.current ?? nodeDrag;
+  const declaredPreviewArea = scene.areas?.filter(area => area.dropRole === dropAreaZone).find(area => previewPoint
+    && previewPoint.x >= area.bounds.x && previewPoint.x <= area.bounds.x + area.bounds.width
+    && previewPoint.y >= area.bounds.y && previewPoint.y <= area.bounds.y + area.bounds.height);
   const previewArea = dropAreaZone === "center" && previewCenter
     ? { left: previewCenter.x - previewCenter.width / 2, top: previewCenter.y - previewCenter.height / 2, width: previewCenter.width, height: previewCenter.height }
-    : dropAreaZone && dropAreaZone !== "center" ? scene.zoneAreas[dropAreaZone] : undefined;
+    : dropAreaZone && dropAreaZone !== "center" ? declaredPreviewArea ? scene.zoneAreas[declaredPreviewArea.id]
+      : classic ? scene.zoneAreas[dropAreaZone] : undefined : undefined;
   const centerPreviewPadding = dropAreaZone === "center" ? 4 : 0;
 
   const connectionSearchHint = effectiveActionBindings(plugin.settings.actionPreferences, "search.focus")
@@ -4641,7 +5100,14 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         colorValueCss({kind: "theme", variable: COMPASS_COLOR_VARIABLES[direction]}, semanticColorCss(COMPASS_SEMANTIC_SLOTS[direction])))} />)}
     </svg>
     {viewFailed && <div className="kplex-view-error" role="status">{translate("view.failed")}
-      <button type="button" onClick={() => viewSession?.recover()}>{translate("view.recover")}</button></div>}
+      <button type="button" onClick={() => viewSession?.recover()}>{translate("view.recover")}</button>
+      {viewDefinition.hierarchy && <button type="button" onClick={/** A missing/renamed root has an explicit recovery path; attention never implicitly reroots it. */ () => {
+        const page = index.get(activePath);if (page) runNodeAction("view.root.selected", page);
+      }}>{translate("mindmap.useAttentionRoot")}</button>}
+      {boundEditorBinding && <button type="button" data-kplex-close-bound-editor disabled={boundEditorBinding.closing}
+        onClick={/** Hidden buffers remain recoverable through the same explicit save-aware action. */ () => {
+          void plugin.actionManager.dispatch({id: "editor.collapse", source: "toolbar", surfaceId: actionSurfaceId, args: {bindingId: boundEditorBinding.id}});
+        }}>{translate("actions.editor.collapse")}</button>}</div>}
     <div ref={cameraElement} className="kplex-camera" style={{ transform: `translate(${camera.current.x}px, ${camera.current.y}px) scale(${camera.current.scale})` }}>
       {scene.decorations && <ViewDecorations decorations={scene.decorations} translate={translate}
         counts={viewDecorationCounts(scene.decorations, scene.nodes, filterMatchedNodePaths, zoneDisplayLayouts)} />}
@@ -4722,7 +5188,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         : visibleAreaZone && visibleArea ? renderAreaFrame(visibleAreaZone, visibleArea) : null}
 
       <div className="kplex-nodes">
-        {standardNodes.filter((node) => nodeDrag?.path !== node.page.path && visibleOccurrenceIds.has(occurrenceKey(node))).map((node) => renderNode(node, renderedNodeMap.get(occurrenceKey(node)) ?? node))}
+        {standardNodes.filter((node) => !isDraggedNode(node) && visibleOccurrenceIds.has(occurrenceKey(node))).map((node) => renderNode(node, renderedNodeMap.get(occurrenceKey(node)) ?? node))}
         {ZONES.map((zone) => {
           const panel = scene.zoneViewports[zone];
           return panel ? renderScrollZone(zone, panel) : null;
@@ -4741,33 +5207,42 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       viewportWidth={viewport.current.clientWidth} viewportHeight={viewport.current.clientHeight}
     />}
 
-    {centralEditorPage && centralEditorNode && <div
+    {centralEditorPage && displayedEditorNode && <div
       ref={centralEditorOverlayElement}
+      data-kplex-editor-binding={boundEditorBinding?.id}
+      data-kplex-editor-occurrence={boundEditorBinding?.occurrenceId}
+      inert={boundEditorConcealed || undefined}
       className={`kplex-central-editor-overlay${centralEditorMaximized ? " is-maximized" : ""}`}
       style={{
-        left: camera.current.x + (centralEditorNode.x - centralEditorNode.width / 2) * camera.current.scale,
-        top: camera.current.y + (centralEditorNode.y - centralEditorNode.height / 2) * camera.current.scale,
-        width: Math.max(1, centralEditorNode.width * camera.current.scale),
-        height: Math.max(1, centralEditorNode.height * camera.current.scale),
+        left: camera.current.x + (displayedEditorNode.x - displayedEditorNode.width / 2) * camera.current.scale,
+        top: camera.current.y + (displayedEditorNode.y - displayedEditorNode.height / 2) * camera.current.scale,
+        width: Math.max(1, displayedEditorNode.width * camera.current.scale),
+        height: Math.max(1, displayedEditorNode.height * camera.current.scale),
+        visibility: boundEditorConcealed ? "hidden" : undefined,
         "--kplex-editor-camera-scale": camera.current.scale,
       } as CSSProperties}
       onContextMenu={(event: MouseEvent<HTMLDivElement>) => event.stopPropagation()}
     >
       <CentralNodeEditor
-        key={centralEditorPage.path}
+        key={boundEditorBinding?.id ?? centralEditorPage.path}
+        bindingId={boundEditorBinding?.id}
+        onCloseReady={boundEditorBinding ? close => {
+          const registration = {id: boundEditorBinding.id, close}; boundEditorClose.current = registration;
+          return () => {if (boundEditorClose.current === registration) boundEditorClose.current = null;};
+        } : undefined}
         plugin={plugin}
         hostLeaf={hostLeaf}
         page={centralEditorPage}
-        defaultMode={settings.centralNodeMarkdownMode}
+        defaultMode={boundEditorBinding?.mode ?? settings.centralNodeMarkdownMode}
         maximized={centralEditorMaximized}
         allowMaximize={centralEditorCanMaximize}
         activateHostLeafOnInteraction={surface === "sidepanel" || Platform.isMobile}
-        onModeChange={onCentralNodeModeChange}
+        onModeChange={mode => boundEditorBinding ? viewSession?.editors.setMode(boundEditorBinding.id, mode) : onCentralNodeModeChange(mode)}
         onMaximizedChange={setCentralEditorMaximizedState}
         onCollapse={collapseCentralEditor}
         onOpenMenu={/** Reuse the exact central node's context policy and owning view menu. */ (button) => {
           const bounds = button.getBoundingClientRect();
-          showNodeContextMenuAt(centralEditorNode, bounds.left, bounds.bottom);
+          showNodeContextMenuAt(displayedEditorNode, bounds.left, bounds.bottom);
         }}
         onNavigate={(nextFile) => {
           const target = index.get(nextFile.path);
@@ -4794,6 +5269,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         simplifiedHint={`${translate("layout.simplifiedHelp")} ${translate("layout.arrangementScope", {
           device: translate(`typography.${typographyDevice}`), surface: translate(lateralArrangementSurface(surface) === "leaf" ? "layout.mainTab" : "layout.sidepanel"),
         })}`} />}
+      {configuredLayout.status === "available" && contributedLayoutControls.length > 0 && <div className="kplex-density-axes">
+        {contributedLayoutControls.map(control => <LayoutSlider key={control.field} label={translate(control.labelKey)} caption={translate(control.captionKey)}
+          hint={control.hintKey ? translate(control.hintKey) : undefined} icon={<ObsidianIcon name={control.icon} size={11} />}
+          value={Number(configuredLayout.values[control.field])} displayValue={Number(configuredLayout.values[control.field]).toFixed(2)}
+          min={control.min} max={control.max} step={control.step} onChange={value => changeViewLayoutValue(control.field, value)} />)}
+      </div>}
       <div className="kplex-typography-group">
       <div className="kplex-typography-scope">
         <span>{translate("typography.scopeHint", { device: translate(`typography.${typographyDevice}`),
@@ -4831,6 +5312,18 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     </LayoutControls>
 
     <div className="kplex-zoom-controls">
+      {viewDefinition.hierarchy && <>
+        {activePath !== sceneScope && <button type="button" aria-label={translate("mindmap.useAttentionRoot")}
+          onClick={/** External navigation keeps this map intact; only this explicit action adopts the current note as its new root. */ event => {
+            event.stopPropagation();const page=index.get(activePath);if(page)runNodeAction("view.root.selected",page);
+          }}><ObsidianIcon name="git-fork" size={16} /></button>}
+        <button type="button" aria-label={translate("actions.branches.expand-generation")}
+          disabled={!preparedDefinitionScene?.projection?.occurrences.some(row => row.branch?.canExpand && !row.branch.expanded)}
+          onClick={/** Bounded next frontier is a shared action, not recursive source work in the control. */ event => {event.stopPropagation();runGenerationAction("branches.expand-generation");}}><ObsidianIcon name="list-plus" size={16} /></button>
+        <button type="button" aria-label={translate("actions.branches.collapse-generation")}
+          disabled={!preparedDefinitionScene?.projection?.occurrences.some(row => row.branch?.canExpand && row.branch.expanded)}
+          onClick={/** Collapsing a generation uses the same exact editor-removal guard as one branch. */ event => {event.stopPropagation();runGenerationAction("branches.collapse-generation");}}><ObsidianIcon name="list-minus" size={16} /></button>
+      </>}
       <button aria-label={translate("graph.zoomIn")} onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); void plugin.actionManager.dispatch({ id: "view.zoom-in", source: "toolbar", surfaceId: actionSurfaceId }); }}><ObsidianIcon name="zoom-in" size={16} /></button>
       <button aria-label={translate("graph.zoomOut")} onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); void plugin.actionManager.dispatch({ id: "view.zoom-out", source: "toolbar", surfaceId: actionSurfaceId }); }}><ObsidianIcon name="zoom-out" size={16} /></button>
       <button aria-label={translate("graph.fitGraph")} onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); void plugin.actionManager.dispatch({ id: "view.fit", source: "toolbar", surfaceId: actionSurfaceId }); }}><ObsidianIcon name="focus" size={16} /></button>
