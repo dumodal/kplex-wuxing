@@ -40,6 +40,44 @@ const mount=async definition=>{
 };
 `;
 
+test('Alt/Option click explicitly centers through shared actions in every view and ordinary Mind Map clicks retain the root',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${initialize}
+ const errors=[];window.addEventListener('error',event=>errors.push(event.message));let opened=0;plugin.openFileInMainTab=()=>{opened++};
+ for(const definition of [...M.builtInPlexViews.available,M.exampleViewDefinition]){
+  const ui=await mount(definition),accepted=[];
+  ui.props.onActivate=(page,intent)=>{
+   if(intent==='destination'&&definition.navigation==='rooted'&&!ui.session.setRoot(page.path))return false;
+   accepted.push({path:page.path,intent});ui.props.activePath=page.path;ui.render();return true;
+  };ui.render();
+  const implementations=Object.fromEntries(Object.keys(ui.ports.current.implementations).map(id=>[id,{
+   availability:context=>ui.ports.current.implementations[id].availability(context),execute:context=>ui.ports.current.implementations[id].execute(context)}]));
+  const release=plugin.actionManager.registerSurface({id:ui.props.actionSurfaceId,generation:1,
+   readSnapshot:()=>({mounted:true,visible:true,windowId:'main',center:M.actionNodeRef(pages.get(ui.props.activePath)),selected:null,focusRegion:'graph',interactionRevision:0,viewRevision:ui.session.getSnapshot()}),implementations});
+  const card=ui.container.querySelector('.kplex-thought[data-kplex-path="B.md"]');check(card,'Displayed B '+definition.id);
+  if(definition.navigation==='rooted'){
+   M.flushSync(()=>card.dispatchEvent(new MouseEvent('click',{bubbles:true})));await wait();
+   check(ui.session.layoutRoot('A.md')==='A.md'&&accepted.length===0,'Ordinary branch click keeps root/attention policy');
+  }
+  M.flushSync(()=>card.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,altKey:true,detail:1})));await wait();await wait();
+  check(accepted.length===1&&accepted[0].path==='B.md'&&accepted[0].intent==='destination','Shared destination accepted '+definition.id);
+  check(ui.props.activePath==='B.md','Attention centered '+definition.id);
+  if(definition.navigation==='rooted')check(ui.session.layoutRoot('B.md')==='B.md','Pinned root changed explicitly');
+  const centered=ui.container.querySelector('.kplex-thought[data-kplex-path="B.md"]');
+  M.flushSync(()=>centered.dispatchEvent(new MouseEvent('dblclick',{bubbles:true,altKey:true,detail:2})));await wait();
+  check(opened===0,'Alt/Option center double-click cannot also open file '+definition.id);
+  if(definition.navigation==='rooted'){
+   ui.session.editors.open({viewId:definition.id,occurrenceId:'root',target:{nodeId:'B.md',path:'B.md',fileIdentity:M.actionNodeRef(pages.get('B.md')).fileIdentity},dimensions:{width:420,height:240},mode:'source'});
+   check(ui.session.editors.bindings.length===1,'Existing binding admitted for guard proof');
+   const refused=await plugin.actionManager.dispatch({id:'node.activate',source:'context-menu',surfaceId:ui.props.actionSurfaceId,
+    target:{kind:'explicit',node:M.actionNodeRef(pages.get('A.md'))},args:{intent:'destination'}});
+   check(refused.status==='unavailable'&&ui.session.layoutRoot('B.md')==='B.md'&&accepted.length===1,'Center action must preserve live occurrence editor/root');
+  }
+  release();ui.close();
+ }
+ check(errors.length===0,'No DOM errors '+errors.join(';'));check(work.body===0&&work.scans===0,'No source work');return true})()`),true)}finally{await host.cleanup()}
+});
+
 test('Wander starts, highlights and navigates with local proof in Compass, Mind Map, Wu Xing and the public example',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${initialize}

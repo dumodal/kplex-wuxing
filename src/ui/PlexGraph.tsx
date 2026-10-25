@@ -104,7 +104,7 @@ import { usePlexTypeSelection } from "./usePlexTypeSelection";
 import { PlexTypeSelectionStatus } from "./features/PlexTypeSelectionStatus";
 import { type ActionContext, type ActionImplementation } from "../application/ActionManager";
 import type {PlexEditorBinding} from "../application/PlexEditorBindings";
-import { ACTION_DIRECTIONS, type ActionId, type ActionOutcome, type NodeRef } from "../core/plex/actions";
+import { ACTION_DIRECTIONS, type ActionId, type ActionOutcome, type ActionRequest, type NodeRef } from "../core/plex/actions";
 import { actionNodeRef, resolveActionPage } from "../adapters/obsidian/actionNode";
 import { acceptPlexKeyEvent } from "./actionKeyboardOwnership";
 import { effectiveActionBindings } from "../core/plex/actionPreferences";
@@ -700,7 +700,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   onApplyFindFilter: (query: string) => void;
   appliedFindFilterQuery: string | null;
   onClearFindFilter: () => void;
-  onActivate: (page: GraphPage, intent?: "destination") => void;
+  onActivate: (page: GraphPage, intent?: "destination") => boolean | void;
   onWanderActivate: (page: GraphPage) => void;
   onOpen: (page: GraphPage) => void | Promise<unknown>;
   onOpenInSidecar: (page: GraphPage) => Promise<void>;
@@ -3760,10 +3760,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   };
   const graphAction = surfaceAction;
   /** Capture an explicit occurrence for menus and pointer controls using the same dispatcher as keys. */
-  const runNodeAction = (id: ActionId, target: GraphPage, occurrenceId?: string): void => {
-    void plugin.actionManager.dispatch({ id, source: "context-menu", surfaceId: actionSurfaceId,
-      target: { kind: "explicit", node: actionNodeRef(target), occurrenceId } }).then(outcome => {
-        if (["editor.expand", "branch.toggle", "branches.expand-generation", "branches.collapse-generation", "view.root.selected"].includes(id)
+  const runNodeAction = (id: ActionId, target: GraphPage, occurrenceId?: string, intent?: "destination"): void => {
+    const request: ActionRequest = id === "node.activate" && intent ? {id, source: "context-menu", surfaceId: actionSurfaceId,
+      target: {kind: "explicit", node: actionNodeRef(target), occurrenceId}, args: {intent}}
+      : {id, source: "context-menu", surfaceId: actionSurfaceId, target: {kind: "explicit", node: actionNodeRef(target), occurrenceId}};
+    void plugin.actionManager.dispatch(request).then(outcome => {
+        if ((intent || ["editor.expand", "branch.toggle", "branches.expand-generation", "branches.collapse-generation", "view.root.selected"].includes(id))
           && outcome.status === "unavailable") new Notice(translateActionText(translate, outcome.reasonKey));
       });
   };
@@ -4061,6 +4063,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       if (!page) return;
       if (page.transient?.kind === "group") { unfoldGroup(page); return; }
       if (page.transient?.kind === "section") return plugin.openSection(page, hostLeaf);
+      if (context.request.id === "node.activate" && context.request.args?.intent === "destination") {
+        if (viewDefinition.navigation === "rooted" && (!viewSession || viewSession.editors.bindings.length && page.path !== sceneScope))
+          return {status: "unavailable", reasonKey: "actions.branch-editor-blocked"};
+        if (context.target.kind === "node" && context.target.occurrenceId) navigationOccurrence.current = {identity: page.path, id: context.target.occurrenceId};
+        return onActivate(page, "destination") === false ? {status: "unavailable", reasonKey: "actions.target-unavailable"} : {status: "completed"};
+      }
       if (!viewDefinition.hierarchy && context.request.source === "local-hotkey" && page.path === activePath && page.file) return renameFrom(context);
       // A saved/search target is an explicit map destination. A displayed occurrence is inspection
       // inside the retained map; its attention must not retarget an expanded native editor.
@@ -4330,6 +4338,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const isPlaceholderFolderGesture = (page: GraphPage, event: MouseEvent<HTMLDivElement>): boolean =>
     Boolean(Keymap.isModEvent(event.nativeEvent)) && !page.file && !page.url && !page.isFolder && !page.isTag && !page.transient;
 
+  /** Alt/Option alone explicitly centers a node; Mod remains the placeholder-creation gesture. */
+  const isCenterNodeGesture = (event: MouseEvent<HTMLDivElement>): boolean => event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
+
   /** The definition chooses primary branch toggling or activation. Shared branch guards refuse folds that would remove a live editor; root and attention remain unchanged. */
   const activateOccurrence = (page: GraphPage, occurrenceId: string | undefined, primary: boolean): void => {
     if (primary && viewDefinition.hierarchy?.primary === "expand" && occurrenceId) {
@@ -4366,6 +4377,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       if (event.detail > 1) return;
       void plugin.actionManager.dispatch({ id: "node.open", source: "context-menu", surfaceId: actionSurfaceId,
         target: { kind: "explicit", node: actionNodeRef(target) }, args: { chooseFolder: true, preserveCenter: true } });
+      return;
+    }
+    if (event && isCenterNodeGesture(event)) {
+      event.preventDefault();
+      if (event.detail > 1) return;
+      runNodeAction("node.activate", target, occurrenceId, "destination");
       return;
     }
     activateOccurrence(target, occurrenceId, !event || !(event.ctrlKey || event.metaKey || event.shiftKey || event.altKey));
@@ -4680,7 +4697,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       flair={activeNodeFlair === baseNode.page.path}
       connectionState={connectionStateFor(baseNode)}
       onActivate={/** Capture the clicked occurrence; explicit placeholder folder gestures retain their target. */ (_node, event) => {if (!viewFailed) activateNode(baseNode.page, sceneNodeKeys.get(baseNode), event);}}
-      onOpen={/** Modified placeholder clicks already opened the one in-place creation dialog. */ (_, event) => { if (!viewFailed && !isPlaceholderFolderGesture(baseNode.page, event)) openNode(baseNode.page); }}
+      onOpen={/** Explicit create/center gestures cannot also open a file on their double-click event. */ (_, event) => { if (!viewFailed && !isPlaceholderFolderGesture(baseNode.page, event) && !isCenterNodeGesture(event)) openNode(baseNode.page); }}
       nativeDraggable={!viewFailed && canDragNodeLink(baseNode.page) && !hasCentralEditor}
       onNativeDragStart={/** The actual displayed key and primary semantic context travel through the shared native payload. */ (_, event) => beginNativeNodeDrag(baseNode.page, baseNode.role, baseNode.label, event)}
       onNativeDragEnd={endNativeNodeDrag}
@@ -4899,7 +4916,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
               }}
               title={translate("graph.relatedNotePath", { label: child.label, path: child.relation.page.path })}
               onClick={(event: MouseEvent<HTMLDivElement>) => { event.stopPropagation(); activateNode(child.relation.page, child.key, event); }}
-              onDoubleClick={/** Modified placeholder creation belongs to single click, including expanded rows. */ (event: MouseEvent<HTMLDivElement>) => { event.stopPropagation(); if (!isPlaceholderFolderGesture(child.relation.page, event)) openNode(child.relation.page); }}
+              onDoubleClick={/** Explicit create/center gestures belong to single click, including expanded rows. */ (event: MouseEvent<HTMLDivElement>) => { event.stopPropagation(); if (!isPlaceholderFolderGesture(child.relation.page, event) && !isCenterNodeGesture(event)) openNode(child.relation.page); }}
               onContextMenu={/** Mini occurrences reuse the same captured native node menu policy. */ (event: MouseEvent<HTMLDivElement>) => {
                 event.preventDefault(); event.stopPropagation(); runNodeAction("node.context-menu", child.relation.page, child.key);
               }}

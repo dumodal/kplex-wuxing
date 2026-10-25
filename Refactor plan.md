@@ -6229,3 +6229,6 @@ B1 closeout adds the explicit collection-reset guard: restoring view defaults re
 
 
 2026-10-25 PR220/issue221: shared Wander readiness uses existing local attention certificate and canonical identity rather than rendered physical/numerical gate completeness. Actual negative renderer reproduction; production registry plus public example start/highlight/navigate/arrive and retain rooted intent. Focused46 pass, real build/scanner pass; no source/count work from readiness. Final Windows/source-head coverage pending. Existing controller/route/editor/camera ownership retained; C15-C26 paused.
+
+
+2026-10-25 PR220 maintainer addition: Mod placeholder creation retained; Alt/Option alone dispatches bounded node.activate destination intent through existing App navigation/session guards in every view. Rooted views reroot explicitly; ordinary branch clicks retain root, live occurrence binding blocks displacement. Shared expanded/regular double-clicks cannot additionally open a file. Focused66, production build/scanner pass; Windows exact-final-head modifier/editor checks pending. No new action/navigation/editor/file writer owner.

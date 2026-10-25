@@ -1376,7 +1376,7 @@ import {actionNodeRef,resolveActionPage} from ${JSON.stringify(join(root,'src/ad
 import {captureSurfaceContinuation} from ${JSON.stringify(join(root,'src/ui/surfaceContinuation.ts'))};
 const Keymap={isModEvent:event=>event.ctrlKey||event.metaKey},openNode=(...args)=>miniOpened.push(args),clearHoverIntent=()=>{},setExternalDropZone=()=>{};
 const runNodeAction=(...args)=>activated.push(args);
-${uiDefinitions("src/ui/PlexGraph.tsx", ["isPlaceholderFolderGesture", "activateOccurrence", "activateNode"])}
+${uiDefinitions("src/ui/PlexGraph.tsx", ["isPlaceholderFolderGesture", "isCenterNodeGesture", "activateOccurrence", "activateNode"])}
 const manager={draggable:null,dragLink:(event,linktext,sourcePath,title,source)=>({type:"link",linktext,sourcePath,title,source}),onDragStart(event,value){this.draggable=value},onDragEnd(){this.draggable=null}};
 const previewed=[];
 const plugin={triggerHoverPreview:(page,target,event)=>previewed.push({page,target,ctrl:event.ctrlKey}),actionManager:{dispatch:request=>materialized.push(request),readSnapshot:()=>({mounted:true,viewRevision:0,interactionRevision:0,center:{identity:activePath}})},app:{dragManager:manager,vault:{getFileByPath:path=>[centerPage,attachmentPage,placeholderPage,sentinelPage,miniPage].find(page=>page.file?.path===path)?.file??null}}};
@@ -1424,9 +1424,18 @@ try {
   const real=[...container.querySelectorAll('.kplex-thought')].find(element=>element.dataset.kplexPath===attachmentPage.path);
   flushSync(()=>real.dispatchEvent(new MouseEvent('click',{bubbles:true,ctrlKey:true})));
   check(activated.length===beforeActivations+2,'Modified real-file click was incorrectly reserved for placeholder creation');
+  const beforeCenterWrites=materialized.length;
+  flushSync(()=>ghost.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,altKey:true,detail:1})));
+  check(activated.at(-1)?.[0]==='node.activate'&&activated.at(-1)?.[1]===placeholderPage&&activated.at(-1)?.[3]==='destination','Alt/Option placeholder click did not use shared explicit centering');
+  check(materialized.length===beforeCenterWrites,'Alt/Option centering materialized a placeholder');
   const mini=container.querySelector(".kplex-expanded-mini-thought"),transfer=new DataTransfer();
   check(!mini.hasAttribute("aria-label")&&mini.hasAttribute("title"),"Expanded rows retained competing native tooltip sources");
   check(document.getElementById(mini.getAttribute("aria-labelledby"))?.textContent===miniPage.name,"Expanded row lost its full accessible name");
+  const beforeCenterDoubleOpen=miniOpened.length;
+  flushSync(()=>mini.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,altKey:true,detail:1})));
+  check(activated.at(-1)?.[0]==='node.activate'&&activated.at(-1)?.[1]===miniPage&&activated.at(-1)?.[3]==='destination','Expanded Alt/Option click lost explicit center intent');
+  flushSync(()=>mini.dispatchEvent(new MouseEvent('dblclick',{bubbles:true,altKey:true,detail:2})));
+  check(miniOpened.length===beforeCenterDoubleOpen,'Expanded Alt/Option double-click also opened the file');
   const releasePreview=bindHoverPreview(container,hoverPreview.current),beforePreviews=previewed.length;
   flushSync(()=>mini.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse'})));
   window.dispatchEvent(new KeyboardEvent('keydown',{key:'Control',ctrlKey:true}));
@@ -1439,6 +1448,7 @@ try {
   check(manager.draggable?.linktext===miniPage.path&&manager.draggable?.source.owner===viewport.current&&manager.draggable.source.occurrence?.id===mini.dataset.kplexKeyboardId&&!manager.draggable.source.occurrence.relationship,"Expanded drag did not retain its exact copy-only occurrence");
   flushSync(()=>mini.dispatchEvent(new DragEvent("dragend",{bubbles:true,dataTransfer:transfer})));check(manager.draggable===null,"Expanded native drag did not retire");
   flushSync(()=>mini.dispatchEvent(new MouseEvent("dblclick",{bubbles:true,ctrlKey:true})));check(miniOpened.at(-1)?.[0]===miniPage&&miniOpened.at(-1)?.[1]===undefined,"Real expanded node double-click gained placeholder-only creation behavior");
+
   // GraphIndex.renameTreeEndpoint intentionally retains canonical page identity and mutates its
   // path; an unrelated React update may reuse the existing scene before its publication commits.
   attachmentPage.path = "After.png"; attachmentPage.name = "After.png"; attachmentPage.file.path = "After.png";

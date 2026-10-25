@@ -88,6 +88,8 @@ Shared badges, property-assignment targets/actions and measured section sub-anch
 
 Wander is shared base behavior for every view, not an opt-in gate capability. It uses admitted displayed canonical occurrences, the existing local attention-scope certificate, shared selection/reveal and normal activation. Complete corpus/numerical gate counts and a rendered center-role node are not prerequisites. Rooted layouts retain their navigation policy as attention moves. Unprepared/failed/hidden/stale scenes and active interaction/motion still decline; readiness never requests sources or gate counts.
 
+Alt/Option-click is an explicit node-centering gesture for every view. The shared `node.activate` action accepts the finite invocation argument `{intent: "destination"}` and delegates to the existing navigation owner. Attention-following views activate the target; rooted views explicitly reroot and activate after their existing editor/native identity safeguards. Ordinary branch clicks retain their policy. Ctrl/Cmd-click still opens the in-place placeholder creation choice. Modifier combinations are not implicitly interpreted as centering. The same click/double-click separation applies to expanded rows.
+
 ## Current validation
 
 The implemented configuration batch passes 45 pure/actual Settings-host Chromium tests, including independent queued/received presets, stale same-preset and container epochs, A→B→A, reset scope, durable/idempotent migration, future payloads, disk rejection and retired registration. Architecture/core/scanner/build are separate gates. Native migration/preset UI and the remaining expanded API/Facets acceptance are still pending; see [the current validation record](validation/facets-220-2026-10-25.md).
