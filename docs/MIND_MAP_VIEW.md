@@ -1,6 +1,6 @@
 # Mind Map canvas view
 
-Prepared by Zsolt's Codex Agent, 2026-10-24. **Implementation started; bounded ordinary-Markdown M0 proof is validated at905b777. M1–M3 production integration and real source-demand proof are implemented; production native editor/session/settings and legacy-host lanes pass on932ddae; final corrected-head full/CI acceptance remains pending. FileManager and fresh-popout Sidecar limitations remain explicit.**
+Prepared by Zsolt's Codex Agent, 2026-10-24. **Implemented and locally validated at `342ad13`: complete verification and exact-artifact production editor/session/settings/legacy native lanes pass. Capacity one. Publication-head CI is authoritative on PR219; FileManager and fresh-popout Sidecar limits remain explicit.**
 
 ## Baseline and start gate
 
@@ -168,3 +168,8 @@ Native acceptance uses `verify:obsidian:mindmap` with `KPLEX_MINDMAP_LANE=editor
 Source932ddae passes eight production editor cases (including explicit camera retention), two independent main/popout session cases,25 native settings/selector receipts and the12-case M0/legacy-host regression. Hierarchy Find now selects/reveals through the existing owner without activation; Compass remains reveal-only. Geometry proof waits for current post-edit frontier admission and rechecks genuinely unsaved text before its single resize. The host can withhold scene admission during source preparation; continuous scene availability is not claimed. Fresh-popout Sidecar creation remained empty and is not a passing workflow; independence uses a real main-window Sidecar. All failed observations are retained in the [validation record](validation/mind-map-219-2026-10-25.md) and [ordered receipts](validation/mind-map-219-receipts.json). e4ec8b3 full verify:obsidian and CI478 passed; corrected-head final full/CI remains the next gate. No merge authorized.
 
 Final lifecycle review also corrects unavailable projection being mistaken for empty frontier demand. Last admitted bounded leases now survive unavailable output without granting stale scene authority; valid collapse/root/view/unmount still retire them. Actual callback/Chromium negatives reproduce the old release/reacquisition; corrected renderer and33 focused checks/build/scanner pass. The33bfd56 full attempt was intentionally interrupted and is not a pass; final corrected-source full/native/CI follows.
+
+
+### Local validation complete
+
+Runtime342ad13571a0f36dd2f20314940fe29ee6db175c passes clean full verify:obsidian7/130/1483/244/357/777, zero failures/skips, scanner/build/native smoke. Exact artifact5d0e3b5b passes production editor8, independent-session2, native settings/selector25 and M0/unchanged attention-host12, with cleanup. Small original8 files/77 content hashes and closed state are restored. Final architecture/lifecycle review confirmed admitted-only frontier retirement: unavailable output retains bounded leases without stale scene authority; valid collapse/root/view/unmount still retire them. [Final evidence and limits](validation/mind-map-219-2026-10-25.md), [all ordered receipts](validation/mind-map-219-receipts.json). Publication-head CI/completion is recorded on PR219. No merge/release/production deployment authorized; #220 remains independent.

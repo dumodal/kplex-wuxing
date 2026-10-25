@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "sourceRuntime": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db",
-  "status": "interim; final clean verification pending",
-  "note": "Ordered native samples, including failures. Diagnostic policy wrappers were forwarding-only and restored; their sample is diagnostic, not acceptance. Production source remains932ddae; driver hashes distinguish later harness corrections. Test note contents and workspace/settings payloads are omitted.",
+  "sourceRuntime": "342ad13571a0f36dd2f20314940fe29ee6db175c",
+  "status": "Local complete verification, exact-artifact native acceptance and restoration passed; publication-head CI is authoritative on PR219.",
+  "note": "Ordered native samples include every retained failure. Earlier artifacts remain separately attributed; no native workflow is inferred from an unrelated passing sample. Forwarding-only policy diagnostics were restored and are not acceptance instrumentation. Test-note contents and workspace/settings payloads are omitted.",
   "samples": [
     {
       "name": "mindmap-219-editor",
@@ -46,7 +46,8 @@
           "id": "production-diamond-and-terminal-cycle-references"
         }
       ],
-      "lastPhase": "canonical-branches"
+      "lastPhase": "canonical-branches",
+      "sourceRuntime": "e4ec8b3647cac7c476038ec4d612280b3ba3c52e"
     },
     {
       "name": "mindmap-219-editor",
@@ -90,7 +91,8 @@
           "id": "production-diamond-and-terminal-cycle-references"
         }
       ],
-      "lastPhase": "canonical-branches"
+      "lastPhase": "canonical-branches",
+      "sourceRuntime": "e4ec8b3647cac7c476038ec4d612280b3ba3c52e"
     },
     {
       "name": "mindmap-219-editor",
@@ -137,7 +139,8 @@
           "id": "find-selects-exact-occurrence-without-activation-or-editor"
         }
       ],
-      "lastPhase": "canonical-branches"
+      "lastPhase": "canonical-branches",
+      "sourceRuntime": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db"
     },
     {
       "name": "mindmap-219-editor",
@@ -184,7 +187,8 @@
           "id": "find-selects-exact-occurrence-without-activation-or-editor"
         }
       ],
-      "lastPhase": "canonical-branches"
+      "lastPhase": "canonical-branches",
+      "sourceRuntime": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db"
     },
     {
       "name": "mindmap-219-editor",
@@ -228,7 +232,8 @@
           "id": "staging-native-theme-information-dismissed"
         }
       ],
-      "lastPhase": "fixture"
+      "lastPhase": "fixture",
+      "sourceRuntime": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db"
     },
     {
       "name": "mindmap-219-editor",
@@ -279,7 +284,8 @@
           "capacity": 1
         }
       ],
-      "lastPhase": "canonical-branches"
+      "lastPhase": "canonical-branches",
+      "sourceRuntime": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db"
     },
     {
       "name": "mindmap-219-editor",
@@ -330,7 +336,8 @@
           "capacity": 1
         }
       ],
-      "lastPhase": "canonical-branches"
+      "lastPhase": "canonical-branches",
+      "sourceRuntime": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db"
     },
     {
       "name": "mindmap-219-editor",
@@ -381,7 +388,8 @@
           "capacity": 1
         }
       ],
-      "lastPhase": "canonical-branches"
+      "lastPhase": "canonical-branches",
+      "sourceRuntime": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db"
     },
     {
       "name": "mindmap-219-editor",
@@ -432,7 +440,8 @@
           "capacity": 1
         }
       ],
-      "lastPhase": "settle-attention-frontiers"
+      "lastPhase": "settle-attention-frontiers",
+      "sourceRuntime": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db"
     },
     {
       "name": "mindmap-219-editor",
@@ -504,7 +513,8 @@
         "Owned native-view restoration is not whole-application restart.",
         "Dedicated M0 FileManager cache-gate limitation remains unproven; no FileManager pass claimed."
       ],
-      "lastPhase": "complete"
+      "lastPhase": "complete",
+      "sourceRuntime": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db"
     },
     {
       "name": "mindmap-219-sessions",
@@ -544,7 +554,8 @@
         "scripts/testing/obsidian/nativeDocumentSessions.mjs": "296a4dfd58edba9736f810e0aab03dac48b52db63b05b7fb87fb5e4736ae0805"
       },
       "cases": [],
-      "lastPhase": "independent-native-sessions"
+      "lastPhase": "independent-native-sessions",
+      "sourceRuntime": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db"
     },
     {
       "name": "mindmap-219-sessions",
@@ -584,7 +595,8 @@
         "scripts/testing/obsidian/nativeDocumentSessions.mjs": "296a4dfd58edba9736f810e0aab03dac48b52db63b05b7fb87fb5e4736ae0805"
       },
       "cases": [],
-      "lastPhase": "independent-native-sessions"
+      "lastPhase": "independent-native-sessions",
+      "sourceRuntime": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db"
     },
     {
       "name": "mindmap-219-sessions",
@@ -624,7 +636,8 @@
         "scripts/testing/obsidian/nativeDocumentSessions.mjs": "296a4dfd58edba9736f810e0aab03dac48b52db63b05b7fb87fb5e4736ae0805"
       },
       "cases": [],
-      "lastPhase": "independent-native-sessions"
+      "lastPhase": "independent-native-sessions",
+      "sourceRuntime": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db"
     },
     {
       "name": "mindmap-219-sessions",
@@ -677,7 +690,8 @@
         "Owned native-view restoration is not whole-application restart.",
         "Dedicated M0 FileManager cache-gate limitation remains unproven; no FileManager pass claimed."
       ],
-      "lastPhase": "complete"
+      "lastPhase": "complete",
+      "sourceRuntime": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db"
     },
     {
       "name": "canvas-settings-218",
@@ -830,7 +844,8 @@
           "changes": []
         }
       ],
-      "lastPhase": "native-settings"
+      "lastPhase": "native-settings",
+      "sourceRuntime": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db"
     },
     {
       "name": "canvas-settings-218",
@@ -1032,7 +1047,8 @@
         "acquisitions": 0,
         "saves": 1
       },
-      "lastPhase": "native-main-complete"
+      "lastPhase": "native-main-complete",
+      "sourceRuntime": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db"
     },
     {
       "name": "occurrence-editors-219",
@@ -1125,7 +1141,8 @@
         "Owned view recreation is not a whole-application restart.",
         "External rename uses Vault.rename; the separate FileManager cache-gate failure remains unpassed."
       ],
-      "lastPhase": "complete"
+      "lastPhase": "complete",
+      "sourceRuntime": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db"
     },
     {
       "name": "mindmap-219-editor",
@@ -1172,7 +1189,8 @@
           "id": "find-selects-exact-occurrence-without-activation-or-editor"
         }
       ],
-      "lastPhase": "canonical-branches"
+      "lastPhase": "canonical-branches",
+      "sourceRuntime": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db"
     },
     {
       "name": "mindmap-219-editor",
@@ -1219,7 +1237,8 @@
           "id": "find-selects-exact-occurrence-without-activation-or-editor"
         }
       ],
-      "lastPhase": "canonical-branches"
+      "lastPhase": "canonical-branches",
+      "sourceRuntime": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db"
     },
     {
       "name": "mindmap-219-editor",
@@ -1292,7 +1311,433 @@
         "Dedicated M0 FileManager cache-gate limitation remains unproven; no FileManager pass claimed.",
         "Session acceptance preserves a main-window Sidecar; separate fresh-popout Sidecar creation remained empty and is not a passing workflow."
       ],
-      "lastPhase": "complete"
+      "lastPhase": "complete",
+      "sourceRuntime": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db"
+    },
+    {
+      "name": "mindmap-219-editor",
+      "status": "passed",
+      "startedAt": "2026-10-25T02:53:16.564Z",
+      "completedAt": "2026-10-25T02:53:20.647Z",
+      "node": "v22.22.2",
+      "obsidian": "1.15.0 (installer 1.14.0)",
+      "driver": {
+        "transport": "beb7677649f8ae6ae390c0df25b4a025a48777b5fbfc5e36c25f7fe252b8a0d3",
+        "scenario": "44af77021a967694f0102441dee71eff4beaf48bcf5ffd630a130aa674bc24b2",
+        "definitions": "e5be503cdf4cc87075e6346f7937686c62894e05292cfdf82a9b0a72792eddd9"
+      },
+      "artifacts": {
+        "main.js": "5d0e3b5b3e138e1956ba04a7c08e6fce98b6dc78c60ce1f5b45f20a0cfd0b165",
+        "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+        "styles.css": "783480a9cfae6de540d0ade75ecf59fc5b3240bee44ba2cf69b2b2c561cdff1f"
+      },
+      "cleanup": "passed",
+      "sample": "frontier-editor-342ad13",
+      "sourceRuntime": "342ad13571a0f36dd2f20314940fe29ee6db175c",
+      "sourceHashes": {
+        "src/index/GraphBuilder.ts": "b4ff3bc6298c1d30c58aa15a47d2636b8e32a33f1ff4c225ce2848534567cab8",
+        "src/index/GraphIndex.ts": "7c62e628ec8d27eb7ebccb3e15a945bbc22fee616e6cb19f2f39e391bb53664f",
+        "src/core/graph/compiler.ts": "ee403bd86870137e7ea769dfb5c5c7cfa27e08ad768b1815bef47eab9732bd4f",
+        "src/application/PlexHierarchyDemand.ts": "95370acfa8a0294b3357b7f9fb8981121130fd0df6eb0a93ec84895d63f8f8a8",
+        "src/application/PlexViewSession.ts": "dbd094adc49fdac297b17ce497ead0a15d54c4b1deb06a71aa8c61404b3b568b",
+        "src/ui/PlexGraph.tsx": "f4d08007d7ed754003262591990404024f7cae9ef609f784289069621c4b66f6",
+        "src/ui/ThoughtNode.tsx": "ad25666992ced0012c2ac7303ebde34f817fc6d015b24de0713240fe113219eb",
+        "src/ui/plexViews/prepareScene.ts": "3de261cb5b1a24bc3f6e6a4d4ce0cd9fa9bd7aa8fd25103e29fc69405a90e0be",
+        "src/ui/plexViews/useHierarchyDemand.ts": "21d19c5c5af0987180f9b3544bc3d0a678f3651ff1b2042623cd4284d50d5bf7",
+        "src/core/plex/views/mindmap/definition.ts": "b63afc7dbe2d979d2cf5cf791c62a7f303b038a7f4ad0b27ba91d146efc8aa9e",
+        "src/core/plex/views/mindmap/projection.ts": "1c36d3ea9a74d3b4c2278fa7328750cc5ab4cc596ced8b2e8ef8820baf4ebfb8",
+        "src/core/plex/views/mindmap/layout.ts": "76b13c69fe233dcf6b300d3837bc9eda07a83992219b21f9c0d92cecc04069c1",
+        "src/ui/plexViews/mindmap/settings.ts": "92da2bf83219fc65ba748f93e278217669fca4cff460a8c4b1379bd5f982c919",
+        "scripts/testing/obsidian/mindMap.mjs": "f419251e7335209d2d1a4bc5ef52a4eee8bcb59e01ad08061c3ce0f1e10f8b2b",
+        "scripts/testing/obsidian/nativeDocumentSessions.mjs": "296a4dfd58edba9736f810e0aab03dac48b52db63b05b7fb87fb5e4736ae0805"
+      },
+      "cases": [
+        {
+          "id": "staging-native-theme-information-dismissed"
+        },
+        {
+          "id": "production-diamond-and-terminal-cycle-references"
+        },
+        {
+          "id": "find-selects-exact-occurrence-without-activation-or-editor"
+        },
+        {
+          "id": "trusted-primary-B1-editor-retains-root-through-attention-C",
+          "capacity": 1
+        },
+        {
+          "id": "dirty-native-resize-type-reflow-focus-and-nonoverlap"
+        },
+        {
+          "id": "exact-filter-pin-branch-root-and-selector-save-guards"
+        },
+        {
+          "id": "dirty-popout-main-migration-and-durable-collapse"
+        },
+        {
+          "id": "production-root-fold-restoration",
+          "applicationRestart": false
+        },
+        {
+          "id": "trusted-explicit-root-from-outside-current-map"
+        }
+      ],
+      "capacity": 1,
+      "limits": [
+        "Native Electron automation; no physical Windows/mobile proof.",
+        "Owned native-view restoration is not whole-application restart.",
+        "Dedicated M0 FileManager cache-gate limitation remains unproven; no FileManager pass claimed.",
+        "Session acceptance preserves a main-window Sidecar; separate fresh-popout Sidecar creation remained empty and is not a passing workflow."
+      ]
+    },
+    {
+      "name": "mindmap-219-sessions",
+      "status": "passed",
+      "startedAt": "2026-10-25T02:53:59.339Z",
+      "completedAt": "2026-10-25T02:54:02.527Z",
+      "node": "v22.22.2",
+      "obsidian": "1.15.0 (installer 1.14.0)",
+      "driver": {
+        "transport": "beb7677649f8ae6ae390c0df25b4a025a48777b5fbfc5e36c25f7fe252b8a0d3",
+        "scenario": "44af77021a967694f0102441dee71eff4beaf48bcf5ffd630a130aa674bc24b2",
+        "definitions": "3602edc011ead4f1e0fe79edafc0ab0052bbdcedc71ea5e998538b83615f0a46"
+      },
+      "artifacts": {
+        "main.js": "5d0e3b5b3e138e1956ba04a7c08e6fce98b6dc78c60ce1f5b45f20a0cfd0b165",
+        "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+        "styles.css": "783480a9cfae6de540d0ade75ecf59fc5b3240bee44ba2cf69b2b2c561cdff1f"
+      },
+      "cleanup": "passed",
+      "sample": "frontier-sessions-342ad13",
+      "sourceRuntime": "342ad13571a0f36dd2f20314940fe29ee6db175c",
+      "sourceHashes": {
+        "src/index/GraphBuilder.ts": "b4ff3bc6298c1d30c58aa15a47d2636b8e32a33f1ff4c225ce2848534567cab8",
+        "src/index/GraphIndex.ts": "7c62e628ec8d27eb7ebccb3e15a945bbc22fee616e6cb19f2f39e391bb53664f",
+        "src/core/graph/compiler.ts": "ee403bd86870137e7ea769dfb5c5c7cfa27e08ad768b1815bef47eab9732bd4f",
+        "src/application/PlexHierarchyDemand.ts": "95370acfa8a0294b3357b7f9fb8981121130fd0df6eb0a93ec84895d63f8f8a8",
+        "src/application/PlexViewSession.ts": "dbd094adc49fdac297b17ce497ead0a15d54c4b1deb06a71aa8c61404b3b568b",
+        "src/ui/PlexGraph.tsx": "f4d08007d7ed754003262591990404024f7cae9ef609f784289069621c4b66f6",
+        "src/ui/ThoughtNode.tsx": "ad25666992ced0012c2ac7303ebde34f817fc6d015b24de0713240fe113219eb",
+        "src/ui/plexViews/prepareScene.ts": "3de261cb5b1a24bc3f6e6a4d4ce0cd9fa9bd7aa8fd25103e29fc69405a90e0be",
+        "src/ui/plexViews/useHierarchyDemand.ts": "21d19c5c5af0987180f9b3544bc3d0a678f3651ff1b2042623cd4284d50d5bf7",
+        "src/core/plex/views/mindmap/definition.ts": "b63afc7dbe2d979d2cf5cf791c62a7f303b038a7f4ad0b27ba91d146efc8aa9e",
+        "src/core/plex/views/mindmap/projection.ts": "1c36d3ea9a74d3b4c2278fa7328750cc5ab4cc596ced8b2e8ef8820baf4ebfb8",
+        "src/core/plex/views/mindmap/layout.ts": "76b13c69fe233dcf6b300d3837bc9eda07a83992219b21f9c0d92cecc04069c1",
+        "src/ui/plexViews/mindmap/settings.ts": "92da2bf83219fc65ba748f93e278217669fca4cff460a8c4b1379bd5f982c919",
+        "scripts/testing/obsidian/mindMap.mjs": "f419251e7335209d2d1a4bc5ef52a4eee8bcb59e01ad08061c3ce0f1e10f8b2b",
+        "scripts/testing/obsidian/nativeDocumentSessions.mjs": "296a4dfd58edba9736f810e0aab03dac48b52db63b05b7fb87fb5e4736ae0805"
+      },
+      "cases": [
+        {
+          "id": "production-Compass-Mindmap-independent-main-popout-panels-roots-and-Sidecar"
+        },
+        {
+          "id": "production-independent-native-view-restoration",
+          "applicationRestart": false
+        }
+      ],
+      "capacity": 1,
+      "limits": [
+        "Native Electron automation; no physical Windows/mobile proof.",
+        "Owned native-view restoration is not whole-application restart.",
+        "Dedicated M0 FileManager cache-gate limitation remains unproven; no FileManager pass claimed.",
+        "Session acceptance preserves a main-window Sidecar; separate fresh-popout Sidecar creation remained empty and is not a passing workflow."
+      ]
+    },
+    {
+      "name": "occurrence-editors-219",
+      "status": "passed",
+      "startedAt": "2026-10-25T02:54:32.674Z",
+      "completedAt": "2026-10-25T02:54:39.801Z",
+      "node": "v22.22.2",
+      "obsidian": "1.15.0 (installer 1.14.0)",
+      "driver": {
+        "transport": "beb7677649f8ae6ae390c0df25b4a025a48777b5fbfc5e36c25f7fe252b8a0d3",
+        "scenario": "6d24b8e4ac0a6432872354666e05ca882ab4729c6b29c12530b104afabfe354f",
+        "definitions": "195347ba639fa692a1f1cded868cf5152defd2c6c88973d78bd605a4ef890802"
+      },
+      "artifacts": {
+        "main.js": "5d0e3b5b3e138e1956ba04a7c08e6fce98b6dc78c60ce1f5b45f20a0cfd0b165",
+        "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+        "styles.css": "783480a9cfae6de540d0ade75ecf59fc5b3240bee44ba2cf69b2b2c561cdff1f"
+      },
+      "cleanup": "passed",
+      "sample": "frontier-m0-342ad13",
+      "sourceRuntime": "342ad13571a0f36dd2f20314940fe29ee6db175c",
+      "sourceHashes": {
+        "src/index/GraphBuilder.ts": "b4ff3bc6298c1d30c58aa15a47d2636b8e32a33f1ff4c225ce2848534567cab8",
+        "src/index/GraphIndex.ts": "7c62e628ec8d27eb7ebccb3e15a945bbc22fee616e6cb19f2f39e391bb53664f",
+        "src/core/graph/compiler.ts": "ee403bd86870137e7ea769dfb5c5c7cfa27e08ad768b1815bef47eab9732bd4f",
+        "src/application/PlexEditorBindings.ts": "2c9f09ea059c66d8fbeac9ae4f13c469932cbd84a16865ff58054ac51f824ec0",
+        "src/application/PlexViewSession.ts": "dbd094adc49fdac297b17ce497ead0a15d54c4b1deb06a71aa8c61404b3b568b",
+        "src/ui/PlexGraph.tsx": "f4d08007d7ed754003262591990404024f7cae9ef609f784289069621c4b66f6",
+        "src/ui/CentralNodeEditor.tsx": "48c809f364ecd242c917194db12cb6206c03e94706e84ac79fbcd26e65a65a8d",
+        "src/ui/plexViews/prepareScene.ts": "3de261cb5b1a24bc3f6e6a4d4ce0cd9fa9bd7aa8fd25103e29fc69405a90e0be",
+        "src/ui/plexViews/occurrenceEditors.ts": "b3464ff254ab8bad6b776d25965fcb49439d7acc69502e15f14febc6033ae363",
+        "src/adapters/obsidian/embeddedMarkdownLeaf.ts": "cbad76642d696b36ddec08b44ff78df2316724b06ebc3b2dff187867bac8347b",
+        "src/core/plex/actions.ts": "331d3a843b180ff6ef1a8085ea2c4497fd66fe4b9982cb987108bc5d963ccaa8"
+      },
+      "cases": [
+        {
+          "id": "R-A-B1-background-native-host",
+          "rootRetained": true,
+          "attentionRetained": true,
+          "sidecarRetained": true,
+          "focusRetained": true
+        },
+        {
+          "id": "attention-C-retains-R-and-native-B1",
+          "capacityReason": "actions.editor-capacity"
+        },
+        {
+          "id": "dirty-resize-reflow-scroll-clip-retains-native-state",
+          "clip": "inset(33.1617px 0px 0px)",
+          "capacity": 1
+        },
+        {
+          "id": "exact-filter-pin-branch-removal-and-selector-guards"
+        },
+        {
+          "id": "authoritative-removal-save-failure-retains-buffer-for-explicit-recovery"
+        },
+        {
+          "id": "native-save-failure-retention-and-explicit-durable-collapse"
+        },
+        {
+          "id": "bounded-editor-intent-restores-after-native-view-recreation",
+          "applicationRestart": false
+        },
+        {
+          "id": "dirty-popout-main-native-migration-and-durable-close"
+        },
+        {
+          "id": "external-rename-flushes-bound-document-without-old-path-resurrection"
+        },
+        {
+          "id": "external-deletion-does-not-resurrect-or-retarget-recreated-document"
+        },
+        {
+          "id": "unchanged-off-centre-attention-definition-and-Compass-native-compatibility"
+        },
+        {
+          "id": "native-teardown-persists-content-and-releases-editor-owners"
+        }
+      ],
+      "capacity": 1,
+      "cacheGate": {
+        "clean": false,
+        "inProgress": 0,
+        "queued": 273,
+        "running": true
+      },
+      "limits": [
+        "One live editor per canvas.",
+        "Native Electron automation; no physical mobile/Windows acceptance.",
+        "Owned view recreation is not a whole-application restart.",
+        "External rename uses Vault.rename; the separate FileManager cache-gate failure remains unpassed."
+      ]
+    },
+    {
+      "name": "canvas-settings-218",
+      "status": "passed",
+      "startedAt": "2026-10-25T02:55:23.217Z",
+      "completedAt": "2026-10-25T02:55:41.620Z",
+      "node": "v22.22.2",
+      "obsidian": "1.15.0 (installer 1.14.0)",
+      "driver": {
+        "transport": "beb7677649f8ae6ae390c0df25b4a025a48777b5fbfc5e36c25f7fe252b8a0d3",
+        "scenario": "997781f4b8162544a8505513722b54137fab2bb4604dd58eca02d6585329ddeb",
+        "definitions": "5e253255fcc36749fff15715f7d2792fc9bd8485567eb8cbd2d410911cc3370d"
+      },
+      "artifacts": {
+        "main.js": "5d0e3b5b3e138e1956ba04a7c08e6fce98b6dc78c60ce1f5b45f20a0cfd0b165",
+        "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+        "styles.css": "783480a9cfae6de540d0ade75ecf59fc5b3240bee44ba2cf69b2b2c561cdff1f"
+      },
+      "cleanup": "passed",
+      "sample": "frontier-settings-342ad13",
+      "sourceRuntime": "342ad13571a0f36dd2f20314940fe29ee6db175c",
+      "sourceHashes": {
+        "src/index/GraphBuilder.ts": "b4ff3bc6298c1d30c58aa15a47d2636b8e32a33f1ff4c225ce2848534567cab8",
+        "src/index/GraphIndex.ts": "7c62e628ec8d27eb7ebccb3e15a945bbc22fee616e6cb19f2f39e391bb53664f",
+        "src/core/graph/compiler.ts": "ee403bd86870137e7ea769dfb5c5c7cfa27e08ad768b1815bef47eab9732bd4f",
+        "src/settings.ts": "2fc40b7de98be98af59469d3f5487a2e8265041cc9380c65200aee2960e5c650",
+        "src/ui/plexViews/settingsContributions.ts": "9a0f0c462efe298351bac9b90afa0d0c39a69c335d0f3f3a165397d511f8fb20",
+        "src/core/plex/views/configuration.ts": "43e61aa3623f1dda8ff973868dbe3889d22e64f0ed8c98086b51af66ec53a380",
+        "src/adapters/obsidian/settingsReconciliation.ts": "61f452b75f7f2ec1b93f8a29440d6ee030be689e66b2cafb99343ddec4bfbfe7",
+        "scripts/testing/obsidian/canvasSelectorProbe.mjs": "ecf3b739481e25ea7adcca08378c5b864ac691a557a9f28309950874d2089f59"
+      },
+      "cases": [
+        {
+          "id": "production-compass-mindmap-only"
+        },
+        {
+          "id": "native-legacy-slider-save",
+          "pendingAtDurableReceipt": 0
+        },
+        {
+          "id": "native-tint-action-start",
+          "pageConnected": true,
+          "scopeConnected": true
+        },
+        {
+          "id": "native-edit-click-delivery",
+          "trusted": false
+        },
+        {
+          "id": "native-tint-action-complete",
+          "ownerCurrent": true,
+          "generationCurrent": true,
+          "pageConnected": true,
+          "scopeConnected": true,
+          "sameDocument": true,
+          "dialogs": 1
+        },
+        {
+          "id": "main-shared-compass-native-controls-and-area-tint",
+          "parentMaxHeight": 800
+        },
+        {
+          "id": "main-test-contribution-to-effective-native-view",
+          "beforeLeft": "-236px",
+          "afterLeft": "-186px",
+          "rootRetained": true,
+          "sessionRetained": true,
+          "focusRetained": true
+        },
+        {
+          "id": "production-mindmap-native-settings-save",
+          "horizontalSpacing": 240
+        },
+        {
+          "id": "native-type-configuration-zero-work",
+          "work": {
+            "reads": 0,
+            "parses": 0,
+            "semantic": 0,
+            "builds": 0,
+            "acquisitions": 0,
+            "saves": 0
+          }
+        },
+        {
+          "id": "native-contributed-save-failure-rolls-back-control",
+          "rejectedSaves": 1
+        },
+        {
+          "id": "native-contributed-control-recovers-after-storage-failure"
+        },
+        {
+          "id": "main-native-search-and-moved-control-focus"
+        },
+        {
+          "id": "main-native-back-navigation"
+        },
+        {
+          "id": "native-tint-action-start",
+          "pageConnected": true,
+          "scopeConnected": true
+        },
+        {
+          "id": "native-edit-click-delivery",
+          "trusted": false
+        },
+        {
+          "id": "native-tint-action-complete",
+          "ownerCurrent": true,
+          "generationCurrent": true,
+          "pageConnected": true,
+          "scopeConnected": true,
+          "sameDocument": true,
+          "dialogs": 1
+        },
+        {
+          "id": "native-settings-popout-control-focus-and-tint",
+          "siblingRelativeSize": 85
+        },
+        {
+          "id": "native-mounted-panel-and-unsaved-lens-draft-retained"
+        },
+        {
+          "id": "native-same-scope-draft-switch-zero-work",
+          "work": {
+            "reads": 0,
+            "parses": 0,
+            "acquisitions": 0,
+            "rebuilds": 0,
+            "settings": 0
+          }
+        },
+        {
+          "id": "native-incompatible-editor-transition-rejected"
+        },
+        {
+          "id": "native-main-popout-independent-selection-focus-and-camera"
+        },
+        {
+          "id": "native-select-key-delivery",
+          "transport": "OS_CUA",
+          "keys": [
+            {
+              "key": " ",
+              "trusted": true,
+              "targetSelect": true,
+              "target": "SELECT"
+            }
+          ],
+          "changes": [
+            {
+              "trusted": true,
+              "value": "test.situated"
+            }
+          ]
+        },
+        {
+          "id": "native-owning-document-select-keyboard",
+          "keys": [
+            {
+              "key": " ",
+              "trusted": true,
+              "targetSelect": true,
+              "target": "SELECT"
+            }
+          ]
+        },
+        {
+          "id": "native-main-popout-switch-keyboard-zero-work",
+          "work": {
+            "reads": 0,
+            "parses": 0,
+            "acquisitions": 0,
+            "rebuilds": 0,
+            "settings": 0
+          }
+        },
+        {
+          "id": "native-owned-view-reload-independent-workspace-selection",
+          "applicationRestart": false,
+          "expected": [
+            "test.second",
+            "test.situated"
+          ]
+        }
+      ],
+      "work": {
+        "reads": 0,
+        "parses": 0,
+        "semantic": 0,
+        "builds": 0,
+        "acquisitions": 0,
+        "saves": 0
+      },
+      "legacyControlWork": {
+        "reads": 0,
+        "parses": 0,
+        "semantic": 1,
+        "builds": 0,
+        "acquisitions": 0,
+        "saves": 1
+      }
     }
   ],
   "nextRuntimeCorrection": {
@@ -1320,7 +1765,105 @@
     "focusedChecks": 33,
     "build": "passed",
     "scanner": "passed",
-    "fullNativeCI": "pending for new corrected source",
+    "fullNativeCI": "Corrected runtime342ad13 local full/native passed; exact publication-head CI is recorded on PR219.",
     "interrupted33bfd56Full": "incomplete; intentionally stopped after7architecture/130core/1483functional, during browser phase; no stage"
+  },
+  "fullVerification": {
+    "status": "passed",
+    "source": {
+      "revision": "342ad13571a0f36dd2f20314940fe29ee6db175c",
+      "dirty": false,
+      "node": "v22.22.2",
+      "os": "darwin 23.5.0"
+    },
+    "startedAt": "2026-10-25T02:55:57.736Z",
+    "completedAt": "2026-10-25T03:18:24.364Z",
+    "suiteCounts": {
+      "architecture": 7,
+      "core": 130,
+      "functional": 1483,
+      "browser": 244,
+      "source": 357,
+      "sourceBrowser": 777
+    },
+    "failures": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "artifacts": {
+      "sourceHashes": {
+        "main.js": "5d0e3b5b3e138e1956ba04a7c08e6fce98b6dc78c60ce1f5b45f20a0cfd0b165",
+        "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+        "styles.css": "783480a9cfae6de540d0ade75ecf59fc5b3240bee44ba2cf69b2b2c561cdff1f"
+      },
+      "pluginVersion": "0.2.4",
+      "stagedHashes": {
+        "main.js": "5d0e3b5b3e138e1956ba04a7c08e6fce98b6dc78c60ce1f5b45f20a0cfd0b165",
+        "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+        "styles.css": "783480a9cfae6de540d0ade75ecf59fc5b3240bee44ba2cf69b2b2c561cdff1f"
+      }
+    },
+    "nativeSmoke": [
+      {
+        "id": "open-kplex",
+        "status": "passed",
+        "assertions": [
+          "plugin command registered",
+          "rendered .kplex-app contains K-Plex",
+          "no captured JavaScript errors"
+        ],
+        "elapsedMs": 162
+      }
+    ]
+  },
+  "finalAttribution": {
+    "status": "passed",
+    "verifiedRuntimeHead": "342ad13571a0f36dd2f20314940fe29ee6db175c",
+    "sourceDirty": false,
+    "artifacts": {
+      "main.js": "5d0e3b5b3e138e1956ba04a7c08e6fce98b6dc78c60ce1f5b45f20a0cfd0b165",
+      "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+      "styles.css": "783480a9cfae6de540d0ade75ecf59fc5b3240bee44ba2cf69b2b2c561cdff1f"
+    },
+    "manifestRefreshed": false,
+    "completedAt": "2026-10-25T03:19:31.249Z",
+    "native": {
+      "plugin": "0.2.4",
+      "views": [
+        "classic",
+        "mindmap"
+      ],
+      "node": "v24.18.1",
+      "electron": "43.3.0",
+      "chrome": "150.0.7871.212"
+    }
+  },
+  "restoration": {
+    "status": "passed",
+    "completedAt": "2026-10-25T03:19:39.106Z",
+    "rendererExited": true,
+    "originallyClosed": true,
+    "controllers": 0,
+    "startupFlagRestored": true,
+    "restored": {
+      "workspace.json": "16794be9a02af5897b7278952131c9d90f73677a724a14e95787ed1693ae39bf",
+      "community-plugins.json": "4ac827989c179ea6dba2e5a878462085dc86e40328300b1b018fb91d466cbc35",
+      "core-plugins.json": "79985eff638a8a3f7fe2946dca1ed0872116d31028bb1498b0efb7ac4e11077b",
+      "app.json": "e3afdecf971ecd6f83ddb4d658e8c357bea75ca0953721d99f906518caa916f3",
+      "plugins/k-plex/data.json": "b986b4c72d7c22ef411484dbe1cb87f3a72bee65da5d78468df90140829352f9",
+      "plugins/k-plex/main.js": "a709657e06d8f893d185fbc933967266e50007424ccbab751e1410c8c286ff68",
+      "plugins/k-plex/manifest.json": "19d9ecce5557733e0ff0f2e27155e635c30158c3cfa6fbca0f11c16e4dedfd2c",
+      "plugins/k-plex/styles.css": "0135225519ad680cace5c7a35e8eab8388a3c6e6a8ead1a10a49f337324b106a"
+    },
+    "content": {
+      "files": 77,
+      "markdown": 74,
+      "bytes": 362132,
+      "digest": "36372292bd7d6d60f52dfe7eccacc4e56d223bdf602c8f0f8614502357cff162"
+    }
+  },
+  "artifactRuntimeAttribution": {
+    "6ad0b49e08259c27bd060d2bfba7d67c118178504806021ddfbcca505864d40c": "e4ec8b3647cac7c476038ec4d612280b3ba3c52e",
+    "41f8d0332f482dcfd89afcd5cddb915f77b1513c27ede2dd692d533335676605": "932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db",
+    "5d0e3b5b3e138e1956ba04a7c08e6fce98b6dc78c60ce1f5b45f20a0cfd0b165": "342ad13571a0f36dd2f20314940fe29ee6db175c"
   }
 }

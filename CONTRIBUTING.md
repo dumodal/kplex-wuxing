@@ -1442,7 +1442,7 @@ Direct isolated GraphIndex fixtures retain their explicit legacy constructor inp
 
 ## Internal Plex view validation
 
-Compass and Mind Map are registered in the #219 implementation branch; its bounded native editor/session/settings lanes pass; final corrected-head full/CI remains pending. `plex-view-classic` protects the
+Compass and Mind Map are registered production views. The validation report records exact runtime/native evidence and retained host limits. `plex-view-classic` protects the
 pre-extraction membership/caps and 16-case exact geometry golden; contract/session
 checks exercise bounded cached reads, malformed output, unknown state, independent
 lifetimes and editor compatibility. `plex-view-probe` mounts the actual shared
