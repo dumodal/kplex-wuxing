@@ -21,6 +21,8 @@ function production(name, dependencies = {}, filename = "src/main.ts") {
   let expression;
   /** Preserve the production implementation and its asynchronous boundaries verbatim. */
   function visit(node) {
+    if (["searchDestination", "graphDestination"].includes(name) && ts.isJsxAttribute(node) && node.name.getText(source) === "onActivate"
+      && node.parent.parent.tagName.getText(source) === (name === "searchDestination" ? "SearchBox" : "PlexGraph")) expression = node.initializer.expression.getText(source);
     if (name === "centerPublication" && ts.isVariableDeclaration(node) && node.name.getText(source) === "refresh"
       && node.initializer && ts.isArrowFunction(node.initializer)
       && node.initializer.getText(source).includes("const trackedFile")) expression = node.initializer.getText(source);
@@ -541,7 +543,8 @@ function appFollowFixture() {
     syncPageToDocumentLeaf: /** Capture companion propagation without native timing in this App test. */ page => state.companions.push(["document", page]),
     syncSidecarToPage: /** Keep separately managed companions observable on same-file echoes. */ (host, page) => state.companions.push(["sidecar", page]),
   };
-  const dependencies = {...state, plugin, activatePendingDocumentUrl(){},
+  const dependencies = {...state, plugin, nodeId: id => id, translate: key => key,
+    Notice: class {constructor(message){(state.notices??=[]).push(message)}}, activatePendingDocumentUrl(){},
     releasePendingDocumentDemand: production("releasePendingDocumentDemand", state, "src/ui/App.tsx"),
     setNavigationOrigin: /** Observe the exact motion policy supplied to the graph. */ origin => { state.origin = origin; },
     setActivePath: /** A visible render reads only the latest native requested path. */ path => { state.renderPath = path; },
@@ -799,6 +802,7 @@ test("stationary central double taps open in the main tab on a sidepanel and con
       requests.push(id); if (id === "node.open") { assert(available({page: target,request:{id}})); open({page: target, request:{id}, target: {kind: "node"}}); }
       else dependencies.onActivate(target);
     }};
+  touchDependencies.activateOccurrence=production("activateOccurrence",{viewDefinition:{hierarchy:undefined},runNodeAction:touchDependencies.runNodeAction},"src/ui/PlexGraph.tsx");
   const complete = production("completeTouchTap", touchDependencies, "src/ui/PlexGraph.tsx");
   /** Supply only the owning document hit query consumed by a stationary completed tap. */
   const event = timeStamp => ({timeStamp, clientX: 100, clientY: 120, currentTarget: {ownerDocument: {elementFromPoint: () => null}}});
@@ -812,6 +816,38 @@ test("stationary central double taps open in the main tab on a sidepanel and con
   const modifier={page:ghost,request:{id:"node.open",args:{chooseFolder:true}},target:{kind:"node"}};
   assert.equal(available(modifier),true);open(modifier);
   assert.deepEqual(folderPrompts,[{target:ghost,doc:dependencies.viewport.current.ownerDocument,options:{chooseFolder:true,preserveCenter:false,hostLeaf:dependencies.hostLeaf}}]);
+});
+
+test('opt-in activate-editor primary opening captures its exact occurrence and retirement prevents a late editor request',async()=>{
+ const page={path:'B.md',file:{path:'B.md'}},requests=[],legacy=[],notices=[];let current=true,eligible=true;
+ const dependencies={viewDefinition:{hierarchy:{primary:'activate-editor'}},supportsBoundEditor:()=>eligible,viewSession:{capture:()=>()=>current},actionNodeRef,
+  actionSurfaceId:'owned-canvas',runNodeAction:(...args)=>legacy.push(args),plugin:{actionManager:{dispatch:async request=>{requests.push(request);return{status:'completed'}}}},
+  Notice:class{constructor(message){notices.push(message)}},translate:key=>key,translateActionText:(_translate,key)=>key};
+ const primary=production('activateOccurrence',dependencies,'src/ui/PlexGraph.tsx');
+ primary(page,'B1',true);await new Promise(resolve=>setImmediate(resolve));
+ assert.deepEqual(requests.map(request=>[request.id,request.surfaceId,request.target.occurrenceId,request.target.node.identity]),[['node.activate','owned-canvas','B1','B.md'],['editor.expand','owned-canvas','B1','B.md']]);
+ primary(page,'B2',false);assert.deepEqual(legacy,[['node.activate',page,'B2']],'Modifiers retain ordinary activation without requesting an editor');
+ requests.length=0;primary(page,'B1',true);current=false;await new Promise(resolve=>setImmediate(resolve));assert.deepEqual(requests.map(request=>request.id),['node.activate'],'Retired view cannot open an editor after accepted navigation settles');
+ current=true;eligible=false;primary(page,'B2',true);assert.equal(requests.length,1);assert.deepEqual(legacy.at(-1),['node.activate',page,'B2']);assert.deepEqual(notices,[]);
+});
+
+test('Mind Map primary click toggles the exact branch without navigation or editor opening',()=>{
+ const page={path:'B.md'},branch={canExpand:true,expanded:false},requests=[],selected=[];
+ const dependencies={viewDefinition:{hierarchy:{primary:'expand'}},scene:{nodes:[{page,occurrenceId:'B1',branch}]},occurrenceKey:node=>node.occurrenceId,
+  selection:{select:id=>selected.push(id)},runNodeAction:(...args)=>requests.push(args)};
+ const primary=production('activateOccurrence',dependencies,'src/ui/PlexGraph.tsx');
+ primary(page,'B1',true);assert.deepEqual(requests,[['branch.toggle',page,'B1']]);assert.deepEqual(selected,['B1']);
+ branch.expanded=true;primary(page,'B1',true);assert.deepEqual(requests.at(-1),['branch.toggle',page,'B1']);assert.equal(requests.length,2,'Repeated click delegates folding to the existing guarded action');
+ branch.canExpand=false;primary(page,'B1',true);assert.equal(requests.length,3,'An expanded branch can still request a guarded fold');
+ branch.expanded=false;primary(page,'B1',true);assert.equal(requests.length,3,'Leaf click does not start acquisition or create an editor');
+ primary(page,'B1',false);assert.deepEqual(requests.at(-1),['node.activate',page,'B1'],'Modifier route keeps explicit attention navigation');
+});
+
+test('history navigation explicitly requests the selected saved node as the rooted map destination',()=>{
+ const A={path:'A.md'},B={path:'B.md'},activations=[],cursors=[];
+ const back=production('goHistory',{plugin:{settings:{navigationHistory:['A.md','B.md']},index:{get:path=>path==='A.md'?A:B}},historyCursor:1,setHistoryCursor:value=>cursors.push(value),activate:(...args)=>activations.push(args)},'src/ui/App.tsx');
+ back(-1);assert.deepEqual(cursors,[0]);assert.deepEqual(activations,[[A,false,true,'user',true]]);
+ const rejected=[];production('goHistory',{plugin:{settings:{navigationHistory:['A.md','B.md']},index:{get:()=>A}},historyCursor:1,setHistoryCursor:value=>rejected.push(value),activate:()=>false},'src/ui/App.tsx')(-1);assert.deepEqual(rejected,[],'An editor-blocked root cannot advance the history cursor');
 });
 
 test('color publication never promotes a pending native follow or expands its demand',()=>{
@@ -840,4 +876,21 @@ test('partial startup cannot replace the saved center with an earlier available 
   assert.equal(fallback.call(plugin, 'Center.md'), 'Center.md');
   pages.delete('Center.md'); plugin.initialIndexComplete = true;
   assert.equal(fallback.call(plugin, 'Center.md'), 'tag:#Fiction', 'A genuinely missing center still recovers after readiness');
+});
+
+/** Actual F4/App/graph activation callbacks distinguish explicit destination changes from independent occurrence attention. */
+test('F4 and center drops reroot only their owning rooted canvas and refuse editor-removing navigation before any side effect',()=>{
+ const {state,files,pages}=appFollowFixture(),roots=[],other={root:'Other-root'},view=state.documentSession.plexView={definition:{navigation:'rooted'},setRoot:id=>{roots.push(id);view.root=id;return !view.blocked}};
+ state.plugin.index.getVaultSearchPage=id=>pages.get(id);
+ let inserts=0;state.plugin.index.insertCreatedFile=file=>{inserts++;const page={path:file.path,file};pages.set(file.path,page);return page};
+ const activate=state.activate,search=production('searchDestination',{plugin:state.plugin,activate},'src/ui/App.tsx'),graph=production('graphDestination',{activate},'src/ui/App.tsx');
+ search('B.md');assert.equal(view.root,'B.md');assert.equal(state.renderPath,'B.md');assert.equal(other.root,'Other-root');
+ graph(pages.get('C.md'));assert.equal(view.root,'B.md','Ordinary occurrence attention never reroots');assert.equal(state.renderPath,'C.md');
+ graph(pages.get('A.md'),'destination');assert.equal(view.root,'A.md');assert.equal(state.renderPath,'A.md');
+ const before={history:[...state.plugin.settings.navigationHistory],companions:state.companions.length,render:state.renderPath};view.blocked=true;
+ graph(pages.get('B.md'),'destination');assert.equal(state.renderPath,before.render);assert.deepEqual(state.plugin.settings.navigationHistory,before.history);assert.equal(state.companions.length,before.companions);assert.deepEqual(state.notices,['actions.branch-editor-blocked']);assert.equal(inserts,0);
+ files.set('D.md',{path:'D.md'});const cached={path:'D.md',file:files.get('D.md')};state.plugin.index.getVaultSearchPage=()=>cached;
+ search('D.md');assert.equal(inserts,0,'Blocked root cannot materialize a provisional native file');view.blocked=false;search('D.md');assert.equal(inserts,1);assert.equal(state.renderPath,'D.md');
+ const replacement={...files.get('D.md')};files.set('D.md',replacement);const rootCount=roots.length;graph(cached,'destination');assert.equal(roots.length,rootCount,'Stale native incarnation cannot even request a root');
+ view.definition.navigation='attention';graph(pages.get('B.md'),'destination');assert.equal(roots.length,rootCount);assert.equal(state.renderPath,'B.md','Existing attention-following views keep their navigation');
 });

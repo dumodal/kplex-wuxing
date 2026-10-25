@@ -1,6 +1,7 @@
 /** Host-bound render payloads. Occurrence identity and physical areas stay separate from canonical write endpoints. */
 import type {PlexArea, PlexProjection} from "../../core/plex/views/contracts";
 import type {PositionedNode, PositionedEdge} from "../../types";
+import type {AdmittedOccurrenceEditor} from "./occurrenceEditors";
 
 export type SceneViewport = {key: string; left: number; top: number; width: number; height: number;
   contentTop: number; contentHeight: number; initialScrollTop: number};
@@ -12,6 +13,9 @@ export type HostPlexScene = {
   projection?: PlexProjection;
   areas?: readonly PlexArea[];
   entryOccurrence?: string; editorOccurrence?: string; frameOccurrence?: string;
+  boundEditors?: readonly AdmittedOccurrenceEditor[];
+  /** A bounded cached connector pass stopped early; it makes no completeness claim. */
+  crossLinksLimited?: boolean;
   failed?: boolean;
 };
 export type SceneAreaLayout = {nodes: PositionedNode[]; localPositions: Map<string, {x: number; y: number}>;

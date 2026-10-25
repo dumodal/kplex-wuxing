@@ -19,6 +19,8 @@ function callback(name, dependencies) {
     if(name==='sidecar'&&ts.isCallExpression(node)&&node.expression.getText(source)==='useEffect'
       &&node.arguments[0]?.getText(source).includes('previousSidecarOpen.current === sidecarOpen'))selected=node.arguments[0].getText(source);
     if(name==='reframeSidecarViewport'&&ts.isBinaryExpression(node)&&node.left.getText(source)==='reframeSidecarViewport.current')selected=node.right.getText(source);
+    if(name==='hierarchyInitialFrame'&&ts.isCallExpression(node)&&node.expression.getText(source)==='useLayoutEffect'
+      &&node.arguments[0]?.getText(source).includes('hierarchyInitialFrame.current'))selected=node.arguments[0].getText(source);
     ts.forEachChild(node,visit);
   };
   visit(source);assert(selected,name);
@@ -26,10 +28,24 @@ function callback(name, dependencies) {
   return Function(...Object.keys(dependencies),`${js}\nreturn selected;`)(...Object.values(dependencies));
 }
 
+test('a cold rooted map fits its first prepared local cover once without claiming complete incidence or overriding manual/editor ownership',()=>{
+ for(const mode of ['automatic','manual','editor','restored','retired']){
+  const definition={id:'mindmap',hierarchy:{}},camera={x:20,y:30,scale:1};let prepared=false,fits=0,flushes=0;
+  const context={viewDefinition:definition,viewLifetime:1,sceneScope:'R',activePath:'A',nodeId:value=>value,
+   viewSession:{definition,getLifetime:()=>mode==='retired'?2:1,layoutRoot:()=> 'R',readTransient:()=>mode==='restored'?{camera}:undefined},hierarchyInitialFrame:{current:null},viewFailed:false,
+   index:{viewScopeCoverage:()=>({prepared,complete:false})},boundEditorBinding:mode==='editor'?{id:'B1'}:undefined,
+   settings:{allowAutozoom:true},automaticFit:{current:{path:'R',camera}},camera:{current:mode==='manual'?{...camera,x:21}:camera},sameFitCamera,
+   fitCurrentScene:{current:()=>fits++},flushCameraTransform:()=>flushes++};
+  const run=callback('hierarchyInitialFrame',context);run();assert.equal(fits,0);prepared=true;run();assert.equal(fits,mode==='automatic'?1:0,mode);
+  context.boundEditorBinding=undefined;callback('hierarchyInitialFrame',context)();assert.equal(fits,mode==='automatic'?1:0,'No late fit after editor close or ordinary geometry change');assert.equal(flushes,fits);
+ }
+});
+
 /** Supply an asymmetric displayed scene and real camera application/fit/layout owners. */
 function graphFixture() {
-  const ctx={camera:{current:{x:0,y:0,scale:1}},automaticFit:{current:null},activePath:'Center.md',
+  const ctx={camera:{current:{x:0,y:0,scale:1}},automaticFit:{current:null},activePath:'Center.md',rooted:false,
     cameraIntentPlaced:{current:false},
+    previousCameraViewport:{current:null},boundEditorBinding:undefined,
     centralEditorOverlayElement:{current:null},cameraWritePending:{current:false},compassCenter:{current:null},compassSync:{current:()=>false},requestCameraFrame:()=>{},
     cameraFrame:{current:1},cameraElement:{current:null},syncCentralEditorOverlay:()=>{},
     scene:{nodes:[{role:'center',page:{path:'Center.md'},x:30,y:-20,width:200,height:100}],zoneViewports:{}},
@@ -40,9 +56,22 @@ function graphFixture() {
   ctx.viewport={current:{clientWidth:800,clientHeight:600,clientLeft:0,clientTop:0,getBoundingClientRect:()=>({left:0,top:0}),ownerDocument:{defaultView:{getComputedStyle:()=>({transformOrigin:'100px 50px'})}},querySelectorAll:()=>[
     {classList:{contains:value=>value==='kplex-role-center'},dataset:{kplexPath:ctx.activePath},getBoundingClientRect:()=>({left:300,top:250,width:200,height:100})}]}};
   /** Rebind render-owned callbacks after navigation just as React composition does. */
-  ctx.render=()=>{ctx.classic=true;ctx.areaForNode=callback('areaForNode',ctx);ctx.framingOccurrence=callback('framingOccurrence',ctx);ctx.applyCamera=callback('applyCamera',ctx);ctx.flushCameraTransform=callback('flushCameraTransform',ctx);ctx.fit=callback('fit',ctx);ctx.layout=callback('layout',ctx);};
+  ctx.render=()=>{ctx.sceneScope=ctx.rooted ? 'Root.md' : ctx.activePath;ctx.classic=true;ctx.areaForNode=callback('areaForNode',ctx);ctx.framingOccurrence=callback('framingOccurrence',ctx);ctx.applyCamera=callback('applyCamera',ctx);ctx.flushCameraTransform=callback('flushCameraTransform',ctx);ctx.fit=callback('fit',ctx);ctx.layout=callback('layout',ctx);};
   ctx.render();return ctx;
 }
+
+test('a rooted automatic camera follows native startup viewport shrink without moving manual cameras or live editors',()=>{
+ for(const allowAutozoom of [true,false])for(const owner of ['automatic','manual','editor']){
+  const ctx=graphFixture();ctx.rooted=true;ctx.settings.allowAutozoom=allowAutozoom;ctx.scene.nodes[0].x=0;ctx.scene.nodes[0].y=0;ctx.camera.current.scale=1.6;ctx.viewport.current.clientHeight=2591;ctx.render();ctx.layout();
+  assert.equal(ctx.camera.current.y+ctx.scene.nodes[0].y*ctx.camera.current.scale,2591/2);
+  if(owner==='manual')ctx.applyCamera({...ctx.camera.current,y:500});
+  if(owner==='editor')ctx.boundEditorBinding={id:'live-B'};
+  const before={...ctx.camera.current};ctx.viewport.current.clientHeight=713;ctx.pathChangedThisRender=false;ctx.render();ctx.layout();
+  if(owner==='automatic')assert.equal(ctx.camera.current.y+ctx.scene.nodes[0].y*ctx.camera.current.scale,713/2,'Root stays inside the actual pane after native/CSS layout settles');
+  else assert.deepEqual(ctx.camera.current,before,owner+' camera ownership survives viewport geometry');
+  if(!allowAutozoom)assert.equal(ctx.camera.current.scale,before.scale,'Disabled autozoom retains zoom through native viewport correction');
+ }
+});
 
 test('Ctrl or Cmd wheel zooms over both bounded list types while native editor and modal scrolling remain native', () => {
   for (const surface of ['.kplex-zone-scroll', '.kplex-expanded-scroll', '.kplex-central-editor-content', '.modal-container', 'canvas'])
@@ -88,11 +117,11 @@ test('same-center navigation-origin changes retain outline expansion while genui
   /** Locate the production owner instead of recreating its outline policy. */
   const visit=node=>{
     if(ts.isCallExpression(node)&&node.expression.getText(source)==='useEffect'
-      &&node.arguments[0]?.getText(source).includes('transitionPath.current = activePath'))effect=node;
+      &&node.arguments[0]?.getText(source).includes('transitionPath.current = sceneScope'))effect=node;
     ts.forEachChild(node,visit);
   };
   visit(source);assert(effect);
-  const ctx={activePath:'Center.md',navigationOrigin:'follow',settings:{animationSpeed:1},transitionPath:{current:'Center.md'},sectionFoldCenter:{current:'Center.md'},
+  const ctx={activePath:'Center.md',sceneScope:'Center.md',navigationOrigin:'follow',settings:{animationSpeed:1},transitionPath:{current:'Center.md'},sectionFoldCenter:{current:'Center.md'},
     setSectionExpanded(){ctx.expanded=false},setSectionExpansion(){ctx.expansion=null},setExpandedSectionIds(ids){ctx.ids=ids}};
   const js=ts.transpileModule(`const effect=${effect.arguments[0].getText(source)};const deps=${effect.arguments[1].getText(source)};`,{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
   let previous;
@@ -103,7 +132,7 @@ test('same-center navigation-origin changes retain outline expansion while genui
   };
   render();ctx.expanded=true;ctx.expansion={outline:true};ctx.ids=new Set(['section']);
   ctx.navigationOrigin='user';render();assert.equal(ctx.expanded,true);assert.deepEqual([...ctx.ids],['section']);assert(ctx.expansion);
-  ctx.activePath='Next.md';render();assert.equal(ctx.expanded,false);assert.equal(ctx.expansion,null);assert.equal(ctx.ids.size,0);
+  ctx.activePath='Next.md';ctx.sceneScope=ctx.activePath;render();assert.equal(ctx.expanded,false);assert.equal(ctx.expansion,null);assert.equal(ctx.ids.size,0);
 });
 
 test('passive follow retires a deliberate transition through its original owning window', /** Execute the production transition effect across two window identities. */ () => {
@@ -225,7 +254,14 @@ test('the actual thought-corner control forwards modifier-bearing events while s
   let corner;
   /** Confirm the rendered graph connects the corner control to the tested opening owner. */
   const graphVisit=node=>{if(ts.isJsxAttribute(node)&&node.name.text==='cornerAction')corner=node.initializer.expression.whenTrue;ts.forEachChild(node,graphVisit);};graphVisit(source);assert(corner);
-  assert.equal(corner.properties.find(p=>p.name.text==='onClick').initializer.getText(source),'openCentralEditor');
+  const routing=ts.transpileModule(`const route=${corner.properties.find(p=>p.name.text==='onClick').initializer.getText(source)};`,{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
+  for(const occurrenceEditorPolicy of [false,true]){
+    let forwarded,request;const baseNode={page:{path:'B.md'},occurrenceId:'B1'};
+    const route=Function('occurrenceEditorPolicy','openCentralEditor','runNodeAction','baseNode','occurrenceKey',`${routing};return route;`)(occurrenceEditorPolicy,event=>{forwarded=event},(...args)=>{request=args},baseNode,node=>node.occurrenceId);
+    const event={metaKey:true};route(event);
+    if(occurrenceEditorPolicy){assert.deepEqual(request,['editor.expand',baseNode.page,'B1']);assert.equal(forwarded,undefined)}
+    else{assert.equal(forwarded,event);assert.equal(request,undefined)}
+  }
   let actual;const handler=Function('cornerAction',`${output};return handler;`)({onClick:event=>{actual=event;}});
   for(let mask=0;mask<16;mask++){let prevented=false,stopped=false;const event={altKey:!!(mask&1),ctrlKey:!!(mask&2),metaKey:!!(mask&4),shiftKey:!!(mask&8),preventDefault(){prevented=true;},stopPropagation(){stopped=true;}};handler(event);assert.equal(actual,event);assert(prevented&&stopped);}
 });

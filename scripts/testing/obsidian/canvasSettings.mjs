@@ -1,4 +1,4 @@
-/** Exact-build native Canvas/Compass settings proof. Test-only registration is scoped to this owned native session. */
+/** Exact-build native Canvas settings/selector proof, including production Compass/Mind Map. Additional test registration stays scoped to owned native sessions. */
 import {buildSync} from 'esbuild';
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
@@ -18,7 +18,7 @@ async function scenario(app,c){
  const check=(value,message)=>{if(c.closed||!value)throw Error(message)};
  const wait=async ms=>{check(true,'Retired controller');await new Promise(resolve=>window.setTimeout(resolve,ms));check(true,'Retired controller')};
  const until=async(read,message,maximumMs=20000)=>{const end=Date.now()+maximumMs;while(!read()){check(Date.now()<end,message);await wait(30)}};
- const visible=element=>{if(!element?.isConnected)return false;const rect=element.getBoundingClientRect(),style=element.ownerDocument.defaultView.getComputedStyle(element);return rect.width>0&&rect.height>0&&style.display!=='none'&&style.visibility!=='hidden'};
+ const visible=element=>{if(!element?.isConnected||!element.ownerDocument.defaultView)return false;const rect=element.getBoundingClientRect(),style=element.ownerDocument.defaultView.getComputedStyle(element);return rect.width>0&&rect.height>0&&style.display!=='none'&&style.visibility!=='hidden'};
  const settingsDocument=()=>tab.containerEl.ownerDocument;
  const row=name=>[...settingsDocument().querySelectorAll('.setting-item-name')].find(element=>element.textContent===name&&visible(element))?.closest('.setting-item');
  const keyRow=key=>row(p.translator(key));
@@ -29,7 +29,7 @@ async function scenario(app,c){
   if(app.setting.isOpen){const previous=app.setting.isInPopoutWindow()?app.setting.getPopoutWindow():null;app.setting.close();if(previous)await until(()=>previous.closed,'Owned Settings popout did not close');await wait(100)}
   main.show();main.focus();main.webContents.focus();p.openSettings();await until(()=>tab.containerEl.isConnected,'Native Settings root absent');
   await until(()=>app.setting.isInPopoutWindow()===(c.settingsMode==='popout'),'Settings window policy did not apply');
-  for(const page of pages){check(tab.openSettingsPage(p.translator(page)),'Native page absent: '+page);await wait(60)}
+  for(const page of pages){await until(()=>[...settingsDocument().querySelectorAll('.setting-item.mod-navigable .setting-item-name')].some(element=>element.textContent===p.translator(page)&&visible(element)),'Native page entry not visible: '+page);check(tab.openSettingsPage(p.translator(page)),'Native page absent: '+page);await wait(60)}
  };
  const clickAction=async key=>{const name=p.translator('colors.edit')+': '+p.translator(key),button=[...settingsDocument().querySelectorAll('.setting-item button[aria-label]')].find(element=>element.getAttribute('aria-label')===name&&visible(element));check(button&&!button.disabled,'Native Edit action missing/disabled: '+JSON.stringify({key,present:!!button,colorFuture:p.settings.colorPreferencesFuture!==undefined,themeFuture:p.settings.appearanceThemesFuture!==undefined}));button.scrollIntoView({block:'nearest'});button.addEventListener('click',event=>cases.push({id:'native-edit-click-delivery',trusted:event.isTrusted}),{once:true});button.click();await wait(40)};
  let pendingObserved=0;
@@ -58,8 +58,8 @@ async function scenario(app,c){
   const productionRoot=()=>host.view.contentEl.querySelector('.kplex-app');await until(()=>productionRoot()?.querySelector('.kplex-filter-trigger'),'Production panel trigger absent');
   productionRoot().querySelector('.kplex-filter-trigger').click();
   const productionSelect=()=>host.view.containerEl.ownerDocument.querySelector('.kplex-filter-panel .kplex-view-selector select');
-  await until(productionSelect,'Production selector absent');check(productionSelect().disabled&&productionSelect().options.length===1&&productionSelect().value==='classic','Production exposes an unfinished view');
-  host.view.containerEl.ownerDocument.querySelector('.kplex-filter-panel-header button').click();cases.push({id:'production-one-option-compass'});
+  await until(productionSelect,'Production selector absent');check(!productionSelect().disabled&&JSON.stringify([...productionSelect().options].map(option=>[option.value,option.textContent]))===JSON.stringify([['classic',p.translator('view.classic')],['mindmap',p.translator('view.mindmap')]])&&productionSelect().value==='classic','Production registry selection mismatch');
+  host.view.containerEl.ownerDocument.querySelector('.kplex-filter-panel-header button').click();cases.push({id:'production-compass-mindmap-only'});
   const session=host.view.documentSession.plexView;session.registry=views;await p.setDocumentSyncMode(host,'off');
   host.view.centerPresentation.update({embedCentralNode:false});p.notifyNavigation(path('Focus'),host);session.select(probe.id);
   const root=()=>host.view.contentEl.querySelector('.kplex-app'),node=()=>root()?.querySelector('[data-kplex-keyboard-id="layout-root"]');
@@ -87,12 +87,25 @@ async function scenario(app,c){
   const legacyControlWork={...work};for(const key of Object.keys(work))work[key]=0;
   await wait(100);check(Object.values(work).every(value=>value===0),'Type-configuration quiet control did work');
   await open('settings.ui.plex.behavior');check(tab.openSettingsPage(probe.labelKey),'Test-only contributed page missing');await wait(70);
-  const contributedRow=row('Probe ridge offset'),contributedSlider=contributedRow?.querySelector('input[type=range]');check(contributedSlider,'Actual contributed native slider absent');
+  const contributedRow=row('Probe ridge offset');let contributedSlider=contributedRow?.querySelector('input[type=range]');check(contributedSlider,'Actual contributed native slider absent');
   contributedSlider.focus();input(contributedSlider,50);await until(()=>node()?.style.left!==before.left,'Type configuration did not reach native renderer');await p.settingsWriteQueue;
   check(settingsDocument().activeElement===contributedSlider,'Background reflow stole native Settings focus');
   check(node().dataset.kplexPath===before.root&&JSON.stringify(session.getState())===before.state,'Type setting retargeted root/session');
   check((await p.loadData()).canvasViewSettings[probe.id].values.ridgeOffset===50,'Contributed setting not durable');
   cases.push({id:'main-test-contribution-to-effective-native-view',beforeLeft:before.left,afterLeft:node().style.left,rootRetained:true,sessionRetained:true,focusRetained:true});
+  await open('settings.ui.plex.behavior','view.mindmap');
+  for(const key of ['graph.parentColumns','mindmap.arrangement','mindmap.horizontalSpacing','mindmap.verticalSpacing','graph.horizontalDensity','graph.verticalDensity','mindmap.initialGenerations','mindmap.maximumDepth','mindmap.maximumOccurrences'])check(keyRow(key),'Mind Map native control missing: '+key);
+  const mindMapSpacing=keyRow('mindmap.horizontalSpacing').querySelector('input[type=range]'),spacingValue=Number(mindMapSpacing.value)===240?40:240;
+  mindMapSpacing.focus();input(mindMapSpacing,spacingValue);await until(()=>p.settings.canvasViewSettings.mindmap?.values.horizontalSpacing===spacingValue,'Mind Map native spacing did not save');await p.settingsWriteQueue;
+  check((await p.loadData()).canvasViewSettings.mindmap.values.horizontalSpacing===spacingValue,'Mind Map type control not durable');
+  for(const [field,key]of [['horizontalDensity','graph.horizontalDensity'],['verticalDensity','graph.verticalDensity']]){
+   const slider=keyRow(key).querySelector('input[type=range]'),value=Number(slider.min);check(value===0.1,'Mind Map native Settings spacious minimum absent');slider.focus();input(slider,value);
+   await until(()=>p.settings.canvasViewSettings.mindmap?.values[field]===value,'Mind Map density did not save');await p.settingsWriteQueue;check((await p.loadData()).canvasViewSettings.mindmap.values[field]===value,'Mind Map density not durable');
+  }
+  check(JSON.stringify(session.getState())===before.state,'Background Mind Map settings changed the owning test session');
+  cases.push({id:'production-mindmap-native-settings-save',horizontalSpacing:spacingValue});
+  await open('settings.ui.plex.behavior');check(tab.openSettingsPage(probe.labelKey),'Test-only contribution did not reopen');await wait(70);
+  contributedSlider=row('Probe ridge offset')?.querySelector('input[type=range]');check(contributedSlider,'Reopened contribution input absent');
   await until(()=>pendingObserved===0,'Type-configuration writer did not complete');
   for(const restore of stop)restore();check(Object.values(work).every(value=>value===0),'New type configuration performed source/semantic or compatibility-save work');
   cases.push({id:'native-type-configuration-zero-work',work:{...work}});
@@ -127,7 +140,7 @@ async function scenario(app,c){
   cases.push({id:'native-settings-popout-control-focus-and-tint',siblingRelativeSize:siblingNext});
   await c.acceptSelector({app,p,c,host,views,probe,files,hosts,restores,cases,check,wait,until,observe});
   c.progress={phase:'native-main-complete',cases,work,legacyControlWork};return {cases,work,legacyControlWork,mode:'acceptance'};
- }catch(error){failure=error;c.progress={...c.progress,cases};throw error}
+ }catch(error){failure=error;c.progress={...c.progress,cases,settingsDiagnostic:{ownMainDocument:settingsDocument()===document,hasWindow:!!settingsDocument().defaultView,isPopout:app.setting.isInPopoutWindow(),visiblePageEntries:[...settingsDocument().querySelectorAll('.setting-item.mod-navigable .setting-item-name')].filter(visible).map(element=>element.textContent)}};throw error}
  finally{
   const errors=[];const clean=async(label,action)=>{try{await action();cleanup.push({label,status:'passed'})}catch(error){errors.push(label+': '+String(error));cleanup.push({label,status:'failed',error:String(error)})}c.progress={...c.progress,cleanup}};
   for(const restore of restores.reverse())await clean('restore-observer',restore);

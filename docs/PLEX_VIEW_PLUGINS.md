@@ -2,7 +2,7 @@
 
 Prepared by Zsolt's Codex Agent on 2026-10-24.
 
-**Status: implemented foundation under validation in PR #215.** Arbitrary-node editor hosting is a firm requirement but is not implemented by this extraction. The [occurrence-editor prerequisite](PLEX_OCCURRENCE_EDITORS.md) blocks parallel view jobs until its real shared-host proof passes; simultaneous editors remain out of scope. Classic is the only production definition. The original design/research below remains the rationale; section 16 records the actual implementation and capability limits. Mind Map, Ideaverse and Wu Xing remain subsequent features. Acceptance results belong in the linked validation report, not this design status.
+**Status: #215 foundation accepted; revised #219 implementation independently verified, product review open.** Clean eac6dc0 local full verification (3,021 checks) and corrected88c3 27 native pass; runtime CI497 passes at `9e77bf3`, final CI not awaited; [current report](validation/native-occurrence-drag-219-2026-10-25.md) retains failures and limits. Capacity one. Combined Wu Xing integration and physical-device/host limits are not claimed complete.
 
 Research baseline: K-Plex [`5954951`](https://github.com/zsviczian/kplex/commit/595495105f56ae8d159f71b41706157e9f24c851), after PR #214. Ideaverse reference: [`4cce3f2`](https://github.com/nickmilo/ideaverse-maps/commit/4cce3f267148cc81e2961796e9a8dc7e20ff1aa0). Recheck branch/main before implementation. Follow AGENTS.md, CONTRIBUTING.md, ARCHITECTURE.md and AGENT_WORKFLOW.md. This feature does not resume the paused general refactoring programme.
 
@@ -265,7 +265,7 @@ Complete required checks, update durable architecture references only with actua
 
 Mind Map needs bounded multihop expansion beyond the present first-level projection. Ideaverse needs a corpus and evidence-specific metrics. These are different demands on shared reads.
 
-Before handing out independent feature branches, complete the mandatory [occurrence-editor hosting prerequisite](PLEX_OCCURRENCE_EDITORS.md) and its R/A/B native proof. The preparation owner must also deliver a **capability matrix** against the actual index/source interfaces:
+Mind Map must complete the mandatory [occurrence-editor hosting prerequisite](PLEX_OCCURRENCE_EDITORS.md) and its R/A/B native proof before claiming arbitrary-node editing. Wu Xing is independent of this prerequisite. The preparation owner must also deliver a **capability matrix** against the actual index/source interfaces:
 
 | Need | Baseline finding | Required decision/delivery |
 | --- | --- | --- |
@@ -326,7 +326,7 @@ Third-party JavaScript in the Obsidian process should not be advertised as a sec
 
 ## 16. Implemented boundary and capability matrix
 
-The runtime baseline is accepted main `659697a686f341497725dfb31e94a8bc2bcf2b25`.
+The extraction baseline was659697a; current#219 integrates accepted main9987810.
 `src/core/plex/views/` owns the finite internal definition/registry contracts and
 Classic projection/geometry. `GraphIndex.getNeighborhood()` delegates to the same
 `projectClassicNeighborhood()` policy used by Classic's portable projection;
@@ -347,7 +347,7 @@ placement follow explicitly declared physical ports.
 `PlexViewSession` belongs to each existing native document session. It owns static
 view selection, bounded JSON preferences and namespaced area heights through the
 native workspace writer. Camera/selection/unfolded groups stay transient in that
-session and retire on attention change. Global pins/history, Footprints, Sidecars,
+session: rooted policies retain their root scope through ordinary attention; attention-following policies preserve their existing reset behavior. Global pins/history, Footprints, Sidecars,
 native editors, the shared shell and Classic flat/device/surface settings retain
 their existing owners. A live editor prevents selecting an incompatible view;
 compatible changes and a failed/unavailable policy retain its native host. The first host anchors the existing attention document to an admitted occurrence of that document; changing the edited canonical document is not a layout operation. Scene recovery
@@ -358,14 +358,17 @@ actions and delayed destructive work must match both native and view lifetimes.
 | --- | --- | --- |
 | Canonical nodes and local resolved relations | Revision-scoped cache-only `PlexViewRead`; bounded calls and returned incidence, visibility preserved. | Coverage is conservatively cached. Missing/budget-exhausted node reads are unavailable, never proof of absence. |
 | Evidence | Cached canonical relationship explanation DTO, preserving decisions and source provenance. | No new corpus-wide evidence/metric scan or exact global degree API. |
-| Scope preparation | Existing shared attention demand stays acquired across compatible changes; presentation demand is view-owned. | Additional multihop/frontier demand needs a separately reviewed bounded application adapter. Pure definitions cannot acquire sources. |
-| Geometry and identity | Measured thought occurrences, repeated NodeIds, arbitrary areas, physical ports and distinct anchor IDs/positions. | Editor document identity still follows attention. Synthetic groups are created by the shared grouping owner; initial policy-created synthetic nodes are rejected. |
-| Occurrence editor hosting | **Unsupported.** One live attention-following native editor per Plex; existing probe places it off-centre but edits attention. | Firm prerequisite: explicit admitted occurrence/document bindings, shared actions, per-occurrence dimensions and stable native hosting. Initial dependent task enforces capacity one and must pass R/A/B plus attention C, duplicate, resize/filter/collapse/switch/teardown cases. Multiple simultaneous editors are not claimed. |
-| Rooted state across attention changes | A pure definition can supply a different layout root. Current transient camera/selection/unfold state is attention-scoped. | Mind Map requires independently retained root/branch/editor state through M0. Existing attention-following definitions, including Wu Xing, may use the accepted host without adopting M0. |
+| Scope preparation | Existing shared attention demand stays acquired across compatible changes; presentation demand is view-owned. | Optional hierarchy policy now supplies represented parent requests to a session-owned finite demand adapter (Mind Map:8 additional scopes). Actual GraphIndex/IndexedDB on-demand and source-ready Eager tests prove unprepared branch admission and held-cover cancellation. Unavailable projection retains only last admitted bounded leases; it cannot grant stale scene authority or prove an empty expansion. Valid collapse/root/view/unmount retire them. Pure definitions still cannot acquire sources. |
+| Geometry and identity | Measured thought occurrences, repeated NodeIds, arbitrary areas, physical ports and distinct anchor IDs/positions. | Compatibility editor identity follows attention; opt-in bindings resolve an explicit document. Synthetic groups are created by the shared grouping owner; initial policy-created synthetic nodes are rejected. |
+| Occurrence editor hosting | Optional explicit occurrence/document bindings and the existing native controller pass current shared-host12, production-editor8 and native text-drop proof; clean local full verification (3,021 checks) at eac6dc0; runtime CI497 passes at `9e77bf3`, final CI not awaited. The default attention-following contract remains unchanged. | Capacity one, ordinary Markdown. Simultaneous editors, FileManager cache gate and physical-device/combined integration remain unclaimed. |
+| Rooted state across attention changes | Session-owned root/branch/camera/selection persist through ordinary attention; explicit destinations reroot after editor/native guards. Current 27 native and local full verification (3,021 checks) verify standalone behavior; final CI is not awaited. | Wu Xing/Compass attention-following definitions need no M0 changes. Combined accepted-source camera integration still needs its deliberate smoke. |
 | Filtering/grouping/Find/actions | Existing matching and grouping owners; explicit grouping partitions; occurrence selection/reveal; canonical activation/writes. | A connector without semantic evidence is presentation-only. No implicit ontology write from an arbitrary area. |
 | Preferences/lifetime | Per-native-session selection, small unknown-state preservation/fallback, finite area heights, synchronous disposal and epoch fences. | Static bundled registration only; no public plugin loading or ABI. |
 | Type configuration and Settings | Version1 bounded schema/effective values, native declarative contributions under Canvas behavior → Views, existing queued persistence and explicit incoming field ownership. Compass (`classic`) retains legacy flat/profile/appearance storage. | Type settings are shared by canvases of that type; selected view/root/expansion/editor state remain session-owned. Unknown/future payloads are inert and preserved. |
-| Canvas selector | Native Canvas view dropdown in Views and lenses, capturing the opening session and reflecting successful guarded selection while retaining the panel/draft. Compass alone remains visible/disabled. | Only registered production definitions ship; test definitions prove independent owners without exposing unfinished views. No new source acquisition for same-scope selection. |
+| Explicit rooted entry | Optional `navigationEntry: "attention"` captures that canvas’s current attention only on a successful explicit view change. Same-view submission, ordinary attention changes and workspace restoration do not reroot. Existing definitions omit it unchanged. | Root/editor-removing navigation refuses before changing history or attention. |
+| Hierarchy interaction and ports | Optional primary `expand` selects/toggles an exact branch through the shared editor-safe action without opening an editor; `activate-editor` remains compatible. Optional `child-and-peer` admits real peer hierarchy edges and root parent context. `peerPort` is bounded count presentation, never edit/provenance authority. | Every child leaves bottom, peers the outward side and root parents top. Shared explicit editor controls keep capacity one. |
+| View layout rails | Optional `CanvasViewSettingsContribution.layoutControls` describes registered scalar fields using localized labels and existing `LayoutSlider`. Both density axes use the native Settings queued writer and shared measurement. | Type settings remain independent of canvas root/camera/editor state and Compass settings; no separate store or source acquisition. |
+| Canvas selector | Native Canvas view dropdown in Views and lenses, capturing the opening session and reflecting successful guarded selection while retaining the panel/draft. Production Compass/Mind Map are registry-populated. A one-definition fixture still proves visible/disabled selection. | Only registered production definitions ship; test definitions prove independent owners without exposing unfinished views. No new source acquisition for same-scope selection. |
 | Corpus/property scoring | Explicit `corpus: {available:false, reason:"unsupported"}`. | Add paged revision-scoped membership/properties and provenance-specific metrics before promising Ideaverse parity. No zero substitution. |
 | Compact large-map layer | Explicitly unsupported. Point occurrences fail locally. | Shared compact rendering must be reviewed before full-vault Emergence. Detailed DOM thoughts are not a scale claim. |
 
@@ -398,3 +401,27 @@ capacity one, Classic compatibility policy, real native-host reuse, independent
 root/attention/selection/editor/focus state and the five required proof cases.
 It does not implement Mind Map, simultaneous editors or new indexing machinery.
 Do not describe arbitrary-node editing as supported until that proof passes.
+
+
+Production Mind Map evidence: [report](validation/mind-map-219-2026-10-25.md), [ordered receipts including failures](validation/mind-map-219-receipts.json). One live ordinary-Markdown editor per canvas. Current post-edit frontier admission precedes the dirty geometry proof; source preparation may temporarily withhold scene admission. Main/popout selection/restoration and ownership of a loaded main-window Sidecar pass. Fresh Sidecar creation in a newly migrated popout remained empty and is unproven, alongside the older FileManager/two-Sidecar/combined-editor limits. No physical Windows/mobile or whole-app restart claim. Wu Xing remains independent and uses its unchanged attention host.
+
+Runtime342ad13 final full/native evidence and original Small-vault restoration are recorded in the linked validation report. This is a capacity-one ordinary-Markdown proof, not universal FileManager/fresh-popout Sidecar/physical-device/restart acceptance. Final report-only publication keeps runtime and driver bytes unchanged; current PR219 checks own exact-head CI status.
+
+
+### Shared interaction correction for #219/#220 (2026-10-25)
+
+All registered views share native node/file/link ingress/egress, the existing action/composer/structural writer, owning-window delivery and exact canonical identity fences. Explicit destination intent is additive to the shared UI activation callback; rooted definitions choose a root, attention-following definitions retain their accepted policy. Ordinary branch attention remains independent. Views do not implement drag managers, private parsers/writers or global navigation stores.
+
+`PlexArea.dropRole` declares meaningful relationship targets. Optional `dropOrigin?: OccurrenceId` must name a current admitted canonical occurrence; omission uses projection root/entry. Decorative/classification areas omit these fields. Existing measurement, filtering, clipping, frames, keyboard/pointer resize and per-canvas height persistence remain shared. `GraphActionPorts.canEditAreas?: () => boolean` is live, false/absent means unavailable; App hides/refuses Area settings, and PlexGraph retires an unsupported transient mode. Type region-size defaults are independent of editable per-canvas heights.
+
+A single non-Classic cache-only cross-link adapter consumes admitted canonical occurrences and declared physical ports, with no opt-in/editor API requirement for Wu Xing. It chooses one closest compatible visible occurrence pair per extra canonical pair, never duplicates primary pairs, caps adapter work and reports limitation. Global-filter gate numerators consume the same real represented pairs. Synthetic groups/guides do not gain edit authority. Existing `showCrossLinks`, canonical evidence/action validation, hidden/inferred policy and lifetime owners still apply. Ordinary queued settings completion no longer emits generic recovery notices; real refresh failure remains actionable.
+
+Mac owns these bounded common interaction/area/cross-link changes plus Mind Map. Windows owns Wu Xing classification/property/phase layout and the agreed off-origin attention-editor maximize/fit/reframe fix. Numeric fifth/default0 + optional property-provider sixth reader composition and both accepted camera fixes remain agreed; no moving partner branch is consumed. #220 remains independently deliverable. [Current proof/limits](validation/mind-map-interactions-219-2026-10-25.md); no #219/#220 merge/release authorized.
+
+Refresh feedback ownership: saved/pending-result dialogs retain their existing localized notice. Only settings callers without that feedback request the generic actual-failure callback; a normal coalesced/short-wait result never triggers it. Existing modal single-notice regression remains protected.
+
+Native desktop drag authority is shared host behavior, not a per-view backend. The captured payload carries the actual displayed key, current canvas/native identity and primary canonical relationship context. Removal requires one current certified canonical row matching that capture and the explicit target origin. Previous/next retain their actual semantic role behind Compass placement. Foreign/stale/ambiguous/uncertified contexts cannot acquire removal through the legacy existing-target Link upsert: ephemeral RelatedNoteInvocation.additiveOnly flows through the existing composer to the existing append-only ontology owner. Defaults preserve legacy calls. No view definition, persisted schema or parallel writer is added. [Current validation and remaining native/full gates](validation/native-occurrence-drag-219-2026-10-25.md).
+
+### Published relink feedback for non-Classic definitions
+
+Non-Classic definitions do not populate Compass's compatibility neighbourhood lists. Their shared relink feedback retires on the existing writer's `saved-published` result under the captured transaction/mount/document guard; `saved-pending` remains pending. Compass retains its authoritative-neighbourhood/section rendering guard. Reuse this common completion path rather than adding view-specific status stores or polling. The [follow-up proof](validation/relink-feedback-219-2026-10-25.md) includes the actual native parent→child roundtrip; Wu Xing combined runtime validation remains with the later integration owner.

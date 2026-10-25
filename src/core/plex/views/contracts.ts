@@ -11,6 +11,11 @@ export type PhysicalPort = "top" | "bottom" | "left" | "right";
 export type ViewPoint = Readonly<{x: number; y: number}>;
 export type ViewRect = ViewPoint & Readonly<{width: number; height: number}>;
 export type ViewCoverage = "local" | "cached" | "unavailable";
+/** Owning a frontier lease is distinct from prepared local incidence and certified complete incidence. */
+export type PlexViewScopeRead = Readonly<{coverage: ViewCoverage; prepared: boolean; complete: boolean; pending: boolean}>;
+export type PlexBranch = Readonly<{parent?: OccurrenceId; depth: number; side: -1 | 1; expanded: boolean;
+  canExpand: boolean; reference: boolean; status: "ready" | "loading" | "partial" | "unavailable" | "limited"}>;
+export type PlexBranchAction = Readonly<{kind: "toggle"; occurrenceId: OccurrenceId} | {kind: "expand-generation" | "collapse-generation"}>;
 export type PlexViewRelation = Readonly<{
   node: GraphNodeView; role: Role; relationType: RelationType; definition?: string; direction: LinkDirection | null;
 }>;
@@ -24,7 +29,11 @@ export type PlexViewRead = Readonly<{
   /** Current local incidence is independent of corpus/property completeness. Reads never acquire sources. */
   coverage: ViewCoverage; isCurrent: () => boolean;
   node: (id: NodeId) => GraphNodeView | null;
-  relations: (id: NodeId, role: Role) => PlexRelationRead;
+  relations: (id: NodeId, role: Role, maximum?: number) => PlexRelationRead;
+  /** Exact cached pair, used to retain a live occurrence path outside a truncated display prefix. Never acquires sources. */
+  relation?: (source: NodeId, target: NodeId, role: Role) => PlexRelationRead;
+  /** Optional cache-only per-node proof. Absence cannot certify a leaf or start preparation. */
+  scope?: (id: NodeId) => PlexViewScopeRead;
   evidence: (source: NodeId, target: NodeId) => PlexEvidenceRead;
   compare: (left: GraphNodeView, right: GraphNodeView) => number;
   /** Unsupported corpus reads stay unavailable; an empty catalogue must never certify unlinked notes. */
@@ -37,18 +46,28 @@ export type PlexOccurrence = Readonly<{
   /** Optional semantic context for existing styles/lenses. It does not determine physical placement. */
   role?: Role; relation?: PlexViewRelation;
   groupingPartition?: string;
+  /** Explicit occurrence hierarchy; canonical child semantics remain in real edge references. */
+  branch?: PlexBranch;
   ports?: Partial<Record<PhysicalPort, "parent" | "child" | "left" | "right">>;
+  /** Bounded available peer incidence shares one physical port; its lower-bound count never grants relation-edit authority. */
+  peerPort?: Readonly<{side: PhysicalPort; count: number; complete: boolean}>;
 } & ({nodeId: NodeId; synthetic?: never} | {nodeId?: never; synthetic: {kind: "group"; members: readonly OccurrenceId[]}})>;
 export type PlexViewEdge = Readonly<{
   id: string; source: OccurrenceId; target: OccurrenceId; sourcePort: PhysicalPort; targetPort: PhysicalPort;
 } & ({kind: "semantic"; sourceNode: NodeId; targetNode: NodeId; relation: PlexViewRelation}
   | {kind: "derived" | "decorative"; evidence?: readonly {sourceNode: NodeId; targetNode: NodeId; relation: PlexViewRelation}[]})>;
 export type PlexProjection = Readonly<{
-  attention: NodeId; layoutRoot?: NodeId; entry: OccurrenceId; editor?: OccurrenceId; frame?: OccurrenceId;
+  attention: NodeId; layoutRoot?: NodeId; root?: OccurrenceId; entry: OccurrenceId; editor?: OccurrenceId; frame?: OccurrenceId;
   occurrences: readonly PlexOccurrence[]; edges: readonly PlexViewEdge[]; truncated: boolean; coverage: ViewCoverage;
+  /** Only an opt-in hierarchy may request bounded, actually represented parent scopes outside projection/layout. */
+  preparation?: Readonly<{parents: readonly NodeId[]}>;
+  /** Bounded plain session intent (e.g. stable branch sides); the existing session validates and commits it. */
+  stateSuggestion?: unknown;
 }>;
 export type PlexMeasurement = Readonly<{
   id: OccurrenceId; width: number; height: number; expandedWidth: number; expandedReserve: number;
+  /** Only this occurrence has a bound expanded editor; the legacy layout boolean does not describe it. */
+  editor?: true;
   mini: {width: number; viewportHeight: number; topGap: number} | null;
   envelope: {width: number; viewportHeight: number; topGap: number} | null;
 }>;
@@ -58,6 +77,8 @@ export type PlexArea = Readonly<{
   viewport?: ViewRect & {contentTop: number; contentHeight: number; initialScrollTop: number};
   /** Physical area action is explicit; arbitrary areas have no relationship-write meaning by default. */
   dropRole?: "parent" | "child" | "left" | "right";
+  /** Exact admitted canonical origin; omission means projection root/entry. Area placement is never relationship provenance. */
+  dropOrigin?: OccurrenceId;
   reflow?: Readonly<{columns: number; columnGap: number; rowGap: number; paddingTop?: number; paddingBottom?: number}>;
 }>;
 export type PlexViewLayout = Readonly<{
@@ -65,6 +86,12 @@ export type PlexViewLayout = Readonly<{
 }>;
 export type PlexViewInput = Readonly<{
   attention: NodeId; read: PlexViewRead; maximum: number; state: unknown;
+  /** Present only for an opt-in rooted native session; attention remains an independent navigation target. */
+  layoutRoot?: NodeId;
+  /** Plain current resource ownership, not coverage. Existing frontier slots take priority over newly arriving branches. */
+  retainedScopes?: readonly NodeId[];
+  /** Only plain occurrence/canonical identities; native tokens/buffers and dimensions remain with their existing owners. */
+  editors?: readonly Readonly<{occurrenceId: OccurrenceId; nodeId: NodeId}>[];
   /** Type-wide configuration is separate from native-session state. */
   configuration?: PlexViewConfiguration;
 }>;
@@ -75,6 +102,16 @@ export interface PlexViewDefinition {
   readonly icon: string;
   readonly capabilities: Readonly<{sections: boolean; descendants: boolean; editor: boolean; compact: boolean}>;
   readonly defaultState: unknown;
+  /** Omit for the existing attention-following host. Occurrence hosting requires explicit shared bindings. */
+  readonly editorHosting?: "occurrence";
+  /** Omit for attention-scoped geometry and navigation compatibility. */
+  readonly navigation?: "rooted";
+  /** Explicit selector entry may start at this canvas's current attention; workspace restoration still retains its saved root. */
+  readonly navigationEntry?: "attention";
+  /** Optional bounded branch-frontier policy, independent of attention-following definitions and native editor creation. */
+  readonly hierarchy?: Readonly<{maximumScopes: number; primary: "activate" | "activate-editor" | "expand"; relations?: "child-and-peer";
+    /** Return a small replacement view state, or null when the requested displayed branch is unavailable. */
+    reduce: (state: unknown, projection: PlexProjection, action: PlexBranchAction) => unknown}>;
   readonly configuration?: PlexViewConfigurationSchema;
   /** Validate only this view's small session state; shared/native settings are not supplied. */
   restoreState(value: unknown): unknown;

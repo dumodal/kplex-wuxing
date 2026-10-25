@@ -32,6 +32,8 @@ export type RelatedNoteInvocation = {
   current?: () => boolean;
   focusGraph?: () => void;
   onClosed?: () => void;
+  /** Existing-target native imports may append ontology but cannot inherit the legacy automatic-relink policy. */
+  additiveOnly?: boolean;
 };
 
 /** Detach the bounded endpoint reference from mutable published page metadata while retaining its exact TFile. */
@@ -228,7 +230,10 @@ function RelatedNoteComposer({
     try {
       const field = await prepareField();
       if (!field || !session.isSessionOpen()) return;
-      const result = await plugin.createRelationToPage(refreshCapturedPage(plugin, origin), role, refreshCapturedPage(plugin, target), field);
+      const currentOrigin = refreshCapturedPage(plugin, origin), currentTarget = refreshCapturedPage(plugin, target);
+      const result = session.additiveOnly
+        ? await plugin.createRelationToPage(currentOrigin, role, currentTarget, field, undefined, true)
+        : await plugin.createRelationToPage(currentOrigin, role, currentTarget, field);
       if (result.state === "unavailable") return;
       await complete(result.page, intent, false);
     } catch (error) { reportFailure(error, target); }
@@ -606,6 +611,7 @@ export class NewRelatedNoteModal extends Modal {
   private releaseIdentity: (() => void) | null = null;
   private releaseInteraction: (() => void) | null = null;
   readonly continuation: CompletionIntent;
+  readonly additiveOnly: boolean;
   readonly suggestionOwnerId = `related-composer-${++composerSequence}`;
 
   /** Capture origin and invoker now; future shared-center changes never replace them. */
@@ -626,6 +632,7 @@ export class NewRelatedNoteModal extends Modal {
     const active = this.invokingDocument.activeElement;
     this.invokingElement = active && "focus" in active ? active as HTMLElement : null;
     this.continuation = invocation.continuation ?? "configured";
+    this.additiveOnly = invocation.additiveOnly === true;
   }
 
   /** Protect role changes during the exact asynchronous save, independently of React state. */

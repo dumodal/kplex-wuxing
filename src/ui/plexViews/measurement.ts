@@ -93,13 +93,17 @@ export function deferredNodeCounts(): Pick<PositionedNode, "neighbourCount" | "g
 }
 
 /** Map canonical role counts to the explicitly declared physical ports without claiming absent counts for undeclared gates. */
-export function physicalGateStats(node: Pick<PositionedNode, "gateStats" | "physicalPorts">): PositionedNode["gateStats"] {
+export function physicalGateStats(node: Pick<PositionedNode, "gateStats" | "physicalPorts" | "peerPort">): PositionedNode["gateStats"] {
   if (!node.physicalPorts) return node.gateStats;
   const sides = {parent: "top", child: "bottom", left: "left", right: "right"} as const;
   const result = deferredNodeCounts().gateStats;
   for (const side of ["top", "bottom", "left", "right"] as const) {
     const role = node.physicalPorts[side];
     if (role) result[side] = node.gateStats[sides[role]];
+  }
+  if (node.peerPort) {
+    const peer = node.peerPort;
+    result[peer.side] = {visibleCount: peer.count, complete: peer.complete, hasAny: peer.count > 0, shownCount: peer.shownCount};
   }
   return result;
 }

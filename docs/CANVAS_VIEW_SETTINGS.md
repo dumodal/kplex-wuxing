@@ -152,3 +152,14 @@ Type configuration applies to all canvases of that view. Selected view, roots, f
 The maintainer's later steer authorizes committing/pushing #218, exact-head automated/native verification and CI, refreshing main normally, then marking ready and merging #218 without another confirmation. Read back the actual merge and post its accepted contract/validation to #220 as Zsolt's Codex Agent. Immediately continue existing #219 branch `2026-10-24-canvas-mindmap`, integrate latest accepted main and begin isolated M0 from `PLEX_OCCURRENCE_EDITORS.md`. #219 implementation/publication is authorized; merging #219/#220, releases and production-vault deployment remain unauthorized. Coordinate shared renderer/session/action/contracts with the Windows partner before M0 changes.
 
 The corrected dependency is explicit: #220 can implement and validate complete Wu Xing after #218 with the existing attention-following native editor, independently of #219/M0. M0 is required for Mind Map's arbitrary-node editing and must preserve existing Compass and non-Classic attention-following definitions without simultaneous API migration. No editor work belongs in #218.
+
+
+## Mind Map interaction follow-up (2026-10-25)
+
+Mind Map contributes nine native type controls. Parent columns (1–3/default2) joins horizontal/vertical density (0.1–4/default1) on its existing bottom-left layout rail. Both Settings and rails address registered fields through the same queued writer. Measured parent-area width and density affect the branch baseline without shrinking notes/editors. Parent height stays in existing per-canvas area state (140–800/default300); it is not another global field or lens property.
+
+Area settings is a current-scene capability, not a view-ID preference. Views with no supported editable height regions hide/refuse that action and retire existing area-edit mode while preserving their bounded filters/scrolling. Normal coalesced/200ms-pending refresh after a saved setting is quiet; only actual refresh rejection uses the existing recovery notice. Disk failures, conflicts and saved/pending modal result semantics remain intact.
+
+The maintainer later authorized #219 test main.js/styles.css deployment and node/view navigation in the named production vault with notes strictly read-only. That narrow authorization does not permit note edits, release, or merging #219/#220.
+
+Refresh feedback ownership: saved/pending-result dialogs retain their existing localized notice. Only settings callers without that feedback request the generic actual-failure callback; a normal coalesced/short-wait result never triggers it. Existing modal single-notice regression remains protected.

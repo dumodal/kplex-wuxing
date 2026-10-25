@@ -24,6 +24,8 @@ import { TooltipButton } from "./components/TooltipButton";
 export function CentralNodeEditor({
   plugin,
   hostLeaf,
+  bindingId,
+  onCloseReady,
   page,
   defaultMode,
   maximized,
@@ -37,6 +39,8 @@ export function CentralNodeEditor({
   translate,
 }: {
   plugin: KplexPlugin;
+  bindingId?: string;
+  onCloseReady?: (close: () => Promise<void>) => (() => void);
   hostLeaf: WorkspaceLeaf;
   page: GraphPage;
   defaultMode: EmbeddedMarkdownMode;
@@ -55,6 +59,8 @@ export function CentralNodeEditor({
   const useWebFrame = Boolean(webTarget);
   const mountRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<EmbeddedMarkdownLeafController | null>(null);
+  const closeReadyRef = useRef(onCloseReady);
+  closeReadyRef.current = onCloseReady;
   const fileRef = useRef(page.file);
   const defaultModeRef = useRef(defaultMode);
   const onNavigateRef = useRef(onNavigate);
@@ -84,18 +90,21 @@ export function CentralNodeEditor({
       }, (nextView) => {
         setDocumentView(nextView);
       }, activateHostLeafOnInteraction, /** Read current normal-node policy for opening and untouched reading-mode resizing. */ () =>
-        plugin.settings.excalidrawFitOnNodeOpen && !maximizedRef.current);
+        plugin.settings.excalidrawFitOnNodeOpen && !maximizedRef.current,
+      bindingId ? nextFile => onNavigateRef.current(nextFile) : undefined);
     } catch (error) {
       console.error("K-Plex failed to create the embedded central leaf.", error);
       setStatus("error");
       return;
     }
     controllerRef.current = controller;
+    const releaseClose = closeReadyRef.current?.(() => controller.close());
     return () => {
+      releaseClose?.();
       controllerRef.current = null;
       controller.dispose();
     };
-  }, [plugin, hostLeaf, activateHostLeafOnInteraction, useWebFrame]);
+  }, [plugin, hostLeaf, activateHostLeafOnInteraction, useWebFrame, bindingId]);
 
   useEffect(/** Route this center to its native file leaf or explicitly opened URL guest without changing history. */ () => {
     const controller = controllerRef.current;
@@ -122,7 +131,7 @@ export function CentralNodeEditor({
       if (!cancelled) setStatus("error");
     });
     return () => { cancelled = true; };
-  }, [page.path, page.file, page.url, plugin, useWebFrame]);
+  }, [bindingId ? null : page.path, page.file, page.url, plugin, useWebFrame, bindingId]);
 
   useEffect(/** Notify native files when their layout box changes; web guests own their resize observer. */ () => {
     const mount = mountRef.current;

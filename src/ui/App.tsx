@@ -6,6 +6,8 @@
  * explicit navigation origins and native input pause it without replacing history, editor or Zen owners.
  * The root leases one shared delayed-hover/long-press tooltip owner for its rendering document.
  * Cross-link visibility reads shared persisted settings rather than temporary quick-filter or Find snapshots.
+ * Explicit F4/history/pin/drop destinations reroot only this captured rooted session after editor/native-identity admission; ordinary attention and passive document follow retain the root.
+ * Area editing is available only through the current admitted graph capability, with the shared action owner rechecking submission.
  * Action-dispatched sync/Sidecar menus resolve fresh surface-local control anchors without routing DOM events through the action manager.
  * Native follow retains the latest canonical file while hidden and suppresses fallback scenes/motion during partial hydration.
  * Directional Sidecar attachment controls project host eligibility and use the same native follow owner for inward synchronization.
@@ -34,7 +36,8 @@ import {
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from "react";
-import { FileView, View, Menu, type TFile, type WorkspaceLeaf } from "obsidian";
+import { FileView, View, Menu, Notice, type TFile, type WorkspaceLeaf } from "obsidian";
+import {nodeId} from "../core/graph/model";
 import type KplexPlugin from "../main";
 import type { GraphPage } from "../types";
 import type { PresentationEnvironment } from "../core/contracts/presentationEnvironment";
@@ -356,8 +359,16 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
    * Center an exact page; sidecar-open commands defer document synchronization to their owned open.
    * Passive follow keeps companion propagation: each host destination independently skips an
    * exact same-file observation, while other linked destinations still receive genuine navigation.
+   * Explicit search/history/pin/drop destinations may reroot; refuse an editor-removing root before changing attention or history.
    */
-  const activate = useCallback((target: GraphPage, record = true, syncDocuments = true, origin: "user" | "wander" | "follow" = "user") => {
+  const activate = useCallback((target: GraphPage, record = true, syncDocuments = true, origin: "user" | "wander" | "follow" = "user", reroot = false) => {
+    if (reroot && target.file && plugin.app.vault.getFileByPath(target.file.path) !== target.file) return false;
+    if (reroot && documentSession.plexView.definition.navigation === "rooted" && !documentSession.plexView.setRoot(nodeId(target.path))) {
+      new Notice(translate("actions.branch-editor-blocked")); return false;
+    }
+    // Only an accepted explicit destination may materialize its existing native file in the index.
+    // A refused root change must not create demand or publish a provisional destination.
+    if (reroot && target.file && !plugin.index.get(target.path)) target = plugin.index.insertCreatedFile(target.file);
     if (target.path !== activePathRef.current || origin === "follow") {
       if (origin !== "wander") wander.pause();
       graphActionPorts.current?.prepareNavigation?.(target.path, origin);
@@ -389,7 +400,8 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
       void plugin.syncPageToDocumentLeaf(target, hostLeaf);
       void plugin.syncSidecarToPage(hostLeaf, target);
     }
-  }, [plugin, hostLeaf, wander, releasePendingDocumentDemand]);
+    return true;
+  }, [plugin, hostLeaf, wander, releasePendingDocumentDemand, documentSession, translate]);
 
   /** Transfer a settled preview lease only after this exact graph center has acquired its own semantic demand. */
   const acknowledgeDocumentDemandHandover = useCallback((path: string): void => {
@@ -506,7 +518,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     const target = plugin.index.get(file.path);
     if (!target) return;
     pendingFileExplorerDropRef.current = null;
-    activate(target, true);
+    activate(target, true, true, "user", true);
   }, [plugin, activate]);
 
   /** Register and clean up the pending-drop index subscription for this mounted K-Plex surface. */
@@ -828,9 +840,8 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     const list = plugin.settings.navigationHistory;
     if (!list.length) return;
     const cursor = Math.max(0, Math.min(list.length - 1, historyCursor + delta));
-    setHistoryCursor(cursor);
     const target = plugin.index.get(list[cursor]);
-    if (target) activate(target, false);
+    if (target && activate(target, false, true, "user", true) !== false) setHistoryCursor(cursor);
   };
 
   /** Persist a shared visibility preference and refresh mounted views without rebuilding the index. */
@@ -935,7 +946,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
       .setTitle(translate("app.pluginSettings"))
       .setIcon("settings")
       .onClick(() => plugin.openSettings()));
-    menu.addItem((item) => item
+    if (graphActionPorts.current?.canEditAreas?.()) menu.addItem((item) => item
       .setTitle(translate("app.areaSettings"))
       .setIcon("move-vertical")
       .setChecked(areaSettingsMode)
@@ -968,6 +979,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
 
   /** Accept current native files and exact Plex URL/tag/placeholder links without source acquisition. */
   const handlePlexDragOver = (event: ReactDragEvent<HTMLDivElement>) => {
+    if (documentSession.plexView.definition.editorHosting === "occurrence" && (event.target as Element).closest(".kplex-central-editor-overlay")) return;
     const target = draggedGraphPage(plugin.app, plugin.index, event);
     if (!target && (nodeLinkDragSource(plugin.app) || !getDraggedFile(plugin.app)) && !event.dataTransfer.types.includes("text/plain")) return;
     event.preventDefault();
@@ -975,14 +987,16 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
 
   /** Re-center on an existing dropped endpoint; only native files may wait for partial indexing. */
   const handlePlexDrop = (event: ReactDragEvent<HTMLDivElement>) => {
-    const target = draggedGraphPage(plugin.app, plugin.index, event);
+    if (documentSession.plexView.definition.editorHosting === "occurrence" && (event.target as Element).closest(".kplex-central-editor-overlay")) return;
+    let target = draggedGraphPage(plugin.app, plugin.index, event);
     const file = getDraggedFile(plugin.app);
     if (!target && (nodeLinkDragSource(plugin.app) || !file)) return;
+    if (!target && file) target = plugin.index.getVaultSearchPage(file.path) ?? null;
     event.preventDefault();
     event.stopPropagation();
     if (target) {
       pendingFileExplorerDropRef.current = null;
-      activate(target, true);
+      activate(target, true, true, "user", true);
       return;
     }
     if (file) pendingFileExplorerDropRef.current = file;
@@ -1102,7 +1116,8 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     "view.depth.toggle": uiAction(/** Reuse the established projection depth setting. */ () => toggleExpandedView()),
     "view.groups.toggle": uiAction(/** Grouping changes presentation without rebuilding semantics. */ () => toggleToolbarSetting("groupRelations")),
     "view.connectors.toggle": uiAction(/** Camera and connector appearance remain presentation-only. */ () => toggleConnectorStyle()),
-    "view.areas.toggle": uiAction(/** Area editing mode remains transient and surface-local. */ () => setAreaSettingsMode(value => !value)),
+    "view.areas.toggle": uiAction(/** Only the current graph's real editable areas can enter this transient surface-local mode. */ () => setAreaSettingsMode(value => !value),
+      () => Boolean(graphActionPorts.current?.canEditAreas?.())),
     "view.center-editor.toggle": uiAction(/** Existing embedded editor capability and cleanup remain graph-owned. */ () => setCentralNodeEditorEnabled(!centerMode.embedCentralNode)),
     "view.sync.choose": uiAction(/** Open the same keyboard-accessible native sync menu. */ () => showDocumentSyncMenu()),
     "view.sidecar.toggle": uiAction(/** Toggle this leaf's companion; captured modifier intent optionally folds the completed pair. */ context => page ? plugin.toggleSidecar(hostLeaf, page, context.request.id === "view.sidecar.toggle" && context.request.args?.maximize === true) : undefined, () => surface !== "sidepanel" && Boolean(page)),
@@ -1144,7 +1159,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     appImplementations[`pin.open-slot.${slot}`] = uiAction(/** Slot resolution precedes hydration filtering, so missing earlier entries do not shift meanings. */ () => {
       const path = plugin.settings.pinnedNodes[slot - 1];
       const target = path ? plugin.index.get(path) : undefined;
-      if (target) activate(target);
+      if (target) activate(target, true, true, "user", true);
     }, /** Missing slots stay unavailable rather than redirecting to a neighboring pin. */ () => Boolean(plugin.index.get(plugin.settings.pinnedNodes[slot - 1] ?? "")));
   }
   const sidecarAvailable = surface !== "sidepanel";
@@ -1328,9 +1343,8 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
             appTopbarSelector=".kplex-topbar"
             revision={renderRevision}
             onActivate={/** Physical search remains usable during partial hydration; materialize only the selected current file. */ (id) => {
-              let target = plugin.index.getVaultSearchPage(id);
-              if (target?.file && !plugin.index.get(id)) target = plugin.index.insertCreatedFile(target.file);
-              if (target) activate(target, true);
+              const target = plugin.index.getVaultSearchPage(id);
+              if (target) activate(target, true, true, "user", true);
             }}
             focusRequest={searchFocusRequest}
             placeholder={searchCopy.placeholder}
@@ -1415,10 +1429,12 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
                   : {label: visit.node.identity, icon: "circle-help", available: false};
               }} formatLink={/** Explicit clipboard projection uses current cached facets or the captured link; never acquire sources. */ visit => nodeMarkdownLink(visit.node, resolveActionPage(plugin.index, visit.node))}
               navigate={/** Normal activation preserves global history and records this repeated visit once. */ visit => {
-                const target = resolveActionPage(plugin.index, visit.node);if (target && target.path !== activePathRef.current) activate(target);
+                const target = resolveActionPage(plugin.index, visit.node);
+                if (target && (target.path !== activePathRef.current || documentSession.plexView.definition.navigationEntry === "attention"
+                  && documentSession.plexView.layoutRoot(nodeId(target.path)) !== target.path)) activate(target, true, true, "user", true);
               }} />}
           actionPorts={graphActionPorts} actionSurfaceId={actions.surfaceId} displayState={displayState} fullscreenAvailable={displayModes.fullscreenAvailable && environment.device === "desktop"}
-          semanticRevision={plugin.index.getSemanticRevision()} navigationOrigin={navigationOrigin} onSemanticDemandAcquired={acknowledgeDocumentDemandHandover} onActivate={/** Manual graph navigation keeps the existing history and sync path. */ target => activate(target)} onWanderActivate={/** Explicit Wander origin survives asynchronous scene publications. */ target => activate(target, true, true, "wander")} onOpen={open} onOpenInSidecar={centerAndOpenSidecar} onCentralNodeEditorChange={setCentralNodeEditorEnabled} onCentralNodeModeChange={rememberCentralNodeMarkdownMode} areaSettingsMode={areaSettingsMode} onAreaSettingsModeChange={setAreaSettingsMode}
+          semanticRevision={plugin.index.getSemanticRevision()} navigationOrigin={navigationOrigin} onSemanticDemandAcquired={acknowledgeDocumentDemandHandover} onActivate={/** Explicit destinations may reroot; occurrence attention and document synchronization retain their existing owners. */ (target, intent) => activate(target, true, true, "user", intent === "destination")} onWanderActivate={/** Explicit Wander origin survives asynchronous scene publications. */ target => activate(target, true, true, "wander")} onOpen={open} onOpenInSidecar={centerAndOpenSidecar} onCentralNodeEditorChange={setCentralNodeEditorEnabled} onCentralNodeModeChange={rememberCentralNodeMarkdownMode} areaSettingsMode={areaSettingsMode} onAreaSettingsModeChange={setAreaSettingsMode}
           onApplyFindFilter={applyFindFilter} appliedFindFilterQuery={findFilterOwner?.query ?? null} onClearFindFilter={clearFindFilter} />
           {wanderState.phase !== "stopped" && <WanderControls state={wanderState} translate={translate}
             stopIcon={<ObsidianIcon name="x" size={17} />} playbackIcon={<ObsidianIcon name={wanderState.phase === "paused" ? "play" : "pause"} size={17} />} paceIcon={<ObsidianIcon name="timer" size={11} />}

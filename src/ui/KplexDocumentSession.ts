@@ -9,6 +9,7 @@ import {PlexViewSession} from "../application/PlexViewSession";
 import {builtInPlexViews} from "./plexViews/builtins";
 import type {PlexViewRegistry} from "../core/plex/views/registry";
 import { PlexFootprints } from "../application/PlexFootprints";
+import {nodeId} from "../core/graph/model";
 
 export type DocumentPreferences = Pick<KplexSettings, "documentSyncMode" | "sidecarOpen" | "sidecarPosition" | "sidecarLastFilePath" | "sidecarLastUrl" | "sidecarMarkdownMode">;
 export type DocumentFollowIntent = Readonly<{file: TFile; leaf: WorkspaceLeaf; revision: number}>;
@@ -41,7 +42,7 @@ export class KplexDocumentSession {
 
   /** New views inherit defaults, never another view's managed association or pinned target. */
   constructor(defaults: DocumentPreferences, readonly ownerId: string | null, private readonly changed: () => void, registry: PlexViewRegistry = builtInPlexViews) {
-    this.plexView = new PlexViewSession(registry, () => this.persist());
+    this.plexView = new PlexViewSession(registry, () => this.persist(), () => this.centerPath ? nodeId(this.centerPath) : null);
     this.preferences = {documentSyncMode: defaults.documentSyncMode === "pinned" ? "off" : defaults.documentSyncMode,
       sidecarOpen: false, sidecarPosition: defaults.sidecarPosition, sidecarLastFilePath: "", sidecarLastUrl: "",
       sidecarMarkdownMode: defaults.sidecarMarkdownMode};

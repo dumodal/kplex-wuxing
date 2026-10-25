@@ -158,7 +158,7 @@ These opt-in routes retain their existing driver's configuration/fixture restora
 
 After exact-build staging, `npm run verify:obsidian:canvas-settings` checks Canvas behavior/Compass routing, native search/Back/focus, tint ownership in main/popout Settings, contributed type configuration and the Views and lenses selector in Small. Test definitions are injected only into owned sessions. The driver checks blocked transitions, retained lens drafts, independent main/popout choices and native view restoration, trusted select keyboard input and zero extra source work in isolated same-scope/type-configuration intervals. It distinguishes legacy flat-control completion from new type configuration. It restores owned notes, Settings policy, registries, wrappers, settings bytes and native workspace. A native view reload is not a full application restart; physical touch, minimum-host and unrelated #215 restart/combined-editor limitations remain separate.
 
-On macOS, set `KPLEX_CANVAS_SELECTOR_OS_KEYS=true` and coordinate the OS automation participant with the report's bounded `await-native-select-os-keys` phase. The driver has already focused the exact Small-owned select. Deliver **Space**, **Down**, **Return** through OS keyboard automation, without pointer activation or a property/event fallback. Acceptance requires both a trusted key targeting that select and a trusted native change selecting the expected session view. Renderer-only End injection reached the control but did not select an option on the tested macOS host; do not report that as keyboard acceptance. This follows the existing actions lane's explicit OS-CUA distinction and does not establish physical touch testing.
+On macOS, set `KPLEX_CANVAS_SELECTOR_OS_KEYS=true` and coordinate the OS automation participant with the report's bounded `await-native-select-os-keys` phase. The driver has already focused the exact Small-owned select. Deliver **Space**, move **Down** to the expected probe shown in the native menu (currently twice because Mind Map follows Compass), then **Return** through OS keyboard automation, without pointer activation or a property/event fallback. Acceptance requires both a trusted key targeting that select and a trusted native change selecting the expected session view. Renderer-only End injection reached the control but did not select an option on the tested macOS host; do not report that as keyboard acceptance. This follows the existing actions lane's explicit OS-CUA distinction and does not establish physical touch testing.
 
 After exact-build staging, `npm run verify:obsidian:color-styling` exercises actual declarative Settings navigation, paired palette strips/property actions, source/alpha/palette/adoption editing, local counterpart recommendations and Compass controls/motion in `kplex-test-small`. Use the same three explicit vault variables and a fresh `KPLEX_HOST_REPORT_DIR`. The driver verifies artifact hashes, measures source/index/search calls in the tested paint intervals and checks retained center/camera DOM and actual mode changes. It owns two synthetic Compass notes, removes only those fixtures and restores settings, appearance, workspace/configuration bytes and listeners/controllers. Cleanup failure fails acceptance. Programmatic activation and trusted range/Escape input do not establish physical native-picker/touch or minimum-host acceptance; OS-specific results are recorded in the validation report.
 
@@ -1442,7 +1442,7 @@ Direct isolated GraphIndex fixtures retain their explicit legacy constructor inp
 
 ## Internal Plex view validation
 
-Classic remains the only shipped definition. `plex-view-classic` protects the
+Compass and Mind Map are registered production views. The validation report records exact runtime/native evidence and retained host limits. `plex-view-classic` protects the
 pre-extraction membership/caps and 16-case exact geometry golden; contract/session
 checks exercise bounded cached reads, malformed output, unknown state, independent
 lifetimes and editor compatibility. `plex-view-probe` mounts the actual shared
@@ -1470,3 +1470,34 @@ owns a timestamped fixture folder and restores settings/layout/resources in
 Run existing sessions/groups/actions/workflow/sections lanes serially for Classic
 regressions. Native automation and desktop mobile emulation do not establish
 physical Windows, phone or tablet input acceptance.
+
+
+### Occurrence-editor prerequisite acceptance
+
+After exact-build staging in backed-up Small, run
+`npm run verify:obsidian:occurrence-editors` with the three explicit disposable-vault
+variables and a fresh report directory. The test-only opt-in definition uses the actual
+shared actions, scene, native Markdown controller and existing session. It checks root R,
+attention A/C and editor B1, duplicate B2/capacity one, genuinely dirty text/nonempty
+selection/focus through resize/reflow/scroll clipping, exact filtering, rejected-save and
+authoritative-removal recovery, bounded intent restoration, main/popout migration,
+external Vault rename/deletion/recreation and durable teardown. It awaits actual source
+maintenance settlement before reopening a saved document; it does not retry a rejected
+action. Production definitions remain unchanged until their own feature registers them.
+
+Run browser/native drivers serially and retain failed samples. The earlier FileManager
+rename producer stalled at the native cache-clean gate; Vault.rename exercises external
+mutation separately and does not turn that workflow into a pass. This lane's view
+recreation is not a whole-application restart, native Electron input is not physical
+mobile/Windows acceptance, and simultaneous editors are unsupported. See the
+[interim report](docs/validation/occurrence-editors-219-2026-10-25.md) for evidence,
+restoration and remaining checks.
+
+
+### Production Mind Map acceptance
+
+After exact-build staging in backed-up Small, run `npm run verify:obsidian:mindmap` with the three explicit test-vault variables and a fresh report directory. Run `KPLEX_MINDMAP_LANE=navigation`, `editor` and `sessions` serially. The navigation lane checks root parent/peer context, trusted branch expansion, actual SVG bottom-child/outward-peer gates, current-node selector entry, history/pin rerooting and bottom-left density rails through the shared durable type-settings writer. The editor lane uses the real registered definition, canonical diamonds/cycles, Find, trusted native primary input, dirty editor/caret/focus, actual spacing/resize, camera and branch/root/filter/selector guards, migration, durable close and bounded native-view restoration. The session lane uses production Compass/Mind Map in actual main/popout documents, captured selectors, a retained draft and independent roots/cameras/main-window Sidecar association/restoration. A separate fresh-popout Sidecar creation attempt remained empty and is not counted as passing; the session lane does not certify that workflow. All test-owned notes/leaves/settings/layout/wrappers are restored. No test definition or production debug API is installed.
+
+`tests/mind-map-source-demand.test.mjs` uses actual GraphIndex, source acquisition and Chromium IndexedDB in both modes to prove unprepared branch preparation and cancellation of held native/canonical covers. This is distinct from portable DTO tests and native editor acceptance. Existing scaling guards remain enabled. Native-view recreation is not whole-application restart; physical touch/Windows and the documented M0 FileManager cache gate remain separate limits. See [the current evidence](docs/validation/mind-map-219-2026-10-25.md); a written driver is not a passing receipt.
+
+For the focused native HTML source-identity/actual additive Save/occurrence-editor text-drop proof, use `KPLEX_MINDMAP_LANE=interactions KPLEX_MINDMAP_DRAG_ONLY=true` with the same disposable Small variables and a fresh report directory. This runs the existing real drag transport and shared composer/editor in a test-only definition; it is separate from the full parent-area/navigation lane. After native popout migration, check that Obsidian’s `activeDocument` still has a live window before a later modal probe. A retired host document requires a disposable-renderer reload; preserve that failed sample, and do not treat reload as an application fix or a whole-app restart test.
