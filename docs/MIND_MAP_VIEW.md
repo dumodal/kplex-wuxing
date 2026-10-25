@@ -1,6 +1,6 @@
 # Mind Map canvas view
 
-Prepared by Zsolt's Codex Agent, 2026-10-24. **Implemented and locally validated at `342ad13`: complete verification and exact-artifact production editor/session/settings/legacy native lanes pass. Capacity one. Publication-head CI is authoritative on PR219; FileManager and fresh-popout Sidecar limits remain explicit.**
+Prepared by Zsolt's Codex Agent, 2026-10-24. **Correction in progress after rejected product acceptance.** Earlier `342ad13` verification covered a narrower interaction model and does not establish the revised requirements below. Capacity one. Current correction/native/full-suite/CI results must be read separately; retained FileManager and fresh-popout Sidecar limits remain explicit.
 
 ## Baseline and start gate
 
@@ -12,7 +12,7 @@ Planning branch: `2026-10-24-canvas-mindmap`, created from `main@659697a686f3414
 
 Keep M0 independently reviewable and reusable, but do not require Windows to consume it, acknowledge a checkpoint or wait before completing #220. Preserve the existing view/editor contract through an additive capability or compatibility adapter so existing consumers can keep working unchanged. #218 stays focused on settings/selection and must not absorb this host work.
 
-The running #218 agent remains authorized to merge #218 after successful automated validation and immediately start this PR with M0. That continuation is unchanged; merging #219/#220, release and personal-vault deployment remain unauthorized.
+The running #218 agent remains authorized to merge #218 after successful automated validation and immediately start this PR with M0. That continuation is unchanged; merging #219/#220 and release remain unauthorized. The maintainer subsequently authorized read-only observation, node/view navigation and temporary `main.js`/`styles.css` deployment in the production vault; production notes must never be edited.
 
 ## Product goal and source basis
 
@@ -30,15 +30,16 @@ Outline can later reuse this hierarchy projection with a one-sided layout. A com
 
 | Intent | Result |
 | --- | --- |
-| Enter Mind Map | Current attention becomes the initial root. Display a bounded child hierarchy. |
-| Primary click/tap on an eligible collapsed note occurrence | Explicitly activate that note and request its in-place editor through shared actions. Root and branch identity remain unchanged. Respect existing modifier-open behavior and ignore drags/control clicks. |
+| Enter Mind Map through the selector | Capture that canvas’s current attention as root, including when re-entering a previously used Mind Map. Native workspace restoration independently retains its saved root. Show children to the right, peers to the left and parents above. |
+| Primary click/tap on an eligible collapsed occurrence | Select and expand its next bounded child/peer frontier through shared actions. Preserve root, attention and editors; a repeated primary click does not collapse it. Respect modifier-open behavior and ignore drags/control clicks. |
+| Select the explicit editor control | Request that exact occurrence’s in-place native editor through shared actions. Branch expansion is independent. |
 | Select through arrows, typing or Find | Select/reveal the exact occurrence without opening an editor or rerooting. |
 | Click within an expanded editor | Focus its existing native editor. Never toggle-collapse it because the click bubbles to the node. |
 | Expand/collapse branch | Change that occurrence's displayed descendants; independent of editor expansion. |
 | Expand/collapse one generation | Bounded frontier operation over current expansion, not an unbounded recursive scan. |
 | Use as map root | Explicit reroot through the shared navigation owner, with safe handling of any editor that would be removed. |
 | Close node editor | Collapse only that binding through the shared save/teardown path. |
-| Follow an external note/search/history destination | Preserve root when an admitted occurrence exists. Otherwise request explicit reroot; resolve any live-editor removal safely before committing. No hidden replacement of editor content. |
+| Explicitly select a history, pin or search destination | Make that destination the map root through the owning session; refuse unsafe editor removal before changing navigation/history. Ordinary attention updates remain independent and retain the root. |
 
 Initial editor capacity is **one per canvas**, using an occurrence-keyed collection designed to allow more later. A second request has an explicit capacity result and clear recovery (close the current editor first); no silent replacement. Multiple simultaneous editors are tentative follow-up work, not an overnight acceptance criterion.
 
@@ -74,17 +75,19 @@ Support eager and on-demand indexing. Root demand may remain while another visib
 
 Occurrence IDs encode stable traversal identity, not sorted-array position. Repeated canonical notes under different parents have independent occurrences and expansion. Track ancestry per branch to terminate cycles while still allowing the same note in separate branches. Reference/cycle indicators do not invent semantic edges or writable nodes. Preserve provenance, actual endpoints, hidden-link handling and defined/inferred distinctions.
 
-Keep the first hierarchy focused on children. Parent/lateral/root-sibling context and arbitrary hierarchy-field selection are later options unless they come without expanding the validated scope. Optional cross-links among displayed nodes must be actual canonical relationships and honor shared visibility settings.
+Read the root’s canonical parents, children, friends/challengers and previous/next relationships. Every expanded descendant reads its children and four peer roles through the existing bounded reader/demand owner. Parents are root context, not a recursive ancestor traversal. Deduplicate a target per parent using deterministic role precedence; separate lineages remain distinct. Keep the same occurrence/depth/frontier budgets. All displayed edges retain their actual canonical semantic role and provenance; no synthetic writable relationship is introduced.
 
 ## M2 — Stable horizontal layout
 
-Use the existing measured thought/editor rectangles, node/link styling and physical-port renderer. Assign root branches deterministically to left/right, retain their side across attention changes, and avoid global rebalancing when an editor opens. Preserve root-relative branch identity when new data arrive.
+Use the existing measured thought/editor rectangles, node/link styling and physical-port renderer. Default root children to the right, all four peer roles to the left and parents above. Previously saved balanced/left child arrangements remain supported. Descendants retain their branch side across attention changes; avoid global rebalancing when an editor opens. Preserve root-relative branch identity when new data arrive.
 
-Place child connectors on outward-facing ports without reversing their semantic role. Layout must account for editor dimensions and avoid overlaps with neighboring branches. Opening/resizing can move nearby nodes; ordinary attention changes must not trigger a new whole-map fit or large center-style size changes. Preserve manual camera intent; reroot/Fit remain deliberate framing operations.
+At every expanded occurrence, child connectors leave the bottom gate. Peer connectors leave the outward side gate (right on right-hand branches, left on left-hand branches); root peers leave the left gate. Root parents use the top gate. Preserve the canonical semantic role independently of physical routing. Layout must account for editor dimensions and avoid overlaps with neighboring branches. Opening/resizing can move nearby nodes; ordinary attention changes must not trigger a new whole-map fit or large center-style size changes. Preserve manual camera intent; reroot/Fit remain deliberate framing operations.
 
-Validate link clipping and scene extents for large horizontal/deep layouts, including outside Classic's typical bounds, scrolled/clipped editor occurrences and popout resizing. No force simulation or frame-by-frame source/layout recomputation.
+Validate link clipping and scene extents for large horizontal/deep layouts, including outside Classic's typical bounds, scrolled/clipped editor occurrences and popout resizing. No force simulation or frame-by-frame source/layout recomputation. Automatic placement may follow initial viewport settlement while its authority remains current, including preserving scale when autozoom is disabled. Manual/restored cameras and live editor bindings retain priority.
 
 Filtering, grouping, Find and keyboard navigation use shared owners. Specify how a filtered branch affects descendants and keep it deterministic; never turn a hidden ancestor into an invented direct semantic link. Keep/Reflow retains its advertised meaning. Group only appropriate branch partitions, never the root or a live editor; unfold through the shared mechanism. Same-note occurrences must remain independently selectable and discoverable.
+
+Horizontal and vertical density are independent Mind Map type settings (default 1, range 0.75–4). Both appear under **Settings → K-Plex → Canvas behavior → Views → Mind Map** and in the bottom-left **Configure layout** panel. Both surfaces use the same validated queued writer; density divides the corresponding gap, never note/editor dimensions. Compass density and per-canvas root/expansion/camera/editor state remain independent.
 
 ## M3 — View settings, selection and actions
 
@@ -125,7 +128,11 @@ No simultaneous-editor workspace, native Obsidian Canvas replacement, manual bra
 
 Return actual implementation/files, validated editor checkpoint, compatibility/configuration contracts, source/build identities, tests/failures/limits, cleanup and remaining decisions. Keep this PR draft until the complete Mind Map feature and its own M0 requirements are validated. Do not merge the planning document as a completed view. #220's readiness is independent of this PR.
 
-## Accepted implementation baseline and current checkpoint
+## Historical checkpoints — acceptance superseded
+
+The checkpoint notes below preserve the earlier implementation history. Their delivery/authorization statements describe that time, not current acceptance. The requirements above and the [correction report](validation/mind-map-correction-219-2026-10-25.md) govern current work.
+
+### Accepted implementation baseline and prior checkpoint
 
 2026-10-25 Budapest / 2026-10-24 UTC: #218 merged as `998781070a9382005154f4f884ed753280a9cf52` after exact-head Node22.22.2 full/native verification and green CI467. This existing branch includes its latest specification `67885e6` and normally integrates accepted main. No local work was discarded.
 

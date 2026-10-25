@@ -30,7 +30,8 @@ export class PlexViewSession {
   private closed = false;
   private restored = false;
   /** Selection persists through the existing native workspace writer, not plugin settings. */
-  constructor(readonly registry: PlexViewRegistry, private readonly persist: () => void) { this.requestedId = registry.fallbackId; }
+  constructor(readonly registry: PlexViewRegistry, private readonly persist: () => void,
+    private readonly readAttention: () => NodeId | null = () => null) { this.requestedId = registry.fallbackId; }
   /** Resolve only static policy; unavailable saved IDs retain the fallback without discarding their payload. */
   get definition(): PlexViewDefinition { return this.registry.resolve(this.requestedId); }
   /** Decode this definition's finite preference payload without sharing runtime/native objects. */
@@ -47,10 +48,16 @@ export class PlexViewSession {
   getLifetime(): number { return this.epoch; }
   /** Capture the selection lifetime independently of ordinary preference/paint publications. */
   capture(): () => boolean { const epoch = this.epoch; return () => !this.closed && epoch === this.epoch; }
-  /** Same-definition selection performs no work; a replacement retires only view-owned resources. */
+  /** Opt-in view entry uses this canvas's current attention as its root. Other definitions, workspace restoration and same-definition selection retain existing intent. */
   select(id: string): void {
     if (this.closed || id === this.requestedId || !this.canSelect(id) || !/^[a-z][a-z0-9.-]{0,79}$/.test(id)) return;
-    this.retire(); this.requestedId = id; this.notify(); this.persist();
+    const attention = this.readAttention();
+    this.retire(); this.requestedId = id;
+    if (this.definition.navigationEntry === "attention" && typeof attention === "string" && attention && attention.length <= 4096
+      && this.roots.get(this.definition.id) !== attention) {
+      this.storeRoot(attention); this.restoredEditors = undefined;
+    }
+    this.notify(); this.persist();
   }
   /** An incompatible definition/hosting mode cannot silently destroy a live native editor. Compatible legacy attention hosts retain their exact instance. */
   canSelect(id: string): boolean { return !this.closed && (!this.editors.bindings.length || this.registry.resolve(id).id === this.definition.id)
@@ -66,12 +73,16 @@ export class PlexViewSession {
     if (this.closed || this.definition.navigation !== "rooted" || typeof root !== "string" || !root || root.length > 4096) return false;
     if (this.roots.get(this.definition.id) === root) return true;
     if (this.editors.bindings.length) return false;
+    if (this.readEditorIntent()) this.restoredEditors = undefined;
+    this.storeRoot(root); this.notify(); this.persist(); return true;
+  }
+  /** Keep root storage bounded without publishing a partially completed selection transition. */
+  private storeRoot(root: NodeId): void {
     if (this.roots.size >= 16 && !this.roots.has(this.definition.id)) {
       const oldest: unknown = this.roots.keys().next().value;
       if (typeof oldest === "string") this.roots.delete(oldest);
     }
-    if (this.readEditorIntent()) this.restoredEditors = undefined;
-    this.roots.set(this.definition.id, root); this.notify(); this.persist(); return true;
+    this.roots.set(this.definition.id, root);
   }
   /** The mounted host preflights branch-state changes against exact current editor admission. */
   guardState(check: (state: unknown) => boolean): () => void {

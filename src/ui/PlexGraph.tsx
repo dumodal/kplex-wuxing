@@ -1,6 +1,8 @@
 /**
  * Host-bound Plex scene composition, shared captured center-arrival motion and finite Wander navigation ports, layout and relationship interactions. Semantic resolution stays index/core-owned; UI labels and on-demand evidence hints use the injected translator. Navigation fits keep the central node centered and follow late geometry until manual camera input; publication and ordinary pane resizing preserve manual intent. Sidecar open/close transitions explicitly reframe the current viewport after native layout settles, with pending work retired by input, navigation or unmount. View-owned display transitions retain camera coordinates and scene settings. Device typography stages scalar live preferences and persists after input settles; unmount flushes storage without replaying stale overrides. Area-height gestures own viewport pointer capture and persist existing presentation settings on completion or interruption. History and pinned drag targets share composer eligibility; external file drops follow the rendered area's semantic role. Theme-native area previews follow the existing drop action without intercepting capture or moving the dragged thought. Visible rows retain finite cache-only presentation demand; hidden surfaces and effect teardown release it. Geometry defers gate/count queries until a row intersects the displayed viewport, including partially clipped rows. Ordinary unfiltered scenes project cross-links for clipped visible rows; filtered and section scenes retain their established edge/count policy. Scene-local React keys capture paths before canonical pages can mutate during rename; semantic pages and actions retain their live identity. Normal-mode keyboard and exact-phrase typing selection are view-local; the displayed occurrence projection supplies all candidates and the shared selection owner reveals them without changing the center, filters or native search. Host methods own activation/rename/creation. Filtered badge numerators use revision-scoped semantic endpoint membership independently of connector routing and viewport clipping. Pane-fit native layout controls own local touch containment and bounded scrolling without changing preferences or browser range behavior. Accessible layout-wrapper hints use the shell's shared tooltip owner; inputs retain concise accessible names.
  * Hierarchy Find selects and reveals exact occurrences without activating attention or opening an editor.
+ * Registered view layout rails share the native Settings queued writer and measured layout pipeline;
+ * they preserve camera intent and editor instances without acquiring semantic sources.
  * Visual resolution and metadata refreshes retain the index consent epoch; teardown and revocation
  * reject late publication. Hover enlargement uses the same already-guarded image element.
  * Connector Hidden actions share the plugin writer; this surface owns their pending confirmation
@@ -59,6 +61,7 @@ import { LayoutSlider } from "./components/LayoutSlider";
 import { centeredViewportFit, sameFitCamera, type FitCamera } from "./components/viewportFit";
 import { projectFilteredGateCounts } from "./filteredGateCounts";
 import { LayoutControls } from "./components/LayoutControls";
+import {readViewConfiguration} from "../core/plex/views/configuration";
 import { LayoutCheckbox } from "./components/LayoutCheckbox";
 import { lateralArrangementSurface } from "./viewProfile";
 import { centerArrivalFrames, type MotionRect } from "./components/centerArrival";
@@ -1122,6 +1125,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const zoneScrollRefs = useRef<Partial<Record<ScrollZone, HTMLDivElement>>>({});
   const camera = useRef({ x: 0, y: 0, scale: 1 });
   const cameraIntentPlaced = useRef(false);
+  const previousCameraViewport = useRef<{width: number; height: number} | null>(null);
   const automaticFit = useRef<{ path: string; camera: FitCamera } | null>(null);
   const hierarchyInitialFrame = useRef<{key: string; settled: boolean} | null>(null);
   const miniNamePrefix = useId();
@@ -1600,16 +1604,20 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const editorModeChanged = centralEditorAvailabilityRef.current !== centralEditorAvailable;
     const editorSizeKey = centralEditorSize ? `${centralEditorSize.width}:${centralEditorSize.height}` : "";
     const editorSizeChanged = centralEditorSizeKeyRef.current !== editorSizeKey;
-    const followAutomaticFit = !rooted && !preserveCamera && !displayResizeLayout.current && !centralEditorMaximized
+    const previousViewport = previousCameraViewport.current;
+    const viewportChanged = Boolean(previousViewport && (previousViewport.width !== root.clientWidth || previousViewport.height !== root.clientHeight));
+    // Initial native/CSS layout may shrink after the first fit. A rooted map must remain visible
+    // while that fit still owns the camera; ordinary branch reflow and live editors never refit.
+    const followAutomaticFit = (!rooted || viewportChanged && !boundEditorBinding) && !preserveCamera && !displayResizeLayout.current && !centralEditorMaximized
       && automaticFit.current?.path === sceneScope && sameFitCamera(automaticFit.current.camera, camera.current);
-    const shouldRecenter = !preserveCamera && (!cameraIntentPlaced.current || pathChangedThisRender || !rooted && editorModeChanged
+    const shouldRecenter = !preserveCamera && (!cameraIntentPlaced.current || pathChangedThisRender || rooted && viewportChanged && followAutomaticFit || !rooted && editorModeChanged
       || (settings.allowAutozoom && editorSizeChanged && followAutomaticFit));
     if (shouldRecenter || (settings.allowAutozoom && followAutomaticFit)) {
       if (settings.allowAutozoom) fit();
       else {
         const el = viewport.current;
         // Recenter navigation while retaining the user's zoom when automatic fitting is disabled.
-        if (el) applyCamera((current) => ({ ...current, x: el.clientWidth / 2, y: el.clientHeight / 2 }));
+        if (el) applyCamera((current) => ({ ...current, x: el.clientWidth / 2, y: el.clientHeight / 2 }), rooted);
       }
     }
 
@@ -1686,6 +1694,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     }
     incomingCenter.current = null;
     previousNodeRects.current = nextRects;
+    previousCameraViewport.current = {width: root.clientWidth, height: root.clientHeight};
     centralEditorAvailabilityRef.current = centralEditorAvailable;
     centralEditorSizeKeyRef.current = editorSizeKey;
     preserveCameraOnNextLayout.current = false;
@@ -2273,6 +2282,15 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   }, [scene.nodes, scene.zoneViewports, filterMatchedNodePaths, zoneDisplayLayouts, renderedNodeMap, nodeDrag]);
 
   const visibleNodePaths = useMemo(() => new Set(scene.nodes.filter(node => visibleOccurrenceIds.has(occurrenceKey(node))).map(node => node.page.path)), [scene.nodes, visibleOccurrenceIds]);
+  const shownPeerCounts = useMemo(/** One finite pass counts filtered peer endpoints per displayed occurrence, rather than adding semantic side totals or merging duplicate notes. */ () => {
+    const targets = new Map<string, Set<string>>();
+    if (globalFiltering) for (const edge of scene.edges) {
+      if (!edge.sourceOccurrence || !edge.targetOccurrence || !["left", "right", "previous", "next"].includes(edge.role)
+        || !visibleOccurrenceIds.has(edge.sourceOccurrence) || !visibleOccurrenceIds.has(edge.targetOccurrence)) continue;
+      const rows = targets.get(edge.sourceOccurrence) ?? new Set<string>(); rows.add(edge.targetPath); targets.set(edge.sourceOccurrence, rows);
+    }
+    return new Map([...targets].map(([id, rows]) => [id, rows.size]));
+  }, [scene.edges, globalFiltering, visibleOccurrenceIds]);
 
   const filteredGateCounts = useMemo(/** Count surviving scene pairs by canonical endpoint membership, before viewport clipping. */ () => {
     if (!globalFiltering) return null;
@@ -3918,6 +3936,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       if (page.transient?.kind === "group") { unfoldGroup(page); return; }
       if (page.transient?.kind === "section") return plugin.openSection(page, hostLeaf);
       if (!viewDefinition.hierarchy && context.request.source === "local-hotkey" && page.path === activePath && page.file) return renameFrom(context);
+      // A saved/search target is an explicit map destination. A displayed occurrence is inspection
+      // inside the retained map; its attention must not retarget an expanded native editor.
+      if (viewDefinition.hierarchy?.primary === "expand" && context.target.kind === "node" && !context.target.occurrenceId
+        && !viewSession?.setRoot(nodeId(page.path))) return {status: "unavailable", reasonKey: "actions.branch-editor-blocked"};
       if (context.target.kind === "node" && context.target.occurrenceId) navigationOccurrence.current = { identity: page.path, id: context.target.occurrenceId };
       onActivate(page);
       return;
@@ -4177,8 +4199,14 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const isPlaceholderFolderGesture = (page: GraphPage, event: MouseEvent<HTMLDivElement>): boolean =>
     Boolean(Keymap.isModEvent(event.nativeEvent)) && !page.file && !page.url && !page.isFolder && !page.isTag && !page.transient;
 
-  /** Explicit primary activation may request this exact eligible occurrence's editor; navigation and native hosting keep their separate shared owners. */
+  /** The definition chooses primary expansion or activation. Expansion selects the exact occurrence without opening a native editor or changing the map root. */
   const activateOccurrence = (page: GraphPage, occurrenceId: string | undefined, primary: boolean): void => {
+    if (primary && viewDefinition.hierarchy?.primary === "expand" && occurrenceId) {
+      const node = scene.nodes.find(value => occurrenceKey(value) === occurrenceId);
+      selection.select(occurrenceId);
+      if (node?.branch?.canExpand && !node.branch.expanded) runNodeAction("branch.toggle", page, occurrenceId);
+      return;
+    }
     if (!primary || viewDefinition.hierarchy?.primary !== "activate-editor" || !occurrenceId || !supportsBoundEditor(page)) {
       runNodeAction("node.activate", page, occurrenceId); return;
     }
@@ -4466,7 +4494,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     if (baseNode.role === "center") renderedCenterGates.current = { identity: baseNode.page.path, stats: countedDisplayNode.gateStats };
     let colorStyle = paintedNodeStyles.get(baseNode);
     if (!colorStyle) {colorStyle = currentNodeColorStyle(baseNode, paintSettings); paintedNodeStyles.set(baseNode, colorStyle);}
-    const styledDisplayNode = { ...countedDisplayNode, style: { ...colorStyle, ...lensNodeStyle } };
+    const styledDisplayNode = { ...countedDisplayNode, style: { ...colorStyle, ...lensNodeStyle },
+      ...(countedDisplayNode.peerPort ? {peerPort: {...countedDisplayNode.peerPort,
+        shownCount: globalFiltering ? shownPeerCounts.get(occurrenceKey(baseNode)) ?? 0 : undefined}} : {}) };
     const gateCounts = filteredGateCounts?.isCurrent() ? filteredGateCounts.counts.get(baseNode.page.path) : undefined;
     const nodeForDisplay = globalFiltering && gateCounts
       ? {
@@ -4764,6 +4794,20 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     preserveCameraOnNextLayout.current = true;
     setLayoutRevision((revision) => revision + 1);
     scheduleLayoutSave();
+  };
+  const contributedLayoutControls = plugin.viewSettingsRegistry.layoutControls(viewDefinition);
+  const configuredLayout = readViewConfiguration(viewDefinition, settings.canvasViewSettings ?? {});
+  /** Live view-specific rails reuse the same queued Settings writer; they never change selection or acquire graph sources. */
+  const changeViewLayoutValue = (field: string, value: number): void => {
+    if (!contributedLayoutControls.some(control => control.field === field) || viewSession?.definition !== viewDefinition) return;
+    const current = viewSession.capture();
+    sceneMotion.cancelAll(); preserveCameraOnNextLayout.current = true;
+    void plugin.updateCanvasViewSetting(viewDefinition.id, field, value).catch(/** The queued writer retains committed values on failure; report it without inventing an optimistic setting. */ error => {
+      console.error("K-Plex view layout setting was not saved", error);
+      if (current()) new Notice(translate("view.settingsSaveFailed"));
+    }).finally(/** Restore the committed scalar after rejection without remounting or stealing the native slider's focus. */ () => {
+      if (current()) setLayoutRevision(revision => revision + 1);
+    });
   };
   /** Persist only this device's arrangement context; pop-outs use the same main-tab owner as reads. */
   const changeSimplifiedLayout = (enabled: boolean): void => {
@@ -5089,6 +5133,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         simplifiedHint={`${translate("layout.simplifiedHelp")} ${translate("layout.arrangementScope", {
           device: translate(`typography.${typographyDevice}`), surface: translate(lateralArrangementSurface(surface) === "leaf" ? "layout.mainTab" : "layout.sidepanel"),
         })}`} />}
+      {configuredLayout.status === "available" && contributedLayoutControls.length > 0 && <div className="kplex-density-axes">
+        {contributedLayoutControls.map(control => <LayoutSlider key={control.field} label={translate(control.labelKey)} caption={translate(control.captionKey)}
+          hint={control.hintKey ? translate(control.hintKey) : undefined} icon={<ObsidianIcon name={control.icon} size={11} />}
+          value={Number(configuredLayout.values[control.field])} displayValue={Number(configuredLayout.values[control.field]).toFixed(2)}
+          min={control.min} max={control.max} step={control.step} onChange={value => changeViewLayoutValue(control.field, value)} />)}
+      </div>}
       <div className="kplex-typography-group">
       <div className="kplex-typography-scope">
         <span>{translate("typography.scopeHint", { device: translate(`typography.${typographyDevice}`),

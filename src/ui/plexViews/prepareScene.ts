@@ -35,8 +35,11 @@ export function attentionFallbackScene(source: Pick<GraphIndex, "get" | "titleFo
 export function plexViewRead(source: SceneRead, current: () => boolean, maximum: number, attention?: string, hierarchyOccurrences = 0): PlexViewRead {
   const proof = source.captureSemanticGateRead(), nodes = new Map<NodeId, GraphNodeView>();
   let operations = 0;
-  // Ordinary definitions retain their existing budget. An explicit hierarchy admits at most256 occurrences and eight frontier scopes.
-  const budget = Math.min(16_384, Math.max(16, maximum * 16, Number.isInteger(hierarchyOccurrences) ? Math.min(256, Math.max(0, hierarchyOccurrences)) * 8 : 0));
+  // Ordinary definitions retain their existing budget. A hierarchy admits at most256 occurrences:
+  // each can probe six roles plus node/scope/admission guards; eight expanded scopes can read six
+  // bounded prefixes (8 * 6 = 48). The absolute read-operation cap remains16,384; no read acquires sources.
+  const budget = Math.min(16_384, Math.max(16, maximum * 16, Number.isInteger(hierarchyOccurrences) && hierarchyOccurrences > 0
+    ? Math.min(256, hierarchyOccurrences) * 16 + maximum * 48 : 0));
   const isCurrent = (): boolean => current() && proof.isCurrent();
   const node = (id: NodeId): GraphNodeView | null => {
     if (!isCurrent() || ++operations > budget) return null;
@@ -93,6 +96,9 @@ function validateProjection(projection: PlexProjection, maximum: number, definit
   for (const occurrence of projection.occurrences) {
     if (!occurrence.id || occurrence.id.length > 4096 || occurrence.synthetic || occurrence.representation !== "thought"
       || occurrence.areaId && ["__proto__", "constructor", "prototype"].includes(occurrence.areaId)) throw new Error("Unsupported view occurrence");
+    const peer = occurrence.peerPort;
+    if (peer && (definition.hierarchy?.relations !== "child-and-peer" || !occurrence.ports?.[peer.side]
+      || !Number.isInteger(peer.count) || peer.count < 0 || peer.count > 1024 || typeof peer.complete !== "boolean")) throw new Error("Invalid bounded peer port");
   }
   if (!ids.has(projection.entry) || projection.root && !ids.has(projection.root) || projection.editor && !ids.has(projection.editor)
     || projection.frame && !ids.has(projection.frame)) throw new Error("Invalid scene anchor");
@@ -105,7 +111,8 @@ function validateProjection(projection: PlexProjection, maximum: number, definit
       || !branch.parent && (branch.depth !== 0 || occurrence.id !== projection.root)
       || branch.reference && (branch.expanded || branch.canExpand)) throw new Error("Invalid occurrence hierarchy");
     if (parent && !projection.edges.some(edge => edge.kind === "semantic" && edge.source === parent.id && edge.target === occurrence.id
-      && edge.relation.role === "child")) throw new Error("Missing canonical child branch");
+      && (edge.relation.role === "child" || definition.hierarchy?.relations === "child-and-peer" && occurrence.role === edge.relation.role
+        && (["left", "right", "previous", "next"].includes(edge.relation.role) || parent.id === projection.root && edge.relation.role === "parent")))) throw new Error("Missing canonical hierarchy branch");
   }
   if (projection.preparation) {
     const parents = projection.preparation.parents;
@@ -167,7 +174,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
       const node: PositionedNode = {page, occurrenceId: occurrence.id, areaId: occurrence.areaId, representation: occurrence.representation,
         role, relationType: relation?.relationType, typeDefinition: relation?.typeDefinition, linkDirection: relation?.linkDirection,
         ...(occurrence.branch ? {branch: occurrence.branch, semanticSourceId: occurrence.branch.parent ? occurrences.get(occurrence.branch.parent)?.nodeId : undefined} : {}),
-        physicalPorts: occurrence.ports ?? {}, x: 0, y: 0, ...size, label, style, ...deferredNodeCounts()};
+        physicalPorts: occurrence.ports ?? {}, peerPort: occurrence.peerPort, x: 0, y: 0, ...size, label, style, ...deferredNodeCounts()};
       const matching = matches(node);
       if (matching || occurrence.id === legacyEditor || boundEditor) matched.add(occurrence.id);
       if (!matching && occurrence.id !== legacyEditor && !boundEditor && !definition.hierarchy) continue;

@@ -10,7 +10,8 @@
  */
 export const englishCatalog = {
   "view.mindmap": {"message":"Mind Map","context":"Mind Map view settings, bounded branch navigation and explicit editor-safe root changes. Branch expansion is distinct from editor expansion.","params":[],"referenceParams":[]},
-  "mindmap.arrangement": {"message":"Branch arrangement","context":"Mind Map view settings, bounded branch navigation and explicit editor-safe root changes. Branch expansion is distinct from editor expansion.","params":[],"referenceParams":[]},
+  "view.settingsSaveFailed": {"message":"Could not save the view setting. The previous value is kept.","context":"A canvas layout control failed to persist its view-type value.","params":[],"referenceParams":[]},
+  "mindmap.arrangement": {"message":"Child branch arrangement","context":"Mind Map view settings. Controls the root's child tree; peers stay on the left and parents above. Branch expansion is distinct from editor expansion.","params":[],"referenceParams":[]},
   "mindmap.balanced": {"message":"Balanced","context":"Mind Map view settings, bounded branch navigation and explicit editor-safe root changes. Branch expansion is distinct from editor expansion.","params":[],"referenceParams":[]},
   "mindmap.left": {"message":"Left","context":"Mind Map view settings, bounded branch navigation and explicit editor-safe root changes. Branch expansion is distinct from editor expansion.","params":[],"referenceParams":[]},
   "mindmap.right": {"message":"Right","context":"Mind Map view settings, bounded branch navigation and explicit editor-safe root changes. Branch expansion is distinct from editor expansion.","params":[],"referenceParams":[]},

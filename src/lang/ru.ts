@@ -8,7 +8,8 @@ import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const russianTranslations = {
   "view.mindmap": "Интеллект-карта",
-  "mindmap.arrangement": "Расположение ветвей",
+  "view.settingsSaveFailed": "Не удалось сохранить настройку вида. Сохранено прежнее значение.",
+  "mindmap.arrangement": "Расположение дочерних ветвей",
   "mindmap.balanced": "Сбалансированное",
   "mindmap.left": "Слева",
   "mindmap.right": "Справа",

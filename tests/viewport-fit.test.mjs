@@ -45,6 +45,7 @@ test('a cold rooted map fits its first prepared local cover once without claimin
 function graphFixture() {
   const ctx={camera:{current:{x:0,y:0,scale:1}},automaticFit:{current:null},activePath:'Center.md',rooted:false,
     cameraIntentPlaced:{current:false},
+    previousCameraViewport:{current:null},boundEditorBinding:undefined,
     centralEditorOverlayElement:{current:null},cameraWritePending:{current:false},compassCenter:{current:null},compassSync:{current:()=>false},requestCameraFrame:()=>{},
     cameraFrame:{current:1},cameraElement:{current:null},syncCentralEditorOverlay:()=>{},
     scene:{nodes:[{role:'center',page:{path:'Center.md'},x:30,y:-20,width:200,height:100}],zoneViewports:{}},
@@ -58,6 +59,19 @@ function graphFixture() {
   ctx.render=()=>{ctx.sceneScope=ctx.rooted ? 'Root.md' : ctx.activePath;ctx.classic=true;ctx.areaForNode=callback('areaForNode',ctx);ctx.framingOccurrence=callback('framingOccurrence',ctx);ctx.applyCamera=callback('applyCamera',ctx);ctx.flushCameraTransform=callback('flushCameraTransform',ctx);ctx.fit=callback('fit',ctx);ctx.layout=callback('layout',ctx);};
   ctx.render();return ctx;
 }
+
+test('a rooted automatic camera follows native startup viewport shrink without moving manual cameras or live editors',()=>{
+ for(const allowAutozoom of [true,false])for(const owner of ['automatic','manual','editor']){
+  const ctx=graphFixture();ctx.rooted=true;ctx.settings.allowAutozoom=allowAutozoom;ctx.scene.nodes[0].x=0;ctx.scene.nodes[0].y=0;ctx.camera.current.scale=1.6;ctx.viewport.current.clientHeight=2591;ctx.render();ctx.layout();
+  assert.equal(ctx.camera.current.y+ctx.scene.nodes[0].y*ctx.camera.current.scale,2591/2);
+  if(owner==='manual')ctx.applyCamera({...ctx.camera.current,y:500});
+  if(owner==='editor')ctx.boundEditorBinding={id:'live-B'};
+  const before={...ctx.camera.current};ctx.viewport.current.clientHeight=713;ctx.pathChangedThisRender=false;ctx.render();ctx.layout();
+  if(owner==='automatic')assert.equal(ctx.camera.current.y+ctx.scene.nodes[0].y*ctx.camera.current.scale,713/2,'Root stays inside the actual pane after native/CSS layout settles');
+  else assert.deepEqual(ctx.camera.current,before,owner+' camera ownership survives viewport geometry');
+  if(!allowAutozoom)assert.equal(ctx.camera.current.scale,before.scale,'Disabled autozoom retains zoom through native viewport correction');
+ }
+});
 
 test('Ctrl or Cmd wheel zooms over both bounded list types while native editor and modal scrolling remain native', () => {
   for (const surface of ['.kplex-zone-scroll', '.kplex-expanded-scroll', '.kplex-central-editor-content', '.modal-container', 'canvas'])

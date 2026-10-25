@@ -63,6 +63,16 @@ test('Compass and Mind Map selection and rooted intent restore independently in 
  `),true);
 });
 
+test('returning from Compass uses the opening canvas current attention rather than a stale Mind Map root',async()=>{
+ assert.equal(await scenario(`
+ let attention='First',otherAttention='Other';const a=new M.PlexViewSession(M.builtInPlexViews,()=>writes.a++,()=>attention),b=new M.PlexViewSession(M.builtInPlexViews,()=>writes.b++,()=>otherAttention);
+ const first=mount(a);first.open();await waitFor(first.select);first.change('mindmap');equal(a.layoutRoot('unused'),'First','First entry uses own current note');a.setRoot('Old-map');
+ first.change('classic');attention='Current-compass';b.select('mindmap');first.change('mindmap');
+ equal([first.select().value,a.layoutRoot('unused'),b.layoutRoot('unused')],['mindmap','Current-compass','Other'],'Explicit view selection cannot restore an unrelated old root or target globally active canvas');
+ equal([writes.sources,writes.lenses,writes.filter,writes.settings],[0,0,0,0],'Entry root is session intent without source/global mutation');first.close();b.dispose();
+ `),true);
+});
+
 test('selection is registry populated, session owned, restorable and safe for unavailable saved IDs',async()=>{
  assert.equal(await scenario(`
  const a=session('a',registry),b=session('b',registry),first=mount(a);first.open();await waitFor(first.select);

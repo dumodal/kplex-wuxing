@@ -815,7 +815,7 @@ test("stationary central double taps open in the main tab on a sidepanel and con
   assert.deepEqual(folderPrompts,[{target:ghost,doc:dependencies.viewport.current.ownerDocument,options:{chooseFolder:true,preserveCenter:false,hostLeaf:dependencies.hostLeaf}}]);
 });
 
-test('Mind Map primary opening captures its exact occurrence and retirement prevents a late editor request',async()=>{
+test('opt-in activate-editor primary opening captures its exact occurrence and retirement prevents a late editor request',async()=>{
  const page={path:'B.md',file:{path:'B.md'}},requests=[],legacy=[],notices=[];let current=true,eligible=true;
  const dependencies={viewDefinition:{hierarchy:{primary:'activate-editor'}},supportsBoundEditor:()=>eligible,viewSession:{capture:()=>()=>current},actionNodeRef,
   actionSurfaceId:'owned-canvas',runNodeAction:(...args)=>legacy.push(args),plugin:{actionManager:{dispatch:async request=>{requests.push(request);return{status:'completed'}}}},
@@ -826,6 +826,24 @@ test('Mind Map primary opening captures its exact occurrence and retirement prev
  primary(page,'B2',false);assert.deepEqual(legacy,[['node.activate',page,'B2']],'Modifiers retain ordinary activation without requesting an editor');
  requests.length=0;primary(page,'B1',true);current=false;await new Promise(resolve=>setImmediate(resolve));assert.deepEqual(requests.map(request=>request.id),['node.activate'],'Retired view cannot open an editor after accepted navigation settles');
  current=true;eligible=false;primary(page,'B2',true);assert.equal(requests.length,1);assert.deepEqual(legacy.at(-1),['node.activate',page,'B2']);assert.deepEqual(notices,[]);
+});
+
+test('Mind Map primary click expands the exact branch without navigation, editor opening or toggling it closed',()=>{
+ const page={path:'B.md'},branch={canExpand:true,expanded:false},requests=[],selected=[];
+ const dependencies={viewDefinition:{hierarchy:{primary:'expand'}},scene:{nodes:[{page,occurrenceId:'B1',branch}]},occurrenceKey:node=>node.occurrenceId,
+  selection:{select:id=>selected.push(id)},runNodeAction:(...args)=>requests.push(args)};
+ const primary=production('activateOccurrence',dependencies,'src/ui/PlexGraph.tsx');
+ primary(page,'B1',true);assert.deepEqual(requests,[['branch.toggle',page,'B1']]);assert.deepEqual(selected,['B1']);
+ branch.expanded=true;primary(page,'B1',true);assert.equal(requests.length,1,'Repeated click does not collapse an already open branch');
+ branch.canExpand=false;primary(page,'B1',true);assert.equal(requests.length,1,'Leaf click does not start acquisition or create an editor');
+ primary(page,'B1',false);assert.deepEqual(requests.at(-1),['node.activate',page,'B1'],'Modifier route keeps explicit attention navigation');
+});
+
+test('history navigation explicitly requests the selected saved node as the rooted map destination',()=>{
+ const A={path:'A.md'},B={path:'B.md'},activations=[],cursors=[];
+ const back=production('goHistory',{plugin:{settings:{navigationHistory:['A.md','B.md']},index:{get:path=>path==='A.md'?A:B}},historyCursor:1,setHistoryCursor:value=>cursors.push(value),activate:(...args)=>activations.push(args)},'src/ui/App.tsx');
+ back(-1);assert.deepEqual(cursors,[0]);assert.deepEqual(activations,[[A,false,true,'user',true]]);
+ const rejected=[];production('goHistory',{plugin:{settings:{navigationHistory:['A.md','B.md']},index:{get:()=>A}},historyCursor:1,setHistoryCursor:value=>rejected.push(value),activate:()=>false},'src/ui/App.tsx')(-1);assert.deepEqual(rejected,[],'An editor-blocked root cannot advance the history cursor');
 });
 
 test('color publication never promotes a pending native follow or expands its demand',()=>{

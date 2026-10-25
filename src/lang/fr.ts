@@ -8,7 +8,8 @@ import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const frenchTranslations = {
   "view.mindmap": "Carte mentale",
-  "mindmap.arrangement": "Disposition des branches",
+  "view.settingsSaveFailed": "Impossible d’enregistrer le réglage de la vue. La valeur précédente est conservée.",
+  "mindmap.arrangement": "Disposition des branches enfants",
   "mindmap.balanced": "Équilibrée",
   "mindmap.left": "À gauche",
   "mindmap.right": "À droite",

@@ -26,6 +26,7 @@ const output=await build({stdin:{resolveDir:process.cwd(),contents:`
   export {ActionManager} from './src/application/ActionManager';export {actionNodeRef} from './src/adapters/obsidian/actionNode';
   export {editViewConfiguration} from './src/core/plex/views/configuration';
   export {mindMapViewDefinition} from './src/core/plex/views/mindmap/definition';
+  export {builtInCanvasViewSettings} from './src/ui/plexViews/settingsContributions';
 `},write:false,bundle:true,platform:'browser',format:'iife',globalName:'sourceModules',plugins:[{name:'finite-native-host',setup(builder){
   builder.onResolve({filter:/^obsidian$/},()=>({path:'host',namespace:'finite'}));
   builder.onLoad({filter:/.*/,namespace:'finite'},()=>({contents:nativeStub}));
@@ -57,7 +58,7 @@ test('non-Classic definition uses the production scene, selection, Find and acti
       const unavailableDefinition={...M.probeViewDefinition,id:'test.unavailable',project(){return null}};
       const rootedDefinition={...M.probeViewDefinition,id:'test.rooted',navigation:'rooted'};
       const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.probeViewDefinition,groupedDefinition,failedDefinition,unavailableDefinition,rootedDefinition]);const session=new M.PlexViewSession(registry,()=>{});session.select('test.situated');
-      const actionPorts={current:null},activations=[],plugin={settings,index,translator:M.createTranslator('en'),app:{workspace:{...nativeEvents},metadataCache:{...nativeEvents,getFileCache:()=>null},vault:{getFileByPath:path=>pages.get(path)?.file??null,cachedRead:()=>{work.reads++;throw Error('Unexpected note read')}}},
+      const actionPorts={current:null},activations=[],plugin={settings,index,viewSettingsRegistry:M.builtInCanvasViewSettings,translator:M.createTranslator('en'),app:{workspace:{...nativeEvents},metadataCache:{...nativeEvents,getFileCache:()=>null},vault:{getFileByPath:path=>pages.get(path)?.file??null,cachedRead:()=>{work.reads++;throw Error('Unexpected note read')}}},
         saveSettings:()=>{work.settingsWrites++;throw Error('Unexpected global settings write')},getTypographyDevice:()=> 'desktop',isKplexLeafVisible:()=>true,subscribeKplexVisibility:subscribe,subscribeNodeFlair:subscribe,getHierarchyColorRevision:()=>0,
         isActionSurfaceCurrent:()=>true,getSavedSettingsPolicy:()=>null};
       plugin.actionManager=new M.ActionManager({readCommandContext:()=>({sharedCenter:null,focusRegion:'graph'}),validateNode:()=>true});
@@ -176,6 +177,15 @@ test('non-Classic definition uses the production scene, selection, Find and acti
       const hierarchyFindInput=hierarchyFind.querySelector('input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(hierarchyFindInput,'Repeated');
       M.flushSync(()=>hierarchyFindInput.dispatchEvent(new Event('input',{bubbles:true})));await new Promise(resolve=>setTimeout(resolve,20));
       const hierarchyFindProof={selected:actionPorts.current.readSelected()?.occurrenceId,attention:props.activePath,root:hierarchySession.layoutRoot(props.activePath),editors:hierarchySession.editors.bindings.length};
+      await act('view.layout-controls');
+      const layoutBefore={semantic:work.semantic,root:hierarchySession.layoutRoot(props.activePath),camera:mount.querySelector('.kplex-camera').style.transform},layoutWrites=[];
+      plugin.updateCanvasViewSetting=async(id,field,value)=>{if(id!=='mindmap')throw Error('Foreign view setting');layoutWrites.push([id,field,value]);settings.canvasViewSettings=M.editViewConfiguration(M.mindMapViewDefinition,settings.canvasViewSettings,field,value);props.renderRevision++;renderHierarchy()};
+      const rails=[...mount.querySelectorAll('.kplex-layout-panel input[type=range]')];
+      for(const [label,value]of [['Horizontal density',2],['Vertical density',1.5]]){
+        const rail=rails.find(element=>element.getAttribute('aria-label')===label);if(!rail)throw Error('Registered density rail missing');
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(rail,value);M.flushSync(()=>rail.dispatchEvent(new Event('input',{bubbles:true})));await new Promise(resolve=>setTimeout(resolve,20));
+      }
+      const densityProof={writes:layoutWrites,values:settings.canvasViewSettings.mindmap.values,root:hierarchySession.layoutRoot(props.activePath),camera:mount.querySelector('.kplex-camera').style.transform,semantic:work.semantic,before:layoutBefore};
       settings.canvasViewSettings=M.editViewConfiguration(M.mindMapViewDefinition,settings.canvasViewSettings,'horizontalSpacing',160);props.renderRevision++;renderHierarchy();await new Promise(resolve=>setTimeout(resolve,20));
       props.activePath='Other.md';renderHierarchy();await new Promise(resolve=>setTimeout(resolve,20));const attentionHierarchy={semantic:work.semantic,root:hierarchySession.layoutRoot(props.activePath)};
       M.flushSync(()=>mount.querySelector('[aria-label="Collapse one generation"]').click());await new Promise(resolve=>setTimeout(resolve,20));
@@ -184,7 +194,7 @@ test('non-Classic definition uses the production scene, selection, Find and acti
       const heldBranch=plugin.actionManager.prepare({id:'branch.toggle',source:'local-menu',surfaceId:'probe',target:branchTarget});
       const rerootOutcome=await act('view.root.selected',{kind:'explicit',node:M.actionNodeRef(pages.get('Other.md'))});await new Promise(resolve=>setTimeout(resolve,20));
       const staleBranch=heldBranch.state==='accepted'?await heldBranch.run():null,rerooted=hierarchySession.layoutRoot(props.activePath);
-      releaseHierarchyAction();hierarchyRoot.unmount();hierarchySession.dispose();plugin.actionManager.dispose();const hierarchyProof={initial:initialHierarchy,expanded:expandedHierarchy,attention:attentionHierarchy,collapsed:collapsedHierarchy,after:{...work},events:events.size,errors:[...errors],mismatched,toggleOutcome,frontiers:frontierProof,find:hierarchyFindProof,keyboard:keyboardHierarchy,rerootOutcome,staleBranch,rerooted};
+      releaseHierarchyAction();hierarchyRoot.unmount();hierarchySession.dispose();plugin.actionManager.dispose();const hierarchyProof={initial:initialHierarchy,expanded:expandedHierarchy,attention:attentionHierarchy,collapsed:collapsedHierarchy,after:{...work},events:events.size,errors:[...errors],mismatched,toggleOutcome,frontiers:frontierProof,density:densityProof,find:hierarchyFindProof,keyboard:keyboardHierarchy,rerootOutcome,staleBranch,rerooted};
       style.remove();mount.remove();return {...snapshot,events:legacyEvents,after:legacyAfter,rooted:rootedProof,hierarchy:hierarchyProof};
     })()`);
     assert.deepEqual(result.physicalPorts,['left']);assert.equal(result.physicalCount,'1');
@@ -214,6 +224,10 @@ test('non-Classic definition uses the production scene, selection, Find and acti
     assert.equal(result.hierarchy.mismatched.status,'unavailable');assert.equal(result.hierarchy.toggleOutcome.status,'completed');assert.deepEqual(result.hierarchy.keyboard,{editors:0,root:'Root.md'});
     assert.deepEqual(result.hierarchy.find,{selected:JSON.stringify(['Root.md','Repeated.md']),attention:'Focus.md',root:'Root.md',editors:0},'Hierarchy Find selects and reveals its exact occurrence without activation or editor opening');
     assert.equal(result.hierarchy.rerootOutcome.status,'completed');assert.equal(result.hierarchy.rerooted,'Other.md');assert.notEqual(result.hierarchy.staleBranch?.status,'completed');
+    assert.deepEqual(result.hierarchy.density.writes,[['mindmap','horizontalDensity',2],['mindmap','verticalDensity',1.5]]);
+    assert.equal(result.hierarchy.density.values.horizontalDensity,2);assert.equal(result.hierarchy.density.values.verticalDensity,1.5);
+    assert.equal(result.hierarchy.density.root,result.hierarchy.density.before.root);assert.equal(result.hierarchy.density.camera,result.hierarchy.density.before.camera);
+    assert.equal(result.hierarchy.density.semantic,result.hierarchy.density.before.semantic,'Live density rails never acquire another frontier');
     assert.equal(result.hierarchy.after.reads,0);assert.equal(result.hierarchy.after.parses,0);assert.equal(result.hierarchy.after.publishes,0);assert.equal(result.hierarchy.after.settingsWrites,0);
   } finally {await host.cleanup();}
 });

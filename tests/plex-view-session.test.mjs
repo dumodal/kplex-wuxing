@@ -9,6 +9,18 @@ const M=await plexViewModules(['src/application/PlexViewSession.ts','src/applica
 const occurrenceIntent = (occurrenceId='B1',fileIdentity='native-B') => ({viewId:'test.bound',occurrenceId,
  target:{nodeId:'B.md',path:'B.md',fileIdentity},dimensions:{width:600,height:360},mode:'source'});
 
+test('explicit rooted view entry captures its owning canvas current attention instead of an older saved root',()=>{
+ let attention='A.md',otherAttention='Other.md',writes=0;
+ const a=new M.PlexViewSession(M.builtInPlexViews,()=>writes++,()=>attention),b=new M.PlexViewSession(M.builtInPlexViews,()=>{},()=>otherAttention);
+ a.select('mindmap');assert.equal(a.layoutRoot('unused'),'A.md');assert.equal(writes,1);
+ a.setRoot('Old-map.md');a.select('classic');attention='Current-compass.md';a.select('mindmap');
+ assert.equal(a.layoutRoot('unused'),'Current-compass.md');assert.equal(b.definition.id,'classic');
+ attention='Inspected.md';a.ensureRoot(attention);a.select('mindmap');assert.equal(a.layoutRoot(attention),'Current-compass.md','Ordinary attention and same selection retain the rooted map');
+ const restored=new M.PlexViewSession(M.builtInPlexViews,()=>{},()=>attention);restored.restore(JSON.parse(JSON.stringify(a.getState())));assert.equal(restored.layoutRoot(attention),'Current-compass.md','Workspace restoration keeps its explicit map state');
+ b.select('mindmap');assert.equal(b.layoutRoot('unused'),'Other.md');assert.equal(a.layoutRoot(attention),'Current-compass.md');
+ a.dispose();b.dispose();restored.dispose();
+});
+
 test('occurrence editor identity is independent of duplicate notes, caller mutation and geometry',()=>{
  let changes=0;const owner=new M.PlexEditorBindings(()=>changes++),intent=occurrenceIntent(),opened=owner.open(intent);
  assert.equal(opened.status,'opened');const binding=opened.binding,live=owner.capture(binding.id),future=owner.capture('occurrence-editor-2');

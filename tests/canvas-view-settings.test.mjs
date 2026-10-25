@@ -33,10 +33,10 @@ const flatten=(items,path=[])=>items.flatMap(item=>[...('control'in item?[{...it
 `;
 const scenario=body=>colorEditorScenario(`(async()=>{${initialize}\n${body}\nreturn true})()`);
 
-test('production Mind Map contributes six localized native fields and persists type settings independently of canvas intent',async()=>{
+test('production Mind Map contributes eight localized native fields and persists type settings independently of canvas intent',async()=>{
  assert.equal(await scenario(`
  const p=await create();p.viewSettingsRegistry=M.builtInCanvasViewSettings;const tab=new M.KplexSettingTab({},p),rows=flatten(tab.getSettingDefinitions());
- const controls=rows.filter(row=>row.control.key.replace(/^received:\\d+:/,'').startsWith('canvasView:mindmap:'));equal(controls.length,6,'One native control per Mind Map field');
+ const controls=rows.filter(row=>row.control.key.replace(/^received:\\d+:/,'').startsWith('canvasView:mindmap:'));equal(controls.length,8,'One native control per Mind Map field');
  for(const row of controls)equal(row.path,['Canvas behavior','Mind Map'],'Type settings route');
  const spacing=controls.find(row=>row.control.key.endsWith(':horizontalSpacing')),arrangement=controls.find(row=>row.control.key.endsWith(':arrangement'));
  equal(arrangement.control.options,{balanced:'Balanced',left:'Left',right:'Right'},'Localized finite arrangement');
@@ -49,6 +49,9 @@ test('production Mind Map contributes six localized native fields and persists t
  const incoming=copy(disk);incoming.canvasViewSettings.mindmap.values.verticalSpacing=44;incoming.canvasViewSettings['future.view']={version:9,values:{inert:true}};
  await receive(p,incoming);equal(tab.getControlValue('canvasView:mindmap:verticalSpacing'),44,'Incoming type values synchronize');
  await tab.setControlValue(spacing.control.key,164);equal(disk.canvasViewSettings['future.view'],incoming.canvasViewSettings['future.view'],'Future independent view retained');
+ const live=p.viewSettingsRegistry.layoutControls(a.definition);equal(live.map(row=>row.field),['horizontalDensity','verticalDensity'],'Bottom-left controls use the same registered type fields');
+ await tab.setControlValue('canvasView:mindmap:horizontalDensity',2);await tab.setControlValue('canvasView:mindmap:verticalDensity',1.5);
+ equal([disk.canvasViewSettings.mindmap.values.horizontalDensity,disk.canvasViewSettings.mindmap.values.verticalDensity],[2,1.5],'Both density axes persist independently');equal([p.work.semantic,p.work.invalidate],[0,0],'Density is presentation only');
  equal([a.getState(),b.getState()],intent,'Incoming settings cannot retarget sessions');a.dispose();b.dispose();
  `),true);
 });

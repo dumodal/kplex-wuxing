@@ -53,3 +53,9 @@ test('pair reads cannot acquire authority from a retired read, hidden target or 
  const canonical={get:id=>({path:id==='old'?'renamed':id}),isVisiblePage:()=>true,neighbours:()=>[{page:{path:'D'}}]};
  assert.equal(M.GraphIndex.prototype.cachedViewRelation.call(canonical,'old','D','child'),null);
 });
+
+test('the shared peer port displays the bounded aggregate without adding or duplicating canonical gate totals',()=>{
+ const f=fixture(),result=f.prepare(),root=result.scene.nodes.find(node=>node.occurrenceId==='root');assert.equal(result.failure,false);
+ root.peerPort={side:'left',count:4,complete:false,shownCount:2};root.gateStats={top:{visibleCount:1,hasAny:true},bottom:{visibleCount:10,hasAny:true},left:{visibleCount:99,hasAny:true},right:{visibleCount:99,hasAny:true}};
+ const stats=M.physicalGateStats(root);assert.deepEqual(stats.left,{visibleCount:4,complete:false,hasAny:true,shownCount:2});assert.equal(stats.bottom.visibleCount,10);assert.equal(stats.top.visibleCount,1);
+});

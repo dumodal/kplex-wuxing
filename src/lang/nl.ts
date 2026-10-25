@@ -8,7 +8,8 @@ import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const dutchTranslations = {
   "view.mindmap": "Mindmap",
-  "mindmap.arrangement": "Takindeling",
+  "view.settingsSaveFailed": "De weergave-instelling kon niet worden opgeslagen. De vorige waarde blijft behouden.",
+  "mindmap.arrangement": "Indeling van kindtakken",
   "mindmap.balanced": "Evenwichtig",
   "mindmap.left": "Links",
   "mindmap.right": "Rechts",

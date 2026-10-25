@@ -8,7 +8,8 @@ import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const spanishTranslations = {
   "view.mindmap": "Mapa mental",
-  "mindmap.arrangement": "Disposición de ramas",
+  "view.settingsSaveFailed": "No se pudo guardar el ajuste de la vista. Se conserva el valor anterior.",
+  "mindmap.arrangement": "Disposición de ramas hijas",
   "mindmap.balanced": "Equilibrada",
   "mindmap.left": "Izquierda",
   "mindmap.right": "Derecha",

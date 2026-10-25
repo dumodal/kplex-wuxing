@@ -8,7 +8,8 @@ import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const traditionalChineseTranslations = {
   "view.mindmap": "心智圖",
-  "mindmap.arrangement": "分支配置",
+  "view.settingsSaveFailed": "無法儲存檢視設定。已保留先前的值。",
+  "mindmap.arrangement": "子分支配置",
   "mindmap.balanced": "左右平衡",
   "mindmap.left": "左側",
   "mindmap.right": "右側",

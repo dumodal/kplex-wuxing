@@ -9,8 +9,8 @@ function graphInput(children,options={}){
  const ids=new Set(['R','A',...Object.keys(children),...Object.values(children).flat()]);const nodes=new Map([...ids].map(id=>[id,{id,kind:'markdown',label:id}]));
  let current=true,reads=0;const rows=id=>(children[id]??[]).map(target=>({node:nodes.get(target),role:'child',relationType:1,direction:1}));
  const read={coverage:'cached',isCurrent:()=>current,node:id=>{reads++;return nodes.get(id)??null},scope:id=>options.scope?.(id)??{coverage:'local',prepared:true,complete:true,pending:false},
-  relations:(id,role,max)=>{reads++;const all=rows(id);return{items:all.slice(0,max),coverage:'cached',truncated:all.length>max}},
-  relation:(id,target)=>({items:rows(id).filter(row=>row.node.id===target),coverage:'cached',truncated:false}),compare:(a,b)=>a.id.localeCompare(b.id)};
+  relations:(id,role,max)=>{reads++;const all=role==='child'?rows(id):[];return{items:all.slice(0,max),coverage:'cached',truncated:all.length>max}},
+  relation:(id,target,role='child')=>({items:role==='child'?rows(id).filter(row=>row.node.id===target):[],coverage:'cached',truncated:false}),compare:(a,b)=>a.id.localeCompare(b.id)};
  return{input:{attention:'A',layoutRoot:'R',maximum:32,state:null,read,...options.input},nodes,project(){return M.mindMapViewDefinition.project(this.input)},get reads(){return reads},retire(){current=false}};
 }
 
@@ -23,13 +23,13 @@ test('matching one duplicate occurrence keeps only its real ancestor path, and b
 
 test('retained unshown branches cannot bias the visible root split under partial coverage',()=>{
  const sides=Object.fromEntries(Array.from({length:20},(_,i)=>[M.mindMapOccurrence(['R','Previously-shown-'+i]),1]));
- const f=graphInput({R:['B','C']},{scope:()=>({coverage:'local',prepared:true,complete:false,pending:false}),input:{state:{version:1,scope:'R',initialGenerations:1,expanded:[],collapsed:[],sides}}});
+ const f=graphInput({R:['B','C']},{scope:()=>({coverage:'local',prepared:true,complete:false,pending:false}),input:{configuration:{status:'available',values:{arrangement:'balanced'}},state:{version:1,scope:'R',initialGenerations:1,expanded:[],collapsed:[],sides}}});
  const p=f.project();assert.deepEqual([...new Set(p.occurrences.filter(row=>row.branch.depth===1).map(row=>row.branch.side))].sort(),[-1,1]);
  for(const[id,side]of Object.entries(sides))assert.equal(p.stateSuggestion.sides[id],side,'Partial absence cannot delete retained intent');
 });
 
 test('canonical children form stable two-sided occurrences, diamonds remain distinct and ancestor cycles are references',()=>{
- const f=graphInput({R:['B','C','R'],B:['D'],C:['D'],D:['R']},{input:{configuration:{status:'available',values:{initialGenerations:3}}}});
+ const f=graphInput({R:['B','C','R'],B:['D'],C:['D'],D:['R']},{input:{configuration:{status:'available',values:{initialGenerations:3,arrangement:'balanced'}}}});
  const p=f.project();assert.equal(p.layoutRoot,'R');assert.equal(p.attention,'A');assert.equal(p.root,'root');assert.equal(p.editor,undefined);
  const diamonds=p.occurrences.filter(row=>row.nodeId==='D');assert.equal(diamonds.length,2);assert.notEqual(diamonds[0].id,diamonds[1].id);
  const references=p.occurrences.filter(row=>row.branch.reference);assert(references.length>=1);for(const row of references){assert.equal(row.branch.expanded,false);assert.equal(row.branch.canExpand,false)}
@@ -41,6 +41,38 @@ test('canonical children form stable two-sided occurrences, diamonds remain dist
  f.retire();assert.equal(f.project(),null);
 });
 
+test('default map keeps children right, every peer role left and parents above, including a childless root',()=>{
+ const f=graphInput({R:['B'],B:['D'],Friend:['FriendChild'],Parent:['R','Sibling']});
+ const original=f.input.read.relations,context={parent:['Parent'],left:['Friend'],right:['Challenger'],previous:['Previous'],next:['Next']};
+ for(const id of Object.values(context).flat())if(!f.nodes.has(id))f.nodes.set(id,{id,kind:'markdown',label:id});
+ f.input.read.relations=(id,role,max)=>id==='R'&&role!=='child'?{items:(context[role]??[]).slice(0,max).map(target=>({node:f.nodes.get(target),role,relationType:1,direction:1})),coverage:'local',truncated:false}:original(id,role,max);
+ let p=f.project();assert.equal(p.occurrences.length,7);assert.deepEqual(new Set(p.edges.map(edge=>edge.relation.role)),new Set(['parent','child','left','right','previous','next']));
+ assert.deepEqual(p.occurrences[0].ports,{top:'parent',bottom:'child',left:'left'});
+ for(const edge of p.edges)assert.equal(edge.sourcePort,edge.relation.role==='child'?'bottom':edge.relation.role==='parent'?'top':'left','Root connections retain their semantic gate rather than the destination layout direction');
+ const geometry=projection=>M.layoutMindMap(projection,projection.occurrences.map(row=>({id:row.id,width:row.nodeId==='Friend'?660:180,height:row.nodeId==='Friend'?410:40})),M.mindMapConfiguration());
+ let layout=geometry(p),rect=id=>layout.positions.get(p.occurrences.find(row=>row.nodeId===id).id);
+ assert(rect('B').x>0);for(const id of ['Friend','Challenger','Previous','Next'])assert(rect(id).x<0);assert(rect('Parent').y<0);
+ for(const id of ['Friend','Parent']){const row=p.occurrences.find(row=>row.nodeId===id);f.input.state=M.mindMapViewDefinition.hierarchy.reduce(f.input.state,p,{kind:'toggle',occurrenceId:row.id});p=f.project();}
+ layout=geometry(p);assert(p.occurrences.some(row=>row.nodeId==='FriendChild'));assert(p.occurrences.some(row=>row.nodeId==='Sibling'));assert(p.occurrences.some(row=>row.nodeId==='R'&&row.branch.reference));
+ const positions=[...layout.positions.values()];for(let i=0;i<positions.length;i++)for(let j=i+1;j<positions.length;j++){const a=positions[i],b=positions[j];assert(Math.abs(a.x-b.x)>=(a.width+b.width)/2||Math.abs(a.y-b.y)>=(a.height+b.height)/2,'Expanded editor/context forests overlap');}
+ f.input.state=null;f.input.read.relations=(id,role,max)=>id==='R'&&role==='child'?{items:[],coverage:'local',truncated:false}:id==='R'&&role==='parent'?{items:[{node:f.nodes.get('Parent'),role:'parent',relationType:1,direction:1}],coverage:'local',truncated:false}:{items:[],coverage:'local',truncated:false};
+ p=f.project();assert.deepEqual(p.occurrences.map(row=>row.nodeId),['R','Parent'],'A childless note still exposes its parents');
+});
+
+test('expanded descendants keep child edges on bottom and every peer edge on the outward side, without merging duplicate canonical occurrences',()=>{
+ const f=graphInput({R:['B'],B:['D'],F:['E']},{input:{configuration:{status:'available',values:{initialGenerations:3}}}});
+ const context={R:{left:['F']},B:{left:['BF'],right:['BX'],previous:['BP'],next:['BN']},F:{left:['FF'],right:['FX'],previous:['FP'],next:['FN']}};
+ for(const roles of Object.values(context))for(const id of Object.values(roles).flat())if(!f.nodes.has(id))f.nodes.set(id,{id,kind:'markdown',label:id});
+ const read=f.input.read.relations;f.input.read.relations=(id,role,max)=>role==='child'?read(id,role,max):{items:(context[id]?.[role]??[]).slice(0,max).map(target=>({node:f.nodes.get(target),role,relationType:1,direction:1})),coverage:'local',truncated:false};
+ const p=f.project(),B=p.occurrences.find(row=>row.nodeId==='B'),F=p.occurrences.find(row=>row.nodeId==='F');
+ assert.equal(B.branch.side,1);assert.equal(F.branch.side,-1);assert.deepEqual(B.ports,{left:'parent',bottom:'child',right:'left'});assert.deepEqual(F.ports,{left:'left',bottom:'child',right:'parent'});
+ for(const [row,side]of [[B,'right'],[F,'left']]){
+  const edges=p.edges.filter(edge=>edge.source===row.id);assert.equal(edges.length,5);assert.equal(edges.find(edge=>edge.relation.role==='child').sourcePort,'bottom');
+  assert(edges.filter(edge=>edge.relation.role!=='child').every(edge=>edge.sourcePort===side));assert.equal(row.peerPort.count,4);assert.equal(row.peerPort.complete,true);
+ }
+ assert(p.preparation.parents.length<=8);assert(p.occurrences.length<=256);
+});
+
 test('fold and generation reducers are occurrence-scoped, bounded, and do not confuse unknown empty incidence with a proven leaf',()=>{
  const f=graphInput({R:['B','C'],B:['D'],C:['D']},{scope:id=>id==='B'?{coverage:'cached',prepared:false,complete:false,pending:false}:{coverage:'local',prepared:true,complete:true,pending:false}});
  let p=f.project();const B=p.occurrences.find(row=>row.nodeId==='B');assert.equal(B.branch.canExpand,true);assert.equal(B.branch.expanded,false);
@@ -49,6 +81,7 @@ test('fold and generation reducers are occurrence-scoped, bounded, and do not co
  f.input.state=M.mindMapViewDefinition.hierarchy.reduce(f.input.state,p,{kind:'collapse-generation'});p=f.project();assert.equal(p.occurrences.filter(row=>row.nodeId==='D').length,0);
  assert.equal(M.mindMapViewDefinition.hierarchy.reduce(f.input.state,p,{kind:'toggle',occurrenceId:'foreign'}),null);
  const unknown=graphInput({R:[]},{scope:()=>({coverage:'cached',prepared:false,complete:false,pending:true})}).project();assert.equal(unknown.occurrences[0].branch.canExpand,true);assert.equal(unknown.occurrences[0].branch.status,'loading');
+ const unavailable=graphInput({R:[]});unavailable.input.read.relations=()=>({items:[],coverage:'unavailable',truncated:false});const absent=unavailable.project().occurrences[0];assert.equal(absent.branch.canExpand,true);assert.equal(absent.peerPort.complete,false,'An unavailable role read cannot certify an empty peer gate');
 });
 
 test('high-degree and deep incidence is finite, explicit frontier retention wins, and exact live ancestry survives a truncated prefix',()=>{
@@ -73,7 +106,16 @@ test('fold/sides restoration is detached, bounded, future-safe and scoped to the
 test('type configuration validates exact ranges and leaves unavailable payloads inert',()=>{
  const defaults=M.mindMapConfiguration();assert.equal(defaults.initialGenerations,1);assert.equal(defaults.maximumOccurrences,256);
  assert.equal(M.mindMapConfiguration({status:'unavailable',reason:'unsupported'}),null);
- for(const values of [{maximumDepth:9},{initialGenerations:1.5},{maximumOccurrences:257},{arrangement:'unknown'},{verticalSpacing:NaN},{maximumDepth:null}])assert.equal(M.mindMapConfiguration({status:'available',values}),null);
+ for(const values of [{maximumDepth:9},{initialGenerations:1.5},{maximumOccurrences:257},{arrangement:'unknown'},{verticalSpacing:NaN},{maximumDepth:null},{horizontalDensity:0},{verticalDensity:Infinity}])assert.equal(M.mindMapConfiguration({status:'available',values}),null);
+});
+
+test('Mind Map horizontal and vertical density independently compact measured gaps without changing root, occurrence identity or node/editor dimensions',()=>{
+ const f=graphInput({R:['B','C'],B:['D']},{input:{configuration:{status:'available',values:{initialGenerations:2}}}}),p=f.project();
+ const sizes=p.occurrences.map(row=>({id:row.id,width:row.nodeId==='B'?660:180,height:row.nodeId==='B'?410:40}));
+ const base=M.layoutMindMap(p,sizes,M.mindMapConfiguration()),horizontal=M.layoutMindMap(p,sizes,M.mindMapConfiguration({status:'available',values:{horizontalDensity:2}})),vertical=M.layoutMindMap(p,sizes,M.mindMapConfiguration({status:'available',values:{verticalDensity:2}}));
+ for(const row of p.occurrences){const a=base.positions.get(row.id),h=horizontal.positions.get(row.id),v=vertical.positions.get(row.id);assert.equal(h.y,a.y);assert.equal(v.x,a.x);assert.equal(h.width,a.width);assert.equal(v.height,a.height);}
+ assert.deepEqual(horizontal.positions.get('root'),base.positions.get('root'));assert.deepEqual(vertical.positions.get('root'),base.positions.get('root'));
+ const B=p.occurrences.find(row=>row.nodeId==='B'),C=p.occurrences.find(row=>row.nodeId==='C');assert(horizontal.positions.get(B.id).x<base.positions.get(B.id).x);assert(Math.abs(vertical.positions.get(B.id).y-vertical.positions.get(C.id).y)<Math.abs(base.positions.get(B.id).y-base.positions.get(C.id).y));
 });
 
 test('renamed or missing roots require explicit recovery, and reduced limits retain a live editor path only through real canonical pairs',()=>{

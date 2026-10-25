@@ -598,6 +598,7 @@ test("navigation with autofit disabled recenters without resetting manual scale"
     automaticFit: { current: null }, activePath: "Center.md", sceneScope: "Center.md", rooted: false, centralEditorMaximized: false,
     camera: { current: camera }, sameFitCamera: (a, b) => a.x === b.x && a.y === b.y && a.scale === b.scale,
     cameraIntentPlaced: { current: true },
+    previousCameraViewport: { current: null }, boundEditorBinding: undefined,
     fit: () => { calls.push("fit"); Object.assign(camera, { scale: 0.4, x: 90, y: 120 }); },
     applyCamera: update => Object.assign(camera, typeof update === "function" ? update(camera) : update),
     flushCameraTransform: () => calls.push("flush"), syncCentralEditorOverlay: () => {},

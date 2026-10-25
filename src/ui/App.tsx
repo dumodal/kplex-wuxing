@@ -34,7 +34,8 @@ import {
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from "react";
-import { FileView, View, Menu, type TFile, type WorkspaceLeaf } from "obsidian";
+import { FileView, View, Menu, Notice, type TFile, type WorkspaceLeaf } from "obsidian";
+import {nodeId} from "../core/graph/model";
 import type KplexPlugin from "../main";
 import type { GraphPage } from "../types";
 import type { PresentationEnvironment } from "../core/contracts/presentationEnvironment";
@@ -356,8 +357,12 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
    * Center an exact page; sidecar-open commands defer document synchronization to their owned open.
    * Passive follow keeps companion propagation: each host destination independently skips an
    * exact same-file observation, while other linked destinations still receive genuine navigation.
+   * History/pin traversal may explicitly reroot; refuse an editor-removing root before changing attention or history.
    */
-  const activate = useCallback((target: GraphPage, record = true, syncDocuments = true, origin: "user" | "wander" | "follow" = "user") => {
+  const activate = useCallback((target: GraphPage, record = true, syncDocuments = true, origin: "user" | "wander" | "follow" = "user", reroot = false) => {
+    if (reroot && documentSession.plexView.definition.navigationEntry === "attention" && !documentSession.plexView.setRoot(nodeId(target.path))) {
+      new Notice(translate("actions.branch-editor-blocked")); return false;
+    }
     if (target.path !== activePathRef.current || origin === "follow") {
       if (origin !== "wander") wander.pause();
       graphActionPorts.current?.prepareNavigation?.(target.path, origin);
@@ -389,7 +394,8 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
       void plugin.syncPageToDocumentLeaf(target, hostLeaf);
       void plugin.syncSidecarToPage(hostLeaf, target);
     }
-  }, [plugin, hostLeaf, wander, releasePendingDocumentDemand]);
+    return true;
+  }, [plugin, hostLeaf, wander, releasePendingDocumentDemand, documentSession, translate]);
 
   /** Transfer a settled preview lease only after this exact graph center has acquired its own semantic demand. */
   const acknowledgeDocumentDemandHandover = useCallback((path: string): void => {
@@ -828,9 +834,8 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     const list = plugin.settings.navigationHistory;
     if (!list.length) return;
     const cursor = Math.max(0, Math.min(list.length - 1, historyCursor + delta));
-    setHistoryCursor(cursor);
     const target = plugin.index.get(list[cursor]);
-    if (target) activate(target, false);
+    if (target && activate(target, false, true, "user", true) !== false) setHistoryCursor(cursor);
   };
 
   /** Persist a shared visibility preference and refresh mounted views without rebuilding the index. */
@@ -1144,7 +1149,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     appImplementations[`pin.open-slot.${slot}`] = uiAction(/** Slot resolution precedes hydration filtering, so missing earlier entries do not shift meanings. */ () => {
       const path = plugin.settings.pinnedNodes[slot - 1];
       const target = path ? plugin.index.get(path) : undefined;
-      if (target) activate(target);
+      if (target) activate(target, true, true, "user", true);
     }, /** Missing slots stay unavailable rather than redirecting to a neighboring pin. */ () => Boolean(plugin.index.get(plugin.settings.pinnedNodes[slot - 1] ?? "")));
   }
   const sidecarAvailable = surface !== "sidepanel";
@@ -1415,7 +1420,9 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
                   : {label: visit.node.identity, icon: "circle-help", available: false};
               }} formatLink={/** Explicit clipboard projection uses current cached facets or the captured link; never acquire sources. */ visit => nodeMarkdownLink(visit.node, resolveActionPage(plugin.index, visit.node))}
               navigate={/** Normal activation preserves global history and records this repeated visit once. */ visit => {
-                const target = resolveActionPage(plugin.index, visit.node);if (target && target.path !== activePathRef.current) activate(target);
+                const target = resolveActionPage(plugin.index, visit.node);
+                if (target && (target.path !== activePathRef.current || documentSession.plexView.definition.navigationEntry === "attention"
+                  && documentSession.plexView.layoutRoot(nodeId(target.path)) !== target.path)) activate(target, true, true, "user", true);
               }} />}
           actionPorts={graphActionPorts} actionSurfaceId={actions.surfaceId} displayState={displayState} fullscreenAvailable={displayModes.fullscreenAvailable && environment.device === "desktop"}
           semanticRevision={plugin.index.getSemanticRevision()} navigationOrigin={navigationOrigin} onSemanticDemandAcquired={acknowledgeDocumentDemandHandover} onActivate={/** Manual graph navigation keeps the existing history and sync path. */ target => activate(target)} onWanderActivate={/** Explicit Wander origin survives asynchronous scene publications. */ target => activate(target, true, true, "wander")} onOpen={open} onOpenInSidecar={centerAndOpenSidecar} onCentralNodeEditorChange={setCentralNodeEditorEnabled} onCentralNodeModeChange={rememberCentralNodeMarkdownMode} areaSettingsMode={areaSettingsMode} onAreaSettingsModeChange={setAreaSettingsMode}

@@ -3,7 +3,7 @@ import type {PlexViewConfiguration, PlexViewConfigurationSchema} from "../config
 
 export const MIND_MAP_LIMITS = {occurrences: 256, depth: 8, scopes: 8, stateCharacters: 12_000, occurrenceCharacters: 4096} as const;
 export type MindMapConfiguration = Readonly<{arrangement: "balanced" | "left" | "right"; horizontalSpacing: number;
-  verticalSpacing: number; initialGenerations: number; maximumDepth: number; maximumOccurrences: number}>;
+  verticalSpacing: number; horizontalDensity: number; verticalDensity: number; initialGenerations: number; maximumDepth: number; maximumOccurrences: number}>;
 
 /** Shared schema fields use exact finite ranges; no native or semantic settings are copied into this type. */
 function integer(defaultValue: number, minimum: number, maximum: number) {
@@ -11,8 +11,10 @@ function integer(defaultValue: number, minimum: number, maximum: number) {
 }
 
 export const mindMapConfigurationSchema: PlexViewConfigurationSchema = {version: 1, fields: {
-  arrangement: {defaultValue: "balanced", validate: (value): boolean => value === "balanced" || value === "left" || value === "right"},
+  arrangement: {defaultValue: "right", validate: (value): boolean => value === "balanced" || value === "left" || value === "right"},
   horizontalSpacing: integer(96, 40, 240), verticalSpacing: integer(24, 12, 80), initialGenerations: integer(1, 1, 3),
+  horizontalDensity: {defaultValue: 1, validate: (value): boolean => typeof value === "number" && Number.isFinite(value) && value >= 0.75 && value <= 4},
+  verticalDensity: {defaultValue: 1, validate: (value): boolean => typeof value === "number" && Number.isFinite(value) && value >= 0.75 && value <= 4},
   maximumDepth: integer(6, 1, MIND_MAP_LIMITS.depth), maximumOccurrences: integer(256, 16, MIND_MAP_LIMITS.occurrences),
 }};
 
@@ -26,5 +28,6 @@ export function mindMapConfiguration(configuration?: PlexViewConfiguration): Min
   const arrangement = read("arrangement");
   if (arrangement !== "balanced" && arrangement !== "left" && arrangement !== "right") return null;
   return {arrangement, horizontalSpacing: Number(read("horizontalSpacing")), verticalSpacing: Number(read("verticalSpacing")),
+    horizontalDensity: Number(read("horizontalDensity")), verticalDensity: Number(read("verticalDensity")),
     initialGenerations: Number(read("initialGenerations")), maximumDepth: Number(read("maximumDepth")), maximumOccurrences: Number(read("maximumOccurrences"))};
 }

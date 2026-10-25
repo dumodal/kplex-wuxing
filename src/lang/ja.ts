@@ -8,7 +8,8 @@ import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const japaneseTranslations = {
   "view.mindmap": "マインドマップ",
-  "mindmap.arrangement": "枝の配置",
+  "view.settingsSaveFailed": "表示設定を保存できませんでした。以前の値を保持します。",
+  "mindmap.arrangement": "子の枝の配置",
   "mindmap.balanced": "左右均等",
   "mindmap.left": "左側",
   "mindmap.right": "右側",

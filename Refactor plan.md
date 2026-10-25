@@ -6154,3 +6154,8 @@ Register mindmap through existing view/settings owners; add bounded branch/gener
 
 
 2026-10-25 PR219 LOCAL CLOSEOUT: clean runtime342ad13 verify:obsidian7/130/1483/244/357/777 passed, zero failures/cancellations/skips, scanner/build/native smoke. Exact artifact5d0e3b5b passes editor8(+setup), independent main-popout2 with loaded main-window Sidecar, settings-selector25 with trusted OS input, M0/unchanged legacy12; all cleanup passed. Small original8 bytes/77 content hashes and closed startup state restored, exact renderer exited/controllers0. Final evidence docs only; publication-head CI/completion on PR219 remains authoritative. Frontier null-output retention and Find negatives/corrections preserved. Capacity1, source-read authority, FileManager/fresh-popout Sidecar/215/physical/restart limits retained. No merge219/220/release/personal deploy. Risk recommendations only if separately assigned: fresh-popout adjacency/request-lifetime control and matched main, Windows/mobile physical input, whole-app restart.
+
+
+### 2026-10-25 - PR219 product correction (in progress)
+
+Prior acceptance withdrawn after real read-only observation exposed stale saved-root entry and missing parent/peer context. Existing branch retained. Additive current-attention entry, branch-primary expansion, real child/peer/root-parent projection and bottom-child/outward-peer routing. Independent density controls share native Settings and bottom-left panel through existing queued type-settings writer. Native navigation/density and dirty editor retention pass; full verification, CI and restoration pending. C15-C26 paused; no indexing/Sidecar architecture change. See docs/validation/mind-map-correction-219-2026-10-25.md. No merge/release authorized.

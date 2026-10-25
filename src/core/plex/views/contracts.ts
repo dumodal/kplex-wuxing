@@ -49,6 +49,8 @@ export type PlexOccurrence = Readonly<{
   /** Explicit occurrence hierarchy; canonical child semantics remain in real edge references. */
   branch?: PlexBranch;
   ports?: Partial<Record<PhysicalPort, "parent" | "child" | "left" | "right">>;
+  /** Bounded available peer incidence shares one physical port; its lower-bound count never grants relation-edit authority. */
+  peerPort?: Readonly<{side: PhysicalPort; count: number; complete: boolean}>;
 } & ({nodeId: NodeId; synthetic?: never} | {nodeId?: never; synthetic: {kind: "group"; members: readonly OccurrenceId[]}})>;
 export type PlexViewEdge = Readonly<{
   id: string; source: OccurrenceId; target: OccurrenceId; sourcePort: PhysicalPort; targetPort: PhysicalPort;
@@ -102,8 +104,10 @@ export interface PlexViewDefinition {
   readonly editorHosting?: "occurrence";
   /** Omit for attention-scoped geometry and navigation compatibility. */
   readonly navigation?: "rooted";
-  /** Optional child-frontier policy, independent of attention-following definitions and native editor creation. */
-  readonly hierarchy?: Readonly<{maximumScopes: number; primary: "activate" | "activate-editor";
+  /** Explicit selector entry may start at this canvas's current attention; workspace restoration still retains its saved root. */
+  readonly navigationEntry?: "attention";
+  /** Optional bounded branch-frontier policy, independent of attention-following definitions and native editor creation. */
+  readonly hierarchy?: Readonly<{maximumScopes: number; primary: "activate" | "activate-editor" | "expand"; relations?: "child-and-peer";
     /** Return a small replacement view state, or null when the requested displayed branch is unavailable. */
     reduce: (state: unknown, projection: PlexProjection, action: PlexBranchAction) => unknown}>;
   readonly configuration?: PlexViewConfigurationSchema;

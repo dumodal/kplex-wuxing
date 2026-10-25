@@ -8,7 +8,8 @@ import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const germanTranslations = {
   "view.mindmap": "Mindmap",
-  "mindmap.arrangement": "Zweiganordnung",
+  "view.settingsSaveFailed": "Die Ansichtseinstellung konnte nicht gespeichert werden. Der bisherige Wert bleibt erhalten.",
+  "mindmap.arrangement": "Anordnung der Kindzweige",
   "mindmap.balanced": "Ausgewogen",
   "mindmap.left": "Links",
   "mindmap.right": "Rechts",

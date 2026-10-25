@@ -153,6 +153,8 @@ export type PositionedNode = {
   areaId?: string;
   representation?: "thought" | "point";
   physicalPorts?: Partial<Record<GateSide, GateRole>>;
+  /** Presentation-only aggregate from the bounded view reader, independent of the port's default creation role. */
+  peerPort?: import("./core/plex/views/contracts").PlexOccurrence["peerPort"] & {shownCount?: number};
   /** Canonical source of this occurrence's primary real relationship, independent of current attention. */
   semanticSourceId?: string;
   branch?: import("./core/plex/views/contracts").PlexBranch;

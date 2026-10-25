@@ -1,0 +1,53 @@
+# Mind Map product correction — PR219
+
+Zsolt's Codex Agent, 2026-10-25. **Interim correction; not final acceptance.** Existing branch `2026-10-24-canvas-mindmap`, parent `ba1d2f3`, accepted main `9987810`. PR219 is draft. Earlier [validation](mind-map-219-2026-10-25.md) and CI482 remain historical evidence for their narrower fixture; they do not certify these working changes.
+
+## Diagnosis and correction
+
+Read-only observation confirmed different current Compass attention A and dormant saved Mind Map root R. Selector entry restored R. R had no visible children and four parents; child-only projection discarded that navigation context, leaving a lone node. This was a real product/design defect missed by the earlier acceptance model. No causal indexing regression is claimed.
+
+An actual observation also found the root below the viewport with automatic zoom disabled. Its translation was consistent with an earlier taller viewport; that earlier size was not captured, so causation remains an inference. An actual-layout callback fixture reproduces 2591→713 viewport settlement and verifies centering at unchanged scale, with manual/restored/editor guards. Final exact-build production visual verification remains pending.
+
+Opt-in current-attention selector entry preserves ordinary rooted attention changes and workspace restoration. Primary clicks select/expand exact child/peer branches; the explicit shared editor control opens an occurrence editor. History/pin/search destinations reroot safely before changing attention/history. Root children default right, peers left and parents above; descendants retain side. Children leave bottom gates; peers outward side gates; root parents top. Canonical edges retain role/provenance. Bounds remain256 occurrences, depth8 and eight additional scopes.
+
+Independent horizontal/vertical density (default1, range0.75–4) divides the corresponding gap without shrinking node/editor rectangles. Native Settings and bottom-left Configure layout use the same registered type fields, existing slider and queued writer. Compass preferences and canvas state remain separate. No alternate registry, selection store, editor, parser, index scheduler or storage path was added.
+
+## Ordered evidence
+
+Node22.22.2, real dependencies, existing Chromium and Obsidian1.15.0 on macOS. Sixteen final affected Chromium settings/selector/shared-renderer cases pass, including live density events, independent values, retained root/camera and unchanged frontier acquisitions. Full-suite verification remains pending. Existing performance guards are unchanged; no separate benchmark/profiling campaign. Private reports preserve every failed sample and test ordering. No private note identity, content or screenshot is published.
+
+| Sample | Actual outcome |
+| --- | --- |
+| Preparation | Refused expected-closed assumption: Small was open. Inspection found no competing controller/editor and exact original config/content bytes. Fresh backup preserves its open state. |
+| navigation-1 | Rejected relative config path before native work; corrected to absolute path. |
+| navigation-2 | Actual SVG gates and trusted expansion passed; trusted pin click missed measured element. Cleanup passed. |
+| navigation-3 | Document capture showed trusted click hit surrounding pinned bar. Cleanup passed. |
+| navigation-4 | Stable target rectangle required before single native input. Four cases passed: actual SVG routes, branch expansion without editor/attention/root change, current-note selector/history/pin roots, both durable bottom-left density rails. Cleanup passed. No in-scenario assertion retries. |
+| editor-1 | Eight cases passed: duplicates/cycles, Find selection, explicit B1 editor/capacity, dirty resize/spacing/density/caret/focus/nonoverlap, removal guards, migration/durable close, bounded view restoration, explicit reroot. Cleanup passed. |
+| sessions-1 | Stopped before test canvases: global semantic preparation pending after earlier serial fixture deletion, metadata-pending/activefalse. Cleanup passed; no fixture notes/controller remained, existing Markdown metadata available. No index fix or same-lifetime success claimed. |
+| sessions-fresh-1 / fresh-2 / fresh-3 | Setup notice dismissal failed; cleanup passed. The notice belonged to a foreign/retired document with zero rectangle, so element.click was not evidence of native close. |
+| sessions-notice-close-1 | Public Modal.close retires only the informational setup owner; no notice-input success claimed. Both independent main/popout cases passed with cleanup, retained drafts/filters/Sidecar and restoration. |
+| settings-1 | Existing native range helper refused a non-endpoint density request; corrected fixture to Home/End endpoints, without changing production policy. Cleanup passed. |
+| settings-2 | Native density/Settings persistence and strict zero-work assertions passed. OS selector step failed after CUA targeted identically titled popout rather than main; cleanup passed, no keyboard success claimed. |
+
+**settings-3 passed**:25 native receipts, including both density fields, failed-save rollback/recovery, popout Settings, draft preservation, independent sessions and actual CUA Space/Down/Down/Return with a trusted owning-document select key/change. Cleanup passed. [Ordered native receipts](mind-map-correction-219-receipts.json) retain failed samples and source/artifact/driver hashes.
+
+Native staging is explicitly interim until current full verification. Drivers check installed/dist hashes. Later source changes require affected verification and exact final attribution. Earlier fixture failures (implicit balanced-default assumptions and wrong extracted source) and sandbox loopback EPERM are preserved privately with their corrected follow-ups.
+
+## Safety and remaining acceptance
+
+Production notes strictly read only. Maintainer authorized test main.js/styles.css and node/view changes only. Actual observer recorded zero create/modify/delete/rename and was removed; no native production editor opened. Original executables backed up privately. Installed production interim predates final density/descendant/camera changes and is not final acceptance.
+
+Small owns synthetic writes. Scenarios restore settings/layout/demand/wrappers and remove fixtures independently of success. Outer restoration of eight config/plugin hashes,77 content files and original opening state remains pending. Earlier backups remain immutable.
+
+Capacity one, ordinary Markdown. Native Electron automation does not establish physical touch/Windows/minimum-host behavior. View recreation is not whole-app restart. M0 FileManager cache-clean gate, fresh-popout Sidecar and older #215 combined-editor/two-Sidecar/extra-tab limits remain explicit. #220 is independent and uses unchanged attention-following hosting.
+
+- [x] Diagnose real root/context mismatch without production note writes.
+- [x] Implement root/navigation/context/gates and both density surfaces.
+- [x] Native navigation/density and dirty-editor checks.
+- [x] Independent sessions and native Settings on current staged runtime.
+- [ ] Final compatibility/native attribution after complete verification.
+- [ ] Affected browser checks, full verify/verify:obsidian and exact-head CI.
+- [ ] Final read-only production visual check, restoration and published correction.
+
+No merge219/220 or release authorized. Review recommendation remains pending actual remaining acceptance.
