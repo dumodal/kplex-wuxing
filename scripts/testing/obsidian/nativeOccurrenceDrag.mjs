@@ -4,11 +4,11 @@ export async function acceptNativeOccurrenceDrag({app,p,c,host,compass,restores,
  const ids={r:path('P'),c:path('Q'),b:path('B')},child=p.settings.hierarchy.children[0];
  const definition={id:'test.native-occurrence-drag',version:1,labelKey:'Native occurrence proof',icon:'network',navigation:'rooted',capabilities:{sections:false,descendants:false,editor:false,compact:false},defaultState:null,restoreState:()=>null,
   project(input){const r=input.read.node(ids.r),other=input.read.node(ids.c),b=input.read.node(ids.b);if(!r||!other||!b)return null;
-   const first=input.read.relations(r.id,'child').items.find(row=>row.node.id===b.id),second=input.read.relations(other.id,'child').items.find(row=>row.node.id===b.id);if(!first||!second)return null;
+   const first=input.read.relations(r.id,'child').items.find(row=>row.node.id===b.id),second=input.read.relations(other.id,'child').items.find(row=>row.node.id===b.id);
    return{attention:input.attention,layoutRoot:r.id,entry:'r',frame:'r',coverage:'cached',truncated:false,occurrences:[
     {id:'r',nodeId:r.id,representation:'thought',ports:{top:'parent',bottom:'child'}},{id:'c',nodeId:other.id,representation:'thought',role:'child',ports:{top:'parent',bottom:'child'}},
     {id:'b-first',nodeId:b.id,representation:'thought',role:'child',relation:first,ports:{left:'parent',bottom:'child'}},{id:'b-second',nodeId:b.id,representation:'thought',role:'child',relation:second,ports:{left:'parent',bottom:'child'}}],
-    edges:[{id:'rb',kind:'semantic',source:'r',target:'b-first',sourceNode:r.id,targetNode:b.id,sourcePort:'bottom',targetPort:'left',relation:first},{id:'cb',kind:'semantic',source:'c',target:'b-second',sourceNode:other.id,targetNode:b.id,sourcePort:'bottom',targetPort:'left',relation:second}]};},
+    edges:[...(first?[{id:'rb',kind:'semantic',source:'r',target:'b-first',sourceNode:r.id,targetNode:b.id,sourcePort:'bottom',targetPort:'left',relation:first}]:[]),...(second?[{id:'cb',kind:'semantic',source:'c',target:'b-second',sourceNode:other.id,targetNode:b.id,sourcePort:'bottom',targetPort:'left',relation:second}]:[])]};},
   layout(_projection,measurements){const points={r:[0,0],c:[-210,140],'b-first':[230,-120],'b-second':[230,140]};return{positions:new Map(measurements.map(row=>[row.id,{x:points[row.id][0],y:points[row.id][1],width:row.width,height:row.height}])),areas:[]};}};
  const captured=[],manager=app.dragManager,start=manager.onDragStart;
  manager.onDragStart=function(...args){const result=start.apply(this,args),source=this.draggable?.source;if(source?.kind==='kplex-node-link')captured.push({trusted:args[0].isTrusted,id:source.occurrence?.id,origin:source.occurrence?.relationship?.origin.identity,role:source.role});return result};
@@ -16,7 +16,8 @@ export async function acceptNativeOccurrenceDrag({app,p,c,host,compass,restores,
  owner.registry=new registry.constructor([...registry.available,definition]);owner.select(definition.id);owner.setRoot(ids.r);
  await until(()=>nodes(host).filter(node=>node.dataset.kplexPath===ids.b).length===2&&!root(host).querySelector('.kplex-view-error'),'Two same-role native occurrences absent');await act(host,'view.fit');
  const node=id=>nodes(host).find(element=>element.dataset.kplexKeyboardId===id),file=id=>app.vault.getFileByPath(id);
- const identities=Object.values(ids).map(id=>({id,page:p.index.get(id),file:file(id)}));
+ const identities=Object.values(ids).map(id=>({id,canonical:p.index.allPages().find(page=>page.path===id),file:file(id)}));
+ check(identities.every(row=>row.canonical),'Published fixture endpoints absent');
  const beforeR=await app.vault.read(file(ids.r)),beforeC=await app.vault.read(file(ids.c)),beforeB=await app.vault.read(file(ids.b));
  const childrenBefore=structuredClone(app.metadataCache.getFileCache(file(ids.r)).frontmatter[child]);
  const count=opened.length;await drag(()=>node('b-second'),()=>node('r').querySelector('[data-kplex-gate="top"]'));
@@ -31,7 +32,7 @@ export async function acceptNativeOccurrenceDrag({app,p,c,host,compass,restores,
  await until(()=>!modal.modalEl.isConnected,'Native additive save did not settle');
  await until(()=>JSON.stringify(app.metadataCache.getFileCache(file(ids.r))?.frontmatter?.[parent]).includes('B'),'Added parent declaration absent');
  check(JSON.stringify(app.metadataCache.getFileCache(file(ids.r)).frontmatter[child])===JSON.stringify(childrenBefore),'Existing R→B child declaration was removed');
- check(identities.every(({id,page,file:original})=>p.index.get(id)===page&&file(id)===original),'Native additive save replaced canonical/native identity');
+ const identityChecks=identities.map(({id,canonical,file:original})=>({id,canonicalRetained:p.index.allPages().find(page=>page.path===id)===canonical,currentReadIdentity:p.index.get(id)?.path===id&&p.index.get(id)?.file===original,nativeRetained:file(id)===original}));check(identityChecks.every(row=>row.canonicalRetained&&row.currentReadIdentity&&row.nativeRetained),'Native additive save replaced canonical/native identity: '+JSON.stringify(identityChecks));
  check(await app.vault.read(file(ids.c))===beforeC&&await app.vault.read(file(ids.b))===beforeB,'Native additive drop altered unrelated source/target notes');
  check((await app.vault.read(file(ids.r))).includes(beforeR.slice(beforeR.indexOf('# P'))),'Native additive drop altered the original body');
  cases.push({id:'trusted-native-second-occurrence-additive-save',sourceId:source.id,canonicalOriginMatched:true,mode:options.mode,canonicalAndNativeIdentityRetained:true,originalChildDeclarationRetained:true,otherSourceBytesRetained:true,targetBytesRetained:true});

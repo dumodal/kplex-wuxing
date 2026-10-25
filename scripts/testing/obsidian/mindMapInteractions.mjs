@@ -40,7 +40,7 @@ export async function acceptMindMapInteractions({app,p,c,host,hosts,restores,pat
  const cross=root(host).querySelectorAll('.is-cross-link');check(cross.length>0,'Enabled native canonical cross-link absent');
  cases.push({id:'production-mindmap-canonical-cross-links',visible:cross.length});
  // F4 owns only this canvas. Native text insertion targets its search input, never a note editor.
- await workspaceFocus();key('F4');const search=()=>root(host).querySelector('input.kplex-search');
+ await workspaceFocus();const observedKey=event=>{c.progress={...c.progress,f4:{trusted:event.isTrusted,key:event.key,target:event.target?.className,windowFocused:win.isFocused(),contentsFocused:win.webContents.isFocused(),documentFocused:doc.hasFocus()}}};doc.addEventListener('keydown',observedKey,true);try{key('F4')}finally{await wait(50);doc.removeEventListener('keydown',observedKey,true)}const search=()=>root(host).querySelector('input.kplex-search');
  await until(()=>doc.activeElement===search(),'F4 did not focus owning canvas search');check(!session(host).editors.bindings.length,'Search unexpectedly opened an editor');
  await win.webContents.insertText(path('C'));
  const result=()=>[...doc.querySelectorAll('.kplex-search-result')].find(element=>element.textContent.includes(path('C')));
@@ -77,5 +77,5 @@ export async function acceptMindMapInteractions({app,p,c,host,hosts,restores,pat
  cases.push({id:'trusted-cross-view-parent-area-shared-composer',cancelledWithoutWrite:true,sourceCanvasRetained:true,delivery:parentDelivery});
  await c.acceptNativeDrag({app,p,c,host,compass,restores,path,root,session,nodes,act,check,wait,until,clickNative,drag,opened,cases,instance});
  /** Capture the intended owning canvas before submitting its keyboard shortcut. */
- async function workspaceFocus(){app.workspace.setActiveLeaf(host,{focus:true});win.show();win.focus();win.webContents.focus();root(host).focus();await wait(50)}
+ async function workspaceFocus(){app.workspace.setActiveLeaf(host,{focus:true});doc.defaultView.require('@electron/remote').app.focus({steal:true});win.show();win.focus();win.webContents.focus();root(host).focus();await until(()=>win.isFocused()&&win.webContents.isFocused()&&doc.hasFocus()&&doc.activeElement===root(host),'Owning window/graph focus not admitted');await wait(50)}
 }
