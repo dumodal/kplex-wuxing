@@ -5,11 +5,14 @@ import type {RelationshipExplanation} from "../../graph/resolver";
 import type {LinkDirection, RelationType, Role} from "../../graph/relations";
 import type {PlexViewConfiguration, PlexViewConfigurationSchema} from "./configuration";
 import type {NotePropertyAvailability, NotePropertyRead} from "../noteProperties";
+import type {ColorValue} from "../../contracts/colorValue";
 
 /** Policy API compatibility, independent of configuration and session payload schema versions. */
 export const CANVAS_VIEW_API_VERSION = 1 as const;
 /** Literal user/extension copy never passes through the host catalog lookup. */
 export type CanvasViewText = Readonly<{literal: string} | {key: string}>;
+/** A measured presentation badge, with no gate/edge/drop or note mutation authority. */
+export type PlexNodeBadge = Readonly<{label: CanvasViewText; description?: CanvasViewText; background?: ColorValue}>;
 export type PlexViewStateAction = Readonly<{id: string; args?: unknown}>;
 export type PlexViewStateResult = Readonly<{status: "updated"; state: unknown}
   | {status: "unavailable"; reason?: CanvasViewText}>;
@@ -52,6 +55,9 @@ export type PlexViewRead = Readonly<{
 }>;
 export type PlexOccurrence = Readonly<{
   id: OccurrenceId; areaId?: AreaId;
+  badge?: PlexNodeBadge;
+  /** Accessible presentation explanation, separate from the semantic node label. */
+  description?: CanvasViewText;
   /** Point rendering is reserved; the current host rejects it explicitly rather than rendering a detailed card. */
   representation: "thought" | "point";
   /** Optional semantic context for existing styles/lenses. It does not determine physical placement. */
@@ -72,6 +78,8 @@ export type PlexProjection = Readonly<{
   occurrences: readonly PlexOccurrence[]; edges: readonly PlexViewEdge[]; truncated: boolean; coverage: ViewCoverage;
   /** Undefined inherits normal host presentation; null or an empty literal explicitly hides it. */
   heading?: CanvasViewText | null;
+  /** Recoverable presentation status, independent of note/relationship semantics. */
+  status?: CanvasViewText;
   /** Only an opt-in hierarchy may request bounded, actually represented parent scopes outside projection/layout. */
   preparation?: Readonly<{parents: readonly NodeId[]}>;
   /** Bounded plain session intent (e.g. stable branch sides); the existing session validates and commits it. */
@@ -79,6 +87,7 @@ export type PlexProjection = Readonly<{
 }>;
 export type PlexMeasurement = Readonly<{
   id: OccurrenceId; width: number; height: number; expandedWidth: number; expandedReserve: number;
+  badge?: Readonly<{width: number; height: number}>;
   /** Only this occurrence has a bound expanded editor; the legacy layout boolean does not describe it. */
   editor?: true;
   mini: {width: number; viewportHeight: number; topGap: number} | null;
@@ -98,7 +107,7 @@ export type PlexArea = Readonly<{
 }>;
 /** Pure presentation marks have no semantic endpoints or interaction/write authority. */
 export type PlexDecoration = Readonly<{id: string} & (
-  {kind: "region"; bounds: ViewRect; labelKey: string; label?: string; areaId?: AreaId; tint?: "water" | "wood" | "fire" | "earth" | "metal"; count?: boolean}
+  {kind: "region"; bounds: ViewRect; labelKey: string; label?: string; areaId?: AreaId; tint?: "water" | "wood" | "fire" | "earth" | "metal"; color?: ColorValue; count?: boolean}
   | {kind: "guide"; points: readonly ViewPoint[]}
 )>;
 export type PlexViewLayout = Readonly<{
@@ -134,6 +143,9 @@ export interface PlexViewDefinition {
     /** Return a small replacement view state, or null when the requested displayed branch is unavailable. */
     reduce: (state: unknown, projection: PlexProjection, action: PlexBranchAction) => unknown}>;
   readonly configuration?: PlexViewConfigurationSchema;
+  /** Bounded configured colors join the existing owning-document theme/palette projection.
+   * It receives this view's configuration only, and grants no style or settings write. */
+  readonly colorReferences?: (configuration: PlexViewConfiguration) => readonly ColorValue[];
   /** Optional pure presentation-state actions. The session still validates/persists bounded state
    * and protects native editors; this reducer receives no host or file mutation capability. */
   readonly reduceState?: (state: unknown, action: PlexViewStateAction, configuration: PlexViewConfiguration) => PlexViewStateResult;

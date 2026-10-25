@@ -6235,3 +6235,6 @@ B1 closeout adds the explicit collection-reset guard: restoring view defaults re
 
 
 2026-10-25 PR220 requested cycle-reference UX: read-only observed snapshot showed terminal ancestor cycles rather than a limit or failed ordinary branch. User chose nearest earlier occurrence reveal with Notice. Existing hierarchy helper/selection owner,8-step own ancestry, canonical/session/root retirement guards;8 locale Notice; no root/attention/fold/editor/source change. Focused72/final browser/architecture7/build/scanner pass; native final-head acceptance pending. Private production names/content excluded from committed evidence; no production writes/deployment. C15-C26 paused.
+
+
+2026-10-25 PR220 C1: bounded Facets templates/schema2 legacy migration, independent preset intent/explicit deletion replacement, cache-only property/type/tag classification and centered direct projection/measured3-7-region policy. Optional shared badge/color metadata/bounds added for real Facets consumer; host composition not yet shipped.17 focused/core130/architecture7 zero violations/build/scanner pass. Existing JSON/scene/property/area bounds retained; no parser/index/scheduler/private renderer or mutation owner. C2 production UI/editor integration and D-F remain pending; C15-C26 paused.
