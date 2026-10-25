@@ -9,6 +9,7 @@
  * parameters remain unquoted regardless of their names. Locale catalogs inherit this classification.
  */
 export const englishCatalog = {
+  "facets.rulesHelp": {message: "Use shared conditions or Code. note.phase reads the candidate; this.phase explicitly reads the focused note's Markdown field. Fixed attributes such as this.name keep their usual meaning. Unavailable metadata stays unknown, including under negation. Strict == preserves case; .equals() compares text without case. Relationship rules need recorded context and cannot classify the focus from a self-link.", context: "Availability-aware category rules using shared Graph Lens conditions.", params: []},
   "facets.relativeLabels": {message: "Show relative Wu Xing labels", context: "Optional read-only Wu Xing model interpretation and decorative cycles.", params: []},
   "facets.regulatingGuides": {message: "Show regulating cycle guides", context: "Optional read-only Wu Xing model interpretation and decorative cycles.", params: []},
   "facets.wuxingHelp": {message: "Phase assignment records your interpretation of a note. Relative labels read that phase against the focused note; they do not change phases or recorded links and do not prove causation. An unassigned or conflicting focus supplies no reference phase.", context: "Optional read-only Wu Xing model interpretation and decorative cycles.", params: []},

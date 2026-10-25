@@ -7,6 +7,7 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const traditionalChineseTranslations = {
+  "facets.rulesHelp": "使用共用條件或程式碼。note.phase 讀取候選筆記；this.phase 明確讀取焦點筆記的 Markdown 屬性。this.name 等固定屬性維持原意。無法取得的中繼資料即使取反仍為未知。== 區分大小寫；.equals() 不區分。關係規則需要已記錄的脈絡，不會虛構焦點的自身連結。",
   "facets.relativeLabels": "顯示五行相對標籤",
   "facets.regulatingGuides": "顯示相剋循環指引",
   "facets.wuxingHelp": "五行歸類記錄你對筆記的詮釋。相對標籤將該行與目前焦點筆記的行比較；不會變更歸類或已記錄的連結，也不代表因果證據。未歸類或歸類衝突的焦點不提供參照行。",

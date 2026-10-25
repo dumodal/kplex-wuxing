@@ -7,6 +7,7 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const frenchTranslations = {
+  "facets.rulesHelp": "Utilisez les conditions partagées ou Code. note.phase lit le candidat ; this.phase lit explicitement la propriété Markdown de la note ciblée. Les attributs fixes comme this.name gardent leur sens. Des métadonnées indisponibles restent inconnues, même avec une négation. == respecte la casse ; .equals() l’ignore. Les règles de relation exigent un contexte enregistré, sans lien fictif vers soi-même.",
   "facets.relativeLabels": "Afficher les libellés relatifs Wu Xing",
   "facets.regulatingGuides": "Afficher le cycle de régulation",
   "facets.wuxingHelp": "L’attribution d’une phase traduit votre interprétation d’une note. Les libellés relatifs comparent cette phase à celle de la note ciblée ; ils ne changent ni les phases ni les liens enregistrés et ne prouvent aucune causalité. Une cible sans phase ou en conflit ne fournit pas de référence.",

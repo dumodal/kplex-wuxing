@@ -7,6 +7,7 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const germanTranslations = {
+  "facets.rulesHelp": "Nutze gemeinsame Bedingungen oder Code. note.phase liest den Kandidaten; this.phase liest ausdrücklich die Markdown-Eigenschaft der fokussierten Notiz. Feste Attribute wie this.name behalten ihre Bedeutung. Nicht verfügbare Metadaten bleiben auch bei Verneinung unbekannt. == beachtet Großschreibung; .equals() vergleicht Text ohne sie. Beziehungsregeln benötigen gespeicherten Kontext, keinen erfundenen Selbst-Link.",
   "facets.relativeLabels": "Relative Wu-Xing-Beschriftungen anzeigen",
   "facets.regulatingGuides": "Regulierenden Zyklus anzeigen",
   "facets.wuxingHelp": "Die Phasenzuordnung hält deine Interpretation einer Notiz fest. Relative Beschriftungen vergleichen sie mit der fokussierten Notiz; sie ändern weder Phasen noch gespeicherte Verbindungen und belegen keine Ursache. Ein nicht zugeordneter oder widersprüchlicher Fokus liefert keine Referenzphase.",

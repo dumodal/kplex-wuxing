@@ -27,6 +27,7 @@ return await build({stdin:{resolveDir:process.cwd(),contents:`
   export {ActionManager} from './src/application/ActionManager';export {actionNodeRef} from './src/adapters/obsidian/actionNode';
   export {editViewConfiguration, editViewConfigurationAt} from './src/core/plex/views/configuration';export {wuXingViewDefinition} from './src/core/plex/views/wuxing/definition';
   export {mindMapViewDefinition} from './src/core/plex/views/mindmap/definition';
+  export {FACET_TEMPLATES} from './src/core/plex/views/facets/templates';
   export {builtInCanvasViewSettings} from './src/ui/plexViews/settingsContributions';
   export {CanvasViewContributionController} from './src/ui/plexViews/CanvasViewContributionController';
   export {CanvasPropertyAssignmentActions} from './src/ui/CanvasPropertyAssignmentActions';

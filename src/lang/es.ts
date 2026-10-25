@@ -7,6 +7,7 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const spanishTranslations = {
+  "facets.rulesHelp": "Usa las condiciones compartidas o Código. note.phase lee el candidato; this.phase lee explícitamente la propiedad Markdown de la nota enfocada. Los atributos fijos como this.name conservan su significado. Los metadatos no disponibles siguen siendo desconocidos, incluso bajo negación. == distingue mayúsculas; .equals() no. Las reglas de relación necesitan contexto registrado, sin enlaces propios ficticios.",
   "facets.relativeLabels": "Mostrar etiquetas relativas de Wu Xing",
   "facets.regulatingGuides": "Mostrar el ciclo de regulación",
   "facets.wuxingHelp": "La fase asignada refleja tu interpretación de una nota. Las etiquetas relativas comparan esa fase con la nota enfocada; no cambian fases ni enlaces registrados y no prueban causalidad. Un foco sin fase o con conflicto no aporta una fase de referencia.",

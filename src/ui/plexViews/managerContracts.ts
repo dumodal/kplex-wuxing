@@ -3,6 +3,7 @@
 import type {PlexViewConfiguration, ViewConfigurationAddress, ViewConfigurationEdit, ViewConfigurationExpected} from "../../core/plex/views/configuration";
 import type {StyleColorContext} from "../StyleColorControls";
 import type {StyleCommitResult} from "../StyleEditorModal";
+import type {PredicateSuggestions} from "../predicates/PredicateRuleEditor";
 
 export type CanvasViewManagerContext = Readonly<{
   colors: StyleColorContext;
@@ -10,6 +11,8 @@ export type CanvasViewManagerContext = Readonly<{
   read: (address: ViewConfigurationAddress) => ViewConfigurationExpected;
   capture: (address: ViewConfigurationAddress) => () => boolean;
   subscribe: (changed: () => void) => () => void;
+  /** Optional bounded suggestions from the existing cached UI catalogue; no acquisition. */
+  suggestions?: () => PredicateSuggestions;
   save: (address: ViewConfigurationAddress, edit: ViewConfigurationEdit, expected: ViewConfigurationExpected,
     current: () => boolean) => Promise<StyleCommitResult>;
   closed: () => void;

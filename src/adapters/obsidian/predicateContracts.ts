@@ -93,7 +93,7 @@ export function createLegacyPropertyProvider(app: App, isCurrent: () => boolean 
       const value = capture(node);
       if (value.status !== "available") return {status: value.status};
       const field = cachedProperty(value.cache, key);
-      return current(value) ? {status: "available", value: field} : {status: "unavailable"};
+      return current(value) ? {status: "available", value: field, isCurrent: () => current(value)} : {status: "unavailable"};
     },
   };
 }

@@ -2062,6 +2062,11 @@ export class KplexSettingTab extends PluginSettingTab {
       read: address => readViewConfigurationAt(definition, plugin.settings.canvasViewSettings, address),
       capture: address => {const incoming = plugin.receivedSettingsOwner(viewConfigurationUpdateDomain(definition, address));return () => registered() && incoming();},
       subscribe: changed => plugin.index?.subscribePresentation(changed) ?? (() => {}),
+      suggestions: () => {
+        const catalogue = registered() ? plugin.index?.suggestionCatalog?.() : undefined;
+        return {properties: catalogue?.properties.slice(0, 512) ?? [], tags: catalogue?.tags.slice(0, 512) ?? [],
+          folders: catalogue?.folders.slice(0, 512) ?? [], noteTypes: catalogue?.noteTypes.slice(0, 512) ?? []};
+      },
       save: async (address, edit, expected, current) => {
         await plugin.updateCanvasViewConfiguration(id, address, edit, expected, () => registered() && current());
         return {refreshPending: false};

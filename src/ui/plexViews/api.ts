@@ -3,6 +3,9 @@
 export {CanvasViewSettingsRegistry, canvasViewControl} from "./settingsContributions";
 export type {CanvasViewSettingsContribution, CanvasViewSettingsContext} from "./settingsContributions";
 export type {CanvasViewManagerContext} from "./managerContracts";
+export {PredicateConditions} from "../predicates/PredicateConditions";
+export {PredicateRuleEditor} from "../predicates/PredicateRuleEditor";
+export type {PredicateSuggestions} from "../predicates/PredicateRuleEditor";
 export type {CanvasViewContributionContext, CanvasViewCommand, CanvasViewMenuItem, CanvasViewChoice,
   CanvasViewLayoutControl, CapturedCanvasViewCommand, CanvasViewCommandOutcome} from "./contributionContracts";
 export {CanvasViewContributionController} from "./CanvasViewContributionController";

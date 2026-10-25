@@ -22,6 +22,18 @@ test('bounded cache reads expose truncation, unavailable corpus and stale revisi
   assert.equal(f.read.node('Focus.md'),null);assert.equal(f.read.relations('Root.md','child').coverage,'unavailable');assert.equal(f.read.evidence('Root.md','Repeated.md').coverage,'unavailable');
 });
 
+test('optional declared multi-field budgets retain the fifth/sixth signature, admission and finite existing owner',()=>{
+ const f=fixture(1);let fields=0;
+ const provider={getNoteProperty:()=>{throw Error('Unsafe legacy read')},readNoteProperty:()=>{fields++;return{status:'available',value:'known'}}};
+ const plain=M.plexViewRead(f.source,()=>true,1,'Focus.md',0,provider);plain.node('Focus.md');
+ for(let i=0;i<20;i++)plain.properties.read('Focus.md','phase');assert.equal(fields,9,'Existing default budget unchanged');
+ fields=0;const read=M.plexViewRead(f.source,()=>true,1,'Focus.md',0,{...provider,viewDependencies:{fields:['phase','priority']}});read.node('Focus.md');
+ for(let i=0;i<40;i++)read.properties.read('Focus.md','phase');assert.equal(fields,21,'Only the same finite frame grows for declared fields');
+ const before=fields;assert.equal(read.properties.read('Unadmitted.md','phase').status,'unavailable');assert.equal(fields,before);
+ fields=0;const invalid=M.plexViewRead(f.source,()=>true,1,'Focus.md',0,{...provider,viewDependencies:{fields:Array(17).fill('phase')}});invalid.node('Focus.md');
+ for(let i=0;i<20;i++)invalid.properties.read('Focus.md','phase');assert.equal(fields,9,'Malformed declarations cannot enlarge a budget');
+});
+
 test('shared scene binds repeated occurrences to one canonical page with independent anchors and semantic edges',()=>{
   const f=fixture(),result=f.prepare();assert.equal(result.failure,false);
   const repeated=result.scene.nodes.filter(node=>node.page.path==='Repeated.md');assert.equal(repeated.length,2);assert.equal(repeated[0].page,repeated[1].page);

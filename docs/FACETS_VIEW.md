@@ -16,7 +16,7 @@ Reviewed [fa038f0af796a9a6f42e6f8eb91e44c13ba3e067](https://github.com/dumodal/k
 
 The phase is a personal classification. The relative role is a model reading against the current focus. Recorded graph evidence remains a separate fact; neither color nor a cycle guide establishes causation. For the ordered cycle, offsets 0/1/2/3/4 mean shares my phase / I generate / I regulate / regulates me / generates me. Reordering visible categories does not reorder this model. Unassigned, conflicting or unavailable focus phases supply no default reference. Configuration and layout do not edit notes or acquire metadata.
 
-The existing predicate `this` namespace exposes fixed page attributes and does **not** automatically read Markdown properties such as `this.phase`. E must explicitly define and test current/candidate property availability through the shared field-scoped reader before offering that expression. No private rule interpreter, parser or metadata owner is permitted.
+Review confirmed that the legacy predicate `this` namespace exposes fixed page attributes and does **not** automatically read Markdown properties such as `this.phase`. E adds explicit opt-in availability-aware evaluation: fixed attributes retain precedence, while other `this` keys read the focused Markdown note through the same field-scoped reader used for candidate `note` properties. Legacy `matches` stays compatible. Unavailable inputs remain unknown under negation; exact cached-field proofs are rechecked before accepting compound results or a final rule projection. No private rule interpreter, parser or metadata owner is introduced.
 
 # PR #220 — Facets and the canvas-view plugin API
 

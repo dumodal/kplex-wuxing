@@ -947,8 +947,11 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   /** Share exact current admission between rendering, restored intent and branch-removal preflight. */
   const prepareSelectedDefinition = (state: unknown, bindings: readonly PlexEditorBinding[] = viewSession?.editors.bindings ?? []): ReturnType<typeof prepareViewScene> => {
     const current = viewSession?.capture() ?? (() => true);
+    const propertyProvider = viewDefinition.capabilities.properties ? createLegacyPropertyProvider(plugin.app, current, node => index.get(node.id)?.file) : undefined;
+    let viewDependencies;
+    try {viewDependencies = viewDefinition.propertyDependencies?.(state, readViewConfiguration(viewDefinition, settings.canvasViewSettings));} catch { /* Invalid declarations retain the original finite read budget. */ }
     const read = plexViewRead(index, current, settings.maxItemCount, activePath, viewDefinition.hierarchy ? 256 : 0,
-      viewDefinition.capabilities.properties ? createLegacyPropertyProvider(plugin.app, current, node => index.get(node.id)?.file) : undefined);
+      propertyProvider ? {...propertyProvider, viewDependencies} : undefined);
     return prepareViewScene(viewDefinition, read, index, activePath, state, settings, current, centralEditorSize,
       node => !globalFiltering || filterLayoutMode === "keep" && !settings.groupRelations || (matchesGraphPredicateNode(predicateEngine, predicate, node, predicateCenter)
         && matchesVisibleLensNode(predicateEngine, index, lenses, node, predicateCenter)),

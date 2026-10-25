@@ -7,6 +7,7 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const japaneseTranslations = {
+  "facets.rulesHelp": "共通の条件またはコードを使います。note.phase は候補、this.phase は注目中のノートの Markdown プロパティを明示的に読みます。this.name などの固定属性の意味は変わりません。利用できないメタデータは否定しても不明のままです。== は大文字と小文字を区別し、.equals() は区別しません。関係ルールには記録済みの文脈が必要で、注目中のノートに架空の自己リンクは作りません。",
   "facets.relativeLabels": "五行の相対ラベルを表示",
   "facets.regulatingGuides": "相克の循環ガイドを表示",
   "facets.wuxingHelp": "相の割り当てはノートに対するあなたの解釈です。相対ラベルはその相を注目中のノートの相と比較します。相や記録済みリンクを変更せず、因果関係の証拠にもなりません。注目中の相が未割り当て・競合の場合、参照相はありません。",

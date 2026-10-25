@@ -3,7 +3,7 @@ import type {GraphIndex} from "../../index/GraphIndex";
 import type {KplexSettings} from "../../settings";
 import {graphNodeViewFromLegacy} from "../../adapters/obsidian/graphContracts";
 import {nodeId, type NodeId, type GraphNodeView} from "../../core/graph/model";
-import type {PlexViewDefinition, PlexViewRead, PlexProjection, PlexMeasurement, PlexOccurrence, PlexViewEdge} from "../../core/plex/views/contracts";
+import type {PlexViewDefinition, PlexViewRead, PlexProjection, PlexMeasurement, PlexOccurrence, PlexViewEdge, PlexViewPropertyDependencies} from "../../core/plex/views/contracts";
 import {RelationType, type GraphPage, type PositionedNode, type PositionedEdge, type Role, type Neighbour} from "../../types";
 import {resolveNodeStyle, resolveLinkStyle} from "../../index/style";
 import {deferredNodeCounts, nodeSize, nodeBadgeSize} from "./measurement";
@@ -38,17 +38,23 @@ export function attentionFallbackScene(source: Pick<GraphIndex, "get" | "titleFo
 }
 
 /** Expose a bounded, revision-scoped cache-only reader. Corpus/metric absence is explicit, never numerical zero. */
-export function plexViewRead(source: SceneRead, current: () => boolean, maximum: number, attention?: string, hierarchyOccurrences = 0, properties?: GraphPropertyProvider): PlexViewRead {
+export function plexViewRead(source: SceneRead, current: () => boolean, maximum: number, attention?: string, hierarchyOccurrences = 0,
+  properties?: GraphPropertyProvider & {viewDependencies?: PlexViewPropertyDependencies}): PlexViewRead {
   const proof = source.captureSemanticGateRead(), nodes = new Map<NodeId, GraphNodeView>();
   let operations = 0;
   let propertyOperations = 0;
+  const requested = properties?.viewDependencies;
+  const dependencies = requested && requested.fields.length <= 16 && requested.fields.every(field => typeof field === "string" && field.length > 0 && field.length <= 128)
+    && (requested.evidence === undefined || typeof requested.evidence === "boolean") ? requested : undefined;
+  const occurrences = Math.min(2048, maximum * 6 + 1);
+  const propertyBudget = dependencies && dependencies.fields.length > 1 ? Math.min(16_384, occurrences * (dependencies.fields.length + 1)) : Math.min(2048, maximum * 8 + 1);
   /** Property reads address only admitted nodes with a separate finite scene budget. */
-  const propertyNode = (id: NodeId): GraphNodeView | null => isCurrent() && ++propertyOperations <= Math.min(2048, maximum * 8 + 1) ? nodes.get(id) ?? null : null;
+  const propertyNode = (id: NodeId): GraphNodeView | null => isCurrent() && ++propertyOperations <= propertyBudget ? nodes.get(id) ?? null : null;
   // Ordinary definitions retain their existing budget. A hierarchy admits at most256 occurrences:
   // each can probe six roles plus node/scope/admission guards; eight expanded scopes can read six
   // bounded prefixes (8 * 6 = 48). The absolute read-operation cap remains16,384; no read acquires sources.
   const budget = Math.min(16_384, Math.max(16, maximum * 16, Number.isInteger(hierarchyOccurrences) && hierarchyOccurrences > 0
-    ? Math.min(256, hierarchyOccurrences) * 16 + maximum * 48 : 0));
+    ? Math.min(256, hierarchyOccurrences) * 16 + maximum * 48 : 0, dependencies?.evidence ? occurrences * 6 : 0));
   const isCurrent = (): boolean => current() && proof.isCurrent();
   const node = (id: NodeId): GraphNodeView | null => {
     if (!isCurrent() || ++operations > budget) return null;

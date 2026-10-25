@@ -516,7 +516,7 @@ test("physical positions embedded in sentences use catalog labels", () => {
 
 
 test("structured parser failures preserve accepted English and support future localized feedback", () => {
-  const sourcePath = join(root, "src/ui/PlexFilter.tsx");
+  const sourcePath = join(root, "src/ui/predicates/predicateMessages.ts");
   const file = ts.createSourceFile(sourcePath, readFileSync(sourcePath, "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const declarations = file.statements.filter((node) => ts.isFunctionDeclaration(node) &&
     ["graphLensExpectedTokenLabel", "graphLensValidationMessage"].includes(node.name?.text));

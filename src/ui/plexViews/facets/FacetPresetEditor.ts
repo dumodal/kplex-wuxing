@@ -11,6 +11,10 @@ import {FACET_TEMPLATES} from "../../../core/plex/views/facets/templates";
 import {canvasViewText} from "../labels";
 import {FacetPresetRemoval} from "./FacetPresetRemoval";
 import {configurationExpected} from "../../../core/plex/views/configurationPaths";
+import {createElement as reactElement} from "react";
+import {createRoot, type Root} from "react-dom/client";
+import {PredicateRuleEditor} from "../../predicates/PredicateRuleEditor";
+import {compileFacetRules} from "../../../core/plex/views/facets/rules";
 
 export class FacetPresetEditor extends StyleEditorModal {
   private draft: FacetPreset;
@@ -23,6 +27,7 @@ export class FacetPresetEditor extends StyleEditorModal {
   private colors: StyleColorControls | null = null;
   private release: (() => void) | null = null;
   private removal: FacetPresetRemoval | null = null;
+  private readonly ruleRoots: Root[] = [];
   /** Opening captures only this entry; sibling drafts and canvases remain independent. */
   constructor(app: App, private readonly options: CanvasViewManagerContext, private readonly id: string, preset: FacetPreset,
     private readonly existing: boolean, private readonly duplicate: (preset: FacetPreset) => void, private readonly closed: () => void) {
@@ -51,6 +56,7 @@ export class FacetPresetEditor extends StyleEditorModal {
   /** Rebuild only after explicit structure changes; ordinary typing never replaces/focuses input. */
   private render(): void {
     const body = this.body;if (!body) return;
+    for (const root of this.ruleRoots.splice(0)) root.unmount();
     this.colors?.dispose();body.empty();const t = this.translate;
     this.colors = new StyleColorControls(this.app, this.options.colors, () => this.canEdit() && this.owner());
     new Setting(body).setName(t("facets.name")).addText(input => input.setValue(canvasViewText(facetPresetLabel(this.draft), t)).onChange(name => {
@@ -98,7 +104,12 @@ export class FacetPresetEditor extends StyleEditorModal {
       const {assignment: _previous, ...rest} = this.draft.categories[id];
       this.draft = {...this.draft, categories: {...this.draft.categories, [id]: {...rest, ...(assignment.trim() ? {assignment: assignment.trim()} : {})}}};this.validate();
     }));
-    if (this.draft.source === "rules") new Setting(section).setName(t("facets.rules")).addTextArea(input => input.setValue(category.rule ?? "").onChange(rule => this.changeCategory(id, {rule})));
+    if (this.draft.source === "rules") {
+      new Setting(section).setName(t("facets.rules")).setDesc(t("facets.rulesHelp"));
+      const host = section.createDiv(), root = createRoot(host);this.ruleRoots.push(root);
+      root.render(reactElement(PredicateRuleEditor, {initial: category.rule ?? "", translate: t, suggestions: this.options.suggestions?.(),
+        onChange: rule => this.changeCategory(id, {rule})}));
+    }
     this.colors?.add(section, t("facets.color"), {kind: "node", field: "backgroundColor"}, () => this.draft.categories[id].color,
       color => {if (color !== undefined) this.changeCategory(id, {color});}, () => undefined);
     new Setting(section).addButton(button => button.setButtonText(t("facets.moveUp")).setDisabled(index === 0).onClick(() => this.move(id, -1)))
@@ -123,22 +134,28 @@ export class FacetPresetEditor extends StyleEditorModal {
   }
   /** Stale entry/appearance drafts retain their content and cannot overwrite accepted settings. */
   private validate(): void {
-    const valid = isFacetPreset(this.draft) && !!(this.draft.name.trim() || this.draft.nameKey);
+    const valid = this.validDraft();
     const current = this.owner() && configurationExpected(this.options.read(this.address), this.expected);
     this.validation?.setText(!current ? this.translate("facets.staleDraft") : !valid ? this.translate("facets.invalidPreset") : "");
     this.saveButton?.setDisabled(!this.canEdit() || !current || !valid);
   }
   /** Save is atomic at the entry and revalidated inside the existing queued writer. */
   private submit(): void {
-    this.validate();if (!this.canEdit() || !this.owner() || !isFacetPreset(this.draft) || !this.draft.name.trim() && !this.draft.nameKey) return;
+    this.validate();if (!this.canEdit() || !this.owner() || !this.validDraft()) return;
     const value = structuredClone(this.draft);
     if (this.expected.present && JSON.stringify(this.expected.value) === JSON.stringify(value)) {this.close();return;}
     this.runOperation(current => this.options.save(this.address, {kind: "set", value}, this.expected, () => current() && this.owner()));
   }
   /** A storage rejection retains the exact draft and rechecks current ownership. */
   protected onOperationRejected(): void {this.validate();}
+  /** Authored rules must compile through the shared grammar before the existing queue sees them. */
+  private validDraft(): boolean {
+    return isFacetPreset(this.draft) && !!(this.draft.name.trim() || this.draft.nameKey)
+      && (this.draft.source !== "rules" || compileFacetRules(this.draft).status === "ready");
+  }
   /** Retire children/color samplers/listeners before clearing the native form. */
   onClose(): void {
+    for (const root of this.ruleRoots.splice(0)) root.unmount();
     super.onClose();this.removal?.retire();this.removal = null;this.release?.();this.release = null;this.colors?.dispose();this.colors = null;
     this.body = null;this.saveButton = null;this.contentEl.empty();this.closed();
   }

@@ -7,6 +7,7 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const dutchTranslations = {
+  "facets.rulesHelp": "Gebruik gedeelde voorwaarden of Code. note.phase leest de kandidaat; this.phase leest expliciet de Markdown-eigenschap van de gerichte notitie. Vaste attributen zoals this.name behouden hun betekenis. Niet-beschikbare metadata blijft onbekend, ook bij ontkenning. == is hoofdlettergevoelig; .equals() niet. Relatieregels vereisen vastgelegde context, zonder verzonnen zelfkoppeling.",
   "facets.relativeLabels": "Relatieve Wu Xing-labels tonen",
   "facets.regulatingGuides": "Regulerende cyclus tonen",
   "facets.wuxingHelp": "Een fasetoewijzing legt je interpretatie van een notitie vast. Relatieve labels vergelijken die fase met de gerichte notitie; ze veranderen geen fasen of vastgelegde koppelingen en bewijzen geen oorzaak. Een niet-toegewezen of conflicterende focus levert geen referentiefase.",

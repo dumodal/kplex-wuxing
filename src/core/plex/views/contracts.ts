@@ -130,6 +130,8 @@ export type PlexViewInput = Readonly<{
   /** Type-wide configuration is separate from native-session state. */
   configuration?: PlexViewConfiguration;
 }>;
+/** Bounded dependency declaration, never an acquisition request or property inventory. */
+export type PlexViewPropertyDependencies = Readonly<{fields: readonly string[]; evidence?: boolean}>;
 export interface PlexViewDefinition {
   readonly id: string;
   readonly version: typeof CANVAS_VIEW_API_VERSION;
@@ -154,6 +156,9 @@ export interface PlexViewDefinition {
   /** Declarative assignment choices join the shared native action/write owner. Omit to remain
    * read-only; categories/regions never derive a YAML or relationship edit from their geometry. */
   readonly propertyAssignments?: (state: unknown, configuration: PlexViewConfiguration) => readonly PlexPropertyAssignment[];
+  /** Optional dependency declaration enlarges only the existing finite read frame's budgets.
+   * No data is read by declaring it; old consumers keep their previous budget and signature. */
+  readonly propertyDependencies?: (state: unknown, configuration: PlexViewConfiguration) => PlexViewPropertyDependencies;
   /** Optional pure presentation-state actions. The session still validates/persists bounded state
    * and protects native editors; this reducer receives no host or file mutation capability. */
   readonly reduceState?: (state: unknown, action: PlexViewStateAction, configuration: PlexViewConfiguration) => PlexViewStateResult;

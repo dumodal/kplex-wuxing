@@ -4,7 +4,14 @@ export {CANVAS_VIEW_API_VERSION} from "./contracts";
 export type {CanvasViewText, PlexNodeBadge, PlexViewStateAction, PlexViewStateResult, PlexViewDefinition, PlexViewInput,
   PlexViewRead, PlexProjection, PlexOccurrence, PlexViewEdge, PlexViewRelation, PlexRelationRead, PlexEvidenceRead,
   PlexMeasurement, PlexArea, PlexDecoration, PlexViewLayout, PlexViewScopeRead, PhysicalPort, OccurrenceId,
-  AreaId, ViewPoint, ViewRect, ViewCoverage, PlexDropMeaning} from "./contracts";
+  AreaId, ViewPoint, ViewRect, ViewCoverage, PlexDropMeaning, PlexViewPropertyDependencies} from "./contracts";
+export {GraphPredicateEngine, compileGraphPredicate} from "../predicate";
+export type {GraphPredicateContext, GraphPredicateResult, GraphPredicateRead, GraphPredicateDependencies} from "../predicate";
+export {parseGraphPredicateExpression, tryParseGraphPredicateExpression} from "../predicateParser";
+export type {NotePropertyAvailability, NotePropertyRead} from "../noteProperties";
+export {evaluatePortablePredicateContexts} from "../lens";
+export type {GraphNodeView, NodeId} from "../../graph/model";
+export type {ColorValue} from "../../contracts/colorValue";
 export {PlexViewRegistry} from "./registry";
 export {readViewConfiguration, readViewConfigurationAt, editViewConfiguration, editViewConfigurationAt,
   resetViewConfiguration, migrateViewConfiguration, removeViewConfiguration, VIEW_CONFIGURATION_LIMITS} from "./configuration";

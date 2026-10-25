@@ -7,6 +7,28 @@ import {plexViewBrowserModules} from './support/plexViewBrowser.mjs';
 import {canvasSceneFixture} from './support/canvasSceneFixture.mjs';
 const output=await plexViewBrowserModules();
 
+test('advanced Facets rules use current/candidate cached metadata in the production shared renderer without source work',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ fieldCaches.get('A.md').frontmatter.phase='wood';fieldCaches.get('B.md').frontmatter.phase='metal';fieldCaches.get('C.md').frontmatter.phase='water';
+ const preset=structuredClone(M.FACET_TEMPLATES.ace);preset.source='rules';preset.categories.add.rule='note.phase == this.phase';preset.categories.connect.rule='note.phase == "metal"';preset.categories.express.rule='edge.role == "child" and note.phase == "water"';
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['ace']},{kind:'set',value:preset});
+ const a=await mount(M.wuXingViewDefinition);M.flushSync(()=>a.session.updateState({version:1,preset:'ace'}));a.render();await wait();
+ const node=id=>[...a.container.querySelectorAll('[data-kplex-keyboard-id]')].find(row=>row.dataset.kplexPath===id);
+ const area=id=>a.container.querySelector('.'+CSS.escape('kplex-zone-'+JSON.stringify(['facets','ace','category',id])));
+ check(node('A.md').querySelector('.kplex-node-badge').textContent==='Add','The owning canvas focus uses this.phase');
+ check(area('connect')?.contains(node('B.md'))&&area('express')?.contains(node('C.md')),'Candidates use stored fields and canonical relationship contexts');
+ const focus=node('A.md'),camera=a.container.querySelector('.kplex-camera').style.transform,before={body:work.body,scans:work.scans,acquisitions:work.acquisitions};
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings,{field:'presets',path:['ace','regionWidth']},{kind:'set',value:400});a.props.settings={...settings};a.props.paintSettings=a.props.settings;a.render();await wait();
+ check(node('A.md')===focus&&a.container.querySelector('.kplex-camera').style.transform===camera,'Rule/layout settings do not retarget attention or camera');
+ check(work.body===before.body&&work.scans===before.scans&&work.acquisitions===before.acquisitions,'Rule/layout presentation does no body parsing, scanning or acquisition');
+ fieldCaches.delete('C.md');for(const ref of [...events])if(ref?.name==='changed')ref.callback(pages.get('C.md').file);await wait();
+ const unresolved=a.container.querySelector('.'+CSS.escape('kplex-zone-'+JSON.stringify(['facets','ace','status','unresolved'])));check(unresolved?.contains(node('C.md')),'Missing metadata stays reachable and unresolved');
+ check(rows(pages.get('A.md'),'child').map(row=>row.page.path).join(',')==='B.md,C.md','Rules preserve canonical relationships');
+ a.close();plugin.actionManager.dispose();check(events.size===0,'Rule presentation retires the original subscriptions');style.remove();return true;
+ })()`),true)}finally{await host.cleanup()}
+});
+
 test('relative Wu Xing presentation follows focus and unavailable metadata without new work or semantic edges',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}

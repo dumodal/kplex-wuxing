@@ -21,6 +21,7 @@ export class PlexViewRegistry {
         || definition.reduceState !== undefined && typeof definition.reduceState !== "function"
         || definition.colorReferences !== undefined && typeof definition.colorReferences !== "function"
         || definition.propertyAssignments !== undefined && typeof definition.propertyAssignments !== "function"
+        || definition.propertyDependencies !== undefined && typeof definition.propertyDependencies !== "function"
         || definition.defaultState !== null && boundedViewState(definition.defaultState) === null) throw new Error("Invalid canvas view policy contract");
       if (definition.configuration) validateViewConfigurationSchema(definition.configuration);
       if (definition.editorHosting !== undefined && (definition.editorHosting !== "occurrence" || !definition.capabilities.editor)) {

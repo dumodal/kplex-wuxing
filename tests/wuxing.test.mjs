@@ -109,9 +109,9 @@ test('existing property owner distinguishes missing cache/field and never reads 
  const app={vault:{getFileByPath:path=>currentFile?.path===path?currentFile:null,read:()=>{throw Error('Body read')},cachedRead:()=>{throw Error('Body read')}},metadataCache:{getFileCache:()=>cache}};
  const provider=M.createLegacyPropertyProvider(app,()=>live,()=>file);
  assert.equal(provider.readNoteProperty(node,'phase').status,'unavailable');
- cache={};assert.deepEqual(provider.readNoteProperty(node,'phase'),{status:'available',value:undefined});
+ cache={};const missing=provider.readNoteProperty(node,'phase');assert.equal(missing.status,'available');assert.equal(missing.value,undefined);assert.equal(missing.isCurrent(),true);
  cache={frontmatter:{Phase:'water',get unrelated(){otherReads++;throw Error('Unselected field read')}}};
- assert.deepEqual(provider.readNoteProperty(node,'phase'),{status:'available',value:'water'});assert.equal(otherReads,0);
+ const selected=provider.readNoteProperty(node,'phase');assert.equal(selected.status,'available');assert.equal(selected.value,'water');assert.equal(selected.isCurrent(),true);assert.equal(missing.isCurrent(),false,'Cache replacement retires the old known-absence proof');assert.equal(otherReads,0);
  currentFile={...file,stat:{...file.stat}};assert.equal(provider.readNoteProperty(node,'phase').status,'unavailable','Same-path/stat replacement cannot stand in for the canonical native file');
  currentFile=file;file.stat.mtime=2;assert.equal(provider.notePropertyAvailability(node),'unavailable');
  file.stat.mtime=1;cache={frontmatter:{get phase(){live=false;return 'water'}}};assert.equal(provider.readNoteProperty(node,'phase').status,'unavailable','A result retired during a synchronous getter is rejected');
