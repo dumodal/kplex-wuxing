@@ -1,6 +1,6 @@
 # Mind Map canvas view
 
-Prepared by Zsolt's Codex Agent, 2026-10-24. **Implementation started; bounded ordinary-Markdown M0 proof is validated at905b777. Mind Map M1–M4 and the documented native FileManager gate limit remain pending.**
+Prepared by Zsolt's Codex Agent, 2026-10-24. **Implementation started; bounded ordinary-Markdown M0 proof is validated at905b777. M1 hierarchy foundation is implemented but not production-registered; remaining integration/cold/native/full acceptance and the documented FileManager gate limit remain pending.**
 
 ## Baseline and start gate
 
@@ -140,10 +140,14 @@ M0 checkpoints, each independently reviewable:
 
 Then implement M1–M3 using only accepted canonical demand/source owners and complete M4. #220 proceeds independently on its accepted attention editor; no unmerged partner code or acknowledgement is required. Mac owns only the concrete editor/root/frontier additions, not whole shared files. Final #219 merge remains unauthorized.
 
-M0 rooted interface now implemented: optional `navigation: "rooted"`, per-session `layoutRoot()`/initial capture/explicit `setRoot()`, bounded `roots` in the existing workspace payload, and `PlexViewInput.layoutRoot`. This is separate from `editorHosting`. Rooted state survives attention updates in the actual Chromium renderer; existing attention-scoped definitions/goldens remain covered. Native occurrence hosting and its mandatory proof are still pending.
+M0 rooted interface now implemented: optional `navigation: "rooted"`, per-session `layoutRoot()`/initial capture/explicit `setRoot()`, bounded `roots` in the existing workspace payload, and `PlexViewInput.layoutRoot`. This is separate from `editorHosting`. Rooted state survives attention updates in the actual Chromium renderer; existing attention-scoped definitions/goldens remain covered. Native occurrence hosting subsequently passed the bounded905b777 proof described below.
 
 
-M0 native integration is implemented and twelve actual Mac native cases pass, including external-Vault mutation and teardown; the FileManager cache-gate limitation and final full verification remain pending. See [the interim evidence and preserved failed sample](validation/occurrence-editors-219-2026-10-25.md). No production definition opts into occurrence hosting yet. M1–M3 remain unimplemented; this checkpoint is not a completed Mind Map.
+M0 native integration is implemented and twelve actual Mac native cases pass, including external-Vault mutation and teardown; the FileManager cache-gate limitation remains open; final M0 full verification subsequently passed at905b777. See [the interim evidence and preserved failed sample](validation/occurrence-editors-219-2026-10-25.md). No production definition opts into occurrence hosting yet. The following M1 checkpoint starts hierarchy implementation; this is not a completed Mind Map.
 
 
 M0 source905b777 passed full `verify:obsidian`, CI475 and the isolated fresh-renderer twelve-case ordinary-Markdown proof. [Ordered receipts and limits](validation/occurrence-editors-219-receipts.json) include the real authoritative-hide correction and preserved failed controls. The longer-sequence native FileManager cache-gate cause remains unproven. This is a validated shared-host checkpoint, not completed Mind Map acceptance. Continue M1 with explicit bounded frontier preparation, stable session-owned sides/folds and shared actions/settings, retaining the open native limit through M4.
+
+## M1 hierarchy foundation checkpoint
+
+Optional finite frontier demand, cache-only coverage/pair reads, bounded canonical child projection, stable occurrence sides/folds, cycle references, measured subtree layout and real shared-renderer integration are implemented. No production registry exposure yet. See [the Mind Map checkpoint report](validation/mind-map-219-2026-10-25.md) for actual42 focused/core130/architecture/Chromium/build/scanner evidence and failed samples. Genuine cold acquisition, shared actions/settings/primary editor UI and complete native/full/CI acceptance remain pending. #220 remains independent.

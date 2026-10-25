@@ -153,6 +153,9 @@ export type PositionedNode = {
   areaId?: string;
   representation?: "thought" | "point";
   physicalPorts?: Partial<Record<GateSide, GateRole>>;
+  /** Canonical source of this occurrence's primary real relationship, independent of current attention. */
+  semanticSourceId?: string;
+  branch?: import("./core/plex/views/contracts").PlexBranch;
   page: GraphPage;
   role: Role | "center";
   relationType?: RelationType;

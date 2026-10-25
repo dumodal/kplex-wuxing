@@ -25,6 +25,7 @@ const output=await build({stdin:{resolveDir:process.cwd(),contents:`
   export {builtInPlexViews} from './src/ui/plexViews/builtins';export {probeViewDefinition} from './tests/support/plexViewProbe';
   export {ActionManager} from './src/application/ActionManager';export {actionNodeRef} from './src/adapters/obsidian/actionNode';
   export {editViewConfiguration} from './src/core/plex/views/configuration';
+  export {mindMapViewDefinition} from './src/core/plex/views/mindmap/definition';
 `},write:false,bundle:true,platform:'browser',format:'iife',globalName:'sourceModules',plugins:[{name:'finite-native-host',setup(builder){
   builder.onResolve({filter:/^obsidian$/},()=>({path:'host',namespace:'finite'}));
   builder.onLoad({filter:/.*/,namespace:'finite'},()=>({contents:nativeStub}));
@@ -55,7 +56,7 @@ test('non-Classic definition uses the production scene, selection, Find and acti
       const failedDefinition={...M.probeViewDefinition,id:'test.failed',layout(){throw Error('Deliberate scene failure')}};
       const unavailableDefinition={...M.probeViewDefinition,id:'test.unavailable',project(){return null}};
       const rootedDefinition={...M.probeViewDefinition,id:'test.rooted',navigation:'rooted'};
-      const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.probeViewDefinition,groupedDefinition,failedDefinition,unavailableDefinition,rootedDefinition]);const session=new M.PlexViewSession(registry,()=>{});session.select('test.situated');
+      const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.mindMapViewDefinition,M.probeViewDefinition,groupedDefinition,failedDefinition,unavailableDefinition,rootedDefinition]);const session=new M.PlexViewSession(registry,()=>{});session.select('test.situated');
       const actionPorts={current:null},activations=[],plugin={settings,index,translator:M.createTranslator('en'),app:{workspace:{...nativeEvents},metadataCache:{...nativeEvents,getFileCache:()=>null},vault:{getFileByPath:path=>pages.get(path)?.file??null,cachedRead:()=>{work.reads++;throw Error('Unexpected note read')}}},
         saveSettings:()=>{work.settingsWrites++;throw Error('Unexpected global settings write')},getTypographyDevice:()=> 'desktop',isKplexLeafVisible:()=>true,subscribeKplexVisibility:subscribe,subscribeNodeFlair:subscribe,getHierarchyColorRevision:()=>0,
         isActionSurfaceCurrent:()=>true,getSavedSettingsPolicy:()=>null};
@@ -150,7 +151,22 @@ test('non-Classic definition uses the production scene, selection, Find and acti
       const rootedProof={before:rootedBefore,after:{camera:mount.querySelector('.kplex-camera').style.transform,selection:actionPorts.current.readSelected()?.occurrenceId,semantic:work.semantic},
        root:rootedSession.layoutRoot(props.activePath),rootPresent:!!rootNode,sameRootElement:mount.querySelector('[data-kplex-keyboard-id="layout-root"]')===rootNode,failed:!!mount.querySelector('.kplex-view-error')};
       releaseRootedAction();rootedRoot.unmount();rootedSession.dispose();plugin.actionManager.dispose();rootedProof.releases=work.releases;rootedProof.events=events.size;
-      style.remove();mount.remove();return {...snapshot,events:legacyEvents,after:legacyAfter,rooted:rootedProof};
+      for(const key of Object.keys(work))work[key]=0;
+      index.neighbours=(page,role)=>role==='child'&&(page.path==='Root.md'||page.path==='Repeated.md')?[{page:pages.get(page.path==='Root.md'?'Repeated.md':'Other.md'),role:'child',relationType:1,typeDefinition:'Child',linkDirection:1}]:[];
+      index.viewScopeCoverage=()=>({coverage:'local',prepared:true,complete:true,pending:false});
+      const hierarchySession=new M.PlexViewSession(registry,()=>{});hierarchySession.select('mindmap');hierarchySession.setRoot('Root.md');
+      props.viewSession=hierarchySession;props.activePath='Focus.md';const hierarchyRoot=M.createRoot(mount);
+      function HierarchyHarness(){const revision=M.useSyncExternalStore(hierarchySession.subscribe,hierarchySession.getSnapshot);return M.createElement(M.PlexGraph,{...props,viewDefinition:hierarchySession.definition,viewRevision:revision})}
+      const renderHierarchy=()=>M.flushSync(()=>hierarchyRoot.render(M.createElement(HierarchyHarness)));
+      renderHierarchy();await new Promise(resolve=>setTimeout(resolve,30));const initialHierarchy={semantic:work.semantic,nodes:mount.querySelectorAll('[data-kplex-keyboard-id]').length};
+      const branchId=JSON.stringify(['Root.md','Repeated.md']);M.flushSync(()=>hierarchySession.updateState({...hierarchySession.state,expanded:[branchId]}));await new Promise(resolve=>setTimeout(resolve,30));
+      const expandedHierarchy={semantic:work.semantic,nodes:mount.querySelectorAll('[data-kplex-keyboard-id]').length,failed:!!mount.querySelector('.kplex-view-error')};
+      settings.canvasViewSettings=M.editViewConfiguration(M.mindMapViewDefinition,settings.canvasViewSettings,'horizontalSpacing',160);props.renderRevision++;renderHierarchy();await new Promise(resolve=>setTimeout(resolve,20));
+      props.activePath='Other.md';renderHierarchy();await new Promise(resolve=>setTimeout(resolve,20));const attentionHierarchy={semantic:work.semantic,root:hierarchySession.layoutRoot(props.activePath)};
+      M.flushSync(()=>hierarchySession.updateState({...hierarchySession.state,expanded:[],collapsed:[branchId]}));await new Promise(resolve=>setTimeout(resolve,20));
+      const collapsedHierarchy={semantic:work.semantic,releases:work.releases,nodes:mount.querySelectorAll('[data-kplex-keyboard-id]').length};
+      hierarchyRoot.unmount();hierarchySession.dispose();const hierarchyProof={initial:initialHierarchy,expanded:expandedHierarchy,attention:attentionHierarchy,collapsed:collapsedHierarchy,after:{...work},events:events.size,errors:[...errors]};
+      style.remove();mount.remove();return {...snapshot,events:legacyEvents,after:legacyAfter,rooted:rootedProof,hierarchy:hierarchyProof};
     })()`);
     assert.deepEqual(result.physicalPorts,['left']);assert.equal(result.physicalCount,'1');
     assert.deepEqual(result.errors,[]);assert.equal(result.ports,true);assert.equal(result.nodes.length,4);
@@ -172,5 +188,9 @@ test('non-Classic definition uses the production scene, selection, Find and acti
     assert.equal(result.rooted.after.camera,result.rooted.before.camera);assert.equal(result.rooted.after.selection,result.rooted.before.selection);
     assert.equal(result.rooted.before.semantic,2,'Initial rooted render retains separate root and attention leases');assert.equal(result.rooted.after.semantic,3,'Attention change acquires only the new attention lease');
     assert.equal(result.rooted.releases,3);assert.equal(result.rooted.events,0);
+    assert.deepEqual(result.hierarchy.initial,{semantic:2,nodes:2});assert.deepEqual(result.hierarchy.expanded,{semantic:3,nodes:3,failed:false});
+    assert.deepEqual(result.hierarchy.attention,{semantic:4,root:'Root.md'},'Geometry settings do not reacquire frontiers, attention adds only its independent lease');
+    assert.deepEqual(result.hierarchy.collapsed,{semantic:4,releases:2,nodes:2});assert.equal(result.hierarchy.after.releases,4);assert.equal(result.hierarchy.events,0);assert.deepEqual(result.hierarchy.errors,[]);
+    assert.equal(result.hierarchy.after.reads,0);assert.equal(result.hierarchy.after.parses,0);assert.equal(result.hierarchy.after.publishes,0);assert.equal(result.hierarchy.after.settingsWrites,0);
   } finally {await host.cleanup();}
 });

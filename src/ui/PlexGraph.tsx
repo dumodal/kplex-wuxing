@@ -62,7 +62,8 @@ import type { WanderDestination, WanderScene } from "../application/WanderContro
 import { ElementMotion } from "./components/ElementMotion";
 import { ResizableAreaFrame } from "./components/ResizableAreaFrame";
 import { ThoughtNode, type ConnectionDragState } from "./ThoughtNode";
-import {nodeId} from "../core/graph/model";
+import {nodeId, type NodeId} from "../core/graph/model";
+import {useHierarchyDemand} from "./plexViews/useHierarchyDemand";
 import type {AreaId as ScrollZone, PlexViewDefinition} from "../core/plex/views/contracts";
 import type {PlexViewSession} from "../application/PlexViewSession";
 import {classicViewDefinition, classicPorts} from "../core/plex/views/classic/definition";
@@ -457,7 +458,7 @@ function matchesGraphPredicateNode(
     role: node.role,
     relationType: node.relationType,
     linkDirection: node.linkDirection,
-    sourcePath: center?.path,
+    sourcePath: node.semanticSourceId ?? center?.path,
     targetPath: node.page.path,
   });
 }
@@ -491,7 +492,7 @@ function matchesVisibleLensNode(
     role: node.role,
     relationType: node.relationType,
     linkDirection: node.linkDirection,
-    sourcePath: center?.path,
+    sourcePath: node.semanticSourceId ?? center?.path,
     targetPath: node.page.path,
   });
 }
@@ -714,6 +715,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const boundEditorConcealed = Boolean(boundEditorBinding && (!boundEditorPage || !index.isVisiblePage(boundEditorPage)));
   const rooted = viewDefinition.navigation === "rooted";
   const sceneScope = rooted ? viewSession?.layoutRoot(nodeId(activePath)) ?? activePath : activePath;
+  const acquireHierarchyScope = useCallback(/** Reuse the canonical demand owner; the view never starts parsing or a separate rebuild. */
+    (id: NodeId) => index.acquireSemanticDemand(id), [index]);
+  const hierarchyDemand = useHierarchyDemand(viewSession, viewDefinition, nodeId(sceneScope), acquireHierarchyScope);
   useLayoutEffect(/** Retain root demand before an outgoing attention effect releases its lease. */ () => {
     if (!rooted || !viewSession) return;
     viewSession.ensureRoot(nodeId(activePath));
@@ -853,6 +857,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     ? { ...projectedSectionExpansion, centerNeighborhood: applyOptimisticRelink(projectedSectionExpansion.centerNeighborhood, optimisticRelink.targetPath, optimisticRelink.role) }
     : projectedSectionExpansion, [projectedSectionExpansion, optimisticRelink]);
   const neighborhood = effectiveSectionExpansion?.centerNeighborhood ?? effectivePersistentNeighborhood;
+  const predicateCenter = viewDefinition.hierarchy ? index.get(sceneScope) ?? neighborhood?.center : neighborhood?.center;
   const globalFiltering = predicate !== null || lenses.lenses.some((lens) => lens.mode === "include" || lens.mode === "exclude");
   const [unfoldedGroups, setUnfoldedGroups] = useState<{ center: string; keys: ReadonlySet<string> }>({ center: sceneScope, keys: new Set() });
   useEffect(/** Navigation and disabling grouping retire only this view's unfolded buckets. */ () => {
@@ -910,11 +915,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   /** Share exact current admission between rendering, restored intent and branch-removal preflight. */
   const prepareSelectedDefinition = (state: unknown, bindings: readonly PlexEditorBinding[] = viewSession?.editors.bindings ?? []): ReturnType<typeof prepareViewScene> => {
     const current = viewSession?.capture() ?? (() => true);
-    const read = plexViewRead(index, current, settings.maxItemCount, activePath);
+    const read = plexViewRead(index, current, settings.maxItemCount, activePath, viewDefinition.hierarchy ? 256 : 0);
     return prepareViewScene(viewDefinition, read, index, activePath, state, settings, current, centralEditorSize,
-      node => !globalFiltering || filterLayoutMode === "keep" && !settings.groupRelations || (matchesGraphPredicateNode(predicateEngine, predicate, node, neighborhood?.center)
-        && matchesVisibleLensNode(predicateEngine, index, lenses, node, neighborhood?.center)),
-      {translate, unfolded: unfoldedGroups.center === sceneScope ? unfoldedGroups.keys : new Set(), areaHeights: viewSession?.getAreaHeights(), layoutRoot: rooted ? nodeId(sceneScope) : undefined},
+      node => !globalFiltering || filterLayoutMode === "keep" && !settings.groupRelations || (matchesGraphPredicateNode(predicateEngine, predicate, node, predicateCenter)
+        && matchesVisibleLensNode(predicateEngine, index, lenses, node, predicateCenter)),
+      {translate, unfolded: unfoldedGroups.center === sceneScope ? unfoldedGroups.keys : new Set(), areaHeights: viewSession?.getAreaHeights(), layoutRoot: rooted ? nodeId(sceneScope) : undefined,
+        retainedScopes: hierarchyDemand.held},
       occurrenceEditorPolicy ? {bindings, supports: supportsBoundEditor} : undefined);
   };
   const branchPreflight = useRef<(state: unknown) => boolean>(() => false);
@@ -922,7 +928,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   useLayoutEffect(/** Refuse a branch-state mutation before it can remove the exact live editor occurrence. */ () =>
     viewSession?.guardState(state => branchPreflight.current(state)), [viewSession, viewLifetime]);
   const preparedDefinitionScene = useMemo(() => classic ? null : prepareSelectedDefinition(viewSession?.state),
-    [classic, viewDefinition, viewRevision, viewSession, index, activePath, renderRevision, semanticRevision, settings, centralEditorSize, globalFiltering, filterLayoutMode, predicateEngine, predicate, lenses, predicateRevision, unfoldedGroups, translate, rooted, sceneScope, occurrenceEditorPolicy]);
+    [classic, viewDefinition, viewRevision, viewSession, index, activePath, renderRevision, semanticRevision, settings, centralEditorSize, globalFiltering, filterLayoutMode, predicateEngine, predicate, lenses, predicateRevision, unfoldedGroups, translate, rooted, sceneScope, occurrenceEditorPolicy, predicateCenter, hierarchyDemand.revision]);
+  useLayoutEffect(/** Only an actually admitted selected scene can request finite source frontiers or commit stable side/fold intent. */ () => {
+    if (!viewDefinition.hierarchy || !viewSession) return;
+    const projection = preparedDefinitionScene && !preparedDefinitionScene.failure ? preparedDefinitionScene.projection : null;
+    hierarchyDemand.synchronize(projection);
+    if (projection?.stateSuggestion !== undefined) viewSession.updateState(projection.stateSuggestion);
+  }, [preparedDefinitionScene, viewDefinition, viewSession, viewLifetime, hierarchyDemand.revision]);
   useLayoutEffect(/** Reacquire native identity and exact admission before restored intent becomes a live editor. */ () => {
     if (!pendingEditorIntent || !viewSession || boundEditorBinding) return;
     const page = index.get(pendingEditorIntent.target.nodeId);
@@ -2075,7 +2087,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const filterMatchedNodePaths = useMemo(() => {
     const matches = new Set<string>();
     for (const node of scene.nodes) {
-      if (!globalFiltering || node.role === "center" || node.page.transient?.kind === "group" || (matchesGraphPredicateNode(predicateEngine, predicate, node, neighborhood?.center) && matchesVisibleLensNode(predicateEngine, index, lenses, node, neighborhood?.center))) matches.add(node.page.path);
+      if (!globalFiltering || node.role === "center" || node.page.transient?.kind === "group" || (matchesGraphPredicateNode(predicateEngine, predicate, node, predicateCenter) && matchesVisibleLensNode(predicateEngine, index, lenses, node, predicateCenter))) matches.add(node.page.path);
     }
     // Section headings are structural containers. If a section-level relationship matches the
     // global filter, retain its heading node so the matching result is not visually orphaned.
@@ -2087,7 +2099,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       }
     }
     return matches;
-  }, [scene.nodes, scene.edges, globalFiltering, predicate, lenses, predicateRevision, predicateEngine, index, neighborhood?.center, sectionExpansion]);
+  }, [scene.nodes, scene.edges, globalFiltering, predicate, lenses, predicateRevision, predicateEngine, index, predicateCenter, sectionExpansion]);
 
   const nodeMatchesCurrentFilter = (node: PositionedNode): boolean =>
     occurrenceEditorPolicy && occurrenceKey(node) === boundEditorBinding?.occurrenceId || filterMatchedNodePaths.has(node.page.path);
@@ -4328,13 +4340,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     }
     if (connectDrag?.originPath === baseNode.page.path) highlightedGates.add(connectDrag.gate);
 
-    const lensNodeStyle = neighborhood ? graphLensNodeStyle(predicateEngine, index, paintLenses, {
+    const lensNodeStyle = predicateCenter ? graphLensNodeStyle(predicateEngine, index, paintLenses, {
       page: baseNode.page,
       label: baseNode.label,
-      center: neighborhood.center,
+      center: predicateCenter,
       edge: baseNode.role === "center" ? undefined : {
         role: baseNode.role, relationType: baseNode.relationType, definition: baseNode.typeDefinition, linkDirection: baseNode.linkDirection,
-        sourcePath: neighborhood.center.path, targetPath: baseNode.page.path,
+        sourcePath: baseNode.semanticSourceId ?? predicateCenter.path, targetPath: baseNode.page.path,
       },
     }) : {};
     const countedDisplayNode = hydrateCounts && (!displayNode.physicalPorts || Object.keys(displayNode.physicalPorts).length > 0) ? projectNodeCounts(displayNode, index) : displayNode;

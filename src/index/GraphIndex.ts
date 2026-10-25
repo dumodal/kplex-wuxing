@@ -2152,6 +2152,25 @@ export class GraphIndex {
   /** Active work is distinct from demand that already ended with an unavailable or bounded outcome. */
   hasActiveSemanticPreparation(): boolean { return this.hasOnDemandWork() || this.pendingStructuralTasks > 0 || this.semanticPreparationTasks.size > 0; }
 
+  /** Read existing requested-scope certificates without acquisition, parsing, retry or global completeness claims.
+   * Current local presentation is usable but cannot prove absent children. Native/view demand owners prepare it separately. */
+  viewScopeCoverage(path: string): Readonly<{coverage: "local" | "cached" | "unavailable"; prepared: boolean; complete: boolean; pending: boolean}> {
+    if (this.diagnosticsClosed || this.persistentCachePurged) return {coverage: "unavailable", prepared: false, complete: false, pending: false};
+    const complete = this.hasCurrentCanonicalCenter(path), local = this.onDemandHostScopes.get(path);
+    const prepared = complete || this.hasCurrentOnDemandCachedScope(path) || Boolean(local && this.semanticPage(path) === local.pages.get(path));
+    const pending = this.onDemandTasks.has(path) || this.onDemandPreviewTasks.has(path) || this.onDemandGateTasks.has(path)
+      || this.onDemandBuildWaiters.has(path) || this.semanticPreparationTasks.has(path)
+      || this.semanticDemandCounts.has(path) && this.onDemandBaselineTask !== null;
+    return {coverage: prepared ? "local" : this.get(path) ? "cached" : "unavailable", prepared, complete, pending};
+  }
+
+  /** Reuse the current canonical relationship owner for one cached pair; a display cap/old identity alias grants no alternative endpoint. */
+  cachedViewRelation(sourceId: string, targetId: string, role: Role): Neighbour | null {
+    const source = this.get(sourceId), target = this.get(targetId);
+    if (!source || !target || source.path !== sourceId || target.path !== targetId || !this.isVisiblePage(target)) return null;
+    return this.neighbours(source, role).find(row => row.page.path === targetId) ?? null;
+  }
+
   /** Passive startup milestone used only to admit a bounded visible-center follow-up. */
   isCenterRecoverySourceReady(): boolean { return this.sourceAcquisition.hasSemanticDependencies(); }
 

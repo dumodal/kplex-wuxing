@@ -3,22 +3,10 @@ import type {PlexViewDefinition} from "../core/plex/views/contracts";
 import type {PlexViewRegistry} from "../core/plex/views/registry";
 import {nodeId, type NodeId} from "../core/graph/model";
 import {PlexEditorBindings, type SavedPlexEditorIntent} from "./PlexEditorBindings";
+import {boundedViewState as savedState} from "../core/plex/views/state";
 
 export type PlexViewTransient = Readonly<{attention: NodeId; scope?: NodeId; camera: Readonly<{x: number; y: number; scale: number}>;
   selected: string | null; unfolded: readonly string[]}>;
-
-/** Admit only small JSON workspace payloads; unknown view state is retained without executing it. */
-function savedState(value: unknown): unknown {
-  try {
-    const encoded = JSON.stringify(value);
-    if (!encoded || encoded.length > 16_384) return null;
-    const result: unknown = JSON.parse(encoded);
-    /** Deep payloads cannot make restoration recurse without a bound. */
-    const bounded = (item: unknown, depth: number): boolean => depth <= 8 && (!item || typeof item !== "object"
-      || Object.values(item).every(child => bounded(child, depth + 1)));
-    return bounded(result, 0) ? result : null;
-  } catch { return null; }
-}
 
 export class PlexViewSession {
   /** Document/editor lifetime does not follow attention or definition-owned transient resources. */

@@ -112,3 +112,25 @@ test('native editor removal uses the same exact document proof as scene admissio
  page.file.path=binding.target.path;page.path='Renamed.md';assert.equal(resolve(),null,'An old-ID alias cannot confer authority over a different canonical identity');
  page.path=binding.target.nodeId;page.file={...page.file};assert.equal(resolve(),null,'A recreated file cannot inherit the old native token');
 });
+
+
+test('optional frontier coverage stays unavailable without a proof and limits are cache-only and lifetime-fenced',()=>{
+ const f=fixture();assert.deepEqual(f.read.scope('Root.md'),{coverage:'unavailable',prepared:false,complete:false,pending:false});
+ let calls=0;f.source.viewScopeCoverage=()=>{calls++;return{coverage:'local',prepared:true,complete:false,pending:false}};
+ const read=M.plexViewRead(f.source,()=>true,10,'Focus.md');assert.deepEqual(read.scope('Root.md'),{coverage:'local',prepared:true,complete:false,pending:false});
+ assert.equal(read.relations('Root.md','child',1).items.length,1);assert.equal(read.relations('Root.md','child',1).truncated,true);
+ assert.equal(read.relations('Root.md','child',0).coverage,'unavailable');
+ assert.equal(read.scope('Hidden.md').prepared,false);assert.equal(calls,1,'Hidden nodes never reach the scope owner');
+ f.source.viewScopeCoverage=()=>{f.retire();return{coverage:'local',prepared:true,complete:true,pending:false}};
+ assert.equal(read.scope('Root.md').complete,false,'A proof retired during a read cannot certify absence');
+});
+
+
+test('a repeated reference to the root note keeps ordinary occurrence sizing and cannot ambiguously claim the root',()=>{
+ const f=fixture(),definition={...M.probeViewDefinition,navigation:'rooted',project(input){const p=M.probeViewDefinition.project(input);return{...p,root:'layout-root',occurrences:[...p.occurrences,{id:'root-reference',nodeId:'Root.md',role:'child',representation:'thought'}]}},layout(projection,rows,...rest){const base=M.probeViewDefinition.layout(projection,rows.filter(row=>row.id!=='root-reference'),...rest),reference=rows.find(row=>row.id==='root-reference');return{...base,positions:new Map([...base.positions,['root-reference',{x:480,y:520,width:reference.width,height:reference.height}]])}}};
+ const prepare=def=>M.prepareViewScene(def,f.read,f.source,'Focus.md',null,f.settings,()=>true,undefined,()=>true,{translate:v=>v,unfolded:new Set(),layoutRoot:'Root.md'});
+ const result=prepare(definition);assert.equal(result.failure,false);const reference=result.scene.nodes.find(row=>row.occurrenceId==='root-reference');
+ const expected=M.nodeSize(reference.label,reference.style.fontSize??18,f.settings,false,reference.style.maxLabelLength,reference.style.maxWidth,reference.style.strokeWidth);
+ assert.equal(reference.width,expected.width);assert.equal(reference.height,expected.height);assert.equal(reference.role,'child');assert.equal(result.projection.root,'layout-root');
+ assert.equal(prepare({...definition,project(input){const p=definition.project(input);delete p.root;return p}}).failure,true,'Two root-note occurrences require one explicit root anchor');
+});
