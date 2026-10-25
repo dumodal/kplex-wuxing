@@ -20,9 +20,9 @@ Obsidian is the production host; preserve the established portable semantic, ide
 ---
 
 
-# PR219 — production native checkpoint; final clean full/CI next
+# PR219 — confirmed frontier-lifetime correction; final clean full/native/CI next
 
-Zsolt's Codex Agent,2026-10-25. Existing branch2026-10-24-canvas-mindmap above accepted main9987810; preserve all work. Current production runtime932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db; upcoming checkpoint changes native driver/docs only. Main.js41f8d0332f482dcfd89afcd5cddb915f77b1513c27ede2dd692d533335676605. Implement/publish219 authorized, NEVER merge219/220/release/personal-vault deploy. #218 merged. #220 fully independent with unchanged attention-following editor. No subagents; C15–C26 paused.
+Zsolt's Codex Agent,2026-10-25. Existing branch2026-10-24-canvas-mindmap above accepted main9987810; preserve all work. Previous native runtime932ddaee4d8c4126d1dfae201fd2a9a3aa2a10db. The next source checkpoint also fixes useHierarchyDemand null-projection lease release; do NOT attribute older native/full passes to it. Main.js41f8d0332f482dcfd89afcd5cddb915f77b1513c27ede2dd692d533335676605. Implement/publish219 authorized, NEVER merge219/220/release/personal-vault deploy. #218 merged. #220 fully independent with unchanged attention-following editor. No subagents; C15–C26 paused.
 
 ## Actual implementation/evidence
 
@@ -32,7 +32,10 @@ Native exposed actual Find reveal-without-selection gap; real Chromium negative 
 
 ## Continue immediately
 
-Commit/push reviewed driver/docs checkpoint, verify remote publication, notify219/220 exact contracts/source/evidence/limits. Refresh accepted main and partner read-only; no unmerged partner code/acknowledgement gate. Run clean full verify:obsidian with Node22.22.2 real deps and explicit Small variables/report directory. Keep source clean and native/browser drivers SERIAL; wait actual process completion. Final artifacts should match41f8d033 runtime if only drivers/docs changed. Run final editor/sessions native hash attribution after staging, then whole-vault restoration. Updated settings/M0 source/driver hashes are unchanged from passing native lanes; rerun only if affected. Exact final PR head CI required, no skips/waivers. Keep219 draft until own acceptance complete; never merge.
+Final review confirmed useHierarchyDemand.synchronize(null) wrongly released admitted frontier leases. Actual callback and real Chromium negative reproduce release1/reacquisition3to4; guard now retains bounded leases on unavailable/foreign output, valid collapse/root/view/unmount still retire. Corrected full shared renderer,33 focused tests/build/scanner pass. Clean33bfd56 verification was intentionally interrupted after7architecture/130core/1483functional while browser suite active; parent reported failed/incomplete, all owned browser processes exited, Small70880 excluded/no stage. Preserve negative/interruption logs. Publish this narrow source checkpoint, notify219/220, run clean full/native/CI for NEW source. No previous pass inherited.
+
+
+Commit/push reviewed driver/docs checkpoint, verify remote publication, notify219/220 exact contracts/source/evidence/limits. Refresh accepted main and partner read-only; no unmerged partner code/acknowledgement gate. Run clean full verify:obsidian with Node22.22.2 real deps and explicit Small variables/report directory. Keep source clean and native/browser drivers SERIAL; wait actual process completion. Final artifacts now change because of the frontier guard;41f8d033 identifies only the previous native runtime. Guard stage from the exact prior diagnostic receipt, record new source/hashes and leave final full validation explicitly pending until complete. Run final editor/sessions native hash attribution after staging, then whole-vault restoration. Updated settings/M0 source/driver hashes are unchanged from passing native lanes; rerun only if affected. Exact final PR head CI required, no skips/waivers. Keep219 draft until own acceptance complete; never merge.
 
 ## Native resources/current state
 

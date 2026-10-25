@@ -166,6 +166,12 @@ test('non-Classic definition uses the production scene, selection, Find and acti
       const mismatched=await act('branch.toggle',{...branchTarget,node:M.actionNodeRef(pages.get('Other.md'))});
       const toggleOutcome=await act('branch.toggle',branchTarget);await new Promise(resolve=>setTimeout(resolve,30));
       const expandedHierarchy={semantic:work.semantic,nodes:mount.querySelectorAll('[data-kplex-keyboard-id]').length,failed:!!mount.querySelector('.kplex-view-error')};
+      const currentGateRead=index.captureSemanticGateRead,frontierBefore={semantic:work.semantic,releases:work.releases};
+      index.captureSemanticGateRead=()=>({isCurrent:()=>false,read:()=>null});props.renderRevision++;renderHierarchy();await new Promise(resolve=>setTimeout(resolve,30));
+      const unavailableFrontier={semantic:work.semantic,releases:work.releases,failed:!!mount.querySelector('.kplex-view-error')};
+      index.captureSemanticGateRead=currentGateRead;props.renderRevision++;renderHierarchy();await new Promise(resolve=>setTimeout(resolve,30));
+      const recoveredFrontier={semantic:work.semantic,releases:work.releases,nodes:mount.querySelectorAll('[data-kplex-keyboard-id]').length,failed:!!mount.querySelector('.kplex-view-error')};
+      const frontierProof={before:frontierBefore,unavailable:unavailableFrontier,recovered:recoveredFrontier};
       const hierarchyFind=mount.querySelector('.kplex-find');M.flushSync(()=>hierarchyFind.querySelector('button').click());
       const hierarchyFindInput=hierarchyFind.querySelector('input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(hierarchyFindInput,'Repeated');
       M.flushSync(()=>hierarchyFindInput.dispatchEvent(new Event('input',{bubbles:true})));await new Promise(resolve=>setTimeout(resolve,20));
@@ -178,7 +184,7 @@ test('non-Classic definition uses the production scene, selection, Find and acti
       const heldBranch=plugin.actionManager.prepare({id:'branch.toggle',source:'local-menu',surfaceId:'probe',target:branchTarget});
       const rerootOutcome=await act('view.root.selected',{kind:'explicit',node:M.actionNodeRef(pages.get('Other.md'))});await new Promise(resolve=>setTimeout(resolve,20));
       const staleBranch=heldBranch.state==='accepted'?await heldBranch.run():null,rerooted=hierarchySession.layoutRoot(props.activePath);
-      releaseHierarchyAction();hierarchyRoot.unmount();hierarchySession.dispose();plugin.actionManager.dispose();const hierarchyProof={initial:initialHierarchy,expanded:expandedHierarchy,attention:attentionHierarchy,collapsed:collapsedHierarchy,after:{...work},events:events.size,errors:[...errors],mismatched,toggleOutcome,find:hierarchyFindProof,keyboard:keyboardHierarchy,rerootOutcome,staleBranch,rerooted};
+      releaseHierarchyAction();hierarchyRoot.unmount();hierarchySession.dispose();plugin.actionManager.dispose();const hierarchyProof={initial:initialHierarchy,expanded:expandedHierarchy,attention:attentionHierarchy,collapsed:collapsedHierarchy,after:{...work},events:events.size,errors:[...errors],mismatched,toggleOutcome,frontiers:frontierProof,find:hierarchyFindProof,keyboard:keyboardHierarchy,rerootOutcome,staleBranch,rerooted};
       style.remove();mount.remove();return {...snapshot,events:legacyEvents,after:legacyAfter,rooted:rootedProof,hierarchy:hierarchyProof};
     })()`);
     assert.deepEqual(result.physicalPorts,['left']);assert.equal(result.physicalCount,'1');
@@ -201,6 +207,7 @@ test('non-Classic definition uses the production scene, selection, Find and acti
     assert.equal(result.rooted.after.camera,result.rooted.before.camera);assert.equal(result.rooted.after.selection,result.rooted.before.selection);
     assert.equal(result.rooted.before.semantic,2,'Initial rooted render retains separate root and attention leases');assert.equal(result.rooted.after.semantic,3,'Attention change acquires only the new attention lease');
     assert.equal(result.rooted.releases,3);assert.equal(result.rooted.events,0);
+    assert.deepEqual(result.hierarchy.frontiers,{before:{semantic:3,releases:0},unavailable:{semantic:3,releases:0,failed:true},recovered:{semantic:3,releases:0,nodes:3,failed:false}},'Unavailable current projection retains bounded branch leases; readmission neither reacquires nor borrows stale scene authority');
     assert.deepEqual(result.hierarchy.initial,{semantic:2,nodes:2});assert.deepEqual(result.hierarchy.expanded,{semantic:3,nodes:3,failed:false});
     assert.deepEqual(result.hierarchy.attention,{semantic:4,root:'Root.md'},'Geometry settings do not reacquire frontiers, attention adds only its independent lease');
     assert.deepEqual(result.hierarchy.collapsed,{semantic:4,releases:2,nodes:2});assert.equal(result.hierarchy.after.releases,result.hierarchy.after.semantic);assert.equal(result.hierarchy.events,0);assert.deepEqual(result.hierarchy.errors,[]);

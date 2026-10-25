@@ -5,7 +5,7 @@ import type {PlexViewSession} from "../../application/PlexViewSession";
 import type {NodeId} from "../../core/graph/model";
 import type {PlexProjection, PlexViewDefinition} from "../../core/plex/views/contracts";
 
-/** Lease reconciliation runs after an admitted scene commits, never while pure policy is executing. Scope/view/unmount retirement is synchronous. */
+/** Lease reconciliation runs after an admitted scene commits, never while pure policy is executing. Unavailable projection retains the last admitted bounded leases; scope/view/unmount retirement is synchronous. */
 export function useHierarchyDemand(session: PlexViewSession | undefined, definition: PlexViewDefinition, root: NodeId,
   acquire: (id: NodeId) => (() => void)): Readonly<{held: readonly NodeId[]; revision: number; synchronize: (projection: PlexProjection | null) => void}> {
   const holder = useRef<{owner: PlexHierarchyDemand; key: string; current: () => boolean} | null>(null);
@@ -24,12 +24,12 @@ export function useHierarchyDemand(session: PlexViewSession | undefined, definit
     });
   }, [session, definition, lifetime, key, acquire]);
   const held = holder.current?.key === key ? holder.current.owner.snapshot().held : [];
-  /** A warm cache hit may publish nothing. Re-render once when the actual lease set/status changes so released reservations cannot starve new branches. */
+  /** Only admitted output can retire branch requests. A failed read is not an empty expansion; warm lease changes still trigger one reservation update. */
   const synchronize = (projection: PlexProjection | null): void => {
     const value = holder.current;
-    if (!value || value.key !== key || !value.current()) return;
+    if (!value || value.key !== key || !value.current() || !projection || projection.layoutRoot !== root) return;
     const before = JSON.stringify(value.owner.snapshot());
-    value.owner.synchronize(definition.id, root, projection?.layoutRoot === root ? projection.preparation?.parents ?? [] : []);
+    value.owner.synchronize(definition.id, root, projection.preparation?.parents ?? []);
     if (holder.current === value && value.current() && before !== JSON.stringify(value.owner.snapshot())) setRevision(previous => previous + 1);
   };
   return {held, revision, synchronize};

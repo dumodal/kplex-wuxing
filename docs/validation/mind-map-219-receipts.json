@@ -1294,5 +1294,33 @@
       ],
       "lastPhase": "complete"
     }
-  ]
+  ],
+  "nextRuntimeCorrection": {
+    "scope": "useHierarchyDemand null-projection retention",
+    "negativeActualCallback": {
+      "heldBefore": [
+        "P"
+      ],
+      "heldAfter": [],
+      "released": [
+        "P"
+      ]
+    },
+    "negativeActualChromium": {
+      "acquiredBefore": 3,
+      "releasedDuringUnavailable": 1,
+      "acquiredAfterReadmission": 4
+    },
+    "correctedActualChromium": {
+      "acquiredBefore": 3,
+      "releasedDuringUnavailable": 0,
+      "acquiredAfterReadmission": 3,
+      "errorSceneWithholdsAuthority": true
+    },
+    "focusedChecks": 33,
+    "build": "passed",
+    "scanner": "passed",
+    "fullNativeCI": "pending for new corrected source",
+    "interrupted33bfd56Full": "incomplete; intentionally stopped after7architecture/130core/1483functional, during browser phase; no stage"
+  }
 }
