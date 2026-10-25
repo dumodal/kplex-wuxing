@@ -102,12 +102,13 @@ export function editViewConfigurationAt(definition: Readonly<{id: string; config
   const migration = migrateViewConfiguration(definition, stored);
   if (migration.status === 'unavailable') throw new Error('View configuration migration is unavailable');
   if (!Object.prototype.hasOwnProperty.call(stored, definition.id) && Object.keys(stored).length >= VIEW_CONFIGURATION_LIMITS.views) throw new Error('View configuration exceeds its bound');
-  const field = schema.fields[address.field];
-  const current = configurationEntryValue(effective.values[address.field], field.defaultValue, field.inheritEntries, address.path ?? []);
-  const actual = configurationLeaf(current, address.path ?? []);
-  if (!configurationExpected(actual, expected)) throw new Error('View configuration changed');
   const previous = migration.settings[definition.id], payload = record(previous) ? previous : {version: schema.version, values: {}};
   const values = record(payload.values) ? payload.values : {}, nextValues = {...values};
+  const field = schema.fields[address.field];
+  const sparse = field.inheritEntries && address.path?.length && !Object.prototype.hasOwnProperty.call(values, address.field) ? {} : effective.values[address.field];
+  const current = configurationEntryValue(sparse, field.defaultValue, field.inheritEntries, address.path ?? []);
+  const actual = configurationLeaf(current, address.path ?? []);
+  if (!configurationExpected(actual, expected)) throw new Error('View configuration changed');
   if (edit.kind === 'remove' && !address.path?.length) delete nextValues[address.field];
   else {
     const value = editConfigurationLeaf(current, address.path ?? [], edit);

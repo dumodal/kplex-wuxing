@@ -20,6 +20,8 @@ test('defaults remain read-only and old scalar edits retain their public API',()
 test('optional entry defaults seed only the edited entry and rebase leaf edits',()=>{
  const d=definition();Object.assign(d.configuration.fields.library,{entries:true,inheritEntries:true});
  M.validateViewConfigurationSchema(d.configuration);
+ const fresh=M.editViewConfigurationAt(d,{}, {field:'library',path:['alpha','name']},{kind:'set',value:'Fresh'});
+ assert.deepEqual(fresh[d.id].values.library,{alpha:{name:'Fresh',colors:['red','blue']}},'Fresh fields materialize only the addressed entry');
  const initial=stored(d);initial[d.id].values.library={};const before=structuredClone(initial);
  const a={field:'library',path:['alpha','name']},b={field:'library',path:['beta','colors']};
  const expected=M.readViewConfigurationAt(d,initial,a);assert.deepEqual(expected,{present:true,value:'Alpha'});

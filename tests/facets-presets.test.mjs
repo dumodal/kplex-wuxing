@@ -47,6 +47,9 @@ test('legacy type/tag sources and maximum alias text retain their interpretation
  const aliases=Array(512).fill('w').join(',');const raw={wuxing:{version:1,values:Object.fromEntries(['water','wood','fire','earth','metal'].map(id=>[id+'Values',aliases]))}};
  const migrated=M.migrateViewConfiguration(definition,raw);assert.equal(migrated.status,'migrated');assert.equal(available(migrated.settings).status,'available');
  assert.equal(library(migrated.settings).presets.wuxing.categories.water.values.length,512);assert(JSON.stringify(migrated.settings).length<=16384);
+ const long='x'.repeat(1024),single=M.migrateViewConfiguration(definition,{wuxing:{version:1,values:{waterValues:long}}});
+ assert.equal(single.status,'migrated');assert.deepEqual(library(single.settings).presets.wuxing.categories.water.values,[long]);
+ assert.equal(library(single.settings).presets.wuxing.categories.water.assignment,long,'A maximum legacy scalar alias remains assignable without truncation');
 });
 
 test('failed/future migrations preserve original payload and refuse a destructive fallback write',()=>{

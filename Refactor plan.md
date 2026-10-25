@@ -6241,3 +6241,6 @@ B1 closeout adds the explicit collection-reset guard: restoring view defaults re
 
 
 2026-10-25 PR220 C2a: production Facets registration/shared badge, color, status and captured preset controls; optional inherited stable default entries use existing queue.66 policy/selector +48 settings/localization/camera +5 actual renderer regressions, real build/scanner, architecture7 zero violations. Native manager/D/E/F/final-head Windows remain pending. No structural refactor or vault deployment.
+
+
+2026-10-25 PR220 C2b: native registered preset manager uses existing list/modal/color components and queued scoped writer. Optional pre-acceptance lifetime; sparse inherited entry fix, protected palette ownership, maximum legacy alias preserved.118 affected checks +final11 native-control Chromium cases, build/scanner/indexing/startup/section suite pass; architecture zero violations. Highest risk: native editor/metadata write interference in next assignment phase; exact-final-head Windows required. No C15-C26 or vault deployment.

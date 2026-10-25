@@ -4,6 +4,7 @@ import type {CanvasViewContributionContext, CanvasViewChoice} from "../contribut
 import {facetLibrary} from "../../../core/plex/views/facets/configuration";
 import {facetState, orderedFacetPresets, resolveFacetPreset} from "../../../core/plex/views/facets/state";
 import {facetPresetLabel} from "../../../core/plex/views/facets/labels";
+import {FacetPresetManager} from "../facets/FacetPresetManager";
 
 /** Both entry points dispatch the same state reducer, preserving independent canvas intent. */
 function presetChoice(context: CanvasViewContributionContext): CanvasViewChoice | null {
@@ -19,7 +20,9 @@ function presetChoice(context: CanvasViewContributionContext): CanvasViewChoice 
 
 export const wuXingSettingsContribution: CanvasViewSettingsContribution = {
   id: "wuxing",
-  items: ({translate}) => [{name: translate("facets.about"), desc: translate("facets.aboutHelp")}],
+  manager: (app, context) => new FacetPresetManager(app, context),
+  items: ({translate, manage}) => [{name: translate("facets.about"), desc: translate("facets.aboutHelp")},
+    ...(manage ? [{name: translate("facets.manage"), desc: translate("facets.managerHelp"), action: manage}] : [])],
   choices: context => {const choice = presetChoice(context); return choice ? [choice] : [];},
   menus: context => {
     const choice = presetChoice(context);

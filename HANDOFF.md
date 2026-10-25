@@ -21,9 +21,9 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 # Active PR220 Facets implementation
 
-Branch2026-10-24-canvas-wuxing; accepted main26623c8393bddc0c3bcac39468078ec20ceccbc8 integrated0406844. Prior validated0169198 is historical. Latest published before this checkpoint3eff6b72e7f1232ac2954b3897bcff360bbf5545. Maintainer authorizes implementation/commits/push/PR updates; no merge/release/force push.
+Branch2026-10-24-canvas-wuxing; accepted main26623c8393bddc0c3bcac39468078ec20ceccbc8 integrated0406844. Prior validated0169198 is historical. Latest published before C2b0fa0e30391b7e7f6618ce13a0ca057ba59a93f7a. Maintainer authorizes implementation/commits/push/PR updates; no merge/release/force push.
 
-A/B and C1 complete; C2a production rendering complete. Native preset manager C2b, D assignment/undo, E shared predicate editor/rules, F sections/developer guide/fixtures/screenshots/final verification remain. Full specification docs/FACETS_VIEW.md, progress/results docs/validation/facets-220-2026-10-25.md and API docs/CANVAS_VIEW_API.md. Do not stop at intermediate checkpoints.
+A/B and C1 complete; C2a production rendering complete. C2b native preset manager complete and checked; D assignment/undo, E shared predicate editor/rules, F sections/developer guide/fixtures/screenshots/final verification remain. Full specification docs/FACETS_VIEW.md, progress/results docs/validation/facets-220-2026-10-25.md and API docs/CANVAS_VIEW_API.md. Do not stop at intermediate checkpoints.
 
 
 
@@ -35,7 +35,7 @@ Optional badges capability, finite scene admission/status, region colors and con
 
 Node22.22.2:66 policy/configuration/selector cases;48 actual Settings-host/captured contributions/localization/editor-camera cases;5 actual renderer/preset/theme/independent canvas/Wander/modifier/cycle cases pass. Official scanner, real production build and architecture7 (194 roots,346 reachable files,zero violations) pass. Historical Wu helper tests retain exact original assertions as migration compatibility; production Facets is covered separately. Browser boundary was corrected to return stable MetadataCache objects, retaining actual cache-identity rejection. No assertion/budget/scanner gate was relaxed.
 
-Native preset manager is next; safe assignment, advanced rules, sections, final API guide, fixtures/screenshots and final-head portable/CI/Windows acceptance remain pending. No candidate is deployed in Small or production. Small remains restored to its captured baseline. Production observation remained read-only.
+Native preset manager is now implemented; safe assignment, advanced rules, sections, final API guide, fixtures/screenshots and final-head portable/CI/Windows acceptance remain pending. No candidate is deployed in Small or production. Small remains restored to its captured baseline. Production observation remained read-only.
 
 ## Native resources and safety
 
@@ -44,3 +44,14 @@ Small C:\Obsidian\kplex-test-small is restored, no staged candidate. Prior backu
 Node22.22.2 at %TEMP%\kplex-node-v22.22.2\node-v22.22.2-win-x64. Real build/scanner/browser needs approved sandbox escalation for esbuild parent reads; Git metadata writes/push escalation. Retain #215 baseline failures separately. Preserve reader fifth hierarchy budget/sixth property provider, both camera fixes, attention equality for Facets, canonical source occurrence and additiveOnly writer, saved-published relationship feedback. #219 is accepted; no moving partner branch consumption.
 
 New maintainer requests already implemented/published: #221 shared Wander c3aa629, explicit Alt/Option center af22b8b, cycle reveal plus Notice13c3922. Exact-final-head Windows checks still required.
+
+
+## C2b: native preset manager and guarded settings/color composition
+
+The registered contribution exposes a native manager factory with own-configuration/read-address/captured-owner/save-address ports, existing StyleColorContext and exact close callback. Native Settings composes it without a view-ID branch or second writer. Facets reuses StyleManagerList, StyleEditorModal and StyleColorControls for search, create, duplicate, rename, preset/category reorder, explicit replacement deletion, restore-in-draft, matching aliases, canonical assignment, source/field, colors and layout defaults. Opening/search/unchanged Save/Cancel do no writes. New IDs are independent of labels; saved definition and per-canvas selection remain separate.
+
+The queued writer accepts an optional pre-acceptance modal/session lifetime guard. The sparse inherited-entry path now also seeds only the addressed entry when the entire field is absent; actual manager tests caught the earlier all-default materialization. Same-entry changes preserve stale drafts; sibling entries rebase. Native disk failure keeps exact controls/content. Explicit replacement uses one atomic redirect and validates the current destination. A maximum1024-character legacy alias/assignment now migrates unchanged as permitted by the old field contract.
+
+Registered view colors contribute to the existing palette usage display. Preset-owned colors require explicit reassignment before named-color deletion; a style-only rewrite cannot cross settings owners. Unknown/future view namespaces conservatively exclude destructive palette deletion with actionable copy. New named identities are checked inside the existing view-settings queue; unchanged damaged identities remain repairable. Native preview/color-source behavior is reused and parent drafts do not persist from child-picker changes. All8 locales maintained, including audited property-reference metadata.
+
+Node22.22.2: affected118-case configuration/actual-native-control Chromium/API/palette/migration/localization batch passes. Final11-case manager rerun after layout controls passes. Production build and official scanner pass. Architecture zero violations (194 roots350 reachable files). Required indexing/startup/source-convergence/settings-independence/watchdog/sections suite passes with real dependencies. Initial test failures distinguished a real sparse materialization bug from incorrect native action labeling/translation metadata; all original save, lifetime, resource and bound assertions remain. Exact-final-head Windows/native validation, D assignment/undo, E rules/shared editor and F sections/docs/fixtures remain pending. No native vault staged or production files modified.

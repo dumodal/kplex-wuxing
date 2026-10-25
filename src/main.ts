@@ -2081,7 +2081,7 @@ export default class KplexPlugin extends Plugin {
   /** Submit one detached field/path operation. Sibling preset edits rebase on the latest queue
    * state; stale same-entry remote epochs or an optional stale opening leaf reject safely. */
   async updateCanvasViewConfiguration(id: string, address: ViewConfigurationAddress, edit: ViewConfigurationEdit,
-    expected?: ViewConfigurationExpected): Promise<void> {
+    expected?: ViewConfigurationExpected, isCurrent: () => boolean = () => true): Promise<void> {
     const definition = (this.viewSettingsRegistry ?? builtInCanvasViewSettings).definition(id);
     if (!definition || !edit || !["set", "remove"].includes(edit.kind)) throw new Error(this.translator("view.settingsUnavailable"));
     const submitted = {field: address.field, ...(address.path ? {path: [...address.path]} : {})};
@@ -2090,7 +2090,7 @@ export default class KplexPlugin extends Plugin {
       ...(expected.value !== undefined ? {value: configurationJson(expected.value)} : {})} : undefined;
     await this.commitCanvasViewConfiguration(id, viewConfigurationUpdateDomain(definition, submitted),
       /** Pure updates preserve other namespaces and unknown fields on each fresh accepted map. */ (stored, validateOpening) =>
-        editViewConfigurationAt(definition, stored, submitted, operation, validateOpening ? opening : undefined));
+        editViewConfigurationAt(definition, stored, submitted, operation, validateOpening ? opening : undefined), isCurrent);
   }
 
   /** Explicit reset retains all unknown fields and other views; its scope is one address or the
@@ -2118,14 +2118,15 @@ export default class KplexPlugin extends Plugin {
   /** The sole view-settings effect: serialized rebase/disk commit, then live installation and
    * presentation refresh. No session/navigation/source/index mutation is granted to a view. */
   private async commitCanvasViewConfiguration(id: string, domain: string,
-    apply: (stored: unknown, validateOpening: boolean) => Record<string, unknown>): Promise<void> {
+    apply: (stored: unknown, validateOpening: boolean) => Record<string, unknown>, isCurrent: () => boolean = () => true): Promise<void> {
     const registry = this.viewSettingsRegistry ?? builtInCanvasViewSettings, definition = registry.definition(id);
     const current = this.receivedSettingsOwner(domain);
     let changed = false;
     await this.enqueueSettingsWrite(async () => {
-      if (this.unloading || !current() || !definition || (this.viewSettingsRegistry ?? builtInCanvasViewSettings).definition(id) !== definition)
+      if (this.unloading || !isCurrent() || !current() || !definition || (this.viewSettingsRegistry ?? builtInCanvasViewSettings).definition(id) !== definition)
         throw new Error(this.translator("settingsSync.conflict"));
       const source = this.settingsForWrite(), canvasViewSettings = apply(source.canvasViewSettings, true);
+      registry.validatePaletteReferences(definition, source.canvasViewSettings, canvasViewSettings, source.colorPreferences.palette);
       if (appearanceThemes.themeValuesEqual(source.canvasViewSettings, canvasViewSettings)) return;
       const next = {...source, canvasViewSettings};
       await this.writeSettingsSnapshot(this.settingsSnapshotForPersistence(source.actionPreferencesFuture ?? source.actionPreferences, next));

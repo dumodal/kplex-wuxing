@@ -37,8 +37,8 @@ export function isFacetPreset(value: unknown): value is FacetPreset {
   for (const [id, category] of Object.entries(value.categories)) {
     if (!facetId(id) || !value.order.includes(id) || !record(category) || !text(category.label, FACET_LIMITS.label)
       || category.labelKey !== undefined && !text(category.labelKey, 128, false) || !color(category.color)
-      || !Array.isArray(category.values) || category.values.length > FACET_LIMITS.aliases || !category.values.every(item => text(item, 256, false))
-      || category.assignment !== undefined && !text(category.assignment, 256, false)
+      || !Array.isArray(category.values) || category.values.length > FACET_LIMITS.aliases || !category.values.every(item => text(item, 1024, false))
+      || category.assignment !== undefined && !text(category.assignment, 1024, false)
       || category.rule !== undefined && !text(category.rule, FACET_LIMITS.expression)) return false;
   }
   return true;
