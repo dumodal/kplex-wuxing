@@ -1357,6 +1357,7 @@ const interaction = { gates: new Set(), nodePaths: new Set() }, connectDrag = nu
 const hoverPreview = {current:new HoverPreview()};
 // The production unfiltered projection is absent; rename reconciliation must not invent a filtered read.
 const globalFiltering = false, filteredGateCounts = null, nodeVisuals = new Map();
+const visibleEdgeProjection = {limited:false};
 const predicate = null, lenses = { lenses: [] }, paintLenses = lenses, predicateEngine = {}, predicateRevision = 0, layoutRevision = 0;
 let styleReads=0;const measuredStyle=()=>new Proxy({textColor:"#abcdef"},{ownKeys(target){styleReads++;return Reflect.ownKeys(target)}});
 settings.baseNodeStyle=measuredStyle();let paintSettings=settings;
@@ -1391,7 +1392,7 @@ function Scene({ scene: sourceScene, expanded }) {
   const sectionExpansion = null, expandedScrollTop = useMemo(() => ({}), []);
   const visibleNodePaths = useMemo(() => new Set(scene.nodes.map((item) => item.page.path)), [scene.nodes]);
   const renderedNodeMap = useMemo(() => new Map(scene.nodes.map((item) => [item.page.path, { ...item }])), [scene.nodes]);
-  ${uiDefinitions("src/ui/PlexGraph.tsx", ["areaForNode", "isEditorOccurrence", "paintedNodeStyles", "sceneNodeKeys", "expandedClusters", "beginNativeNodeDrag", "endNativeNodeDrag", "renderNode", "renderExpandedCluster"])}
+  ${uiDefinitions("src/ui/PlexGraph.tsx", ["areaForNode", "isEditorOccurrence", "navigationNode", "isDraggedNode", "paintedNodeStyles", "sceneNodeKeys", "expandedClusters", "beginNativeNodeDrag", "endNativeNodeDrag", "renderNode", "renderExpandedCluster"])}
   const miniKeys = expandedClusters.flatMap((cluster) => cluster.children.map((child) => child.key));
   check(new Set(miniKeys).size === miniKeys.length, "expanded connector keys collide during rename");
   return <><div className="kplex-nodes">{scene.nodes.map((item) => renderNode(item, { ...item }))}</div><div>{expandedClusters.map(renderExpandedCluster)}</div></>;
@@ -1736,6 +1737,7 @@ try {
  scene.nodes=[rootOccurrence,nested,{...nested,occurrenceId:"copy-two"}];scene.areas=[{id:"parent",dropRole:"parent"},{id:"child",dropRole:"child"},{id:"left",dropRole:"left"},{id:"right"}];
  const previousNav=navigated.length;dropExternalFile(event(90,90));check(navigated.length===previousNav+1&&destinationIntents.at(-1)==="destination","rooted center drop lost explicit destination intent");
  const editorNavigation=navigated.length;const editorDrop=event(90,240);dropExternalFile(editorDrop);check(navigated.length===editorNavigation&&!editorDrop.prevented&&!editorDrop.stopped,"occurrence editor drop retargeted map instead of retaining native edit ownership");
+ externalDropZone="parent";const editorOver=event(90,240);dragExternalFileOver(editorOver);check(!editorOver.prevented&&!editorOver.stopped&&editorOver.dataTransfer.dropEffect==="move"&&externalDropZone===null,"occurrence editor drag-over suppressed native drop delivery or retained old canvas feedback");
  const beforeNested=calls.length;commitNodeAreaDrop(nested,"parent");check(calls.length===beforeNested+1&&calls.at(-1).origin===origin&&calls.at(-1).mode==="create"&&calls.at(-1).existingDirection===undefined,"nested copy borrowed unrelated parent-to-child move authority");
  nodeDrag={path:target.path,occurrenceId:"copy-one"};check(isDraggedNode(nested)&&!isDraggedNode(scene.nodes[2]),"dragging one canonical copy hid another occurrence");nodeDrag=null;
  const neutralCount=calls.length;dropExternalFile(event(510,280));check(calls.length===neutralCount,"classification-only area became a relationship writer");
@@ -2501,7 +2503,7 @@ function Graph(){
  const visibleNodePaths=useMemo(()=>new Set(scene.nodes.filter(node=>!hidden.includes(node.page.path)).map(node=>node.page.path)),[scene.nodes,hidden]);
  const renderedNodeMap=useMemo(()=>new Map(scene.nodes.map(node=>[node.page.path,node])),[scene.nodes]);
  const visibleOccurrenceIds=visibleNodePaths;
- ${uiDefinitions('src/ui/PlexGraph.tsx',['connectionCaption','visibleEdges','paintedEdges','interaction'])}
+ ${uiDefinitions('src/ui/PlexGraph.tsx',['connectionCaption','visibleEdgeProjection','visibleEdges','paintedEdges','interaction'])}
  ${effectCode}
  fixture={enter(path,gate,alt=false){scheduleHoverIntent(gate?{kind:'gate',path,gate}:{kind:'node',path},{pointerType:'mouse',isTrusted:true,altKey:alt})},key:alt=>hoverHighlight.current.modifier(alt,true),leave:()=>clearHoverIntent(true),setRequired,setShown,setHidden,scene,interaction};
  return <div ref={viewport} className='kplex-plex' style={{width:1000,height:800}}><input defaultValue='unsaved editor'/><svg width='1000' height='800'>{paintedEdges.map(edge=><Edge key={edge.id} edge={edge} nodes={renderedNodeMap} inverseArrowDirection={true} connectorStyle='bezier' labelBackground={NATIVE_LINK_LABEL_FILL} crossLinkOpacity={0} highlighted={${edgeHighlights[0]}} dimmed={false} passive={Boolean(crossLinkPeek&&!showCrossLinks&&edge.isCrossLink)} onHover={()=>{}} onMove={()=>{}} onLeave={()=>{}} onContextMenu={()=>{}}/>)}</svg>{scene.nodes.map(node=><div key={node.page.path} data-node={node.page.path}>{node.label}</div>)}</div>;

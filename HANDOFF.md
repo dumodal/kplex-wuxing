@@ -47,3 +47,5 @@ Read6394239125/6394251873/6394330896; Mac confirmed6394339805. Mac owns common a
 Full2e2fcbb failed before indexing assertions: isolated fixture inventory omitted new areaLayout. That real module added; UI bundler already includes crossLinks, no extra inventory needed. Timing guards unchanged. Corrected clean-head full/CI must pass.
 
 Full31d6fa1: indexing/P1-P17 pass;1497/1498 functional, one actual regression: duplicate generic+dialog style recovery notice. Corrected request notifyFailure(defaultfalse), void save/type calls opt in; existing modal single-notice assertion and generic late/episode/recovery/unload controls pass unchanged. Next clean-head full/native/CI required.
+
+Full5ccde10 functional1498 pass; browser243/246,3fail: intentional normal-pending consent Notice expectation +2 extracted callback missing dependencies. Preserved all privacy/style/cache/paint/focus/hover/visibility assertions. Updated fixtures pass4 affected cases. Actual occurrence-editor dragover negative(dropEffect none) corrected with matching native-owner early return; Compass behavior retained. Final full/native/CI required.

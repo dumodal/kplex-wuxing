@@ -3311,6 +3311,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
 
   /** Accept native files or captured Plex links; same-view node drags retain relinking semantics. */
   const dragExternalFileOver = (event: DragEvent<HTMLDivElement>): void => {
+    // A bound occurrence editor owns its native text drop; changing dropEffect here can suppress
+    // the browser's drop before the corresponding drop handler has a chance to yield ownership.
+    if (occurrenceEditorPolicy && (event.target as Element | null)?.closest(".kplex-central-editor-overlay")) {setExternalDropZone(null); return;}
     externalDropPoint.current = toWorld(event.clientX, event.clientY);
     const target = draggedGraphPage(plugin.app, index, event);
     const file = getDraggedFile(plugin.app);

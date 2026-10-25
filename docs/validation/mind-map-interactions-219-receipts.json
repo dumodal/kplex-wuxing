@@ -360,11 +360,47 @@
         "skip": 0
       },
       "cause": "New generic recovery callback duplicated existing dialog-owned Style saved feedback on actual refresh failure. Preserve single-notice assertion; add optional per-request feedback ownership, default caller result."
+    },
+    {
+      "head": "5ccde10a8d8b205f0bd2698d00f0810d24da710c",
+      "status": "failed",
+      "functional": {
+        "tests": 1498,
+        "pass": 1498,
+        "fail": 0,
+        "skip": 0
+      },
+      "browser": {
+        "tests": 246,
+        "pass": 243,
+        "fail": 3,
+        "skip": 0
+      },
+      "causes": [
+        "Old consent test expected generic pending Notice, now intentionally quiet; all privacy/revocation/zero-work assertions retained.",
+        "Attachment rename callback fixture lacked new projection/navigation/occurrence dependencies; original style/DOM assertions retained.",
+        "Crosslink peek callback fixture omitted visibleEdgeProjection memo dependency; original Alt/geometry/focus/visibility assertions retained."
+      ]
     }
   ],
   "feedbackOwnerCorrection": {
     "styleFailureManagerSettingsExistingCase": "passed unchanged",
     "genericQueuedLateEpisodeRecoveryUnload": "passed",
     "fullFinal": "pending"
+  },
+  "editorDragOverControl": {
+    "negative": {
+      "prevented": true,
+      "stopped": true,
+      "zone": null,
+      "dropEffect": "none",
+      "expectation": "Occurrence editor dragover must remain with native editor instead of setting browser dropEffect none."
+    },
+    "correction": "Yield occurrence editor drag-over before setting dropEffect, retain Compass legacy behavior.",
+    "browserAffected": {
+      "tests": 4,
+      "pass": 4,
+      "fail": 0
+    }
   }
 }
