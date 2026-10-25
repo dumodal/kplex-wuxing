@@ -59,7 +59,7 @@ import { TYPOGRAPHY_FIELDS, TYPOGRAPHY_LIMITS, type TypographyValues } from "../
 import { appendVisibleCrossLinks, presentationPage, projectNodeCounts, scrollZoneForRole, rowIntersectsViewport, effectiveLabelLimit, expandedMiniLayout, horizontalDensity, gateDiameter, siblingScale, withAreaHeightOverrides, type CenterNodeSize, type ZoneViewport, type ZoneAreaBounds } from "./layout";
 import { LayoutSlider } from "./components/LayoutSlider";
 import {appendOccurrenceCrossLinks} from "./plexViews/crossLinks";
-import { centeredViewportFit, sameFitCamera, type FitCamera } from "./components/viewportFit";
+import { centeredViewportFit, sameFitCamera, zoomedViewportCamera, type FitCamera } from "./components/viewportFit";
 import { projectFilteredGateCounts } from "./filteredGateCounts";
 import { LayoutControls } from "./components/LayoutControls";
 import {readViewConfiguration} from "../core/plex/views/configuration";
@@ -1743,6 +1743,11 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     if (compassSync.current()) requestCameraFrame();
   }, [sceneLayoutKey, navigationOrigin, settings.animationSpeed, nodeDrag?.path, connectDrag?.originPath, sceneMotion, viewportSize.width, viewportSize.height, displayState.revision]);
 
+  /** Toolbar/keyboard zoom shares the camera owner and preserves the world point at viewport center. */
+  const zoomFromCenter = (scale: number): void => {
+    const el = viewport.current;
+    if (el) applyCamera(current => zoomedViewportCamera(current, {x: el.clientWidth / 2, y: el.clientHeight / 2}, scale));
+  };
   /** Center the actual central node and fit symmetric displayed bounds; explicit Fit renews ownership. */
   const fit = () => {
     const el = viewport.current;
@@ -4121,8 +4126,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     "sections.toggle": graphAction(/** Reuse current center Markdown projection folding. */ () => toggleCentralSections(), () => canExpandCentralSections(persistentNeighborhood?.center, activePath) && !centralEditorAvailable),
     "sections.fold-all": graphAction(/** Fold only this center's current section projection. */ () => updateSectionFolds(() => new Set()), () => Boolean(sectionExpansion)),
     "sections.unfold-all": graphAction(/** Expand only actual current sections with children. */ () => updateSectionFolds(() => new Set(sectionExpansion?.sections.filter(section => section.childIds.length).map(section => section.id))), () => Boolean(sectionExpansion)),
-    "view.zoom-in": graphAction(/** Keep existing platform clamp and zoom increment. */ () => applyCamera(camera => ({ ...camera, scale: Math.min(Platform.isIosApp ? IOS_MAX_ZOOM : MAX_ZOOM, camera.scale * 1.15) }))),
-    "view.zoom-out": graphAction(/** Keep existing minimum and zoom decrement. */ () => applyCamera(camera => ({ ...camera, scale: Math.max(.3, camera.scale / 1.15) }))),
+    "view.zoom-in": graphAction(/** Keep existing platform clamp and zoom increment. */ () => zoomFromCenter(Math.min(Platform.isIosApp ? IOS_MAX_ZOOM : MAX_ZOOM, camera.current.scale * 1.15))),
+    "view.zoom-out": graphAction(/** Keep existing minimum and zoom decrement. */ () => zoomFromCenter(Math.max(.3, camera.current.scale / 1.15))),
     "view.fit": graphAction(/** Reuse the camera owner's current displayed-scene fitting policy. */ () => fit()),
     "view.layout-controls": graphAction(/** Existing sliders retain native arrows and Tab protocols after disclosure. */ () => setLayoutControlsOpen(value => !value)),
     "nodes.open": {

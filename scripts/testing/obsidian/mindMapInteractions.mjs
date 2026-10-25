@@ -11,17 +11,25 @@ export async function acceptMindMapInteractions({app,p,c,host,hosts,restores,pat
  /** Reuse the reviewed trusted HTML drag transport; Chromium supplies its payload, and finally releases the debugger. */
  const drag=async(from,to)=>{
   check(!app.dragManager.draggable,'Competing native drag');win.show();win.focus();win.webContents.focus();
+  const fromPoint=typeof from==='function'?center(from()):from,toPoint=typeof to==='function'?center(to()):to;
+  const hit=doc.elementFromPoint(fromPoint.x,fromPoint.y),source=typeof from==='function'?from():null;
+  c.progress={...c.progress,dragGeometry:{from:fromPoint,to:toPoint,sourceVisible:!!source&&source.contains(hit),hitClass:typeof hit?.className==='string'?hit.className:null,sourceId:source?.dataset.kplexKeyboardId,sourceBounds:source?.getBoundingClientRect().toJSON(),canvasBounds:root(host).getBoundingClientRect().toJSON(),camera:root(host).querySelector('.kplex-camera')?.style.transform,viewport:{width:doc.defaultView.innerWidth,height:doc.defaultView.innerHeight}}};
+  check(!source||source.contains(hit),'Native drag source must be visible at its actual hit-test point');
+  const inputs=[];
+  /** Bounded trusted-input diagnostics identify host activation or geometry failures without replacing events. */
+  const trace=event=>{if(inputs.length<12)inputs.push({type:event.type,trusted:event.isTrusted,x:event.clientX,y:event.clientY,sourceId:event.target?.closest?.('[data-kplex-keyboard-id]')?.dataset.kplexKeyboardId});c.progress={...c.progress,dragInputs:inputs}};
+  for(const name of ['mousedown','pointerdown','dragstart'])doc.addEventListener(name,trace,true);
   const drops=[];/** Observe actual delivery before React consumes it; no payload or handler is replaced. */
   const observe=event=>{const source=app.dragManager.draggable?.source,hit=doc.elementFromPoint(event.clientX,event.clientY);drops.push({trusted:event.isTrusted,x:event.clientX,y:event.clientY,hitClass:typeof hit?.className==='string'?hit.className:null,gate:hit?.closest('[data-kplex-gate]')?.dataset.kplexGate,occurrence:hit?.closest('[data-kplex-keyboard-id]')?.dataset.kplexKeyboardId,insideParent:!!parentPanel()?.contains(hit),root:session(host).layoutRoot(path('A')),sourceKind:source?.kind,sourceId:source?.occurrence?.id,canonicalSource:source?.node?.identity,relationshipOrigin:source?.occurrence?.relationship?.origin.identity});c.progress={...c.progress,nativeDrops:drops}};
   doc.addEventListener('drop',observe,true);
-  try{const receipt=await c.htmlDrag({contents:win.webContents,from:typeof from==='function'?center(from()):from,to:typeof to==='function'?center(to()):to,
+  try{const receipt=await c.htmlDrag({contents:win.webContents,from:fromPoint,to:toPoint,
    input:(type,point,modifiers=[])=>win.webContents.sendInputEvent({type,x:point.x,y:point.y,button:'left',clickCount:1,modifiers}),wait,until});
    await wait(80);check(!win.webContents.debugger.isAttached(),'Native drag debugger leaked');return{...receipt,drops};
-  }finally{doc.removeEventListener('drop',observe,true)}
+  }finally{doc.removeEventListener('drop',observe,true);for(const name of ['mousedown','pointerdown','dragstart'])doc.removeEventListener(name,trace,true)}
  };
  const parentPanel=()=>root(host).querySelector('.kplex-zone-parent');
  if(c.nativeDragOnly){
-  const compass=app.workspace.getLeaf('split');hosts.push(compass);await compass.setViewState({type:'k-plex-react-view',active:true});await compass.view.waitUntilReady();compass.view.centerPresentation.update({embedCentralNode:false});p.notifyNavigation(path('C'),compass);
+  const compass=c.prepareViewport?app.workspace.createLeafInParent(app.workspace.rootSplit,1):app.workspace.getLeaf('split');hosts.push(compass);await compass.setViewState({type:'k-plex-react-view',active:true});await compass.view.waitUntilReady();compass.view.centerPresentation.update({embedCentralNode:false});p.notifyNavigation(path('C'),compass);
   await until(()=>compass.view.documentSession.centerPath===path('C')&&root(compass)?.isConnected,'Native drag-only Compass absent');await act(compass,'view.fit');
   const opened=[],open=p.openRelationModal;
   p.openRelationModal=function(options){check(options.origin.path.startsWith(path('').slice(0,-3))&&options.fixedTarget?.path.startsWith(path('').slice(0,-3)),'Non-fixture native drag relationship');const modal=open.call(this,options);opened.push({modal,options});return modal};
