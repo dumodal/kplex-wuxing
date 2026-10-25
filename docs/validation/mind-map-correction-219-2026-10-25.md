@@ -14,7 +14,7 @@ Independent horizontal/vertical density (default1, range0.75–4) divides the co
 
 ## Ordered evidence
 
-Node22.22.2, real dependencies, existing Chromium and Obsidian1.15.0 on macOS. Sixteen final affected Chromium settings/selector/shared-renderer cases pass, including live density events, independent values, retained root/camera and unchanged frontier acquisitions. Full-suite verification remains pending. Existing performance guards are unchanged; no separate benchmark/profiling campaign. Private reports preserve every failed sample and test ordering. No private note identity, content or screenshot is published.
+Node22.22.2, real dependencies, existing Chromium and Obsidian1.15.0 on macOS. Sixteen final affected Chromium settings/selector/shared-renderer cases pass, including live density events, independent values, retained root/camera and unchanged frontier acquisitions. Full verification was attempted and failed as recorded below; no full-suite pass is claimed. Existing performance guards are unchanged; no separate benchmark/profiling campaign. Private reports preserve every failed sample and test ordering. No private note identity, content or screenshot is published.
 
 | Sample | Actual outcome |
 | --- | --- |
@@ -33,6 +33,12 @@ Node22.22.2, real dependencies, existing Chromium and Obsidian1.15.0 on macOS. S
 **settings-3 passed**:25 native receipts, including both density fields, failed-save rollback/recovery, popout Settings, draft preservation, independent sessions and actual CUA Space/Down/Down/Return with a trusted owning-document select key/change. Cleanup passed. [Ordered native receipts](mind-map-correction-219-receipts.json) retain failed samples and source/artifact/driver hashes.
 
 Native staging is explicitly interim until current full verification. Drivers check installed/dist hashes. Later source changes require affected verification and exact final attribution. Earlier fixture failures (implicit balanced-default assumptions and wrong extracted source) and sandbox loopback EPERM are preserved privately with their corrected follow-ups.
+
+## Complete verification attempt
+
+`npm run verify:obsidian` under Node22.22.2 ran the real `npm run verify`:7 architecture and130 core tests plus scanner passed. The indexing runner then stopped at unchanged `tests/indexing.test.mjs:4060`: **Inline-field cooperative parser blocked timers for55.0ms**, with the existing strict45ms guard. The assertion was not modified by correction commit `d07f2a8`. This observation does not establish the cause or justify changing the threshold. Full verification and native staging from that runner failed; later stages were not run, and no check is waived. Failed log/runner receipt retained. No extra performance campaign or arbitrary passing retry was initiated.
+
+Runtime checkpoint `d07f2a87be65c373b3f7b318bc9c8756f4b8f7ee` is pushed and remote PR head verified. Current-head CI is a separate pending gate. Partner #220 was reread at `272291cc911a13fb974a7b25fbe0d68028e2166e`; its autozoom-off framing-coordinate correction overlaps our rooted viewport-settlement block. Both behaviors must survive later accepted-main integration; no partner code was consumed.
 
 ## Safety and remaining acceptance
 

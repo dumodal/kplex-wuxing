@@ -863,5 +863,24 @@
     "production final visual observation",
     "outer resource restoration",
     "exact-head CI"
-  ]
+  ],
+  "fullVerification": {
+    "command": "npm run verify:obsidian (includes npm run verify)",
+    "node": "v22.22.2",
+    "status": "failed",
+    "error": "npm run verify failed (1)",
+    "startedAt": "2026-10-25T05:24:43.170Z",
+    "completedAt": "2026-10-25T05:25:19.456Z",
+    "source": {
+      "revision": "ba1d2f3851b035361e8e0c73c084151f87e4d246",
+      "dirty": true,
+      "node": "v22.22.2",
+      "os": "darwin 23.5.0"
+    },
+    "stoppedAt": "tests/indexing.test.mjs:4060",
+    "assertion": "Inline-field cooperative parser blocked timers for55.0ms; existing45ms limit",
+    "thresholdChanged": false,
+    "laterStages": "not run",
+    "privateReceiptSha256": "92553a201e5cdbb1f2f0356ff03a5a6c5784cf10e18df19e41fc853293e49423"
+  }
 }
