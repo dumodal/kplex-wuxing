@@ -21,6 +21,8 @@ function production(name, dependencies = {}, filename = "src/main.ts") {
   let expression;
   /** Preserve the production implementation and its asynchronous boundaries verbatim. */
   function visit(node) {
+    if (["searchDestination", "graphDestination"].includes(name) && ts.isJsxAttribute(node) && node.name.getText(source) === "onActivate"
+      && node.parent.parent.tagName.getText(source) === (name === "searchDestination" ? "SearchBox" : "PlexGraph")) expression = node.initializer.expression.getText(source);
     if (name === "centerPublication" && ts.isVariableDeclaration(node) && node.name.getText(source) === "refresh"
       && node.initializer && ts.isArrowFunction(node.initializer)
       && node.initializer.getText(source).includes("const trackedFile")) expression = node.initializer.getText(source);
@@ -541,7 +543,8 @@ function appFollowFixture() {
     syncPageToDocumentLeaf: /** Capture companion propagation without native timing in this App test. */ page => state.companions.push(["document", page]),
     syncSidecarToPage: /** Keep separately managed companions observable on same-file echoes. */ (host, page) => state.companions.push(["sidecar", page]),
   };
-  const dependencies = {...state, plugin, activatePendingDocumentUrl(){},
+  const dependencies = {...state, plugin, nodeId: id => id, translate: key => key,
+    Notice: class {constructor(message){(state.notices??=[]).push(message)}}, activatePendingDocumentUrl(){},
     releasePendingDocumentDemand: production("releasePendingDocumentDemand", state, "src/ui/App.tsx"),
     setNavigationOrigin: /** Observe the exact motion policy supplied to the graph. */ origin => { state.origin = origin; },
     setActivePath: /** A visible render reads only the latest native requested path. */ path => { state.renderPath = path; },
@@ -873,4 +876,21 @@ test('partial startup cannot replace the saved center with an earlier available 
   assert.equal(fallback.call(plugin, 'Center.md'), 'Center.md');
   pages.delete('Center.md'); plugin.initialIndexComplete = true;
   assert.equal(fallback.call(plugin, 'Center.md'), 'tag:#Fiction', 'A genuinely missing center still recovers after readiness');
+});
+
+/** Actual F4/App/graph activation callbacks distinguish explicit destination changes from independent occurrence attention. */
+test('F4 and center drops reroot only their owning rooted canvas and refuse editor-removing navigation before any side effect',()=>{
+ const {state,files,pages}=appFollowFixture(),roots=[],other={root:'Other-root'},view=state.documentSession.plexView={definition:{navigation:'rooted'},setRoot:id=>{roots.push(id);view.root=id;return !view.blocked}};
+ state.plugin.index.getVaultSearchPage=id=>pages.get(id);
+ let inserts=0;state.plugin.index.insertCreatedFile=file=>{inserts++;const page={path:file.path,file};pages.set(file.path,page);return page};
+ const activate=state.activate,search=production('searchDestination',{plugin:state.plugin,activate},'src/ui/App.tsx'),graph=production('graphDestination',{activate},'src/ui/App.tsx');
+ search('B.md');assert.equal(view.root,'B.md');assert.equal(state.renderPath,'B.md');assert.equal(other.root,'Other-root');
+ graph(pages.get('C.md'));assert.equal(view.root,'B.md','Ordinary occurrence attention never reroots');assert.equal(state.renderPath,'C.md');
+ graph(pages.get('A.md'),'destination');assert.equal(view.root,'A.md');assert.equal(state.renderPath,'A.md');
+ const before={history:[...state.plugin.settings.navigationHistory],companions:state.companions.length,render:state.renderPath};view.blocked=true;
+ graph(pages.get('B.md'),'destination');assert.equal(state.renderPath,before.render);assert.deepEqual(state.plugin.settings.navigationHistory,before.history);assert.equal(state.companions.length,before.companions);assert.deepEqual(state.notices,['actions.branch-editor-blocked']);assert.equal(inserts,0);
+ files.set('D.md',{path:'D.md'});const cached={path:'D.md',file:files.get('D.md')};state.plugin.index.getVaultSearchPage=()=>cached;
+ search('D.md');assert.equal(inserts,0,'Blocked root cannot materialize a provisional native file');view.blocked=false;search('D.md');assert.equal(inserts,1);assert.equal(state.renderPath,'D.md');
+ const replacement={...files.get('D.md')};files.set('D.md',replacement);const rootCount=roots.length;graph(cached,'destination');assert.equal(roots.length,rootCount,'Stale native incarnation cannot even request a root');
+ view.definition.navigation='attention';graph(pages.get('B.md'),'destination');assert.equal(roots.length,rootCount);assert.equal(state.renderPath,'B.md','Existing attention-following views keep their navigation');
 });

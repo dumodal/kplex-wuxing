@@ -1,8 +1,9 @@
 /**
  * Owns optional post-save completion, never settings persistence. One refresh flight and a
  * coalesced newer obligation bound retained work when a host refresh does not settle. A short
- * UI wait reports saved/pending; it neither cancels nor replays an accepted disk operation.
- * The plugin supplies its existing refresh owners and retires this adapter on unload.
+ * UI wait reports saved/pending; normal waiting is not failure and never requests a reload.
+ * The plugin supplies existing refresh owners plus one optional failure-episode callback,
+ * and retires this adapter on unload. Persistence is never cancelled or replayed here.
  */
 import {yieldToHostTask} from "./yieldToHostTask";
 
@@ -16,9 +17,11 @@ export class SavedSettingsRefresh {
   private semanticPending = false;
   private semanticRevision = 0;
   private closed = false;
+  private failureReported = false;
 
-  /** The callback must retain its own publication fences and must never write settings. */
-  constructor(private readonly refresh: (semantic: boolean, current: () => boolean) => Promise<void>) {}
+  /** Refresh retains publication fences and never writes settings; failure feedback remains owned by the plugin and may arrive after the short UI wait. */
+  constructor(private readonly refresh: (semantic: boolean, current: () => boolean) => Promise<void>,
+    private readonly failed?: () => void) {}
 
   /** Coalesce later accepted settings without retaining their drafts or starting more host work. */
   request(semantic: boolean): Promise<RefreshResult> {
@@ -48,10 +51,16 @@ export class SavedSettingsRefresh {
         // A later paint/workflow save cannot manufacture another semantic refresh. A genuinely
         // newer ontology obligation still survives the earlier semantic completion.
         if (semantic && semanticRevision === this.semanticRevision) this.semanticPending = false;
-        if (revision === this.revision) return {refreshPending: this.closed};
+        if (revision === this.revision) {this.failureReported = false; return {refreshPending: this.closed};}
         await yieldToHostTask();
       }
-    } catch (error) {console.error("K-Plex saved settings refresh remains pending", error);}
+    } catch (error) {
+      console.error("K-Plex saved settings refresh remains pending", error);
+      if (!this.closed && !this.failureReported) {
+        this.failureReported = true;
+        try {this.failed?.();} catch (feedbackError) {console.error("K-Plex settings refresh feedback failed", feedbackError);}
+      }
+    }
     finally {this.flight = null;}
     return {refreshPending: true};
   }

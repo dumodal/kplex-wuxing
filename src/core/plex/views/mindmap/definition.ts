@@ -16,6 +16,6 @@ export const mindMapViewDefinition: PlexViewDefinition = {
   layout(projection, measurements, _preferences, _editor, context) {
     const configuration = mindMapConfiguration(context?.configuration);
     if (!configuration) throw new Error("Mind Map configuration unavailable");
-    return layoutMindMap(projection, measurements, configuration);
+    return layoutMindMap(projection, measurements, configuration, context?.areaHeights);
   },
 };

@@ -14,6 +14,8 @@ export type HostPlexScene = {
   areas?: readonly PlexArea[];
   entryOccurrence?: string; editorOccurrence?: string; frameOccurrence?: string;
   boundEditors?: readonly AdmittedOccurrenceEditor[];
+  /** A bounded cached connector pass stopped early; it makes no completeness claim. */
+  crossLinksLimited?: boolean;
   failed?: boolean;
 };
 export type SceneAreaLayout = {nodes: PositionedNode[]; localPositions: Map<string, {x: number; y: number}>;

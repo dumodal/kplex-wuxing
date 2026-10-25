@@ -5,6 +5,7 @@ import {MIND_MAP_DENSITY} from "../../../core/plex/views/mindmap/configuration";
 export const mindMapSettingsContribution: CanvasViewSettingsContribution = {
   id: "mindmap",
   layoutControls: [
+    {field: "parentColumns", labelKey: "graph.parentColumns", captionKey: "graph.parentColumnsShort", icon: "columns-2", min: 1, max: 3, step: 1},
     {field: "horizontalDensity", labelKey: "graph.horizontalDensity", captionKey: "graph.horizontalDensityShort",
       hintKey: "settings.ui.horizontal.density.help", icon: "move-horizontal", ...MIND_MAP_DENSITY},
     {field: "verticalDensity", labelKey: "graph.verticalDensity", captionKey: "graph.verticalDensityShort",
@@ -17,6 +18,7 @@ export const mindMapSettingsContribution: CanvasViewSettingsContribution = {
     }}},
     {name: translate("mindmap.horizontalSpacing"), control: {type: "slider", key: key("horizontalSpacing"), min: 40, max: 240, step: 4}},
     {name: translate("mindmap.verticalSpacing"), control: {type: "slider", key: key("verticalSpacing"), min: 12, max: 80, step: 2}},
+    {name: translate("graph.parentColumns"), control: {type: "slider", key: key("parentColumns"), min: 1, max: 3, step: 1}},
     {name: translate("graph.horizontalDensity"), desc: translate("settings.ui.horizontal.density.help"), control: {type: "slider", key: key("horizontalDensity"), ...MIND_MAP_DENSITY}},
     {name: translate("graph.verticalDensity"), desc: translate("settings.ui.vertical.density.help"), control: {type: "slider", key: key("verticalDensity"), ...MIND_MAP_DENSITY}},
     {name: translate("mindmap.initialGenerations"), desc: translate("mindmap.initialGenerationsHelp"), control: {type: "slider", key: key("initialGenerations"), min: 1, max: 3, step: 1}},

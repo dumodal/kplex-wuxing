@@ -2081,8 +2081,7 @@ export default class KplexPlugin extends Plugin {
       changed = true;
     });
     if (!changed || this.unloading || !this.index) return;
-    const completion = await this.refreshSavedSettings(false);
-    if (completion.refreshPending && !this.unloading) new Notice(this.translator("settings.savedRefreshPending"));
+    await this.refreshSavedSettings(false);
   }
 
   /** Read a transaction's accepted base plus only its submitted imperative roots, excluding later queued controls. */
@@ -2185,12 +2184,14 @@ export default class KplexPlugin extends Plugin {
     return result;
   }
 
-  /** Finish durable saves through one optional refresh lease; UI pending never means disk cancellation. */
+  /** Finish durable saves through one optional refresh lease. Normal queued work stays quiet; actual refresh failure reports recovery once per failure episode, including after the short UI wait. */
   private refreshSavedSettings(semantic: boolean): Promise<StyleCommitResult> {
     this.savedSettingsRefresh ??= new SavedSettingsRefresh(/** Existing index owners retain atomic publication and source/demand fences. */ async (needsSemantic, current) => {
       if (this.unloading || !current()) return;
       await this.index.refreshPresentationSettings();
       if (needsSemantic && !this.unloading && current()) await this.index.refreshSemanticSettings();
+    }, /** Only an actual refresh rejection warrants recovery feedback; normal coalescing/timeouts are successful durable saves. */ () => {
+      if (!this.unloading) new Notice(this.translator("settings.savedRefreshPending"));
     });
     return this.savedSettingsRefresh.request(semantic);
   }
@@ -2672,8 +2673,7 @@ export default class KplexPlugin extends Plugin {
     if (this.unloading) return;
     // Preserve the established coverage decision; optional completion cannot hold the disk queue or Settings close.
     const needsSemantic = effects.semanticInvalidation || (effects.render && !effects.typographyOnly && !effects.paintOnly && !consentOnly && !layoutOnly && !isStyleOnlySettingsChange(effects) && !effects.changedKeys.every(/** Non-color theme geometry uses presentation/layout only. */ key => STYLE_SETTINGS_KEYS.some(/** Lens behavior keeps its separate owner. */ field => field === key)));
-    const completion = await this.refreshSavedSettings(needsSemantic);
-    if (completion.refreshPending && !this.unloading) new Notice(this.translator("settings.savedRefreshPending"));
+    await this.refreshSavedSettings(needsSemantic);
     // Workflow-only callers can still request their historical view notification. Changed settings
     // use the separate presentation channel and never pretend relationship evidence changed.
     if ((!effects.render || effects.typographyOnly) && notifyIndex) this.index.notifyPresentation();

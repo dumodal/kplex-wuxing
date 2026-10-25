@@ -271,6 +271,9 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
     for (const area of layout.areas) {
       if (!area.id || ["__proto__", "constructor", "prototype"].includes(area.id) || areaIds.has(area.id) || !Object.values(area.bounds).every(Number.isFinite) || area.bounds.width <= 0 || area.bounds.height <= 0) throw new Error("Invalid view area");
       areaIds.add(area.id);
+      if (area.dropRole !== undefined && !["parent", "child", "left", "right"].includes(area.dropRole)) throw new Error("Invalid area drop role");
+      if (area.dropOrigin !== undefined && (typeof area.dropOrigin !== "string" || !nodes.has(area.dropOrigin)
+        || !filtered.occurrences.some(row => row.id === area.dropOrigin && row.nodeId))) throw new Error("Invalid area drop origin");
       if (area.viewport && (!Object.values(area.viewport).every(Number.isFinite) || area.viewport.width <= 0 || area.viewport.height <= 0
         || area.viewport.contentHeight < 0 || area.viewport.initialScrollTop < 0)) throw new Error("Invalid area viewport");
       if (area.heightPreference && (!area.heightPreference.key || ["__proto__", "constructor", "prototype"].includes(area.heightPreference.key)

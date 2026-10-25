@@ -1,10 +1,12 @@
-/** Pure measured subtree geometry. Supplied occurrence ancestry/sides remain stable; no source, native editor or camera effects occur here. */
+/** Pure measured subtree and parent-area geometry. Parent forests occupy measured grid cells above the root; their width reserves lateral branch space. Supplied occurrence ancestry/sides remain stable; the shared host owns area filtering/scrolling/resizing and all native editor/camera effects. */
 import type {PlexProjection, PlexMeasurement, PlexViewLayout, ViewRect} from "../contracts";
 import type {MindMapConfiguration} from "./configuration";
 import {MIND_MAP_LIMITS} from "./configuration";
+import {measuredAreaGrid} from "../areaLayout";
 
 /** Place disjoint vertical subtree bands around a fixed root, with outward x spacing from measured parent/child rectangles. */
-export function layoutMindMap(projection: PlexProjection, measurements: readonly PlexMeasurement[], configuration: MindMapConfiguration): PlexViewLayout {
+export function layoutMindMap(projection: PlexProjection, measurements: readonly PlexMeasurement[], configuration: MindMapConfiguration,
+  areaHeights: Readonly<Record<string, number>> = {}): PlexViewLayout {
   const horizontalSpacing = configuration.horizontalSpacing / configuration.horizontalDensity;
   const verticalSpacing = configuration.verticalSpacing / configuration.verticalDensity;
   const root = projection.entry, branches = projection.occurrences, sizes = new Map(measurements.map(row => [row.id, row]));
@@ -43,24 +45,40 @@ export function layoutMindMap(projection: PlexProjection, measurements: readonly
   };
   const first = children.get(root) ?? [];
   const above = first.filter(branch => branch.role === "parent"), horizontal = first.filter(branch => branch.role !== "parent");
-  for (const side of [-1, 1] as const) place(horizontal.filter(branch => branch.branch?.side === side), positions.get(root)!, side);
-  /** Measure each parent's outward forest before placing its real semantic context above colliding root/side rectangles. */
+  /** A measured parent subtree is one grid tile, preserving its real ancestry and all editor dimensions. */
   const width = (id: string): number => sizes.get(id)!.width + ((children.get(id)?.length ?? 0)
     ? horizontalSpacing + Math.max(...children.get(id)!.map(child => width(child.id))) : 0);
-  const totalWidth = above.reduce((sum, row) => sum + width(row.id), 0) + Math.max(0, above.length - 1) * horizontalSpacing;
-  let left = -totalWidth / 2;
+  const grid = measuredAreaGrid(above.map(row => ({id: row.id, width: width(row.id), height: extents.get(row.id)!})),
+    configuration.parentColumns, horizontalSpacing, verticalSpacing);
+  const parentWidth = Math.max(rootSize.width, grid.width), height = Math.max(140, Math.min(800, areaHeights.parentHeight ?? 300));
+  const parentBounds = {x: -parentWidth / 2, y: -rootSize.height / 2 - verticalSpacing - height, width: parentWidth, height};
+  if (!Number.isFinite(height)) throw new Error("Invalid parent area height");
   for (const parent of above) {
-    const forestWidth = width(parent.id);
-    // A compact parent belongs just above the root, not above the tallest unrelated side branch.
-    // Expanded/wide parent forests move farther only when their horizontal span would collide.
-    const top = Math.min(-rootSize.height / 2, ...[...positions.values()]
-      .filter(rect => rect.x + rect.width / 2 > left && rect.x - rect.width / 2 < left + forestWidth)
-      .map(rect => rect.y - rect.height / 2));
-    const size = sizes.get(parent.id)!, rect = {x: left + size.width / 2, y: top - verticalSpacing - extents.get(parent.id)! / 2,
+    const tile = grid.positions.get(parent.id)!, size = sizes.get(parent.id)!;
+    const rect = {x: parentBounds.x + (parentWidth - grid.width) / 2 + tile.x - tile.width / 2 + size.width / 2,
+      y: parentBounds.y + tile.y,
       width: size.width, height: size.height};
     positions.set(parent.id, rect); place(children.get(parent.id) ?? [], rect, 1);
-    left += forestWidth + horizontalSpacing;
+  }
+  // The parent area's actual measured width, not child columns or node interior padding, sets the lateral baseline.
+  const lateralRoot = {...positions.get(root)!, width: parentWidth};
+  for (const side of [-1, 1] as const) {
+    const rows = horizontal.filter(branch => branch.branch?.side === side);
+    place([...rows.filter(row => row.role !== "child"), ...rows.filter(row => row.role === "child")], lateralRoot, side);
   }
   if (positions.size !== branches.length) throw new Error("Disconnected hierarchy");
-  return {positions, areas: []};
+  const areas: PlexViewLayout["areas"][number][] = [{id: "parent", labelKey: "graph.zoneParents", bounds: {...parentBounds, height}, resizeEdge: "top",
+    heightPreference: {key: "parentHeight", minimum: 140, maximum: 800}, dropRole: "parent",
+    viewport: {...parentBounds, height, contentTop: parentBounds.y, contentHeight: Math.max(height, grid.height), initialScrollTop: 0},
+    reflow: {columns: configuration.parentColumns, columnGap: horizontalSpacing, rowGap: verticalSpacing}}];
+  const padding = Math.min(8, verticalSpacing / 4, horizontalSpacing / 4);
+  for (const [id, dropRole] of [["child-left", "child"], ["child-right", "child"], ["left", "left"]] as const) {
+    const rects = branches.filter(row => row.areaId === id).map(row => positions.get(row.id)!);
+    if (!rects.length) continue;
+    const left = Math.min(...rects.map(rect => rect.x - rect.width / 2)) - padding, top = Math.min(...rects.map(rect => rect.y - rect.height / 2)) - padding;
+    areas.push({id, labelKey: dropRole === "child" ? "graph.zoneChildren" : "graph.zoneFriendsChallengers", dropRole,
+      bounds: {x: left, y: top, width: Math.max(...rects.map(rect => rect.x + rect.width / 2)) + padding - left,
+        height: Math.max(...rects.map(rect => rect.y + rect.height / 2)) + padding - top}});
+  }
+  return {positions, areas};
 }

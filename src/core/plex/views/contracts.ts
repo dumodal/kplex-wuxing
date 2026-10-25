@@ -77,6 +77,8 @@ export type PlexArea = Readonly<{
   viewport?: ViewRect & {contentTop: number; contentHeight: number; initialScrollTop: number};
   /** Physical area action is explicit; arbitrary areas have no relationship-write meaning by default. */
   dropRole?: "parent" | "child" | "left" | "right";
+  /** Exact admitted canonical origin; omission means projection root/entry. Area placement is never relationship provenance. */
+  dropOrigin?: OccurrenceId;
   reflow?: Readonly<{columns: number; columnGap: number; rowGap: number; paddingTop?: number; paddingBottom?: number}>;
 }>;
 export type PlexViewLayout = Readonly<{

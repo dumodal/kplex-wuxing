@@ -73,6 +73,22 @@ test('expanded descendants keep child edges on bottom and every peer edge on the
  assert(p.preparation.parents.length<=8);assert(p.occurrences.length<=256);
 });
 
+test('measured parent columns occupy a bounded area above root and reserve the horizontal branch baseline',()=>{
+ const f=graphInput({R:['Child']});const parents=Array.from({length:7},(_,i)=>'Parent'+i);
+ for(const id of parents)f.nodes.set(id,{id,kind:'markdown',label:id});const read=f.input.read.relations;
+ f.input.read.relations=(id,role,max)=>id==='R'&&role==='parent'?{items:parents.slice(0,max).map(id=>({node:f.nodes.get(id),role:'parent',relationType:1,direction:1})),coverage:'local',truncated:false}:read(id,role,max);
+ const p=f.project(),measurements=p.occurrences.map(row=>({id:row.id,width:row.nodeId==='Parent0'?440:180,height:40}));
+ const layout=(columns,density=1,heights={})=>M.layoutMindMap(p,measurements,{...M.mindMapConfiguration(),parentColumns:columns,horizontalDensity:density},heights);
+ const one=layout(1),three=layout(3),area=three.areas.find(row=>row.id==='parent'),root=three.positions.get('root');
+ assert.equal(root.x,0);assert.equal(root.y,0);assert(area.bounds.y+area.bounds.height< -root.height/2);assert.equal(area.heightPreference.key,'parentHeight');assert.equal(area.dropRole,'parent');
+ assert(area.viewport.contentHeight>=area.viewport.height);assert(p.occurrences.filter(row=>parents.includes(row.nodeId)).every(row=>row.areaId==='parent'));
+ const parentRects=parents.map(id=>three.positions.get(p.occurrences.find(row=>row.nodeId===id).id));assert.equal(new Set(parentRects.slice(0,3).map(row=>row.y)).size,1);assert.equal(new Set(parentRects.slice(0,3).map(row=>row.x)).size,3);
+ const child=p.occurrences.find(row=>row.nodeId==='Child').id;assert(three.positions.get(child).x>one.positions.get(child).x,'Wider measured parent area moves the horizontal baseline outward');
+ const sparse=layout(3,0.1);assert(sparse.positions.get(child).x>three.positions.get(child).x);assert.equal(sparse.positions.get('root').width,root.width,'Density never changes node interior size');
+ const resized=layout(3,1,{parentHeight:140});assert.equal(resized.areas[0].bounds.height,140);assert(resized.areas[0].viewport.contentHeight>140);assert.deepEqual(resized.positions.get('root'),root);assert.equal(resized.positions.get(child).x,three.positions.get(child).x,'Height does not change horizontal anchors');
+ for(const id of [0,4,1.5])assert.equal(M.mindMapConfiguration({status:'available',values:{parentColumns:id}}),null);
+});
+
 test('fold and generation reducers are occurrence-scoped, bounded, and do not confuse unknown empty incidence with a proven leaf',()=>{
  const f=graphInput({R:['B','C'],B:['D'],C:['D']},{scope:id=>id==='B'?{coverage:'cached',prepared:false,complete:false,pending:false}:{coverage:'local',prepared:true,complete:true,pending:false}});
  let p=f.project();const B=p.occurrences.find(row=>row.nodeId==='B');assert.equal(B.branch.canExpand,true);assert.equal(B.branch.expanded,false);

@@ -94,7 +94,7 @@ async function scenario(app,c){
   check((await p.loadData()).canvasViewSettings[probe.id].values.ridgeOffset===50,'Contributed setting not durable');
   cases.push({id:'main-test-contribution-to-effective-native-view',beforeLeft:before.left,afterLeft:node().style.left,rootRetained:true,sessionRetained:true,focusRetained:true});
   await open('settings.ui.plex.behavior','view.mindmap');
-  for(const key of ['mindmap.arrangement','mindmap.horizontalSpacing','mindmap.verticalSpacing','graph.horizontalDensity','graph.verticalDensity','mindmap.initialGenerations','mindmap.maximumDepth','mindmap.maximumOccurrences'])check(keyRow(key),'Mind Map native control missing: '+key);
+  for(const key of ['graph.parentColumns','mindmap.arrangement','mindmap.horizontalSpacing','mindmap.verticalSpacing','graph.horizontalDensity','graph.verticalDensity','mindmap.initialGenerations','mindmap.maximumDepth','mindmap.maximumOccurrences'])check(keyRow(key),'Mind Map native control missing: '+key);
   const mindMapSpacing=keyRow('mindmap.horizontalSpacing').querySelector('input[type=range]'),spacingValue=Number(mindMapSpacing.value)===240?40:240;
   mindMapSpacing.focus();input(mindMapSpacing,spacingValue);await until(()=>p.settings.canvasViewSettings.mindmap?.values.horizontalSpacing===spacingValue,'Mind Map native spacing did not save');await p.settingsWriteQueue;
   check((await p.loadData()).canvasViewSettings.mindmap.values.horizontalSpacing===spacingValue,'Mind Map type control not durable');

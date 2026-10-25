@@ -5,7 +5,7 @@ import {mindMapConfiguration, MIND_MAP_LIMITS} from "./configuration";
 import {admitMindMapState, restoreMindMapState, scopeMindMapState} from "./state";
 import {mindMapEditorPaths, mindMapOccurrence} from "./occurrences";
 
-type BranchWork = {id: string; lineage: readonly NodeId[]; depth: number; side: -1 | 1; relation?: PlexViewRelation; parent?: string};
+type BranchWork = {id: string; lineage: readonly NodeId[]; depth: number; side: -1 | 1; areaId?: string; relation?: PlexViewRelation; parent?: string};
 
 /** Traverse a finite breadth-first child/peer frontier with root parent context; repeated notes remain independent and ancestor cycles become terminal references. */
 export function projectMindMap(input: PlexViewInput): PlexProjection | null {
@@ -100,7 +100,7 @@ export function projectMindMap(input: PlexViewInput): PlexProjection | null {
     }
     const branch: PlexBranch = {parent: work.parent, depth: work.depth, side: work.side, expanded: admitted, canExpand, reference, status};
     const peerPort = work.depth === 0 || work.side === -1 ? "left" : "right";
-    occurrences.push({id: work.id, nodeId: canonical, representation: "thought", role: work.relation?.role,
+    occurrences.push({id: work.id, nodeId: canonical, areaId: work.areaId, representation: "thought", role: work.relation?.role,
       relation: work.relation, branch, ports: work.depth === 0 ? {top: "parent", bottom: "child", left: "left"}
         : work.side === 1 ? {left: "parent", bottom: "child", right: "left"} : {left: "left", bottom: "child", right: "parent"},
       peerPort: {side: peerPort, count: new Set(rows.items.filter(row => ["left", "right", "previous", "next"].includes(row.role)).map(row => row.node.id)).size,
@@ -113,7 +113,8 @@ export function projectMindMap(input: PlexViewInput): PlexProjection | null {
     for (const child of children) {
       const side = work.depth ? work.side : child.relation.role === "parent" ? 1 : child.relation.role !== "child" ? -1
         : configuration.arrangement === "left" ? -1 : configuration.arrangement === "right" ? 1 : state.sides[child.id];
-      queue.push({...child, parent: work.id, depth: work.depth + 1, side});
+      const areaId = work.depth ? work.areaId : child.relation.role === "parent" ? "parent" : child.relation.role === "child" ? side === -1 ? "child-left" : "child-right" : "left";
+      queue.push({...child, parent: work.id, depth: work.depth + 1, side, areaId});
     }
   }
   if (!input.read.isCurrent()) return null;

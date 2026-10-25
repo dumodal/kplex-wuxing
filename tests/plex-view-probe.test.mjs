@@ -27,6 +27,7 @@ const output=await build({stdin:{resolveDir:process.cwd(),contents:`
   export {editViewConfiguration} from './src/core/plex/views/configuration';
   export {mindMapViewDefinition} from './src/core/plex/views/mindmap/definition';
   export {builtInCanvasViewSettings} from './src/ui/plexViews/settingsContributions';
+  export {compileGraphPredicate} from './src/core/plex/predicate';
 `},write:false,bundle:true,platform:'browser',format:'iife',globalName:'sourceModules',plugins:[{name:'finite-native-host',setup(builder){
   builder.onResolve({filter:/^obsidian$/},()=>({path:'host',namespace:'finite'}));
   builder.onLoad({filter:/.*/,namespace:'finite'},()=>({contents:nativeStub}));
@@ -50,14 +51,15 @@ test('non-Classic definition uses the production scene, selection, Find and acti
         getNodeVisualRevision:()=>0,resolveNodeVisuals:async()=>new Map(),invalidateNodeVisual:()=>{},gateStats:page=>({top:{visibleCount:page.path==='Repeated.md'?1:0,hasAny:page.path==='Repeated.md',complete:true},
           bottom:{visibleCount:page.path==='Root.md'?1:0,hasAny:page.path==='Root.md',complete:true},left:{visibleCount:0,hasAny:false,complete:true},right:{visibleCount:0,hasAny:false,complete:true}}),neighbourCount:()=>0,
         subscribe,subscribePresentation:subscribe,
-        getNeighborhood:()=>{work.classicReads++;return {center:pages.get('Focus.md'),parents:[],children:[],leftFriends:[],rightFriends:[],siblings:[]}},visibleRelationshipsWithin:()=>{throw Error('Non-Classic entered Classic cross-link projection')},
+        getNeighborhood:()=>{work.classicReads++;return {center:pages.get('Focus.md'),parents:[],children:[],leftFriends:[],rightFriends:[],siblings:[]}},visibleRelationshipsWithin:()=>[],
         explainRelationship:()=>null};
       const groupedDefinition={...M.probeViewDefinition,id:'test.grouped',project(input){const projection=M.probeViewDefinition.project(input);if(!projection)return null;
         return {...projection,occurrences:[...projection.occurrences,{id:'extra-above',nodeId:'Other.md',areaId:'grove',groupingPartition:'upper',representation:'thought',role:'child'}]}}};
       const failedDefinition={...M.probeViewDefinition,id:'test.failed',layout(){throw Error('Deliberate scene failure')}};
       const unavailableDefinition={...M.probeViewDefinition,id:'test.unavailable',project(){return null}};
       const rootedDefinition={...M.probeViewDefinition,id:'test.rooted',navigation:'rooted'};
-      const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.probeViewDefinition,groupedDefinition,failedDefinition,unavailableDefinition,rootedDefinition]);const session=new M.PlexViewSession(registry,()=>{});session.select('test.situated');
+      const readonlyAreaDefinition={...M.probeViewDefinition,id:'test.readonly-areas',layout(...args){const layout=M.probeViewDefinition.layout(...args);return {...layout,areas:layout.areas.map(({heightPreference,...area})=>area)}}};
+      const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.probeViewDefinition,groupedDefinition,failedDefinition,unavailableDefinition,rootedDefinition,readonlyAreaDefinition]);const session=new M.PlexViewSession(registry,()=>{});session.select('test.situated');
       const actionPorts={current:null},activations=[],plugin={settings,index,viewSettingsRegistry:M.builtInCanvasViewSettings,translator:M.createTranslator('en'),app:{workspace:{...nativeEvents},metadataCache:{...nativeEvents,getFileCache:()=>null},vault:{getFileByPath:path=>pages.get(path)?.file??null,cachedRead:()=>{work.reads++;throw Error('Unexpected note read')}}},
         saveSettings:()=>{work.settingsWrites++;throw Error('Unexpected global settings write')},getTypographyDevice:()=> 'desktop',isKplexLeafVisible:()=>true,subscribeKplexVisibility:subscribe,subscribeNodeFlair:subscribe,getHierarchyColorRevision:()=>0,
         isActionSurfaceCurrent:()=>true,getSavedSettingsPolicy:()=>null};
@@ -123,6 +125,10 @@ test('non-Classic definition uses the production scene, selection, Find and acti
       props.renderRevision++;M.flushSync(()=>root.render(M.createElement(Harness)));await new Promise(resolve=>setTimeout(resolve,0));
       const configuredAfter=mount.querySelector('[data-kplex-keyboard-id="layout-root"]').style.left;
       const configurationRetainedSession=JSON.stringify(session.getState())===sessionBefore;
+      const editableBefore=actionPorts.current.canEditAreas(),retiredAreaModes=[];props.areaSettingsMode=true;props.onAreaSettingsModeChange=value=>{retiredAreaModes.push(value);props.areaSettingsMode=value};
+      M.flushSync(()=>session.select('test.readonly-areas'));await new Promise(resolve=>setTimeout(resolve,20));
+      const areaCapability={before:editableBefore,after:actionPorts.current.canEditAreas(),retired:retiredAreaModes,scrollPanels:mount.querySelectorAll('.kplex-zone-panel').length,failed:!!mount.querySelector('.kplex-view-error')};
+      props.onAreaSettingsModeChange=()=>{};M.flushSync(()=>session.select('test.situated'));await new Promise(resolve=>setTimeout(resolve,0));
       M.flushSync(()=>session.select('test.failed'));await new Promise(resolve=>setTimeout(resolve,0));
       const failureVisible=!!mount.querySelector('.kplex-view-error'),sameShell=mount.querySelector('.kplex-plex')===rootBefore;
       const failureAction=await act('node.activate');
@@ -133,7 +139,7 @@ test('non-Classic definition uses the production scene, selection, Find and acti
       M.flushSync(()=>session.recover());await new Promise(resolve=>setTimeout(resolve,0));
       const remainingFailure=!!mount.querySelector('.kplex-view-error');
       const snapshot={nodes,physicalPorts,physicalCount,entry,above,below,activations,decorativeCheck,decorativeOutcome,findText,filtered,restored,
-        resizedHeight,heightRestored,retainedSelection,selectionRestored,retainedCamera,cameraRestored,staleOutcome,groupCount,unfolded,normalClassicReads,configuredBefore,configuredAfter,configurationRetainedSession,failureVisible,sameShell,failureAction,recovered,unavailableFallback,remainingFailure,
+        resizedHeight,heightRestored,retainedSelection,selectionRestored,retainedCamera,cameraRestored,staleOutcome,groupCount,unfolded,normalClassicReads,configuredBefore,configuredAfter,configurationRetainedSession,areaCapability,failureVisible,sameShell,failureAction,recovered,unavailableFallback,remainingFailure,
         errors:[...errors],text:mount.textContent,ports:!!actionPorts.current,work:{...work}};
       releaseAction();
       root.unmount();session.dispose();plugin.actionManager.dispose();const legacyEvents=events.size,legacyAfter={...work};
@@ -194,7 +200,20 @@ test('non-Classic definition uses the production scene, selection, Find and acti
       const heldBranch=plugin.actionManager.prepare({id:'branch.toggle',source:'local-menu',surfaceId:'probe',target:branchTarget});
       const rerootOutcome=await act('view.root.selected',{kind:'explicit',node:M.actionNodeRef(pages.get('Other.md'))});await new Promise(resolve=>setTimeout(resolve,20));
       const staleBranch=heldBranch.state==='accepted'?await heldBranch.run():null,rerooted=hierarchySession.layoutRoot(props.activePath);
-      releaseHierarchyAction();hierarchyRoot.unmount();hierarchySession.dispose();plugin.actionManager.dispose();const hierarchyProof={initial:initialHierarchy,expanded:expandedHierarchy,attention:attentionHierarchy,collapsed:collapsedHierarchy,after:{...work},events:events.size,errors:[...errors],mismatched,toggleOutcome,frontiers:frontierProof,density:densityProof,find:hierarchyFindProof,keyboard:keyboardHierarchy,rerootOutcome,staleBranch,rerooted};
+      index.neighbours=(page,role)=>page.path==='Root.md'&&role==='child'?['Repeated.md','Other.md'].map(id=>({page:pages.get(id),role,relationType:1,typeDefinition:'Child',linkDirection:1})):[];
+      let crossReads=0;index.visibleRelationshipsWithin=(page,within)=>{crossReads++;return page.path==='Repeated.md'&&within.has('Other.md')?[{page:pages.get('Other.md'),role:'child',relationType:1,typeDefinition:'Cross-child',linkDirection:1}]:[]};
+      settings.groupRelations=false;hierarchySession.setRoot('Root.md');props.renderRevision++;renderHierarchy();await new Promise(resolve=>setTimeout(resolve,40));
+      const crossElement=mount.querySelector('.is-cross-link [data-kplex-edge-id]');if(!crossElement)throw Error('Enabled canonical occurrence cross-link absent '+JSON.stringify({crossReads,root:hierarchySession.layoutRoot(props.activePath),state:hierarchySession.state,nodes:[...mount.querySelectorAll('[data-kplex-keyboard-id]')].map(n=>[n.dataset.kplexKeyboardId,n.style.cssText]),edges:[...mount.querySelectorAll('[data-kplex-edge-id]')].map(n=>n.dataset.kplexEdgeId),text:mount.textContent}));
+      const crossId=crossElement.dataset.kplexEdgeId,crossTarget={kind:'edge',origin:M.actionNodeRef(pages.get('Repeated.md')),target:M.actionNodeRef(pages.get('Other.md')),evidenceId:crossId};
+      const beforeToggle={semantic:work.semantic,reads:crossReads},crossAvailability=plugin.actionManager.check({id:'relationship.connect',source:'local-menu',surfaceId:'probe',target:crossTarget});
+      props.showCrossLinks=false;renderHierarchy();await new Promise(resolve=>setTimeout(resolve,20));
+      const hiddenCross={count:mount.querySelectorAll('.is-cross-link').length,availability:plugin.actionManager.check({id:'relationship.connect',source:'local-menu',surfaceId:'probe',target:crossTarget}).state,semantic:work.semantic,reads:crossReads};
+      props.showCrossLinks=true;renderHierarchy();await new Promise(resolve=>setTimeout(resolve,20));
+      const crossProof={id:crossId,availability:crossAvailability.state,before:beforeToggle,hidden:hiddenCross,restored:mount.querySelectorAll('.is-cross-link').length,semantic:work.semantic};
+      const gatePairs=[];index.captureSemanticGateRead=()=>({isCurrent:()=>true,read:(page,targets)=>{gatePairs.push([page.path,[...targets]]);return new Map()}});
+      props.predicate=M.compileGraphPredicate({kind:'all',expressions:[]});props.predicateRevision++;renderHierarchy();await new Promise(resolve=>setTimeout(resolve,20));
+      crossProof.filtered={count:mount.querySelectorAll('.is-cross-link').length,pairs:gatePairs,semantic:work.semantic};
+      releaseHierarchyAction();hierarchyRoot.unmount();hierarchySession.dispose();plugin.actionManager.dispose();const hierarchyProof={initial:initialHierarchy,expanded:expandedHierarchy,attention:attentionHierarchy,collapsed:collapsedHierarchy,after:{...work},events:events.size,errors:[...errors],mismatched,toggleOutcome,frontiers:frontierProof,density:densityProof,find:hierarchyFindProof,keyboard:keyboardHierarchy,rerootOutcome,staleBranch,rerooted,cross:crossProof};
       style.remove();mount.remove();return {...snapshot,events:legacyEvents,after:legacyAfter,rooted:rootedProof,hierarchy:hierarchyProof};
     })()`);
     assert.deepEqual(result.physicalPorts,['left']);assert.equal(result.physicalCount,'1');
@@ -209,6 +228,7 @@ test('non-Classic definition uses the production scene, selection, Find and acti
     assert.equal(result.normalClassicReads,0);assert.equal(result.unavailableFallback,true);assert.equal(result.failureVisible,true);assert.equal(result.sameShell,true);
     assert.notEqual(result.configuredBefore,result.configuredAfter,'type configuration reaches the actual shared renderer');
     assert.equal(result.configurationRetainedSession,true,'configuration does not replace per-canvas state');
+    assert.deepEqual(result.areaCapability,{before:true,after:false,retired:[false],scrollPanels:1,failed:false},'Unsupported editable-area mode retires through its owner without removing bounded filtering/scrolling');
     assert.equal(result.failureAction.status,'unavailable');assert.equal(result.recovered,'classic');assert.equal(result.remainingFailure,false);
     assert.equal(result.work.settingsWrites,0);assert.equal(result.work.semantic,1);assert.equal(result.after.releases,1);assert.equal(result.after.presentation,0);assert.equal(result.events,0);
     assert.equal(result.after.reads,0);assert.equal(result.after.parses,0);assert.equal(result.after.publishes,0);
@@ -228,6 +248,11 @@ test('non-Classic definition uses the production scene, selection, Find and acti
     assert.equal(result.hierarchy.density.values.horizontalDensity,2);assert.equal(result.hierarchy.density.values.verticalDensity,1.5);
     assert.equal(result.hierarchy.density.root,result.hierarchy.density.before.root);assert.equal(result.hierarchy.density.camera,result.hierarchy.density.before.camera);
     assert.equal(result.hierarchy.density.semantic,result.hierarchy.density.before.semantic,'Live density rails never acquire another frontier');
+    assert.equal(result.hierarchy.cross.availability,'enabled');assert.equal(result.hierarchy.cross.hidden.count,0);assert.equal(result.hierarchy.cross.hidden.availability,'disabled');
+    assert.equal(result.hierarchy.cross.hidden.reads,result.hierarchy.cross.before.reads,'Disabling cross-links performs no cached incidence pass');
+    assert.equal(result.hierarchy.cross.restored,1);assert.equal(result.hierarchy.cross.semantic,result.hierarchy.cross.before.semantic,'Cross-link composition never acquires semantic sources');
+    assert.equal(result.hierarchy.cross.filtered.count,1);assert(result.hierarchy.cross.filtered.pairs.some(([path,targets])=>path==='Repeated.md'&&targets.includes('Other.md')),'Filtered gate population retains the actual extra canonical pair');
+    assert.equal(result.hierarchy.cross.filtered.semantic,result.hierarchy.cross.semantic);
     assert.equal(result.hierarchy.after.reads,0);assert.equal(result.hierarchy.after.parses,0);assert.equal(result.hierarchy.after.publishes,0);assert.equal(result.hierarchy.after.settingsWrites,0);
   } finally {await host.cleanup();}
 });

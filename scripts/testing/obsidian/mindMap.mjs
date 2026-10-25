@@ -4,6 +4,8 @@ import {join} from 'node:path';
 import {runControlledProbe} from './controlledProbe.mjs';
 import {nativeDocumentSessions} from './nativeDocumentSessions.mjs';
 import {validateTarget} from './runner.mjs';
+import {acceptMindMapInteractions} from './mindMapInteractions.mjs';
+import {nativeHtmlDrag} from './nativeHtmlDrag.mjs';
 
 /** Run separate bounded editor and two-canvas lanes against actual production registration, then restore all owned resources independently of success. */
 async function scenario(app,c){
@@ -55,6 +57,7 @@ async function scenario(app,c){
   c.progress={phase:'create-folder',lane:c.lane,cases};createdFolder=await app.vault.createFolder(folder);const child=p.settings.hierarchy.children[0];check(child,'Child ontology required');const children={R:['P','Q'],P:['B'],Q:['B'],B:['D'],D:['R'],Left:['LeftChild']};
   const peerFields=[p.settings.hierarchy.leftFriends[0],p.settings.hierarchy.rightFriends[0],p.settings.hierarchy.previous[0],p.settings.hierarchy.next[0]];
   const names=c.lane==='navigation'?['R','A','P','Q','B','C','D','S','Left','Right','Prev','Next','LeftChild','LeafPeer']:['R','A','P','Q','B','C','D','S'];
+  if(c.lane==='interactions'){for(let i=0;i<12;i++){const name='Parent'+i;names.push(name);children[name]=['R']}children.P=['B','Q']}
   for(const name of names){
    c.progress={phase:'create-fixture-note',note:name,lane:c.lane,cases};const fields=children[name]?{[child]:children[name].map(value=>'[['+path(value)+']]')}:{};
    if(c.lane==='navigation'&&name==='R')for(const[index,peer]of ['Left','Right','Prev','Next'].entries())fields[peerFields[index]]=['[['+path(peer)+']]'];
@@ -63,13 +66,13 @@ async function scenario(app,c){
    const file=await app.vault.create(path(name),(yaml?'---\n'+yaml+'\n---\n':'')+'# '+name+'\n');files.push(file);p.index.insertCreatedFile(file);releases.push(p.index.acquireSemanticDemand(file.path));
   }
   c.progress={phase:'settle-fixture',lane:c.lane,cases};await until(()=>files.every(file=>app.metadataCache.getFileCache(file))&&!p.index.hasPendingSemanticPreparation()&&!p.index.hasActiveSemanticPreparation(),'Fixture not ready');
-  Object.assign(p.settings,{documentSyncMode:'off',sidecarOpen:false,embedCentralNode:false,autoOpenCentralDocument:false,followActiveFile:false,centralNodeMarkdownMode:'source',animationSpeed:0,allowAutozoom:true,graphDepth:1,renderSiblings:false,showPageNodes:true,showInferredNodes:true,showFolderNodes:false,showTagNodes:false,graphLenses:[],applyPowerFilter:false,groupRelations:false,
+  Object.assign(p.settings,{documentSyncMode:'off',sidecarOpen:false,embedCentralNode:false,autoOpenCentralDocument:false,followActiveFile:false,centralNodeMarkdownMode:'source',animationSpeed:0,allowAutozoom:true,graphDepth:1,renderSiblings:false,showPageNodes:true,showInferredNodes:true,showFolderNodes:false,showTagNodes:false,showCrossLinks:true,graphLenses:[],applyPowerFilter:false,groupRelations:false,
    canvasViewSettings:{...p.settings.canvasViewSettings,mindmap:{version:1,values:{arrangement:'right',initialGenerations:1,maximumDepth:6,maximumOccurrences:128,horizontalSpacing:96,verticalSpacing:24}}}});p.index.notifyPresentation();
   c.progress={phase:'open-native-host',lane:c.lane,cases};const host=workspace.getLeaf('tab');hosts.push(host);const prototype=Object.getPrototypeOf(host),setState=prototype.setViewState;
   prototype.setViewState=function(...args){if(this.containerEl.closest('.kplex-central-editor-leaf-host'))embedded.add(this);return setState.apply(this,args)};restores.push(()=>{prototype.setViewState=setState});
   await host.setViewState({type:'k-plex-react-view',active:true});await workspace.revealLeaf(host);await host.view.waitUntilReady();host.view.centerPresentation.update({embedCentralNode:false,centralNodeMarkdownMode:'source'});p.notifyNavigation(path('A'),host);
   await until(()=>host.view.documentSession.centerPath===path('A'),'Initial attention absent');session(host).select('mindmap');session(host).setRoot(path('R'));
-  await until(()=>nodes(host).length===(c.lane==='navigation'?8:4)&&!root(host).querySelector('.kplex-view-error'),'Production rooted Mind Map absent');
+  await until(()=>nodes(host).length===(c.lane==='navigation'?8:c.lane==='interactions'?16:4)&&!root(host).querySelector('.kplex-view-error'),'Production rooted Mind Map absent');
   check(session(host).definition.id==='mindmap'&&session(host).definition.editorHosting==='occurrence','Production definition mismatch');
   if(c.lane==='navigation'){
    c.progress={phase:'root-context-and-navigation',cases};await act(host,'view.fit');
@@ -101,6 +104,8 @@ async function scenario(app,c){
     const input=read(),owner=input.ownerDocument.defaultView.require('@electron/remote').getCurrentWindow();check(Number(input.min)===0.1,'Spacious minimum missing from live rail');input.focus();check(input.ownerDocument.activeElement===input,'Density rail did not own native focus');for(const type of ['keyDown','keyUp'])owner.webContents.sendInputEvent({type,keyCode:'Home'});await until(()=>p.settings.canvasViewSettings.mindmap.values[field]===0.1,'Native Home did not select spacious minimum');await p.settingsWriteQueue;check((await p.loadData()).canvasViewSettings.mindmap.values[field]===0.1&&Number(read().value)===0.1,'Spacious density minimum was not durable');
    }
    check(session(host).layoutRoot(path('S'))===path('S')&&!session(host).editors.bindings.length,'Density changed navigation/editor state');cases.push({id:'trusted-bottom-left-density-rails-share-durable-type-settings'});
+  }else if(c.lane==='interactions'){
+   await c.acceptInteractions({app,p,c,host,hosts,restores,path,root,session,nodes,act,check,wait,until,clickNative,cases});
   }else if(c.lane==='editor'){
    c.progress={phase:'canonical-branches',cases};
    for(let i=0;i<3;i++)check((await act(host,'branches.expand-generation')).status==='completed','Generation expansion rejected');
@@ -191,7 +196,7 @@ async function scenario(app,c){
 }
 
 if(process.env.KPLEX_TEST_VAULT_NAME!=='kplex-test-small')throw Error('Explicit Small required');
-const lane=process.env.KPLEX_MINDMAP_LANE??'editor';if(!['editor','sessions','navigation'].includes(lane))throw Error('Expected editor, sessions or navigation lane');
+const lane=process.env.KPLEX_MINDMAP_LANE??'editor';if(!['editor','sessions','navigation','interactions'].includes(lane))throw Error('Expected editor, sessions, navigation or interactions lane');
 const target=validateTarget({vaultName:process.env.KPLEX_TEST_VAULT_NAME,vaultPath:process.env.KPLEX_TEST_VAULT_PATH,configDir:process.env.KPLEX_TEST_CONFIG_DIR});
-const definitions='c.lane='+JSON.stringify(lane)+';c.originalData='+JSON.stringify(readFileSync(join(target.pluginDir,'data.json'),'utf8'))+';c.documentSessions=('+nativeDocumentSessions.toString()+');';
-await runControlledProbe('mindmap-219-'+lane,scenario,definitions,['src/application/PlexHierarchyDemand.ts','src/application/PlexViewSession.ts','src/ui/App.tsx','src/ui/KplexDocumentSession.ts','src/core/plex/views/contracts.ts','src/core/plex/views/registry.ts','src/core/plex/views/mindmap/configuration.ts','src/ui/plexViews/settingsContributions.ts','src/ui/plexViews/measurement.ts','src/types.ts','src/ui/PlexGraph.tsx','src/ui/ThoughtNode.tsx','src/ui/plexViews/prepareScene.ts','src/ui/plexViews/useHierarchyDemand.ts','src/core/plex/views/mindmap/definition.ts','src/core/plex/views/mindmap/projection.ts','src/core/plex/views/mindmap/layout.ts','src/ui/plexViews/mindmap/settings.ts','scripts/testing/obsidian/mindMap.mjs','scripts/testing/obsidian/nativeDocumentSessions.mjs'],{maximumMs:240000});
+const definitions='c.lane='+JSON.stringify(lane)+';c.originalData='+JSON.stringify(readFileSync(join(target.pluginDir,'data.json'),'utf8'))+';c.documentSessions=('+nativeDocumentSessions.toString()+');c.acceptInteractions=('+acceptMindMapInteractions.toString()+');c.htmlDrag=('+nativeHtmlDrag.toString()+');';
+await runControlledProbe('mindmap-219-'+lane,scenario,definitions,['src/application/PlexHierarchyDemand.ts','src/application/PlexViewSession.ts','src/ui/App.tsx','src/ui/KplexDocumentSession.ts','src/core/plex/views/contracts.ts','src/core/plex/views/registry.ts','src/core/plex/views/mindmap/configuration.ts','src/ui/plexViews/settingsContributions.ts','src/ui/plexViews/measurement.ts','src/types.ts','src/ui/PlexGraph.tsx','src/ui/ThoughtNode.tsx','src/ui/plexViews/prepareScene.ts','src/ui/plexViews/useHierarchyDemand.ts','src/core/plex/views/mindmap/definition.ts','src/core/plex/views/mindmap/projection.ts','src/core/plex/views/mindmap/layout.ts','src/ui/plexViews/mindmap/settings.ts','scripts/testing/obsidian/mindMap.mjs','scripts/testing/obsidian/mindMapInteractions.mjs','scripts/testing/obsidian/nativeHtmlDrag.mjs','src/core/plex/views/areaLayout.ts','src/ui/plexViews/crossLinks.ts','src/ui/plexViews/reflowArea.ts','src/adapters/obsidian/nodeLinkDrag.ts','scripts/testing/obsidian/nativeDocumentSessions.mjs'],{maximumMs:240000});

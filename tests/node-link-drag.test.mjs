@@ -131,3 +131,14 @@ test("folder prompting is a finite optional node-open argument, never an executa
   for (const args of [{ chooseFolder: "yes" }, { chooseFolder: () => true }, { chooseFolder: true, run: "other" }, {preserveCenter: "yes"}]) assert.equal(api.validActionArguments("node.open", args), false);
   assert.equal(api.validActionArguments("node.activate", { chooseFolder: true }), false);
 });
+
+/** Native/plain single URLs use the existing canonical URL owner and never create a missing endpoint or reinterpret arbitrary Markdown. */
+test('native external URLs and cold physical files resolve through existing bounded readers',()=>{
+ const f=fixture(),url=page({path:'https://example.com/a',url:'https://example.com/a'}),file={path:'Cold.md',extension:'md'},cold=page({path:file.path,file});
+ const reads=[],read={get:id=>{reads.push(id);return id===url.path?url:undefined},getVaultSearchPage:id=>id===file.path?cold:null};
+ f.manager.draggable={type:'link',linktext:'https://EXAMPLE.COM/a',sourcePath:'Origin.md',file:null};assert.equal(api.draggedGraphPage(f.app,read),url);
+ f.manager.draggable=null;assert.equal(api.draggedGraphPage(f.app,read,{dataTransfer:{getData:()=>url.path}}),url);
+ for(const text of ['https://unknown.example/a','https://example.com/a extra','[label](https://example.com/a)','javascript:alert(1)'])assert.equal(api.draggedGraphPage(f.app,read,{dataTransfer:{getData:()=>text}}),null);
+ f.files.set(file.path,file);f.manager.draggable={type:'file',file};assert.equal(api.draggedGraphPage(f.app,read),cold);assert.equal(reads.at(-1),'Cold.md');
+ assert.equal(f.calls.length,0,'Reading a destination cannot start native actions or source work');
+});
