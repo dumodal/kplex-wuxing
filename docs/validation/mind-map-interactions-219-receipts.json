@@ -348,6 +348,23 @@
       "status": "failed",
       "phase": "portable-verify",
       "cause": "Isolated indexing transpile inventory omitted newly imported areaLayout. Add the real module; no production/timing/guard/assertion change. Cross-link UI bundler already follows imports."
+    },
+    {
+      "head": "31d6fa10ddac2420c015a97135b441d2ea1f7dc7",
+      "status": "failed",
+      "indexing": "passed including original responsiveness guards",
+      "functional": {
+        "tests": 1498,
+        "pass": 1497,
+        "fail": 1,
+        "skip": 0
+      },
+      "cause": "New generic recovery callback duplicated existing dialog-owned Style saved feedback on actual refresh failure. Preserve single-notice assertion; add optional per-request feedback ownership, default caller result."
     }
-  ]
+  ],
+  "feedbackOwnerCorrection": {
+    "styleFailureManagerSettingsExistingCase": "passed unchanged",
+    "genericQueuedLateEpisodeRecoveryUnload": "passed",
+    "fullFinal": "pending"
+  }
 }

@@ -161,3 +161,5 @@ Mind Map contributes nine native type controls. Parent columns (1–3/default2) 
 Area settings is a current-scene capability, not a view-ID preference. Views with no supported editable height regions hide/refuse that action and retire existing area-edit mode while preserving their bounded filters/scrolling. Normal coalesced/200ms-pending refresh after a saved setting is quiet; only actual refresh rejection uses the existing recovery notice. Disk failures, conflicts and saved/pending modal result semantics remain intact.
 
 The maintainer later authorized #219 test main.js/styles.css deployment and node/view navigation in the named production vault with notes strictly read-only. That narrow authorization does not permit note edits, release, or merging #219/#220.
+
+Refresh feedback ownership: saved/pending-result dialogs retain their existing localized notice. Only settings callers without that feedback request the generic actual-failure callback; a normal coalesced/short-wait result never triggers it. Existing modal single-notice regression remains protected.

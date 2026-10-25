@@ -2081,7 +2081,7 @@ export default class KplexPlugin extends Plugin {
       changed = true;
     });
     if (!changed || this.unloading || !this.index) return;
-    await this.refreshSavedSettings(false);
+    await this.refreshSavedSettings(false, true);
   }
 
   /** Read a transaction's accepted base plus only its submitted imperative roots, excluding later queued controls. */
@@ -2184,8 +2184,8 @@ export default class KplexPlugin extends Plugin {
     return result;
   }
 
-  /** Finish durable saves through one optional refresh lease. Normal queued work stays quiet; actual refresh failure reports recovery once per failure episode, including after the short UI wait. */
-  private refreshSavedSettings(semantic: boolean): Promise<StyleCommitResult> {
+  /** Finish durable saves through one optional refresh lease. Result-owning dialogs retain their feedback; void saves request host recovery only for actual rejection, including after the short UI wait. */
+  private refreshSavedSettings(semantic: boolean, notifyFailure = false): Promise<StyleCommitResult> {
     this.savedSettingsRefresh ??= new SavedSettingsRefresh(/** Existing index owners retain atomic publication and source/demand fences. */ async (needsSemantic, current) => {
       if (this.unloading || !current()) return;
       await this.index.refreshPresentationSettings();
@@ -2193,7 +2193,7 @@ export default class KplexPlugin extends Plugin {
     }, /** Only an actual refresh rejection warrants recovery feedback; normal coalescing/timeouts are successful durable saves. */ () => {
       if (!this.unloading) new Notice(this.translator("settings.savedRefreshPending"));
     });
-    return this.savedSettingsRefresh.request(semantic);
+    return this.savedSettingsRefresh.request(semantic, notifyFailure);
   }
 
   /** Queue settings disk writes without allowing an older pending save to overwrite new actions. */
@@ -2673,7 +2673,7 @@ export default class KplexPlugin extends Plugin {
     if (this.unloading) return;
     // Preserve the established coverage decision; optional completion cannot hold the disk queue or Settings close.
     const needsSemantic = effects.semanticInvalidation || (effects.render && !effects.typographyOnly && !effects.paintOnly && !consentOnly && !layoutOnly && !isStyleOnlySettingsChange(effects) && !effects.changedKeys.every(/** Non-color theme geometry uses presentation/layout only. */ key => STYLE_SETTINGS_KEYS.some(/** Lens behavior keeps its separate owner. */ field => field === key)));
-    await this.refreshSavedSettings(needsSemantic);
+    await this.refreshSavedSettings(needsSemantic, true);
     // Workflow-only callers can still request their historical view notification. Changed settings
     // use the separate presentation channel and never pretend relationship evidence changed.
     if ((!effects.render || effects.typographyOnly) && notifyIndex) this.index.notifyPresentation();

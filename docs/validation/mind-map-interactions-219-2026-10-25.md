@@ -29,3 +29,7 @@ The [45ms parser follow-up](parser-responsiveness-followup-2026-10-25.md) remain
 ## Full-suite inventory correction
 
 Clean committed2e2fcbb full verify:obsidian failed before indexing assertions: its isolated transpiled fixture inventory omitted new core/plex/views/areaLayout. That real module is now listed; the renderer cross-link helper is already included through its bundler and needs no inventory entry. No production code, timing helper, guard or assertion changed. The failed report/log remain preserved in /private/tmp/kplex-219-new-steer/full-2e2fcbb. Final corrected-head full/CI must pass independently.
+
+## Feedback-owner regression correction
+
+Clean31d6fa1 passed the indexing/P1–P17 guards and1497/1498 functional cases, then failed the unchanged style-editor single-notice assertion: actual refresh rejection produced both the dialog's existing Style saved/pending feedback and the new generic notice. This was a real regression in the correction. The shared refresh request now carries an optional notifyFailure flag, defaultfalse: result-owning dialogs keep their feedback; void settings/type saves request generic actual-failure recovery. Normal pending stays quiet in both paths. No assertion was relaxed. The existing style failure/manager/settings three-arm case now passes, as do quiet generic saves, late rejection, unresolved-episode suppression, recovery and unload. New final full/native/CI remains required; this failed run is retained.

@@ -2,8 +2,9 @@
  * Owns optional post-save completion, never settings persistence. One refresh flight and a
  * coalesced newer obligation bound retained work when a host refresh does not settle. A short
  * UI wait reports saved/pending; normal waiting is not failure and never requests a reload.
- * The plugin supplies existing refresh owners plus one optional failure-episode callback,
- * and retires this adapter on unload. Persistence is never cancelled or replayed here.
+ * The plugin supplies existing refresh owners plus one optional failure-episode callback for
+ * submissions without their own saved/pending UI feedback. Dialogs keep that feedback role;
+ * the plugin retires this adapter on unload. Persistence is never cancelled or replayed here.
  */
 import {yieldToHostTask} from "./yieldToHostTask";
 
@@ -18,15 +19,17 @@ export class SavedSettingsRefresh {
   private semanticRevision = 0;
   private closed = false;
   private failureReported = false;
+  private failureFeedbackPending = false;
 
   /** Refresh retains publication fences and never writes settings; failure feedback remains owned by the plugin and may arrive after the short UI wait. */
   constructor(private readonly refresh: (semantic: boolean, current: () => boolean) => Promise<void>,
     private readonly failed?: () => void) {}
 
-  /** Coalesce later accepted settings without retaining their drafts or starting more host work. */
-  request(semantic: boolean): Promise<RefreshResult> {
+  /** Coalesce accepted settings without retaining drafts. Only fire-and-forget callers request host failure feedback; dialogs already own their saved/pending result. */
+  request(semantic: boolean, notifyFailure = false): Promise<RefreshResult> {
     if (this.closed) return Promise.resolve({refreshPending: true});
     this.revision += 1;
+    this.failureFeedbackPending ||= notifyFailure;
     this.semanticPending ||= semantic;
     if (semantic) this.semanticRevision += 1;
     if (this.flight) return Promise.resolve({refreshPending: true});
@@ -56,12 +59,12 @@ export class SavedSettingsRefresh {
       }
     } catch (error) {
       console.error("K-Plex saved settings refresh remains pending", error);
-      if (!this.closed && !this.failureReported) {
+      if (!this.closed && this.failureFeedbackPending && !this.failureReported) {
         this.failureReported = true;
         try {this.failed?.();} catch (feedbackError) {console.error("K-Plex settings refresh feedback failed", feedbackError);}
       }
     }
-    finally {this.flight = null;}
+    finally {this.flight = null; this.failureFeedbackPending = false;}
     return {refreshPending: true};
   }
 

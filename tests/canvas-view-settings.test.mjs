@@ -191,5 +191,15 @@ test('routine canvas saves stay quiet during queued refresh while actual refresh
  p.index.refreshPresentationSettings=async()=>{throw Error('Expected display-refresh fault')};
  p.settings.renderSiblings=!p.settings.renderSiblings;await p.saveSettings(false,true);
  equal(window.notices,[p.translator('settings.savedRefreshPending')],'Actual refresh failure needs one actionable recovery notice');
+ await p.updateCanvasViewSetting(second.id,'spacing',31);equal(window.notices.length,1,'One unresolved failure episode cannot repeat recovery noise');
+ p.index.refreshPresentationSettings=async()=>{};await p.updateCanvasViewSetting(second.id,'spacing',32);
+ let reject;p.index.refreshPresentationSettings=()=>new Promise((resolve,fail)=>reject=fail);
+ await p.updateCanvasViewSetting(second.id,'spacing',33);equal(window.notices.length,1,'Normal short-wait completion is quiet even before a later rejection');
+ reject(Error('Expected late display-refresh fault'));
+ for(let i=0;i<100&&p.savedSettingsRefresh.flight;i++)await new Promise(resolve=>setTimeout(resolve,5));
+ equal(window.notices.length,2,'A real late rejection after recovery remains actionable');
+ const retiring=p.refreshSavedSettings(false,true);for(let i=0;i<100&&!p.savedSettingsRefresh.flight;i++)await new Promise(resolve=>setTimeout(resolve,5));await Promise.resolve();
+ p.unloading=true;p.savedSettingsRefresh.close();reject(Error('Expected retired display-refresh fault'));await retiring;
+ equal(window.notices.length,2,'Retired native host cannot publish late recovery noise');
  `),true);
 });
