@@ -15,6 +15,7 @@ import type {GraphPropertyProvider} from "../../core/plex/predicate";
 import {admitOccurrenceEditors, type OccurrenceEditorHost} from "./occurrenceEditors";
 import {boundedViewState} from "../../core/plex/views/state";
 import {hierarchyPathClosure} from "../../core/plex/views/hierarchy";
+import {validCanvasViewText} from "../../core/plex/views/presentation";
 
 type SceneRead = Pick<GraphIndex, "get" | "neighbours" | "sortNeighbours" | "titleFor" | "captureSemanticGateRead" | "isVisiblePage" | "explainRelationship">
   & Partial<Pick<GraphIndex, "viewScopeCoverage" | "cachedViewRelation">>;
@@ -159,6 +160,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
       read, maximum: settings.maxItemCount, state, configuration});
     if (!projection || !current() || !read.isCurrent()) return {scene: empty, projection: null, failure: true};
     validateProjection(projection, maximum, definition);
+    if (projection.heading !== undefined && projection.heading !== null && !validCanvasViewText(projection.heading)) throw new Error("Invalid canvas heading");
     if (definition.editorHosting === "occurrence" && editorSize) throw new Error("Occurrence editors require occurrence dimensions");
     if (editorSize && (!projection.editor || projection.occurrences.find(row => row.id === projection.editor)?.nodeId !== attention)) throw new Error("Missing attention editor anchor");
     if (projection.attention !== attention) throw new Error("View changed its admitted attention scope");

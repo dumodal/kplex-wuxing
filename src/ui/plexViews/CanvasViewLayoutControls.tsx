@@ -1,0 +1,29 @@
+/** Render bounded declared controls through the existing shared rail components. No settings
+ * state or persistence lives here; native Settings and this rail address the same schema leaves. */
+import type {Translator} from "../../lang";
+import type {PlexViewConfiguration} from "../../core/plex/views/configuration";
+import {configurationLeaf} from "../../core/plex/views/configurationPaths";
+import type {CanvasViewLayoutControl} from "./contributionContracts";
+import {canvasViewText} from "./labels";
+import {LayoutSlider} from "../components/LayoutSlider";
+import {LayoutCheckbox} from "../components/LayoutCheckbox";
+import {ObsidianIcon} from "../ObsidianIcon";
+
+/** Empty/unavailable groups render nothing. Values always come from committed configuration. */
+export function CanvasViewLayoutControls({controls, configuration, translate, onChange}: Readonly<{
+  controls: readonly CanvasViewLayoutControl[]; configuration: PlexViewConfiguration; translate: Translator;
+  onChange: (control: CanvasViewLayoutControl, value: number | boolean) => void;
+}>) {
+  if (configuration.status !== "available" || !controls.length) return null;
+  return <div className="kplex-density-axes">{controls.map(control => {
+    const key = `${control.field}:${JSON.stringify(control.path ?? [])}`;
+    const value = configurationLeaf(configuration.values[control.field], control.path ?? []).value;
+    const label = control.label ? canvasViewText(control.label, translate) : control.labelKey ? translate(control.labelKey) : "";
+    const hint = control.hint ? canvasViewText(control.hint, translate) : control.hintKey ? translate(control.hintKey) : undefined;
+    return control.kind === "checkbox" ? <LayoutCheckbox key={key} label={label} hint={hint} checked={value === true}
+      controlId={key} onChange={checked => onChange(control, checked)} />
+      : <LayoutSlider key={key} label={label} caption={control.caption ? canvasViewText(control.caption, translate) : control.captionKey ? translate(control.captionKey) : label}
+        hint={hint} icon={<ObsidianIcon name={control.icon} size={11} />} value={Number(value)} displayValue={Number(value).toFixed(2)}
+        min={control.min} max={control.max} step={control.step} onChange={number => onChange(control, number)} />;
+  })}</div>;
+}

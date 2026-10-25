@@ -41,6 +41,7 @@
  * Ontology text drafts persist one guarded field through the existing settings queue before live
  * semantic publication; slow refresh remains outside the disk queue and cannot replay failed saves.
  */
+import {viewLabel} from "./ui/plexViews/labels";
 import {startupIndexPolicy} from './core/plex/startupIndexPreferences';
 import { tagMembershipPair } from "./ui/structuralConnectionActions";
 import {SettingsReconciliation, type SettingsSnapshot, type SettingsWriteIntent} from "./adapters/obsidian/settingsReconciliation";
@@ -2499,6 +2500,13 @@ export default class KplexPlugin extends Plugin {
   /** Open the actual Hidden-fields control without creating a field or approving a note write. */
   openHiddenOntologySettings(): void {
     if (this.openSettingsPage(this.translator("settings.ui.ontology"))) this.settingsTab?.openOntologyManager('hidden');
+  }
+
+  /** Reuse native page-path navigation with the existing owning-tab fallback for settings cross-links. */
+  openCanvasViewSettings(id: string): boolean {
+    const definition = this.viewSettingsRegistry.definition(id);
+    if (!definition) return false;
+    return this.openSettingsPage(this.translator("settings.ui.plex.behavior"), viewLabel(definition.labelKey, this.translator));
   }
 
   /** Reuse native page-path navigation with the existing owning-tab fallback for settings cross-links. */

@@ -3885,3 +3885,17 @@ button.kplex-sidecar-unfold-plex:focus-visible,
 .kplex-view-region text { fill: var(--text-normal); font-size: 16px; }
 .kplex-view-region .kplex-view-region-count { fill: var(--text-muted); font-size: 11px; }
 .kplex-view-guide { stroke: var(--text-faint); stroke-width: 1; stroke-dasharray: 5 7; opacity: 0.5; }
+.kplex-view-heading {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  pointer-events: none;
+}

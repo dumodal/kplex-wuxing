@@ -6,6 +6,14 @@ import type {LinkDirection, RelationType, Role} from "../../graph/relations";
 import type {PlexViewConfiguration, PlexViewConfigurationSchema} from "./configuration";
 import type {NotePropertyAvailability, NotePropertyRead} from "../noteProperties";
 
+/** Policy API compatibility, independent of configuration and session payload schema versions. */
+export const CANVAS_VIEW_API_VERSION = 1 as const;
+/** Literal user/extension copy never passes through the host catalog lookup. */
+export type CanvasViewText = Readonly<{literal: string} | {key: string}>;
+export type PlexViewStateAction = Readonly<{id: string; args?: unknown}>;
+export type PlexViewStateResult = Readonly<{status: "updated"; state: unknown}
+  | {status: "unavailable"; reason?: CanvasViewText}>;
+
 export type OccurrenceId = string;
 export type AreaId = string;
 export type PhysicalPort = "top" | "bottom" | "left" | "right";
@@ -62,6 +70,8 @@ export type PlexViewEdge = Readonly<{
 export type PlexProjection = Readonly<{
   attention: NodeId; layoutRoot?: NodeId; root?: OccurrenceId; entry: OccurrenceId; editor?: OccurrenceId; frame?: OccurrenceId;
   occurrences: readonly PlexOccurrence[]; edges: readonly PlexViewEdge[]; truncated: boolean; coverage: ViewCoverage;
+  /** Undefined inherits normal host presentation; null or an empty literal explicitly hides it. */
+  heading?: CanvasViewText | null;
   /** Only an opt-in hierarchy may request bounded, actually represented parent scopes outside projection/layout. */
   preparation?: Readonly<{parents: readonly NodeId[]}>;
   /** Bounded plain session intent (e.g. stable branch sides); the existing session validates and commits it. */
@@ -108,10 +118,10 @@ export type PlexViewInput = Readonly<{
 }>;
 export interface PlexViewDefinition {
   readonly id: string;
-  readonly version: 1;
+  readonly version: typeof CANVAS_VIEW_API_VERSION;
   readonly labelKey: string;
   readonly icon: string;
-  readonly capabilities: Readonly<{sections: boolean; descendants: boolean; editor: boolean; compact: boolean; properties?: boolean}>;
+  readonly capabilities: Readonly<{sections?: boolean; descendants?: boolean; editor?: boolean; compact?: boolean; properties?: boolean}>;
   readonly defaultState: unknown;
   /** Omit for the existing attention-following host. Occurrence hosting requires explicit shared bindings. */
   readonly editorHosting?: "occurrence";
@@ -124,6 +134,9 @@ export interface PlexViewDefinition {
     /** Return a small replacement view state, or null when the requested displayed branch is unavailable. */
     reduce: (state: unknown, projection: PlexProjection, action: PlexBranchAction) => unknown}>;
   readonly configuration?: PlexViewConfigurationSchema;
+  /** Optional pure presentation-state actions. The session still validates/persists bounded state
+   * and protects native editors; this reducer receives no host or file mutation capability. */
+  readonly reduceState?: (state: unknown, action: PlexViewStateAction, configuration: PlexViewConfiguration) => PlexViewStateResult;
   /** Validate only this view's small session state; shared/native settings are not supplied. */
   restoreState(value: unknown): unknown;
   /** Material preparation is host-owned and bounded; pure projection consumes admitted facts only. */

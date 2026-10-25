@@ -1,6 +1,6 @@
 # Canvas-view API reference
 
-This reference is being completed during PR220. The configuration operations below are implemented and tested; the expanded UI/section contributions and final conformance example remain in progress. Historical standalone view tests do not certify the expanded Facets feature.
+This reference is being completed during PR220. Configuration, captured UI contributions and the executable columns example are implemented. Shared badges, assignment targets and section anchors remain in progress. Historical standalone view tests do not certify the expanded Facets feature.
 
 ## Ownership and versions
 
@@ -52,6 +52,42 @@ Durable storage precedes live installation. Failure does not publish an authorit
 
 Notes, session selection and transient runtime state remain separate owners. Changing a configuration/preset never assigns note properties by itself. Explicit category writes will use a separate shared action and appropriate write-completion outcome.
 
+## Public policy and UI entry points
+
+`src/core/plex/views/index.ts` exports `CANVAS_VIEW_API_VERSION`, policy/scene types, registry, bounded state/text validation and configuration operations. `src/ui/plexViews/api.ts` exports the existing settings registry, contribution types, captured controller, text resolver and shared heading/choice/rail components. The host entry point is Obsidian-bound. Neither entry point loads downloaded code.
+
+Registration rejects duplicate/invalid IDs, incompatible API versions, invalid defaults and unsupported navigation/editor combinations. Known capability members are optional; omission means unavailable. `capabilities: {}` is valid. The host admits canonical endpoints and finite measured output before rendering. Unsupported point/synthetic output is rejected.
+
+`PlexViewDefinition.reduceState(state, action, configuration)` optionally returns `updated` with bounded replacement state or `unavailable` with optional text. It receives no host/file effects. The existing session remains the persistence and editor-admission owner. Definitions must decline commands against unsupported future state while retaining opaque saved data. Attention-following editors retain their equality guard.
+
+## Captured UI contributions
+
+`CanvasViewSettingsContribution` retains `items` and `layoutControls`, and optionally supplies `menus` and `choices`. Providers receive `CanvasViewContributionContext`: registered `viewId`, detached session state and this view's effective configuration. They receive no plugin, active leaf, mutable index or full settings map.
+
+`CanvasViewCommand` admits only presentation state actions, scoped configuration edits and explicit opening of this view's native Settings page. It grants no file/property/relationship writes. `CanvasViewContributionController` captures the exact native session, definition, revision and configuration. Invocation rechecks them and mounted lifetime, then uses the existing session or queued writer. Focus changes cannot redirect it. Commands are one-shot; stale, unsupported and failed requests return explicit outcomes. Unmount disposes the controller. Storage precedes successful configuration completion.
+
+`CanvasViewMenuItem` supports actions, submenus, separators, stable IDs, checked state, visibility, enabled state and unavailable reasons. Bounds are64 total entries,32 siblings and three submenu levels. Contributions append to the common menu before Support. Native submenus reuse the existing compatibility adapter; older hosts retain a flat labelled group. Disabled items have no action authority.
+
+`CanvasViewChoice` supplies up to eight labelled groups of at most32 options. Views and lenses derives selection from the opening canvas using the same commands as menus; there is no second selection store. The example demonstrates state commands; Facets preset selection follows in checkpointC.
+
+## Labels and shared layout controls
+
+`CanvasViewText` is explicitly `{literal: string}` or `{key: string}`. Literal text bypasses catalog lookup, including user text resembling a key. Keys use the existing plain-label resolver. Text is rendered as text, never HTML; literals are bounded to512 characters and keys to128.
+
+`PlexProjection.heading` is optional. Undefined inherits existing host presentation, null/empty literal deliberately adds no caption, and nonempty text supplies the shared top heading. This never renames nodes, areas, physical gates or semantic roles. Compass retains its relationship captions.
+
+`layoutControls` accepts the existing static slider array or a context provider returning at most16 registered-field controls. `CanvasViewLayoutControl` supports shared slider/checkbox components, literal/catalog copy and optional bounded paths. Values come from committed configuration. Empty/unavailable groups render nothing. The existing graph camera owner preserves intent during presentation changes.
+
+Native Settings `context.key(field, path?)` and live rails address the same schema leaves and queued writer. Encoded native keys contain stable keys only; numeric indices use an unambiguous `~N` segment. Prototype/empty/oversized paths are rejected. Received-control epochs use the same declared stable-entry owner as queued writes. No payload or executable expression is encoded into a control key.
+
+## Executable example and remaining API work
+
+`src/core/plex/views/example.ts` and `src/ui/plexViews/example.ts` implement `org.example.columns` using the public entry points exclusively. They demonstrate measured direct-child scenes, canonical connectors, optional headings, native Settings, checked menu/panel choices and shared slider/checkbox rails. They are type-checked source and exercised in portable/Chromium conformance tests. The example is not registered in the shipped dropdown.
+
+Shared badges, property-assignment targets/actions and measured section sub-anchors remain pending in PR220. Existing shared navigation, area capability, exact-occurrence drag transport and saved/published relationship completion remain authoritative. These presentation commands do not replace those owners. Final native acceptance applies to the final published head.
+
 ## Current validation
 
 The implemented configuration batch passes 45 pure/actual Settings-host Chromium tests, including independent queued/received presets, stale same-preset and container epochs, A→B→A, reset scope, durable/idempotent migration, future payloads, disk rejection and retired registration. Architecture/core/scanner/build are separate gates. Native migration/preset UI and the remaining expanded API/Facets acceptance are still pending; see [the current validation record](validation/facets-220-2026-10-25.md).
+
+B2 adds a clean78-case API/menu/actual Chromium/settings/selector/session/renderer batch, plus the repository indexing/startup/watchdog/section suite and architecture7 with zero violations. Real production build and official scanner pass. Expanded final-head/native acceptance remains pending.

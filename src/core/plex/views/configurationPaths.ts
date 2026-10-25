@@ -4,9 +4,12 @@ import type {ViewConfigurationAddress, ViewConfigurationEdit, ViewConfigurationE
 import {configurationJson, configurationRecord, viewConfigurationEntryKey, viewConfigurationKey, VIEW_CONFIGURATION_LIMITS} from "./configurationValues";
 
 /** Refuse unsafe keys, oversized addresses and invalid array offsets before traversing JSON. */
-export function validViewConfigurationAddress(address: ViewConfigurationAddress): boolean {
-  return !!address && viewConfigurationKey(address.field) && (address.path === undefined || Array.isArray(address.path)) && (address.path?.length ?? 0) <= VIEW_CONFIGURATION_LIMITS.path
-    && (address.path ?? []).every(/** Paths carry identities only, never expressions or inferred field ownership. */ part =>
+export function validViewConfigurationAddress(address: unknown): address is ViewConfigurationAddress {
+  if (!address || typeof address !== "object" || Array.isArray(address)) return false;
+  const field: unknown = Reflect.get(address, "field"), path: unknown = Reflect.get(address, "path");
+  const parts: readonly unknown[] = Array.isArray(path) ? path : [];
+  return viewConfigurationKey(field) && (path === undefined || Array.isArray(path)) && parts.length <= VIEW_CONFIGURATION_LIMITS.path
+    && parts.every(/** Paths carry identities only, never expressions or inferred field ownership. */ part =>
       typeof part === "number" ? Number.isInteger(part) && part >= 0 && part < 4096
         : typeof part === "string" && viewConfigurationEntryKey(part));
 }

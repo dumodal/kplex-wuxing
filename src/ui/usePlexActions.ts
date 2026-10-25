@@ -37,6 +37,8 @@ export interface GraphActionPorts {
   normalMode: boolean;
   clearSelection?: () => void;
   prepareDisplayResize?: () => void;
+  /** Existing camera owner prepares presentation-only view-state/configuration changes. */
+  preparePresentationChange?: () => void;
   handleSessionKey?: (event: KeyboardEvent, matchedAction: ActionId | null) => boolean;
 }
 let surfaceCounter = 0;

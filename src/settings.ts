@@ -64,7 +64,7 @@ import {
 } from "obsidian";
 import type KplexPlugin from "./main";
 import {builtInCanvasViewSettings, canvasViewControl, type CanvasViewSettingsRegistry} from "./ui/plexViews/settingsContributions";
-import {readViewConfiguration} from "./core/plex/views/configuration";
+import {readViewConfiguration, readViewConfigurationAt, viewConfigurationUpdateDomain} from "./core/plex/views/configuration";
 import { RelationType, type Arrowhead, type Hierarchy, type LinkStyle, type NodeStyle, type Role } from "./types";
 import { sanitizeGraphLensDefinitions, type GraphLensDefinition } from "./lens/GraphLens";
 import { collectionWindow } from "./ui/components/collectionWindow";
@@ -2845,7 +2845,10 @@ export class KplexSettingTab extends PluginSettingTab {
   /** Map native control aliases to their established coherent settings owner. */
   private receivedControlDomain(key: string): string {
     const view = canvasViewControl(key);
-    if (view) return `canvasViewSettings:${view.id}:${view.field}`;
+    if (view) {
+      const definition = this.viewSettings.definition(view.id);
+      return definition ? viewConfigurationUpdateDomain(definition, view) : `canvasViewSettings:${view.id}:${view.field}`;
+    }
     if (key.startsWith("hierarchy.")) return "hierarchy";
     if (key.startsWith("typography.")) return "typographyProfiles";
     if (key.startsWith("layout.")) return "layoutProfiles";
@@ -2878,8 +2881,7 @@ export class KplexSettingTab extends PluginSettingTab {
     const view = canvasViewControl(key);
     if (view) {
       const definition = this.viewSettings.definition(view.id);
-      const configuration = definition && readViewConfiguration(definition, this.kplexPlugin.settings.canvasViewSettings);
-      return configuration?.status === "available" && Object.prototype.hasOwnProperty.call(configuration.values, view.field) ? configuration.values[view.field] : undefined;
+      return definition ? readViewConfigurationAt(definition, this.kplexPlugin.settings.canvasViewSettings, view).value : undefined;
     }
     const arrangementKey = this.lateralArrangementKey(key);
     if (arrangementKey) return this.kplexPlugin.settings.layoutProfiles[arrangementKey]?.lateralArrangement === "left";
@@ -2914,7 +2916,8 @@ export class KplexSettingTab extends PluginSettingTab {
     key = key.replace(/^received:\d+:/, "");
     const view = canvasViewControl(key);
     if (view) {
-      try {await this.kplexPlugin.updateCanvasViewSetting(view.id, view.field, value);}
+      try {if (view.path?.length) await this.kplexPlugin.updateCanvasViewConfiguration(view.id, view, {kind: "set", value});
+        else await this.kplexPlugin.updateCanvasViewSetting(view.id, view.field, value);}
       catch (error) {
         console.error("K-Plex view setting was not saved", error);
         // Native Settings deliberately preserves focused controls with an unchanged key.

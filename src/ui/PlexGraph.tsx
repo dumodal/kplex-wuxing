@@ -63,6 +63,10 @@ import { centeredViewportFit, sameFitCamera, zoomedViewportCamera, type FitCamer
 import { projectFilteredGateCounts } from "./filteredGateCounts";
 import { LayoutControls } from "./components/LayoutControls";
 import {readViewConfiguration} from "../core/plex/views/configuration";
+import type {CanvasViewContributionController} from "./plexViews/CanvasViewContributionController";
+import type {CanvasViewLayoutControl} from "./plexViews/contributionContracts";
+import {CanvasViewLayoutControls} from "./plexViews/CanvasViewLayoutControls";
+import {CanvasViewHeading} from "./plexViews/CanvasViewHeading";
 import { LayoutCheckbox } from "./components/LayoutCheckbox";
 import { lateralArrangementSurface } from "./viewProfile";
 import { centerArrivalFrames, type MotionRect } from "./components/centerArrival";
@@ -667,9 +671,10 @@ function EdgeLabel({label,midpoint,style,background,opacity}:{label:string|null;
 }
 
 /** Compose the deterministic Plex scene; native-follow layouts land immediately while explicit navigation retains motion and central Open uses a main tab. */
-export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession, viewRevision = 0, plugin, index, settings: viewSettings, paintSettings, paintLenses, surface, hostLeaf, predicate, lenses, filterLayoutMode, predicateRevision, showCrossLinks, activePath, navigationOrigin = "user", onSemanticDemandAcquired, renderRevision, semanticRevision, findFocusRequest, footprintsControl, areaSettingsMode, onAreaSettingsModeChange, onApplyFindFilter, appliedFindFilterQuery, onClearFindFilter, onActivate, onWanderActivate, onOpen, onOpenInSidecar, onCentralNodeEditorChange, onCentralNodeModeChange, actionPorts, actionSurfaceId, displayState, fullscreenAvailable, sidecarOpen }: {
+export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession, viewContributions, viewRevision = 0, plugin, index, settings: viewSettings, paintSettings, paintLenses, surface, hostLeaf, predicate, lenses, filterLayoutMode, predicateRevision, showCrossLinks, activePath, navigationOrigin = "user", onSemanticDemandAcquired, renderRevision, semanticRevision, findFocusRequest, footprintsControl, areaSettingsMode, onAreaSettingsModeChange, onApplyFindFilter, appliedFindFilterQuery, onClearFindFilter, onActivate, onWanderActivate, onOpen, onOpenInSidecar, onCentralNodeEditorChange, onCentralNodeModeChange, actionPorts, actionSurfaceId, displayState, fullscreenAvailable, sidecarOpen }: {
   viewDefinition?: PlexViewDefinition;
   viewSession?: PlexViewSession;
+  viewContributions?: CanvasViewContributionController;
   viewRevision?: number;
   plugin: KplexPlugin;
   index: GraphIndex;
@@ -4221,6 +4226,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     }])) : graphImplementations,
     readEditorBindingId: () => viewSession?.editors.bindings[0]?.id,
     canEditAreas: /** Read live admitted capability instead of inferring it from a view ID or a global setting. */ () => !viewFailed && hasEditableAreas,
+    preparePresentationChange: /** Preserve the existing manual/restored camera owner across view configuration and state changes. */ () => {
+      sceneMotion.cancelAll(); preserveCameraOnNextLayout.current = true;
+    },
     prepareNavigation, readWanderScene, highlightWander, clearWander,
     navigateWander: /** Accept only an exact still-displayed destination through the shared App activation path. */ destination => {
       const page = resolveWanderDestination(destination);
@@ -4928,14 +4936,14 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     setLayoutRevision((revision) => revision + 1);
     scheduleLayoutSave();
   };
-  const contributedLayoutControls = plugin.viewSettingsRegistry.layoutControls(viewDefinition);
+  const contributedLayoutControls = plugin.viewSettingsRegistry.layoutControls(viewDefinition, viewContributions?.context() ?? undefined);
   const configuredLayout = readViewConfiguration(viewDefinition, settings.canvasViewSettings ?? {});
   /** Live view-specific rails reuse the same queued Settings writer; they never change selection or acquire graph sources. */
-  const changeViewLayoutValue = (field: string, value: number): void => {
-    if (!contributedLayoutControls.some(control => control.field === field) || viewSession?.definition !== viewDefinition) return;
+  const changeViewLayoutValue = (control: CanvasViewLayoutControl, value: number | boolean): void => {
+    if (!contributedLayoutControls.includes(control) || viewSession?.definition !== viewDefinition || viewSession.getSnapshot() !== viewRevision) return;
     const current = viewSession.capture();
     sceneMotion.cancelAll(); preserveCameraOnNextLayout.current = true;
-    void plugin.updateCanvasViewSetting(viewDefinition.id, field, value).catch(/** The queued writer retains committed values on failure; report it without inventing an optimistic setting. */ error => {
+    void plugin.updateCanvasViewConfiguration(viewDefinition.id, {field: control.field, path: control.path}, {kind: "set", value}).catch(/** The queued writer retains committed values on failure; report it without inventing an optimistic setting. */ error => {
       console.error("K-Plex view layout setting was not saved", error);
       if (current()) new Notice(translate("view.settingsSaveFailed"));
     }).finally(/** Restore the committed scalar after rejection without remounting or stealing the native slider's focus. */ () => {
@@ -5048,6 +5056,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       const target = event.target as Element;
       if (target.closest("[data-kplex-path], .kplex-edge-hit, button, input, .kplex-central-editor-overlay") || Date.now() < suppressActivateUntil.current) return;
       const menu = createPlexContextMenu({ translate, zen: displayState.zen, fullscreen: displayState.fullscreen, fullscreenAvailable,
+        contributions: viewContributions?.menus(),
         runAction: /** Reuse the exact view-scoped action owner for playback and display modes. */ id => { void plugin.actionManager.dispatch({ id, source: "context-menu", surfaceId: actionSurfaceId }); },
         openSettings: /** Preserve the guarded native settings bridge. */ () => plugin.openSettings(),
         chooseBackground: /** The view owns this picker and closes it on migration/unmount. */ () => {
@@ -5077,6 +5086,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       plugin.showKplexMenuAtMouseEvent(menu, event.nativeEvent, hostLeaf);
     }}
   >
+    {!centralEditorMaximized && !displayState.zen && <CanvasViewHeading heading={scene.projection?.heading} translate={translate} />}
     {keyboardConnect && <div className="kplex-find kplex-connection-session" role="status">
       <span><strong>{translate("actions.connectFrom", { origin: connectionOrigin ? index.titleFor(connectionOrigin) : keyboardConnect.path })}</strong> · {connectionSearchHint
         ? translate("actions.connectHint", { submit: "Enter", search: connectionSearchHint, cancel: "Escape" })
@@ -5274,12 +5284,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         simplifiedHint={`${translate("layout.simplifiedHelp")} ${translate("layout.arrangementScope", {
           device: translate(`typography.${typographyDevice}`), surface: translate(lateralArrangementSurface(surface) === "leaf" ? "layout.mainTab" : "layout.sidepanel"),
         })}`} />}
-      {configuredLayout.status === "available" && contributedLayoutControls.length > 0 && <div className="kplex-density-axes">
-        {contributedLayoutControls.map(control => <LayoutSlider key={control.field} label={translate(control.labelKey)} caption={translate(control.captionKey)}
-          hint={control.hintKey ? translate(control.hintKey) : undefined} icon={<ObsidianIcon name={control.icon} size={11} />}
-          value={Number(configuredLayout.values[control.field])} displayValue={Number(configuredLayout.values[control.field]).toFixed(2)}
-          min={control.min} max={control.max} step={control.step} onChange={value => changeViewLayoutValue(control.field, value)} />)}
-      </div>}
+      <CanvasViewLayoutControls controls={contributedLayoutControls} configuration={configuredLayout} translate={translate} onChange={changeViewLayoutValue} />
       <div className="kplex-typography-group">
       <div className="kplex-typography-scope">
         <span>{translate("typography.scopeHint", { device: translate(`typography.${typographyDevice}`),
