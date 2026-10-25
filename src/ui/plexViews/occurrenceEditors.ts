@@ -27,7 +27,7 @@ export function admitOccurrenceEditors(definition: PlexViewDefinition, projectio
   for (const binding of host.bindings) {
     const occurrences = projection.occurrences.filter(row => row.id === binding.occurrenceId);
     const occurrence = occurrences[0];
-    if (occurrences.length !== 1 || !occurrence.nodeId || occurrence.synthetic || occurrence.representation !== "thought"
+    if (occurrences.length !== 1 || !occurrence.nodeId || occurrence.synthetic || occurrence.section || occurrence.representation !== "thought"
       || binding.viewId !== definition.id || occurrence.nodeId !== binding.target.nodeId || !read.node(occurrence.nodeId)) {
       throw new Error("Unavailable bound editor occurrence");
     }

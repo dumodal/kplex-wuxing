@@ -18,6 +18,7 @@
 import {physicalGateStats} from "./plexViews/measurement";
 import { useId, type CSSProperties, type DragEvent as ReactDragEvent, type MouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import type { GateSide, NodeVisual, PositionedNode } from "../types";
+import {MeasuredNodeBadge} from "./plexViews/MeasuredNodeBadge";
 import { nodePaint, nodePaintFallbacks } from "../index/style";
 import type { KplexSettings } from "../settings";
 import { effectiveLabelLimit, nodeLabelFontSize, gateDiameter } from "./layout";
@@ -57,6 +58,7 @@ export function ThoughtNode({
   onContextMenu,
   sectionFold,
   branchStatus,
+  badgeColorRevision = 0,
   visual,
   content,
   cornerAction,
@@ -103,6 +105,7 @@ export function ThoughtNode({
   };
   /** Optional hierarchy coverage/reference label; canonical note text and editor content are unchanged. */
   branchStatus?: string;
+  badgeColorRevision?: number;
 }) {
   const accessibleNameId = useId();
   const gateStats = physicalGateStats(node);
@@ -199,7 +202,9 @@ export function ThoughtNode({
     }}
     aria-labelledby={group ? undefined : accessibleNameId}
   >
-    <span id={accessibleNameId} className="kplex-accessible-name">{group ? node.label : translate("node.accessibleLabel", { label: node.label, path: node.page.path })}</span>
+    <span id={accessibleNameId} className="kplex-accessible-name">{group ? node.label : translate("node.accessibleLabel", { label: node.label, path: node.page.path })}
+      {node.viewBadge ? ` ${node.viewBadge.label}. ${node.viewBadge.description ?? node.viewDescription ?? ""}` : node.viewDescription ? ` ${node.viewDescription}` : ""}</span>
+    {node.viewBadge && <MeasuredNodeBadge badge={node.viewBadge} colorRevision={badgeColorRevision} />}
     {content ? <div
       className="kplex-thought-embedded-content"
       onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => e.stopPropagation()}

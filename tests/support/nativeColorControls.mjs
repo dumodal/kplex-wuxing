@@ -2,6 +2,8 @@
 export const nativeColorControls = `
 export const setIcon=()=>{}; export const setTooltip=()=>{}; export class SearchComponent{} export class ButtonComponent{}
 export const Platform={}; export const getIconIds=()=>[]; export class App{} export class Scope{} export class ExtraButtonComponent{}
+export class FileView{} export class TextFileView extends FileView{} export class WorkspaceLeaf{} export class WorkspaceSplit{}
+export const parseLinktext=path=>({path,subpath:''});
 export class AbstractInputSuggest {constructor(app,input){this.app=app;this.input=input} setValue(value){this.input.value=value} close(){}}
 export class PluginSettingTab {update(){} constructor(app,plugin){this.app=app;this.plugin=plugin;this.containerEl=createDiv();document.body.append(this.containerEl)} hide(){}}
 export const getLanguage=()=>"en";
@@ -59,3 +61,7 @@ export const initializeColorDom = `(()=>{
  window.scope=createDiv();scope.className='kplex-app';document.body.append(scope);window.preferences=sourceModules.defaultColorPreferences();
  return true;
 })()`;
+
+/** The same finite Obsidian DOM spellings for actual canvas/color renderers. No modal,
+ * palette, production CSS or graph behavior is installed by this helper subset. */
+export const nativeDomHelpers = initializeColorDom.slice(initializeColorDom.indexOf(' function decorate'), initializeColorDom.indexOf(' const migrations'));

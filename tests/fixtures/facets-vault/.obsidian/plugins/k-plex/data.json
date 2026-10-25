@@ -1,0 +1,91 @@
+{
+  "canvasViewSettings": {
+    "wuxing": {
+      "version": 2,
+      "values": {
+        "presets": {
+          "state": {
+            "version": 1,
+            "name": "State",
+            "source": "property",
+            "field": "state",
+            "categories": {
+              "seed": {
+                "label": "Seed",
+                "values": [
+                  "seed"
+                ],
+                "assignment": "seed",
+                "color": {
+                  "kind": "theme",
+                  "variable": "--color-blue"
+                }
+              },
+              "research": {
+                "label": "Research",
+                "values": [
+                  "research"
+                ],
+                "assignment": "research",
+                "color": {
+                  "kind": "theme",
+                  "variable": "--color-green"
+                }
+              },
+              "draft": {
+                "label": "Draft",
+                "values": [
+                  "draft"
+                ],
+                "assignment": "draft",
+                "color": {
+                  "kind": "theme",
+                  "variable": "--color-red"
+                }
+              },
+              "published": {
+                "label": "Published",
+                "values": [
+                  "published"
+                ],
+                "assignment": "published",
+                "color": {
+                  "kind": "theme",
+                  "variable": "--color-orange"
+                }
+              }
+            },
+            "order": [
+              "seed",
+              "research",
+              "draft",
+              "published"
+            ],
+            "start": "seed",
+            "spacing": 56,
+            "regionWidth": 320,
+            "regionHeight": 280,
+            "guides": false,
+            "tints": true,
+            "conflictingColor": {
+              "kind": "theme",
+              "variable": "--color-orange"
+            },
+            "unassignedColor": {
+              "kind": "theme",
+              "variable": "--background-secondary"
+            }
+          }
+        },
+        "presetOrder": [
+          "ace",
+          "para",
+          "wuxing",
+          "gtd",
+          "eaccess",
+          "state"
+        ]
+      }
+    }
+  }
+}

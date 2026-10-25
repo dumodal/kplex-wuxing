@@ -1,0 +1,162 @@
+/** Detached native preset draft. Categories retain stable IDs through rename/reorder; source
+ * values, assignment and colors are explicit. Save commits one atomic entry through the host. */
+import {Setting, type App, type ButtonComponent} from "obsidian";
+import {StyleEditorModal} from "../../StyleEditorModal";
+import {StyleColorControls} from "../../StyleColorControls";
+import type {CanvasViewManagerContext} from "../managerContracts";
+import type {FacetPreset, FacetCategory} from "../../../core/plex/views/facets/contracts";
+import {isFacetPreset} from "../../../core/plex/views/facets/validation";
+import {facetCategoryLabel, facetPresetLabel, facetHasWuXingPhases} from "../../../core/plex/views/facets/labels";
+import {FACET_TEMPLATES} from "../../../core/plex/views/facets/templates";
+import {canvasViewText} from "../labels";
+import {FacetPresetRemoval} from "./FacetPresetRemoval";
+import {configurationExpected} from "../../../core/plex/views/configurationPaths";
+import {createElement as reactElement} from "react";
+import {createRoot, type Root} from "react-dom/client";
+import {PredicateRuleEditor} from "../../predicates/PredicateRuleEditor";
+import {compileFacetRules} from "../../../core/plex/views/facets/rules";
+
+export class FacetPresetEditor extends StyleEditorModal {
+  private draft: FacetPreset;
+  private readonly address: {field: string; path: string[]};
+  private readonly expected;
+  private readonly owner: () => boolean;
+  private body: HTMLElement | null = null;
+  private validation: HTMLElement | null = null;
+  private saveButton: ButtonComponent | null = null;
+  private colors: StyleColorControls | null = null;
+  private release: (() => void) | null = null;
+  private removal: FacetPresetRemoval | null = null;
+  private readonly ruleRoots: Root[] = [];
+  /** Opening captures only this entry; sibling drafts and canvases remain independent. */
+  constructor(app: App, private readonly options: CanvasViewManagerContext, private readonly id: string, preset: FacetPreset,
+    private readonly existing: boolean, private readonly duplicate: (preset: FacetPreset) => void, private readonly closed: () => void) {
+    super(app);this.draft = structuredClone(preset);this.address = {field: "presets", path: [id]};
+    this.expected = options.read(this.address);this.owner = options.capture(this.address);
+  }
+  /** One shared native scrolling body; colors retain the same parent-draft and modal lifecycle. */
+  onOpen(): void {
+    this.beginEditor(this.options.colors.sourceScope, this.options.colors.bindEditor);const t = this.translate;
+    this.titleEl.setText(t(this.existing ? "facets.edit" : "facets.create"));
+    const {body, actions} = this.scrollableContent();this.body = body;
+    this.validation = actions.createDiv({cls: "setting-item-description", attr: {role: "status", "aria-live": "polite"}});
+    new Setting(actions).addButton(button => button.setButtonText(t("common.cancel")).onClick(() => this.close()))
+      .addButton(button => {this.saveButton = button;button.setButtonText(t("common.save")).setCta().onClick(() => this.submit());});
+    new Setting(actions).addButton(button => button.setButtonText(t("facets.duplicate")).onClick(() => {if (this.canEdit()) this.duplicate(this.draft);}));
+    if (FACET_TEMPLATES[this.id]) new Setting(actions).addButton(button => button.setButtonText(t("facets.restore")).onClick(() => {
+      if (this.canEdit()) {this.draft = structuredClone(FACET_TEMPLATES[this.id]);this.render();}
+    }));
+    if (this.existing) new Setting(actions).addButton(button => button.setButtonText(t("common.delete")).setDestructive().onClick(() => {
+      if (!this.canEdit() || !this.owner()) return;
+      this.removal = new FacetPresetRemoval(this.app, this.options, this.id, this.expected, this.owner,
+        deleted => {this.removal = null;if (deleted) this.close();else this.validate();});this.removal.open();
+    }));
+    this.release = this.options.subscribe(() => this.validate());this.render();
+  }
+  /** Rebuild only after explicit structure changes; ordinary typing never replaces/focuses input. */
+  private render(): void {
+    const body = this.body;if (!body) return;
+    for (const root of this.ruleRoots.splice(0)) root.unmount();
+    this.colors?.dispose();body.empty();const t = this.translate;
+    this.colors = new StyleColorControls(this.app, this.options.colors, () => this.canEdit() && this.owner());
+    new Setting(body).setName(t("facets.name")).addText(input => input.setValue(canvasViewText(facetPresetLabel(this.draft), t)).onChange(name => {
+      this.draft = {...this.draft, name};this.validate();
+    }));
+    new Setting(body).setName(t("wuxing.source")).addDropdown(input => input.addOptions({property: t("wuxing.property"), type: t("wuxing.noteType"), tag: t("wuxing.tags"), rules: t("facets.rules")})
+      .setValue(this.draft.source).onChange(source => {if (source === "property" || source === "type" || source === "tag" || source === "rules") this.draft = {...this.draft, source};this.render();}));
+    new Setting(body).setName(t("wuxing.field")).setDesc(t("wuxing.fieldHelp")).addText(input => input.setValue(this.draft.field).onChange(field => {this.draft = {...this.draft, field};this.validate();}));
+    new Setting(body).setName(t("facets.start")).addDropdown(input => input.addOptions(Object.fromEntries(this.draft.order.map(id => [id, canvasViewText(facetCategoryLabel(this.draft.categories[id], id), t)])))
+      .setValue(this.draft.start).onChange(start => {this.draft = {...this.draft, start};this.validate();}));
+    for (const [field, label, minimum, maximum, step] of [["spacing", "wuxing.spacing", 24, 200, 8],
+      ["regionWidth", "wuxing.width", 200, 640, 20], ["regionHeight", "wuxing.height", 160, 600, 20]] as const)
+      new Setting(body).setName(t(label)).addSlider(input => input.setLimits(minimum, maximum, step).setValue(this.draft[field]).setDynamicTooltip()
+        .onChange(value => {this.draft = {...this.draft, [field]: value};this.validate();}));
+    for (const [field, label] of [["guides", "wuxing.guides"], ["tints", "wuxing.tints"]] as const)
+      new Setting(body).setName(t(label)).addToggle(input => input.setValue(this.draft[field]).onChange(value => {this.draft = {...this.draft, [field]: value};this.validate();}));
+    if (facetHasWuXingPhases(this.draft)) {
+      new Setting(body).setName(t("facets.relativeLabels")).setDesc(t("facets.wuxingHelp")).addToggle(input => input
+        .setValue(this.draft.interpretation === "wuxing" && this.draft.relativeLabels === true).onChange(relativeLabels => {
+          this.draft = {...this.draft, interpretation: "wuxing", relativeLabels};this.validate();
+        }));
+      new Setting(body).setName(t("facets.regulatingGuides")).setDesc(t("facets.cyclesHelp")).addToggle(input => input
+        .setValue(this.draft.interpretation === "wuxing" && this.draft.regulatingGuides === true).onChange(regulatingGuides => {
+          this.draft = {...this.draft, interpretation: "wuxing", regulatingGuides};this.validate();
+        }));
+    }
+    for (const [index, id] of this.draft.order.entries()) this.category(body, id, index);
+    new Setting(body).addButton(button => button.setButtonText(t("facets.addCategory")).setDisabled(this.draft.order.length >= 7).onClick(() => {
+      if (!this.canEdit() || this.draft.order.length >= 7) return;
+      const id = `category-${this.modalEl.ownerDocument.defaultView?.crypto.randomUUID() ?? ""}`;if (id === "category-") return;
+      this.draft = {...this.draft, order: [...this.draft.order, id], categories: {...this.draft.categories,
+        [id]: {label: t("facets.newCategory"), values: [], color: {kind: "theme", variable: "--color-cyan"}}}};this.render();
+    }));
+    for (const [field, label] of [["conflictingColor", "facets.conflicting"], ["unassignedColor", "facets.unassigned"]] as const)
+      this.colors.add(body, t(label), {kind: "node", field: "backgroundColor"}, () => this.draft[field], color => {if (color !== undefined) this.draft = {...this.draft, [field]: color};this.validate();}, () => undefined);
+    this.validate();
+  }
+  /** Every category edit replaces its local value only; aliases retain exact trimmed case. */
+  private category(body: HTMLElement, id: string, index: number): void {
+    const t = this.translate, category = this.draft.categories[id], section = body.createDiv();
+    section.createEl("h3", {text: canvasViewText(facetCategoryLabel(category, id), t)});
+    new Setting(section).setName(t("wuxing.label")).addText(input => input.setValue(canvasViewText(facetCategoryLabel(category, id), t)).onChange(label => this.changeCategory(id, {label})));
+    new Setting(section).setName(t("wuxing.values")).setDesc(t("facets.valuesHelp")).addTextArea(input => input.setValue(category.values.join("\n")).onChange(value => this.changeCategory(id, {values: value.split(/\r?\n/).map(part => part.trim()).filter(Boolean)})));
+    new Setting(section).setName(t("facets.assignment")).setDesc(t("facets.assignmentHelp")).addText(input => input.setValue(category.assignment ?? "").onChange(assignment => {
+      const {assignment: _previous, ...rest} = this.draft.categories[id];
+      this.draft = {...this.draft, categories: {...this.draft.categories, [id]: {...rest, ...(assignment.trim() ? {assignment: assignment.trim()} : {})}}};this.validate();
+    }));
+    if (this.draft.source === "rules") {
+      new Setting(section).setName(t("facets.rules")).setDesc(t("facets.rulesHelp"));
+      const host = section.createDiv(), root = createRoot(host);this.ruleRoots.push(root);
+      root.render(reactElement(PredicateRuleEditor, {initial: category.rule ?? "", translate: t, suggestions: this.options.suggestions?.(),
+        onChange: rule => this.changeCategory(id, {rule})}));
+    }
+    this.colors?.add(section, t("facets.color"), {kind: "node", field: "backgroundColor"}, () => this.draft.categories[id].color,
+      color => {if (color !== undefined) this.changeCategory(id, {color});}, () => undefined);
+    new Setting(section).addButton(button => button.setButtonText(t("facets.moveUp")).setDisabled(index === 0).onClick(() => this.move(id, -1)))
+      .addButton(button => button.setButtonText(t("facets.moveDown")).setDisabled(index === this.draft.order.length - 1).onClick(() => this.move(id, 1)))
+      .addButton(button => button.setButtonText(t("common.delete")).setDisabled(this.draft.order.length <= 3).onClick(() => {
+        if (!this.canEdit() || this.draft.order.length <= 3) return;
+        const categories = {...this.draft.categories};delete categories[id];const order = this.draft.order.filter(key => key !== id);
+        this.draft = {...this.draft, categories, order, start: this.draft.start === id ? order[0] : this.draft.start};this.render();
+      }));
+  }
+  /** Current drafts preserve unknown category fields while changing one explicit value. */
+  private changeCategory(id: string, change: Partial<FacetCategory>): void {
+    if (!this.canEdit()) return;
+    this.draft = {...this.draft, categories: {...this.draft.categories, [id]: {...this.draft.categories[id], ...change}}};this.validate();
+  }
+  /** Stable IDs make reordering independent of labels, recognition or assignment values. */
+  private move(id: string, offset: number): void {
+    if (!this.canEdit()) return;
+    const order = [...this.draft.order], index = order.indexOf(id), target = index + offset;
+    if (index < 0 || target < 0 || target >= order.length) return;
+    [order[index], order[target]] = [order[target], order[index]];this.draft = {...this.draft, order};this.render();
+  }
+  /** Stale entry/appearance drafts retain their content and cannot overwrite accepted settings. */
+  private validate(): void {
+    const valid = this.validDraft();
+    const current = this.owner() && configurationExpected(this.options.read(this.address), this.expected);
+    this.validation?.setText(!current ? this.translate("facets.staleDraft") : !valid ? this.translate("facets.invalidPreset") : "");
+    this.saveButton?.setDisabled(!this.canEdit() || !current || !valid);
+  }
+  /** Save is atomic at the entry and revalidated inside the existing queued writer. */
+  private submit(): void {
+    this.validate();if (!this.canEdit() || !this.owner() || !this.validDraft()) return;
+    const value = structuredClone(this.draft);
+    if (this.expected.present && JSON.stringify(this.expected.value) === JSON.stringify(value)) {this.close();return;}
+    this.runOperation(current => this.options.save(this.address, {kind: "set", value}, this.expected, () => current() && this.owner()));
+  }
+  /** A storage rejection retains the exact draft and rechecks current ownership. */
+  protected onOperationRejected(): void {this.validate();}
+  /** Authored rules must compile through the shared grammar before the existing queue sees them. */
+  private validDraft(): boolean {
+    return isFacetPreset(this.draft) && !!(this.draft.name.trim() || this.draft.nameKey)
+      && (this.draft.source !== "rules" || compileFacetRules(this.draft).status === "ready");
+  }
+  /** Retire children/color samplers/listeners before clearing the native form. */
+  onClose(): void {
+    for (const root of this.ruleRoots.splice(0)) root.unmount();
+    super.onClose();this.removal?.retire();this.removal = null;this.release?.();this.release = null;this.colors?.dispose();this.colors = null;
+    this.body = null;this.saveButton = null;this.contentEl.empty();this.closed();
+  }
+}

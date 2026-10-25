@@ -106,8 +106,8 @@ test('root restoration at capacity still captures a stable active root',()=>{
  session.ensureRoot('Actual.md');session.ensureRoot('Other.md');assert.equal(session.layoutRoot('Other.md'),'Actual.md');assert.equal(Object.keys(session.getState().roots).length,16);session.dispose();
 });
 
-test('static registration validates identity/version and ships Compass and Mind Map without test definitions',()=>{
-  assert.deepEqual(M.builtInPlexViews.available.map(view=>view.id),['classic','mindmap']);
+test('static registration validates identity/version and ships Compass, Mind Map and Wu Xing without test definitions',()=>{
+  assert.deepEqual(M.builtInPlexViews.available.map(view=>view.id),['classic','mindmap','wuxing']);
   assert.throws(()=>new M.PlexViewRegistry([M.builtInPlexViews.resolve('classic'),M.builtInPlexViews.resolve('classic')]));
   assert.throws(()=>new M.PlexViewRegistry([M.probeViewDefinition]));
   assert.throws(()=>new M.PlexViewRegistry([{...M.builtInPlexViews.resolve('classic'),version:2}]));

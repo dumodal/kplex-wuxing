@@ -1,7 +1,8 @@
 /** Host-bound render payloads. Occurrence identity and physical areas stay separate from canonical write endpoints. */
-import type {PlexArea, PlexProjection} from "../../core/plex/views/contracts";
+import type {PlexArea, PlexProjection, PlexDecoration} from "../../core/plex/views/contracts";
 import type {PositionedNode, PositionedEdge} from "../../types";
 import type {AdmittedOccurrenceEditor} from "./occurrenceEditors";
+import type {PlexPropertyAssignment} from "../../core/plex/views/propertyAssignment";
 
 export type SceneViewport = {key: string; left: number; top: number; width: number; height: number;
   contentTop: number; contentHeight: number; initialScrollTop: number};
@@ -9,9 +10,13 @@ export type SceneAreaBounds = {key: string; left: number; top: number; width: nu
 export type HostPlexScene = {
   nodes: PositionedNode[]; edges: PositionedEdge[];
   zoneViewports: Partial<Record<string, SceneViewport>>; zoneAreas: Partial<Record<string, SceneAreaBounds>>;
-  sectionTreeEdges?: {id: string; sourcePath: string; targetPath: string}[];
+  sectionTreeEdges?: {id: string; sourcePath: string; targetPath: string; sourceOccurrence?: string; targetOccurrence?: string}[];
   projection?: PlexProjection;
   areas?: readonly PlexArea[];
+  decorations?: readonly PlexDecoration[];
+  propertyAssignments?: readonly PlexPropertyAssignment[];
+  /** World rectangles are fit-only; the shared ThoughtNode paints its own attached badge. */
+  badgeBounds?: readonly Readonly<{occurrenceId: string; bounds: import("../../core/plex/views/contracts").ViewRect}>[];
   entryOccurrence?: string; editorOccurrence?: string; frameOccurrence?: string;
   boundEditors?: readonly AdmittedOccurrenceEditor[];
   /** A bounded cached connector pass stopped early; it makes no completeness claim. */
@@ -26,6 +31,10 @@ export function occurrenceKey(node: PositionedNode): string { return node.occurr
 /** Canonical paths are never overloaded with a visual connector's occurrence endpoint. */
 export function edgeOccurrence(edge: PositionedEdge, endpoint: "source" | "target"): string {
   return endpoint === "source" ? edge.sourceOccurrence ?? edge.sourcePath : edge.targetOccurrence ?? edge.targetPath;
+}
+/** Geometry/clipping may use a measured section row without changing canonical action identity. */
+export function edgePhysicalOccurrence(edge: PositionedEdge, endpoint: "source" | "target"): string {
+  return (endpoint === "source" ? edge.sourceSectionOccurrence : undefined) ?? edgeOccurrence(edge, endpoint);
 }
 /** Non-semantic connectors have no relationship-write authority, even when both endpoints are real notes. */
 export function semanticSceneEdge(edge: PositionedEdge): boolean { return !edge.kind || edge.kind === "semantic"; }

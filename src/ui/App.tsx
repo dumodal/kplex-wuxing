@@ -19,6 +19,7 @@
  * across React/window remounts. Saved history and pins continue through the shared settings writer.
  */
 import { subscribeAppearanceSources } from "../adapters/obsidian/colorChanges";
+import {CanvasViewContributionController} from "./plexViews/CanvasViewContributionController";
 import type {AppearanceOwner} from "../core/plex/appearanceThemes";
 import { ColorSourceModal } from "./ColorSourceModal";
 import type { LensColorRequest, LensColorDialog } from "./PlexFilter";
@@ -238,6 +239,16 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
   const syncMenuButtonRef = useRef<HTMLButtonElement>(null);
   const sidecarMoveButtonRef = useRef<HTMLButtonElement>(null);
   const graphActionPorts = useRef<GraphActionPorts | null>(null);
+  const viewContributions = useMemo(/** Own exactly this native canvas; focus never redirects a contributed request. */ () =>
+    new CanvasViewContributionController(documentSession.plexView, plugin.viewSettingsRegistry, {
+      settings: () => plugin.settings.canvasViewSettings,
+      mounted: () => Boolean(rootRef.current?.isConnected),
+      beforePresentationChange: () => graphActionPorts.current?.preparePresentationChange?.(),
+      update: (id, address, edit, expected) => plugin.updateCanvasViewConfiguration(id, address, edit, expected),
+      openSettings: (id, target) => plugin.openCanvasViewSettings(id, target),
+      failed: error => {console.error("K-Plex canvas contribution was not completed", error); new Notice(plugin.translator("view.settingsSaveFailed"));},
+    }), [documentSession, plugin]);
+  useEffect(/** Retire all captured view callbacks before this native App generation disappears. */ () => () => viewContributions.dispose(), [viewContributions]);
   useEffect(/** Camera preparation must precede native overlay movement and React toolbar visibility changes. */ () => displayModes.onBeforeResize(/** Prepare only the currently mounted graph generation. */ () => graphActionPorts.current?.prepareDisplayResize?.()), [displayModes]);
   const [wander] = useState(/** One controller owns this view generation; all graph capabilities are read live. */ () => new WanderController({
     readScene: /** A detached graph cannot claim readiness or navigation eligibility. */ () => graphActionPorts.current?.readWanderScene?.() ?? { center: null, ready: false, candidates: [] },
@@ -1352,6 +1363,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
           />
           <PlexFilter
             viewSession={documentSession.plexView}
+            viewContributions={viewContributions}
             index={plugin.index}
             center={page}
             revision={renderRevision}
@@ -1421,7 +1433,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
       <main className="kplex-workspace">
         <section className="kplex-graph-area" data-kplex-tooltip-boundary>
           {ViewLabels && <ViewLabels translate={translate} />}
-          <PlexGraph viewDefinition={plexViewDefinition} viewSession={documentSession.plexView} viewRevision={viewRevision} sidecarOpen={sidecarOpen} plugin={plugin} index={plugin.index} settings={viewSettings} paintSettings={paintSettings} paintLenses={paintLenses} surface={profileSurface} hostLeaf={hostLeaf} predicate={plexFilterPredicate} lenses={compiledGraphLenses} filterLayoutMode={filterLayoutMode} predicateRevision={predicateRevision} showCrossLinks={plugin.settings.showCrossLinks} activePath={page.path} renderRevision={renderRevision} findFocusRequest={findFocusRequest}
+          <PlexGraph viewDefinition={plexViewDefinition} viewSession={documentSession.plexView} viewContributions={viewContributions} viewRevision={viewRevision} sidecarOpen={sidecarOpen} plugin={plugin} index={plugin.index} settings={viewSettings} paintSettings={paintSettings} paintLenses={paintLenses} surface={profileSurface} hostLeaf={hostLeaf} predicate={plexFilterPredicate} lenses={compiledGraphLenses} filterLayoutMode={filterLayoutMode} predicateRevision={predicateRevision} showCrossLinks={plugin.settings.showCrossLinks} activePath={page.path} renderRevision={renderRevision} findFocusRequest={findFocusRequest}
             footprintsControl={<PlexFootprintsPanel trail={documentSession.footprints} translate={translate}
               readRow={/** Resolve visible references only; unavailable nodes never trigger acquisition or creation. */ visit => {
                 const target = resolveActionPage(plugin.index, visit.node);

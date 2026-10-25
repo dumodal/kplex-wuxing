@@ -1,0 +1,91 @@
+/** Per-canvas contribution dispatcher. The existing session owns selection/state; the existing
+ * queued writer owns configuration. Captured callbacks cannot borrow another leaf or document. */
+import type {PlexViewSession} from "../../application/PlexViewSession";
+import {boundedViewState} from "../../core/plex/views/state";
+import {readViewConfiguration, readViewConfigurationAt, type ViewConfigurationAddress,
+  type ViewConfigurationEdit, type ViewConfigurationExpected} from "../../core/plex/views/configuration";
+import type {CanvasViewSettingsRegistry} from "./settingsContributions";
+import type {CanvasViewCommand, CanvasViewContributionContext, CapturedCanvasViewCommand,
+  CapturedCanvasViewMenuItem, CapturedCanvasViewChoice} from "./contributionContracts";
+import {copyCanvasViewCommand, validateCanvasViewMenus, validateCanvasViewChoices} from "./contributionValidation";
+
+export type CanvasViewContributionPorts = Readonly<{
+  settings: () => unknown;
+  mounted: () => boolean;
+  beforePresentationChange: () => void;
+  update: (id: string, address: ViewConfigurationAddress, edit: ViewConfigurationEdit, expected?: ViewConfigurationExpected) => Promise<void>;
+  openSettings: (id: string, target?: string) => boolean;
+  failed: (error: unknown) => void;
+}>;
+
+export class CanvasViewContributionController {
+  private disposed = false;
+  /** No subscriptions or global state; the owning App disposes this generation on unmount. */
+  constructor(readonly session: PlexViewSession, readonly registry: CanvasViewSettingsRegistry, private readonly ports: CanvasViewContributionPorts) {}
+  /** Detached snapshots cannot mutate the session or the live settings object. */
+  context(): CanvasViewContributionContext | null {
+    if (this.disposed || !this.ports.mounted() || this.registry.definition(this.session.definition.id) !== this.session.definition) return null;
+    const configuration = readViewConfiguration(this.session.definition, this.ports.settings());
+    return {viewId: this.session.definition.id, state: boundedViewState(this.session.state), configuration};
+  }
+  /** Capture exact session/definition/revision and configuration; a stale menu is inert. */
+  capture(request: CanvasViewCommand): CapturedCanvasViewCommand {
+    const command = copyCanvasViewCommand(request), context = this.context(), definition = this.session.definition;
+    const current = this.session.capture(), revision = this.session.getSnapshot(), configuration = JSON.stringify(context?.configuration);
+    const expected = command.kind === "configuration" && context?.configuration.status === "available"
+      ? readViewConfigurationAt(definition, this.ports.settings(), command.address) : undefined;
+    let used = false;
+    return {run: async () => {
+      if (used || !context || this.disposed || !current() || !this.ports.mounted() || this.session.definition !== definition
+        || this.session.getSnapshot() !== revision || JSON.stringify(this.context()?.configuration) !== configuration) return {status: "unavailable"};
+      used = true;
+      try {
+        if (command.kind === "settings") return {status: this.ports.openSettings(definition.id, command.target) ? "completed" : "unavailable"};
+        if (context.configuration.status !== "available") return {status: "unavailable"};
+        if (command.kind === "configuration") {
+          this.ports.beforePresentationChange();
+          await this.ports.update(definition.id, command.address, command.edit, expected);
+          return {status: "completed"};
+        }
+        if (!definition.reduceState) return {status: "unavailable"};
+        const result = definition.reduceState(context.state, command.action, context.configuration);
+        if (result.status !== "updated") return result;
+        const next = boundedViewState(result.state);
+        if (result.state !== null && next === null) return {status: "unavailable"};
+        this.ports.beforePresentationChange();
+        return {status: this.session.updateState(next) ? "completed" : "unavailable"};
+      } catch (error) {this.ports.failed(error); return {status: "failed"};}
+    }};
+  }
+  /** Native menu composition receives only admitted labels and captured, one-shot commands. */
+  menus(): readonly CapturedCanvasViewMenuItem[] {
+    const context = this.context(); if (!context) return [];
+    try {
+      const rows = this.registry.contribution(this.session.definition)?.menus?.(context) ?? [];
+      validateCanvasViewMenus(rows);
+      const capture = (items: typeof rows): CapturedCanvasViewMenuItem[] => items.flatMap<CapturedCanvasViewMenuItem>(row => {
+        if (row.kind === "separator") return [{id: row.id, kind: "separator"}];
+        if (row.visible === false) return [];
+        const common = {id: row.id, label: {...row.label}, icon: row.icon, enabled: row.enabled !== false};
+        return row.kind === "submenu" ? [{...common, kind: "submenu", items: capture(row.items)}]
+          : [{...common, kind: "action", checked: row.checked, unavailableReason: row.unavailableReason,
+            command: this.capture(row.command)}];
+      });
+      return capture(rows);
+    } catch (error) {this.ports.failed(error); return [];}
+  }
+  /** Shared choices are the same requests as native menu commands, scoped to this panel's canvas. */
+  choices(): readonly CapturedCanvasViewChoice[] {
+    const context = this.context(); if (!context) return [];
+    try {
+      const choices = this.registry.contribution(this.session.definition)?.choices?.(context) ?? [];
+      validateCanvasViewChoices(choices);
+      return choices.filter(choice => choice.visible !== false).map(choice => ({id: choice.id, label: {...choice.label},
+        selected: choice.selected, enabled: choice.enabled !== false, ...(choice.settings ? {settings: this.capture(choice.settings)} : {}), options: choice.options.filter(option => option.visible !== false)
+          .map(option => ({id: option.id, label: {...option.label}, enabled: option.enabled !== false,
+            unavailableReason: option.unavailableReason, command: this.capture(option.command)}))}));
+    } catch (error) {this.ports.failed(error); return [];}
+  }
+  /** Retire callbacks immediately; no host/menu/subscription survives its App generation. */
+  dispose(): void {this.disposed = true;}
+}

@@ -1,37 +1,11 @@
 /** Full production PlexGraph mounts a non-Classic definition in real Chromium. Host effects are finite explicit doubles. */
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {build} from 'esbuild';
+import {plexViewBrowserModules} from './support/plexViewBrowser.mjs';
 import test from 'node:test';
 import {chromiumHarness} from './support/browserTypeScript.mjs';
 
-const nativeStub=`
-  class NativeBase {constructor(){} register(){} registerEvent(){} addChild(){} removeChild(){}}
-  exports.App=exports.Modal=exports.SuggestModal=exports.FuzzySuggestModal=exports.AbstractInputSuggest=exports.Component=exports.MarkdownRenderChild=
-  exports.PluginSettingTab=exports.Setting=exports.ButtonComponent=exports.ColorComponent=exports.SearchComponent=exports.ExtraButtonComponent=
-  exports.ItemView=exports.FileView=exports.TextFileView=exports.Scope=exports.WorkspaceLeaf=NativeBase;
-  exports.TFile=class TFile {};exports.TFolder=class TFolder {};
-  exports.Platform={isMobile:false,isIosApp:false};exports.Keymap={isModEvent:e=>e.metaKey||e.ctrlKey};
-  exports.getLanguage=()=> 'en';exports.getIcon=()=>null;exports.getIconIds=()=>[];exports.setIcon=()=>{};exports.setTooltip=()=>{};
-  exports.normalizePath=p=>p;exports.getAllTags=()=>[];
-  exports.Notice=class Notice {constructor(message){throw Error('Unexpected notice: '+message)}};
-  exports.Menu=class Menu {items=[];addItem(prepare){const item={setTitle(){return item},setIcon(){return item},setChecked(){return item},setDisabled(){return item},onClick(fn){item.click=fn;return item}};prepare(item);this.items.push(item);return this;}addSeparator(){return this;}};
-  exports.MarkdownRenderer={render:async()=>{}};
-`;
-const output=await build({stdin:{resolveDir:process.cwd(),contents:`
-  export {createElement,useSyncExternalStore} from 'react';export {createRoot} from 'react-dom/client';export {flushSync} from 'react-dom';
-  export {PlexGraph} from './src/ui/PlexGraph';export {migrateAndMergeSettings} from './src/settings';export {createTranslator} from './src/lang';
-  export {PlexViewRegistry} from './src/core/plex/views/registry';export {PlexViewSession} from './src/application/PlexViewSession';
-  export {builtInPlexViews} from './src/ui/plexViews/builtins';export {probeViewDefinition} from './tests/support/plexViewProbe';
-  export {ActionManager} from './src/application/ActionManager';export {actionNodeRef} from './src/adapters/obsidian/actionNode';
-  export {editViewConfiguration} from './src/core/plex/views/configuration';
-  export {mindMapViewDefinition} from './src/core/plex/views/mindmap/definition';
-  export {builtInCanvasViewSettings} from './src/ui/plexViews/settingsContributions';
-  export {compileGraphPredicate} from './src/core/plex/predicate';
-`},write:false,bundle:true,platform:'browser',format:'iife',globalName:'sourceModules',plugins:[{name:'finite-native-host',setup(builder){
-  builder.onResolve({filter:/^obsidian$/},()=>({path:'host',namespace:'finite'}));
-  builder.onLoad({filter:/.*/,namespace:'finite'},()=>({contents:nativeStub}));
-}}]});
+const output=await plexViewBrowserModules();
 
 test('non-Classic definition uses the production scene, selection, Find and action lifecycle',async()=>{
   const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
@@ -185,7 +159,7 @@ test('non-Classic definition uses the production scene, selection, Find and acti
       const hierarchyFindProof={selected:actionPorts.current.readSelected()?.occurrenceId,attention:props.activePath,root:hierarchySession.layoutRoot(props.activePath),editors:hierarchySession.editors.bindings.length};
       await act('view.layout-controls');
       const layoutBefore={semantic:work.semantic,root:hierarchySession.layoutRoot(props.activePath),camera:mount.querySelector('.kplex-camera').style.transform},layoutWrites=[];
-      plugin.updateCanvasViewSetting=async(id,field,value)=>{if(id!=='mindmap')throw Error('Foreign view setting');layoutWrites.push([id,field,value]);settings.canvasViewSettings=M.editViewConfiguration(M.mindMapViewDefinition,settings.canvasViewSettings,field,value);props.renderRevision++;renderHierarchy()};
+      plugin.updateCanvasViewConfiguration=async(id,address,edit)=>{if(id!=='mindmap')throw Error('Foreign view setting');layoutWrites.push([id,address.field,edit.value]);settings.canvasViewSettings=M.editViewConfigurationAt(M.mindMapViewDefinition,settings.canvasViewSettings,address,edit);props.renderRevision++;renderHierarchy()};
       const rails=[...mount.querySelectorAll('.kplex-layout-panel input[type=range]')];
       for(const [label,value]of [['Horizontal density',2],['Vertical density',1.5]]){
         const rail=rails.find(element=>element.getAttribute('aria-label')===label);if(!rail)throw Error('Registered density rail missing');

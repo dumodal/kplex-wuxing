@@ -41,6 +41,7 @@
  * Ontology text drafts persist one guarded field through the existing settings queue before live
  * semantic publication; slow refresh remains outside the disk queue and cannot replay failed saves.
  */
+import {viewLabel} from "./ui/plexViews/labels";
 import {startupIndexPolicy} from './core/plex/startupIndexPreferences';
 import { tagMembershipPair } from "./ui/structuralConnectionActions";
 import {SettingsReconciliation, type SettingsSnapshot, type SettingsWriteIntent} from "./adapters/obsidian/settingsReconciliation";
@@ -58,7 +59,10 @@ import {NotificationModal} from "./ui/NotificationModal";
 import { FileView, ItemView, MarkdownView, Menu, Notice, Platform, Plugin, TFile, TFolder, apiVersion, getLanguage, getAllTags, normalizePath, type Editor, type HoverParent, type WorkspaceLeaf } from "obsidian";
 import { captureSettingsPolicy, classifySettingsChange, isStyleOnlySettingsChange, type SettingsPolicy } from "./core/graph/settingsPolicy";
 import {builtInCanvasViewSettings} from "./ui/plexViews/settingsContributions";
-import {editViewConfiguration, viewConfigurationOwnerDomains} from "./core/plex/views/configuration";
+import {editViewConfigurationAt, migrateViewConfiguration, readViewConfiguration, resetViewConfiguration,
+  viewConfigurationOwnerDomains, viewConfigurationUpdateDomain, type ViewConfigurationAddress, type ViewConfigurationEdit,
+  type ViewConfigurationExpected, type PlexViewConfiguration} from "./core/plex/views/configuration";
+import {configurationJson} from "./core/plex/views/configurationValues";
 import { removeMarkdownZoomModes, renameMarkdownZoomModes } from "./core/plex/markdownZoomPreferences";
 import { GraphIndex } from "./index/GraphIndex";
 import {SavedSettingsRefresh} from "./adapters/obsidian/savedSettingsRefresh";
@@ -92,6 +96,8 @@ import { createTranslator, type Translator } from "./lang";
 import { isGraphTabCommandAvailable, isPopoutCommandAvailable, primaryOpenSurface } from "./core/plex/viewPresentation";
 import { createAdjacentFileLeaf } from "./adapters/obsidian/adjacentFileLeaf";
 import { isEmbeddedMarkdownLeaf } from "./adapters/obsidian/embeddedMarkdownLeaf";
+import {CanvasPropertyAssignmentActions, type CanvasPropertyAssignmentRequest} from "./ui/CanvasPropertyAssignmentActions";
+import type {PlexPropertyAssignment} from "./core/plex/views/propertyAssignment";
 import { StartupDiagnostics } from "./adapters/obsidian/startupDiagnostics";
 import { writeRelationshipMetadata, SavedRelationshipPendingError, relationshipMetadataPayload } from "./adapters/obsidian/relationshipMetadataWrite";
 import { SOURCE_DECODE_BUDGET_BYTES } from "./index/SourceFacts";
@@ -295,6 +301,7 @@ export default class KplexPlugin extends Plugin {
   /** Pending saved relationship observers release on unload, rename/delete or actual convergence. */
   private readonly relationshipWriteCancels = new Set<() => void>();
   private structuralDrops: StructuralNodeDropActions | null = null;
+  private canvasPropertyAssignments: CanvasPropertyAssignmentActions | null = null;
   /** Paths suppress the synchronous vault:create rebuild; object identity protects optimistic UI. */
   private readonly managedCreatedPaths = new Map<string, number>();
   private readonly managedCreatedFiles = new WeakSet<TFile>();
@@ -604,6 +611,7 @@ export default class KplexPlugin extends Plugin {
     this.externalSettingsRetryTimers.clear();
     this.structuralDrops?.dispose();
     this.structuralDrops = null;
+    this.canvasPropertyAssignments?.dispose();this.canvasPropertyAssignments = null;
     this.settingsTab?.disposeActionSettings();
     this.settingsTab = null;
     for (const dialog of this.actionDialogs.keys()) dialog.close();
@@ -1965,6 +1973,8 @@ export default class KplexPlugin extends Plugin {
         conflict: /** Event saves can report a refused local intent without an unhandled rejection. */ () => {
           const error = new Error(this.translator("settingsSync.conflict")); error.name = "SettingsConflictError"; return error;
         },
+        canvasEntries: /** Only an installed schema can declare independently owned collection entries. */ (id, field) =>
+          (this.viewSettingsRegistry ?? builtInCanvasViewSettings).definition(id)?.configuration?.fields[field]?.entries === true,
         wait: /** Release bounded retry tasks explicitly on unload as well as normal timeout. */ ms => new Promise(resolve => {
           const timers = this.externalSettingsRetryTimers ??= new Map();
           const timer = window.setTimeout(/** A completed retry no longer retains its owning plugin. */ () => {timers.delete(timer); resolve();}, ms);
@@ -2061,21 +2071,71 @@ export default class KplexPlugin extends Plugin {
     return () => owners.every(current => current());
   }
 
-  /** Commit one type preference against the latest queued map. No draft publication, session mutation or source work. */
+  /** Read only one registered view's validated effective settings; unavailable extensions stay inert. */
+  readCanvasViewConfiguration(id: string): PlexViewConfiguration {
+    const definition = (this.viewSettingsRegistry ?? builtInCanvasViewSettings).definition(id);
+    return definition ? readViewConfiguration(definition, this.settings.canvasViewSettings) : {status: "unavailable", reason: "unsupported"};
+  }
+
+  /** Keep the published scalar API on the same scoped queue; no view writes data.json directly. */
   async updateCanvasViewSetting(id: string, field: string, value: unknown): Promise<void> {
+    return this.updateCanvasViewConfiguration(id, {field}, {kind: "set", value});
+  }
+
+  /** Submit one detached field/path operation. Sibling preset edits rebase on the latest queue
+   * state; stale same-entry remote epochs or an optional stale opening leaf reject safely. */
+  async updateCanvasViewConfiguration(id: string, address: ViewConfigurationAddress, edit: ViewConfigurationEdit,
+    expected?: ViewConfigurationExpected, isCurrent: () => boolean = () => true): Promise<void> {
+    const definition = (this.viewSettingsRegistry ?? builtInCanvasViewSettings).definition(id);
+    if (!definition || !edit || !["set", "remove"].includes(edit.kind)) throw new Error(this.translator("view.settingsUnavailable"));
+    const submitted = {field: address.field, ...(address.path ? {path: [...address.path]} : {})};
+    const operation: ViewConfigurationEdit = edit.kind === "set" ? {kind: "set", value: configurationJson(edit.value)} : {kind: "remove"};
+    const opening: ViewConfigurationExpected | undefined = expected ? {present: expected.present,
+      ...(expected.value !== undefined ? {value: configurationJson(expected.value)} : {})} : undefined;
+    await this.commitCanvasViewConfiguration(id, viewConfigurationUpdateDomain(definition, submitted),
+      /** Pure updates preserve other namespaces and unknown fields on each fresh accepted map. */ (stored, validateOpening) =>
+        editViewConfigurationAt(definition, stored, submitted, operation, validateOpening ? opening : undefined), isCurrent);
+  }
+
+  /** Explicit reset retains all unknown fields and other views; its scope is one address or the
+   * named view's known schema defaults, never vault properties or another preset namespace. */
+  async resetCanvasViewConfiguration(id: string, address?: ViewConfigurationAddress): Promise<void> {
     const definition = (this.viewSettingsRegistry ?? builtInCanvasViewSettings).definition(id);
     if (!definition) throw new Error(this.translator("view.settingsUnavailable"));
-    const current = this.receivedSettingsOwner(`canvasViewSettings:${id}:${field}`);
+    const submitted = address ? {field: address.field, ...(address.path ? {path: [...address.path]} : {})} : undefined;
+    await this.commitCanvasViewConfiguration(id, submitted ? viewConfigurationUpdateDomain(definition, submitted) : `canvasViewSettings:${id}`,
+      /** Reset is a pure explicit operation; future/failed payloads refuse destructive downgrade. */ stored => resetViewConfiguration(definition, stored, submitted));
+  }
+
+  /** Persist a successful schema upgrade through the existing writer. Failed/future migration
+   * leaves the original payload untouched and exposes the existing actionable Settings failure. */
+  async migrateCanvasViewConfiguration(id: string): Promise<void> {
+    const definition = (this.viewSettingsRegistry ?? builtInCanvasViewSettings).definition(id);
+    if (!definition) throw new Error(this.translator("view.settingsUnavailable"));
+    await this.commitCanvasViewConfiguration(id, `canvasViewSettings:${id}`, stored => {
+      const result = migrateViewConfiguration(definition, stored);
+      if (result.status === "unavailable") throw new Error(this.translator("view.settingsUnavailable"));
+      return result.settings;
+    });
+  }
+
+  /** The sole view-settings effect: serialized rebase/disk commit, then live installation and
+   * presentation refresh. No session/navigation/source/index mutation is granted to a view. */
+  private async commitCanvasViewConfiguration(id: string, domain: string,
+    apply: (stored: unknown, validateOpening: boolean) => Record<string, unknown>, isCurrent: () => boolean = () => true): Promise<void> {
+    const registry = this.viewSettingsRegistry ?? builtInCanvasViewSettings, definition = registry.definition(id);
+    const current = this.receivedSettingsOwner(domain);
     let changed = false;
     await this.enqueueSettingsWrite(async () => {
-      if (this.unloading || !current()) throw new Error(this.translator("settingsSync.conflict"));
-      const source = this.settingsForWrite();
-      const canvasViewSettings = editViewConfiguration(definition, source.canvasViewSettings, field, value);
+      if (this.unloading || !isCurrent() || !current() || !definition || (this.viewSettingsRegistry ?? builtInCanvasViewSettings).definition(id) !== definition)
+        throw new Error(this.translator("settingsSync.conflict"));
+      const source = this.settingsForWrite(), canvasViewSettings = apply(source.canvasViewSettings, true);
+      registry.validatePaletteReferences(definition, source.canvasViewSettings, canvasViewSettings, source.colorPreferences.palette);
       if (appearanceThemes.themeValuesEqual(source.canvasViewSettings, canvasViewSettings)) return;
       const next = {...source, canvasViewSettings};
       await this.writeSettingsSnapshot(this.settingsSnapshotForPersistence(source.actionPreferencesFuture ?? source.actionPreferences, next));
       if (this.unloading) return;
-      this.settings.canvasViewSettings = editViewConfiguration(definition, this.settings.canvasViewSettings, field, value);
+      this.settings.canvasViewSettings = apply(this.settings.canvasViewSettings, false);
       const policy = captureSettingsPolicy(this.settings);
       this.savedSettingsPolicy = {values: {...(this.savedSettingsPolicy ?? policy).values, canvasViewSettings: policy.values.canvasViewSettings}};
       changed = true;
@@ -2445,6 +2505,14 @@ export default class KplexPlugin extends Plugin {
   /** Open the actual Hidden-fields control without creating a field or approving a note write. */
   openHiddenOntologySettings(): void {
     if (this.openSettingsPage(this.translator("settings.ui.ontology"))) this.settingsTab?.openOntologyManager('hidden');
+  }
+
+  /** Reuse native page-path navigation with the existing owning-tab fallback for settings cross-links. */
+  openCanvasViewSettings(id: string, target?: string): boolean {
+    const definition = this.viewSettingsRegistry.definition(id);
+    if (!definition) return false;
+    const opened = this.openSettingsPage(this.translator("settings.ui.plex.behavior"), viewLabel(definition.labelKey, this.translator));
+    return opened && (target === undefined || !!this.settingsTab?.openCanvasViewManager(id, target));
   }
 
   /** Reuse native page-path navigation with the existing owning-tab fallback for settings cross-links. */
@@ -6872,6 +6940,35 @@ export default class KplexPlugin extends Plugin {
       /** Reuse exact-file saved-metadata observation and plugin cancellation ownership. */ (file, fields, mutate) => this.mutateCreatedNodeMetadata(file, fields, mutate), () => this.settings.noteTypeField);
     return this.structuralDrops;
   }
+
+  /** Reuse the plugin's native metadata/convergence lifetime, keeping real property edits on
+   * ordinary incremental indexing. No managed relationship feedback or whole-vault work. */
+  private canvasPropertyOwner(): CanvasPropertyAssignmentActions {
+    this.canvasPropertyAssignments ??= new CanvasPropertyAssignmentActions(this.app, this.translator,
+      () => [...this.allOntologyFields(), this.settings.noteTypeField, this.settings.primaryTagField, this.settings.thumbnailProperty,
+        this.settings.nodeImageProperty, ...this.settings.nameFields.split(",").map(name => name.trim())],
+      async (file, field, mutate, current) => {
+        await writeRelationshipMetadata(this.app, file, new Set([normalizeFieldName(field)]), mutate, {
+          own: cancel => {this.relationshipWriteCancels.add(cancel);return () => {this.relationshipWriteCancels.delete(cancel);};},
+          pending: () => {new Notice(this.translator("note.savedMetadataPending"), 4000);},
+          savedPendingMessage: () => this.translator("note.savedMetadataPending"),
+          current: () => !this.unloading && current(), preparingMessage: () => this.translator("assignment.unavailable"),
+        });
+      });
+    return this.canvasPropertyAssignments;
+  }
+  /** Shared action/drop admission supplies no relationship removal or document navigation. */
+  canAssignCanvasProperty(page: GraphPage, assignment: PlexPropertyAssignment): boolean {
+    return !this.unloading && this.canvasPropertyOwner().eligible(page, assignment);
+  }
+  /** Both drag/drop and the accessible node action use this one captured native confirmation. */
+  openCanvasPropertyAssignment(request: CanvasPropertyAssignmentRequest): boolean {
+    return !this.unloading && this.canvasPropertyOwner().open(request);
+  }
+  /** At most one applied-value-guarded field receipt belongs to each live canvas. */
+  canUndoCanvasPropertyAssignment(scope: HTMLElement): boolean {return !this.unloading && !!this.canvasPropertyAssignments?.canUndo(scope);}
+  /** Undo uses the same native writer; it cannot overwrite a later field value. */
+  undoCanvasPropertyAssignment(scope: HTMLElement): boolean {return !this.unloading && !!this.canvasPropertyAssignments?.undo(scope);}
 
   /** Handle explicit structural drops without changing ontology relationship semantics. */
   openStructuralNodeDrop(origin: GraphPage, target: GraphPage, options: {immediateMove?: boolean} = {}): boolean {
