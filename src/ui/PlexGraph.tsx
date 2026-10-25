@@ -3471,6 +3471,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const current = captureSurfaceContinuation(() => viewport.current, () => plugin.actionManager.readSnapshot(actionSurfaceId));
     const commitRoot = viewport.current, commitDocument = commitRoot?.ownerDocument;
     const token = ++optimisticCommitToken.current;
+    /** Pending feedback belongs to this exact mounted view/token, independently of modal focus. */
+    const ownsFeedback = (): boolean => token === optimisticCommitToken.current && Boolean(commitRoot?.isConnected)
+      && viewport.current === commitRoot && commitRoot?.ownerDocument === commitDocument;
     plugin.openRelationModal({
       hostLeaf, mode: currentRole ? "relink" : "create", origin: center, fixedTarget: original.page,
       existingDirection: currentRole ? original.linkDirection : undefined, semanticRole: nextRole,
@@ -3481,12 +3484,16 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         setRelationshipUpdating(true);
       },
       onCommitEnd: /** A failed write releases only its own still-mounted optimistic token. */ success => {
-        if (!success && token === optimisticCommitToken.current && commitRoot?.isConnected && viewport.current === commitRoot && commitRoot.ownerDocument === commitDocument) {
+        if (!success && ownsFeedback()) {
           setRelationshipUpdating(false);
           setOptimisticRelink(null);
         }
       },
-      onCommitted: /** Durable publication survives dialog closure; stale hover feedback does not. */ () => {
+      onCommitted: /** Confirmed non-Classic publication retires feedback without waiting on Compass-only lists; saved-pending is still pending. */ result => {
+        if (!classic && result.state === "saved-published" && ownsFeedback()) {
+          setOptimisticRelink(null);
+          setRelationshipUpdating(false);
+        }
         if (current()) clearHoverIntent(true);
       },
     });

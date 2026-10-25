@@ -38,6 +38,20 @@ export async function acceptNativeOccurrenceDrag({app,p,c,host,compass,restores,
  cases.push({id:'trusted-native-second-occurrence-additive-save',sourceId:source.id,canonicalOriginMatched:true,mode:options.mode,canonicalAndNativeIdentityRetained:true,originalChildDeclarationRetained:true,otherSourceBytesRetained:true,targetBytesRetained:true});
  c.progress={...c.progress,phase:'native-text-drop-restore-production'};owner.select(prior);owner.registry=registry;owner.setRoot(path('R'));await until(()=>owner.definition.id==='mindmap'&&node('root'),'Production Mind Map did not restore');await act(host,'view.fit');
  await until(()=>!p.index.hasPendingSemanticPreparation()&&!p.index.hasActiveSemanticPreparation(),'Native additive source maintenance did not settle');
+ c.progress={...c.progress,phase:'native-parent-child-relink'};check(await p.index.prepareRelationshipPair(path('R'),path('P')),'Relink fixture pair not ready');await until(()=>!p.index.hasPendingSemanticPreparation()&&!p.index.hasActiveSemanticPreparation(),'Relink fixture preparation pending');await wait(120);
+ for(const [gate,role]of [['top','parent'],['bottom','child']]){
+  await act(host,'view.fit');const source=()=>nodes(host).find(element=>element.dataset.kplexPath===path('P'));
+  await until(()=>source()&&node('root')?.dataset.kplexPath===path('R'),'Production relink source/root absent');
+  let geometry,stableSince=Date.now();await until(()=>{const a=source()?.getBoundingClientRect(),b=node('root')?.querySelector('[data-kplex-gate=\"'+gate+'\"]')?.getBoundingClientRect(),next=JSON.stringify([a?.toJSON(),b?.toJSON(),root(host).querySelector('.kplex-camera')?.style.transform]);if(next!==geometry){geometry=next;stableSince=Date.now()}return source()?.isConnected&&a?.width>0&&b?.width>0&&Date.now()-stableSince>=120},'Relink source/target geometry did not settle');
+  const count=opened.length;await drag(source,()=>node('root').querySelector('[data-kplex-gate="'+gate+'"]'));
+  await until(()=>opened.length===count+1&&opened[count].modal.modalEl.isConnected,'Native relink composer absent');const {modal,options}=opened[count];
+  c.progress={...c.progress,relinkAttempt:{gate,role,mode:options.mode,origin:options.origin.path,target:options.fixedTarget?.path,pairReady:p.index.isSemanticWriteReady(path('R'),path('P'))}};
+  check(options.mode==='relink'&&options.origin.path===path('R')&&options.fixedTarget.path===path('P')&&options.semanticRole===role,'Production parent/child move lost exact context');
+  await until(()=>modal.modalEl.querySelector('.kplex-relation-actions button.mod-cta')?.disabled===false,'Native relink save unavailable');await clickNative(()=>modal.modalEl.querySelector('.kplex-relation-actions button.mod-cta'));
+  await until(()=>!modal.modalEl.isConnected&&p.index.isSemanticWriteReady(path('R'),path('P'))&&p.index.neighbours(p.index.get(path('R')),role).some(row=>row.page.path===path('P')),'Native relink was not published');
+  await until(()=>!root(host).querySelector('.kplex-relationship-updating'),'Published native relink left updating feedback stuck');check(owner.layoutRoot(path('C'))===path('R'),'Native relink changed map root');c.progress={...c.progress,relinkSaves:[...(c.progress.relinkSaves??[]),{role,canonicalPublished:true,updatingRetired:true}]};
+ }
+ cases.push({id:'trusted-native-parent-child-relink-feedback-settles',actualSaves:2,rootRetained:true,canonicalRolesConfirmed:true,updatingFeedbackRetired:true});
  c.progress={...c.progress,phase:'native-text-drop-open-editor'};const expanded=await act(host,'editor.expand',undefined,{kind:'explicit',node:{identity:path('R'),path:path('R'),kind:'file'},occurrenceId:'root'});check(expanded.status==='completed','Native text-drop editor unavailable');
  await until(()=>instance(host)?.view.editor&&root(host).querySelector('.kplex-central-editor-overlay .cm-content'),'Native source editor absent');
  c.progress={...c.progress,phase:'native-text-drop-editor-ready'};const leaf=instance(host),editor=leaf.view.editor,before=editor.getValue(),binding=owner.editors.bindings[0].id;
