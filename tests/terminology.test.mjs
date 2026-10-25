@@ -175,13 +175,13 @@ test("CSS hooks, variables, SVG markers and owning-document selectors use the K-
   assert(readFileSync(join(root, "esbuild.config.mjs"), "utf8").includes("/* K-Plex - generated bundle */"));
 });
 
-test("canonical view symbols preserve existing serialized workspace and plugin identities", () => {
+test("fork view symbols and manifests use identities isolated from upstream", () => {
   const view = readFileSync(join(root, "src/ui/KplexView.tsx"), "utf8");
-  assert.match(view, /KPLEX_VIEW_TYPE = "k-plex-react-view"/);
-  assert.match(view, /KPLEX_SIDEPANEL_VIEW_TYPE = "k-plex-sidepanel-view"/);
+  assert.match(view, /KPLEX_VIEW_TYPE = "kplex-wuxing-react-view"/);
+  assert.match(view, /KPLEX_SIDEPANEL_VIEW_TYPE = "kplex-wuxing-sidepanel-view"/);
   assert(readFileSync(join(root, "src/main.ts"), "utf8").includes('from "./ui/KplexView"'));
   for (const file of ["manifest.json", "manifest-beta.json"])
-    assert.equal(JSON.parse(readFileSync(join(root, file), "utf8")).id, "k-plex");
+    assert.equal(JSON.parse(readFileSync(join(root, file), "utf8")).id, "kplex-wuxing");
   const retiredPath = join(root, "src/ui/ExcaliBrainView.tsx");
   if (existsSync(retiredPath)) {
     const retired = readFileSync(retiredPath, "utf8");

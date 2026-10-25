@@ -3598,3 +3598,55 @@ button.kplex-sidecar-unfold-plex:focus-visible,
 
 /* Wander reuses the Plex button and layout-rail palette; only its floating position differs. */
 .kplex-layout-controls.kplex-wander-controls { z-index: 35; bottom: 12px; left: 50%; transform: translateX(-50%); max-width: calc(100% - 24px); }
+
+/* Compact projection status stays readable without intercepting graph gestures. */
+.kplex-wuxing-status {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  z-index: 5;
+  pointer-events: none;
+  font-size: var(--font-smallest);
+  color: var(--text-muted);
+  background: var(--background-primary);
+  padding: 4px 8px;
+  border-radius: var(--radius-s);
+}
+
+/* Fixed phase guides are visual scaffolding, separate from real note connections. */
+.kplex-wuxing-guide { pointer-events: none; }
+.kplex-wuxing-guide .kplex-wuxing-reference { stroke: var(--text-faint); stroke-width: 1; stroke-dasharray: 5 7; opacity: 0.5; }
+.kplex-wuxing-guide text { font-weight: 600; }
+.is-wuxing .kplex-gate-wrap { display: none; }
+
+.kplex-wuxing-wedge { stroke: none; }
+.kplex-wuxing-phase-frame { stroke-width: 1.4; stroke-opacity: 0.6; }
+/* Non-scaling strokes keep both cycles clear in the fitted overview; geometry distinguishes them. */
+.kplex-wuxing-phase-edge { fill: none; stroke: var(--text-normal); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; opacity: 0.9; }
+.kplex-wuxing-phase-edge-label { fill: var(--text-normal); font-size: 28px; }
+.kplex-wuxing-phase-label { fill: var(--text-normal); }
+
+.kplex-wuxing-phase-edge-label-background { fill: var(--background-primary); opacity: 0.9; }
+.kplex-wuxing-phase-count { fill: var(--text-muted); }
+
+/* Keep phase tools inside their reserved panel header. */
+.is-wuxing .kplex-zone-tools { top: 4px; bottom: auto; right: 6px; }
+
+/* One explicit help row before the five ontology inputs. */
+.kplex-ontology-fields > .setting-items > .kplex-ontology-help { display: block; }
+.kplex-ontology-help .setting-item-name { font-size: var(--font-ui-small); font-weight: normal; color: var(--text-muted); }
+.kplex-ontology-help .setting-item-control { display: none; }
+
+/* Single-language terminology selection in the existing graph customization panel. */
+.kplex-wuxing-language { display: flex; flex: 0 0 auto; flex-direction: column; align-items: flex-start; gap: 4px; font-size: var(--font-ui-small); }
+.kplex-layout-controls.is-stacked .kplex-wuxing-language { flex-direction: row; align-items: center; justify-content: space-between; }
+.kplex-wuxing-language select { min-width: 90px; }
+
+/* Plain, theme-aware learning content inside the native Obsidian modal. */
+.kplex-wuxing-introduction-modal { width: min(760px, 92vw); }
+.kplex-wuxing-introduction-modal .modal-content { max-height: 72vh; overflow-y: auto; }
+.kplex-wuxing-introduction section { margin-bottom: 24px; }
+.kplex-wuxing-introduction table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+.kplex-wuxing-introduction th, .kplex-wuxing-introduction td { text-align: left; vertical-align: top; padding: 8px; overflow-wrap: anywhere; border-bottom: 1px solid var(--background-modifier-border); }
+.kplex-wuxing-reference { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }

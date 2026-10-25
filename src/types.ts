@@ -114,6 +114,8 @@ export type Neighborhood = {
   leftFriends: Neighbour[];
   rightFriends: Neighbour[];
   siblings: Neighbour[];
+  /** Available Wu Xing connections before per-zone display limits and local visual filtering. */
+  wuXingCounts?: Record<ScrollZone, number>;
 };
 
 export type GateStat = {
@@ -145,6 +147,11 @@ export type NodeVisual = {
 };
 
 export type PositionedNode = {
+  /** Optional billboard presentation, independent from note styles and semantic roles. */
+  presentationScale?: number;
+  presentationOpacity?: number;
+  /** Painted label size for overview layouts, already adjusted for local perspective. */
+  presentationFontSize?: number;
   page: GraphPage;
   role: Role | "center";
   relationType?: RelationType;

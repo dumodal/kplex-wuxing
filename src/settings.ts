@@ -156,6 +156,12 @@ export interface KplexSettings {
   compactingFactor: number;
   /** Horizontal spacing and label truncation vary independently from vertical density. */
   horizontalCompactingFactor: number;
+  /** Manual offsets from the distribution-driven Wu Xing camera, in degrees. */
+  wuxingYaw: number;
+  wuxingPitch: number;
+  /** Display-only language; English is the default; an explicit Chinese choice is retained. */
+  wuxingLanguage: "en" | "zh";
+  wuxingGuideSeen: boolean;
   minLinkLength: number;
   indexUpdateInterval: number;
   /** Acquisition policy applied at the next plugin startup, not a semantic graph setting. */
@@ -165,6 +171,7 @@ export interface KplexSettings {
   /** Live background scheduling policy, independent of semantic settings and cached source facts. */
   indexingThrottle: IndexingThrottle;
   hierarchy: Hierarchy;
+  wuxingOntologyInitialized?: boolean;
   inferAllLinksAsFriends: boolean;
   inverseInfer: boolean;
   /** Fallback native Date role; configured field ontology always takes precedence. */
@@ -310,6 +317,11 @@ export const DEFAULT_SETTINGS: KplexSettings = {
   compactView: false,
   compactingFactor: 2,
   horizontalCompactingFactor: 2,
+  wuxingYaw: 0,
+  wuxingPitch: 0,
+  wuxingLanguage: "en",
+  /** Remember dismissal of the first-use guide without changing vault notes. */
+  wuxingGuideSeen: false,
   minLinkLength: 18,
   indexUpdateInterval: 60000,
   indexingMode: "on-demand",
@@ -491,6 +503,27 @@ export function importExcaliBrainGraphSettings(raw: unknown, current?: KplexSett
 }
 
 /** Normalize this plugin's persisted settings, preserving K-Plex preferences across reloads. */
+/** Bilingual relationship field groups for the Wu Xing fork. Values are editable property aliases. */
+export const WUXING_ONTOLOGY_GROUPS = [
+  { key: "previous", labelKey: "wuxing.shares", fields: ["同我", "Kinship", "比肩", "Affinity", "劫财", "Alliance"] },
+  { key: "children", labelKey: "wuxing.generated", fields: ["我生", "Expression", "食神", "Cultivation", "伤官", "Innovation"] },
+  { key: "rightFriends", labelKey: "wuxing.regulated", fields: ["我克", "Stewardship", "正财", "Tending", "偏财", "Venturing"] },
+  { key: "leftFriends", labelKey: "wuxing.regulator", fields: ["克我", "Governance", "正官", "Order", "七杀", "Pressure"] },
+  { key: "parents", labelKey: "wuxing.source", fields: ["生我", "Nourishment", "正印", "Sustenance", "偏印", "Inspiration"] },
+] as const;
+
+/** Seed once, replacing upstream example vocabulary while preserving custom field names. */
+export function initializeWuXingOntology(settings: KplexSettings): boolean {
+  if (settings.wuxingOntologyInitialized) return false;
+  for (const group of WUXING_ONTOLOGY_GROUPS) {
+    const legacy = new Set(DEFAULT_HIERARCHY_DEFINITION[group.key].map(norm));
+    const custom = settings.hierarchy[group.key].filter(field => !legacy.has(norm(field)));
+    settings.hierarchy[group.key] = [...new Map([...group.fields, ...custom].map(field => [norm(field), field])).values()];
+  }
+  settings.wuxingOntologyInitialized = true;
+  return true;
+}
+
 export function migrateAndMergeSettings(raw: unknown): KplexSettings {
   const rawSettings = (raw && typeof raw === "object" ? raw : {}) as Partial<KplexSettings> & {
     hierarchy?: Partial<Hierarchy>;
@@ -514,12 +547,12 @@ export function migrateAndMergeSettings(raw: unknown): KplexSettings {
   // K-Plex adds Challenger as the canonical right-gate ontology while retaining every
   // legacy right-friend field. Existing vaults therefore gain the requested default without
   // losing any ExcaliBrain ontology aliases.
-  if (!hierarchy.rightFriends.some((field) => norm(field) === "challenger")) {
+  if (!old.wuxingOntologyInitialized && !hierarchy.rightFriends.some((field) => norm(field) === "challenger")) {
     hierarchy.rightFriends = ["Challenger", ...hierarchy.rightFriends];
   }
 
   // Mirror classic initializeHierarchy() precedence rules.
-  const sortFields = (items: string[]) => [...items].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+  const sortFields = (items: string[]) => old.wuxingOntologyInitialized ? [...items] : [...items].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
   const normalized = (items: string[]) => items.map(norm);
   hierarchy.hidden = sortFields(hierarchy.hidden);
   hierarchy.parents = sortFields(hierarchy.parents);
@@ -604,6 +637,10 @@ export function migrateAndMergeSettings(raw: unknown): KplexSettings {
     maxItemCount: Math.max(10, Math.min(300, Number(old.maxItemCount ?? DEFAULT_SETTINGS.maxItemCount))),
     compactingFactor: legacyProfile.compactingFactor,
     horizontalCompactingFactor: legacyProfile.horizontalCompactingFactor ?? legacyProfile.compactingFactor,
+    wuxingLanguage: old.wuxingLanguage === "zh" ? "zh" : "en",
+    wuxingGuideSeen: old.wuxingGuideSeen === true,
+    wuxingYaw: Math.max(-25, Math.min(25, finite(old.wuxingYaw, 0))),
+    wuxingPitch: Math.max(-25, Math.min(25, finite(old.wuxingPitch, 0))),
     baseFontSize: Math.max(8, Math.min(28, finite(old.baseFontSize, DEFAULT_SETTINGS.baseFontSize))),
     minLinkLength: finite(old.minLinkLength, DEFAULT_SETTINGS.minLinkLength),
     friendMaxHeight: Math.max(120, Math.min(900, Number(old.friendMaxHeight ?? old.siblingMaxHeight ?? DEFAULT_SETTINGS.friendMaxHeight))),
@@ -1967,7 +2004,7 @@ export class KplexSettingTab extends PluginSettingTab {
 
   /** Build localized native settings and subpages, including shared persisted Plex visibility controls. */
   getSettingDefinitions(): SettingDefinitionItem<DeclarativeSettingKey>[] {
-    const translate = createObsidianTranslator();
+    const translate = this.kplexPlugin.translator;
     const deleteCleanupDescription = createFragment();
     deleteCleanupDescription.createSpan({ text: translate("settings.deletion.removeOntologyLinks.help"), attr: { id: "kplex-remove-ontology-links-on-delete" } });
     const nodeStyles = this.nodeStyleEntries();
@@ -2085,20 +2122,34 @@ export class KplexSettingTab extends PluginSettingTab {
           {
             type: "page",
             name: translate("settings.ui.relationship.fields"),
-            desc: translate("settings.ui.choose.which.properties.appear.as.parents.children.frien"),
+            desc: this.kplexPlugin.manifest.id === "kplex-wuxing"
+              ? translate("wuxing.ontologyHelp")
+              : translate("settings.ui.choose.which.properties.appear.as.parents.children.frien"),
             items: [
               {
                 type: "group",
                 heading: translate("settings.ui.relationship.fields"),
                 cls: "kplex-ontology-fields",
                 items: [
-                  { name: translate("settings.ui.parent.fields"), control: { type: "textarea", key: "hierarchy.parents", rows: 3 } },
-                  { name: translate("settings.ui.child.fields"), control: { type: "textarea", key: "hierarchy.children", rows: 3 } },
-                  { name: translate("settings.ui.left.friend.jump.fields"), control: { type: "textarea", key: "hierarchy.leftFriends", rows: 3 } },
-                  { name: translate("settings.ui.right.friend.challenger.fields"), control: { type: "textarea", key: "hierarchy.rightFriends", rows: 3 } },
-                  { name: translate("settings.ui.previous.fields"), control: { type: "textarea", key: "hierarchy.previous", rows: 3 } },
-                  { name: translate("settings.ui.next.fields"), control: { type: "textarea", key: "hierarchy.next", rows: 3 } },
-                  { name: translate("settings.ui.hidden.fields"), desc: translate("settings.ui.relationships.stored.in.these.properties.stay.out.of.the"), control: { type: "textarea", key: "hierarchy.hidden", rows: 3 } },
+                  ...(this.kplexPlugin.manifest.id === "kplex-wuxing" ? [{
+                    name: translate("wuxing.propertyNames"),
+                    desc: translate("wuxing.propertyHelp"),
+                    render: (setting: Setting) => { setting.settingEl.addClass("kplex-ontology-help"); },
+                  }] : []),
+                  ...(this.kplexPlugin.manifest.id === "kplex-wuxing"
+                    ? WUXING_ONTOLOGY_GROUPS.map(group => ({
+                      name: translate(group.labelKey),
+                      control: { type: "textarea" as const, key: `hierarchy.${group.key}` as DeclarativeSettingKey, rows: 3 },
+                    }))
+                    : [
+                  { name: translate("settings.ui.parent.fields"), control: { type: "textarea" as const, key: "hierarchy.parents" as const, rows: 3 } },
+                  { name: translate("settings.ui.child.fields"), control: { type: "textarea" as const, key: "hierarchy.children" as const, rows: 3 } },
+                  { name: translate("settings.ui.left.friend.jump.fields"), control: { type: "textarea" as const, key: "hierarchy.leftFriends" as const, rows: 3 } },
+                  { name: translate("settings.ui.right.friend.challenger.fields"), control: { type: "textarea" as const, key: "hierarchy.rightFriends" as const, rows: 3 } },
+                  { name: translate("settings.ui.previous.fields"), control: { type: "textarea" as const, key: "hierarchy.previous" as const, rows: 3 } },
+                  { name: translate("settings.ui.next.fields"), control: { type: "textarea" as const, key: "hierarchy.next" as const, rows: 3 } },
+                  { name: translate("settings.ui.hidden.fields"), desc: translate("settings.ui.relationships.stored.in.these.properties.stay.out.of.the"), control: { type: "textarea" as const, key: "hierarchy.hidden" as const, rows: 3 } },
+                    ]),
                 ],
               },
             ],

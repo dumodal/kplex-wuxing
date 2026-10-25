@@ -404,6 +404,7 @@ for (const file of [
   "src/lang/index.ts",
   "src/types.ts",
   "src/core/plex/viewPresentation.ts",
+  "src/core/plex/wuxing.ts",
   "src/core/plex/internalHotkeys.ts",
   "src/core/plex/markdownZoomPreferences.ts",
   "src/core/plex/nodeImagePolicy.ts",
@@ -508,6 +509,7 @@ for (const file of [
   "src/adapters/obsidian/relatedFileOutcome.ts",
   "src/ui/actionPresentation.ts",
   "src/ui/layout.ts",
+  "src/ui/wuxingPerspective.ts",
   "src/ui/components/collectionWindow.ts",
 ]) compile(file);
 
@@ -629,6 +631,7 @@ exports.KplexSidepanelView = class {};
 `);
 for (const [path, name] of [
   ["src/ui/RelationModal.js", "RelationModal"],
+  ["src/ui/WuXingIntroductionModal.js", "WuXingIntroductionModal"],
   ["src/ui/NewRelatedNoteModal.js", "NewRelatedNoteModal"],
   ["src/ui/MaterializeGhostModal.js", "MaterializeGhostModal"],
   ["src/ui/CreateFolderNoteModal.js", "CreateFolderNoteModal"],

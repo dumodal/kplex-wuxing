@@ -1,7 +1,7 @@
 /**
  * Native Obsidian view shells, active-view hotkey scopes and React-root lifecycle for K-Plex
  * surfaces. The view owns reversible session display leases and restores them before close/unload or cross-document adoption. React registers/unregisters scoped actions with its owning surface. View registration
- * IDs stay stable; display titles use the plugin translator.
+ * IDs use the Wu Xing fork namespace; display titles use the plugin translator.
  */
 import { ItemView, Scope, WorkspaceLeaf } from "obsidian";
 import { createRoot, type Root } from "react-dom/client";
@@ -11,8 +11,8 @@ import { readObsidianPresentationEnvironment } from "../adapters/obsidian/presen
 import { KplexApp } from "./App";
 import { KplexDisplayModes, registerDisplayModeUnload } from "./KplexDisplayModes";
 
-export const KPLEX_VIEW_TYPE = "k-plex-react-view";
-export const KPLEX_SIDEPANEL_VIEW_TYPE = "k-plex-sidepanel-view";
+export const KPLEX_VIEW_TYPE = "kplex-wuxing-react-view";
+export const KPLEX_SIDEPANEL_VIEW_TYPE = "kplex-wuxing-sidepanel-view";
 
 abstract class BaseKplexView extends ItemView {
   private root: Root | null = null;

@@ -4,7 +4,7 @@ import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import ts from 'typescript';
 import {loadPortableModules} from './support/portableTypeScript.mjs';
-const {exports: {centeredViewportFit, sameFitCamera, EmbeddedDrawingFit, centerArrivalFrames}} = loadPortableModules([
+const {exports: {centeredViewportFit, sameFitCamera, wuXingScaffoldBounds, EmbeddedDrawingFit, centerArrivalFrames}} = loadPortableModules([
   'src/ui/components/viewportFit.ts', 'src/adapters/obsidian/EmbeddedDrawingFit.ts', 'src/ui/components/centerArrival.ts']);
 const source=ts.createSourceFile('graph.tsx',readFileSync('src/ui/PlexGraph.tsx','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
 
@@ -30,13 +30,14 @@ function graphFixture() {
     cameraFrame:{current:1},cameraElement:{current:null},syncCentralEditorOverlay:()=>{},
     scene:{nodes:[{role:'center',page:{path:'Center.md'},x:30,y:-20,width:200,height:100}],zoneViewports:{}},
     centralEditorMaximized:false,Platform:{isIosApp:false},IOS_MAX_ZOOM:2,MAX_ZOOM:5,ZONES:['child'],zoneForRole:role=>role==='child'?'child':null,
-    centeredViewportFit,sameFitCamera,sceneMotion:{cancelAll(){}},preserveCameraOnNextLayout:{current:false},displayResizeLayout:{current:false},
+    centeredViewportFit,sameFitCamera,wuXingScaffoldBounds,sceneMotion:{cancelAll(){}},preserveCameraOnNextLayout:{current:false},displayResizeLayout:{current:false},
     centralEditorAvailabilityRef:{current:false},centralEditorAvailable:false,centralEditorSize:null,centralEditorSizeKeyRef:{current:''},
     previousNodeRects:{current:new Map([['prior',{}]])},pathChangedThisRender:true,navigationOrigin:'user',settings:{allowAutozoom:true,animationSpeed:0},incomingCenter:{current:null}};
   ctx.viewport={current:{clientWidth:800,clientHeight:600,ownerDocument:{defaultView:{}},querySelectorAll:()=>[
     {dataset:{kplexPath:ctx.activePath},getBoundingClientRect:()=>({left:300,top:250,width:200,height:100})}]}};
   /** Rebind render-owned callbacks after navigation just as React composition does. */
   ctx.render=()=>{ctx.applyCamera=callback('applyCamera',ctx);ctx.flushCameraTransform=callback('flushCameraTransform',ctx);ctx.fit=callback('fit',ctx);ctx.layout=callback('layout',ctx);};
+  ctx.index={isWuXingMode:()=>Boolean(ctx.scene.wuXing)};
   ctx.render();return ctx;
 }
 
@@ -190,4 +191,60 @@ test('drawing fit excludes edit/fullscreen/disabled/loading reads and never appl
   const f=drawingFixture();f.controller.resize();f.flush();f.flush();f.state.width=800;f.state.eligible=false;f.controller.resize();f.flush();f.flush();assert.equal(f.fits(),0);
   f.state.eligible=true;f.controller.resize();const retired=[...f.frames.values()][0];f.controller.reset();f.state.owner={};retired();f.flush();f.flush();assert.equal(f.fits(),0);
   f.controller.dispose();
+});
+
+
+test('Wu Xing camera fits the ring and leaves the active note off center', () => {
+  const ctx=graphFixture();
+  ctx.scene.wuXing={focalPoint:{x:0,y:0},vertices:[{x:0,y:-300},{x:285,y:-93},{x:176,y:243},{x:-176,y:243},{x:-285,y:-93}]};
+  for(const vertex of ctx.scene.wuXing.vertices) vertex.frame={left:vertex.x-100,top:vertex.y-78,width:200,height:130};
+  ctx.scene.nodes[0].x=176; ctx.scene.nodes[0].y=243;
+  ctx.render(); ctx.fit();
+  const c=ctx.camera.current;
+  assert.equal(c.x,400);assert.equal(c.y,300);
+  assert.notEqual(c.x+176*c.scale,400);
+  for(const v of ctx.scene.wuXing.vertices) {
+    assert(c.x+v.x*c.scale>=0 && c.x+v.x*c.scale<=800);
+    assert(c.y+(v.y-55)*c.scale>=0 && c.y+v.y*c.scale<=600);
+  }
+});
+
+
+test('phase panel bottom-edge drag grows every role downward', () => {
+ for(const zone of ['parent','child','left','right','sibling']) {
+  const ctx={areaResizeDrag:{current:{zone,pointerId:1,startClientY:100,startScale:1,startHeight:200}},
+   scene:{zoneAreas:{[zone]:{resizeEdge:'bottom'}}},pendingAreaHeight:{current:null},areaResizeFrame:{current:{id:1}}};
+  callback('move',ctx)({pointerId:1,clientY:130,preventDefault(){}});
+  assert.equal(ctx.pendingAreaHeight.current.height,230);
+ }
+});
+
+
+test('Wu Xing opens fitted even with navigation autozoom disabled, including empty phase frames', () => {
+  const ctx=graphFixture();ctx.settings.allowAutozoom=false;
+  ctx.scene.nodes=[];
+  ctx.scene.wuXing={focalPoint:{x:0,y:0},vertices:[{x:0,y:-450},{x:428,y:-139},{x:265,y:364},{x:-265,y:364},{x:-428,y:-139}]};
+  for(const v of ctx.scene.wuXing.vertices) v.frame={left:v.x-160,top:v.y-120,width:320,height:240};
+  ctx.render();ctx.layout();
+  assert(ctx.camera.current.scale<1,'initial Wu Xing opening must fit independently of navigation autozoom');
+  for(const v of ctx.scene.wuXing.vertices) {
+    const c=ctx.camera.current;
+    assert(c.x+v.frame.left*c.scale>=0 && c.x+(v.frame.left+v.frame.width)*c.scale<=800);
+    assert(c.y+v.frame.top*c.scale>=0 && c.y+(v.frame.top+v.frame.height)*c.scale<=600);
+  }
+  ctx.pathChangedThisRender=false;
+  ctx.applyCamera({x:121,y:98,scale:.7});
+  ctx.scene.nodes.push({role:'center',page:{path:'Center.md'},x:265,y:364,width:200,height:90});
+  ctx.render();ctx.layout();assert.deepEqual(ctx.camera.current,{x:121,y:98,scale:.7},'late notes preserve manual camera intent');
+});
+
+
+test('a hidden Wu Xing pane waits for positive dimensions and loading placeholders do not consume its opening fit', () => {
+  const ctx=graphFixture();ctx.settings.allowAutozoom=false;ctx.index={isWuXingMode:()=>true};
+  const nodes=ctx.scene.nodes;ctx.scene.nodes=[];ctx.render();ctx.layout();assert.equal(ctx.cameraIntentPlaced.current,false);
+  ctx.scene.nodes=nodes;ctx.scene.wuXing={focalPoint:{x:0,y:0},vertices:[{frame:{left:-500,top:-500,width:1000,height:1000}}]};
+  ctx.viewport.current.clientWidth=0;ctx.viewport.current.clientHeight=0;ctx.render();ctx.layout();
+  assert.equal(ctx.cameraIntentPlaced.current,false,'hidden opening cannot record an unusable fit');
+  ctx.viewport.current.clientWidth=800;ctx.viewport.current.clientHeight=600;ctx.render();ctx.layout();
+  assert(ctx.camera.current.scale<1);assert.equal(ctx.cameraIntentPlaced.current,true);
 });

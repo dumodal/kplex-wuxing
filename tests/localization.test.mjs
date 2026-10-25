@@ -362,6 +362,7 @@ test("Obsidian language adapter calls the host getLanguage export and retains En
   const temp = compileModules([
     ...localizationModulePaths,
     "src/adapters/obsidian/localization.ts",
+    "src/lang/wuxing.ts",
   ], "kplex-localization-host-test-");
   try {
     const stubPath = join(temp, "node_modules/obsidian/index.js");
@@ -371,6 +372,27 @@ test("Obsidian language adapter calls the host getLanguage export and retains En
     const adapter = require(join(temp, "src/adapters/obsidian/localization.js"));
     const translate = adapter.createObsidianTranslator();
     assert.equal(obsidian.calls(), 1);
+    const fork = adapter.createObsidianTranslator(true, () => "zh");
+    assert.equal(adapter.createObsidianTranslator(true)("wuxing.wood"), "Wood");
+    assert.equal(fork("role.parent"), "生我");
+    assert.equal(fork("role.challenger"), "我克");
+    assert.equal(fork("role.sibling"), "同我");
+    let language = "en";
+    const live = adapter.createObsidianTranslator(true, () => language);
+    assert.equal(live("wuxing.wood"), "Wood");
+    assert.equal(live("wuxing.generate"), "Generates");
+    assert.equal(live("wuxing.control"), "Regulates");
+    assert.equal(live("wuxing.source"), "What generates me");
+    assert.equal(live("role.parent"), "What generates me");
+    assert.equal(live("wuxing.unclassified", {count: 3}), "3 connected nodes cannot be classified. Check status on the current and connected notes.");
+    language = "zh";
+    assert.equal(live("wuxing.wood"), "木");
+    assert.equal(live("wuxing.control"), "克");
+    assert.equal(live("wuxing.source"), "生我");
+    assert.equal(live("role.parent"), "生我");
+    assert.equal(live("wuxing.unclassified", {count: 3}), "3 个已连接节点无法分类，请检查中心与相邻笔记的 status");
+    assert.equal(live("command.openGraph"), "Open graph");
+
     assert.equal(translate("command.openGraph"), "Open graph");
   } finally {
     rmSync(temp, { recursive: true, force: true });

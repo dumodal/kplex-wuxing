@@ -27,7 +27,7 @@ export const contributorBrowserInitialize = `(() => {
     const done=new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onabort=()=>reject(tx.error);tx.onerror=()=>reject(tx.error);});
     const [result]=await Promise.all([callback(tx),done]);return result;
   };
-  window.dbName = vault => 'k-plex-index-v1-'+[...new TextEncoder().encode(vault)].map(v=>v.toString(16).padStart(2,'0')).join('').slice(0,96);
+  window.dbName = vault => 'kplex-wuxing-index-v1-'+[...new TextEncoder().encode(vault)].map(v=>v.toString(16).padStart(2,'0')).join('').slice(0,96);
   window.rawOpen = (name,version,upgrade) => new Promise((resolve,reject)=>{const r=indexedDB.open(name,version);r.onupgradeneeded=()=>upgrade?.(r.result,r.transaction);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
   window.runtime = () => ({now:()=>0,yield:async()=>{},sliceBudgetMs:8,resolverBatchSize:50,isCurrent:()=>true});
   window.ref = (id,kind='document') => ({id,kind,state:'materialized',semanticPath:id,...(kind==='document'?{physicalPath:id}:{})});
