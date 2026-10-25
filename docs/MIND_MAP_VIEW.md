@@ -1,6 +1,6 @@
 # Mind Map canvas view
 
-Prepared by Zsolt's Codex Agent, 2026-10-24. **Implementation started; bounded ordinary-Markdown M0 proof is validated at905b777. M1–M3 production integration and real source-demand proof are implemented; complete native/full/CI acceptance and the documented FileManager gate limit remain pending.**
+Prepared by Zsolt's Codex Agent, 2026-10-24. **Implementation started; bounded ordinary-Markdown M0 proof is validated at905b777. M1–M3 production integration and real source-demand proof are implemented; production native editor/session/settings and legacy-host lanes pass on932ddae; final corrected-head full/CI acceptance remains pending. FileManager and fresh-popout Sidecar limitations remain explicit.**
 
 ## Baseline and start gate
 
@@ -160,4 +160,9 @@ Shared occurrence-path filtering retains genuine ancestors in Keep/Reflow withou
 
 Actual GraphIndex/IndexedDB tests start with an unprepared branch in both on-demand and source-ready Eager mode, admit only its requested frontier, and reject held publication after retirement. These use real source/demand/cache owners with finite native file/metadata inputs, not a fully prepared DTO fixture or a native disk-cache benchmark. Production selector/settings tests cover two documents, independent restoration, incoming merges and unchanged source signatures. All29 new strings are localized in every shipped catalog.
 
-Native acceptance uses `verify:obsidian:mindmap` with `KPLEX_MINDMAP_LANE=editor` and `sessions` separately, through the existing guarded Small transport. They remain unrun at this writing. Full verification found an omitted explicit transpilation inventory and four extracted-fixture dependencies; original assertions are retained and131 focused correction tests pass. Fresh complete verification is underway. Keep the PR draft; no merge/release/production deployment is authorized. See the checkpoint report for actual evidence and remaining limits.
+Native acceptance uses `verify:obsidian:mindmap` with `KPLEX_MINDMAP_LANE=editor` and `sessions` separately, through the existing guarded Small transport. They now pass bounded production editor and main/popout session acceptance; the latter preserves a loaded main-window Sidecar and does not certify fresh-popout Sidecar creation. Full verification found an omitted explicit transpilation inventory and four extracted-fixture dependencies; original assertions are retained and131 focused correction tests pass. Fresh complete verification is underway. Keep the PR draft; no merge/release/production deployment is authorized. See the checkpoint report for actual evidence and remaining limits.
+
+
+### Production native evidence checkpoint
+
+Source932ddae passes eight production editor cases (including explicit camera retention), two independent main/popout session cases,25 native settings/selector receipts and the12-case M0/legacy-host regression. Hierarchy Find now selects/reveals through the existing owner without activation; Compass remains reveal-only. Geometry proof waits for current post-edit frontier admission and rechecks genuinely unsaved text before its single resize. The host can withhold scene admission during source preparation; continuous scene availability is not claimed. Fresh-popout Sidecar creation remained empty and is not a passing workflow; independence uses a real main-window Sidecar. All failed observations are retained in the [validation record](validation/mind-map-219-2026-10-25.md) and [ordered receipts](validation/mind-map-219-receipts.json). e4ec8b3 full verify:obsidian and CI478 passed; corrected-head final full/CI remains the next gate. No merge authorized.
