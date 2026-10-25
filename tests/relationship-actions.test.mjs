@@ -597,7 +597,7 @@ test("navigation with autofit disabled recenters without resetting manual scale"
     pathChangedThisRender: true, settings: { allowAutozoom: false, animationSpeed: 0 },
     automaticFit: { current: null }, activePath: "Center.md", centralEditorMaximized: false,
     camera: { current: camera }, sameFitCamera: (a, b) => a.x === b.x && a.y === b.y && a.scale === b.scale,
-    cameraIntentPlaced: { current: true },
+    cameraIntentPlaced: { current: true }, framingOccurrence: () => null,
     fit: () => { calls.push("fit"); Object.assign(camera, { scale: 0.4, x: 90, y: 120 }); },
     applyCamera: update => Object.assign(camera, typeof update === "function" ? update(camera) : update),
     flushCameraTransform: () => calls.push("flush"), syncCentralEditorOverlay: () => {},
@@ -612,6 +612,9 @@ test("navigation with autofit disabled recenters without resetting manual scale"
   dependencies.settings.allowAutozoom = false; dependencies.pathChangedThisRender = false;
   dependencies.previousNodeRects.current = new Map([["prior", {}]]); dependencies.preserveCameraOnNextLayout.current = false;
   cameraLayoutEffect(dependencies)(); assert.deepEqual(camera, { x: 99, y: 88, scale: 2.1 }, "Metadata layout updates retain the full camera");
+  dependencies.pathChangedThisRender = true; dependencies.framingOccurrence = () => ({x: 145, y: -92});
+  cameraLayoutEffect(dependencies)();
+  assert.deepEqual(camera, {x: 400 - 145 * 2.1, y: 300 + 92 * 2.1, scale: 2.1}, "Off-origin navigation centers its actual occurrence and retains manual scale");
 });
 
 

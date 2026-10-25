@@ -4976,6 +4976,1030 @@
       },
       "cleanup": "passed",
       "completedAt": "2026-10-25T05:22:30.938Z"
+    },
+    {
+      "sample": "kplex-wuxing-pairs-editors-5",
+      "name": "wuxing-220-pairs",
+      "status": "failed",
+      "node": "v22.22.2",
+      "startedAt": "2026-10-25T05:32:33.177Z",
+      "maximumMs": 480000,
+      "driver": {
+        "transport": "beb7677649f8ae6ae390c0df25b4a025a48777b5fbfc5e36c25f7fe252b8a0d3",
+        "scenario": "9ac5e506fcb43d93d0a86e747652c9cfc5e082e15d2d029eb1f27ccdb4610549",
+        "definitions": "49f8708d9817e3582f9386420bba2c62f5fac2131e21c59b2bcbca7cd69b31b6"
+      },
+      "artifacts": {
+        "main.js": "af16af2f83bb3e9c52fa9c19acd0b876be36f40ff54fb0602ef82786194c65ef",
+        "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+        "styles.css": "d317aa613453656bf25518e01af9d8bc04073590dac0b2553891a88055dd5229"
+      },
+      "source": {
+        "src/index/GraphBuilder.ts": "b4ff3bc6298c1d30c58aa15a47d2636b8e32a33f1ff4c225ce2848534567cab8",
+        "src/index/GraphIndex.ts": "b05e2c51bfd49aef4a033b7c47c008f49efb63f196a7be521beabc436936eb9f",
+        "src/core/graph/compiler.ts": "ee403bd86870137e7ea769dfb5c5c7cfa27e08ad768b1815bef47eab9732bd4f",
+        "src/ui/PlexGraph.tsx": "677c9c5bd5b7ce9ad6c9a04ae59ee3f071690743b0ce4e50e551c00ef24cbcfe",
+        "src/core/plex/views/wuxing/definition.ts": "6a524518a5a5eb28920ec961ff205d5c16a11116505d263c5f7130d2289e28a4",
+        "src/core/plex/views/wuxing/layout.ts": "b01355a917c424d80535ba8f450034e9145c7f98e0c5081c48f1d8fe1c0261da",
+        "src/adapters/obsidian/predicateContracts.ts": "72bdb36d2bba385675922dd1e51ea4bf28494c57c5181ef948d3db6f998bd00a"
+      },
+      "limitations": "Controlled native method observations, not actual paint or physical-device acceptance.",
+      "obsidian": "1.14.5 (installer 1.14.0)",
+      "progress": {
+        "phase": "native-sidecar-open",
+        "cases": [
+          {
+            "id": "production-registry-five-phases-canonical-links",
+            "regions": 8,
+            "semanticConnectors": 7
+          },
+          {
+            "id": "popout-sidecar-explicit-loaded-native-document-attachment",
+            "freshCreationTested": false
+          }
+        ],
+        "owner": "main",
+        "sidecarType": "markdown",
+        "expectedDocument": true,
+        "cleanup": [
+          {
+            "label": "close-owned-settings",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "detach-owned-host",
+            "status": "passed"
+          },
+          {
+            "label": "detach-owned-host",
+            "status": "passed"
+          },
+          {
+            "label": "detach-owned-host",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "restore-live-settings",
+            "status": "passed"
+          },
+          {
+            "label": "restore-layout",
+            "status": "passed"
+          },
+          {
+            "label": "restore-window-bounds",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-folder",
+            "status": "passed"
+          },
+          {
+            "label": "drain-settings",
+            "status": "passed"
+          }
+        ]
+      },
+      "partial": {
+        "phase": "native-sidecar-open",
+        "cases": [
+          {
+            "id": "production-registry-five-phases-canonical-links",
+            "regions": 8,
+            "semanticConnectors": 7
+          },
+          {
+            "id": "popout-sidecar-explicit-loaded-native-document-attachment",
+            "freshCreationTested": false
+          }
+        ],
+        "owner": "main",
+        "sidecarType": "markdown",
+        "expectedDocument": true,
+        "cleanup": [
+          {
+            "label": "close-owned-settings",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "detach-owned-host",
+            "status": "passed"
+          },
+          {
+            "label": "detach-owned-host",
+            "status": "passed"
+          },
+          {
+            "label": "detach-owned-host",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "restore-live-settings",
+            "status": "passed"
+          },
+          {
+            "label": "restore-layout",
+            "status": "passed"
+          },
+          {
+            "label": "restore-window-bounds",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-folder",
+            "status": "passed"
+          },
+          {
+            "label": "drain-settings",
+            "status": "passed"
+          },
+          {
+            "label": "restore-settings-bytes",
+            "status": "passed"
+          }
+        ]
+      },
+      "error": "Error: Error: main-popout-per-canvas-selection-zero-source-work: {\"reads\":1,\"parses\":0,\"acquisitions\":0,\"rebuilds\":0}",
+      "cleanup": "passed",
+      "completedAt": "2026-10-25T05:32:42.233Z"
+    },
+    {
+      "sample": "kplex-wuxing-pairs-editors-6",
+      "name": "wuxing-220-pairs",
+      "status": "passed",
+      "node": "v22.22.2",
+      "startedAt": "2026-10-25T05:33:47.288Z",
+      "maximumMs": 480000,
+      "driver": {
+        "transport": "beb7677649f8ae6ae390c0df25b4a025a48777b5fbfc5e36c25f7fe252b8a0d3",
+        "scenario": "d5545cd93d745374344a94f1a90fe853444aadee03665ffa41c9f781db8ab213",
+        "definitions": "f312689170a45159f422d1e2419ae6af3aac65b204b603a07522d77292b28eca"
+      },
+      "artifacts": {
+        "main.js": "af16af2f83bb3e9c52fa9c19acd0b876be36f40ff54fb0602ef82786194c65ef",
+        "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+        "styles.css": "d317aa613453656bf25518e01af9d8bc04073590dac0b2553891a88055dd5229"
+      },
+      "source": {
+        "src/index/GraphBuilder.ts": "b4ff3bc6298c1d30c58aa15a47d2636b8e32a33f1ff4c225ce2848534567cab8",
+        "src/index/GraphIndex.ts": "b05e2c51bfd49aef4a033b7c47c008f49efb63f196a7be521beabc436936eb9f",
+        "src/core/graph/compiler.ts": "ee403bd86870137e7ea769dfb5c5c7cfa27e08ad768b1815bef47eab9732bd4f",
+        "src/ui/PlexGraph.tsx": "677c9c5bd5b7ce9ad6c9a04ae59ee3f071690743b0ce4e50e551c00ef24cbcfe",
+        "src/core/plex/views/wuxing/definition.ts": "6a524518a5a5eb28920ec961ff205d5c16a11116505d263c5f7130d2289e28a4",
+        "src/core/plex/views/wuxing/layout.ts": "b01355a917c424d80535ba8f450034e9145c7f98e0c5081c48f1d8fe1c0261da",
+        "src/adapters/obsidian/predicateContracts.ts": "72bdb36d2bba385675922dd1e51ea4bf28494c57c5181ef948d3db6f998bd00a"
+      },
+      "limitations": "Controlled native method observations, not actual paint or physical-device acceptance.",
+      "obsidian": "1.14.5 (installer 1.14.0)",
+      "progress": {
+        "phase": "native-sidecar-open",
+        "cases": [
+          {
+            "id": "production-registry-five-phases-canonical-links",
+            "regions": 8,
+            "semanticConnectors": 7
+          },
+          {
+            "id": "popout-sidecar-explicit-loaded-native-document-attachment",
+            "freshCreationTested": false
+          },
+          {
+            "id": "main-popout-per-canvas-selection-zero-source-work",
+            "work": {
+              "reads": 0,
+              "parses": 0,
+              "acquisitions": 0,
+              "rebuilds": 0
+            }
+          },
+          {
+            "id": "native-compass-wuxing-main-popout-independent-canvas-and-sidecar-state"
+          },
+          {
+            "id": "opening-canvas-selector-owner-survives-window-focus-change"
+          },
+          {
+            "id": "other-canvas-switch-preserves-native-editor",
+            "owner": "main-wuxing",
+            "simultaneousEditors": 1
+          },
+          {
+            "id": "other-canvas-switch-preserves-native-editor",
+            "owner": "popout-compass",
+            "simultaneousEditors": 1
+          },
+          {
+            "id": "independent-owned-native-workspace-view-restoration",
+            "applicationRestart": false
+          },
+          {
+            "id": "windows-native-view-select-keyboard",
+            "transport": "Electron",
+            "keys": [
+              {
+                "key": "Home",
+                "trusted": true,
+                "targetSelect": true
+              }
+            ],
+            "changes": [
+              {
+                "trusted": true,
+                "value": "classic"
+              }
+            ]
+          }
+        ],
+        "owner": "main",
+        "sidecarType": "markdown",
+        "expectedDocument": true,
+        "zeroWork": {
+          "label": "main-popout-per-canvas-selection-zero-source-work",
+          "work": {
+            "reads": 0,
+            "parses": 0,
+            "acquisitions": 0,
+            "rebuilds": 0
+          },
+          "readers": []
+        },
+        "cleanup": [
+          {
+            "label": "close-owned-settings",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "detach-owned-host",
+            "status": "passed"
+          },
+          {
+            "label": "detach-owned-host",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "restore-live-settings",
+            "status": "passed"
+          },
+          {
+            "label": "restore-layout",
+            "status": "passed"
+          },
+          {
+            "label": "restore-window-bounds",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-folder",
+            "status": "passed"
+          },
+          {
+            "label": "drain-settings",
+            "status": "passed"
+          }
+        ]
+      },
+      "result": {
+        "lane": "pairs",
+        "cases": [
+          {
+            "id": "production-registry-five-phases-canonical-links",
+            "regions": 8,
+            "semanticConnectors": 7
+          },
+          {
+            "id": "popout-sidecar-explicit-loaded-native-document-attachment",
+            "freshCreationTested": false
+          },
+          {
+            "id": "main-popout-per-canvas-selection-zero-source-work",
+            "work": {
+              "reads": 0,
+              "parses": 0,
+              "acquisitions": 0,
+              "rebuilds": 0
+            }
+          },
+          {
+            "id": "native-compass-wuxing-main-popout-independent-canvas-and-sidecar-state"
+          },
+          {
+            "id": "opening-canvas-selector-owner-survives-window-focus-change"
+          },
+          {
+            "id": "other-canvas-switch-preserves-native-editor",
+            "owner": "main-wuxing",
+            "simultaneousEditors": 1
+          },
+          {
+            "id": "other-canvas-switch-preserves-native-editor",
+            "owner": "popout-compass",
+            "simultaneousEditors": 1
+          },
+          {
+            "id": "independent-owned-native-workspace-view-restoration",
+            "applicationRestart": false
+          },
+          {
+            "id": "windows-native-view-select-keyboard",
+            "transport": "Electron",
+            "keys": [
+              {
+                "key": "Home",
+                "trusted": true,
+                "targetSelect": true
+              }
+            ],
+            "changes": [
+              {
+                "trusted": true,
+                "value": "classic"
+              }
+            ]
+          }
+        ],
+        "cleanup": [
+          {
+            "label": "close-owned-settings",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "restore-resource",
+            "status": "passed"
+          },
+          {
+            "label": "detach-owned-host",
+            "status": "passed"
+          },
+          {
+            "label": "detach-owned-host",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "restore-live-settings",
+            "status": "passed"
+          },
+          {
+            "label": "restore-layout",
+            "status": "passed"
+          },
+          {
+            "label": "restore-window-bounds",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-folder",
+            "status": "passed"
+          },
+          {
+            "label": "drain-settings",
+            "status": "passed"
+          },
+          {
+            "label": "restore-settings-bytes",
+            "status": "passed"
+          }
+        ],
+        "host": {
+          "node": "v24.18.1",
+          "electron": "43.3.0",
+          "chrome": "150.0.7871.212",
+          "hidden": false
+        },
+        "limits": [
+          "Windows native automation is separate from macOS and physical mobile acceptance.",
+          "#215 extra-tab application restart/combined two-editor-pair baseline failures are not claimed fixed."
+        ]
+      },
+      "cleanup": "passed",
+      "completedAt": "2026-10-25T05:33:57.474Z"
+    },
+    {
+      "sample": "kplex-wuxing-pairs-editors-os-7",
+      "name": "wuxing-220-pairs",
+      "status": "failed",
+      "node": "v22.22.2",
+      "startedAt": "2026-10-25T05:35:34.327Z",
+      "maximumMs": 480000,
+      "driver": {
+        "transport": "beb7677649f8ae6ae390c0df25b4a025a48777b5fbfc5e36c25f7fe252b8a0d3",
+        "scenario": "d5545cd93d745374344a94f1a90fe853444aadee03665ffa41c9f781db8ab213",
+        "definitions": "4a992f73d57e7e7617426a1c118448449c2cdc1d22702e7f446b42abbba55166"
+      },
+      "artifacts": {
+        "main.js": "af16af2f83bb3e9c52fa9c19acd0b876be36f40ff54fb0602ef82786194c65ef",
+        "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+        "styles.css": "d317aa613453656bf25518e01af9d8bc04073590dac0b2553891a88055dd5229"
+      },
+      "source": {
+        "src/index/GraphBuilder.ts": "b4ff3bc6298c1d30c58aa15a47d2636b8e32a33f1ff4c225ce2848534567cab8",
+        "src/index/GraphIndex.ts": "b05e2c51bfd49aef4a033b7c47c008f49efb63f196a7be521beabc436936eb9f",
+        "src/core/graph/compiler.ts": "ee403bd86870137e7ea769dfb5c5c7cfa27e08ad768b1815bef47eab9732bd4f",
+        "src/ui/PlexGraph.tsx": "677c9c5bd5b7ce9ad6c9a04ae59ee3f071690743b0ce4e50e551c00ef24cbcfe",
+        "src/core/plex/views/wuxing/definition.ts": "6a524518a5a5eb28920ec961ff205d5c16a11116505d263c5f7130d2289e28a4",
+        "src/core/plex/views/wuxing/layout.ts": "b01355a917c424d80535ba8f450034e9145c7f98e0c5081c48f1d8fe1c0261da",
+        "src/adapters/obsidian/predicateContracts.ts": "72bdb36d2bba385675922dd1e51ea4bf28494c57c5181ef948d3db6f998bd00a"
+      },
+      "limitations": "Controlled native method observations, not actual paint or physical-device acceptance.",
+      "obsidian": "1.14.5 (installer 1.14.0)",
+      "progress": {
+        "cases": [],
+        "cleanup": [
+          {
+            "label": "close-owned-settings",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "restore-live-settings",
+            "status": "passed"
+          },
+          {
+            "label": "restore-layout",
+            "status": "passed"
+          },
+          {
+            "label": "restore-window-bounds",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-folder",
+            "status": "passed"
+          },
+          {
+            "label": "drain-settings",
+            "status": "passed"
+          }
+        ]
+      },
+      "partial": {
+        "cases": [],
+        "cleanup": [
+          {
+            "label": "close-owned-settings",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "release-demand",
+            "status": "passed"
+          },
+          {
+            "label": "restore-live-settings",
+            "status": "passed"
+          },
+          {
+            "label": "restore-layout",
+            "status": "passed"
+          },
+          {
+            "label": "restore-window-bounds",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-fixture",
+            "status": "passed"
+          },
+          {
+            "label": "delete-owned-folder",
+            "status": "passed"
+          },
+          {
+            "label": "drain-settings",
+            "status": "passed"
+          },
+          {
+            "label": "restore-settings-bytes",
+            "status": "passed"
+          }
+        ]
+      },
+      "error": "Error: Error: Fixture did not settle",
+      "cleanup": "passed",
+      "completedAt": "2026-10-25T05:35:56.457Z"
+    }
+  ],
+  "verification": [
+    {
+      "sample": "working-checkpoint-full-2",
+      "status": "passed",
+      "counts": {
+        "architecture": 7,
+        "core": 130,
+        "functional": 1454,
+        "browser": 242,
+        "sources": 357,
+        "indexedDB": 775
+      },
+      "source": "before camera/UTF-8 correction",
+      "build": true,
+      "nativeSmoke": true
+    },
+    {
+      "sample": "clean-272291c",
+      "schemaVersion": 1,
+      "status": "failed",
+      "startedAt": "2026-10-25T05:24:38.660Z",
+      "source": {
+        "revision": "272291cc911a13fb974a7b25fbe0d68028e2166e",
+        "dirty": false,
+        "node": "v22.22.2",
+        "os": "win32 10.0.26200"
+      },
+      "target": {
+        "vaultName": "kplex-test-small",
+        "vaultPath": "C:\\Obsidian\\kplex-test-small",
+        "configDir": "C:\\Obsidian\\kplex-test-small\\.obsidian"
+      },
+      "capabilities": {
+        "version": "1.14.5 (installer 1.14.0)",
+        "commands": [
+          "version",
+          "vault",
+          "plugin:disable",
+          "plugin:enable",
+          "commands",
+          "command",
+          "dev:dom",
+          "dev:errors"
+        ]
+      },
+      "artifacts": {},
+      "scenarios": [
+        {
+          "id": "portable-verify",
+          "status": "failed",
+          "reason": "npm run verify failed (1)"
+        }
+      ],
+      "error": "npm run verify failed (1)",
+      "completedAt": "2026-10-25T05:30:27.046Z",
+      "details": "1454/1455 functional pass; extracted camera callback lacks framingOccurrence dependency. CI483 reproduces. Browser/source/build/native stages not run."
     }
   ]
 }

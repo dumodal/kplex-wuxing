@@ -23,6 +23,7 @@ export async function acceptWuXingPairs(x){
   await until(()=>p.sidecarLeaves.get(leaf)?.view.file?.path===path(name),'Owning '+(leaf===host?'main':'popout')+' Sidecar did not open its document');
  }
  await until(()=>[host,companion].every(leaf=>p.sidecarLeaves.get(leaf)?.view.file),'Both native Sidecars did not settle');
+ await until(()=>[host,companion].every(leaf=>p.sidecarLeaves.get(leaf)?.view.contentEl.textContent.includes('Disposable Wu Xing native fixture.')),'Native Sidecar bodies did not finish loading before zero-work observation');
  const session=leaf=>leaf.view.documentSession.plexView;
  const snapshot=leaf=>({state:JSON.stringify(session(leaf).getState()),attention:center(leaf),camera:root(leaf).querySelector('.kplex-camera')?.style.transform,
   selected:root(leaf).querySelector('.is-keyboard-selected')?.dataset.kplexKeyboardId??null,editor:root(leaf).querySelector('.kplex-central-editor-content'),sidecar:p.sidecarLeaves.get(leaf),sidecarFile:p.sidecarLeaves.get(leaf)?.view.file});
@@ -41,6 +42,20 @@ export async function acceptWuXingPairs(x){
  await choose(host,'wuxing');
  // Recreate only owned native views through Obsidian's serialized state owner; never claim a full application restart.
  for(const leaf of [host,companion])await p.closeSidecar(leaf);
+ // Keep the accepted combined-two-editor/two-Sidecar failure separate: establish one actually
+ // loaded native editor at a time and prove the other canvas cannot replace its document.
+ for(const [owner,other,name]of[[host,companion,'Memory'],[companion,host,'Goal']]){
+  owner.view.centerPresentation.update({embedCentralNode:true,centralNodeMarkdownMode:'source'});await reveal(owner);
+  await until(()=>root(owner).querySelector('.kplex-central-editor-content .cm-content')&&!root(owner).querySelector('.kplex-central-editor-status'),'Independent native editor did not finish opening');
+  const element=root(owner).querySelector('.kplex-central-editor-content');element.querySelector('.cm-content').focus();
+  await until(()=>workspace.activeLeaf?.view.file?.path===path(name)&&element.contains(workspace.activeLeaf.view.containerEl),'Independent editor document is not its owner attention');
+  const nativeLeaf=workspace.activeLeaf,editor=nativeLeaf.view.editor;await until(()=>editor.getValue().includes('Disposable Wu Xing native fixture.'),'Independent native document did not load');
+  const text=editor.getValue(),cursor=JSON.stringify(editor.getCursor()),otherView=session(other).definition.id;
+  await choose(other,otherView==='classic'?'wuxing':'classic');await choose(other,otherView);
+  check(root(owner).querySelector('.kplex-central-editor-content')===element&&nativeLeaf.view.file?.path===path(name)&&nativeLeaf.view.editor===editor&&editor.getValue()===text&&JSON.stringify(editor.getCursor())===cursor,'Other canvas switch replaced native editor document/content/caret');
+  cases.push({id:'other-canvas-switch-preserves-native-editor',owner:owner===host?'main-wuxing':'popout-compass',simultaneousEditors:1});
+  owner.view.centerPresentation.update({embedCentralNode:false});await until(()=>!root(owner).querySelector('.kplex-central-editor-content'),'Independent editor did not retire');
+ }
  const saved=[host,companion].map(leaf=>({leaf,state:structuredClone(leaf.getViewState()),view:session(leaf).definition.id,attention:center(leaf)}));
  for(const item of saved){await item.leaf.setViewState({type:'empty'});await item.leaf.setViewState(item.state);await item.leaf.view.waitUntilReady();await until(()=>session(item.leaf).definition.id===item.view&&center(item.leaf)===item.attention&&root(item.leaf)?.querySelector('.kplex-filter-trigger'),'Independent native restoration failed');await choose(item.leaf,item.view)}
  check(session(host).definition.id==='wuxing'&&session(companion).definition.id==='classic','Independent restored selections differ');
