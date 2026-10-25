@@ -33,8 +33,8 @@ if(process.argv[2]==='capture-window'){
  console.log(JSON.stringify({captured:true,configurationFiles:entries.filter(entry=>entry.exists).length,contentFiles:content.length,directory}));
 }else if(process.argv[2]==='restore'){
  const baseline=JSON.parse(readFileSync(join(directory,'baseline.json'),'utf8'));
- const active=evaluate('JSON.stringify({controller:!!window.kplexIndexingProbe})');assert.equal(active.controller,false,'Native controller must finish cleanup before outer restoration');
- cli('plugin:disable','id=k-plex');
+ const active=evaluate('JSON.stringify({controller:!!window.kplexIndexingProbe,enabled:!!app.plugins.plugins["k-plex"]})');assert.equal(active.controller,false,'Native controller must finish cleanup before outer restoration');
+ if(active.enabled)cli('plugin:disable','id=k-plex');
  for(const entry of baseline.entries){const path=join(target.config,entry.name);assert(names.includes(entry.name),'Unrecognized restore path');if(entry.exists)writeFileSync(path,readFileSync(join(directory,String(entry.index))));else if(existsSync(path))rmSync(path)}
  if(baseline.state.enabled)cli('plugin:enable','id=k-plex');
  evaluate(`(()=>{if(window.kplexWuXingRestore)throw Error('Existing restoration');const c=window.kplexWuXingRestore={done:false};app.workspace.changeLayout(${JSON.stringify(baseline.state.layout)}).then(()=>c.done=true,error=>{c.error=String(error);c.done=true});return JSON.stringify({started:true})})()`);

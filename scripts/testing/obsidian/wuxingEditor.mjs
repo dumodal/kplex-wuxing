@@ -8,7 +8,7 @@ export async function acceptWuXingEditor(x){
  p.openSettings();await until(()=>tab.containerEl.isConnected,'Native Settings absent');
  for(const key of ['settings.ui.plex.behavior','view.wuxing']){check(tab.openSettingsPage(p.translator(key)),'Native view settings page absent: '+key);await wait(80)}
  const ownerDocument=tab.containerEl.ownerDocument;
- const manage=[...ownerDocument.querySelectorAll('.setting-item')].find(row=>row.querySelector('.setting-item-name')?.textContent===p.translator('facets.manage')&&row.getBoundingClientRect().height>0)?.querySelector('button');check(manage,'Native preset manager action absent');manage.click();
+ const manage=[...ownerDocument.querySelectorAll('.setting-item')].find(row=>row.querySelector('.setting-item-name')?.textContent===p.translator('facets.manage')&&row.getBoundingClientRect().height>0);check(manage,'Native preset manager action absent');(manage.querySelector('button')??manage).click();
  await until(()=>ownerDocument.querySelector('.kplex-style-manager-row'),'Native preset library absent');
  const preset=[...ownerDocument.querySelectorAll('.kplex-style-manager-row')].find(row=>row.querySelector('.kplex-style-manager-name')?.textContent===p.translator('facets.presetWuXing'));check(preset,'Native Wu Xing preset absent');preset.click();await wait(120);
  // Native declarative subpages can live outside PluginSettingTab.containerEl. Use the owning Settings document, as the existing accepted settings driver does.

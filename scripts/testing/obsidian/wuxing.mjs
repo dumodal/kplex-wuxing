@@ -19,8 +19,12 @@ async function scenario(app,c){
  // The production view consumes cached revision-scoped relationships, not a complete corpus.
  // Global semantic pending is retained as a diagnostic; current local proof and zero active work
  // are required in addition to the exact fixture relationships asserted below.
- const localReady=()=>!p.rebuildTask&&p.rebuildTimer===null&&p.dirtyMarkdownPaths.size===0
-  &&!p.index.hasActiveSemanticPreparation()&&p.index.captureSemanticGateRead().isCurrent();
+ const localReady=()=>{const readiness={rebuild:!!p.rebuildTask,timer:p.rebuildTimer!==null,dirty:p.dirtyMarkdownPaths.size,
+  active:p.index.hasActiveSemanticPreparation(),current:p.index.captureSemanticGateRead().isCurrent(),initial:p.initialIndexComplete};
+  // On-demand startup can retain an uncovered global dirty backlog while serving current local
+  // cached neighborhoods. Keep that limitation visible. Require no executing/queued rebuild,
+  // active semantic work or retired local proof; completed startup must also drain its backlog.
+  c.progress={...c.progress,readiness};return !readiness.rebuild&&!readiness.timer&&(!readiness.initial||readiness.dirty===0)&&!readiness.active&&readiness.current};
  const center=host=>host.view.documentSession.centerPath;
  const observe=(owner,key,work,label=key)=>{const previous=owner[key];check(typeof previous==='function','Observation owner missing: '+key);owner[key]=function(...args){work[label]=(work[label]??0)+1;return previous.apply(this,args)};const restore=()=>{owner[key]=previous};restores.push(restore);return restore};
  const quiet=()=>{const work={reads:0,parses:0,acquisitions:0,rebuilds:0},readers=[];
@@ -52,7 +56,7 @@ async function scenario(app,c){
   await until(()=>files.every(file=>app.metadataCache.getFileCache(file))&&!p.index.hasActiveSemanticPreparation(),'Fixture metadata/active work did not settle');
   Object.assign(p.settings,{canvasViewSettings:{},maxItemCount:100,documentSyncMode:'off',sidecarOpen:false,embedCentralNode:false,autoOpenCentralDocument:false,followActiveFile:false,centralNodeMarkdownMode:'source',animationSpeed:0,graphDepth:1,renderSiblings:false,showPageNodes:true,showInferredNodes:true,showFolderNodes:false,showTagNodes:false,graphLenses:[],applyPowerFilter:false});p.index.notifyPresentation();
   await until(()=>p.index.neighbours(p.index.get(path('Memory')),'child').length>=7,'Canonical direct relationships absent');
-  const host=workspace.getLeaf('tab');hosts.push(host);await host.setViewState({type:'k-plex-react-view',active:true});await host.view.waitUntilReady();await p.setDocumentSyncMode(host,'off');
+  const host=workspace.getLeaf('tab');hosts.push(host);await host.setViewState({type:'k-plex-react-view',active:true});await host.view.waitUntilReady();await reveal(host);await p.setDocumentSyncMode(host,'off');
   host.view.centerPresentation.update({embedCentralNode:false,centralNodeMarkdownMode:'source'});p.notifyNavigation(path('Memory'),host);await until(()=>center(host)===path('Memory')&&root(host)?.querySelector('.kplex-filter-trigger'),'Attention did not render');
   await until(localReady,'Requested local cached proof/active work did not settle');
   cases.push({id:'requested-local-cache-proof',current:true,coverage:'cached',globalSemanticPending:p.index.hasPendingSemanticPreparation()});await choose(host,'wuxing');
