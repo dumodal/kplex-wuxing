@@ -7,6 +7,10 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const japaneseTranslations = {
+  "view.exampleSpacing": "間隔",
+  "view.exampleShowHeading": "見出しを表示",
+  "view.exampleHeading": "見出し",
+  "mindmap.cycleReference": "このノートは同じ枝の上位にすでにあります。ここで展開すると循環が繰り返されます。",
   "view.wuxing": "Wu Xing",
   "view.shownLocally": "この範囲の表示数: {count}",
   "wuxing.water": "水",

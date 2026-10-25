@@ -7,6 +7,10 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const russianTranslations = {
+  "view.exampleSpacing": "Интервал",
+  "view.exampleShowHeading": "Показывать заголовок",
+  "view.exampleHeading": "Заголовок",
+  "mindmap.cycleReference": "Эта заметка уже встречается выше в этой ветви; раскрытие здесь повторило бы цикл.",
   "view.wuxing": "Wu Xing",
   "view.shownLocally": "Показано в этой области: {count}",
   "wuxing.water": "Вода",

@@ -76,6 +76,7 @@ import { ResizableAreaFrame } from "./components/ResizableAreaFrame";
 import { ThoughtNode, type ConnectionDragState } from "./ThoughtNode";
 import {nodeId, type NodeId} from "../core/graph/model";
 import {useHierarchyDemand} from "./plexViews/useHierarchyDemand";
+import {hierarchyReferenceAncestor} from "../core/plex/views/hierarchy";
 import {hierarchyPathClosure} from "../core/plex/views/hierarchy";
 import type {AreaId as ScrollZone, PlexViewDefinition, PlexBranchAction} from "../core/plex/views/contracts";
 import type {PlexViewSession} from "../application/PlexViewSession";
@@ -4345,6 +4346,15 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const activateOccurrence = (page: GraphPage, occurrenceId: string | undefined, primary: boolean): void => {
     if (primary && viewDefinition.hierarchy?.primary === "expand" && occurrenceId) {
       const node = scene.nodes.find(value => occurrenceKey(value) === occurrenceId);
+      if (node?.branch?.reference) {
+        if (node.page !== page || viewSession && (viewSession.definition !== viewDefinition || viewSession.getLifetime() !== viewLifetime
+          || viewSession.layoutRoot(nodeId(activePath)) !== sceneScope)) return;
+        const earlier = hierarchyReferenceAncestor(scene.nodes.map(row => ({id: occurrenceKey(row), canonical: row.page.path,
+          parent: row.branch?.parent, reference: row.branch?.reference})), occurrenceId);
+        selection.select(earlier ?? occurrenceId);
+        new Notice(translate("mindmap.cycleReference"), 5000);
+        return;
+      }
       selection.select(occurrenceId);
       if (node?.branch && (node.branch.canExpand || node.branch.expanded)) runNodeAction("branch.toggle", page, occurrenceId);
       return;

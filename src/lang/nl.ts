@@ -7,6 +7,10 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const dutchTranslations = {
+  "view.exampleSpacing": "Afstand",
+  "view.exampleShowHeading": "Kop tonen",
+  "view.exampleHeading": "Kop",
+  "mindmap.cycleReference": "Deze notitie staat al eerder in deze tak; hier uitvouwen zou de cyclus herhalen.",
   "view.wuxing": "Wu Xing",
   "view.shownLocally": "{count} lokaal weergegeven",
   "wuxing.water": "Water",

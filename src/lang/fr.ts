@@ -7,6 +7,10 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const frenchTranslations = {
+  "view.exampleSpacing": "Espacement",
+  "view.exampleShowHeading": "Afficher le titre",
+  "view.exampleHeading": "Titre",
+  "mindmap.cycleReference": "Cette note apparaît déjà plus haut dans cette branche ; la développer ici répéterait le cycle.",
   "view.wuxing": "Wu Xing",
   "view.shownLocally": "{count} affichés localement",
   "wuxing.water": "Eau",

@@ -21,6 +21,20 @@ test('matching one duplicate occurrence keeps only its real ancestor path, and b
  assert.deepEqual([...M.hierarchyPathClosure(rows,['missing-parent','cycle'],'root')],['root']);
 });
 
+test('cycle references reveal the nearest earlier occurrence on their own branch without traversing another duplicate',()=>{
+ const rows=[{id:'root',canonical:'R'},{id:'earlier',canonical:'N',parent:'root'},
+  {id:'middle',canonical:'M',parent:'earlier'},{id:'reference',canonical:'N',parent:'middle',reference:true},
+  {id:'other-copy',canonical:'N',parent:'root'},{id:'root-reference',canonical:'R',parent:'middle',reference:true}];
+ assert.equal(M.hierarchyReferenceAncestor(rows,'reference'),'earlier');assert.equal(M.hierarchyReferenceAncestor(rows,'root-reference'),'root');
+ assert.equal(M.hierarchyReferenceAncestor(rows,'other-copy'),null,'A non-reference does not gain follow authority');
+ assert.equal(M.hierarchyReferenceAncestor(rows.filter(row=>row.id!=='earlier'),'reference'),null,'Broken ancestry cannot jump to another same-note branch');
+ assert.equal(M.hierarchyReferenceAncestor([...rows,{id:'reference',canonical:'N'}],'reference'),null,'Ambiguous occurrence IDs are rejected');
+ assert.equal(M.hierarchyReferenceAncestor([{id:'loop',canonical:'N',parent:'loop',reference:true}],'loop'),null);
+ assert.equal(M.hierarchyReferenceAncestor(Array.from({length:2049},(_,i)=>({id:String(i),canonical:'N'})),'0'),null);
+ const deep=[{id:'root',canonical:'N'}];for(let i=1;i<10;i++)deep.push({id:String(i),canonical:'X',parent:i===1?'root':String(i-1)});
+ deep.push({id:'too-deep',canonical:'N',parent:'9',reference:true});assert.equal(M.hierarchyReferenceAncestor(deep,'too-deep'),null,'Reference walking keeps the existing depth bound');
+});
+
 test('retained unshown branches cannot bias the visible root split under partial coverage',()=>{
  const sides=Object.fromEntries(Array.from({length:20},(_,i)=>[M.mindMapOccurrence(['R','Previously-shown-'+i]),1]));
  const f=graphInput({R:['B','C']},{scope:()=>({coverage:'local',prepared:true,complete:false,pending:false}),input:{configuration:{status:'available',values:{arrangement:'balanced'}},state:{version:1,scope:'R',initialGenerations:1,expanded:[],collapsed:[],sides}}});

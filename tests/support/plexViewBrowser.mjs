@@ -1,7 +1,7 @@
 /** Compile the actual shared canvas for browser consumers. Native host constructors remain finite explicit doubles; no production scene or property behavior is replaced. */
 import {build} from 'esbuild';
 /** Each test owns a real browser and its root lifetimes; this helper only bundles source with the same native boundary. */
-export async function plexViewBrowserModules(){
+export async function plexViewBrowserModules({captureNotices=false}={}){
 const nativeStub=`
   class NativeBase {constructor(){} register(){} registerEvent(){} addChild(){} removeChild(){}}
   exports.App=exports.Modal=exports.SuggestModal=exports.FuzzySuggestModal=exports.AbstractInputSuggest=exports.Component=exports.MarkdownRenderChild=
@@ -11,7 +11,7 @@ const nativeStub=`
   exports.Platform={isMobile:false,isIosApp:false};exports.Keymap={isModEvent:e=>e.metaKey||e.ctrlKey};
   exports.getLanguage=()=> 'en';exports.getIcon=()=>null;exports.getIconIds=()=>[];exports.setIcon=()=>{};exports.setTooltip=()=>{};
   exports.normalizePath=p=>p;exports.getAllTags=()=>[];
-  exports.Notice=class Notice {constructor(message){throw Error('Unexpected notice: '+message)}};
+  exports.Notice=class Notice {constructor(message,duration){${captureNotices ? '(window.testNotices ??= []).push({message,duration});' : "throw Error('Unexpected notice: '+message)"}}};
   exports.Menu=class Menu {items=[];addItem(prepare){const item={setTitle(){return item},setIcon(){return item},setChecked(){return item},setDisabled(){return item},onClick(fn){item.click=fn;return item}};prepare(item);this.items.push(item);return this;}addSeparator(){return this;}};
   exports.MarkdownRenderer={render:async()=>{}};
 `;

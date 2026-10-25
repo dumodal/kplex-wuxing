@@ -9,6 +9,10 @@
  * parameters remain unquoted regardless of their names. Locale catalogs inherit this classification.
  */
 export const englishCatalog = {
+  "view.exampleSpacing": {message: "Spacing", context: "Native Settings in the executable canvas API example.", params: []},
+  "view.exampleShowHeading": {message: "Show heading", context: "Native Settings in the executable canvas API example.", params: []},
+  "view.exampleHeading": {message: "Heading", context: "Native Settings in the executable canvas API example.", params: []},
+  "mindmap.cycleReference": {message: "This note already appears earlier on this branch; expanding it here would repeat the cycle.", context: "Notice when selecting a terminal ancestor-cycle reference. Reveal its nearest earlier occurrence without changing attention, root or editor.", params: []},
   "view.wuxing": {"message":"Wu Xing","context":"Wu Xing local phase exploration, native settings and noninteractive scene decoration. Raw vault values and stable phase IDs are not translated.","params":[],"referenceParams":[]},
   "view.shownLocally": {"message":"{count} shown locally","context":"Wu Xing local phase exploration, native settings and noninteractive scene decoration. Raw vault values and stable phase IDs are not translated.","params":["count"],"referenceParams":[]},
   "wuxing.water": {"message":"Water","context":"Wu Xing local phase exploration, native settings and noninteractive scene decoration. Raw vault values and stable phase IDs are not translated.","params":[],"referenceParams":[]},

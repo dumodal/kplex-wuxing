@@ -7,6 +7,10 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const spanishTranslations = {
+  "view.exampleSpacing": "Espaciado",
+  "view.exampleShowHeading": "Mostrar encabezado",
+  "view.exampleHeading": "Encabezado",
+  "mindmap.cycleReference": "Esta nota ya aparece antes en esta rama; expandirla aquí repetiría el ciclo.",
   "view.wuxing": "Wu Xing",
   "view.shownLocally": "{count} mostrados localmente",
   "wuxing.water": "Agua",

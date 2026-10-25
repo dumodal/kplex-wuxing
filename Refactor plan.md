@@ -6232,3 +6232,6 @@ B1 closeout adds the explicit collection-reset guard: restoring view defaults re
 
 
 2026-10-25 PR220 maintainer addition: Mod placeholder creation retained; Alt/Option alone dispatches bounded node.activate destination intent through existing App navigation/session guards in every view. Rooted views reroot explicitly; ordinary branch clicks retain root, live occurrence binding blocks displacement. Shared expanded/regular double-clicks cannot additionally open a file. Focused66, production build/scanner pass; Windows exact-final-head modifier/editor checks pending. No new action/navigation/editor/file writer owner.
+
+
+2026-10-25 PR220 requested cycle-reference UX: read-only observed snapshot showed terminal ancestor cycles rather than a limit or failed ordinary branch. User chose nearest earlier occurrence reveal with Notice. Existing hierarchy helper/selection owner,8-step own ancestry, canonical/session/root retirement guards;8 locale Notice; no root/attention/fold/editor/source change. Focused72/final browser/architecture7/build/scanner pass; native final-head acceptance pending. Private production names/content excluded from committed evidence; no production writes/deployment. C15-C26 paused.

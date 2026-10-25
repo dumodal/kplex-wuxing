@@ -11,10 +11,10 @@ function sideChoice(context: CanvasViewContributionContext): CanvasViewChoice {
 }
 export const exampleSettingsContribution: CanvasViewSettingsContribution = {
   id: "org.example.columns",
-  items: ({key}) => [
-    {name: "Spacing", control: {type: "slider", key: key("spacing"), min: 20, max: 200, step: 10}},
-    {name: "Show heading", control: {type: "toggle", key: key("showHeading")}},
-    {name: "Heading", control: {type: "text", key: key("title")}},
+  items: ({key, translate}) => [
+    {name: translate("view.exampleSpacing"), control: {type: "slider", key: key("spacing"), min: 20, max: 200, step: 10}},
+    {name: translate("view.exampleShowHeading"), control: {type: "toggle", key: key("showHeading")}},
+    {name: translate("view.exampleHeading"), control: {type: "text", key: key("title")}},
   ],
   layoutControls: [
     {field: "spacing", label: {literal: "Spacing"}, icon: "move-horizontal", min: 20, max: 200, step: 10},

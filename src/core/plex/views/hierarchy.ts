@@ -10,3 +10,20 @@ export function hierarchyPathClosure(rows: readonly Readonly<{id: string; parent
   }
   return keep;
 }
+
+/** Find only the nearest genuine earlier occurrence on this reference's own admitted ancestor
+ * chain. Opaque IDs are never decoded; same-note copies on another branch confer no authority. */
+export function hierarchyReferenceAncestor(rows: readonly Readonly<{id: string; canonical: string; parent?: string; reference?: boolean}>[], referenceId: string): string | null {
+  if (rows.length > 2048) return null;
+  const nodes = new Map(rows.map(row => [row.id, row]));
+  if (nodes.size !== rows.length) return null;
+  const reference = nodes.get(referenceId);
+  if (!reference?.reference) return null;
+  let parent = reference.parent;const visited = new Set([referenceId]);
+  for (let depth = 0; parent && depth < 8 && !visited.has(parent); depth++) {
+    visited.add(parent);const row = nodes.get(parent);if (!row) return null;
+    if (row.canonical === reference.canonical && !row.reference) return row.id;
+    parent = row.parent;
+  }
+  return null;
+}

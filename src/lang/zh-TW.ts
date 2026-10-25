@@ -7,6 +7,10 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const traditionalChineseTranslations = {
+  "view.exampleSpacing": "間距",
+  "view.exampleShowHeading": "顯示標題",
+  "view.exampleHeading": "標題",
+  "mindmap.cycleReference": "此筆記已出現在這個分支的上方；在此展開會重複這個循環。",
   "view.wuxing": "Wu Xing",
   "view.shownLocally": "局部顯示 {count} 項",
   "wuxing.water": "水",

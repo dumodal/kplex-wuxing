@@ -7,6 +7,10 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const germanTranslations = {
+  "view.exampleSpacing": "Abstand",
+  "view.exampleShowHeading": "Überschrift anzeigen",
+  "view.exampleHeading": "Überschrift",
+  "mindmap.cycleReference": "Diese Notiz erscheint bereits weiter oben in diesem Zweig; ein erneutes Aufklappen würde den Zyklus wiederholen.",
   "view.wuxing": "Wu Xing",
   "view.shownLocally": "{count} lokal angezeigt",
   "wuxing.water": "Wasser",

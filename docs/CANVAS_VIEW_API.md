@@ -90,6 +90,8 @@ Wander is shared base behavior for every view, not an opt-in gate capability. It
 
 Alt/Option-click is an explicit node-centering gesture for every view. The shared `node.activate` action accepts the finite invocation argument `{intent: "destination"}` and delegates to the existing navigation owner. Attention-following views activate the target; rooted views explicitly reroot and activate after their existing editor/native identity safeguards. Ordinary branch clicks retain their policy. Ctrl/Cmd-click still opens the in-place placeholder creation choice. Modifier combinations are not implicitly interpreted as centering. The same click/double-click separation applies to expanded rows.
 
+For primary-expand hierarchy views, clicking a terminal ancestor-cycle reference reveals its nearest genuine earlier occurrence on the same branch and explains the cycle with a localized Notice. This uses shared selection/reveal, changes no root/attention/editor/fold intent, and performs no source acquisition. A same-note occurrence on another branch is not a substitute. The cycle guard still prevents recursive re-expansion.
+
 ## Current validation
 
 The implemented configuration batch passes 45 pure/actual Settings-host Chromium tests, including independent queued/received presets, stale same-preset and container epochs, A→B→A, reset scope, durable/idempotent migration, future payloads, disk rejection and retired registration. Architecture/core/scanner/build are separate gates. Native migration/preset UI and the remaining expanded API/Facets acceptance are still pending; see [the current validation record](validation/facets-220-2026-10-25.md).
