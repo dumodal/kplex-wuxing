@@ -8,6 +8,50 @@ const M=await plexViewModules(['src/core/plex/views/index.ts','src/core/plex/vie
   'src/ui/plexViews/CanvasViewContributionController.ts','src/ui/plexViews/contributionValidation.ts',
   'src/ui/plexViews/prepareScene.ts','src/ui/plexViews/labels.ts']);
 const definition=M.exampleViewDefinition;
+
+test('shared area grid preserves unadorned geometry and native dimensions',()=>{
+  const items=[{id:'a',width:100,height:40},{id:'b',width:200,height:80},{id:'c',width:120,height:30}];
+  const grid=M.measuredAreaGrid(items,2,20,10);
+  assert.equal(grid.width,388);assert.equal(grid.height,178);
+  assert.deepEqual([...grid.positions], [['a',{x:84,y:82,width:100,height:40}],['b',{x:264,y:82,width:200,height:80}],['c',{x:84,y:147,width:120,height:30}]]);
+  assert.deepEqual(M.measuredAreaGrid([],1,0,0),{positions:new Map(),width:0,height:0});
+});
+
+test('shared area envelopes reserve badges without resizing nodes or overlapping adjacent cells',()=>{
+  const items=Object.freeze([Object.freeze({id:'a',width:160,height:44,insets:Object.freeze({top:28,right:40})}),Object.freeze({id:'b',width:160,height:64})]);
+  const grid=M.measuredAreaGrid(items,2,16,18);
+  assert.equal(grid.width,424);assert.equal(grid.height,130);
+  assert.deepEqual(grid.positions.get('a'),{x:104,y:92,width:160,height:44});
+  assert.deepEqual(grid.positions.get('b'),{x:320,y:78,width:160,height:64});
+  const a=grid.positions.get('a'),b=grid.positions.get('b');
+  assert.equal(a.y-a.height/2-items[0].insets.top,42);
+  assert.equal(b.x-b.width/2-(a.x+a.width/2+items[0].insets.right),16);
+  assert.deepEqual([...M.measuredAreaGrid(items,2,16,18).positions],[...grid.positions]);
+});
+
+test('automatic area columns use actual cell envelopes at exact world-width thresholds',()=>{
+  const items=Array.from({length:6},(_,i)=>({id:String(i),width:100,height:40}));
+  assert.equal(M.measuredAreaColumns(items,263,16),1);
+  assert.equal(M.measuredAreaColumns(items,264,16),2);
+  assert.equal(M.measuredAreaColumns(items,380,16),3);
+  assert.equal(M.measuredAreaColumns(items,728,16),6);
+  assert.equal(M.measuredAreaColumns(items,728,16,24,3),3);
+  assert.equal(M.measuredAreaColumns([],200,16),1);
+  const varied=[{id:'wide',width:600,height:40},{id:'b',width:100,height:60},{id:'c',width:100,height:40}];
+  assert.equal(M.measuredAreaColumns(varied,880,16),3);
+  assert.equal(M.measuredAreaColumns([{...varied[0],insets:{right:40}},...varied.slice(1)],880,16),2);
+  assert.equal(M.measuredAreaColumns(varied,200,16),1);
+});
+
+test('shared area packing retains finite budgets and rejects invalid identities, insets and policies',()=>{
+  const item={id:'a',width:100,height:40};
+  for(const items of [[item,item],[{...item,insets:{top:-1}}],[{...item,insets:{right:Infinity}}],Array.from({length:2049},(_,i)=>({...item,id:String(i)}))]){
+    assert.throws(()=>M.measuredAreaGrid(items,1,16,18));assert.throws(()=>M.measuredAreaColumns(items,500,16));
+  }
+  for(const columns of [0,33,1.5])assert.throws(()=>M.measuredAreaGrid([item],columns,16,18));
+  for(const width of [0,-1,NaN,Infinity])assert.throws(()=>M.measuredAreaColumns([item],width,16));
+  assert.throws(()=>M.measuredAreaColumns([item],500,16,24,33));
+});
 /** Independent canvases share type settings only, with visible host-effect counters. */
 function fixture(contribution=M.exampleSettingsContribution){
   const fallback={...definition,id:'org.example.other'};

@@ -7,6 +7,36 @@ import {plexViewBrowserModules} from './support/plexViewBrowser.mjs';
 import {canvasSceneFixture} from './support/canvasSceneFixture.mjs';
 const output=await plexViewBrowserModules();
 
+test('shared width side handle and keyboard edits resize only the owning Facets area without source work',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{
+  await host.command('Emulation.setDeviceMetricsOverride',{width:1500,height:1050,deviceScaleFactor:1,mobile:false});
+  await host.evaluate(`(async()=>{${canvasSceneFixture}
+   fieldCaches.get('B.md').frontmatter.phase='wood';fieldCaches.get('C.md').frontmatter.phase='wood';
+   const ui=await mount(M.wuXingViewDefinition);ui.props.areaSettingsMode=true;ui.render();
+   await ui.ports.current.implementations['view.fit'].execute({});await wait();await wait();
+   window.widthFacets={ui,work,before:{...work},style,settings,settingsBefore:JSON.stringify(settings)};return true;
+  })()`);
+  const id=JSON.stringify(['facets','wuxing','category','wood']);
+  for(const delta of [24,-12]){
+   const from=await host.evaluate(`(()=>{const frame=widthFacets.ui.container.querySelector('.'+CSS.escape('kplex-area-'+${JSON.stringify(id)})),handle=frame?.querySelector('.is-width-handle');if(!handle)throw Error('Width capability absent');const b=handle.getBoundingClientRect();return{x:b.x+b.width/2,y:b.y+b.height/2,width:Number(handle.getAttribute('aria-valuenow')),height:frame.style.height,label:handle.getAttribute('aria-label'),orientation:handle.getAttribute('aria-orientation')}})()`);
+   assert.equal(from.label,'Wood width');assert.equal(from.orientation,'vertical');
+   await host.command('Input.dispatchMouseEvent',{type:'mouseMoved',x:from.x,y:from.y});
+   await host.command('Input.dispatchMouseEvent',{type:'mousePressed',x:from.x,y:from.y,button:'left',buttons:1,clickCount:1});
+   await host.command('Input.dispatchMouseEvent',{type:'mouseMoved',x:from.x+delta,y:from.y,button:'left',buttons:1});
+   await host.evaluate('new Promise(resolve=>setTimeout(resolve,80))');
+   await host.command('Input.dispatchMouseEvent',{type:'mouseReleased',x:from.x+delta,y:from.y,button:'left',buttons:0,clickCount:1});
+   const after=await host.evaluate(`(async()=>{widthFacets.ui.render();await new Promise(resolve=>setTimeout(resolve,70));const frame=widthFacets.ui.container.querySelector('.'+CSS.escape('kplex-area-'+${JSON.stringify(id)}));return{width:widthFacets.ui.session.getAreaWidths()[${JSON.stringify(id)}],height:frame.style.height,rendered:Number(frame.querySelector('.is-width-handle').getAttribute('aria-valuenow'))}})()`);
+   assert(delta>0?after.width>from.width:after.width<from.width);assert.equal(after.width,after.rendered);assert.equal(after.height,from.height);
+  }
+  const before=await host.evaluate(`(()=>{const h=widthFacets.ui.container.querySelector('.'+CSS.escape('kplex-area-'+${JSON.stringify(id)})).querySelector('.is-width-handle');h.focus();return Number(h.getAttribute('aria-valuenow'))})()`);
+  for(const type of ['keyDown','keyUp'])await host.command('Input.dispatchKeyEvent',{type,key:'ArrowRight',code:'ArrowRight',windowsVirtualKeyCode:39});
+  assert.equal(await host.evaluate(`widthFacets.ui.session.getAreaWidths()[${JSON.stringify(id)}]`),before+10);
+  assert.equal(await host.evaluate(`(()=>{const r=widthFacets;return r.work.body===r.before.body&&r.work.scans===r.before.scans&&r.work.acquisitions===r.before.acquisitions&&r.ui.props.activePath==='A.md'&&JSON.stringify(r.settings)===r.settingsBefore})()`),true);
+  await host.evaluate('widthFacets.ui.close();widthFacets.style.remove();delete window.widthFacets;');
+ }finally{await host.cleanup()}
+});
+
 test('shared bottom-edge pointer resize grows and shrinks Facets category and status areas without source work',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{

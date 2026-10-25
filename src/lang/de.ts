@@ -1550,6 +1550,7 @@ const germanTranslations = {
   "actions.editor.resize.description": "Die Größe des geöffneten Knoteneditors ändern.",
   "actions.editor-capacity": "Schließe den aktuellen Knoteneditor, bevor du einen anderen öffnest.",
   "actions.editor-save-failed": "Speichern fehlgeschlagen. Der Editor bleibt geöffnet.",
+  "graph.areaWidth": "Breite von {zone}",
 } as const satisfies LocaleTranslationMap;
 
 export const germanCatalog = buildLocaleCatalog(germanTranslations);

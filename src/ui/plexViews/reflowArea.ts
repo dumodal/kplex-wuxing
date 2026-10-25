@@ -2,7 +2,8 @@
 import type {PlexArea} from "../../core/plex/views/contracts";
 import type {PositionedNode} from "../../types";
 import {occurrenceKey, type SceneAreaLayout, type SceneViewport} from "./scene";
-import {measuredAreaGrid} from "../../core/plex/views/areaLayout";
+import {measuredAreaGrid, measuredAreaColumns} from "../../core/plex/views/areaLayout";
+import {nodeBadgeInsets} from "../../core/plex/views/decorations";
 
 /** Keep coordinates unless the view explicitly opts into filtered repacking; duplicate canonical notes remain independent rows. */
 export function reflowArea(panel: SceneViewport, nodes: PositionedNode[], filter: string,
@@ -41,6 +42,12 @@ export function reflowArea(panel: SceneViewport, nodes: PositionedNode[], filter
       for (const node of groups.get(bound.id)!) localPositions.set(occurrenceKey(node), {x: (panel.width - grid.width) / 2 + cell.x - cell.width / 2 + node.x - bound.left,
         y: cell.y - cell.height / 2 + node.y - bound.top});
     }
+    return {nodes: rows, localPositions, contentHeight: Math.max(panel.height, grid.height), count: rows.length, filtering};
+  }
+  if (policy.autoColumns) {
+    const cells = rows.map(/** Repacking uses the same shared badge envelope as the original layout. */ node => ({id: occurrenceKey(node), width: node.width, height: node.height, insets: nodeBadgeInsets(node, node.viewBadge)}));
+    const columns = measuredAreaColumns(cells, panel.width, policy.columnGap), grid = measuredAreaGrid(cells, columns, policy.columnGap, policy.rowGap, 24, policy.paddingTop ?? 42, policy.paddingBottom ?? 16);
+    for (const [id, cell] of grid.positions) localPositions.set(id, {x: (panel.width - grid.width) / 2 + cell.x, y: cell.y});
     return {nodes: rows, localPositions, contentHeight: Math.max(panel.height, grid.height), count: rows.length, filtering};
   }
   const columns = Math.max(1, Math.min(16, Math.round(policy.columns))), gap = Math.max(0, policy.rowGap);

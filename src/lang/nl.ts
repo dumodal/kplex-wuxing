@@ -1550,6 +1550,7 @@ const dutchTranslations = {
   "actions.editor.resize.description": "Wijzig de afmetingen van de geopende knooppunteditor.",
   "actions.editor-capacity": "Sluit de huidige knooppunteditor voordat je een andere opent.",
   "actions.editor-save-failed": "Opslaan is mislukt. De editor blijft open.",
+  "graph.areaWidth": "Breedte van {zone}",
 } as const satisfies LocaleTranslationMap;
 
 export const dutchCatalog = buildLocaleCatalog(dutchTranslations);

@@ -47,7 +47,7 @@ async function scenario(app,c){
   createdFolder=await app.vault.createFolder(folder);
   const child=p.settings.hierarchy.children[0];check(child,'Configured child ontology required');
   const phase={Memory:'water',Concept:'wood',Concept2:'wood',Goal:'fire',Review:'earth',Method:'metal',Conflict:['water','wood'],Unmapped:null};
-  if(c.lane==='features')phase.Unsupported={unrecognized:true};
+  if(c.lane==='features'||c.lane==='areas')phase.Unsupported={unrecognized:true};
   for(const [name,value]of Object.entries(phase)){
    const index=Object.keys(phase).indexOf(name),frontmatter={phase:value,[p.settings.noteTypeField]:'Example',tags:['wuxing-fixture']};
    for(const [field,values]of Object.entries({ace:['add','connect','express'],para:['projects','areas','resources','archives'],horizon:['actions','projects','areas','goals','vision','purpose'],access:['encounters','atlas','calendar','cards','extras','sources','spaces'],state:['seed','research','draft','published']}))if(value!==null)frontmatter[field]=name==='Conflict'?values.slice(0,2):values[index%values.length];
@@ -66,7 +66,7 @@ async function scenario(app,c){
   host.view.centerPresentation.update({embedCentralNode:false,centralNodeMarkdownMode:'source'});p.notifyNavigation(path('Memory'),host);await until(()=>center(host)===path('Memory')&&root(host)?.querySelector('.kplex-filter-trigger'),'Attention did not render');
   await until(localReady,'Requested local cached proof/active work did not settle');
   cases.push({id:'requested-local-cache-proof',current:true,coverage:'cached',globalSemanticPending:p.index.hasPendingSemanticPreparation()});await choose(host,'wuxing');
-  const expectedRegions=c.lane==='features'?8:7;
+  const expectedRegions=c.lane==='features'||c.lane==='areas'?8:7;
   await until(()=>root(host).querySelectorAll('.kplex-view-region').length===expectedRegions&&!root(host).querySelector('.kplex-view-error'),'Facets production scene absent');panel(host).querySelector('.kplex-filter-panel-header button').click();
   check(root(host).querySelectorAll('.kplex-view-guide').length===10,'Generating/regulating decorative cycles absent');
   const conflict=[...root(host).querySelectorAll('[data-kplex-decoration]')].find(element=>element.dataset.kplexDecoration===JSON.stringify(['facets','wuxing','status','conflicting']));check(conflict?.textContent.includes('1'),'Conflicting list missing');
@@ -74,7 +74,7 @@ async function scenario(app,c){
   const context={app,p,c,workspace,remote,native,bounds,host,hosts,files,releases,restores,cases,path,root,center,check,wait,until,localReady,choose,panel,reveal,observe,quiet};
   c.progress={phase:c.lane,cases};
   if(c.lane==='editor'||c.lane==='editor-isolated')await c.acceptEditor(context);else if(c.lane==='pairs')await c.acceptPairs(context);else await c.acceptFeatures(context);
-  return {lane:c.lane,cases,cleanup,host:{node:process.version,electron:process.versions.electron,chrome:process.versions.chrome,hidden:document.hidden},limits:['Windows native automation is separate from macOS and physical mobile acceptance.','#215 extra-tab application restart/combined two-editor-pair baseline failures are not claimed fixed.',...(c.lane==='editor-isolated'?['Combined editor/Sidecar acceptance is excluded from this isolated lane; its failing Facets/Compass observations remain separate.']:[]),...(!c.osInput?['Native trusted input uses Electron; this is not an OS clipboard acceptance receipt.']:[])]};
+  return {lane:c.lane,cases,cleanup,host:{node:process.version,electron:process.versions.electron,chrome:process.versions.chrome,hidden:document.hidden},limits:['Windows native automation is separate from macOS and physical mobile acceptance.','#215 extra-tab application restart/combined two-editor-pair baseline failures are not claimed fixed.',...(c.lane==='areas'?['Area-only acceptance: no Wander, assignment, preset manager or editor pass is claimed.']:[]),...(c.lane==='editor-isolated'?['Combined editor/Sidecar acceptance is excluded from this isolated lane; its failing Facets/Compass observations remain separate.']:[]),...(!c.osInput?['Native trusted input uses Electron; this is not an OS clipboard acceptance receipt.']:[])]};
  }catch(error){failure=error;c.progress={...c.progress,cases,errorStack:error?.stack??String(error)};throw error}
  finally{
   const errors=[];
@@ -93,7 +93,7 @@ async function scenario(app,c){
 }
 
 if(process.env.KPLEX_TEST_VAULT_NAME!=='kplex-test-small')throw Error('Explicit disposable Small required');
-const lane=process.env.KPLEX_WUXING_NATIVE_LANE??'editor';if(!['editor','editor-isolated','pairs','features'].includes(lane))throw Error('Unknown Wu Xing native lane');
+const lane=process.env.KPLEX_WUXING_NATIVE_LANE??'editor';if(!['editor','editor-isolated','pairs','features','areas'].includes(lane))throw Error('Unknown Wu Xing native lane');
 const definitions='c.htmlDrag='+nativeHtmlDrag.toString()+';c.includeSidecar='+JSON.stringify(lane==='editor')+';c.compareSidecar='+JSON.stringify(process.env.KPLEX_WUXING_SIDECAR_COMPARATOR==='true')+';c.screenshotPrefix='+JSON.stringify(join(process.env.KPLEX_HOST_REPORT_DIR??'','facets'))+';c.lane='+JSON.stringify(lane)+';c.osInput='+JSON.stringify(process.env.KPLEX_WUXING_OS_INPUT==='true')+';c.loadedCompanion='+JSON.stringify(process.env.KPLEX_WUXING_LOADED_COMPANION==='true')+';c.stateExample='+JSON.stringify(JSON.parse(readFileSync('tests/fixtures/facets-vault/.obsidian/plugins/k-plex/data.json','utf8')).canvasViewSettings.wuxing.values.presets.state)+';c.originalData='+JSON.stringify(readFileSync(join(process.env.KPLEX_TEST_CONFIG_DIR,'plugins/k-plex/data.json'),'utf8'))+';c.acceptEditor='+acceptWuXingEditor.toString()+';c.acceptPairs='+acceptWuXingPairs.toString()+';c.acceptFeatures='+acceptFacetsFeatures.toString()+';';
 await runControlledProbe('wuxing-220-'+lane,scenario,definitions,['src/ui/PlexGraph.tsx','src/core/plex/views/wuxing/definition.ts','src/core/plex/views/facets/projection.ts','src/core/plex/views/facets/layout.ts','src/core/plex/views/facets/rules.ts','src/core/plex/predicate.ts','src/ui/plexViews/facets/FacetPresetEditor.ts','src/ui/CanvasPropertyAssignmentActions.ts','src/adapters/obsidian/predicateContracts.ts'],{maximumMs:480000});
 

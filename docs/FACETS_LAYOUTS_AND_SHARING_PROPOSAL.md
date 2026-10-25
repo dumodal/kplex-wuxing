@@ -1,6 +1,6 @@
 # Draft specification: Facets layouts and portable Facets/Lens presets
 
-Status: **specification only**. This branch deliberately contains no feature code or validation claim.
+Status: **implementation started from accepted main**. Baseline integration30d7a73 includes merged #220 at7064644; current feature code/validation is tracked in the PR checkpoints. The original specification below remains the acceptance contract.
 Target: K-Plex built-in Facets view and shared lens/settings components.
 Related: [#220](https://github.com/zsviczian/kplex/pull/220), [#135](https://github.com/zsviczian/kplex/issues/135), [Nick Milo's Maps of the Ideaverse](https://github.com/nickmilo/ideaverse-maps).
 Initial accepted baseline: main at 26623c8393bddc0c3bcac39468078ec20ceccbc8 on 2026-10-25.

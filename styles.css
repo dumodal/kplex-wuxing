@@ -807,6 +807,32 @@ button.kplex-sidecar-unfold-plex,
 .kplex-area-keyboard-handle:focus-visible { outline: 2px solid var(--text-accent); }
 .kplex-plex.is-area-resize-ready,
 .kplex-plex.is-area-resizing { cursor: ns-resize; }
+.kplex-area-frame.is-no-height-resize::after { content: none; }
+.kplex-area-frame.is-width-resizable.is-settings-mode::before,
+.kplex-area-frame.is-width-resizable.is-active::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  width: 5px;
+  border-radius: 5px;
+  background: var(--interactive-accent);
+  opacity: .82;
+}
+.kplex-area-frame.is-side-left::before { left: -1px; }
+.kplex-area-frame.is-side-right::before { right: -1px; }
+.kplex-area-keyboard-handle.is-width-handle {
+  top: 12px;
+  bottom: 12px;
+  left: auto;
+  right: auto;
+  width: 5px;
+  height: auto;
+  cursor: ew-resize;
+}
+.kplex-area-keyboard-handle.is-width-handle.is-edge-left { left: -1px; }
+.kplex-area-keyboard-handle.is-width-handle.is-edge-right { right: -1px; }
+.kplex-plex.is-area-width-resize { cursor: ew-resize; }
 
 /* Generic bounded graph zones (parents, children, friends and siblings). */
 .kplex-zone-panel {

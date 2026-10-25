@@ -1558,6 +1558,7 @@ const russianTranslations = {
   "actions.editor.resize.description": "Изменить размер открытого редактора узла.",
   "actions.editor-capacity": "Закройте текущий редактор узла, прежде чем открывать другой.",
   "actions.editor-save-failed": "Не удалось сохранить. Редактор остаётся открытым.",
+  "graph.areaWidth": "Ширина: {zone}",
 } as const satisfies LocaleTranslationMap;
 
 export const russianCatalog = buildLocaleCatalog(russianTranslations);

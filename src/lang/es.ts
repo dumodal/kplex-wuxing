@@ -1554,6 +1554,7 @@ const spanishTranslations = {
   "actions.editor.resize.description": "Cambia el tamaño del editor abierto del nodo.",
   "actions.editor-capacity": "Cierra el editor actual antes de abrir otro.",
   "actions.editor-save-failed": "No se pudo guardar el editor. Sigue abierto.",
+  "graph.areaWidth": "Anchura de {zone}",
 } as const satisfies LocaleTranslationMap;
 
 export const spanishCatalog = buildLocaleCatalog(spanishTranslations);

@@ -12,6 +12,21 @@ const definition={id:'wuxing',configuration:M.facetsConfigurationSchema};
 const available=stored=>M.readViewConfiguration(definition,stored),library=stored=>M.facetLibrary(available(stored));
 const node={id:'A',kind:'document',file:{extension:'md'},noteType:'water',tags:['wood']};
 
+test('individual Facets widths drive one, two and three measured columns without enlarging unrelated regions',()=>{
+ const preset=M.FACET_TEMPLATES.wuxing,wood=M.facetAreaId('wuxing','category','wood'),water=M.facetAreaId('wuxing','category','water');
+ const occurrences=[{id:'focus'},...Array.from({length:6},(_,i)=>({id:'wood-'+i,areaId:wood})),{id:'wide-water',areaId:water}];
+ const projection={entry:'focus',occurrences},measured=occurrences.map(row=>({id:row.id,width:row.id==='wide-water'?600:100,height:40,expandedWidth:0,expandedReserve:0,mini:null,envelope:null}));
+ for(const [width,columns]of [[200,1],[300,2],[400,3]]){
+  const layout=M.layoutFacets(projection,measured,'wuxing',preset,{},true,{[wood]:width}),area=layout.areas.find(area=>area.id===wood);
+  assert.equal(area.bounds.width,width);assert.equal(area.reflow.columns,columns);assert.equal(area.widthPreference.value,width);assert.equal(area.widthResizeEdge,'right');
+  assert.equal(layout.areas.find(area=>area.id===water).bounds.width,648);
+  assert.equal(layout.positions.size,measured.length);assert.equal(layout.positions.get('focus').x,0);assert.equal(layout.positions.get('focus').y,0);
+  const cards=occurrences.filter(row=>row.areaId===wood).map(row=>layout.positions.get(row.id));
+  assert.equal(new Set(cards.map(card=>card.x)).size,columns);
+  for(const card of cards){assert.equal(card.width,100);assert(card.x-card.width/2>=area.bounds.x);assert(card.x+card.width/2<=area.bounds.x+area.bounds.width);}
+ }
+});
+
 test('five ordinary editable templates cover3/4/5/6/7 categories within existing settings bounds',()=>{
  M.validateViewConfigurationSchema(M.facetsConfigurationSchema);
  assert.deepEqual(M.FACET_TEMPLATE_ORDER.map(id=>M.FACET_TEMPLATES[id].order.length),[3,4,5,6,7]);

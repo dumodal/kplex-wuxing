@@ -163,7 +163,7 @@ function validateProjection(projection: PlexProjection, maximum: number, definit
 export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewRead, source: Pick<GraphIndex, "get" | "titleFor">,
   attention: string, state: unknown, settings: KplexSettings, current: () => boolean,
   editorSize?: {width: number; height: number}, matches: (node: PositionedNode) => boolean = () => true,
-  grouping?: {translate: Translator; unfolded: ReadonlySet<string>; areaHeights?: Readonly<Record<string, number>>; layoutRoot?: NodeId; retainedScopes?: readonly NodeId[];
+  grouping?: {translate: Translator; unfolded: ReadonlySet<string>; areaHeights?: Readonly<Record<string, number>>; areaWidths?: Readonly<Record<string, number>>; layoutRoot?: NodeId; retainedScopes?: readonly NodeId[];
     sections?: PlexSectionViewContext | null},
   editorHost?: OccurrenceEditorHost): PreparedViewScene {
   const empty: HostPlexScene = {nodes: [], edges: [], zoneViewports: {}, zoneAreas: {}};
@@ -303,7 +303,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
       const represented = new Set(filtered.occurrences.flatMap(row => row.nodeId ? [row.nodeId] : []));
       filtered = {...filtered, preparation: {parents: filtered.preparation.parents.filter(id => represented.has(id))}};
     }
-    const layout = definition.layout(filtered, measurements, state, Boolean(editorSize), {areaHeights: grouping?.areaHeights ?? {}, configuration});
+    const layout = definition.layout(filtered, measurements, state, Boolean(editorSize), {areaHeights: grouping?.areaHeights ?? {}, areaWidths: grouping?.areaWidths ?? {}, configuration});
     if (!current() || !read.isCurrent()) return {scene: empty, projection: null, failure: true};
     for (const [id, node] of nodes) {
       const rect = layout.positions.get(id);
@@ -356,11 +356,18 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
         || !filtered.occurrences.some(row => row.id === area.dropOrigin && row.nodeId))) throw new Error("Invalid area drop origin");
       if (area.viewport && (!Object.values(area.viewport).every(Number.isFinite) || area.viewport.width <= 0 || area.viewport.height <= 0
         || area.viewport.contentHeight < 0 || area.viewport.initialScrollTop < 0)) throw new Error("Invalid area viewport");
-      if (area.heightPreference && (!area.heightPreference.key || ["__proto__", "constructor", "prototype"].includes(area.heightPreference.key)
-        || !Number.isFinite(area.heightPreference.minimum) || !Number.isFinite(area.heightPreference.maximum)
-        || area.heightPreference.minimum <= 0 || area.heightPreference.maximum < area.heightPreference.minimum)) throw new Error("Invalid area preference");
-      if (area.reflow && (!Object.values(area.reflow).every(Number.isFinite) || area.reflow.columns < 1 || !Number.isInteger(area.reflow.columns)
-        || area.reflow.columns > 32 || area.reflow.columnGap < 0 || area.reflow.rowGap < 0)) throw new Error("Invalid area reflow");
+      for (const preference of [area.heightPreference, area.widthPreference]) if (preference && (!preference.key || preference.key.length > 128
+        || ["__proto__", "constructor", "prototype"].includes(preference.key) || !Number.isFinite(preference.minimum) || !Number.isFinite(preference.maximum)
+        || preference.minimum <= 0 || preference.maximum < preference.minimum || preference.maximum > 100_000
+        || preference.value !== undefined && (!Number.isFinite(preference.value) || preference.value < preference.minimum || preference.value > preference.maximum)))
+        throw new Error("Invalid area preference");
+      if (area.widthResizeEdge !== undefined && (area.widthResizeEdge !== "left" && area.widthResizeEdge !== "right" || !area.widthPreference)) throw new Error("Invalid area width edge");
+      if (area.reflow) {
+        const {autoColumns, ...geometry} = area.reflow;
+        if (!Object.values(geometry).every(Number.isFinite) || area.reflow.columns < 1 || !Number.isInteger(area.reflow.columns)
+          || area.reflow.columns > 32 || area.reflow.columnGap < 0 || area.reflow.rowGap < 0 || autoColumns !== undefined && typeof autoColumns !== "boolean")
+          throw new Error("Invalid area reflow");
+      }
       scene.zoneAreas[area.id] = {key: area.id, left: area.bounds.x, top: area.bounds.y, width: area.bounds.width, height: area.bounds.height, resizeEdge: area.resizeEdge ?? "bottom"};
       if (area.viewport) scene.zoneViewports[area.id] = {key: area.id, left: area.viewport.x, top: area.viewport.y, ...area.viewport};
     }

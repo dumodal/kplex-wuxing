@@ -162,17 +162,18 @@ type NodeDrag = {
   moved: boolean;
 };
 
-type AreaHoverState = { zone: ScrollZone; edgeActive: boolean } | null;
+type AreaHoverState = { zone: ScrollZone; edgeActive: boolean; axis?: "height" | "width" } | null;
 type AreaHeightKey = "parentMaxHeight" | "childMaxHeight" | "friendMaxHeight" | "siblingMaxHeight";
 type AreaHeightControl = {kind: "classic"; key: AreaHeightKey; min: number; max: number}
   | {kind: "view"; key: string; min: number; max: number};
 type AreaResizeDrag = {
   zone: ScrollZone;
   /** Capture the declared physical edge; opaque view area IDs carry no direction semantics. */
-  edge: "top" | "bottom";
+  edge: "top" | "bottom" | "left" | "right";
+  axis: "height" | "width";
   pointerId: number;
-  startClientY: number;
-  startHeight: number;
+  startClient: number;
+  startSize: number;
   startScale: number;
   changed: boolean;
 };
@@ -968,7 +969,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     return prepareViewScene(viewDefinition, read, index, activePath, state, settings, current, centralEditorSize,
       node => !globalFiltering || filterLayoutMode === "keep" && !settings.groupRelations || (matchesGraphPredicateNode(predicateEngine, predicate, node, predicateCenter)
         && matchesVisibleLensNode(predicateEngine, index, lenses, node, predicateCenter)),
-      {translate, unfolded: unfoldedGroups.center === sceneScope ? unfoldedGroups.keys : new Set(), areaHeights: viewSession?.getAreaHeights(), layoutRoot: rooted ? nodeId(sceneScope) : undefined,
+      {translate, unfolded: unfoldedGroups.center === sceneScope ? unfoldedGroups.keys : new Set(), areaHeights: viewSession?.getAreaHeights(), areaWidths: viewSession?.getAreaWidths(), layoutRoot: rooted ? nodeId(sceneScope) : undefined,
         retainedScopes: hierarchyDemand.held, ...(sections !== undefined ? {sections} : {})},
       occurrenceEditorPolicy ? {bindings, supports: supportsBoundEditor} : undefined);
   };
@@ -1022,12 +1023,19 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const ZONES = useMemo(() => [...new Set([...Object.keys(scene.zoneAreas), ...Object.keys(scene.zoneViewports)])], [scene.zoneAreas, scene.zoneViewports]);
   const AREA_HEIGHT_CONFIG: Record<string, AreaHeightControl | undefined> = classic?.heightControls ?? Object.fromEntries((scene.areas ?? []).flatMap(area =>
     area.heightPreference ? [[area.id, {kind: "view" as const, key: area.heightPreference.key, min: area.heightPreference.minimum, max: area.heightPreference.maximum}]] : []));
+  const AREA_WIDTH_CONFIG: Record<string, {key: string; min: number; max: number; edge: "left" | "right"; value?: number} | undefined> = Object.fromEntries((scene.areas ?? []).flatMap(area =>
+    area.widthPreference && area.widthResizeEdge ? [[area.id, {key: area.widthPreference.key, min: area.widthPreference.minimum,
+      max: area.widthPreference.maximum, edge: area.widthResizeEdge, value: area.widthPreference.value}]] : []));
+  /** Read declared editable sizes; band thickness may intentionally differ from the outer frame. */
   const areaHeight = (zone: string): number => {
     const config = AREA_HEIGHT_CONFIG[zone];
-    return config?.kind === "view" ? viewSession?.getAreaHeights()[config.key] ?? scene.zoneAreas[zone]?.height ?? config.min
+    return config?.kind === "view" ? scene.areas?.find(area => area.id === zone)?.heightPreference?.value ?? viewSession?.getAreaHeights()[config.key] ?? scene.zoneAreas[zone]?.height ?? config.min
       : config ? settings[config.key] : scene.zoneAreas[zone]?.height ?? 0;
   };
-  const persistAreaHeight = (zone: string): void => {if (AREA_HEIGHT_CONFIG[zone]?.kind !== "view") void plugin.saveSettings(false);};
+  /** Width is opt-in and always belongs to the captured native canvas, never global preferences. */
+  const areaWidth = (zone: string): number => {const config = AREA_WIDTH_CONFIG[zone];return config?.value ?? (config ? viewSession?.getAreaWidths()[config.key] : undefined) ?? scene.zoneAreas[zone]?.width ?? 0;};
+  /** Classic heights retain their existing settings save; native-session dimensions already persist. */
+  const persistAreaSize = (zone: string, axis: "height" | "width" = "height"): void => {if (axis === "height" && AREA_HEIGHT_CONFIG[zone]?.kind !== "view") void plugin.saveSettings(false);};
   /** Literal area names and catalog labels share the same accessible resize/filter controls. */
   const zoneTitle = (zone: string, translator: Translator, arrangement: KplexSettings["lateralArrangement"]): string => {
     const area = scene.areas?.find(area => area.id === zone);
@@ -1038,7 +1046,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       ? classic.repack(zone, panel, nodes, filter, preferences, classicRead, centerPath, matchesZoneFilter)
       : reflowArea(panel, nodes, filter, matchesZoneFilter, scene.areas?.find(area => area.id === zone)?.reflow);
   const areaForNode = (node: PositionedNode): string | null => node.areaId ?? (classic ? scrollZoneForRole(node.role, settings.lateralArrangement) : null);
-  const hasEditableAreas = ZONES.some(zone => Boolean(AREA_HEIGHT_CONFIG[zone]));
+  const hasEditableAreas = ZONES.some(zone => Boolean(AREA_HEIGHT_CONFIG[zone] || AREA_WIDTH_CONFIG[zone]));
   useEffect(/** A compatible view change cannot leave inert area editing enabled in a decorative-only or empty scene. */ () => {
     if (areaSettingsMode && !hasEditableAreas) onAreaSettingsModeChange(false);
   }, [areaSettingsMode, hasEditableAreas, onAreaSettingsModeChange]);
@@ -1235,7 +1243,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const [resizingArea, setResizingArea] = useState<ScrollZone | null>(null);
   const areaResizeDrag = useRef<AreaResizeDrag | null>(null);
   const areaResizeFrame = useRef<{ owner: Window; id: number } | null>(null);
-  const pendingAreaHeight = useRef<{ zone: ScrollZone; height: number } | null>(null);
+  const pendingAreaSize = useRef<{ zone: ScrollZone; axis: "height" | "width"; value: number } | null>(null);
   useEffect(/** Accept later settings edits after the local pointer gesture has released ownership. */ () => {
     if (!areaResizeDrag.current) setAreaHeightOverrides({});
   }, [viewSettings.parentMaxHeight, viewSettings.childMaxHeight, viewSettings.friendMaxHeight, viewSettings.siblingMaxHeight]);
@@ -1920,7 +1928,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     if (!emptyTarget && !allowCoveredEdge) return null;
     const point = toWorld(clientX, clientY);
     const threshold = edgePixels / Math.max(0.01, camera.current.scale);
-    let edgeMatch: { zone: ScrollZone; distance: number } | null = null;
+    let edgeMatch: { zone: ScrollZone; distance: number; axis: "height" | "width" } | null = null;
     const interiorMatches: Array<{ zone: ScrollZone; score: number }> = [];
 
     for (const zone of ZONES) {
@@ -1931,7 +1939,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       const resizeY = area.resizeEdge === "top" ? area.top : bottom;
       if (point.x >= area.left && point.x <= right) {
         const distance = Math.abs(point.y - resizeY);
-        if (AREA_HEIGHT_CONFIG[zone] && distance <= threshold && (!edgeMatch || distance < edgeMatch.distance)) edgeMatch = { zone, distance };
+        if (AREA_HEIGHT_CONFIG[zone] && distance <= threshold && (!edgeMatch || distance < edgeMatch.distance)) edgeMatch = { zone, distance, axis: "height" };
+      }
+      const widthConfig = AREA_WIDTH_CONFIG[zone];
+      if (widthConfig && point.y >= area.top && point.y <= bottom) {
+        const distance = Math.abs(point.x - (widthConfig.edge === "left" ? area.left : right));
+        if (distance <= threshold && (!edgeMatch || distance < edgeMatch.distance)) edgeMatch = {zone, distance, axis: "width"};
       }
       if (!emptyTarget || point.x < area.left || point.x > right || point.y < area.top || point.y > bottom) continue;
       const horizontalDistance = Math.abs(point.x - (area.left + area.width / 2)) / Math.max(1, area.width);
@@ -1939,14 +1952,14 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       interiorMatches.push({ zone, score: horizontalDistance + verticalDistance * 0.12 });
     }
 
-    if (edgeMatch) return { zone: edgeMatch.zone, edgeActive: true };
+    if (edgeMatch) return { zone: edgeMatch.zone, edgeActive: true, axis: edgeMatch.axis };
     interiorMatches.sort((a, b) => a.score - b.score);
     return interiorMatches[0] ? { zone: interiorMatches[0].zone, edgeActive: false } : null;
   };
 
   /** Avoid re-rendering the scene for pointer motion that stays on the same affordance. */
   const setAreaHoverIfChanged = (next: AreaHoverState): void => {
-    setAreaHover((current) => current?.zone === next?.zone && current?.edgeActive === next?.edgeActive ? current : next);
+    setAreaHover((current) => current?.zone === next?.zone && current?.edgeActive === next?.edgeActive && current?.axis === next?.axis ? current : next);
   };
 
   useEffect(/** Area outlines share the hover modifier lifetime, with immediate eligible feedback. */ () => {
@@ -1980,30 +1993,43 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       plugin.settings[config.key] = next;
       setAreaHeightOverrides((current) => ({ ...current, [config.key]: next }));
     }
-    preserveCameraOnNextLayout.current = true;
-    suppressAutoFitUntil.current = Date.now() + 1200;
-    setLayoutRevision((value) => value + 1);
+    retainAreaCamera();
     return true;
   };
 
-  /** Commit the latest sampled height once per paint, or synchronously before release/save. */
-  const flushAreaHeight = (): void => {
+  /** Preserve the existing camera suppression for either dimension without retargeting attention. */
+  const retainAreaCamera = (): void => {
+    preserveCameraOnNextLayout.current = true;
+    suppressAutoFitUntil.current = Date.now() + 1200;
+    setLayoutRevision((value) => value + 1);
+  };
+
+  /** Horizontal edits use the existing session writer and the same camera/paint lifetime as heights. */
+  const setAreaWidth = (zone: ScrollZone, width: number): boolean => {
+    const config = AREA_WIDTH_CONFIG[zone];if (!config) return false;
+    const next = Math.max(config.min, Math.min(config.max, Math.round(width)));
+    if (!viewSession?.setAreaWidth(config.key, next)) return false;
+    retainAreaCamera();return true;
+  };
+
+  /** Commit the latest sampled dimension once per paint, or synchronously before release/save. */
+  const flushAreaSize = (): void => {
     const frame = areaResizeFrame.current;
     if (frame) frame.owner.cancelAnimationFrame(frame.id);
     areaResizeFrame.current = null;
-    const pending = pendingAreaHeight.current;
-    pendingAreaHeight.current = null;
-    if (pending && setAreaHeight(pending.zone, pending.height) && areaResizeDrag.current) areaResizeDrag.current.changed = true;
+    const pending = pendingAreaSize.current;
+    pendingAreaSize.current = null;
+    if (pending && (pending.axis === "height" ? setAreaHeight(pending.zone, pending.value) : setAreaWidth(pending.zone, pending.value)) && areaResizeDrag.current) areaResizeDrag.current.changed = true;
   };
 
   /** Finish only the owning pointer and persist a changed height once, without scheduling a semantic rebuild. */
   const finishAreaResize = (pointerId: number): boolean => {
     const drag = areaResizeDrag.current;
     if (!drag || drag.pointerId !== pointerId) return false;
-    flushAreaHeight();
+    flushAreaSize();
     areaResizeDrag.current = null;
     setResizingArea(null);
-    if (drag.changed) persistAreaHeight(drag.zone);
+    if (drag.changed) persistAreaSize(drag.zone, drag.axis);
     return true;
   };
 
@@ -2044,10 +2070,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   useEffect(() => {
     /** Persist an interrupted edit before navigation or surface teardown discards its pointer. */
     return () => {
-      flushAreaHeight();
+      flushAreaSize();
       const drag = areaResizeDrag.current;
       areaResizeDrag.current = null;
-      if (drag?.changed) persistAreaHeight(drag.zone);
+      if (drag?.changed) persistAreaSize(drag.zone, drag.axis);
     };
   }, [plugin, activePath]);
 
@@ -3025,7 +3051,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         areaSettingsMode,
       );
       if (areaHit?.edgeActive) {
-        const config = AREA_HEIGHT_CONFIG[areaHit.zone];
+        const axis = areaHit.axis ?? "height", config = axis === "width" ? AREA_WIDTH_CONFIG[areaHit.zone] : AREA_HEIGHT_CONFIG[areaHit.zone];
         if (!config) return;
         touchDoubleTap.current.reset();
         clearHoverIntent(true);
@@ -3033,10 +3059,11 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         areaSettingsDismissPointer.current = null;
         areaResizeDrag.current = {
           zone: areaHit.zone,
-          edge: scene.zoneAreas[areaHit.zone]?.resizeEdge ?? "bottom",
+          edge: axis === "width" ? AREA_WIDTH_CONFIG[areaHit.zone]!.edge : scene.zoneAreas[areaHit.zone]?.resizeEdge ?? "bottom",
+          axis,
           pointerId: e.pointerId,
-          startClientY: e.clientY,
-          startHeight: areaHeight(areaHit.zone),
+          startClient: axis === "width" ? e.clientX : e.clientY,
+          startSize: axis === "width" ? areaWidth(areaHit.zone) : areaHeight(areaHit.zone),
           startScale: camera.current.scale,
           changed: false,
         };
@@ -3159,12 +3186,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const resizeDrag = areaResizeDrag.current;
     if (resizeDrag) {
       if (e.pointerId !== resizeDrag.pointerId) return;
-      const direction = resizeDrag.edge === "bottom" ? 1 : -1;
-      const delta = direction * (e.clientY - resizeDrag.startClientY) / Math.max(0.3, resizeDrag.startScale);
-      pendingAreaHeight.current = { zone: resizeDrag.zone, height: resizeDrag.startHeight + delta };
+      const direction = resizeDrag.edge === "bottom" || resizeDrag.edge === "right" ? 1 : -1;
+      const delta = direction * ((resizeDrag.axis === "width" ? e.clientX : e.clientY) - resizeDrag.startClient) / Math.max(0.3, resizeDrag.startScale);
+      pendingAreaSize.current = { zone: resizeDrag.zone, axis: resizeDrag.axis, value: resizeDrag.startSize + delta };
       if (!areaResizeFrame.current) {
         const owner = viewport.current?.ownerDocument.defaultView ?? window;
-        areaResizeFrame.current = { owner, id: owner.requestAnimationFrame(flushAreaHeight) };
+        areaResizeFrame.current = { owner, id: owner.requestAnimationFrame(flushAreaSize) };
       }
       e.preventDefault();
       return;
@@ -4403,10 +4430,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       if (restored.selected) selection.select(restored.selected);
     } else selection.select(null);
     return viewSession.own(() => {
-      flushAreaHeight();
+      flushAreaSize();
       const resize = areaResizeDrag.current;
       areaResizeDrag.current = null;
-      if (resize?.changed) persistAreaHeight(resize.zone);
+      if (resize?.changed) persistAreaSize(resize.zone, resize.axis);
       viewSession.retainTransient(viewDefinition.id, {attention: nodeId(recoveryCenter.current), scope: nodeId(sceneScope), camera: camera.current,
         selected: outgoingViewState.current.selected()?.id ?? null,
         unfolded: outgoingViewState.current.groups.center === sceneScope ? [...outgoingViewState.current.groups.keys] : []});
@@ -4914,14 +4941,17 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   /** Compose the shared region affordance with localized names and the existing height-setting policy. */
   const renderAreaFrame = (zone: ScrollZone, area: ZoneAreaBounds) => {
     const edgeActive = resizingArea === zone || (areaHover?.zone === zone && areaHover.edgeActive);
-    const config = AREA_HEIGHT_CONFIG[zone];
+    const config = AREA_HEIGHT_CONFIG[zone], widthConfig = AREA_WIDTH_CONFIG[zone];
     return <ResizableAreaFrame
       key={zone}
-      className={`kplex-area-frame kplex-area-${zone} is-edge-${area.resizeEdge}${areaSettingsMode ? " is-settings-mode" : ""}${edgeActive ? " is-active" : ""}${resizingArea === zone ? " is-resizing" : ""}`}
+      className={`kplex-area-frame kplex-area-${zone} is-edge-${area.resizeEdge}${widthConfig ? ` is-width-resizable is-side-${widthConfig.edge}` : ""}${!config ? " is-no-height-resize" : ""}${areaSettingsMode ? " is-settings-mode" : ""}${edgeActive ? " is-active" : ""}${resizingArea === zone ? " is-resizing" : ""}`}
       left={area.left} top={area.top} width={area.width} height={area.height}
-      edge={area.resizeEdge} editing={areaSettingsMode && Boolean(config)} label={zoneTitle(zone, translate, settings.lateralArrangement)}
+      edge={area.resizeEdge} editing={areaSettingsMode && Boolean(config || widthConfig)} heightEditing={areaSettingsMode && Boolean(config)} label={zoneTitle(zone, translate, settings.lateralArrangement)}
       value={areaHeight(zone)} min={config?.min ?? area.height} max={config?.max ?? area.height}
-      onHeightChange={/** Persist keyboard height edits through the same presentation-only path as pointer edits. */ (height) => { if (setAreaHeight(zone, height)) persistAreaHeight(zone); }}
+      onHeightChange={/** Persist keyboard height edits through the same presentation-only path as pointer edits. */ (height) => { if (setAreaHeight(zone, height)) persistAreaSize(zone); }}
+      widthControl={widthConfig ? {edge: widthConfig.edge, label: translate("graph.areaWidth", {zone: zoneTitle(zone, translate, settings.lateralArrangement)}),
+        value: areaWidth(zone), min: widthConfig.min, max: widthConfig.max,
+        onChange: /** Keep keyboard width edits with this exact canvas's workspace owner. */ width => {setAreaWidth(zone, width);}} : undefined}
     />;
   };
 
@@ -5192,7 +5222,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
 
   return <div
     ref={viewport}
-    className={`kplex-plex${finding ? " is-finding" : ""}${navigationOrigin === "follow" ? " is-following-document" : sceneTransitioning || pathChangedThisRender ? " is-scene-transitioning" : ""}${sectionExpanded ? " is-section-expanded" : ""}${centralEditorMaximized ? " is-central-editor-maximized" : ""}${Platform.isIosApp ? " is-ios" : ""}${areaSettingsMode ? " is-area-settings-mode" : ""}${areaHover?.edgeActive ? " is-area-resize-ready" : ""}${resizingArea ? " is-area-resizing" : ""}`}
+    className={`kplex-plex${finding ? " is-finding" : ""}${navigationOrigin === "follow" ? " is-following-document" : sceneTransitioning || pathChangedThisRender ? " is-scene-transitioning" : ""}${sectionExpanded ? " is-section-expanded" : ""}${centralEditorMaximized ? " is-central-editor-maximized" : ""}${Platform.isIosApp ? " is-ios" : ""}${areaSettingsMode ? " is-area-settings-mode" : ""}${areaHover?.edgeActive ? " is-area-resize-ready" : ""}${resizingArea ? " is-area-resizing" : ""}${areaHover?.edgeActive && areaHover.axis === "width" || areaResizeDrag.current?.axis === "width" ? " is-area-width-resize" : ""}`}
     style={{
       background: alphaHexToCss(paintSettings.backgroundColor, NATIVE_CANVAS_FILL),
       "--kplex-motion-scale": String(Math.max(0, Math.min(2, settings.animationSpeed))),

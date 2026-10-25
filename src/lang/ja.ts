@@ -1546,6 +1546,7 @@ const japaneseTranslations = {
   "actions.editor.resize.description": "開いているノードエディターのサイズを変更します。",
   "actions.editor-capacity": "別のエディターを開く前に、現在のエディターを閉じてください。",
   "actions.editor-save-failed": "保存できませんでした。エディターは開いたままです。",
+  "graph.areaWidth": "{zone}の幅",
 } as const satisfies LocaleTranslationMap;
 
 export const japaneseCatalog = buildLocaleCatalog(japaneseTranslations);

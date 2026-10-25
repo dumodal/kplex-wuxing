@@ -21,6 +21,7 @@ export class PlexViewSession {
   private readonly owned = new Set<() => void>();
   private readonly transient = new Map<string, PlexViewTransient>();
   private readonly areaHeights = new Map<string, Readonly<Record<string, number>>>();
+  private readonly areaWidths = new Map<string, Readonly<Record<string, number>>>();
   private readonly roots = new Map<string, NodeId>();
   private stateGuard: ((state: unknown) => boolean) | null = null;
   private restoredEditors: unknown;
@@ -132,10 +133,18 @@ export class PlexViewSession {
   getAreaHeights(): Readonly<Record<string, number>> { return this.areaHeights.get(this.definition.id) ?? {}; }
   /** Stage a finite presentation preference through the native workspace writer, never global settings or semantic invalidation. */
   setAreaHeight(key: string, height: number): boolean {
-    if (this.closed || !key || ["__proto__", "constructor", "prototype"].includes(key) || key.length > 128 || !Number.isFinite(height) || height <= 0 || height > 100_000) return false;
-    const previous = this.getAreaHeights();
-    if (previous[key] === height || Object.keys(previous).length >= 64 && !(key in previous)) return false;
-    this.areaHeights.set(this.definition.id, {...previous, [key]: height}); this.notify(); this.persist(); return true;
+    return this.setAreaDimension(this.areaHeights, key, height);
+  }
+  /** Optional horizontal area sizes belong to this same canvas/view workspace owner. */
+  getAreaWidths(): Readonly<Record<string, number>> {return this.areaWidths.get(this.definition.id) ?? {};}
+  /** Width changes share height's finite admission, notification and native persistence path. */
+  setAreaWidth(key: string, width: number): boolean {return this.setAreaDimension(this.areaWidths, key, width);}
+  /** Keep dimensions separate from global type configuration and from one another. */
+  private setAreaDimension(areas: Map<string, Readonly<Record<string, number>>>, key: string, value: number): boolean {
+    if (this.closed || !key || ["__proto__", "constructor", "prototype"].includes(key) || key.length > 128 || !Number.isFinite(value) || value <= 0 || value > 100_000) return false;
+    const previous = areas.get(this.definition.id) ?? {};
+    if (previous[key] === value || Object.keys(previous).length >= 64 && !(key in previous)) return false;
+    areas.set(this.definition.id, {...previous, [key]: value});this.notify();this.persist();return true;
   }
   /** Persist one bounded view-local payload without sharing another view's transient state. */
   updateState(value: unknown): boolean {
@@ -149,7 +158,8 @@ export class PlexViewSession {
     this.states.set(this.definition.id, next); this.notify(); this.persist(); return true;
   }
   /** Native workspace allowlist excludes runtime instances, acquired scope and graph payloads. */
-  getState(): unknown { return {version: 1, id: this.requestedId, states: Object.fromEntries(this.states), areaHeights: Object.fromEntries(this.areaHeights), roots: Object.fromEntries(this.roots),
+  getState(): unknown { return {version: 1, id: this.requestedId, states: Object.fromEntries(this.states), areaHeights: Object.fromEntries(this.areaHeights),
+    ...(this.areaWidths.size ? {areaWidths: Object.fromEntries(this.areaWidths)} : {}), roots: Object.fromEntries(this.roots),
     editors: this.editors.bindings.length ? {version: 1, bindings: this.editors.bindings.map(binding => ({viewId: binding.viewId,
       occurrenceId: binding.occurrenceId, target: {nodeId: binding.target.nodeId, path: binding.target.path}, dimensions: binding.dimensions, mode: binding.mode}))} : this.restoredEditors}; }
   /** Restore once; malformed and unavailable IDs safely retain the built-in experience. */
@@ -166,23 +176,27 @@ export class PlexViewSession {
     if (states && typeof states === "object") for (const [key, state] of Object.entries(states).slice(0, 16)) {
       if (/^[a-z][a-z0-9.-]{0,79}$/.test(key)) this.states.set(key, savedState(state));
     }
-    const areas: unknown = Reflect.get(value, "areaHeights");
-    if (areas && typeof areas === "object") for (const [view, rawHeights] of Object.entries(areas).slice(0, 16)) {
-      const heights: unknown = rawHeights;
-      if (!/^[a-z][a-z0-9.-]{0,79}$/.test(view) || !heights || typeof heights !== "object") continue;
-      const admitted: Record<string, number> = {};
-      for (const [key, height] of Object.entries(heights).slice(0, 64)) if (key && !["__proto__", "constructor", "prototype"].includes(key) && key.length <= 128 && typeof height === "number" && Number.isFinite(height) && height > 0 && height <= 100_000) admitted[key] = height;
-      this.areaHeights.set(view, admitted);
-    }
+    this.restoreAreaDimensions(Reflect.get(value, "areaHeights"), this.areaHeights);
+    this.restoreAreaDimensions(Reflect.get(value, "areaWidths"), this.areaWidths);
     if (typeof id === "string" && /^[a-z][a-z0-9.-]{0,79}$/.test(id)) {
       if (id !== this.requestedId) {this.retire(); this.requestedId = id;}
       this.notify();
     }
   }
+  /** Restore only the existing finite dimension vocabulary; malformed/future view IDs stay inert. */
+  private restoreAreaDimensions(areas: unknown, target: Map<string, Readonly<Record<string, number>>>): void {
+    if (areas && typeof areas === "object") for (const [view, rawHeights] of Object.entries(areas).slice(0, 16)) {
+      const heights: unknown = rawHeights;
+      if (!/^[a-z][a-z0-9.-]{0,79}$/.test(view) || !heights || typeof heights !== "object") continue;
+      const admitted: Record<string, number> = {};
+      for (const [key, height] of Object.entries(heights).slice(0, 64)) if (key && !["__proto__", "constructor", "prototype"].includes(key) && key.length <= 128 && typeof height === "number" && Number.isFinite(height) && height > 0 && height <= 100_000) admitted[key] = height;
+      target.set(view, admitted);
+    }
+  }
   /** Isolate a failed definition without mutating its saved preferences or native document owner. */
   recover(): void { if (this.requestedId === this.registry.fallbackId) {this.retire();this.notify();} else this.select(this.registry.fallbackId); }
   /** Permanent native close, unlike a compatible view change or React remount. */
-  dispose(): void { if (this.closed) return; this.closed = true; this.editors.dispose(); this.retire(); this.listeners.clear(); this.states.clear(); this.transient.clear(); this.areaHeights.clear(); this.roots.clear(); this.stateGuard = null; this.restoredEditors = undefined; }
+  dispose(): void { if (this.closed) return; this.closed = true; this.editors.dispose(); this.retire(); this.listeners.clear(); this.states.clear(); this.transient.clear(); this.areaHeights.clear(); this.areaWidths.clear(); this.roots.clear(); this.stateGuard = null; this.restoredEditors = undefined; }
   /** Every disposer runs even if another outgoing view resource fails to close. */
   private retire(): void { this.epoch++; this.generation++; this.stateGuard = null; for (const dispose of [...this.owned]) {this.owned.delete(dispose);try {dispose();} catch { /* resource failure cannot retain another owner's lifetime */ }} }
   /** Re-render session selection/state without semantic publication or a fake navigation visit. */

@@ -2,6 +2,7 @@
  * acquire graph data or create semantic/drop endpoints. Shared host measurement paints them. */
 import {sanitizeColorValue, isThemeColorName, isPaletteColorId, type ColorValue} from "../../contracts/colorValue";
 import type {PlexNodeBadge, ViewRect} from "./contracts";
+import type {MeasuredAreaInsets} from "./areaLayout";
 import {validCanvasViewText} from "./presentation";
 
 /** Bound code-owned reference output and discard no invalid values silently. */
@@ -26,4 +27,12 @@ export function nodeBadgeBounds(node: ViewRect, measured: Readonly<{width: numbe
   if (![node.x, node.y, node.width, node.height, measured.width, measured.height].every(Number.isFinite)
     || node.width <= 0 || node.height <= 0 || measured.width <= 0 || measured.height <= 0) throw new Error("Invalid node badge geometry");
   return {x: node.x - node.width / 2, y: node.y - node.height / 2 - measured.height - 12, width: measured.width, height: measured.height};
+}
+
+/** Reserve the same top/right overhang that the shared attached badge actually paints.
+ * Packing receives geometry only; it never enlarges the native node or editor rectangle. */
+export function nodeBadgeInsets(node: Readonly<{width: number; height: number}>, badge?: Readonly<{width: number; height: number}>): MeasuredAreaInsets | undefined {
+  if (!badge) return undefined;
+  const bounds = nodeBadgeBounds({x: 0, y: 0, ...node}, badge);
+  return {top: -node.height / 2 - bounds.y, right: Math.max(0, bounds.x + bounds.width - node.width / 2)};
 }

@@ -29,7 +29,7 @@ export const wuXingViewDefinition: PlexViewDefinition = {
     if (!library) throw new Error("Unavailable Facets configuration");
     const intent = facetState(state), selected = resolveFacetPreset(library, intent?.preset);
     return layoutFacets(projection, measurements, selected.id, selected.preset, context?.areaHeights,
-      !!intent && (selected.status === "ready" || selected.status === "replaced"));
+      !!intent && (selected.status === "ready" || selected.status === "replaced"), context?.areaWidths);
   },
   /** Configured colors join the existing owning-document theme and palette projection. */
   colorReferences: configuration => {

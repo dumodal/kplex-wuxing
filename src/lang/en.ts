@@ -5512,6 +5512,7 @@ export const englishCatalog = {
   "actions.editor.resize.description": {"message":"Change the size of the editor in this node.","context":"Shared occurrence editor action or explicit native save/capacity result.","params":[],"referenceParams":[]},
   "actions.editor-capacity": {"message":"Close the current node editor before opening another.","context":"Shared occurrence editor action or explicit native save/capacity result.","params":[],"referenceParams":[]},
   "actions.editor-save-failed": {"message":"The editor could not be saved. It remains open.","context":"Shared occurrence editor action or explicit native save/capacity result.","params":[],"referenceParams":[]},
+  "graph.areaWidth": {"message":"{zone} width","context":"Accessible horizontal area resize handle; zone is the literal or translated area name.","params":["zone"],"referenceParams":[]},
 } as const;
 
 export type EnglishCatalog = typeof englishCatalog;

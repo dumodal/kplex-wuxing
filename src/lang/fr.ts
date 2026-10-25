@@ -1554,6 +1554,7 @@ const frenchTranslations = {
   "actions.editor.resize.description": "Redimensionner l’éditeur ouvert du nœud.",
   "actions.editor-capacity": "Fermez l’éditeur actuel avant d’en ouvrir un autre.",
   "actions.editor-save-failed": "L’enregistrement a échoué. L’éditeur reste ouvert.",
+  "graph.areaWidth": "Largeur de {zone}",
 } as const satisfies LocaleTranslationMap;
 
 export const frenchCatalog = buildLocaleCatalog(frenchTranslations);

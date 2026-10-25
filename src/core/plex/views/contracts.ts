@@ -102,18 +102,26 @@ export type PlexMeasurement = Readonly<{
   mini: {width: number; viewportHeight: number; topGap: number} | null;
   envelope: {width: number; viewportHeight: number; topGap: number} | null;
 }>;
+/** A bounded canvas-owned dimension. Optional value describes the editable dimension when
+ * an area's frame is larger than its usable band thickness or other measured content. */
+export type PlexAreaDimension = Readonly<{key: string; minimum: number; maximum: number; value?: number}>;
 export type PlexArea = Readonly<{
   id: AreaId; labelKey: string; bounds: ViewRect; resizeEdge?: "top" | "bottom";
   /** User labels are literal vault configuration, never translated as catalog keys. */
   label?: string;
-  heightPreference?: {key: string; minimum: number; maximum: number};
+  heightPreference?: PlexAreaDimension;
+  /** Horizontal resizing is independent of the existing top/bottom height capability. */
+  widthResizeEdge?: "left" | "right";
+  widthPreference?: PlexAreaDimension;
   viewport?: ViewRect & {contentTop: number; contentHeight: number; initialScrollTop: number};
   /** Physical area action is explicit; arbitrary areas have no relationship-write meaning by default. */
   dropRole?: "parent" | "child" | "left" | "right";
   dropTarget?: PlexDropMeaning;
   /** Exact admitted canonical origin; omission means projection root/entry. Area placement is never relationship provenance. */
   dropOrigin?: OccurrenceId;
-  reflow?: Readonly<{columns: number; columnGap: number; rowGap: number; paddingTop?: number; paddingBottom?: number}>;
+  reflow?: Readonly<{columns: number; columnGap: number; rowGap: number; paddingTop?: number; paddingBottom?: number;
+    /** Recompute columns from surviving measured cards and this area's world width. */
+    autoColumns?: boolean}>;
 }>;
 /** Pure presentation marks have no semantic endpoints or interaction/write authority. */
 export type PlexDecoration = Readonly<{id: string} & (
@@ -175,5 +183,5 @@ export interface PlexViewDefinition {
   project(input: PlexViewInput): PlexProjection | null;
   /** Layout has no source reader, scheduling or subscription capability. */
   layout(projection: PlexProjection, measurements: readonly PlexMeasurement[], preferences: unknown, editor: boolean,
-    context?: Readonly<{areaHeights: Readonly<Record<string, number>>; configuration?: PlexViewConfiguration}>): PlexViewLayout;
+    context?: Readonly<{areaHeights: Readonly<Record<string, number>>; areaWidths?: Readonly<Record<string, number>>; configuration?: PlexViewConfiguration}>): PlexViewLayout;
 }

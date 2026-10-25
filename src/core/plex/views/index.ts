@@ -3,7 +3,7 @@
 export {CANVAS_VIEW_API_VERSION} from "./contracts";
 export type {CanvasViewText, PlexNodeBadge, PlexViewStateAction, PlexViewStateResult, PlexViewDefinition, PlexViewInput,
   PlexViewRead, PlexProjection, PlexOccurrence, PlexViewEdge, PlexViewRelation, PlexRelationRead, PlexEvidenceRead,
-  PlexMeasurement, PlexArea, PlexDecoration, PlexViewLayout, PlexViewScopeRead, PhysicalPort, OccurrenceId,
+  PlexMeasurement, PlexArea, PlexAreaDimension, PlexDecoration, PlexViewLayout, PlexViewScopeRead, PhysicalPort, OccurrenceId,
   AreaId, ViewPoint, ViewRect, ViewCoverage, PlexDropMeaning, PlexViewPropertyDependencies} from "./contracts";
 export {GraphPredicateEngine, compileGraphPredicate} from "../predicate";
 export type {GraphPredicateContext, GraphPredicateResult, GraphPredicateRead, GraphPredicateDependencies} from "../predicate";
@@ -21,7 +21,9 @@ export type {PlexViewConfigurationSchema, PlexViewConfigurationMigration, PlexVi
   ViewConfigurationAddress, ViewConfigurationEdit, ViewConfigurationExpected, ViewConfigurationMigrationResult} from "./configuration";
 export {boundedViewState} from "./state";
 export {validCanvasViewText, validPlexViewStateAction} from "./presentation";
-export {boundedViewColors, validPlexNodeBadge, nodeBadgeBounds} from "./decorations";
+export {boundedViewColors, validPlexNodeBadge, nodeBadgeBounds, nodeBadgeInsets} from "./decorations";
 export type {PlexPropertyAssignment, PropertyFieldValue, PropertyAssignmentPlan} from "./propertyAssignment";
 export {validPropertyAssignment, writableAssignmentField, assignmentField, samePropertyField, planPropertyAssignment, applyPropertyField} from "./propertyAssignment";
 export {validPlexDropMeaning, plexAreaDropMeaning} from "./dropTargets";
+export {measuredAreaGrid, measuredAreaColumns} from "./areaLayout";
+export type {MeasuredAreaItem, MeasuredAreaInsets, MeasuredAreaGrid} from "./areaLayout";

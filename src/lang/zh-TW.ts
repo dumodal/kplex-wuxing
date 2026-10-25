@@ -1546,6 +1546,7 @@ const traditionalChineseTranslations = {
   "actions.editor.resize.description": "調整已開啟的節點編輯器大小。",
   "actions.editor-capacity": "請先關閉目前的節點編輯器，再開啟另一個。",
   "actions.editor-save-failed": "無法儲存。編輯器仍保持開啟。",
+  "graph.areaWidth": "{zone} 寬度",
 } as const satisfies LocaleTranslationMap;
 
 export const traditionalChineseCatalog = buildLocaleCatalog(traditionalChineseTranslations);
