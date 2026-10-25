@@ -68,3 +68,18 @@ Remote CI run40144149938/job121021821018 on17b7bc4 failed nine extracted-callbac
 
 
 The complete affected harness batch now passes78/78 with zero skips: `node --test --test-concurrency=1 tests/display-modes.test.mjs tests/viewport-fit.test.mjs tests/relationship-actions.test.mjs`. Log: `/private/tmp/kplex-219-m0-extracted-context-tests.log`. Production runtime is unchanged from17b7bc4/native artifactb315. The next exact-head `verify:obsidian` reruns all repository checks before native staging/smoke; no check is bypassed.
+
+
+## Authoritative-hide correction and final-check candidate
+
+The clean4b3addf full `verify:obsidian` run passed7 architecture,130 core and1458 functional tests, then failed2 of241 browser checks. Group unfolding lacked injected `sceneScope`; the attachment reconciliation fixture lacked the explicit legacy `occurrenceEditorPolicy=false`, causing a React render error that surfaced in its retained style-work assertion. Both fixture contexts were corrected. All8 group checks and the focused attachment case pass; no style-work/rename/gesture assertion changed. No native staging occurred in that failed full run because portable verification failed first.
+
+A separately labelled healthy M0 control omitted native save-fault injection while retaining restoration and dirty migration. It passed, its cache gate was clean and both actual FileManager renames completed. This narrows the earlier gate stall to the longer sequence containing save fault injection; it does not establish the exact causal step. The production index/source/scheduler is unchanged. Evidence: `healthy-cache-control/occurrence-editors-219-healthy-cache-control.json`.
+
+Attempt6 added an explicit visibility requirement and **failed** on runtimeb315: authoritative exclusion plus rejected save retained the native buffer visibly, without an accessible external Close action. Cleanup passed. This was a real M0 integration defect, not scheduling noise or a baseline indexing issue.
+
+The correction shares `resolveOccurrenceEditorPage` between admission and removal, checking canonical identity, physical path, native token and eligibility. A retained excluded/stale editor stays mounted with `visibility:hidden` and `inert`; the recovery status offers the existing localized shared `editor.collapse` action. A failed retry retains the same buffer; restoring visibility reuses the same native instance. No independent writer/editor, new lifecycle or new copy was added.
+
+Corrected main.js SHA256: `4687f9b7854e08947cce40f20a0bf9b5774556fbbf6719c8019ee9a2594c0877`. Attempt7 passed12 cases but overlapped an unfinished staging command and is exploratory only. That staging command timed out; its log is retained. Staging was then completed serially and attempt8 passed all12 cases with normal cleanup, including actual concealment/inert state, shared recovery Close reaching native save, retained dirty state and all mutation/migration/legacy controls. Evidence: `attempt-6-hidden-buffer-negative`, `attempt-7-hidden-buffer-correction`, `attempt-8-hidden-buffer-serial`; staging logs retain both outcomes. No overlapping sample is final acceptance.
+
+The correction also passes49 focused document/native/group checks,12 actual shared renderer/selector/settings browser checks, the real build, scanner and architecture (299 reachable files, zero violations). Additional comments document existing M0 intent/admission helpers; final build hash is rechecked before publication. Full exact-head verification/native smoke and CI are rerun for the correction; until then M0 remains under validation. Small is currently open only for those authorized checks with original backups intact; final full restoration/close remains pending.

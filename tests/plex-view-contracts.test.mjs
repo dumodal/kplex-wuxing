@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {plexViewModules,viewPage} from './support/plexViewFixture.mjs';
-const M=await plexViewModules(['src/ui/plexViews/prepareScene.ts','src/ui/plexViews/scene.ts','src/adapters/obsidian/actionNode.ts','tests/support/plexViewProbe.ts']);
+const M=await plexViewModules(['src/ui/plexViews/occurrenceEditors.ts','src/ui/plexViews/prepareScene.ts','src/ui/plexViews/scene.ts','src/adapters/obsidian/actionNode.ts','tests/support/plexViewProbe.ts']);
 /** Finite cached canonical graph; no acquisition, storage or note-reader capability exists. */
 function fixture(maximum=10){
   const pages=new Map(['Focus.md','Root.md','Repeated.md','Hidden.md'].map(id=>{const page=viewPage(id);page.file.stat={mtime:1,ctime:1,size:1};return[id,page]}));
@@ -101,4 +101,14 @@ test('rooted scene input keeps layout root separate from attention and central s
  assert.equal(result.scene.nodes.find(row=>row.occurrenceId==='layout-root').role,'center');assert.equal(result.scene.nodes.find(row=>row.occurrenceId==='look-here').role,'child');
  assert.equal(f.prepare(definition).failure,true,'A rooted definition cannot silently replace its admitted root');
  const legacy=f.prepare();assert.equal(legacy.failure,false);assert.equal(legacy.scene.nodes.find(row=>row.occurrenceId==='look-here').role,'center','Omitted rooted policy preserves legacy attention styling');
+});
+
+
+test('native editor removal uses the same exact document proof as scene admission, including rename aliases',()=>{
+ const f=fixture(),page=f.source.get('Repeated.md'),reference=M.actionNodeRef(page);
+ const binding={id:'binding',viewId:'test.bound',occurrenceId:'B1',target:{nodeId:reference.identity,path:page.file.path,fileIdentity:reference.fileIdentity},dimensions:{width:600,height:360},mode:'source',closing:false};
+ const resolve=()=>M.resolveOccurrenceEditorPage(binding,f.source,()=>true);
+ assert.equal(resolve(),page);page.file.path='Renamed.md';assert.equal(resolve(),null,'A native rename cannot borrow the old binding path');
+ page.file.path=binding.target.path;page.path='Renamed.md';assert.equal(resolve(),null,'An old-ID alias cannot confer authority over a different canonical identity');
+ page.path=binding.target.nodeId;page.file={...page.file};assert.equal(resolve(),null,'A recreated file cannot inherit the old native token');
 });

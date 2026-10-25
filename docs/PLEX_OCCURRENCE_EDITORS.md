@@ -57,7 +57,7 @@ Preserve the adapter's existing native activation, mobile and popout workarounds
 
 Collapse must flush/close through the existing native editor lifecycle and retire pending work exactly once. A filter may pin a live editor occurrence; an action that would remove it must explicitly collapse/flush it or refuse the removal. It cannot silently retarget or discard the editor. Branch collapse is distinct from editor collapse.
 
-A compatible view transition may retain a binding only if the replacement admits that exact occurrence/document contract. Otherwise block the transition until explicit editor collapse, or perform an explicitly tested close/flush transaction. Teardown, rename, deletion and window migration must preserve existing native save/identity fences and must not resurrect a deleted document.
+A compatible view transition may retain a binding only if the replacement admits that exact occurrence/document contract. Otherwise block the transition until explicit editor collapse, or perform an explicitly tested close/flush transaction. Teardown, rename, deletion and window migration must preserve existing native save/identity fences and must not resurrect a deleted document. A buffer retained after authoritative hiding and a failed save must remain mounted but concealed and inert, with an accessible shared Close action outside the hidden overlay; restoring visibility must reuse its native instance.
 
 ## Required proof before claiming support
 

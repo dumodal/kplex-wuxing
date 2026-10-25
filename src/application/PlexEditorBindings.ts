@@ -18,12 +18,14 @@ export class PlexEditorBindings {
   private sequence = 0;
   private closed = false;
   private closeToken: object | null = null;
+  /** Notify the owning native session after each actual intent/lifetime change; never own native effects here. */
   constructor(private readonly changed: () => void) {}
   /** Stable immutable snapshot, including while native close/save is pending. */
   get bindings(): readonly PlexEditorBinding[] { return this.current; }
   /** Call only after the host admits this exact displayed occurrence and canonical native file. */
   open(intent: PlexEditorIntent): PlexEditorAdmission {
     if (this.closed) return {status: "unavailable", reason: "closed"};
+    /** Bound plain identifiers before retaining any caller-provided intent. */
     const text = (value: unknown, maximum = 4096): value is string => typeof value === "string" && value.length > 0 && value.length <= maximum;
     if (!intent || !text(intent.viewId, 80) || !/^[a-z][a-z0-9.-]*$/.test(intent.viewId) || !text(intent.occurrenceId)
       || !intent.target || !text(intent.target.nodeId) || !text(intent.target.path) || !text(intent.target.fileIdentity, 256)
@@ -67,6 +69,7 @@ export class PlexEditorBindings {
     if (this.closed || !binding || binding.closing) return null;
     const token = {}; this.closeToken = token;
     this.current = Object.freeze([Object.freeze({...binding, closing: true})]); this.changed();
+    /** A retired or superseded close cannot remove an editor admitted later. */
     const live = (): boolean => !this.closed && this.closeToken === token && this.current[0]?.id === id;
     return {
       commit: () => {if (!live()) return false; this.closeToken = null; this.current = Object.freeze([]); this.changed(); return true;},
@@ -77,6 +80,7 @@ export class PlexEditorBindings {
   dispose(): void { if (this.closed) return; this.closed = true; this.closeToken = null; this.current = Object.freeze([]); this.changed(); }
 }
 
+/** Finite geometry intent is bounded independently of the stricter user-action resize range. */
 function validDimensions(value: PlexEditorDimensions): boolean {
   return Boolean(value && [value.width, value.height].every(size => typeof size === "number" && Number.isFinite(size) && size > 0 && size <= 100_000));
 }

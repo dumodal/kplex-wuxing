@@ -69,6 +69,7 @@ import {classicViewDefinition, classicPorts} from "../core/plex/views/classic/de
 import {plexViewContributionFor} from "./plexViews/contributions";
 import {reflowArea} from "./plexViews/reflowArea";
 import {prepareViewScene, plexViewRead, attentionFallbackScene} from "./plexViews/prepareScene";
+import {resolveOccurrenceEditorPage} from "./plexViews/occurrenceEditors";
 import {occurrenceKey, edgeOccurrence, semanticSceneEdge, semanticEdgeForTarget, type HostPlexScene} from "./plexViews/scene";
 import {viewLabel} from "./plexViews/labels";
 import { DropAreaPreview } from "./components/DropAreaPreview";
@@ -706,8 +707,11 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const boundEditorClose = useRef<{id: string; close: () => Promise<void>} | null>(null);
   const retainedBoundEditor = useRef<{id: string; page: GraphPage; node: PositionedNode} | null>(null);
   const automaticEditorClose = useRef<string | null>(null);
+  /** Native eligibility is current-file identity, independent of attention or layout geometry. */
   const supportsBoundEditor = (page: GraphPage): boolean => Boolean(page.file && page.file.extension === "md" && !page.transient
     && plugin.app.vault.getFileByPath(page.file.path) === page.file);
+  const boundEditorPage = boundEditorBinding ? resolveOccurrenceEditorPage(boundEditorBinding, index, supportsBoundEditor) : null;
+  const boundEditorConcealed = Boolean(boundEditorBinding && (!boundEditorPage || !index.isVisiblePage(boundEditorPage)));
   const rooted = viewDefinition.navigation === "rooted";
   const sceneScope = rooted ? viewSession?.layoutRoot(nodeId(activePath)) ?? activePath : activePath;
   useLayoutEffect(/** Retain root demand before an outgoing attention effect releases its lease. */ () => {
@@ -903,6 +907,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const scenePolicyKey = useMemo(/** Equivalent wrappers and paint-only updates retain the actual geometry policy. */ () => classic?.policyKey(settings) ?? viewDefinition.id, [classic, viewDefinition, settings]);
   const sceneGeometryKey = useMemo(/** Compare consumed values, never mutable page identity or source clocks alone. */ () =>
     classic?.geometryKey(layoutNeighborhood, classicRead, settings) ?? "", [classic, layoutNeighborhood, classicRead, settings]);
+  /** Share exact current admission between rendering, restored intent and branch-removal preflight. */
   const prepareSelectedDefinition = (state: unknown, bindings: readonly PlexEditorBinding[] = viewSession?.editors.bindings ?? []): ReturnType<typeof prepareViewScene> => {
     const current = viewSession?.capture() ?? (() => true);
     const read = plexViewRead(index, current, settings.maxItemCount, activePath);
@@ -1497,6 +1502,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     onCentralNodeEditorChange(true);
   };
 
+  /** Retire only this binding after its existing native save succeeds; rejected saves retain recovery ownership. */
   const closeBoundEditor = async (id: string): Promise<ActionOutcome> => {
     const transaction = viewSession?.editors.beginClose(id);
     if (!transaction) return {status: "unavailable", reasonKey: "actions.target-unavailable"};
@@ -1513,13 +1519,11 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   };
   useEffect(/** Authoritative removal safely closes once; a failed save stays open for explicit recovery. */ () => {
     if (!boundEditorBinding || boundEditorBinding.closing) return;
-    const page = resolveActionPage(index, {identity: boundEditorBinding.target.nodeId, path: boundEditorBinding.target.path,
-      kind: "file", fileIdentity: boundEditorBinding.target.fileIdentity});
-    if (page && supportsBoundEditor(page) && index.isVisiblePage(page)) {automaticEditorClose.current = null; return;}
+    if (!boundEditorConcealed) {automaticEditorClose.current = null; return;}
     if (automaticEditorClose.current === boundEditorBinding.id) return;
     automaticEditorClose.current = boundEditorBinding.id;
     void closeBoundEditor(boundEditorBinding.id);
-  }, [boundEditorBinding, renderRevision, semanticRevision]);
+  }, [boundEditorBinding, boundEditorConcealed, renderRevision, semanticRevision]);
 
   /** Restore the graph camera when necessary, then return the center to its compact Plex node. */
   const collapseCentralEditor = (): void => {
@@ -3746,6 +3750,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     graphDialogs.current.add(dialog); dialog.open();
     return { status: "opened", sessionId };
   };
+  /** Admit only the captured displayed occurrence with current filter, native-file and visible-area authority. */
   const editorExpansion = (context: ActionContext): PositionedNode | null => {
     if (!occurrenceEditorPolicy || !viewSession || context.target.kind !== "node" || !context.target.occurrenceId) return null;
     const target = context.target, page = graphActionPage(context);
@@ -3756,6 +3761,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     if (area && scene.zoneViewports[area] && !zoneDisplayLayouts[area]?.localPositions.has(occurrenceKey(node))) return null;
     return node;
   };
+  /** Close/resize retain the invocation incarnation instead of inheriting a later editor opened at that occurrence. */
   const capturedEditorId = (context: ActionContext): string | undefined =>
     context.request.id === "editor.collapse" || context.request.id === "editor.resize"
       ? context.request.args?.bindingId ?? context.invocationSnapshot?.editorBindingId : context.invocationSnapshot?.editorBindingId;
@@ -4786,7 +4792,11 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         colorValueCss({kind: "theme", variable: COMPASS_COLOR_VARIABLES[direction]}, semanticColorCss(COMPASS_SEMANTIC_SLOTS[direction])))} />)}
     </svg>
     {viewFailed && <div className="kplex-view-error" role="status">{translate("view.failed")}
-      <button type="button" onClick={() => viewSession?.recover()}>{translate("view.recover")}</button></div>}
+      <button type="button" onClick={() => viewSession?.recover()}>{translate("view.recover")}</button>
+      {boundEditorBinding && <button type="button" data-kplex-close-bound-editor disabled={boundEditorBinding.closing}
+        onClick={/** Hidden buffers remain recoverable through the same explicit save-aware action. */ () => {
+          void plugin.actionManager.dispatch({id: "editor.collapse", source: "toolbar", surfaceId: actionSurfaceId, args: {bindingId: boundEditorBinding.id}});
+        }}>{translate("actions.editor.collapse")}</button>}</div>}
     <div ref={cameraElement} className="kplex-camera" style={{ transform: `translate(${camera.current.x}px, ${camera.current.y}px) scale(${camera.current.scale})` }}>
       <svg className="kplex-links" width="3200" height="2400" viewBox="-1600 -1200 3200 2400">
         <defs>
@@ -4888,12 +4898,14 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       ref={centralEditorOverlayElement}
       data-kplex-editor-binding={boundEditorBinding?.id}
       data-kplex-editor-occurrence={boundEditorBinding?.occurrenceId}
+      inert={boundEditorConcealed || undefined}
       className={`kplex-central-editor-overlay${centralEditorMaximized ? " is-maximized" : ""}`}
       style={{
         left: camera.current.x + (displayedEditorNode.x - displayedEditorNode.width / 2) * camera.current.scale,
         top: camera.current.y + (displayedEditorNode.y - displayedEditorNode.height / 2) * camera.current.scale,
         width: Math.max(1, displayedEditorNode.width * camera.current.scale),
         height: Math.max(1, displayedEditorNode.height * camera.current.scale),
+        visibility: boundEditorConcealed ? "hidden" : undefined,
         "--kplex-editor-camera-scale": camera.current.scale,
       } as CSSProperties}
       onContextMenu={(event: MouseEvent<HTMLDivElement>) => event.stopPropagation()}
