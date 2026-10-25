@@ -1,5 +1,5 @@
 /**
- * Host-bound Plex scene composition, shared captured center-arrival motion and finite Wander navigation ports, layout and relationship interactions. Semantic resolution stays index/core-owned; UI labels and on-demand evidence hints use the injected translator. Navigation fits keep the central node centered and follow late geometry until manual camera input; publication and ordinary pane resizing preserve manual intent. View-owned display transitions retain camera coordinates and scene settings. Device typography stages scalar live preferences and persists after input settles; unmount flushes storage without replaying stale overrides. Area-height gestures own viewport pointer capture and persist existing presentation settings on completion or interruption. History and pinned drag targets share composer eligibility; external file drops follow the rendered area's semantic role. Theme-native area previews follow the existing drop action without intercepting capture or moving the dragged thought. Visible rows retain finite cache-only presentation demand; hidden surfaces and effect teardown release it. Geometry defers gate/count queries until a row intersects the displayed viewport, including partially clipped rows. Ordinary unfiltered scenes project cross-links for clipped visible rows; filtered and section scenes retain their established edge/count policy. Scene-local React keys capture paths before canonical pages can mutate during rename; semantic pages and actions retain their live identity. Normal-mode keyboard and exact-phrase typing selection are view-local; the displayed occurrence projection supplies all candidates and the shared selection owner reveals them without changing the center, filters or native search. Host methods own activation/rename/creation. Filtered badge numerators use revision-scoped semantic endpoint membership independently of connector routing and viewport clipping. Pane-fit native layout controls own local touch containment and bounded scrolling without changing preferences or browser range behavior. Accessible layout-wrapper hints use the shell's shared tooltip owner; inputs retain concise accessible names.
+ * Host-bound Plex scene composition, shared captured center-arrival motion and finite Wander navigation ports, layout and relationship interactions. Semantic resolution stays index/core-owned; UI labels and on-demand evidence hints use the injected translator. Navigation fits keep the central node centered in legacy scenes, while Wu Xing fits the fixed phase ring and routes links by displayed geometry; both follow late geometry until manual camera input; publication and ordinary pane resizing preserve manual intent. View-owned display transitions retain camera coordinates and scene settings. Device typography stages scalar live preferences and persists after input settles; unmount flushes storage without replaying stale overrides. Area-height gestures own viewport pointer capture and persist existing presentation settings on completion or interruption. History and pinned drag targets share composer eligibility; external file drops follow the rendered area's semantic role. Theme-native area previews follow the existing drop action without intercepting capture or moving the dragged thought. Visible rows retain finite cache-only presentation demand; hidden surfaces and effect teardown release it. Geometry defers gate/count queries until a row intersects the displayed viewport, including partially clipped rows. Ordinary unfiltered scenes project cross-links for clipped visible rows; filtered and section scenes retain their established edge/count policy. Scene-local React keys capture paths before canonical pages can mutate during rename; semantic pages and actions retain their live identity. Normal-mode keyboard and exact-phrase typing selection are view-local; the displayed occurrence projection supplies all candidates and the shared selection owner reveals them without changing the center, filters or native search. Host methods own activation/rename/creation. Filtered badge numerators use revision-scoped semantic endpoint membership independently of connector routing and viewport clipping. Pane-fit native layout controls own local touch containment and bounded scrolling without changing preferences or browser range behavior. Accessible layout-wrapper hints use the shell's shared tooltip owner; inputs retain concise accessible names.
  * Visual resolution and metadata refreshes retain the index consent epoch; teardown and revocation
  * reject late publication. Hover enlargement uses the same already-guarded image element.
  * Connector Hidden actions share the plugin writer; this surface owns their pending confirmation
@@ -18,14 +18,17 @@ import { urlEmbed } from "./features/urlEmbed";
 import type KplexPlugin from "../main";
 import type { KplexDisplayModeState } from "./KplexDisplayModes";
 import type { GraphIndex } from "../index/GraphIndex";
-import type { KplexLayoutProfile, KplexSettings, KplexViewSurface, SidecarMarkdownMode } from "../settings";
+import type { KplexSettings, KplexViewSurface, SidecarMarkdownMode } from "../settings";
 import type { GateRole, GateSide, GraphPage, Neighbour, Neighborhood, NodeStyle, NodeVisual, PositionedEdge, PositionedNode, Role, ScrollZone } from "../types";
 import { LinkDirection, RelationType } from "../types";
 import { alphaHexToCss, resolveLinkStyle, resolveNodeStyle } from "../index/style";
 import { TYPOGRAPHY_FIELDS, TYPOGRAPHY_LIMITS, type TypographyValues } from "../core/plex/typographyPreferences";
-import { buildScene, buildSectionExpandedScene, appendVisibleCrossLinks, projectNodeCounts, rowIntersectsViewport, effectiveLabelLimit, expandedChildReserve, expandedNodeWidth, expandedMiniLayout, horizontalDensity, layoutColumns, spacingPolicy, gateDiameter, siblingScale, withAreaHeightOverrides, type CenterNodeSize, type ZoneViewport, type ZoneAreaBounds } from "./layout";
+import type { WuXingElement } from "../core/plex/wuxing";
+import { WuXingGuide } from "./WuXingGuide";
+import { WuXingLanguageControl } from "./features/WuXingLanguageControl";
+import { buildScene, buildSectionExpandedScene, appendVisibleCrossLinks, projectNodeCounts, rowIntersectsViewport, effectiveLabelLimit, expandedChildReserve, expandedNodeWidth, expandedMiniLayout, layoutColumns, spacingPolicy, gateDiameter, siblingScale, withAreaHeightOverrides, type CenterNodeSize, type ZoneViewport, type ZoneAreaBounds } from "./layout";
 import { LayoutSlider } from "./components/LayoutSlider";
-import { centeredViewportFit, sameFitCamera, type FitCamera } from "./components/viewportFit";
+import { centeredViewportFit, sameFitCamera, wuXingScaffoldBounds, type FitCamera } from "./components/viewportFit";
 import { projectFilteredGateCounts } from "./filteredGateCounts";
 import { LayoutControls } from "./components/LayoutControls";
 import { centerArrivalFrames, type MotionRect } from "./components/centerArrival";
@@ -555,9 +558,10 @@ function buildZoneDisplayLayout(
 
   // Filtering is a list operation, not a visibility mask. Re-pack matching thoughts so removed
   // items leave no holes in the scroll content. The filter tools occupy the first ~36 px.
-  const topPadding = 42;
-  const bottomPadding = 16;
-  if (zone === "parent" || zone === "child") {
+  const topPadding = 42 * (panel.presentationScale ?? 1);
+  const bottomPadding = 16 * (panel.presentationScale ?? 1);
+  const wuXing = index.isWuXingMode?.() ?? false;
+  if (!wuXing && (zone === "parent" || zone === "child")) {
     const columns = layoutColumns(settings, zone);
     const { horizontal, vertical, spacing } = spacingPolicy(settings);
     const columnGap = 26 * horizontal / 0.675 * spacing;
@@ -582,16 +586,16 @@ function buildZoneDisplayLayout(
   }
 
   const { vertical, spacing } = spacingPolicy(settings);
-  const gap = 20 * vertical / 0.675 * spacing;
+  const gap = index.isWuXingMode?.() ? 14 * (panel.presentationScale ?? 1) : 20 * vertical / 0.675 * spacing;
   const occupiedHeight = filtered.reduce((sum, node, nodeIndex) => (
     sum
     + node.height
-    + expandedChildReserve(node.page, index, settings, centerPath, node.role === "sibling" ? siblingScale(settings) : 1)
+    + expandedChildReserve(node.page, index, settings, centerPath, node.role === "sibling" && !wuXing ? siblingScale(settings) : 1)
     + (nodeIndex > 0 ? gap : 0)
   ), 0);
   const availableHeight = Math.max(0, panel.height - topPadding - bottomPadding);
   let y = topPadding;
-  if ((zone === "left" || zone === "right") && occupiedHeight < availableHeight) {
+  if (!wuXing && (zone === "left" || zone === "right") && occupiedHeight < availableHeight) {
     // panel.top is in world coordinates. The active node lives at world y = 0, so -panel.top
     // is its panel-local midline. Keep filtered sparse lateral lists centered on that same line.
     const midlineY = -panel.top;
@@ -600,7 +604,7 @@ function buildZoneDisplayLayout(
   }
   for (const node of filtered) {
     localPositions.set(node.page.path, { x: node.x - panel.left, y: y + node.height / 2 });
-    y += node.height + expandedChildReserve(node.page, index, settings, centerPath, node.role === "sibling" ? siblingScale(settings) : 1) + gap;
+    y += node.height + expandedChildReserve(node.page, index, settings, centerPath, node.role === "sibling" && !wuXing ? siblingScale(settings) : 1) + gap;
   }
   const contentHeight = Math.max(panel.height, Math.max(topPadding + bottomPadding, y - (filtered.length ? gap : 0) + bottomPadding));
   return { nodes: filtered, localPositions, contentHeight, count: filtered.length, filtering };
@@ -611,6 +615,7 @@ function Edge({
   nodes,
   inverseArrowDirection,
   connectorStyle,
+  geometryRouting,
   labelBackground,
   crossLinkOpacity,
   highlighted,
@@ -624,6 +629,7 @@ function Edge({
   nodes: Map<string, PositionedNode>;
   inverseArrowDirection: boolean;
   connectorStyle: "bezier" | "straight";
+  geometryRouting?: boolean;
   labelBackground: string;
   crossLinkOpacity: number;
   highlighted: boolean;
@@ -637,7 +643,13 @@ function Edge({
   const target = nodes.get(edge.targetPath);
   if (!source || !target) return null;
 
-  const gates = gatesForEdge(edge);
+  // Semantic roles remain unchanged; a fixed phase ring chooses ports from actual geometry.
+  const dx = target.x - source.x, dy = target.y - source.y;
+  const sourceGate: GateSide = Math.abs(dx) / Math.max(1, source.width) > Math.abs(dy) / Math.max(1, source.height)
+    ? dx >= 0 ? "right" : "left" : dy >= 0 ? "bottom" : "top";
+  const targetGate: GateSide = Math.abs(dx) / Math.max(1, target.width) > Math.abs(dy) / Math.max(1, target.height)
+    ? dx >= 0 ? "left" : "right" : dy >= 0 ? "top" : "bottom";
+  const gates = geometryRouting ? { source: sourceGate, target: targetGate } : gatesForEdge(edge);
   const a = gatePoint(source, gates.source);
   const b = gatePoint(target, gates.target);
   const geometry = edgeGeometry(a, b, gates.source, gates.target, connectorStyle);
@@ -743,15 +755,13 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
   const [findIncludePath, setFindIncludePath] = useState(false);
   const [findCursor, setFindCursor] = useState(0);
   const [layoutControlsOpen, setLayoutControlsOpen] = useState(false);
-  const [layoutOverrides, setLayoutOverrides] = useState<Partial<KplexLayoutProfile>>({});
-  const layoutDraft = useRef<KplexLayoutProfile | null>(null);
   const typographyDraft = useRef<object | null>(null);
   const typographyDevice = plugin.getTypographyDevice();
   const typographySave = useRef<{ id: number; window: Window } | null>(null);
   const [areaHeightOverrides, setAreaHeightOverrides] = useState<Partial<Record<AreaHeightKey, number>>>({});
   // App receives fresh prepared facades during unrelated renders. Explicit drafts survive those
   // publications; mutating one temporary facade would discard slow slider changes mid-gesture.
-  const settings = useMemo(() => Object.assign(withAreaHeightOverrides(viewSettings, areaHeightOverrides), layoutOverrides), [viewSettings, areaHeightOverrides, layoutOverrides]);
+  const settings = useMemo(() => withAreaHeightOverrides(viewSettings, areaHeightOverrides), [viewSettings, areaHeightOverrides]);
   const predicateEngine = useMemo(() => new GraphPredicateEngine(plugin.app), [plugin]);
   useEffect(/** Acquire before acknowledging App's preview handover so the center never loses its final live demand. */ () => {
     const release = index.acquireSemanticDemand(activePath);
@@ -764,6 +774,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
   // getNeighborhood() performs relationship classification/filtering. Keep it stable during local
   // pointer/camera/hover state updates; only rebuild it when navigation, settings, or the index
   // actually changes. This removes the largest source of wasted work in dense Plex scenes.
+  const unclassifiedCount = useMemo(() => index.wuXingUnclassifiedCount?.(activePath) ?? 0, [index, activePath, renderRevision, semanticRevision]);
   const persistentNeighborhood = useMemo(() => index.getNeighborhood(activePath), [index, activePath, renderRevision, semanticRevision]);
   const centralEditorCapable = Boolean(
     supportsCentralEditorFile(persistentNeighborhood?.center)
@@ -878,6 +889,14 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
       ? buildSectionExpandedScene(layoutSectionExpansion, index, settings, expandedSectionIds, showCrossLinks, centralEditorSize, true)
       : buildScene(layoutNeighborhood, index, settings, showCrossLinks && globalFiltering, centralEditorSize, true))
     : { nodes: [], edges: [], zoneViewports: {}, zoneAreas: {} }, [layoutNeighborhood, layoutSectionExpansion, expandedSectionIds, index, settings, layoutRevision, showCrossLinks, globalFiltering, centralEditorSize]);
+  /** Phase names stay stable as the active note changes; legacy layouts retain relation headings. */
+  const phaseLabel = (phase: WuXingElement): string => translate(({
+    "🟢": "wuxing.wood", "🔴": "wuxing.fire", "🟤": "wuxing.earth", "🟡": "wuxing.metal", "🔵": "wuxing.water",
+  } as const)[phase]);
+  const displayedZoneTitle = (zone: ScrollZone): string => {
+    const phase = scene.wuXing?.vertices.find(vertex => vertex.role === zone)?.phase;
+    return phase ? phaseLabel(phase) : zoneTitle(zone, translate);
+  };
   const sceneNodeKeys = useMemo(/** Capture unique reconciliation keys for this scene without changing mutable canonical page identity. */ () => {
     const occurrences = new Map<string, number>();
     return new Map(scene.nodes.map(/** Keep renamed endpoints and new-name placeholders distinct even if geometry rebuilds before their authoritative handover. */ (node) => {
@@ -999,7 +1018,6 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
   const suppressSyntheticClickUntil = useRef(0);
   const suppressNativeDoubleClickUntil = useRef(0);
   const touchDoubleTap = useRef(new DoubleTapGesture());
-  const layoutSaveTimer = useRef<number | null>(null);
   const preserveCameraOnNextLayout = useRef(false);
   const displayResizePending = useRef(false);
   const displayResizeLayout = useRef(false);
@@ -1287,7 +1305,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     if (!el) return;
     if (displayResizePending.current || displayResizeLayout.current) return;
     if (centralEditorMaximized && centralEditorAvailable) {
-      applyCamera({ x: el.clientWidth / 2, y: el.clientHeight / 2, scale: 1 });
+      applyCamera({ x: el.clientWidth / 2 - (centralEditorNode?.x ?? 0), y: el.clientHeight / 2 - (centralEditorNode?.y ?? 0), scale: 1 });
       flushCameraTransform();
       return;
     }
@@ -1296,12 +1314,13 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     applyCamera(centralEditorRestoreCamera.current);
     centralEditorRestoreCamera.current = null;
     flushCameraTransform();
-  }, [centralEditorMaximized, centralEditorAvailable, viewportSize.width, viewportSize.height]);
+  }, [centralEditorMaximized, centralEditorAvailable, centralEditorNode?.x, centralEditorNode?.y, viewportSize.width, viewportSize.height]);
 
   const sceneLayoutKey = [
     activePath,
     centralEditorSize ? `central-editor:${centralEditorSize.width}:${centralEditorSize.height}` : "central-editor:-",
     scene.nodes.map((node) => `${node.role}:${node.page.path}:${node.x}:${node.y}:${node.width}:${node.height}`).join("|"),
+    scene.wuXing?.vertices.map(vertex => `${vertex.phase}:${vertex.frame.left}:${vertex.frame.top}:${vertex.frame.width}:${vertex.frame.height}`).join("|"),
     ...ZONES.map((zone) => {
       const panel = scene.zoneViewports[zone];
       return panel ? `${zone}:${panel.left}:${panel.top}:${panel.width}:${panel.height}:${panel.contentTop}:${panel.contentHeight}` : `${zone}:-`;
@@ -1324,10 +1343,14 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     const editorSizeChanged = centralEditorSizeKeyRef.current !== editorSizeKey;
     const followAutomaticFit = !preserveCamera && !displayResizeLayout.current && !centralEditorMaximized
       && automaticFit.current?.path === activePath && sameFitCamera(automaticFit.current.camera, camera.current);
+    const waitingForWuXing = Boolean(index.isWuXingMode?.()) && !scene.wuXing && scene.nodes.length === 0;
+    // Fit the first complete Wu Xing scaffolding even when navigation autozoom is off.
+    // Loading placeholders do not claim camera intent; later manual movement still retires fitting.
+    const fitOverview = settings.allowAutozoom || Boolean(scene.wuXing) && (!cameraIntentPlaced.current || followAutomaticFit);
     const shouldRecenter = !preserveCamera && (!cameraIntentPlaced.current || pathChangedThisRender || editorModeChanged
       || (settings.allowAutozoom && editorSizeChanged && followAutomaticFit));
-    if (shouldRecenter || (settings.allowAutozoom && followAutomaticFit)) {
-      if (settings.allowAutozoom) fit();
+    if (!waitingForWuXing && (shouldRecenter || (fitOverview && followAutomaticFit))) {
+      if (fitOverview) fit();
       else {
         const el = viewport.current;
         // Recenter navigation while retaining the user's zoom when automatic fitting is disabled.
@@ -1394,12 +1417,12 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     syncCentralEditorOverlay();
   }, [sceneLayoutKey, navigationOrigin, settings.animationSpeed, nodeDrag?.path, connectDrag?.originPath, sceneMotion, viewportSize.width, viewportSize.height, displayState.revision]);
 
-  /** Center the actual central node and fit symmetric displayed bounds; explicit Fit renews ownership. */
+  /** Fit the full Wu Xing scaffold or legacy focal node; hidden panes wait for real dimensions. */
   const fit = () => {
     const el = viewport.current;
-    if (!el) return;
+    if (!el || el.clientWidth <= 0 || el.clientHeight <= 0) return;
     if (centralEditorMaximized) {
-      applyCamera({ x: el.clientWidth / 2, y: el.clientHeight / 2, scale: 1 }, true);
+      applyCamera({ x: el.clientWidth / 2 - (centralEditorNode?.x ?? 0), y: el.clientHeight / 2 - (centralEditorNode?.y ?? 0), scale: 1 }, true);
       return;
     }
 
@@ -1414,6 +1437,9 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
       maxY = Math.max(maxY, bottom);
     };
 
+    // Empty phase positions and their labels remain part of the fixed ring's camera bounds.
+    const scaffold = wuXingScaffoldBounds(scene.wuXing?.vertices ?? []);
+    if (scaffold) includeRect(scaffold.left, scaffold.top, scaffold.right, scaffold.bottom);
     for (const node of scene.nodes) {
       const zone = zoneForRole(node.role);
       if (zone && scene.zoneViewports[zone]) continue;
@@ -1431,7 +1457,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     }
 
     const maxScale = Platform.isIosApp ? IOS_MAX_ZOOM : MAX_ZOOM;
-    const center = scene.nodes.find(/** Use the central occurrence as the focal point instead of the asymmetric bounds midpoint. */ node => node.role === "center") ?? { x: 0, y: 0 };
+    const center = scene.wuXing?.focalPoint ?? scene.nodes.find(/** Legacy scenes keep their central occurrence as the focal point. */ node => node.role === "center") ?? { x: 0, y: 0 };
     applyCamera(centeredViewportFit(el.clientWidth, el.clientHeight, center,
       { left: minX, top: minY, right: maxX, bottom: maxY }, maxScale), true);
   };
@@ -1466,7 +1492,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     edgePixels = AREA_RESIZE_EDGE_PX,
     allowCoveredEdge = false,
   ): AreaHoverState => {
-    if (!target || isAreaControlTarget(target)) return null;
+    if (scene.wuXing || !target || isAreaControlTarget(target)) return null;
     const emptyTarget = isEmptyAreaTarget(target);
     if (!emptyTarget && !allowCoveredEdge) return null;
     const point = toWorld(clientX, clientY);
@@ -1619,14 +1645,14 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
       if (preserveDisplayCamera) { preserveCameraOnNextLayout.current = true; displayResizeLayout.current = true; }
       setViewportSize({ width, height });
       if (preserveDisplayCamera || centralEditorMaximized || Date.now() < suppressAutoFitUntil.current) return;
-      if (settings.allowAutozoom && automaticFit.current?.path === activePath
+      if ((settings.allowAutozoom || index.isWuXingMode?.()) && automaticFit.current?.path === activePath
         && sameFitCamera(automaticFit.current.camera, camera.current)) fitCurrentScene.current();
     };
     updateViewport();
     const observer = new owningWindow.ResizeObserver(updateViewport);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [settings.allowAutozoom, centralEditorMaximized, displayState.revision, activePath]);
+  }, [settings.allowAutozoom, centralEditorMaximized, displayState.revision, activePath, index]);
 
   useEffect(() => {
     const el = viewport.current;
@@ -1691,8 +1717,6 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
   }, []);
 
   useEffect(/** Release this graph's delayed writes, motion and owning-window tasks when its surface retires. */ () => () => {
-    if (layoutSaveTimer.current !== null) window.clearTimeout(layoutSaveTimer.current);
-    layoutDraft.current = null;
     // Only an unstarted debounce needs flushing. A save already awaiting view refresh has written
     // its settings and must not start a second persistence operation while this view retires.
     if (typographySave.current) {
@@ -1711,21 +1735,6 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     cameraFrameWindow.current = null;
     viewport.current?.classList.remove("is-touch-gesturing", "is-pinch-gesturing");
   }, [sceneMotion]);
-
-  /** Debounce the current surface's axis and column values without requesting semantic work. */
-  const scheduleLayoutSave = () => {
-    if (layoutSaveTimer.current !== null) window.clearTimeout(layoutSaveTimer.current);
-    layoutSaveTimer.current = window.setTimeout(() => {
-      layoutSaveTimer.current = null;
-      const draft = layoutDraft.current;
-      if (!draft) return;
-      void plugin.updateLayoutProfile(surface, draft).then(/** Retire only the saved draft; a newer input must remain visible. */ () => {
-        if (layoutDraft.current !== draft) return;
-        layoutDraft.current = null;
-        setLayoutOverrides({});
-      });
-    }, 180);
-  };
 
   const filterMatchedNodePaths = useMemo(() => {
     const matches = new Set<string>();
@@ -1878,7 +1887,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
   }, [globalFiltering, scene.nodes, scene.edges, filterMatchedNodePaths, index, renderRevision, semanticRevision, predicateRevision]);
 
   const expandedClusters = useMemo<ExpandedCluster[]>(/** Project descendant strips with the original base node's captured scene identity. */ () => {
-    if (sectionExpansion || settings.graphDepth !== 2 || !neighborhood) return [];
+    if (scene.wuXing || sectionExpansion || settings.graphDepth !== 2 || !neighborhood) return [];
     const clusters: ExpandedCluster[] = [];
 
     for (const baseNode of scene.nodes) {
@@ -2557,7 +2566,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     const resizeDrag = areaResizeDrag.current;
     if (resizeDrag) {
       if (e.pointerId !== resizeDrag.pointerId) return;
-      const direction = resizeDrag.zone === "child" ? 1 : -1;
+      const direction = scene.zoneAreas[resizeDrag.zone]?.resizeEdge === "bottom" ? 1 : -1;
       const delta = direction * (e.clientY - resizeDrag.startClientY) / Math.max(0.3, resizeDrag.startScale);
       pendingAreaHeight.current = { zone: resizeDrag.zone, height: resizeDrag.startHeight + delta };
       if (!areaResizeFrame.current) {
@@ -3720,7 +3729,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
       key={zone}
       className={`kplex-area-frame kplex-area-${zone} is-edge-${area.resizeEdge}${areaSettingsMode ? " is-settings-mode" : ""}${edgeActive ? " is-active" : ""}${resizingArea === zone ? " is-resizing" : ""}`}
       left={area.left} top={area.top} width={area.width} height={area.height}
-      edge={area.resizeEdge} editing={areaSettingsMode} label={zoneTitle(zone, translate)}
+      edge={area.resizeEdge} editing={areaSettingsMode} label={displayedZoneTitle(zone)}
       value={plugin.settings[config.key]} min={config.min} max={config.max}
       onHeightChange={/** Persist keyboard height edits through the same presentation-only path as pointer edits. */ (height) => { if (setAreaHeight(zone, height)) void plugin.saveSettings(false); }}
     />;
@@ -3736,13 +3745,13 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
       className={`kplex-zone-panel kplex-zone-${zone}`}
       style={{ left: panel.left, top: panel.top, width: panel.width, height: panel.height }}
     >
-      <div className="kplex-zone-tools" onPointerDown={(event: PointerEvent<HTMLDivElement>) => event.stopPropagation()}>
+      <div className="kplex-zone-tools" style={{ opacity: panel.presentationOpacity }} onPointerDown={(event: PointerEvent<HTMLDivElement>) => event.stopPropagation()}>
         {zoneFilterOpen[zone] && <input
           className="kplex-zone-filter-input"
           type="text"
           value={filter}
-          placeholder={translate("graph.filterZonePlaceholder", { zone: zoneTitle(zone, translate).toLowerCase() })}
-          aria-label={translate("graph.filterZone", { zone: zoneTitle(zone, translate) })}
+          placeholder={translate("graph.filterZonePlaceholder", { zone: displayedZoneTitle(zone).toLowerCase() })}
+          aria-label={translate("graph.filterZone", { zone: displayedZoneTitle(zone) })}
           onChange={(event: ChangeEvent<HTMLInputElement>) => {
             const value = event.currentTarget.value;
             setZoneFilters((current) => ({ ...current, [zone]: value }));
@@ -3754,12 +3763,12 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
           autoFocus
         />}
         <span className={`kplex-zone-filter-control${flairFilterZone === zone ? " is-new-flair" : ""}`}>
-          <span className="kplex-zone-count" aria-label={translate("graph.zoneCount", { count: layout.count, zone: zoneTitle(zone, translate).toLowerCase() })}>{layout.count}</span>
+          <span className="kplex-zone-count" aria-label={translate("graph.zoneCount", { count: layout.count, zone: displayedZoneTitle(zone).toLowerCase() })}>{layout.count}</span>
           <button
             type="button"
             className={`kplex-zone-filter-button${zoneFilterOpen[zone] ? " is-on" : ""}`}
             aria-pressed={Boolean(zoneFilterOpen[zone])}
-            aria-label={translate("graph.filterZone", { zone: zoneTitle(zone, translate) })}
+            aria-label={translate("graph.filterZone", { zone: displayedZoneTitle(zone) })}
             onPointerDown={(event: PointerEvent<HTMLButtonElement>) => event.stopPropagation()}
             onClick={(event: MouseEvent<HTMLButtonElement>) => {
               event.stopPropagation();
@@ -3854,18 +3863,12 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
     </div>;
   };
 
-  /** Update only the current surface profile while retaining the user's camera. */
-  const changeLayoutValue = (key: "compactingFactor" | "horizontalCompactingFactor" | "parentColumns" | "childColumns", value: number) => {
-    const draft = { compactingFactor: settings.compactingFactor, horizontalCompactingFactor: horizontalDensity(settings),
-      parentColumns: settings.parentColumns, childColumns: settings.childColumns, ...layoutDraft.current, [key]: value };
-    layoutDraft.current = draft;
-    setLayoutOverrides(draft);
-    suppressLayoutMotionUntil.current = Date.now() + 800;
+  /** Retain the user's viewport while persisting only the Wu Xing camera offsets. */
+  const changeWuXingAngles = (patch: Partial<Pick<KplexSettings, "wuxingYaw" | "wuxingPitch">>): void => {
     suppressAutoFitUntil.current = Date.now() + 1200;
-    sceneMotion.cancelAll();
     preserveCameraOnNextLayout.current = true;
-    setLayoutRevision((revision) => revision + 1);
-    scheduleLayoutSave();
+    void plugin.updateWuXingAngles(patch);
+    setLayoutRevision(revision => revision + 1);
   };
   /** Report each scalar's inheritance separately from its effective displayed value. */
   const typographyHint = (field: keyof TypographyValues, help: string): string => {
@@ -3937,7 +3940,7 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
 
   return <div
     ref={viewport}
-    className={`kplex-plex${finding ? " is-finding" : ""}${navigationOrigin === "follow" ? " is-following-document" : sceneTransitioning || pathChangedThisRender ? " is-scene-transitioning" : ""}${sectionExpanded ? " is-section-expanded" : ""}${centralEditorMaximized ? " is-central-editor-maximized" : ""}${Platform.isIosApp ? " is-ios" : ""}${areaSettingsMode ? " is-area-settings-mode" : ""}${areaHover?.edgeActive ? " is-area-resize-ready" : ""}${resizingArea ? " is-area-resizing" : ""}`}
+    className={`kplex-plex${scene.wuXing ? " is-wuxing" : ""}${finding ? " is-finding" : ""}${navigationOrigin === "follow" ? " is-following-document" : sceneTransitioning || pathChangedThisRender ? " is-scene-transitioning" : ""}${sectionExpanded ? " is-section-expanded" : ""}${centralEditorMaximized ? " is-central-editor-maximized" : ""}${Platform.isIosApp ? " is-ios" : ""}${areaSettingsMode ? " is-area-settings-mode" : ""}${areaHover?.edgeActive ? " is-area-resize-ready" : ""}${resizingArea ? " is-area-resizing" : ""}`}
     style={{
       background: alphaHexToCss(settings.backgroundColor, "#0c2233"),
       "--kplex-motion-scale": String(Math.max(0, Math.min(2, settings.animationSpeed))),
@@ -3973,6 +3976,10 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
       plugin.showKplexMenuAtMouseEvent(menu, event.nativeEvent, hostLeaf);
     }}
   >
+    <div className="kplex-wuxing-status" role="status">
+      {translate("wuxing.distribution")}
+      {unclassifiedCount > 0 && <span> · {translate("wuxing.unclassified", { count: unclassifiedCount })}</span>}
+    </div>
     {keyboardConnect && <div className="kplex-find kplex-connection-session" role="status">
       <span><strong>{translate("actions.connectFrom", { origin: connectionOrigin ? index.titleFor(connectionOrigin) : keyboardConnect.path })}</strong> · {connectionSearchHint
         ? translate("actions.connectHint", { submit: "Enter", search: connectionSearchHint, cancel: "Escape" })
@@ -4001,6 +4008,8 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
           <marker id="kplex-dot" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto" markerUnits="strokeWidth"><circle cx="4" cy="4" r="2.6" fill="context-stroke" /></marker>
           <marker id="kplex-bar" markerWidth="8" markerHeight="10" refX="4" refY="5" orient="auto-start-reverse" markerUnits="strokeWidth"><path d="M4,1 L4,9" stroke="context-stroke" strokeWidth="1.8" /></marker>
         </defs>
+        {scene.wuXing && <WuXingGuide geometry={scene.wuXing}
+          phaseLabel={phaseLabel} generateLabel={translate("wuxing.generate")} controlLabel={translate("wuxing.control")} description={translate("wuxing.distribution")} />}
         {(scene.sectionTreeEdges ?? []).map((treeEdge) => {
           const source = renderedNodeMap.get(treeEdge.sourcePath) ?? scene.nodes.find((node) => node.page.path === treeEdge.sourcePath);
           const target = renderedNodeMap.get(treeEdge.targetPath) ?? scene.nodes.find((node) => node.page.path === treeEdge.targetPath);
@@ -4028,12 +4037,13 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
             />}
           </g>;
         })}
-        {visibleEdges.map((edge) => <Edge
+        {!scene.wuXing && visibleEdges.map((edge) => <Edge
           key={edge.id}
           edge={edge}
           nodes={renderedNodeMap}
           inverseArrowDirection={settings.inverseArrowDirection}
           connectorStyle={settings.connectorStyle}
+          geometryRouting={Boolean(scene.wuXing)}
           labelBackground={alphaHexToCss(settings.backgroundColor, "#0c3e6a")}
           crossLinkOpacity={Math.max(0, Math.min(1, settings.crossLinkOpacity / 100))}
           highlighted={!connectDrag && (finding ? matchesOntologyFind(findQuery, edge.style.showLabel ? relationLabel(edge.typeDefinition) ?? undefined : undefined) : interaction.edgeIds.has(edge.id))}
@@ -4062,12 +4072,12 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
         {dragPath && <path className="kplex-drag-connector" d={dragPath} fill="none" vectorEffect="non-scaling-stroke" />}
       </svg>
 
-      {areaSettingsMode
+      {!scene.wuXing && (areaSettingsMode
         ? ZONES.map((zone) => {
           const area = scene.zoneAreas[zone];
           return area ? renderAreaFrame(zone, area) : null;
         })
-        : visibleAreaZone && visibleArea ? renderAreaFrame(visibleAreaZone, visibleArea) : null}
+        : visibleAreaZone && visibleArea ? renderAreaFrame(visibleAreaZone, visibleArea) : null)}
 
       <div className="kplex-nodes">
         {standardNodes.filter((node) => nodeDrag?.path !== node.page.path && visibleNodePaths.has(node.page.path)).map((node) => renderNode(node, renderedNodeMap.get(node.page.path) ?? node))}
@@ -4138,24 +4148,33 @@ export function PlexGraph({ plugin, index, settings: viewSettings, surface, host
         <ObsidianIcon name="sliders-horizontal" size={16} />
       </button>
       }>
-      <div className="kplex-density-axes">
-        <LayoutSlider label={translate("graph.horizontalDensity")} caption={translate("graph.horizontalDensityShort")}
-          hint={translate("settings.ui.horizontal.density.help")} icon={<ObsidianIcon name="move-horizontal" size={11} />}
-          value={horizontalDensity(settings)} displayValue={horizontalDensity(settings).toFixed(2)} min={0.75} max={4} step={0.05}
-          onChange={/** Persist the horizontal axis without modifying row spacing. */ (value) => changeLayoutValue("horizontalCompactingFactor", value)} />
-        <LayoutSlider label={translate("graph.verticalDensity")} caption={translate("graph.verticalDensityShort")}
-          hint={translate("settings.ui.vertical.density.help")} icon={<ObsidianIcon name="move-vertical" size={11} />}
-          value={settings.compactingFactor} displayValue={settings.compactingFactor.toFixed(2)} min={0.75} max={4} step={0.05}
-          onChange={/** Persist row density without modifying labels or horizontal spacing. */ (value) => changeLayoutValue("compactingFactor", value)} />
-      </div>
-      <div className="kplex-density-axes">
-        <LayoutSlider label={translate("graph.parentColumns")} caption={translate("graph.parentColumnsShort")}
-          icon={<ObsidianIcon name="columns-2" size={11} />} value={layoutColumns(settings, "parent")} displayValue={String(layoutColumns(settings, "parent"))}
-          min={1} max={3} step={1} onChange={/** Persist the exact parent grid width. */ (value) => changeLayoutValue("parentColumns", value)} />
-        <LayoutSlider label={translate("graph.childColumns")} caption={translate("graph.childColumnsShort")}
-          icon={<ObsidianIcon name="columns-3" size={11} />} value={layoutColumns(settings, "child")} displayValue={String(layoutColumns(settings, "child"))}
-          min={1} max={7} step={1} onChange={/** Persist the exact child grid width. */ (value) => changeLayoutValue("childColumns", value)} />
-      </div>
+      {/* Terminology is display-only and shares the existing customization panel. */}
+      <WuXingLanguageControl language={settings.wuxingLanguage ?? "en"} translate={translate}
+        onChange={/** Update all open views while retaining the current camera. */ language => {
+          preserveCameraOnNextLayout.current = true;
+          suppressAutoFitUntil.current = Date.now() + 1200;
+          void plugin.updateWuXingLanguage(language);
+          setLayoutRevision(revision => revision + 1);
+        }} />
+      <button type="button" aria-label={translate("wuxing.guide.open")}
+        onClick={/** Reopen the same introduction after first-use dismissal. */ () => plugin.openWuXingGuide()}>
+        <ObsidianIcon name="book-open" size={14} /> {translate("wuxing.guide.button")}
+      </button>
+      {/* This fork always exposes its Wu Xing camera, independent of the current index facade. */}
+        <div className="kplex-density-axes">
+          <LayoutSlider label={translate("wuxing.yaw")} caption={translate("wuxing.yaw")}
+            hint={translate("wuxing.angleHelp")} icon={<ObsidianIcon name="move-horizontal" size={11} />}
+            value={settings.wuxingYaw ?? 0} displayValue={`${settings.wuxingYaw ?? 0}°`} min={-25} max={25} step={1}
+            onChange={value => changeWuXingAngles({ wuxingYaw: value })} />
+          <LayoutSlider label={translate("wuxing.pitch")} caption={translate("wuxing.pitch")}
+            hint={translate("wuxing.angleHelp")} icon={<ObsidianIcon name="move-vertical" size={11} />}
+            value={settings.wuxingPitch ?? 0} displayValue={`${settings.wuxingPitch ?? 0}°`} min={-25} max={25} step={1}
+            onChange={value => changeWuXingAngles({ wuxingPitch: value })} />
+        </div>
+        <button type="button" aria-label={translate("wuxing.resetAngles")}
+          onClick={() => changeWuXingAngles({ wuxingYaw: 0, wuxingPitch: 0 })}>
+          {translate("wuxing.resetAngles")}
+        </button>
       <div className="kplex-typography-group">
       <div className="kplex-typography-scope">
         <span>{translate("typography.scopeHint", { device: translate(`typography.${typographyDevice}`),

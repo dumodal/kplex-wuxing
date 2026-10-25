@@ -587,6 +587,7 @@ test("navigation with autofit disabled recenters without resetting manual scale"
     sceneMotion: { cancelAll: () => {} }, preserveCameraOnNextLayout: { current: false }, displayResizeLayout: { current: false },
     centralEditorAvailabilityRef: { current: false }, centralEditorAvailable: false, centralEditorSize: null,
     incomingCenter: { current: null }, centralEditorSizeKeyRef: { current: "" }, previousNodeRects: { current: new Map([["prior", {}]]) },
+    index: { isWuXingMode: () => false }, scene: { nodes: [] },
     pathChangedThisRender: true, settings: { allowAutozoom: false, animationSpeed: 0 },
     automaticFit: { current: null }, activePath: "Center.md", centralEditorMaximized: false,
     camera: { current: camera }, sameFitCamera: (a, b) => a.x === b.x && a.y === b.y && a.scale === b.scale,

@@ -6,7 +6,7 @@ export type ActionImplementation = Readonly<{availability: (context: ActionConte
 export type ActionImplementations = Partial<Record<ActionId, ActionImplementation>>;
 export type SurfaceRegistration = Readonly<{id: string; generation: number; readSnapshot: () => SurfaceSnapshot; implementations?: ActionImplementations}>;
 export type CommandContext = Readonly<{sharedCenter: NodeRef | null; windowId?: string; preferredSurfaceId?: string; editorInvocationId?: string; focusRegion?: FocusRegion}>;
-export type ActionManagerOptions = Readonly<{readCommandContext: (request: ActionRequest) => CommandContext; implementations?: ActionImplementations; validateNode?: (node: NodeRef) => boolean; onError?: (error: unknown, context: ActionContext) => void}>;
+export type ActionManagerOptions = Readonly<{isActionBlocked?: (id: string) => boolean; readCommandContext: (request: ActionRequest) => CommandContext; implementations?: ActionImplementations; validateNode?: (node: NodeRef) => boolean; onError?: (error: unknown, context: ActionContext) => void}>;
 export type PreparedAction = Readonly<{state: "rejected"; reasonKey: string} | {state: "accepted"; run: () => Promise<ActionOutcome>; cancel: () => void}>;
 type Registered = {registration: SurfaceRegistration; order: number; interactionOrder: number};
 const ACTION_SOURCES = ["obsidian-command", "local-hotkey", "local-menu", "toolbar", "context-menu", "composer", "internal"];
@@ -52,6 +52,7 @@ export class ActionManager {
   readSnapshot(surfaceId: string): SurfaceSnapshot | null { return this.surfaces.get(surfaceId)?.registration.readSnapshot() ?? null; }
   /** Check eligibility synchronously without opening, focusing, saving or scanning. */
   check(request: ActionRequest): Availability {
+    if (this.options.isActionBlocked?.(request.id)) return {state: "disabled", reasonKey: "actions.target-unavailable"};
     try {
       const result = this.resolve(request);
       if (typeof result === "string") return {state: "disabled", reasonKey: result};
@@ -63,6 +64,7 @@ export class ActionManager {
   }
   /** Capture target intent and take the short single-flight guard before event consumption. */
   prepare(request: ActionRequest): PreparedAction {
+    if (this.options.isActionBlocked?.(request.id)) return {state: "rejected", reasonKey: "actions.target-unavailable"};
     let resolved: Resolved | string;
     try { resolved = this.resolve(request); } catch { return {state: "rejected", reasonKey: "actions.failed"}; }
     if (typeof resolved === "string") return {state: "rejected", reasonKey: resolved};

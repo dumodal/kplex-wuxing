@@ -74,6 +74,7 @@
  * Node imagery remains lazy presentation data. Live consent and a visual epoch fence cache reads,
  * pending durable-body results and mounted consumers without changing graph semantics or sources.
  */
+import { wuXingElement, wuXingRole, WUXING_LABELS } from "../core/plex/wuxing";
 import { canonicalWebUrl } from "../adapters/obsidian/urlIdentity";
 import { remapGraphEndpoint } from "./remapGraphEndpoint";
 import { isRemoteNodeImageSource } from "../core/plex/nodeImagePolicy";
@@ -7314,6 +7315,43 @@ export class GraphIndex {
 
   /** Classify available incidence with its captured policy and mark partial gate counts as lower bounds. */
   private relationView(page: GraphPage, preparedSource?: Readonly<{ page: GraphPage; settings: GraphCompilerSettings }>): CachedRelationView {
+    if (!this.isWuXingMode()) return this.legacyRelationView(page, preparedSource);
+    const semantic = preparedSource ?? this.semanticRelationSource(page);
+    const source = semantic.page;
+    const roles: CachedRelationView["roles"] = { parent: [], child: [], left: [], right: [], previous: [], next: [] };
+    const gateStats: GateStats = {
+      top: { visibleCount: 0, hasAny: false }, bottom: { visibleCount: 0, hasAny: false },
+      left: { visibleCount: 0, hasAny: false }, right: { visibleCount: 0, hasAny: false },
+    };
+    const centerStatus = this.wuXingStatus(source);
+    let count = 0;
+    for (const relation of source.neighbours.values()) {
+      if (relation.isHidden || !this.isVisiblePage(relation.target)) continue;
+      const target = this.get(relation.target.path) ?? relation.target;
+      if (target.path === source.path) continue;
+      const role = wuXingRole(centerStatus, this.wuXingStatus(target));
+      if (!role) continue;
+      roles[role].push({ page: target, role, relationType: RelationType.INFERRED,
+        typeDefinition: WUXING_LABELS[role], linkDirection: relation.direction });
+      count += 1;
+      // Same-phase notes have their own fifth zone and no four-way connector gate.
+      if (role !== "previous") {
+        const side = role === "parent" ? "top" : role === "child" ? "bottom" : role;
+        gateStats[side].visibleCount += 1;
+        gateStats[side].hasAny = true;
+      }
+    }
+    for (const role of Object.keys(roles) as Array<keyof typeof roles>) roles[role] = this.sortNeighbours(roles[role]);
+    // Raw graph degree proofs describe the upstream ontology, not status-derived roles.
+    // Conservatively mark these counts as the currently available local neighborhood.
+    for (const gate of Object.values(gateStats)) { gate.complete = false; gate.coverage = "local"; }
+    return { signature: this.relationViewSignature(), roles, gateStats, neighbourCount: count };
+  }
+
+  /** Activate the fork projection only for its explicit plugin identity. */
+  isWuXingMode(): boolean { return this.plugin.manifest?.id === "kplex-wuxing"; }
+
+  private legacyRelationView(page: GraphPage, preparedSource?: Readonly<{ page: GraphPage; settings: GraphCompilerSettings }>): CachedRelationView {
     const semantic = preparedSource ?? this.semanticRelationSource(page);
     const source = semantic.page;
     const signature = this.relationViewSignature();
@@ -7433,8 +7471,37 @@ export class GraphIndex {
     return result;
   }
 
+  /** Read live frontmatter only; arbitrary metadata never enters the persistent graph cache. */
+  private wuXingStatus(page: GraphPage): unknown {
+    // Cached/provisional graph pages may not yet carry the current physical file.
+    // Resolve through Vault so a valid status is not lost while graph hydration catches up.
+    const file = this.app.vault.getFileByPath(page.path);
+    return file?.extension === "md"
+      ? this.app.metadataCache.getFileCache(file)?.frontmatter?.status : undefined;
+  }
+
+  /** Share live normalized status with layout so position and color cannot disagree with relationships. */
+  wuXingPhase(page: GraphPage) {
+    return wuXingElement(this.wuXingStatus(page));
+  }
+
+  /** Count connected, visible endpoints that cannot be classified; never silently assign a phase. */
+  wuXingUnclassifiedCount(path: string): number {
+    const page = this.get(path);
+    if (!page) return 0;
+    const source = this.semanticRelationSource(page).page;
+    const status = this.wuXingStatus(source);
+    let count = 0;
+    for (const relation of source.neighbours.values()) {
+      if (relation.target.path !== source.path && !relation.isHidden && this.isVisiblePage(relation.target)
+        && !wuXingRole(status, this.wuXingStatus(this.get(relation.target.path) ?? relation.target))) count += 1;
+    }
+    return count;
+  }
+
   neighbours(page: GraphPage, role: Role): Neighbour[] {
-    return role === "sibling" ? [] : this.relationView(page).roles[role];
+    if (!this.isWuXingMode()) return role === "sibling" ? [] : this.relationView(page).roles[role];
+    return role === "sibling" ? this.relationView(page).roles.previous.map(item => ({ ...item, role: "sibling" })) : this.relationView(page).roles[role];
   }
 
   /** Return semantic parent pages without applying presentation visibility filters. Creation flows
@@ -7455,6 +7522,8 @@ export class GraphIndex {
    * targets. Cross-link layout calls this once per displayed page, so work scales with graph
    * degree rather than with every possible pair of visible nodes. */
   visibleRelationshipsWithin(source: GraphPage, targetPaths: ReadonlySet<string>): Neighbour[] {
+    if (this.isWuXingMode()) return Object.values(this.relationView(source).roles).flat()
+      .filter(item => targetPaths.has(item.page.path));
     const semantic = this.semanticRelationSource(source);
     const settings = this.plugin.settings;
     const result: Neighbour[] = [];
@@ -7500,6 +7569,7 @@ export class GraphIndex {
 
   /** Return local numerical coverage separately from global semantic/write completeness. */
   gateStats(page: GraphPage): GateStats {
+    if (this.isWuXingMode()) return this.relationView(page).gateStats;
     const unavailable = this.onDemandUnavailableCounts.get(page.path);
     if (this.usesLocalForeground() && unavailable?.sourceRevision === this.plugin.getIndexSourceRevision()
       && unavailable.hostRevision === this.hostPreview.observationRevision()
@@ -7592,6 +7662,23 @@ export class GraphIndex {
   }
 
   getNeighborhood(path: string): Neighborhood | null {
+    if (!this.isWuXingMode()) return this.legacyNeighborhood(path);
+    const center = this.get(path);
+    if (!center) return null;
+    const max = this.plugin.settings.maxItemCount;
+    const view = this.relationView(center);
+    const parents = view.roles.parent.slice(0, max);
+    const children = view.roles.child.slice(0, max);
+    const leftFriends = view.roles.left.slice(0, max);
+    const rightFriends = view.roles.right.slice(0, max);
+    const siblings = view.roles.previous.slice(0, max).map(item => ({ ...item, role: "sibling" as const }));
+    const wuXingCounts = { parent: view.roles.parent.length, child: view.roles.child.length,
+      left: view.roles.left.length, right: view.roles.right.length, sibling: view.roles.previous.length };
+    const result = { center, parents, children, leftFriends, rightFriends, siblings, wuXingCounts };
+    return result;
+  }
+
+  private legacyNeighborhood(path: string): Neighborhood | null {
     const center = this.get(path);
     if (!center) return null;
     const max = this.plugin.settings.maxItemCount;

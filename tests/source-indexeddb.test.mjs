@@ -13,7 +13,7 @@ const initialize = `(() => {
   window.ok = (value, message) => { if (!value) throw new Error(message); };
   window.equal = (actual, expected, message) => ok(JSON.stringify(actual) === JSON.stringify(expected), message + ': ' + JSON.stringify(actual));
   window.requestValue = request => new Promise((resolve, reject) => { request.onsuccess=()=>resolve(request.result); request.onerror=()=>reject(request.error); });
-  window.databaseName = vault => 'k-plex-index-v1-' + [...new TextEncoder().encode(vault)].map(v=>v.toString(16).padStart(2,'0')).join('').slice(0,96);
+  window.databaseName = vault => 'kplex-wuxing-index-v1-' + [...new TextEncoder().encode(vault)].map(v=>v.toString(16).padStart(2,'0')).join('').slice(0,96);
   window.rawOpen = (name, version, upgrade) => new Promise((resolve,reject) => {
     const request = indexedDB.open(name,version); request.onupgradeneeded=()=>upgrade?.(request.result,request.transaction);
     request.onsuccess=()=>resolve(request.result); request.onerror=()=>reject(request.error); request.onblocked=()=>reject(new Error('Unexpected blocked fixture open'));

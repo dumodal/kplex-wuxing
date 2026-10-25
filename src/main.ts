@@ -19,11 +19,13 @@
  * Its foreground write lease ends before lower-priority source publication can checkpoint.
  * Folder/tag notices supply complete literal references to the shared localization formatter.
  */
+import { WuXingIntroductionModal } from "./ui/WuXingIntroductionModal";
+import { wuXingActionBlocked } from "./core/plex/wuxing";
 import { FileView, MarkdownView, Menu, Notice, Platform, Plugin, TFile, TFolder, apiVersion, getLanguage, getAllTags, normalizePath, setIcon, type Editor, type HoverParent, type WorkspaceLeaf } from "obsidian";
 import { captureSettingsPolicy, classifySettingsChange, isStyleOnlySettingsChange, type SettingsPolicy } from "./core/graph/settingsPolicy";
 import { removeMarkdownZoomModes, renameMarkdownZoomModes } from "./core/plex/markdownZoomPreferences";
 import { GraphIndex } from "./index/GraphIndex";
-import { DEFAULT_SETTINGS, KplexSettingTab, migrateAndMergeSettings, importExcaliBrainGraphSettings, type DocumentSyncMode, type KplexSettings, type KplexLayoutProfile, type KplexViewSurface, type SidecarPosition, type StyleSettingsDraft, type StyleCommitResult } from "./settings";
+import { DEFAULT_SETTINGS, KplexSettingTab, migrateAndMergeSettings, initializeWuXingOntology, importExcaliBrainGraphSettings, type DocumentSyncMode, type KplexSettings, type KplexLayoutProfile, type KplexViewSurface, type SidecarPosition, type StyleSettingsDraft, type StyleCommitResult } from "./settings";
 import { KPLEX_VIEW_TYPE, KPLEX_SIDEPANEL_VIEW_TYPE, KplexView, KplexSidepanelView } from "./ui/KplexView";
 import { RelationModal, type RelationModalOptions } from "./ui/RelationModal";
 import { NewRelatedNoteModal, type RelatedNoteInvocation } from "./ui/NewRelatedNoteModal";
@@ -130,6 +132,7 @@ export default class KplexPlugin extends Plugin {
   private readonly actionDialogs = new Map<{ close(): void }, { surfaceId?: string; generation?: number }>();
   /** The host owns Settings navigation; the tab owns rendered shortcut controls and cleanup. */
   private settingsTab: KplexSettingTab | null = null;
+  private wuXingIntroduction: WuXingIntroductionModal | null = null;
   private actionPreferenceQueue: Promise<void> = Promise.resolve();
   private settingsWriteQueue: Promise<void> = Promise.resolve();
   /** A future version remains intact on disk; editing its conservative fallback is disabled. */
@@ -266,7 +269,7 @@ export default class KplexPlugin extends Plugin {
   async onload(): Promise<void> {
     this.supportEvents.record("plugin-start");
     this.startupDiagnostics.begin((window as Window & { kplexStartupDiagnosticsEnabled?: boolean }).kplexStartupDiagnosticsEnabled === true);
-    this.translator = createObsidianTranslator();
+    this.translator = createObsidianTranslator(this.manifest?.id === "kplex-wuxing", () => this.settings.wuxingLanguage);
     const ownData: unknown = await this.loadData();
     const ownRecord = ownData && typeof ownData === "object" ? ownData as Record<string, unknown> : null;
     const alreadyKplex = Boolean(
@@ -278,6 +281,23 @@ export default class KplexPlugin extends Plugin {
       ownRecord?.noteTypeField
     );
     this.settings = migrateAndMergeSettings(ownData);
+    const wuXingOntologyChanged = this.manifest?.id === "kplex-wuxing" && initializeWuXingOntology(this.settings);
+    if (this.manifest?.id === "kplex-wuxing") {
+      // This fork reads existing status values; it does not migrate or write note metadata.
+      this.settings.noteTypeField = "status";
+      this.settings.noteTypeStyles = {
+        "🟡": { backgroundColor: "#ffde24ff", textColor: "#161616ff" },
+        "🔵": { backgroundColor: "#51adfbff", textColor: "#161616ff" },
+        "🟢": { backgroundColor: "#2abb56ff", textColor: "#161616ff" },
+        "🔴": { backgroundColor: "#f95148ff", textColor: "#161616ff" },
+        "🟤": { backgroundColor: "#80716bff", textColor: "#ffffffff" },
+        ...this.settings.noteTypeStyles,
+      };
+      this.settings.baseLinkStyle = { ...this.settings.baseLinkStyle, showLabel: true };
+      this.settings.showCrossLinks = false;
+      this.settings.graphDepth = 1;
+      this.settings.allowOntologySuggester = false;
+    }
     const actionMigration = migrateActionPreferences(ownData, readObsidianPresentationEnvironment().keyConvention);
     this.settings.actionPreferences = actionMigration.preferences;
     this.actionPreferenceUnsupportedVersion = actionMigration.unsupportedVersion;
@@ -288,7 +308,7 @@ export default class KplexPlugin extends Plugin {
     if (initializedChanged) {
       this.settings.kplexInitialized = true;
     }
-    if (initializedChanged || actionMigration.migrated) {
+    if (initializedChanged || actionMigration.migrated || wuXingOntologyChanged) {
       await this.persistSettingsSnapshot();
     }
 
@@ -536,6 +556,8 @@ export default class KplexPlugin extends Plugin {
   /** Release action publications, surface registrations and host resources before index teardown. */
   onunload(): void {
     this.unloading = true;
+    this.wuXingIntroduction?.close();
+    this.wuXingIntroduction = null;
     this.settingsTab?.disposeActionSettings();
     this.settingsTab = null;
     for (const dialog of this.actionDialogs.keys()) dialog.close();
@@ -681,6 +703,7 @@ export default class KplexPlugin extends Plugin {
     });
     const metadata = this.app.metadataCache.on("changed", (file) => {
       if (this.app.vault.getFileByPath(file.path) !== file) return;
+      if (this.manifest?.id === "kplex-wuxing") this.index.notifyPresentation();
       const previousSourceRevision = this.indexDirtyRevision;
       mark("metadata:changed", file);
       void this.index.refreshVisiblePresentation(file.path);
@@ -883,6 +906,7 @@ export default class KplexPlugin extends Plugin {
       }
     }));
     this.registerEvent(this.app.metadataCache.on("changed", (file) => {
+      if (this.manifest?.id === "kplex-wuxing") this.index.notifyPresentation();
       const previousSourceRevision = this.indexDirtyRevision;
       /** Capture preview freshness after this event's source revision has been advanced. */
       const refreshVisible = (): void => {
@@ -1717,6 +1741,7 @@ export default class KplexPlugin extends Plugin {
       return editor && this.fieldAtEditorCursor(editor) ? enabled : { state: "disabled", reasonKey: "actions.editor-unavailable" };
     });
     this.actionManager = new ActionManager({
+      isActionBlocked: this.manifest?.id === "kplex-wuxing" ? wuXingActionBlocked : undefined,
       implementations,
       /** Prefer actual owning graph/native view, including sidebar palette launches; shared-center commands retain their distinct target. */
       readCommandContext: request => {
@@ -3785,6 +3810,50 @@ export default class KplexPlugin extends Plugin {
     return effectiveViewSettings(this.index.withPreparedPresentationSettings(this.settings), surface, readObsidianPresentationEnvironment());
   }
 
+  /** Save camera offsets without refreshing relationship evidence or changing legacy layout profiles. */
+  async updateWuXingAngles(patch: Partial<Pick<KplexSettings, "wuxingYaw" | "wuxingPitch">>): Promise<void> {
+    for (const key of ["wuxingYaw", "wuxingPitch"] as const) {
+      const value = patch[key];
+      if (typeof value === "number" && Number.isFinite(value)) this.settings[key] = Math.max(-25, Math.min(25, value));
+    }
+    this.index.notifyPresentation();
+    try {
+      await this.persistSettingsSnapshot();
+    } catch (error) {
+      new Notice(this.translator("actions.saveFailed", { error: String(error) }));
+    }
+  }
+
+  /** Persist terminology as presentation state and notify open views without rebuilding graph semantics. */
+  async updateWuXingLanguage(language: KplexSettings["wuxingLanguage"]): Promise<void> {
+    if (language !== "en" && language !== "zh") return;
+    this.settings.wuxingLanguage = language;
+    this.index.notifyPresentation();
+    try {
+      await this.persistSettingsSnapshot();
+    } catch (error) {
+      new Notice(this.translator("actions.saveFailed", { error: String(error) }));
+    }
+  }
+
+  /** Share a single native guide across graph views and remember dismissal through existing settings storage. */
+  openWuXingGuide(onlyIfUnseen = false): void {
+    if (this.unloading || this.manifest?.id !== "kplex-wuxing" || this.wuXingIntroduction
+      || (onlyIfUnseen && this.settings.wuxingGuideSeen)) return;
+    const modal = new WuXingIntroductionModal(this.app, this.translator, /** Close retires the shared dialog before saving a presentation-only preference. */ () => {
+      if (this.wuXingIntroduction !== modal) return;
+      this.wuXingIntroduction = null;
+      if (this.unloading) return;
+      this.settings.wuxingGuideSeen = true;
+      void this.persistSettingsSnapshot().catch(/** Report failed storage without reopening a dismissed guide. */ error => {
+        new Notice(this.translator("actions.saveFailed", { error: String(error) }));
+      });
+    });
+    this.wuXingIntroduction = modal;
+    try { modal.open(); }
+    catch (error) { this.wuXingIntroduction = null; modal.close(); throw error; }
+  }
+
   /** Capture the host device, independent of viewport width or selected Plex surface. */
   getTypographyDevice(): PersistedLayoutDeviceClass {
     return persistedLayoutDeviceClass(readObsidianPresentationEnvironment().device);
@@ -4044,12 +4113,16 @@ export default class KplexPlugin extends Plugin {
 
   /** All creation gestures share the React composer, including preselected gate/history endpoints. */
   openRelationModal(options: RelationModalOptions): NewRelatedNoteModal | RelationModal {
+    const readOnly = this.manifest?.id === "kplex-wuxing";
+    if (readOnly) new Notice(this.translator("wuxing.readOnly"));
     if (options.mode === "create") {
       const modal = new NewRelatedNoteModal(this, options.origin, options.semanticRole, options.onCommitted, options.hostLeaf, options.fixedTarget, options.invocation);
-      modal.open(); return modal;
+      if (!readOnly) modal.open();
+      return modal;
     }
     const modal = new RelationModal(this, options);
-    modal.open(); return modal;
+    if (!readOnly) modal.open();
+    return modal;
   }
 
   triggerHoverPreview(page: GraphPage, targetEl: HTMLElement, event: MouseEvent | PointerEvent, sourcePath = ""): void {

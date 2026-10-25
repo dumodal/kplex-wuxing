@@ -7,8 +7,11 @@
  * Parent width owns lateral x anchors; density three touches area edges and four permits bounded
  * margin overlap, while child-column/row controls cannot push those anchors. Optional deferred counts
  * keep offscreen geometry independent of incidence queries; rendered rows acquire current counts.
- * Callers own interaction, settings persistence and camera transforms.
+ * The Wu Xing fork places five status groups on fixed pentagon vertices; its active occurrence
+ * shares its own phase vertex with same-phase neighbors. Callers own interaction, settings persistence and camera transforms.
  */
+import { createWuXingProjection } from "./wuxingPerspective";
+import { WUXING_EMOJI, type WuXingElement } from "../core/plex/wuxing";
 import type { KplexSettings } from "../settings";
 import type { GraphPage, Neighborhood, Neighbour, NodeStyle, PositionedEdge, PositionedNode, Role, ScrollZone } from "../types";
 import { RelationType } from "../types";
@@ -52,6 +55,8 @@ export function siblingScale(settings: KplexSettings): number {
 }
 
 export type ZoneViewport = {
+  presentationScale?: number;
+  presentationOpacity?: number;
   key: ScrollZone;
   left: number;
   top: number;
@@ -87,6 +92,8 @@ export type PlexScene = {
   zoneViewports: Partial<Record<ScrollZone, ZoneViewport>>;
   zoneAreas: Partial<Record<ScrollZone, ZoneAreaBounds>>;
   sectionTreeEdges?: SectionTreeEdge[];
+  /** Fixed phase scaffolding is presentation only, never a set of synthetic graph edges. */
+  wuXing?: { vertices: Array<{ phase: WuXingElement; x: number; y: number; role: ScrollZone; count: number; color: string; radarX: number; radarY: number; balanceX: number; balanceY: number; axisX: number; axisY: number; depth: number; scale: number; opacity: number; controlRoute: Array<{x: number; y: number}>; frame: { left: number; top: number; width: number; height: number } }>; focalPoint: { x: number; y: number } };
 };
 
 /** Keep the gate visually subordinate while preserving the legacy style radius. */
@@ -143,8 +150,8 @@ function makeNode(
   settings: KplexSettings,
   deferCounts = false,
 ): PositionedNode {
-  const resolved = resolveNodeStyle(n.page, n, role, settings);
-  const scale = role === "sibling" ? siblingScale(settings) : 1;
+  const resolved = wuXingNodeStyle(n.page, resolveNodeStyle(n.page, n, role, settings), index, settings);
+  const scale = role === "sibling" && !index.isWuXingMode?.() ? siblingScale(settings) : 1;
   const style: NodeStyle = scale === 1 ? resolved : {
     ...resolved,
     fontSize: (resolved.fontSize ?? 18) * scale,
@@ -166,6 +173,143 @@ function makeNode(
     label,
     ...countsForLayout(n.page, index, deferCounts),
   };
+}
+
+/** Reuse the configured phase palette with the same live status read used by relation projection.
+ * Cached note-type facets may lag metadata events; other shape/typography preferences remain intact.
+ */
+function wuXingNodeStyle(page: GraphPage, style: NodeStyle, index: GraphIndex, settings: KplexSettings): NodeStyle {
+  if (!index.isWuXingMode?.()) return style;
+  const phase = index.wuXingPhase(page);
+  if (!phase) return style;
+  const palette = settings.noteTypeStyles[phase];
+  return palette ? { ...style, backgroundColor: palette.backgroundColor ?? style.backgroundColor,
+    textColor: palette.textColor ?? style.textColor, borderColor: palette.borderColor ?? style.borderColor } : style;
+}
+
+/** Lay out only the supplied direct neighborhood, with equal phase groups and a vacant ring center.
+ * Wood stays at the top; fire, earth, metal and water proceed clockwise on a fixed world-space
+ * pentagon. Bounded perspective and billboard frames express depth; all notes stay in scroll panels.
+ * The current note occupies the first lane inside its phase frame; no semantic adjacency is added.
+ */
+function buildWuXingScene(
+  neighborhood: Neighborhood, center: PositionedNode, index: GraphIndex, settings: KplexSettings,
+  showCrossLinks: boolean, deferCounts: boolean, preserveEditorSize = false,
+): PlexScene {
+  /** Keep overview note titles below phase headings, with matching rows and no saved-style changes. */
+  const enlargeLabel = (node: PositionedNode): PositionedNode => {
+    const central = node.role === "center";
+    const font = Math.max(central ? 32 : 30,
+      nodeLabelFontSize(node.style.fontSize ?? 18, central, settings.baseFontSize) * (central ? 1.45 : 2.3));
+    node.presentationFontSize = font;
+    if (!central || !preserveEditorSize) node.height = Math.max(node.height,
+      Math.ceil(font * 1.2 * (settings.wrapNodeLabels ? 2 : 1) + (central ? 20 : 14)));
+    return node;
+  };
+  enlargeLabel(center);
+  const phase = index.wuXingPhase(neighborhood.center);
+  const centerPhase = phase ? WUXING_EMOJI.indexOf(phase) : 0;
+  const roles: ScrollZone[] = ["sibling", "child", "right", "left", "parent"];
+  const relations: Record<ScrollZone, Neighbour[]> = {
+    sibling: neighborhood.siblings, child: neighborhood.children, right: neighborhood.rightFriends,
+    left: neighborhood.leftFriends, parent: neighborhood.parents,
+  };
+  const gap = 14;
+  const padding = 16;
+  const phaseOrder: WuXingElement[] = ["🟢", "🔴", "🟤", "🟡", "🔵"];
+  // World-space geometry depends on presentation preferences, never on how many notes exist.
+  const frameWidth = Math.max(220, preserveEditorSize ? center.width : 0, settings.baseNodeStyle.maxWidth ?? 286) + 32;
+  const frameHeight = Math.max(300, center.height + 210);
+  const radius = Math.max(360, frameWidth * 1.55, frameHeight * 1.5);
+  const groups = phaseOrder.map(element => {
+    const i = WUXING_EMOJI.indexOf(element);
+    const role = roles[(i - centerPhase + 5) % 5];
+    const nodes = relations[role].map(item => enlargeLabel(makeNode(item, role, index, settings, deferCounts)));
+    return { element, role, nodes, own: !!phase && i === centerPhase };
+  });
+  const counts = groups.map(group => (neighborhood.wuXingCounts?.[group.role] ?? group.nodes.length) + (group.own ? 1 : 0));
+  const total = counts.reduce((sum, count) => sum + count, 0);
+  const projection = createWuXingProjection(counts, settings.wuxingYaw ?? 0, settings.wuxingPitch ?? 0, radius);
+  const nodes = [center];
+  const edges: PositionedEdge[] = [];
+  const zoneViewports: PlexScene["zoneViewports"] = {};
+  const zoneAreas: PlexScene["zoneAreas"] = {};
+  const vertices = groups.map((group, i) => {
+    const angle = -Math.PI / 2 + i * Math.PI * 2 / 5;
+    const worldX = Math.cos(angle) * radius, worldY = Math.sin(angle) * radius;
+    const point = projection.project(worldX, worldY);
+    const { x, y, scale, depth } = point;
+    const opacity = projection.opacity(depth);
+    const frame = { left: x - frameWidth * scale / 2, top: y - frameHeight * scale / 2,
+      width: frameWidth * scale, height: frameHeight * scale };
+    const innerWidth = frameWidth - padding * 2;
+    if (group.own) {
+      center.x = x; center.y = y;
+      center.width = innerWidth * scale; center.height *= scale;
+      center.y = frame.top + 62 * scale + center.height / 2;
+      center.presentationScale = scale; center.presentationOpacity = Math.max(0.85, opacity);
+      center.presentationFontSize = (center.presentationFontSize ?? 0) * scale;
+    }
+    // Reserve the same active-note lane in all frames so note lists cannot alter the skeleton.
+    const top = group.own ? center.y + center.height / 2 + 12 * scale : frame.top + 48 * scale;
+    const height = Math.max(60 * scale, frame.top + frame.height - padding * scale - top);
+    let rowY = top + 42 * scale;
+    for (const node of group.nodes) {
+      node.width = innerWidth * scale; node.height *= scale;
+      node.x = x; node.y = rowY + node.height / 2;
+      node.presentationScale = scale; node.presentationOpacity = Math.max(0.85, opacity);
+      node.presentationFontSize = (node.presentationFontSize ?? 0) * scale;
+      rowY += node.height + gap * scale;
+      nodes.push(node);
+    }
+    const contentHeight = Math.max(height, rowY - top + padding * scale);
+    if (group.nodes.length) zoneViewports[group.role] = {
+      key: group.role, left: frame.left + padding * scale, top, width: innerWidth * scale, height,
+      contentTop: top, contentHeight, initialScrollTop: 0, presentationScale: scale, presentationOpacity: Math.max(0.85, opacity),
+    };
+    zoneAreas[group.role] = { key: group.role, left: frame.left, top: frame.top,
+      width: frame.width, height: frame.height, resizeEdge: "bottom" };
+    for (const relation of relations[group.role]) edges.push({
+      id: `wuxing:${group.role}:${relation.page.path}`, sourcePath: center.page.path,
+      targetPath: relation.page.path, role: group.role, relationType: relation.relationType,
+      typeDefinition: relation.typeDefinition, direction: relation.linkDirection,
+      style: resolveLinkStyle(relation, settings),
+    });
+    const share = total > 0 ? counts[i] / total : 0;
+    const radar = projection.project(worldX * 0.57 * Math.sqrt(share), worldY * 0.57 * Math.sqrt(share));
+    const balance = projection.project(worldX * 0.57 * Math.sqrt(0.2), worldY * 0.57 * Math.sqrt(0.2));
+    const axis = projection.project(worldX * 0.57, worldY * 0.57);
+    // Each controlling edge has its own outward quadratic bow, not a shared circular track.
+    const targetAngle = angle + Math.PI * 4 / 5;
+    const targetPoint = projection.project(Math.cos(targetAngle) * radius, Math.sin(targetAngle) * radius);
+    const bowAngle = angle + Math.PI * 2 / 5;
+    const skipped = projection.project(Math.cos(bowAngle) * radius, Math.sin(bowAngle) * radius);
+    let control = { x: skipped.x * 2.5, y: skipped.y * 2.5 };
+    // Keep each bow outside the intervening frame, including manual camera extremes.
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const intersects = Array.from({ length: 39 }, (_, sample) => (sample + 1) / 40).some(t => {
+        const u = 1 - t;
+        const px = u * u * x + 2 * u * t * control.x + t * t * targetPoint.x;
+        const py = u * u * y + 2 * u * t * control.y + t * t * targetPoint.y;
+        return Math.abs(px - skipped.x) < frameWidth * skipped.scale / 2 + 28
+          && Math.abs(py - skipped.y) < frameHeight * skipped.scale / 2 + 28;
+      });
+      if (!intersects) break;
+      const outward = 2.5 + (attempt + 1) * 0.15;
+      control = { x: skipped.x * outward, y: skipped.y * outward };
+    }
+    const controlRoute = Array.from({ length: 13 }, (_, step) => {
+      const t = step / 12, u = 1 - t;
+      return { x: u * u * x + 2 * u * t * control.x + t * t * targetPoint.x,
+        y: u * u * y + 2 * u * t * control.y + t * t * targetPoint.y };
+    });
+    return { phase: group.element, controlRoute, x, y, role: group.role, count: counts[i], frame, depth, scale, opacity,
+      color: settings.noteTypeStyles[group.element]?.backgroundColor ?? "var(--text-muted)",
+      radarX: radar.x, radarY: radar.y, balanceX: balance.x, balanceY: balance.y, axisX: axis.x, axisY: axis.y };
+  });
+  // Unknown status has no assigned phase: keep the sole unclassified active note in the vacant center.
+  if (showCrossLinks) appendVisibleCrossLinks(nodes, edges, index, settings, center.page.path);
+  return { nodes, edges, zoneViewports, zoneAreas, wuXing: { vertices, focalPoint: { x: 0, y: 0 } } };
 }
 
 /** Keep geometry count-free when requested; provisional zero values never certify absent edges. */
@@ -511,7 +655,7 @@ export function buildScene(
   centerSizeOverride?: CenterNodeSize,
   deferCounts = false,
 ): PlexScene {
-  const centerStyle = resolveNodeStyle(neighborhood.center, null, "center", settings);
+  const centerStyle = wuXingNodeStyle(neighborhood.center, resolveNodeStyle(neighborhood.center, null, "center", settings), index, settings);
   const centerLabel = index.titleFor(neighborhood.center);
   const normalCenterSize = nodeSize(`${centerStyle.prefix ?? ""}${centerLabel}`, centerStyle.fontSize ?? 30, settings, true, centerStyle.maxLabelLength ?? 30, centerStyle.maxWidth ?? settings.centralNodeStyle.maxWidth ?? settings.baseNodeStyle.maxWidth);
   const centerSize = centerSizeOverride
@@ -527,6 +671,8 @@ export function buildScene(
     label: centerLabel,
     ...countsForLayout(neighborhood.center, index, deferCounts),
   };
+
+  if (index.isWuXingMode?.()) return buildWuXingScene(neighborhood, center, index, settings, showCrossLinks, deferCounts, Boolean(centerSizeOverride));
 
   // Compactness controls inter-node spacing and label length. Expanded view adds vertical
   // space per thought/row only when that thought actually has visible child thoughts.
@@ -681,7 +827,8 @@ export function buildScene(
   // Siblings exist only because they share one or more currently visible parents with the center.
   // Those structural parent→sibling links are part of the sibling presentation itself and must
   // remain visible even when optional cross-links are disabled.
-  appendSiblingParentLinks(nodes, edges, index, settings, neighborhood.center.path);
+  if (index.isWuXingMode?.()) from(neighborhood.siblings, "sibling");
+  else appendSiblingParentLinks(nodes, edges, index, settings, neighborhood.center.path);
   if (showCrossLinks) appendVisibleCrossLinks(nodes, edges, index, settings, neighborhood.center.path);
 
   return { nodes, edges, zoneViewports, zoneAreas };

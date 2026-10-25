@@ -445,3 +445,174 @@ test("global font size migrates, stays presentation-only and grows node/expanded
   for(const node of smallStyle.nodes){assert(node.height>=geometry.nodeLabelFontSize(node.style.fontSize,node.role==="center",28)*2.3+8,"Clamped small style must fit both painted line boxes");}
   noOverlap(smallStyle.nodes,"small-style-large-base-font");
 });
+
+
+test("Wu Xing fixed phase vertices move the active note without rotating the five colors", () => {
+  const phases = ["🟢", "🔴", "🟤", "🟡", "🔵"];
+  const cycle = ["🟡", "🔵", "🟢", "🔴", "🟤"];
+  const roleFields = ["siblings", "children", "rightFriends", "leftFriends", "parents"];
+  for (const phase of phases) {
+    const current = page("Current"); current.phase = phase; current.noteType = "🔴";
+    const n = {center: current, parents: [], children: [], leftFriends: [], rightFriends: [], siblings: []};
+    for (const target of phases) {
+      const p = page(target); p.phase = target; p.noteType = "🔴";
+      n[roleFields[(cycle.indexOf(target) - cycle.indexOf(phase) + 5) % 5]].push({page:p, relationType:1, typeDefinition:"", linkDirection:0});
+    }
+    const colors = Object.fromEntries(phases.map((p,i)=>[p,{backgroundColor:`#00000${i}`} ]));
+    const ix = {...index, isWuXingMode:()=>true, wuXingPhase:p=>p.phase};
+    const scene = geometry.buildScene(n, ix, {...defaults, noteTypeStyles:colors}, false);
+    assert.deepEqual(scene.wuXing.vertices.map(v=>v.phase), phases);
+    const active = scene.nodes[0], vertex = scene.wuXing.vertices.find(v=>v.phase===phase);
+    assert.equal(active.x,vertex.x);
+    assert.equal(active.y-active.height/2,vertex.frame.top+62*vertex.scale,"active card owns the first lane below the phase heading");
+    assert(active.y+active.height/2<vertex.frame.top+vertex.frame.height,"the active card stays inside its phase frame");
+    assert(Math.hypot(active.x,active.y)>200);
+    assert.deepEqual(scene.wuXing.focalPoint,{x:0,y:0});
+    for(const node of scene.nodes) assert.equal(node.style.backgroundColor,colors[node.page.phase].backgroundColor,"live status wins over stale cached noteType");
+    assert.equal(scene.nodes.find(node=>node.role==="sibling").x, active.x);
+    assert.equal(scene.edges.length,5,"no imaginary phase connections");
+    noOverlap(scene.nodes,"phase ring");
+    noOverlap(scene.wuXing.vertices.map(v=>({x:v.frame.left+v.frame.width/2,y:v.frame.top+v.frame.height/2,width:v.frame.width,height:v.frame.height,page:{path:v.phase}})),"phase frames");
+    const [wood,fire,earth,metal,water]=scene.wuXing.vertices;
+    assert(wood.y<fire.y && fire.x>0 && earth.y>0 && metal.x<0 && water.y<0);
+    assert(wood.x>water.x && wood.x<fire.x, "perspective may shift the top vertex laterally without changing phase order");
+  }
+});
+
+test("Wu Xing large groups scroll within separate bounded phase panels", () => {
+  const n=neighborhood(300);n.center.phase="🟡";
+  const ix={...index,isWuXingMode:()=>true,wuXingPhase:p=>p.phase ?? "🔵"};
+  const scene=geometry.buildScene(n,ix,defaults,false);
+  assert(scene.zoneViewports.parent && scene.zoneViewports.child);
+  for(const panel of Object.values(scene.zoneViewports)) {
+    assert(panel.height<=defaults.childMaxHeight);
+    assert(panel.contentHeight>=panel.height);
+    assert.equal(panel.initialScrollTop,0);
+  }
+  const areas=Object.values(scene.zoneAreas).map(a=>({x:a.left+a.width/2,y:a.top+a.height/2,width:a.width,height:a.height,page:{path:a.key}}));
+  noOverlap(areas,"large ring panels");
+});
+
+
+test("local radar uses note counts, preserves empty phases and responds to unequal distributions", () => {
+  const make = counts => {
+    const n={center:page("Current"),parents:[],children:[],rightFriends:[],leftFriends:[],siblings:[]};
+    n.center.phase="🟡";
+    const fields=["siblings","children","rightFriends","leftFriends","parents"];
+    counts.forEach((count,i)=>{n[fields[i]]=Array.from({length:count-(i===0?1:0)},(_,j)=>({page:page(`${i}-${j}`),relationType:1,typeDefinition:"",linkDirection:0}));});
+    return geometry.buildScene(n,{...index,isWuXingMode:()=>true,wuXingPhase:p=>p.phase ?? "🔵"},defaults,false);
+  };
+  const balanced=make([2,2,2,2,2]).wuXing.vertices;
+  const radii=balanced.map(v=>Math.hypot(v.radarX,v.radarY));
+  assert(radii.every(r=>Math.abs(r-radii[0])<1e-8));
+  const uneven=make([1,8,4,2,0]).wuXing.vertices;
+  assert.deepEqual(uneven.map(v=>v.count),[4,2,0,1,8]);
+  const water=uneven.find(v=>v.phase==="🔵"), metal=uneven.find(v=>v.phase==="🟡");
+  assert(Math.hypot(water.radarX,water.radarY)>Math.hypot(metal.radarX,metal.radarY));
+  const earth=uneven.find(v=>v.phase==="🟤");assert.equal(Math.hypot(earth.radarX,earth.radarY),0);
+  assert.equal(uneven.reduce((sum,v)=>sum+v.count,0),15);
+});
+
+
+test("radar counts retain recognized connections beyond the displayed per-phase cap", () => {
+ const n=neighborhood(1);n.center.phase="🟡";
+ n.wuXingCounts={sibling:1,child:1000,right:100,left:0,parent:0};
+ const scene=geometry.buildScene(n,{...index,isWuXingMode:()=>true,wuXingPhase:p=>p.phase ?? "🔵"},defaults,false);
+ assert.equal(scene.wuXing.vertices.find(v=>v.phase==="🔵").count,1000);
+ assert.equal(scene.wuXing.vertices.find(v=>v.phase==="🟢").count,100);
+ assert.equal(scene.wuXing.vertices.find(v=>v.phase==="🟡").count,2);
+});
+
+
+test("empty phases retain visible frames without inventing note neighbors", () => {
+ const n={center:page("Current"),parents:[],children:[],rightFriends:[],leftFriends:[],siblings:[]};
+ n.center.phase="🟡";
+ const scene=geometry.buildScene(n,{...index,isWuXingMode:()=>true,wuXingPhase:p=>p.phase},defaults,false);
+ assert.equal(scene.nodes.length,1);assert.equal(scene.edges.length,0);assert.equal(scene.wuXing.vertices.length,5);
+ assert.equal(scene.wuXing.vertices.filter(v=>v.count===0).length,4);
+ assert(scene.wuXing.vertices.every(v=>v.frame.width>0 && v.frame.height>0));
+});
+
+
+test("Wu Xing camera offsets migrate safely and remain live in cached surface facades", () => {
+  assert.equal(defaults.wuxingYaw, 0);
+  assert.equal(defaults.wuxingPitch, 0);
+  const clamped = geometry.migrateAndMergeSettings({ wuxingYaw: 900, wuxingPitch: -900 });
+  assert.equal(clamped.wuxingYaw, 25);
+  assert.equal(clamped.wuxingPitch, -25);
+  const invalid = geometry.migrateAndMergeSettings({ wuxingYaw: NaN, wuxingPitch: Infinity });
+  assert.equal(invalid.wuxingYaw, 0);
+  assert.equal(invalid.wuxingPitch, 0);
+  const settings = geometry.migrateAndMergeSettings({ wuxingYaw: 10, wuxingPitch: -8 });
+  const views = ["leaf", "sidepanel", "popout"].map(surface => geometry.effectiveViewSettings(settings, surface, { device: "desktop" }));
+  settings.wuxingYaw = -12;
+  settings.wuxingPitch = 7;
+  for (const view of views) {
+    assert.equal(view.wuxingYaw, -12);
+    assert.equal(view.wuxingPitch, 7);
+  }
+  settings.wuxingYaw = settings.wuxingPitch = 0;
+  for (const view of views) assert.deepEqual([view.wuxingYaw, view.wuxingPitch], [0, 0]);
+});
+
+
+test("phase frames have count-independent world dimensions and bounded scroll content", () => {
+ const make=count=>{const n=neighborhood(0);n.center.phase="🟢";n.parents=[];n.leftFriends=[];n.rightFriends=[];n.siblings=Array.from({length:count},(_,i)=>({page:page(`Wood${i}`),relationType:1,typeDefinition:"",linkDirection:0}));return geometry.buildScene(n,{...index,isWuXingMode:()=>true,wuXingPhase:p=>p.phase??"🟢"},defaults,false);};
+ const sparse=make(1),dense=make(300);
+ assert.deepEqual(sparse.wuXing.vertices,dense.wuXing.vertices.map((v,i)=>({...v,count:sparse.wuXing.vertices[i].count})),"same proportions preserve plane and frames despite more notes");
+ assert(dense.zoneViewports.sibling.contentHeight>dense.zoneViewports.sibling.height);
+ assert.equal(dense.wuXing.vertices.length,5);
+ const dims=dense.wuXing.vertices.map(v=>[v.frame.width/v.scale,v.frame.height/v.scale]);
+ assert(dims.every(d=>Math.abs(d[0]-dims[0][0])<1e-8&&Math.abs(d[1]-dims[0][1])<1e-8));
+});
+
+
+test("phase frames remain separate through allowed manual tilt extremes", () => {
+ const n=neighborhood(1);n.center.phase="🟢";
+ for(const yaw of [-25,0,25]) for(const pitch of [-25,0,25]) {
+   const scene=geometry.buildScene(n,{...index,isWuXingMode:()=>true,wuXingPhase:p=>p.phase??"🟢"},{...defaults,wuxingYaw:yaw,wuxingPitch:pitch},false);
+   noOverlap(scene.wuXing.vertices.map(v=>({x:v.frame.left+v.frame.width/2,y:v.frame.top+v.frame.height/2,width:v.frame.width,height:v.frame.height,page:{path:v.phase}})),`tilt ${yaw},${pitch}`);
+ }
+});
+
+
+test("Wu Xing ontology seeds five bilingual groups once and preserves user edits", () => {
+ const settings=geometry.migrateAndMergeSettings({});
+ settings.hierarchy.parents.push("custom_source");
+ assert.equal(geometry.initializeWuXingOntology(settings),true);
+ assert.equal(geometry.WUXING_ONTOLOGY_GROUPS.length,5);
+ assert.deepEqual(settings.hierarchy.previous,["同我","Kinship","比肩","Affinity","劫财","Alliance"]);
+ assert(settings.hierarchy.parents.includes("custom_source"));
+ assert(!settings.hierarchy.parents.includes("Parent"));
+ assert.deepEqual(geometry.migrateAndMergeSettings(settings).hierarchy.previous,settings.hierarchy.previous);
+ assert(!geometry.migrateAndMergeSettings(settings).hierarchy.rightFriends.includes("Challenger"));
+ settings.hierarchy.previous=["自定义"];
+ const reloaded=geometry.migrateAndMergeSettings(settings);
+ assert.equal(geometry.initializeWuXingOntology(reloaded),false);
+ assert.deepEqual(reloaded.hierarchy.previous,["自定义"]);
+});
+
+
+test("Wu Xing display language survives settings reload without changing metadata aliases or layout", () => {
+  const initial = geometry.migrateAndMergeSettings({});
+  assert.equal(initial.wuxingLanguage, "en");
+  assert.equal(initial.wuxingGuideSeen, false);
+  assert.equal(geometry.migrateAndMergeSettings({wuxingLanguage: "unsupported"}).wuxingLanguage, "en");
+  geometry.initializeWuXingOntology(initial);
+  initial.wuxingLanguage = "en";
+  initial.wuxingYaw = 12;
+  const reloaded = geometry.migrateAndMergeSettings(JSON.parse(JSON.stringify(initial)));
+  assert.equal(reloaded.wuxingLanguage, "en");
+  assert.equal(reloaded.wuxingYaw, 12);
+  assert.deepEqual(reloaded.hierarchy, initial.hierarchy);
+});
+
+
+test("explicit Chinese and dismissed onboarding survive reload while fresh settings use English", () => {
+  const settings = geometry.migrateAndMergeSettings({wuxingLanguage:"zh",wuxingGuideSeen:true});
+  assert.equal(settings.wuxingLanguage,"zh");
+  assert.equal(settings.wuxingGuideSeen,true);
+  const reloaded = geometry.migrateAndMergeSettings(JSON.parse(JSON.stringify(settings)));
+  assert.equal(reloaded.wuxingLanguage,"zh");
+  assert.equal(reloaded.wuxingGuideSeen,true);
+});

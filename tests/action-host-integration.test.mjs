@@ -565,3 +565,26 @@ for(const replaceCanonical of [false,true])test('delete cleanup '+(replaceCanoni
   assert.equal(f.context.relationshipWriteCancels.size,0);
  }finally{globalThis.window=previous;}
 });
+
+
+/** Exercise the real guide host owner: duplicate panes, persistent dismissal, reopen, and unload. */
+test('Wu Xing guide opens once across views, remembers dismissal, and can be reopened', async () => {
+  const dialogs=[]; let saves=0;
+  class Guide {
+    constructor(app,translate,dismiss){this.dismiss=dismiss;dialogs.push(this);}
+    open(){this.opened=true;}
+    close(){this.dismiss();}
+  }
+  const open=method('openWuXingGuide',{WuXingIntroductionModal:Guide,Notice:class{}});
+  const owner={unloading:false,manifest:{id:'kplex-wuxing'},app:{},translator:key=>key,settings:{wuxingGuideSeen:false},wuXingIntroduction:null,
+    async persistSettingsSnapshot(){saves++;}};
+  open.call(owner,true); open.call(owner,true);
+  assert.equal(dialogs.length,1);assert(dialogs[0].opened);
+  dialogs[0].close();await Promise.resolve();
+  assert.equal(owner.settings.wuxingGuideSeen,true);assert.equal(saves,1);
+  dialogs[0].close();assert.equal(saves,1);
+  open.call(owner,true);assert.equal(dialogs.length,1);
+  open.call(owner);assert.equal(dialogs.length,2);
+  owner.unloading=true;dialogs[1].close();assert.equal(saves,1);
+  owner.unloading=false;owner.manifest.id='k-plex';open.call(owner);assert.equal(dialogs.length,2);
+});
