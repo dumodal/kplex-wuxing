@@ -57,3 +57,13 @@ Capacity one, ordinary Markdown. Native Electron automation does not establish p
 - [ ] Final read-only production visual check, restoration and published correction.
 
 No merge219/220 or release authorized. Review recommendation remains pending actual remaining acceptance.
+
+## Second-click folding and spacious density follow-up
+
+The maintainer subsequently requested symmetric primary clicks and more spacious density. A second click now folds the exact branch through existing branch.toggle guards; a third reopens it. No root/attention/editor retargeting. Both density axes now admit0.1–4, default1; shared schema/Settings/live-rail metadata uses one finite range constant. Minimum0.1 gives960px horizontal and240px vertical base gaps while preserving measured note/editor rectangles. Previously saved values remain valid and Compass is unchanged.
+
+Node22.22.2 real build,68 focused policy/navigation cases and13 Chromium settings/shared-renderer/control-input cases pass. Exact staged main85f16cf5a1c3dfad9319bfebebf73fc7d06f51488d7a7ebe2a892a964de48d84 passes native navigation4 (trusted folding/reopening, SVG gates, pins/history and both Home-key0.1 durable live rails), dirty editor8 (spacious0.2/0.1 reflow/caret/focus/instance/manual camera/guards/migration) and Settings/selector25 (both native Settings0.1 endpoints, trusted OS select, popout/draft/zero-work guards). The12-case M0/unchanged attention-host/Compass native compatibility lane also passes. Final clean full verification/CI and outer restoration still pending.
+
+Ordered new failures are retained: toggle-editor-1 stopped on fixture preparation before opening editors, cleanup passed; a stronger pre-fixture requested-semantics readiness condition and owned-scope diagnostics preceded the passing editor case. spacious-settings-1 could not find a visible native page; the diagnostic follow-up exposed a retired popout document with defaultViewnull, cleanup passed. A normal reload of only Small's renderer established a fresh main Settings document, startupfalse/pendingfalse; the unchanged acceptance then passed. No production indexing/Settings architecture fix is claimed and no rejected action is retried inside a scenario.
+
+The separately authorized [P13 timer follow-up](parser-responsiveness-followup-2026-10-25.md) completed its fixed primary/control/diagnostic series without reproducing55ms or establishing a justified correction. All failed generator attempts and controls remain recorded; production parser and45ms guards are unchanged. It does not convert the original failed full verification into a pass.

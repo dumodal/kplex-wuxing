@@ -6159,3 +6159,8 @@ Register mindmap through existing view/settings owners; add bounded branch/gener
 ### 2026-10-25 - PR219 product correction (in progress)
 
 Prior acceptance withdrawn after real read-only observation exposed stale saved-root entry and missing parent/peer context. Existing branch retained. Additive current-attention entry, branch-primary expansion, real child/peer/root-parent projection and bottom-child/outward-peer routing. Independent density controls share native Settings and bottom-left panel through existing queued type-settings writer. Native navigation/density and dirty editor retention pass; full verification, CI and restoration pending. C15-C26 paused; no indexing/Sidecar architecture change. See docs/validation/mind-map-correction-219-2026-10-25.md. No merge/release authorized.
+
+
+### 2026-10-25 - PR219 second-click/density and targeted parser follow-up
+
+Second primary click folds the exact Mind Map branch through existing editor-safe actions; shared native/live density range now0.1-4/default1. Real build,68 focused,13 Chromium and native navigation4/editor8/settings25/M0 compatibility12 pass on85f16cf5. Ordered failed setups and successful fresh-document evidence retained. Fixed parser-only primary/control/diagnostic series did not reproduce55ms or justify a correction; production parser and45ms guards unchanged. See docs/validation/parser-responsiveness-followup-2026-10-25.md and correction report. Clean full verification, CI, final readonly visual check and outer restoration pending. No index/Sidecar architecture work, feature merge or release authorized.
