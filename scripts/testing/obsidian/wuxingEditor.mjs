@@ -61,14 +61,21 @@ export async function acceptWuXingEditor(x){
  await choose(host,'classic');panel(host).querySelector('.kplex-filter-panel-header button').click();await choose(host,'wuxing');panel(host).querySelector('.kplex-filter-panel-header button').click();content.focus();
  check(root(host).querySelector('.kplex-central-editor-content')===element&&leaf.view.editor===editor&&editor.getValue()===value&&JSON.stringify(editor.getCursor())===cursor,'Compatible view switch replaced the native editor');
  cases.push({id:'attention-native-editor-phase-reclassification-resize-compatible-switch',dirtyAtReclassification,documentRetained:true,contentRetained:true,caretRetained:true});
- await p.openSidecar(host,p.index.get(path('Memory')));const side=p.sidecarLeaves.get(host);check(side,'Owned Sidecar absent');await until(()=>side.view.file?.path===path('Memory'),'Sidecar document absent');content.focus();
+ if(c.includeSidecar){
+ if(c.compareSidecar){await choose(host,'classic');panel(host).querySelector('.kplex-filter-panel-header button').click();}
  const surface=[...p.actionSurfaceHosts].find(([,registration])=>registration.leaf===host)?.[0];check(surface,'Native action surface absent');
+ const sidecarOutcome=await p.actionManager.dispatch({id:'view.sidecar.toggle',source:'internal',surfaceId:surface});check(sidecarOutcome.status==='completed','Shared Sidecar action failed: '+JSON.stringify(sidecarOutcome));
+ const side=p.sidecarLeaves.get(host);check(side,'Owned Sidecar absent');await until(()=>side.view.file?.path===path('Memory'),'Sidecar document absent');content.focus();
  await p.actionManager.dispatch({id:'graph.focus',source:'internal',surfaceId:surface});
  const selection=await p.actionManager.dispatch({id:'selection.center',source:'internal',surfaceId:surface});check(selection.status==='completed','Shared native selection did not execute');await p.actionManager.dispatch({id:'selection.move.right',source:'internal',surfaceId:surface});
- check(leaf.view.file.path===path('Memory')&&p.sidecarLeaves.get(host)===side&&side.view.file.path===path('Memory')&&editor.getValue()===value,'Selection redirected editor or Sidecar');
+ c.progress={phase:'sidecar-editor-identity',cases,sidecarIdentity:{view:session.definition.id,comparison:c.compareSidecar,attention:centerPath(),oldEditorConnected:element.isConnected,oldLeafType:leaf.view.getViewType(),oldDocument:leaf.view.file?.path===path('Memory'),currentEditor:root(host).querySelector('.kplex-central-editor-content')===element,sidecarDocument:side.view.file?.path===path('Memory'),content:editor.getValue()===value}};
+ /** Capture only the owned attention identity at the combined Sidecar boundary. */
+ function centerPath(){return host.view.documentSession.centerPath===path('Memory')}
+ check(leaf.view.file?.path===path('Memory')&&p.sidecarLeaves.get(host)===side&&side.view.file?.path===path('Memory')&&editor.getValue()===value,'Selection redirected editor or Sidecar');
  await configure(['categories','fire','values'],['fire','water']);await wait(100);check(leaf.view.file.path===path('Memory')&&p.sidecarLeaves.get(host)===side&&side.view.file.path===path('Memory'),'Mapping redirected native documents');
  cases.push({id:'selection-and-phase-mapping-preserve-editor-and-owned-sidecar'});
  await p.closeSidecar(host);await reveal(host);content.focus();editor.setCursor(editor.lastLine(),editor.getLine(editor.lastLine()).length);
+ }else{await reveal(host);content.focus();editor.setCursor(editor.lastLine(),editor.getLine(editor.lastLine()).length);}
  // Follow the existing support-report driver's guarded text/empty policy. Raw writeBuffer does
  // not certify restoration of standard native formats; never replace rich/custom clipboard data.
  const clipboard=require('electron').clipboard,formats=clipboard.availableFormats();

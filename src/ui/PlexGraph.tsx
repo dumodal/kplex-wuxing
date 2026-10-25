@@ -168,6 +168,8 @@ type AreaHeightControl = {kind: "classic"; key: AreaHeightKey; min: number; max:
   | {kind: "view"; key: string; min: number; max: number};
 type AreaResizeDrag = {
   zone: ScrollZone;
+  /** Capture the declared physical edge; opaque view area IDs carry no direction semantics. */
+  edge: "top" | "bottom";
   pointerId: number;
   startClientY: number;
   startHeight: number;
@@ -1026,9 +1028,11 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       : config ? settings[config.key] : scene.zoneAreas[zone]?.height ?? 0;
   };
   const persistAreaHeight = (zone: string): void => {if (AREA_HEIGHT_CONFIG[zone]?.kind !== "view") void plugin.saveSettings(false);};
-  const zoneTitle = (zone: string, translator: Translator, arrangement: KplexSettings["lateralArrangement"]): string =>
-    scene.areas?.find(area => area.id === zone)?.labelKey ? scene.areas.find(area => area.id === zone)!.label ?? viewLabel(scene.areas.find(area => area.id === zone)!.labelKey, translator)
-      : classic?.title(zone, translator, arrangement) ?? zone;
+  /** Literal area names and catalog labels share the same accessible resize/filter controls. */
+  const zoneTitle = (zone: string, translator: Translator, arrangement: KplexSettings["lateralArrangement"]): string => {
+    const area = scene.areas?.find(area => area.id === zone);
+    return area?.label ?? (area?.labelKey ? viewLabel(area.labelKey, translator) : classic?.title(zone, translator, arrangement) ?? zone);
+  };
   const buildZoneDisplayLayout = (zone: string, panel: ZoneViewport, nodes: PositionedNode[], filter: string,
     preferences: KplexSettings, _read: GraphIndex, centerPath: string): ZoneDisplayLayout => classic
       ? classic.repack(zone, panel, nodes, filter, preferences, classicRead, centerPath, matchesZoneFilter)
@@ -3029,6 +3033,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         areaSettingsDismissPointer.current = null;
         areaResizeDrag.current = {
           zone: areaHit.zone,
+          edge: scene.zoneAreas[areaHit.zone]?.resizeEdge ?? "bottom",
           pointerId: e.pointerId,
           startClientY: e.clientY,
           startHeight: areaHeight(areaHit.zone),
@@ -3154,7 +3159,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const resizeDrag = areaResizeDrag.current;
     if (resizeDrag) {
       if (e.pointerId !== resizeDrag.pointerId) return;
-      const direction = resizeDrag.zone === "child" ? 1 : -1;
+      const direction = resizeDrag.edge === "bottom" ? 1 : -1;
       const delta = direction * (e.clientY - resizeDrag.startClientY) / Math.max(0.3, resizeDrag.startScale);
       pendingAreaHeight.current = { zone: resizeDrag.zone, height: resizeDrag.startHeight + delta };
       if (!areaResizeFrame.current) {

@@ -36,6 +36,8 @@ test('the real hierarchy reader admits the full bounded scene and coverage never
   for(const id of [parent,...Array.from({length:32},(_,j)=>parent+'-'+j)]){const page=viewPage(id);page.file.stat={mtime:1,ctime:1,size:1};f.pages.set(id,page);if(id!==parent)f.children[parent].push(id)}
  }
  f.settings.canvasViewSettings.mindmap.values.initialGenerations=2;
+ // This case exercises an explicit256-note cap, independently of the editable type default.
+ f.settings.canvasViewSettings.mindmap.values.maximumOccurrences=256;
  const result=f.prepare();assert.equal(result.failure,false);assert.equal(result.scene.nodes.length,256);assert(result.projection.truncated);assert.equal(result.projection.preparation.parents.length,8);
  const native={diagnosticsClosed:false,persistentCachePurged:false,hasCurrentCanonicalCenter:()=>false,hasCurrentOnDemandCachedScope:()=>false,
   onDemandHostScopes:new Map(),onDemandTasks:new Map(),onDemandPreviewTasks:new Map(),onDemandGateTasks:new Map(),onDemandBuildWaiters:new Map(),semanticPreparationTasks:new Map(),semanticDemandCounts:new Map(),onDemandBaselineTask:null,get:id=>f.pages.get(id)};

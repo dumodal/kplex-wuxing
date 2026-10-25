@@ -650,3 +650,6 @@ Preset attribution references:
 - https://www.linkingyourthinking.com/download-lyt-kit
 
 The maintainer's supplied drawings are the source for the requested ACE wording and seven-category eACCESS adaptation.
+
+
+Current area behavior: bottom-edge pointer direction follows the existing declared resizeEdge. All status regions share bounded per-canvas resizing with compact220 defaults and independent160-1200 overrides. The status column sits beyond the measured category envelope with extra spacing. Literal area labels are preserved in the shared accessible controls.

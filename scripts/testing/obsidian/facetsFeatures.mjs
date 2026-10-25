@@ -5,15 +5,27 @@ export async function acceptFacetsFeatures(x){
  const session=host.view.documentSession.plexView,doc=host.view.containerEl.ownerDocument;
  const surface=/** Reacquire this exact native leaf's current shared action surface. */ ()=>[...p.actionSurfaceHosts].find(([,registration])=>registration.leaf===host)?.[0];
  const action=/** All native commands use the shipped catalog and captured owner. */ async(id,args)=>{const result=await p.actionManager.dispatch({id,source:'internal',surfaceId:surface(),...(args?{args}:{})});check(result.status==='completed',id+': '+JSON.stringify(result));return result};
- const preset=/** Select through the actual opening canvas's contributed dropdown. */ async id=>{await choose(host,'wuxing');const select=panel(host).querySelector('[data-kplex-view-choice="preset"] select');check(select,'Captured preset choice absent');select.value=id;select.dispatchEvent(new doc.defaultView.Event('change',{bubbles:true}));await until(()=>session.getState().preset===id,'Preset did not reach owning session');panel(host).querySelector('.kplex-filter-panel-header button').click();await wait(100)};
+ const preset=/** Select through the actual opening canvas's contributed dropdown. */ async id=>{await choose(host,'wuxing');const select=panel(host).querySelector('[data-kplex-view-choice="preset"] select');check(select,'Captured preset choice absent');select.value=id;select.dispatchEvent(new doc.defaultView.Event('change',{bubbles:true}));await until(()=>session.state?.preset===id,'Preset did not reach owning session');panel(host).querySelector('.kplex-filter-panel-header button').click();await wait(100)};
  const region=/** Exact opaque region identity avoids label and CSS-escaping assumptions. */ (id,category)=>[...root(host).querySelectorAll('[data-kplex-decoration]')].find(element=>element.dataset.kplexDecoration===JSON.stringify(['facets',id,'category',category]));
  const focus=/** Explicit navigation retains the normal attention/session lifecycle. */ async name=>{p.notifyNavigation(path(name),host);await until(()=>center(host)===path(name)&&root(host).querySelector('.kplex-node-badge'),'Focused note absent');await until(localReady,'Focused cached metadata did not settle');await wait(100)};
  const capture=/** Capture only the actual disposable canvas; no synthetic rendering or private notes. */ async name=>{await reveal(host);await action('view.fit');await wait(200);const bounds=root(host).getBoundingClientRect(),image=await native.webContents.capturePage({x:Math.max(0,Math.ceil(bounds.x)),y:Math.max(0,Math.ceil(bounds.y)),width:Math.floor(bounds.width),height:Math.floor(bounds.height)});require('node:fs').writeFileSync(c.screenshotPrefix+'-'+name+'.png',image.toPNG())};
  const configure=/** Fixture configuration returns to the existing queued settings writer. */ (path,value)=>p.updateCanvasViewConfiguration('wuxing',{field:'presets',path},{kind:'set',value});
+ await action('view.fit');await action('view.areas.toggle');await until(()=>root(host).querySelector('.is-area-settings-mode'),'Area settings mode absent');await wait(200);
+ const areaStop=quiet();
+ for(const [kind,name]of [['category','water'],['status','unassigned'],['status','conflicting'],['status','unresolved']]){
+  const id=JSON.stringify(['facets','wuxing',kind,name]);
+  for(const delta of [12,-8]){
+   const frame=root(host).querySelector('.'+doc.defaultView.CSS.escape('kplex-area-'+id)),handle=frame?.querySelector('[role="separator"]');check(handle,'Native resizable area absent: '+name);
+   const box=handle.getBoundingClientRect(),x=Math.round(box.x+box.width/2),y=Math.round(box.y+box.height/2),before=Number(handle.getAttribute('aria-valuenow'));
+   native.webContents.sendInputEvent({type:'mouseMove',x,y});native.webContents.sendInputEvent({type:'mouseDown',x,y,button:'left',clickCount:1});native.webContents.sendInputEvent({type:'mouseMove',x,y:y+delta,button:'left'});await wait(100);native.webContents.sendInputEvent({type:'mouseUp',x,y:y+delta,button:'left',clickCount:1});await wait(100);
+   const after=session.getAreaHeights()[id];check(delta>0?after>before:after<before,'Native bottom-edge resize has wrong direction/no effect: '+name);cases.push({id:'native-area-resize-'+name,delta,before,after});
+  }
+ }
+ areaStop('native-area-resize-zero-source-work');await action('view.areas.toggle');
  await configure(['state'],c.stateExample);await until(localReady,'Custom preset configuration did not settle');
  const stop=quiet();
  for(const [id,count]of[['ace',3],['para',4],['wuxing',5],['gtd',6],['eaccess',7],['state',4]]){
-  await preset(id);check(root(host).querySelectorAll('.kplex-view-region').length===count+2,'Preset category/status region count differs: '+id);
+  await preset(id);check(root(host).querySelectorAll('.kplex-view-region').length===count+2+(id==='wuxing'?1:0),'Preset category/status region count differs: '+id);
   check(root(host).querySelector('.kplex-node-badge')?.textContent.trim(),'Centered category badge absent: '+id);
   cases.push({id:'native-preset-'+id,categories:count});
  }

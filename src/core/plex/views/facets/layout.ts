@@ -30,7 +30,7 @@ export function layoutFacets(projection: PlexProjection, measured: readonly Plex
   if (!attention || preset.order.length < 3 || preset.order.length > 7) throw new Error("Invalid Facets center/categories");
   const peripherals = measured.filter(row => row.id !== projection.entry);
   const width = Math.max(preset.regionWidth, ...peripherals.map(row => row.width + 48));
-  const height = (id: string): number => Math.max(160, Math.min(1200, areaHeights[id] ?? preset.regionHeight), ...peripherals.map(row => row.height + 100));
+  const height = (id: string, fallback = preset.regionHeight): number => Math.max(160, Math.min(1200, areaHeights[id] ?? fallback), ...peripherals.map(row => row.height + 100));
   const start = preset.order.indexOf(preset.start), order = [...preset.order.slice(start), ...preset.order.slice(0, start)];
   const regionHeight = Math.max(...order.map(id => height(facetAreaId(presetId, "category", id))));
   const diagonal = Math.hypot(width, regionHeight), badge = attention.badge && nodeBadgeBounds({x: 0, y: 0, width: attention.width, height: attention.height}, attention.badge);
@@ -71,13 +71,16 @@ export function layoutFacets(projection: PlexProjection, measured: readonly Plex
     decorations.push({id: `facets-guide-${step}-${cycle[index]}-${cycle[(index + step) % cycle.length]}`, kind: "guide", points,
       ...(wuxing ? {directed: true, variant: step === 2 ? "regulating" as const : "generating" as const} : {})});
   }
+  // Keep the status column beyond the measured category envelope, including wide notes and
+  // larger per-canvas regions. Its compact defaults remain independently resizable.
+  const statusLeft = Math.max(...areas.map(area => area.bounds.x + area.bounds.width)) + Math.max(160, preset.spacing * 2);
   let top = -110;
   for (const status of ["unassigned", "conflicting", "checking", "unresolved"] as const) {
     const id = facetAreaId(presetId, "status", status);
     if ((status === "checking" || status === "unresolved") && !projection.occurrences.some(row => row.areaId === id)) continue;
-    const region = {x: radius + width / 2 + preset.spacing, y: top, width, height: Math.max(160, Math.min(220, height(id)))};
+    const region = {x: statusLeft, y: top, width, height: height(id, 220)};
     const label = {key: status === "unresolved" ? "facets.cannotClassify" : `facets.${status}`};
-    areas.push({...pack(id, region, projection, measurements, positions, label, false),
+    areas.push({...pack(id, region, projection, measurements, positions, label, editable),
       ...(assignments.has(id) ? {dropTarget: {kind: "property" as const, assignmentId: id}} : {})});decorations.push({id, kind: "region", bounds: region, labelKey: label.key, areaId: id, count: true,
       ...(status === "unassigned" ? {color: preset.unassignedColor} : status === "conflicting" ? {color: preset.conflictingColor} : {})});top += region.height + 20;
   }

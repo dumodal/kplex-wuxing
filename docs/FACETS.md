@@ -69,6 +69,8 @@ The prototype by [Dumo Guo at fixed commit fa038f0](https://github.com/dumodal/k
 
 Facets uses the existing measured nodes/links, bounded area overflow, grouping, Find, keyboard actions, navigation and Sidecar. Its native editor follows the current note and retains the normal save/switch/resize lifecycle. Decorative guides have no relationship-edit authority.
 
+In **Area settings**, drag a region's bottom handle downward to grow it or upward to shrink it. Unassigned, Conflicting and Cannot classify use the same controls and keep independent sizes in each canvas. These status sections sit apart from the category regions on the right.
+
 Alt/Option-click explicitly centers a note through the shared navigation action. Ctrl/Cmd placeholder creation keeps its existing meaning. Wander uses the displayed navigable notes in every registered view. Mind Map's ordinary branch clicks retain its root; cycle references reveal their earlier occurrence and explain the cycle.
 
 Section expansion remains hidden in production Facets and Mind Map. Compass retains its existing section behavior. The reusable section boundary is tested separately and is not a shipped Mind Map section mode.

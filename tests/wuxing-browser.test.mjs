@@ -7,6 +7,39 @@ import {plexViewBrowserModules} from './support/plexViewBrowser.mjs';
 import {canvasSceneFixture} from './support/canvasSceneFixture.mjs';
 const output=await plexViewBrowserModules();
 
+test('shared bottom-edge pointer resize grows and shrinks Facets category and status areas without source work',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{
+  await host.command('Emulation.setDeviceMetricsOverride',{width:1500,height:1050,deviceScaleFactor:1,mobile:false});
+  await host.evaluate(`(async()=>{${canvasSceneFixture}
+   fieldCaches.get('A.md').frontmatter.phase='wood';fieldCaches.get('B.md').frontmatter.phase=['water','metal'];fieldCaches.delete('C.md');
+   settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing','categories','wood','label']},{kind:'set',value:'My wood'});
+   const ui=await mount(M.wuXingViewDefinition);ui.props.areaSettingsMode=true;ui.render();
+   await ui.ports.current.implementations['view.fit'].execute({});await wait();await wait();
+   window.resizeFacets={ui,work,before:{...work},style};return true;
+  })()`);
+  for(const [kind,name]of [['category','wood'],['status','unassigned'],['status','conflicting'],['status','unresolved']]){
+   const id=JSON.stringify(['facets','wuxing',kind,name]);
+   const initial=await host.evaluate(`(()=>{const r=resizeFacets,frame=r.ui.container.querySelector('.'+CSS.escape('kplex-area-'+${JSON.stringify(id)})),handle=frame?.querySelector('[role="separator"]');if(!handle)throw Error('Editable area absent');const b=handle.getBoundingClientRect();return{x:b.x+b.width/2,y:b.y+b.height/2,height:Number(handle.getAttribute('aria-valuenow'))}})()`);
+   if(name==='wood')assert.equal(await host.evaluate(`resizeFacets.ui.container.querySelector('.'+CSS.escape('kplex-area-'+${JSON.stringify(id)})).querySelector('[role="separator"]').getAttribute('aria-label')`),'My wood');
+   /** Trusted browser pointer input exercises shared capture, scale conversion and session persistence. */
+   for(const [delta,expected]of [[18,'larger'],[-12,'smaller']]){
+    const from=await host.evaluate(`(()=>{const handle=resizeFacets.ui.container.querySelector('.'+CSS.escape('kplex-area-'+${JSON.stringify(id)})).querySelector('[role="separator"]'),b=handle.getBoundingClientRect();return{x:b.x+b.width/2,y:b.y+b.height/2,height:Number(handle.getAttribute('aria-valuenow'))}})()`);
+    await host.command('Input.dispatchMouseEvent',{type:'mouseMoved',x:from.x,y:from.y});
+    await host.command('Input.dispatchMouseEvent',{type:'mousePressed',x:from.x,y:from.y,button:'left',buttons:1,clickCount:1});
+    await host.command('Input.dispatchMouseEvent',{type:'mouseMoved',x:from.x,y:from.y+delta,button:'left',buttons:1});
+    await host.evaluate('new Promise(resolve=>setTimeout(resolve,80))');
+    await host.command('Input.dispatchMouseEvent',{type:'mouseReleased',x:from.x,y:from.y+delta,button:'left',buttons:0,clickCount:1});
+    const height=await host.evaluate(`resizeFacets.ui.session.getAreaHeights()[${JSON.stringify(id)}]`);
+    assert(expected==='larger'?height>from.height:height<from.height,`${name}: ${expected} height after physical bottom-edge drag`);
+   }
+   assert(initial.height>0);
+  }
+  assert.equal(await host.evaluate(`(()=>{const r=resizeFacets;return r.work.body===r.before.body&&r.work.scans===r.before.scans&&r.work.acquisitions===r.before.acquisitions&&r.ui.props.activePath==='A.md'})()`),true);
+  await host.evaluate('resizeFacets.ui.close();resizeFacets.style.remove();delete window.resizeFacets;');
+ }finally{await host.cleanup()}
+});
+
 test('advanced Facets rules use current/candidate cached metadata in the production shared renderer without source work',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}

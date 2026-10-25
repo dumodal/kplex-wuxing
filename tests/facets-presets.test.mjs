@@ -191,6 +191,24 @@ test('shared badge validation/bounds keep labels, colors and optional geometry f
  assert.throws(()=>M.nodeBadgeBounds({x:0,y:0,width:NaN,height:100},{width:100,height:20}));
 });
 
+test('status regions resize independently beyond their compact defaults and retain measured separation',()=>{
+ const f=scene('wuxing',3),unresolved=M.facetAreaId('wuxing','status','unresolved');
+ f.projection.occurrences.find(row=>row.id!==f.projection.entry).areaId=unresolved;
+ const initial=f.layout(),categoryRight=Math.max(...initial.areas.filter(area=>area.id.includes('"category"')).map(area=>area.bounds.x+area.bounds.width));
+ for(const status of ['unassigned','conflicting','unresolved']){
+  const id=M.facetAreaId('wuxing','status',status),area=initial.areas.find(area=>area.id===id);
+  assert.equal(area.resizeEdge,'bottom');assert.deepEqual(area.heightPreference,{key:id,minimum:160,maximum:1200});
+  assert.equal(area.bounds.height,220);assert(area.bounds.x-categoryRight>=160);
+  assert.equal(f.layout({[id]:480}).areas.find(area=>area.id===id).bounds.height,480);
+  assert.equal(f.layout({[id]:180}).areas.find(area=>area.id===id).bounds.height,180);
+ }
+ const heights=Object.fromEntries(['unassigned','conflicting','unresolved'].map((status,index)=>[M.facetAreaId('wuxing','status',status),400+index*100]));
+ const resized=f.layout(heights),statuses=resized.areas.filter(area=>area.id.includes('"status"'));
+ for(let index=1;index<statuses.length;index++)assert(statuses[index].bounds.y>=statuses[index-1].bounds.y+statuses[index-1].bounds.height+20);
+ assert.deepEqual(resized.positions.get(f.projection.entry),initial.positions.get(f.projection.entry));
+ assert(M.layoutFacets(f.projection,f.measured,'wuxing',f.preset,{},false).areas.every(area=>!area.heightPreference),'Unavailable intent remains read-only');
+});
+
 test('a wide measured badge contributes its complete envelope to region separation',()=>{
  const f=scene('wuxing',0),size=f.measured.find(row=>row.id===f.projection.entry);size.badge={width:1400,height:48};
  const layout=f.layout(),badge=M.nodeBadgeBounds(layout.positions.get(f.projection.entry),size.badge);
