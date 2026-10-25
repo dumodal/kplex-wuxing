@@ -1,7 +1,7 @@
 /** Mind Map type defaults/validation. Root, branch state, camera and editor bindings remain native-session intent. */
 import type {PlexViewConfiguration, PlexViewConfigurationSchema} from "../configuration";
 
-export const MIND_MAP_LIMITS = {occurrences: 256, depth: 8, scopes: 8, stateCharacters: 12_000, occurrenceCharacters: 4096} as const;
+export const MIND_MAP_LIMITS = {occurrences: 2000, depth: 20, scopes: 8, stateCharacters: 12_000, occurrenceCharacters: 4096} as const;
 /** Both settings surfaces share the finite density range; 0.1 gives ten times the default gap without resizing thoughts or editors. */
 export const MIND_MAP_DENSITY = {min: 0.1, max: 4, step: 0.05} as const;
 export type MindMapConfiguration = Readonly<{arrangement: "balanced" | "left" | "right"; horizontalSpacing: number;
@@ -17,7 +17,7 @@ export const mindMapConfigurationSchema: PlexViewConfigurationSchema = {version:
   horizontalSpacing: integer(96, 40, 240), verticalSpacing: integer(24, 12, 80), parentColumns: integer(2, 1, 3), initialGenerations: integer(1, 1, 3),
   horizontalDensity: {defaultValue: 1, validate: (value): boolean => typeof value === "number" && Number.isFinite(value) && value >= MIND_MAP_DENSITY.min && value <= MIND_MAP_DENSITY.max},
   verticalDensity: {defaultValue: 1, validate: (value): boolean => typeof value === "number" && Number.isFinite(value) && value >= MIND_MAP_DENSITY.min && value <= MIND_MAP_DENSITY.max},
-  maximumDepth: integer(6, 1, MIND_MAP_LIMITS.depth), maximumOccurrences: integer(256, 16, MIND_MAP_LIMITS.occurrences),
+  maximumDepth: integer(10, 1, MIND_MAP_LIMITS.depth), maximumOccurrences: integer(500, 16, MIND_MAP_LIMITS.occurrences),
 }};
 
 /** Decode only schema-admitted effective values; absent payload inherits defaults without materializing global settings. */

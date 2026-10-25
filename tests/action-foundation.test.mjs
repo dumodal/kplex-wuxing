@@ -21,6 +21,15 @@ const implementation = (execute = () => ({status: "completed"})) => ({availabili
 /** Provide a shared center independently of whichever editor has focus. */
 const manager = (extra = {}) => new api.ActionManager({readCommandContext: () => ({sharedCenter: node("shared"), windowId: "main", focusRegion: "graph"}), ...extra});
 
+test('explicit center activation is a finite invocation intent, preserving placeholder-open choices',()=>{
+ assert.equal(api.validActionArguments('node.activate',undefined),true);
+ assert.equal(api.validActionArguments('node.activate',{intent:'destination'}),true);
+ for(const args of [{intent:'root-anywhere'},{intent:true},{intent:'destination',chooseFolder:true},{root:'B'}])
+  assert.equal(api.validActionArguments('node.activate',args),false);
+ assert.equal(api.validActionArguments('node.open',{chooseFolder:true,preserveCenter:true}),true);
+ assert.equal(api.validActionArguments('node.open',{intent:'destination'}),false);
+});
+
 test("document-sync commands capture their originating surface and its center independently of shared history",async()=>{
  let preferred="B";const calls=[],app=manager({readCommandContext:()=>({sharedCenter:node("global-saved"),windowId:"main",preferredSurfaceId:preferred}),implementations:Object.fromEntries(["document.sync-from-center","center.sync-from-document","center.focus-active-note"].map(id=>[id,implementation(context=>{calls.push({id,surface:context.surfaceId,node:context.target.kind==="node"?context.target.node.identity:null});return{status:"completed"};})]))});
  app.registerSurface({id:"A",generation:1,readSnapshot:()=>snapshot(node("A"))});app.registerSurface({id:"B",generation:2,readSnapshot:()=>snapshot(node("B"))});

@@ -418,6 +418,24 @@ for (const file of [
   "src/application/PlexEditorBindings.ts",
   "src/ui/plexViews/occurrenceEditors.ts",
   "src/core/plex/views/registry.ts",
+  "src/core/plex/views/presentation.ts",
+  "src/core/plex/views/decorations.ts",
+  "src/core/plex/views/facets/contracts.ts",
+  "src/core/plex/views/propertyAssignment.ts",
+  "src/core/plex/views/dropTargets.ts",
+  "src/core/plex/views/facets/assignment.ts",
+  "src/ui/CanvasPropertyAssignmentActions.ts",
+  "src/ui/CanvasPropertyAssignmentModal.ts",
+  "src/core/plex/views/facets/templates.ts",
+  "src/core/plex/views/facets/validation.ts",
+  "src/core/plex/views/facets/configuration.ts",
+  "src/core/plex/views/facets/state.ts",
+  "src/core/plex/views/facets/classification.ts",
+  "src/core/plex/views/facets/rules.ts",
+  "src/core/plex/views/sections.ts",
+  "src/core/plex/views/facets/labels.ts",
+  "src/core/plex/views/facets/projection.ts",
+  "src/core/plex/views/facets/layout.ts",
   "src/ui/plexViews/builtins.ts",
   "src/ui/KplexDocumentSession.ts",
   "src/core/plex/viewPresentation.ts",
@@ -560,7 +578,24 @@ for (const file of [
   "src/core/plex/actionPreferences.ts",
   "src/core/plex/typographyPreferences.ts",
   "src/core/plex/views/configuration.ts",
+  "src/core/plex/views/configurationContracts.ts",
+  "src/core/plex/views/configurationValues.ts",
+  "src/core/plex/views/configurationPaths.ts",
+  "src/core/plex/views/configurationMigrations.ts",
   "src/ui/plexViews/settingsContributions.ts",
+  "src/ui/plexViews/managerContracts.ts",
+  "src/ui/plexViews/facets/FacetPresetManager.ts",
+  "src/ui/plexViews/facets/FacetPresetEditor.ts",
+  "src/ui/predicates/conditionChoices.ts",
+  "src/ui/predicates/PredicateConditions.tsx",
+  "src/ui/ObsidianIcon.tsx",
+  "src/ui/predicates/PredicateRuleEditor.tsx",
+  "src/ui/predicates/predicateMessages.ts",
+  "src/ui/plexViews/sections.ts",
+  "src/ui/plexViews/scene.ts",
+  "src/ui/plexViews/facets/FacetPresetRemoval.ts",
+  "src/ui/plexViews/contributionContracts.ts",
+  "src/ui/plexViews/contributionValidation.ts",
   "src/ui/plexViews/mindmap/settings.ts",
   "src/ui/plexViews/labels.ts",
   "src/ui/plexViews/classic/settings.ts",
@@ -597,6 +632,13 @@ for (const file of [
   "src/core/plex/views/areaLayout.ts",
   "src/core/plex/views/mindmap/actions.ts",
   "src/core/plex/views/contracts.ts",
+  "src/core/plex/noteProperties.ts",
+  "src/core/plex/views/wuxing/classification.ts",
+  "src/core/plex/views/wuxing/configuration.ts",
+  "src/core/plex/views/wuxing/projection.ts",
+  "src/core/plex/views/wuxing/layout.ts",
+  "src/core/plex/views/wuxing/definition.ts",
+  "src/ui/plexViews/wuxing/settings.ts",
   "src/ui/components/collectionWindow.ts",
 ]) compile(file);
 
@@ -605,6 +647,12 @@ compile("src/core/plex/viewPresentation.ts");
 compile("src/ui/viewProfile.ts", "src/ui/viewProfileUnderTest.ts");
 
 const obsidianModuleDir = join(temp, "node_modules/obsidian");
+// Native preset contributions now import shared React condition controls. Forward the real
+// installed dependencies from this owned emitted-module fixture; only Obsidian remains finite.
+for (const [name, entry] of [["react/index.js", "react"], ["react/jsx-runtime.js", "react/jsx-runtime"], ["react-dom/client.js", "react-dom/client"]]) {
+  const target = join(temp, "node_modules", name);mkdirSync(dirname(target), {recursive: true});
+  writeFileSync(target, `module.exports = require(${JSON.stringify(require.resolve(entry))});\n`);
+}
 mkdirSync(obsidianModuleDir, { recursive: true });
 writeFileSync(join(obsidianModuleDir, "index.js"), String.raw`
 class TAbstractFile {
@@ -5066,8 +5114,9 @@ try {
     const edgeJs = ts.transpileModule(plexGraphSource.slice(markerStart, markerEnd) + plexGraphSource.slice(edgeStart, edgeEnd), {
       compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None, jsx: ts.JsxEmit.React },
     }).outputText;
-    const Edge = new Function("React", "LinkDirection", "gatesForEdge", "gatePoint", "edgeGeometry", "alphaHexToCss", "relationLabel", "NATIVE_LINK_STROKE", "NATIVE_LINK_TEXT", "DEFAULT_RENDERED_LINK_WIDTH", `${edgeJs}; return Edge;`)(
+    const Edge = new Function("React", "LinkDirection", "edgePhysicalOccurrence", "gatesForEdge", "gatePoint", "edgeGeometry", "alphaHexToCss", "relationLabel", "NATIVE_LINK_STROKE", "NATIVE_LINK_TEXT", "DEFAULT_RENDERED_LINK_WIDTH", `${edgeJs}; return Edge;`)(
       { createElement: (type, props, ...children) => ({ type, props, children }) }, LinkDirection,
+      require(join(temp, "src/ui/plexViews/scene.js")).edgePhysicalOccurrence,
       () => ({ source: "left", target: "right" }), () => ({ x: 0, y: 0 }),
       () => ({ d: "M0 0L1 1", midpoint: { x: 0, y: 0 } }), value => value, value => value,
       require(join(temp, "src/index/style.js")).NATIVE_LINK_STROKE, require(join(temp, "src/index/style.js")).NATIVE_LINK_TEXT,

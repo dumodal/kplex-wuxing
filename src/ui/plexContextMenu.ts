@@ -6,6 +6,8 @@
 import { Menu } from "obsidian";
 import type { ActionId } from "../core/plex/actions";
 import type { Translator } from "../lang";
+import type {CapturedCanvasViewMenuItem} from "./plexViews/contributionContracts";
+import {appendCanvasViewMenu} from "./plexViews/contributionMenu";
 
 /** Build the bare-canvas menu with checked display modes and support reporting as the last item. */
 export function createPlexContextMenu(options: {
@@ -17,6 +19,7 @@ export function createPlexContextMenu(options: {
   openSettings: () => void;
   chooseBackground: () => void;
   reportBug: () => void;
+  contributions?: readonly CapturedCanvasViewMenuItem[];
 }): Menu {
   const { translate, runAction } = options;
   const menu = new Menu();
@@ -34,6 +37,7 @@ export function createPlexContextMenu(options: {
     .onClick(/** Fullscreen remains independent of Zen. */ () => runAction("view.fullscreen.toggle")));
   menu.addItem(/** Reuse Obsidian's native color control through the caller's owned dialog. */ item => item
     .setTitle(translate("actions.canvasBackground")).setIcon("palette").onClick(options.chooseBackground));
+  if (options.contributions?.length) {menu.addSeparator(); appendCanvasViewMenu(menu, options.contributions, translate);}
   menu.addSeparator();
   menu.addItem(/** Invoke support synchronously so its clipboard writer retains native user activation. */ item => item
     .setTitle(translate("support.reportTitle")).setIcon("bug").onClick(options.reportBug));

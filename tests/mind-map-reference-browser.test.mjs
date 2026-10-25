@@ -1,0 +1,33 @@
+/** Real shared node click/selection/reveal with a bounded anonymous ancestor cycle. Production
+ * vault observation remains strictly read-only; this fixture owns every mutation below. */
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {chromiumHarness} from './support/browserTypeScript.mjs';
+import {plexViewBrowserModules} from './support/plexViewBrowser.mjs';
+import {canvasSceneFixture} from './support/canvasSceneFixture.mjs';
+const output=await plexViewBrowserModules({captureNotices:true});
+
+test('cycle click reveals the genuine earlier occurrence and explains it without attention/root/editor/source changes',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ const graph={'A.md':['B.md'],'B.md':['C.md'],'C.md':['B.md']};
+ index.neighbours=(page,role)=>role==='child'?(graph[page.path]??[]).map(path=>({page:pages.get(path),role,relationType:1,typeDefinition:'Related',linkDirection:1})):[];
+ const definition=M.builtInPlexViews.resolve('mindmap'),ui=await mount(definition);
+ const earlier=JSON.stringify(['A.md','B.md']),middle=JSON.stringify(['A.md','B.md','C.md']),reference=JSON.stringify(['A.md','B.md','C.md','B.md']);
+ ui.session.updateState({version:1,scope:'A.md',initialGenerations:1,expanded:[earlier,middle],collapsed:[],sides:{}});ui.render();await wait();await wait();
+ const cards=()=>[...ui.container.querySelectorAll('.kplex-thought')],find=id=>cards().find(el=>el.dataset.kplexKeyboardId===id);
+ const source=find(earlier),repeated=find(reference);check(source&&repeated&&source!==repeated,'Independent exact occurrences exist');
+ const input=document.createElement('input');document.body.append(input);input.value='Unsaved native-like control';input.focus();input.setSelectionRange(7,7);
+ const before={state:JSON.stringify(ui.session.state),attention:ui.props.activePath,root:ui.session.layoutRoot('A.md'),acquisitions:work.acquisitions,editors:JSON.stringify(ui.session.editors.bindings)};
+ M.flushSync(()=>repeated.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true})));await wait();
+ check(find(earlier).classList.contains('is-keyboard-selected'),'Nearest ancestor occurrence revealed/selected');
+ check(!find(reference).classList.contains('is-keyboard-selected'),'Reference must not remain the selected occurrence');
+ check(window.testNotices?.length===1&&window.testNotices[0].message===plugin.translator('mindmap.cycleReference')&&window.testNotices[0].duration===5000,'Localized cycle explanation appears once');
+ check(JSON.stringify(ui.session.state)===before.state&&ui.props.activePath===before.attention&&ui.session.layoutRoot('A.md')===before.root,'No fold, attention or root mutation');
+ check(JSON.stringify(ui.session.editors.bindings)===before.editors,'No editor retarget');check(document.activeElement===input&&input.selectionStart===7&&input.value==='Unsaved native-like control','No focus/caret/content change');
+ check(work.acquisitions===before.acquisitions&&work.body===0&&work.scans===0,'Reveal adds no source demand/body/scan');
+ ui.session.setRoot('B.md');M.flushSync(()=>repeated.dispatchEvent(new MouseEvent('click',{bubbles:true})));
+ check(window.testNotices.length===1,'Changed root cannot follow a previous scene reference');
+ ui.session.select('classic');M.flushSync(()=>repeated.dispatchEvent(new MouseEvent('click',{bubbles:true})));
+ check(window.testNotices.length===1,'Retired view cannot follow an old reference');input.remove();ui.close();return true})()`),true)}finally{await host.cleanup()}
+});

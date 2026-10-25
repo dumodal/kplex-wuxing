@@ -1,6 +1,7 @@
 /** Finite static internal registration; definitions carry policy, never per-window mutable instances. */
-import type {PlexViewDefinition} from "./contracts";
+import {CANVAS_VIEW_API_VERSION, type PlexViewDefinition} from "./contracts";
 import {validateViewConfigurationSchema} from "./configuration";
+import {boundedViewState} from "./state";
 
 export class PlexViewRegistry {
   private readonly definitions = new Map<string, PlexViewDefinition>();
@@ -8,9 +9,20 @@ export class PlexViewRegistry {
   /** Reject ambiguous IDs/versions before any native surface is constructed. */
   constructor(definitions: readonly PlexViewDefinition[], readonly fallbackId = "classic") {
     for (const definition of definitions) {
-      if (!/^[a-z][a-z0-9.-]{0,79}$/.test(definition.id) || definition.version !== 1 || this.definitions.has(definition.id)) {
+      if (!/^[a-z][a-z0-9.-]{0,79}$/.test(definition.id) || definition.version !== CANVAS_VIEW_API_VERSION || this.definitions.has(definition.id)) {
         throw new Error("Invalid or duplicate internal Plex view definition");
       }
+      if (typeof definition.labelKey !== "string" || !definition.labelKey || definition.labelKey.length > 128
+        || typeof definition.icon !== "string" || !/^[a-z][a-z0-9-]{0,79}$/.test(definition.icon)
+        || !definition.capabilities || typeof definition.capabilities !== "object" || Array.isArray(definition.capabilities)
+        || [definition.capabilities.sections, definition.capabilities.descendants, definition.capabilities.editor,
+          definition.capabilities.compact, definition.capabilities.properties, definition.capabilities.badges].some(/** Omitted optional capabilities are unavailable. */ value => value !== undefined && typeof value !== "boolean")
+        || typeof definition.restoreState !== "function" || typeof definition.project !== "function" || typeof definition.layout !== "function"
+        || definition.reduceState !== undefined && typeof definition.reduceState !== "function"
+        || definition.colorReferences !== undefined && typeof definition.colorReferences !== "function"
+        || definition.propertyAssignments !== undefined && typeof definition.propertyAssignments !== "function"
+        || definition.propertyDependencies !== undefined && typeof definition.propertyDependencies !== "function"
+        || definition.defaultState !== null && boundedViewState(definition.defaultState) === null) throw new Error("Invalid canvas view policy contract");
       if (definition.configuration) validateViewConfigurationSchema(definition.configuration);
       if (definition.editorHosting !== undefined && (definition.editorHosting !== "occurrence" || !definition.capabilities.editor)) {
         throw new Error("Unsupported internal editor hosting policy");

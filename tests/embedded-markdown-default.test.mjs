@@ -175,6 +175,25 @@ test('explicit native close saves the exact editor once before detaching and coa
  }finally{context.cleanup()}
 });
 
+test('saved-buffer guard covers ordinary and isolated native Markdown editors without saving or retargeting',async()=>{
+ const context=fixture({path:'B.md',bridgePresent:false});
+ try{
+  context.app.textView=true;context.app.nativeFile=context.file;context.app.saves=0;await context.controller.open(context.file,'source');
+  const embedded=context.app.embeddedLeaf.view,View=embedded.constructor,ordinary=Object.assign(new View(),{file:context.file,getViewType:()=> 'markdown',getViewData:()=> 'saved'});
+  let buffer='saved',ordinaryLeaves=[{view:ordinary}];embedded.getViewData=()=>buffer;
+  context.app.workspace.iterateAllLeaves=callback=>ordinaryLeaves.forEach(callback);
+  assert.equal(modules.exports.markdownBuffersMatchSaved(context.app,context.file,'saved'),true);
+  buffer='saved\nbody';ordinary.getViewData=()=> 'saved\nbody';assert.equal(modules.exports.markdownBuffersMatchSaved(context.app,context.file,'saved\r\nbody'),true,'Windows CRLF normalization is not an unsaved content edit');
+  buffer='saved';ordinary.getViewData=()=> 'saved';
+  buffer='unsaved embedded';assert.equal(modules.exports.markdownBuffersMatchSaved(context.app,context.file,'saved'),false);
+  buffer='saved';ordinary.getViewData=()=> 'unsaved ordinary';assert.equal(modules.exports.markdownBuffersMatchSaved(context.app,context.file,'saved'),false);
+  ordinaryLeaves=[];assert.equal(modules.exports.markdownBuffersMatchSaved(context.app,context.file,'saved'),true);
+  embedded.getViewData=()=>{throw Error('Retired native buffer')};assert.equal(modules.exports.markdownBuffersMatchSaved(context.app,context.file,'saved'),false);
+  assert.equal(context.app.saves,0);assert.equal(context.app.embeddedLeaf.view,embedded);assert.equal(context.app.detaches,0);
+  context.controller.dispose();assert.equal(modules.exports.markdownBuffersMatchSaved(context.app,context.file,'saved'),true,'Disposed isolated leaf is no longer retained or queried');
+ }finally{context.cleanup()}
+});
+
 test('rejected native save retains its view and allows a later explicit close without a custom writer',async()=>{
  const context=fixture({path:'B.md',bridgePresent:false});
  try{

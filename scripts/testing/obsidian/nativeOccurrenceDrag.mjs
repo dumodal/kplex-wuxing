@@ -14,7 +14,12 @@ export async function acceptNativeOccurrenceDrag({app,p,c,host,compass,restores,
  manager.onDragStart=function(...args){const result=start.apply(this,args),source=this.draggable?.source;if(source?.kind==='kplex-node-link')captured.push({trusted:args[0].isTrusted,id:source.occurrence?.id,origin:source.occurrence?.relationship?.origin.identity,role:source.role});return result};
  restores.push(()=>{manager.onDragStart=start;owner.registry=registry});
  owner.registry=new registry.constructor([...registry.available,definition]);owner.select(definition.id);owner.setRoot(ids.r);
- await until(()=>nodes(host).filter(node=>node.dataset.kplexPath===ids.b).length===2&&!root(host).querySelector('.kplex-view-error'),'Two same-role native occurrences absent');await act(host,'view.fit');
+ await until(()=>nodes(host).filter(node=>node.dataset.kplexPath===ids.b).length===2&&!root(host).querySelector('.kplex-view-error'),'Two same-role native occurrences absent');
+ // Creating the second pane can resize the source after the first scene commits. Admit a usable
+ // actual viewport before explicitly fitting; native input must hit the source card itself.
+ await app.workspace.revealLeaf(host);
+ await until(()=>{const viewport=root(host).querySelector('.kplex-plex');c.progress={...c.progress,sourceViewport:{width:viewport?.clientWidth,height:viewport?.clientHeight,root:root(host).getBoundingClientRect().toJSON()}};return viewport?.clientWidth>=350&&viewport.clientHeight>=300},'Usable source canvas required before native drag fit');
+ await wait(160);await act(host,'view.fit');
  const node=id=>nodes(host).find(element=>element.dataset.kplexKeyboardId===id),file=id=>app.vault.getFileByPath(id);
  const identities=Object.values(ids).map(id=>({id,canonical:p.index.allPages().find(page=>page.path===id),file:file(id)}));
  check(identities.every(row=>row.canonical),'Published fixture endpoints absent');
@@ -38,20 +43,41 @@ export async function acceptNativeOccurrenceDrag({app,p,c,host,compass,restores,
  cases.push({id:'trusted-native-second-occurrence-additive-save',sourceId:source.id,canonicalOriginMatched:true,mode:options.mode,canonicalAndNativeIdentityRetained:true,originalChildDeclarationRetained:true,otherSourceBytesRetained:true,targetBytesRetained:true});
  c.progress={...c.progress,phase:'native-text-drop-restore-production'};owner.select(prior);owner.registry=registry;owner.setRoot(path('R'));await until(()=>owner.definition.id==='mindmap'&&node('root'),'Production Mind Map did not restore');await act(host,'view.fit');
  await until(()=>!p.index.hasPendingSemanticPreparation()&&!p.index.hasActiveSemanticPreparation(),'Native additive source maintenance did not settle');
- c.progress={...c.progress,phase:'native-parent-child-relink'};check(await p.index.prepareRelationshipPair(path('R'),path('P')),'Relink fixture pair not ready');await until(()=>!p.index.hasPendingSemanticPreparation()&&!p.index.hasActiveSemanticPreparation(),'Relink fixture preparation pending');await wait(120);
- for(const [gate,role]of [['top','parent'],['bottom','child']]){
-  await act(host,'view.fit');const source=()=>nodes(host).find(element=>element.dataset.kplexPath===path('P'));
-  await until(()=>source()&&node('root')?.dataset.kplexPath===path('R'),'Production relink source/root absent');
-  let geometry,stableSince=Date.now();await until(()=>{const a=source()?.getBoundingClientRect(),b=node('root')?.querySelector('[data-kplex-gate=\"'+gate+'\"]')?.getBoundingClientRect(),next=JSON.stringify([a?.toJSON(),b?.toJSON(),root(host).querySelector('.kplex-camera')?.style.transform]);if(next!==geometry){geometry=next;stableSince=Date.now()}return source()?.isConnected&&a?.width>0&&b?.width>0&&Date.now()-stableSince>=120},'Relink source/target geometry did not settle');
-  const count=opened.length;await drag(source,()=>node('root').querySelector('[data-kplex-gate="'+gate+'"]'));
-  await until(()=>opened.length===count+1&&opened[count].modal.modalEl.isConnected,'Native relink composer absent');const {modal,options}=opened[count];
-  c.progress={...c.progress,relinkAttempt:{gate,role,mode:options.mode,origin:options.origin.path,target:options.fixedTarget?.path,pairReady:p.index.isSemanticWriteReady(path('R'),path('P'))}};
-  check(options.mode==='relink'&&options.origin.path===path('R')&&options.fixedTarget.path===path('P')&&options.semanticRole===role,'Production parent/child move lost exact context');
-  await until(()=>modal.modalEl.querySelector('.kplex-relation-actions button.mod-cta')?.disabled===false,'Native relink save unavailable');await clickNative(()=>modal.modalEl.querySelector('.kplex-relation-actions button.mod-cta'));
-  await until(()=>!modal.modalEl.isConnected&&p.index.isSemanticWriteReady(path('R'),path('P'))&&p.index.neighbours(p.index.get(path('R')),role).some(row=>row.page.path===path('P')),'Native relink was not published');
-  await until(()=>!root(host).querySelector('.kplex-relationship-updating'),'Published native relink left updating feedback stuck');check(owner.layoutRoot(path('C'))===path('R'),'Native relink changed map root');c.progress={...c.progress,relinkSaves:[...(c.progress.relinkSaves??[]),{role,canonicalPublished:true,updatingRetired:true}]};
+ /** Reuse the same actual native relink/save/publication oracle across registered view policies. */
+ async function relinkRoundtrip(canvas,view){
+  c.progress={...c.progress,phase:'native-parent-child-relink',relinkView:view};
+  check(await p.index.prepareRelationshipPair(path('R'),path('P')),'Relink fixture pair not ready');
+  await until(()=>!p.index.hasPendingSemanticPreparation()&&!p.index.hasActiveSemanticPreparation(),'Relink fixture preparation pending');
+  await app.workspace.revealLeaf(canvas);await wait(160);
+  const center=()=>nodes(canvas).find(element=>element.dataset.kplexPath===path('R'));
+  for(const [gate,role]of [['top','parent'],['bottom','child']]){
+   await act(canvas,'view.fit');
+   // Fitting empty phase regions can make a real card smaller than the OS drag threshold.
+   // Use the shipped zoom action before the gesture, rather than manufacturing a drag payload.
+   for(let step=0;step<14;step++){
+    const scale=Number(root(canvas).querySelector('.kplex-camera')?.style.transform.match(/scale\(([^)]+)\)/)?.[1]);
+    if(scale>=0.65)break;await act(canvas,'view.zoom-in');
+   }
+   const source=()=>nodes(canvas).find(element=>element.dataset.kplexPath===path('P'));
+   await until(()=>source()&&center(),'Production relink source/root absent');
+   source().scrollIntoView({block:'nearest',inline:'nearest'});await wait(120);
+   let geometry,stableSince=Date.now();
+   await until(()=>{const a=source()?.getBoundingClientRect(),b=center()?.querySelector('[data-kplex-gate="'+gate+'"]')?.getBoundingClientRect(),next=JSON.stringify([a?.toJSON(),b?.toJSON(),root(canvas).querySelector('.kplex-camera')?.style.transform]);if(next!==geometry){geometry=next;stableSince=Date.now()}return source()?.isConnected&&a?.width>0&&b?.width>0&&Date.now()-stableSince>=120},'Relink source/target geometry did not settle');
+   const count=opened.length;await drag(source,()=>center().querySelector('[data-kplex-gate="'+gate+'"]'));
+   await until(()=>opened.length===count+1&&opened[count].modal.modalEl.isConnected,'Native relink composer absent');const {modal,options}=opened[count];
+   c.progress={...c.progress,relinkAttempt:{view,gate,role,mode:options.mode,origin:options.origin.path,target:options.fixedTarget?.path,pairReady:p.index.isSemanticWriteReady(path('R'),path('P'))}};
+   check(options.mode==='relink'&&options.origin.path===path('R')&&options.fixedTarget.path===path('P')&&options.semanticRole===role,'Production parent/child move lost exact context');
+   await until(()=>modal.modalEl.querySelector('.kplex-relation-actions button.mod-cta')?.disabled===false,'Native relink save unavailable');await clickNative(()=>modal.modalEl.querySelector('.kplex-relation-actions button.mod-cta'));
+   await until(()=>!modal.modalEl.isConnected&&p.index.isSemanticWriteReady(path('R'),path('P'))&&p.index.neighbours(p.index.get(path('R')),role).some(row=>row.page.path===path('P')),'Native relink was not published');
+   await until(()=>!root(canvas).querySelector('.kplex-relationship-updating'),'Published native relink left updating feedback stuck');
+   check(session(canvas).definition.id===view&&canvas.view.documentSession.centerPath===path('R')||view==='mindmap'&&owner.layoutRoot(path('C'))===path('R'),'Native relink changed its navigation context');
+   const field=p.defaultOntologyField(role),raw=app.metadataCache.getFileCache(file(path('R')))?.frontmatter?.[field],values=Array.isArray(raw)?raw:[raw],saved=await app.vault.read(file(path('R')));
+   check(values.some(value=>typeof value==='string'&&app.metadataCache.getFirstLinkpathDest(value.replace(/^\[\[/,'').replace(/\]\]$/,'').split('|')[0],path('R'))===file(path('P'))&&saved.includes(value)),'Published relation missing from saved metadata');
+   c.progress={...c.progress,relinkSaves:[...(c.progress.relinkSaves??[]),{view,role,canonicalPublished:true,persistedMetadata:true,updatingRetired:true}]};
+  }
+  cases.push({id:'trusted-native-parent-child-relink-feedback-settles',view,actualSaves:2,rootRetained:true,canonicalRolesConfirmed:true,persistedMetadataConfirmed:true,updatingFeedbackRetired:true});
  }
- cases.push({id:'trusted-native-parent-child-relink-feedback-settles',actualSaves:2,rootRetained:true,canonicalRolesConfirmed:true,updatingFeedbackRetired:true});
+ await relinkRoundtrip(host,'mindmap');
  c.progress={...c.progress,phase:'native-text-drop-open-editor'};const expanded=await act(host,'editor.expand',undefined,{kind:'explicit',node:{identity:path('R'),path:path('R'),kind:'file'},occurrenceId:'root'});check(expanded.status==='completed','Native text-drop editor unavailable');
  await until(()=>instance(host)?.view.editor&&root(host).querySelector('.kplex-central-editor-overlay .cm-content'),'Native source editor absent');
  c.progress={...c.progress,phase:'native-text-drop-editor-ready'};const leaf=instance(host),editor=leaf.view.editor,before=editor.getValue(),binding=owner.editors.bindings[0].id;
@@ -65,4 +91,9 @@ export async function acceptNativeOccurrenceDrag({app,p,c,host,compass,restores,
  const closed=await act(host,'editor.collapse');check(closed.status==='completed','Native text-drop save/collapse failed');
  check(await app.vault.read(file(path('R')))===after,'Native text-drop edits were not durably saved');
  cases.push({id:'trusted-native-occurrence-editor-text-drop',sameNativeInstance:true,sameBinding:true,rootRetained:true,durableSave:true});
+ p.notifyNavigation(path('R'),compass);await until(()=>compass.view.documentSession.centerPath===path('R')&&nodes(compass).some(element=>element.dataset.kplexPath===path('P')),'Compass relink fixture absent');
+ await relinkRoundtrip(compass,'classic');
+ owner.select('wuxing');p.notifyNavigation(path('R'),host);await until(()=>owner.definition.id==='wuxing'&&host.view.documentSession.centerPath===path('R')&&nodes(host).some(element=>element.dataset.kplexPath===path('P')),'Wu Xing relink fixture absent');
+ await relinkRoundtrip(host,'wuxing');
+
 }

@@ -109,6 +109,16 @@ test("English catalog is strict, typed at source, and remains the fallback", () 
   assert.equal(localization.createTranslator("zz-ZZ")("command.openGraph"), "Open canvas", "unknown locale must fall back to English");
 });
 
+test("Wu Xing labels retain their actual Unicode translations", () => {
+  for (const [locale, label] of Object.entries({en:"Water",de:"Wasser",es:"Agua",fr:"Eau",ja:"水",nl:"Water",ru:"Вода","zh-TW":"水"})) {
+    const translate=localization.createTranslator(locale);
+    assert.equal(translate("wuxing.water"),label);
+    for(const key of ["wuxing.about","wuxing.unmapped","wuxing.conflicting","wuxing.unavailable"])
+      assert(!translate(key).includes("?"),`${locale} ${key} must not contain encoding replacement characters`);
+  }
+  assert.equal(localization.createTranslator("en")("wuxing.unavailable"),"Unclassified · Unavailable");
+});
+
 /** Named reference metadata reflects each consumer's semantics, not a global parameter-name heuristic. */
 test("reference metadata distinguishes literal source target field names from descriptive labels", () => {
   const translate = localization.createTranslator("en"), source = require(join(portableTemp,"src/lang/en.js")).englishCatalog;
@@ -506,7 +516,7 @@ test("physical positions embedded in sentences use catalog labels", () => {
 
 
 test("structured parser failures preserve accepted English and support future localized feedback", () => {
-  const sourcePath = join(root, "src/ui/PlexFilter.tsx");
+  const sourcePath = join(root, "src/ui/predicates/predicateMessages.ts");
   const file = ts.createSourceFile(sourcePath, readFileSync(sourcePath, "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const declarations = file.statements.filter((node) => ts.isFunctionDeclaration(node) &&
     ["graphLensExpectedTokenLabel", "graphLensValidationMessage"].includes(node.name?.text));

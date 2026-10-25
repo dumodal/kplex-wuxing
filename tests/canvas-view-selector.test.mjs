@@ -41,10 +41,10 @@ test('a one-definition panel shows labelled disabled Compass and no test definit
  `),true);
 });
 
-test('production selection exposes only localized Compass and Mind Map definitions',async()=>{
+test('production selection exposes localized Compass, Mind Map and Wu Xing definitions',async()=>{
  assert.equal(await scenario(`
  const owner=session('a',M.builtInPlexViews),ui=mount(owner);ui.open();await waitFor(ui.select);
- equal([...ui.select().options].map(option=>[option.value,option.textContent]),[['classic','Compass'],['mindmap','Mind Map']],'Production definitions only');
+ equal([...ui.select().options].map(option=>[option.value,option.textContent]),[['classic','Compass'],['mindmap','Mind Map'],['wuxing','Facets']],'Production definitions only');
  check(!ui.select().disabled,'Implemented second production definition enables selection');ui.change('mindmap');
  check(ui.select().value==='mindmap'&&owner.definition.navigation==='rooted'&&owner.definition.editorHosting==='occurrence','Actual selected Mind Map contract');
  equal([writes.sources,writes.lenses,writes.filter,writes.settings],[0,0,0,0],'Registration/selection alone never acquires or mutates shared owners');ui.close();
@@ -131,5 +131,14 @@ test('two canvas panels retain owning-document and session identity across focus
  check(first.panel().querySelector('label[for="'+first.select().id+'"]')&&second.panel().querySelector('label[for="'+second.select().id+'"]'),'Each document has its own accessible label');
  equal([writes.lenses,writes.filter,writes.settings,writes.sources],[0,0,0,0],'Cross-document switching adds no unrelated work');
  first.close();check(second.panel()?.isConnected,'One canvas teardown cannot close the other panel');second.close();iframe.remove();
+ `),true);
+});
+
+
+test('production registry exposes all three accepted definitions through the same captured selector',async()=>{
+ assert.equal(await scenario(`
+ const owner=session('a',M.builtInPlexViews),ui=mount(owner);ui.open();await waitFor(ui.select);
+ equal([...ui.select().options].map(option=>[option.value,option.textContent]),[['classic','Compass'],['mindmap','Mind Map'],['wuxing','Facets']],'Production registry options');
+ check(!ui.select().disabled,'Implemented definitions selectable');ui.change('wuxing');check(owner.definition.id==='wuxing','Captured owner selects Wu Xing');ui.close();
  `),true);
 });

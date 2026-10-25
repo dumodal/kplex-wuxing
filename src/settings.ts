@@ -64,7 +64,7 @@ import {
 } from "obsidian";
 import type KplexPlugin from "./main";
 import {builtInCanvasViewSettings, canvasViewControl, type CanvasViewSettingsRegistry} from "./ui/plexViews/settingsContributions";
-import {readViewConfiguration} from "./core/plex/views/configuration";
+import {readViewConfiguration, readViewConfigurationAt, viewConfigurationUpdateDomain} from "./core/plex/views/configuration";
 import { RelationType, type Arrowhead, type Hierarchy, type LinkStyle, type NodeStyle, type Role } from "./types";
 import { sanitizeGraphLensDefinitions, type GraphLensDefinition } from "./lens/GraphLens";
 import { collectionWindow } from "./ui/components/collectionWindow";
@@ -1846,6 +1846,7 @@ export class KplexSettingTab extends PluginSettingTab {
     const owner = this.kplexPlugin.captureAppearanceOwner();
     const plugin = this.kplexPlugin;
     const dialog = new ColorPaletteModal(this.app, {...this.styleColorContext(owner), read: () => plugin.settings,
+      protectedUsage: () => this.viewSettings.paletteUsage(plugin.settings.canvasViewSettings),
       readOnly: () => plugin.settings.colorPreferencesFuture !== undefined || plugin.settings.appearanceThemesFuture !== undefined || !plugin.isAppearanceOwnerCurrent(owner),
       canDelete: () => plugin.settings.graphLensesColorFuture === undefined && !appearanceHasUnsupportedColors(plugin.settings),
       write: edit => plugin.updateStyleSettings(edit, owner), subscribe: changed => subscribeAppearanceSources(listener => plugin.index.subscribePresentation(listener), () => plugin.settings, changed),
@@ -2046,6 +2047,33 @@ export class KplexSettingTab extends PluginSettingTab {
       create: /** Creating selects only after the same queued snapshot succeeds. */ (name, defaults, _current) => plugin.createAppearanceTheme(name, defaults, owner),
       closed: /** Unload/settings replacement releases precisely this manager and its children. */ () => this.colorDialogs.delete(dialog)});
     this.colorDialogs.add(dialog); dialog.open();
+  }
+
+  /** Instantiate one registered native manager with its own sparse settings and existing queue.
+   * The opening definition, appearance, incoming-entry epochs and modal lifetime stay captured. */
+  openCanvasViewManager(id: string, target?: string): boolean {
+    const plugin = this.kplexPlugin, definition = this.viewSettings.definition(id);
+    const factory = definition && this.viewSettings.contribution(definition)?.manager;
+    if (!definition || !factory || plugin.readCanvasViewConfiguration(id).status !== "available") return false;
+    const appearance = plugin.captureAppearanceOwner();
+    const registered = (): boolean => this.viewSettings.definition(id) === definition && plugin.isAppearanceOwnerCurrent(appearance);
+    const dialog = factory(this.app, {
+      colors: this.styleColorContext(appearance), configuration: () => plugin.readCanvasViewConfiguration(id),
+      read: address => readViewConfigurationAt(definition, plugin.settings.canvasViewSettings, address),
+      capture: address => {const incoming = plugin.receivedSettingsOwner(viewConfigurationUpdateDomain(definition, address));return () => registered() && incoming();},
+      subscribe: changed => plugin.index?.subscribePresentation(changed) ?? (() => {}),
+      suggestions: () => {
+        const catalogue = registered() ? plugin.index?.suggestionCatalog?.() : undefined;
+        return {properties: catalogue?.properties.slice(0, 512) ?? [], tags: catalogue?.tags.slice(0, 512) ?? [],
+          folders: catalogue?.folders.slice(0, 512) ?? [], noteTypes: catalogue?.noteTypes.slice(0, 512) ?? []};
+      },
+      save: async (address, edit, expected, current) => {
+        await plugin.updateCanvasViewConfiguration(id, address, edit, expected, () => registered() && current());
+        return {refreshPending: false};
+      }, closed: () => this.colorDialogs.delete(dialog),
+    }, target);
+    this.colorDialogs.add(dialog); dialog.open();
+    return true;
   }
 
   /** Enumerate the exact reviewed sources; palette definitions and non-color styling are never reset slots. */
@@ -2378,7 +2406,7 @@ export class KplexSettingTab extends PluginSettingTab {
               { name: translate("settings.ui.gate.counts"), desc: translate("settings.ui.show.the.number.of.currently.visible.relationships.besid"), control: { type: "toggle", key: "showNeighborCount" } },
             ]
           },
-          {type: "group", heading: translate("view.settingsViews"), items: this.viewSettings.pages({translate, areaTint: () => this.compassTintDefinition()})},
+          {type: "group", heading: translate("view.settingsViews"), items: this.viewSettings.pages({translate, areaTint: () => this.compassTintDefinition(), openManager: id => this.openCanvasViewManager(id)})},
         ]
       },
       {
@@ -2845,7 +2873,10 @@ export class KplexSettingTab extends PluginSettingTab {
   /** Map native control aliases to their established coherent settings owner. */
   private receivedControlDomain(key: string): string {
     const view = canvasViewControl(key);
-    if (view) return `canvasViewSettings:${view.id}:${view.field}`;
+    if (view) {
+      const definition = this.viewSettings.definition(view.id);
+      return definition ? viewConfigurationUpdateDomain(definition, view) : `canvasViewSettings:${view.id}:${view.field}`;
+    }
     if (key.startsWith("hierarchy.")) return "hierarchy";
     if (key.startsWith("typography.")) return "typographyProfiles";
     if (key.startsWith("layout.")) return "layoutProfiles";
@@ -2878,8 +2909,7 @@ export class KplexSettingTab extends PluginSettingTab {
     const view = canvasViewControl(key);
     if (view) {
       const definition = this.viewSettings.definition(view.id);
-      const configuration = definition && readViewConfiguration(definition, this.kplexPlugin.settings.canvasViewSettings);
-      return configuration?.status === "available" && Object.prototype.hasOwnProperty.call(configuration.values, view.field) ? configuration.values[view.field] : undefined;
+      return definition ? readViewConfigurationAt(definition, this.kplexPlugin.settings.canvasViewSettings, view).value : undefined;
     }
     const arrangementKey = this.lateralArrangementKey(key);
     if (arrangementKey) return this.kplexPlugin.settings.layoutProfiles[arrangementKey]?.lateralArrangement === "left";
@@ -2914,7 +2944,8 @@ export class KplexSettingTab extends PluginSettingTab {
     key = key.replace(/^received:\d+:/, "");
     const view = canvasViewControl(key);
     if (view) {
-      try {await this.kplexPlugin.updateCanvasViewSetting(view.id, view.field, value);}
+      try {if (view.path?.length) await this.kplexPlugin.updateCanvasViewConfiguration(view.id, view, {kind: "set", value});
+        else await this.kplexPlugin.updateCanvasViewSetting(view.id, view.field, value);}
       catch (error) {
         console.error("K-Plex view setting was not saved", error);
         // Native Settings deliberately preserves focused controls with an unchanged key.

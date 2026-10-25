@@ -3,10 +3,13 @@ import {useEffect, useId, useState, useSyncExternalStore} from "react";
 import type {PlexViewSession} from "../../application/PlexViewSession";
 import type {Translator} from "../../lang";
 import {viewLabel} from "./labels";
+import type {CanvasViewContributionController} from "./CanvasViewContributionController";
+import {TooltipButton} from "../components/TooltipButton";
+import {ObsidianIcon} from "../ObsidianIcon";
 
 /** Read the successful selection from the existing owner, including rejected or retired transitions. */
-export function PlexViewSelector({session, translate}: {
-  session: PlexViewSession; translate: Translator;
+export function PlexViewSelector({session, translate, contributions}: {
+  session: PlexViewSession; translate: Translator; contributions?: CanvasViewContributionController;
 }) {
   useSyncExternalStore(session.subscribe, session.getSnapshot);
   const selected = session.definition.id;
@@ -32,6 +35,11 @@ export function PlexViewSelector({session, translate}: {
         {definitions.map(definition => <option key={definition.id} value={definition.id}>{viewLabel(definition.labelKey, translate)}</option>)}
       </select>
     </label>
+    {contributions?.session === session && <TooltipButton className="kplex-icon-button" label={translate("view.settingsFor", {name: viewLabel(session.definition.labelKey, translate)})}
+      onClick={/** Repeated navigation captures a fresh command for this panel's actual view, never global focus. */ () => {
+        if (session.definition.id !== selected) {setRestriction("unavailable");return;}
+        void contributions.capture({kind: "settings"}).run().then(outcome => setRestriction(outcome.status === "completed" ? null : "unavailable"));
+      }}><ObsidianIcon name="settings" size={14} /></TooltipButton>}
     {restriction && <div id={`${id}-restriction`} role="status" className="kplex-lens-help">
       {translate(restriction === "editor" ? "view.editorTransitionBlocked" : "view.unavailable")}
     </div>}
