@@ -2,6 +2,7 @@
 
 /** Exercise measured parent controls, F4 destinations and bidirectional native body drops without installing a test view or writing outside the owned fixture. */
 export async function acceptMindMapInteractions({app,p,c,host,hosts,restores,path,root,session,nodes,act,check,wait,until,clickNative,cases,instance}) {
+ await until(()=>root(host)?.isConnected&&root(host).ownerDocument.defaultView===document.defaultView,'Interaction fixture is not mounted in the live main document');
  const doc=root(host).ownerDocument,win=doc.defaultView.require('@electron/remote').getCurrentWindow();
  /** Deliver actual owning-window keyboard events, including the public F4 shortcut. */
  const key=code=>{for(const type of ['keyDown','keyUp'])win.webContents.sendInputEvent({type,keyCode:code})};
@@ -19,6 +20,15 @@ export async function acceptMindMapInteractions({app,p,c,host,hosts,restores,pat
   }finally{doc.removeEventListener('drop',observe,true)}
  };
  const parentPanel=()=>root(host).querySelector('.kplex-zone-parent');
+ if(c.nativeDragOnly){
+  const compass=app.workspace.getLeaf('split');hosts.push(compass);await compass.setViewState({type:'k-plex-react-view',active:true});await compass.view.waitUntilReady();compass.view.centerPresentation.update({embedCentralNode:false});p.notifyNavigation(path('C'),compass);
+  await until(()=>compass.view.documentSession.centerPath===path('C')&&root(compass)?.isConnected,'Native drag-only Compass absent');await act(compass,'view.fit');
+  const opened=[],open=p.openRelationModal;
+  p.openRelationModal=function(options){check(options.origin.path.startsWith(path('').slice(0,-3))&&options.fixedTarget?.path.startsWith(path('').slice(0,-3)),'Non-fixture native drag relationship');const modal=open.call(this,options);opened.push({modal,options});return modal};
+  restores.push(()=>{p.openRelationModal=open;for(const value of opened)value.modal.close()});
+  await c.acceptNativeDrag({app,p,c,host,compass,restores,path,root,session,nodes,act,check,wait,until,clickNative,drag,opened,cases,instance});return;
+ }
+
  check(parentPanel(),'Measured parent area absent');check(Number(parentPanel().querySelector('.kplex-zone-count').textContent)===13,'Parent area lost available occurrences');
  const parentWidthBefore=parseFloat(parentPanel().style.width),childBefore=parseFloat(nodes(host).find(node=>node.dataset.kplexKeyboardId===JSON.stringify([path('R'),path('P')])).style.left);
  await act(host,'view.layout-controls');
