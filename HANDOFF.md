@@ -43,3 +43,5 @@ Publish coherent checkpoint, run final-source full verify:obsidian + native edit
 ## Partner220 agreement
 
 Read6394239125/6394251873/6394330896; Mac confirmed6394339805. Mac owns common area/drop/crosslink/notice seams and219. Windows owns classification/property/phase layout and bounded actual centralEditorNode x/y maximize/fit/reframe fixes, retaining Mac rooted/manual/restored/binding guards. Later compose numeric hierarchy fifth/default0 + optional property provider sixth reader, both cameras and framingOccurrence null fixture. No moving branch consumed, no M0 delivery gate for220. Publish exact commits/interfaces/evidence; reread partner at milestones.
+
+Full2e2fcbb failed before indexing assertions: isolated fixture inventory omitted new areaLayout. That real module added; UI bundler already includes crossLinks, no extra inventory needed. Timing guards unchanged. Corrected clean-head full/CI must pass.

@@ -299,7 +299,7 @@ IDs C00–C26 replace the draft's numbering; E00 and L00/L01 are inserted enviro
 | ID | Deliverable | Prerequisites | Lanes | Agent fit | Status / evidence |
 | --- | --- | --- | --- | --- | --- |
 | PR218 | Canvas/Compass settings and session-owned Views and lenses selector | Accepted PR215 | H/U/L/X | Host | Done - merged9987810 after clean-head full/native24 and CI467; Small restored. C15-C26 remain paused. |
-| PR219-M0 | Opt-in occurrence editor and rooted-session prerequisite | Accepted PR218 | H/U/L/X | Host | Active - bounded binding owner/policy first; native runtime/proof unsupported pending integration. Wu Xing independent. |
+| PR219-M0 | Opt-in occurrence editor and rooted-session prerequisite | Accepted PR218 | H/U/L/X | Host | Native occurrence/unchanged attention-host proof implemented; latest shared area/drop/cross-link closeout full/native/CI pending. Capacity one; Wu Xing independent. |
 | C00 | Baseline, conflicts, invariant inventory | — | G/I/P/U/X/M | Host | Review — Node 22 `verify`, inventory, exact-build CLI render/error smoke and maintainer's qualitative v1 graph inspection; v2 large-file fixture verified, but its runtime completion, representative interaction and cold/warm performance remain pending (see baseline doc) |
 | C01 | Behavior characterization and test seams | C00 | G/I/X | — | Done — canonical graph/evidence/scene fixture, pair comparison, stub guard and source-check map; Node 22 test/build pass |
 | C02 | Dependency rules, checker, PR verification and optional-host runner | C01 | H/O | — | Done — C02a/C02b local lanes pass; remote CI unverified |

@@ -25,3 +25,7 @@ Earlier `11da553` independently passed full verify:obsidian3,007 tests and [CI48
 Run final-source editor/session/Settings compatibility, full verify:obsidian and exact-head CI; observe the authorized production test build read-only; restore original disposable config/artifacts/open state and verify hashes. Review final architecture/action/lifecycle diff, publish/read back commits and coordinate concrete interfaces with220. Existing FileManager cache-gate and fresh-popout Sidecar creation limitations remain explicit; no unrelated215 work is claimed.
 
 The [45ms parser follow-up](parser-responsiveness-followup-2026-10-25.md) remains unproven: fixed isolated/full-file repetitions and no-work/80ms controls passed, but did not reproduce or attribute the historical55ms failure. Production parser and45/50ms guards are unchanged. No dedicated additional indexing performance campaign is started.
+
+## Full-suite inventory correction
+
+Clean committed2e2fcbb full verify:obsidian failed before indexing assertions: its isolated transpiled fixture inventory omitted new core/plex/views/areaLayout. That real module is now listed; the renderer cross-link helper is already included through its bundler and needs no inventory entry. No production code, timing helper, guard or assertion changed. The failed report/log remain preserved in /private/tmp/kplex-219-new-steer/full-2e2fcbb. Final corrected-head full/CI must pass independently.

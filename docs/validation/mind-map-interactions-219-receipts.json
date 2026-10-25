@@ -341,5 +341,13 @@
   },
   "timer": "Prior bounded follow-up did not reproduce55ms; production parser and45/50ms guards unchanged.",
   "productionNoteWrites": "Not permitted; production inspection/deployment remains pending for new source.",
-  "outerDisposableRestoration": "Pending until remaining native checks complete."
+  "outerDisposableRestoration": "Pending until remaining native checks complete.",
+  "fullSamples": [
+    {
+      "head": "2e2fcbb0c25c4be6755e43ba96c7a6692174392d",
+      "status": "failed",
+      "phase": "portable-verify",
+      "cause": "Isolated indexing transpile inventory omitted newly imported areaLayout. Add the real module; no production/timing/guard/assertion change. Cross-link UI bundler already follows imports."
+    }
+  ]
 }

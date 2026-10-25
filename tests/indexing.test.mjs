@@ -594,6 +594,7 @@ for (const file of [
   "src/core/plex/views/mindmap/occurrences.ts",
   "src/core/plex/views/mindmap/projection.ts",
   "src/core/plex/views/mindmap/layout.ts",
+  "src/core/plex/views/areaLayout.ts",
   "src/core/plex/views/mindmap/actions.ts",
   "src/core/plex/views/contracts.ts",
   "src/ui/components/collectionWindow.ts",
