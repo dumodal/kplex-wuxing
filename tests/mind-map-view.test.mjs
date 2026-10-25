@@ -106,7 +106,7 @@ test('fold/sides restoration is detached, bounded, future-safe and scoped to the
 test('type configuration validates exact ranges and leaves unavailable payloads inert',()=>{
  const defaults=M.mindMapConfiguration();assert.equal(defaults.initialGenerations,1);assert.equal(defaults.maximumOccurrences,256);
  assert.equal(M.mindMapConfiguration({status:'unavailable',reason:'unsupported'}),null);
- for(const values of [{maximumDepth:9},{initialGenerations:1.5},{maximumOccurrences:257},{arrangement:'unknown'},{verticalSpacing:NaN},{maximumDepth:null},{horizontalDensity:0},{verticalDensity:Infinity}])assert.equal(M.mindMapConfiguration({status:'available',values}),null);
+ for(const values of [{maximumDepth:9},{initialGenerations:1.5},{maximumOccurrences:257},{arrangement:'unknown'},{verticalSpacing:NaN},{maximumDepth:null},{horizontalDensity:0},{horizontalDensity:0.05},{verticalDensity:Infinity}])assert.equal(M.mindMapConfiguration({status:'available',values}),null);
 });
 
 test('Mind Map horizontal and vertical density independently compact measured gaps without changing root, occurrence identity or node/editor dimensions',()=>{
@@ -116,6 +116,9 @@ test('Mind Map horizontal and vertical density independently compact measured ga
  for(const row of p.occurrences){const a=base.positions.get(row.id),h=horizontal.positions.get(row.id),v=vertical.positions.get(row.id);assert.equal(h.y,a.y);assert.equal(v.x,a.x);assert.equal(h.width,a.width);assert.equal(v.height,a.height);}
  assert.deepEqual(horizontal.positions.get('root'),base.positions.get('root'));assert.deepEqual(vertical.positions.get('root'),base.positions.get('root'));
  const B=p.occurrences.find(row=>row.nodeId==='B'),C=p.occurrences.find(row=>row.nodeId==='C');assert(horizontal.positions.get(B.id).x<base.positions.get(B.id).x);assert(Math.abs(vertical.positions.get(B.id).y-vertical.positions.get(C.id).y)<Math.abs(base.positions.get(B.id).y-base.positions.get(C.id).y));
+ const spacious=M.layoutMindMap(p,sizes,M.mindMapConfiguration({status:'available',values:{horizontalDensity:0.1,verticalDensity:0.1}}));
+ const root=spacious.positions.get('root'),b=spacious.positions.get(B.id),c=spacious.positions.get(C.id);assert.equal(b.x-b.width/2-(root.x+root.width/2),960,'Minimum horizontal density gives ten times the96px default gap');assert(Math.abs(b.y-c.y)-(b.height+c.height)/2>=240,'Minimum vertical density gives at least ten times the24px default gap');
+ assert.equal(b.width,660);assert.equal(b.height,410);assert.deepEqual(root,base.positions.get('root'));
 });
 
 test('renamed or missing roots require explicit recovery, and reduced limits retain a live editor path only through real canonical pairs',()=>{

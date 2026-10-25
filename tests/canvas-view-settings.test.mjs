@@ -49,9 +49,9 @@ test('production Mind Map contributes eight localized native fields and persists
  const incoming=copy(disk);incoming.canvasViewSettings.mindmap.values.verticalSpacing=44;incoming.canvasViewSettings['future.view']={version:9,values:{inert:true}};
  await receive(p,incoming);equal(tab.getControlValue('canvasView:mindmap:verticalSpacing'),44,'Incoming type values synchronize');
  await tab.setControlValue(spacing.control.key,164);equal(disk.canvasViewSettings['future.view'],incoming.canvasViewSettings['future.view'],'Future independent view retained');
- const live=p.viewSettingsRegistry.layoutControls(a.definition);equal(live.map(row=>row.field),['horizontalDensity','verticalDensity'],'Bottom-left controls use the same registered type fields');
- await tab.setControlValue('canvasView:mindmap:horizontalDensity',2);await tab.setControlValue('canvasView:mindmap:verticalDensity',1.5);
- equal([disk.canvasViewSettings.mindmap.values.horizontalDensity,disk.canvasViewSettings.mindmap.values.verticalDensity],[2,1.5],'Both density axes persist independently');equal([p.work.semantic,p.work.invalidate],[0,0],'Density is presentation only');
+ const live=p.viewSettingsRegistry.layoutControls(a.definition);equal(live.map(row=>row.field),['horizontalDensity','verticalDensity'],'Bottom-left controls use the same registered type fields');equal(live.map(row=>[row.min,row.max,row.step]),[[0.1,4,0.05],[0.1,4,0.05]],'Live controls share the spacious range');
+ await tab.setControlValue('canvasView:mindmap:horizontalDensity',0.1);await tab.setControlValue('canvasView:mindmap:verticalDensity',0.2);
+ equal([disk.canvasViewSettings.mindmap.values.horizontalDensity,disk.canvasViewSettings.mindmap.values.verticalDensity],[0.1,0.2],'Both spacious density axes persist independently');equal([p.work.semantic,p.work.invalidate],[0,0],'Density is presentation only');
  equal([a.getState(),b.getState()],intent,'Incoming settings cannot retarget sessions');a.dispose();b.dispose();
  `),true);
 });

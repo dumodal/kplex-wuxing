@@ -18,7 +18,7 @@ async function scenario(app,c){
  const check=(value,message)=>{if(c.closed||!value)throw Error(message)};
  const wait=async ms=>{check(true,'Retired controller');await new Promise(resolve=>window.setTimeout(resolve,ms));check(true,'Retired controller')};
  const until=async(read,message,maximumMs=20000)=>{const end=Date.now()+maximumMs;while(!read()){check(Date.now()<end,message);await wait(30)}};
- const visible=element=>{if(!element?.isConnected)return false;const rect=element.getBoundingClientRect(),style=element.ownerDocument.defaultView.getComputedStyle(element);return rect.width>0&&rect.height>0&&style.display!=='none'&&style.visibility!=='hidden'};
+ const visible=element=>{if(!element?.isConnected||!element.ownerDocument.defaultView)return false;const rect=element.getBoundingClientRect(),style=element.ownerDocument.defaultView.getComputedStyle(element);return rect.width>0&&rect.height>0&&style.display!=='none'&&style.visibility!=='hidden'};
  const settingsDocument=()=>tab.containerEl.ownerDocument;
  const row=name=>[...settingsDocument().querySelectorAll('.setting-item-name')].find(element=>element.textContent===name&&visible(element))?.closest('.setting-item');
  const keyRow=key=>row(p.translator(key));
@@ -29,7 +29,7 @@ async function scenario(app,c){
   if(app.setting.isOpen){const previous=app.setting.isInPopoutWindow()?app.setting.getPopoutWindow():null;app.setting.close();if(previous)await until(()=>previous.closed,'Owned Settings popout did not close');await wait(100)}
   main.show();main.focus();main.webContents.focus();p.openSettings();await until(()=>tab.containerEl.isConnected,'Native Settings root absent');
   await until(()=>app.setting.isInPopoutWindow()===(c.settingsMode==='popout'),'Settings window policy did not apply');
-  for(const page of pages){check(tab.openSettingsPage(p.translator(page)),'Native page absent: '+page);await wait(60)}
+  for(const page of pages){await until(()=>[...settingsDocument().querySelectorAll('.setting-item.mod-navigable .setting-item-name')].some(element=>element.textContent===p.translator(page)&&visible(element)),'Native page entry not visible: '+page);check(tab.openSettingsPage(p.translator(page)),'Native page absent: '+page);await wait(60)}
  };
  const clickAction=async key=>{const name=p.translator('colors.edit')+': '+p.translator(key),button=[...settingsDocument().querySelectorAll('.setting-item button[aria-label]')].find(element=>element.getAttribute('aria-label')===name&&visible(element));check(button&&!button.disabled,'Native Edit action missing/disabled: '+JSON.stringify({key,present:!!button,colorFuture:p.settings.colorPreferencesFuture!==undefined,themeFuture:p.settings.appearanceThemesFuture!==undefined}));button.scrollIntoView({block:'nearest'});button.addEventListener('click',event=>cases.push({id:'native-edit-click-delivery',trusted:event.isTrusted}),{once:true});button.click();await wait(40)};
  let pendingObserved=0;
@@ -99,7 +99,7 @@ async function scenario(app,c){
   mindMapSpacing.focus();input(mindMapSpacing,spacingValue);await until(()=>p.settings.canvasViewSettings.mindmap?.values.horizontalSpacing===spacingValue,'Mind Map native spacing did not save');await p.settingsWriteQueue;
   check((await p.loadData()).canvasViewSettings.mindmap.values.horizontalSpacing===spacingValue,'Mind Map type control not durable');
   for(const [field,key]of [['horizontalDensity','graph.horizontalDensity'],['verticalDensity','graph.verticalDensity']]){
-   const slider=keyRow(key).querySelector('input[type=range]'),value=Number(slider.value)===Number(slider.max)?Number(slider.min):Number(slider.max);slider.focus();input(slider,value);
+   const slider=keyRow(key).querySelector('input[type=range]'),value=Number(slider.min);check(value===0.1,'Mind Map native Settings spacious minimum absent');slider.focus();input(slider,value);
    await until(()=>p.settings.canvasViewSettings.mindmap?.values[field]===value,'Mind Map density did not save');await p.settingsWriteQueue;check((await p.loadData()).canvasViewSettings.mindmap.values[field]===value,'Mind Map density not durable');
   }
   check(JSON.stringify(session.getState())===before.state,'Background Mind Map settings changed the owning test session');
@@ -140,7 +140,7 @@ async function scenario(app,c){
   cases.push({id:'native-settings-popout-control-focus-and-tint',siblingRelativeSize:siblingNext});
   await c.acceptSelector({app,p,c,host,views,probe,files,hosts,restores,cases,check,wait,until,observe});
   c.progress={phase:'native-main-complete',cases,work,legacyControlWork};return {cases,work,legacyControlWork,mode:'acceptance'};
- }catch(error){failure=error;c.progress={...c.progress,cases};throw error}
+ }catch(error){failure=error;c.progress={...c.progress,cases,settingsDiagnostic:{ownMainDocument:settingsDocument()===document,hasWindow:!!settingsDocument().defaultView,isPopout:app.setting.isInPopoutWindow(),visiblePageEntries:[...settingsDocument().querySelectorAll('.setting-item.mod-navigable .setting-item-name')].filter(visible).map(element=>element.textContent)}};throw error}
  finally{
   const errors=[];const clean=async(label,action)=>{try{await action();cleanup.push({label,status:'passed'})}catch(error){errors.push(label+': '+String(error));cleanup.push({label,status:'failed',error:String(error)})}c.progress={...c.progress,cleanup}};
   for(const restore of restores.reverse())await clean('restore-observer',restore);

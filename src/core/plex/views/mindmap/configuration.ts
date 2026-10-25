@@ -2,6 +2,8 @@
 import type {PlexViewConfiguration, PlexViewConfigurationSchema} from "../configuration";
 
 export const MIND_MAP_LIMITS = {occurrences: 256, depth: 8, scopes: 8, stateCharacters: 12_000, occurrenceCharacters: 4096} as const;
+/** Both settings surfaces share the finite density range; 0.1 gives ten times the default gap without resizing thoughts or editors. */
+export const MIND_MAP_DENSITY = {min: 0.1, max: 4, step: 0.05} as const;
 export type MindMapConfiguration = Readonly<{arrangement: "balanced" | "left" | "right"; horizontalSpacing: number;
   verticalSpacing: number; horizontalDensity: number; verticalDensity: number; initialGenerations: number; maximumDepth: number; maximumOccurrences: number}>;
 
@@ -13,8 +15,8 @@ function integer(defaultValue: number, minimum: number, maximum: number) {
 export const mindMapConfigurationSchema: PlexViewConfigurationSchema = {version: 1, fields: {
   arrangement: {defaultValue: "right", validate: (value): boolean => value === "balanced" || value === "left" || value === "right"},
   horizontalSpacing: integer(96, 40, 240), verticalSpacing: integer(24, 12, 80), initialGenerations: integer(1, 1, 3),
-  horizontalDensity: {defaultValue: 1, validate: (value): boolean => typeof value === "number" && Number.isFinite(value) && value >= 0.75 && value <= 4},
-  verticalDensity: {defaultValue: 1, validate: (value): boolean => typeof value === "number" && Number.isFinite(value) && value >= 0.75 && value <= 4},
+  horizontalDensity: {defaultValue: 1, validate: (value): boolean => typeof value === "number" && Number.isFinite(value) && value >= MIND_MAP_DENSITY.min && value <= MIND_MAP_DENSITY.max},
+  verticalDensity: {defaultValue: 1, validate: (value): boolean => typeof value === "number" && Number.isFinite(value) && value >= MIND_MAP_DENSITY.min && value <= MIND_MAP_DENSITY.max},
   maximumDepth: integer(6, 1, MIND_MAP_LIMITS.depth), maximumOccurrences: integer(256, 16, MIND_MAP_LIMITS.occurrences),
 }};
 

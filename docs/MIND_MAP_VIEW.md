@@ -31,7 +31,7 @@ Outline can later reuse this hierarchy projection with a one-sided layout. A com
 | Intent | Result |
 | --- | --- |
 | Enter Mind Map through the selector | Capture that canvas’s current attention as root, including when re-entering a previously used Mind Map. Native workspace restoration independently retains its saved root. Show children to the right, peers to the left and parents above. |
-| Primary click/tap on an eligible collapsed occurrence | Select and expand its next bounded child/peer frontier through shared actions. Preserve root, attention and editors; a repeated primary click does not collapse it. Respect modifier-open behavior and ignore drags/control clicks. |
+| Primary click/tap on an eligible occurrence | Select and expand its next bounded child/peer frontier through shared actions. Preserve root, attention and editors; a second primary click folds it through the same editor-safe action. Respect modifier-open behavior and ignore drags/control clicks. |
 | Select the explicit editor control | Request that exact occurrence’s in-place native editor through shared actions. Branch expansion is independent. |
 | Select through arrows, typing or Find | Select/reveal the exact occurrence without opening an editor or rerooting. |
 | Click within an expanded editor | Focus its existing native editor. Never toggle-collapse it because the click bubbles to the node. |
@@ -87,7 +87,7 @@ Validate link clipping and scene extents for large horizontal/deep layouts, incl
 
 Filtering, grouping, Find and keyboard navigation use shared owners. Specify how a filtered branch affects descendants and keep it deterministic; never turn a hidden ancestor into an invented direct semantic link. Keep/Reflow retains its advertised meaning. Group only appropriate branch partitions, never the root or a live editor; unfold through the shared mechanism. Same-note occurrences must remain independently selectable and discoverable.
 
-Horizontal and vertical density are independent Mind Map type settings (default 1, range 0.75–4). Both appear under **Settings → K-Plex → Canvas behavior → Views → Mind Map** and in the bottom-left **Configure layout** panel. Both surfaces use the same validated queued writer; density divides the corresponding gap, never note/editor dimensions. Compass density and per-canvas root/expansion/camera/editor state remain independent.
+Horizontal and vertical density are independent Mind Map type settings (default 1, range 0.1–4). Both appear under **Settings → K-Plex → Canvas behavior → Views → Mind Map** and in the bottom-left **Configure layout** panel. Both surfaces use the same validated queued writer; density divides the corresponding gap, never note/editor dimensions. Compass density and per-canvas root/expansion/camera/editor state remain independent.
 
 ## M3 — View settings, selection and actions
 

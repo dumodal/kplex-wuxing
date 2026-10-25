@@ -828,14 +828,15 @@ test('opt-in activate-editor primary opening captures its exact occurrence and r
  current=true;eligible=false;primary(page,'B2',true);assert.equal(requests.length,1);assert.deepEqual(legacy.at(-1),['node.activate',page,'B2']);assert.deepEqual(notices,[]);
 });
 
-test('Mind Map primary click expands the exact branch without navigation, editor opening or toggling it closed',()=>{
+test('Mind Map primary click toggles the exact branch without navigation or editor opening',()=>{
  const page={path:'B.md'},branch={canExpand:true,expanded:false},requests=[],selected=[];
  const dependencies={viewDefinition:{hierarchy:{primary:'expand'}},scene:{nodes:[{page,occurrenceId:'B1',branch}]},occurrenceKey:node=>node.occurrenceId,
   selection:{select:id=>selected.push(id)},runNodeAction:(...args)=>requests.push(args)};
  const primary=production('activateOccurrence',dependencies,'src/ui/PlexGraph.tsx');
  primary(page,'B1',true);assert.deepEqual(requests,[['branch.toggle',page,'B1']]);assert.deepEqual(selected,['B1']);
- branch.expanded=true;primary(page,'B1',true);assert.equal(requests.length,1,'Repeated click does not collapse an already open branch');
- branch.canExpand=false;primary(page,'B1',true);assert.equal(requests.length,1,'Leaf click does not start acquisition or create an editor');
+ branch.expanded=true;primary(page,'B1',true);assert.deepEqual(requests.at(-1),['branch.toggle',page,'B1']);assert.equal(requests.length,2,'Repeated click delegates folding to the existing guarded action');
+ branch.canExpand=false;primary(page,'B1',true);assert.equal(requests.length,3,'An expanded branch can still request a guarded fold');
+ branch.expanded=false;primary(page,'B1',true);assert.equal(requests.length,3,'Leaf click does not start acquisition or create an editor');
  primary(page,'B1',false);assert.deepEqual(requests.at(-1),['node.activate',page,'B1'],'Modifier route keeps explicit attention navigation');
 });
 

@@ -4199,12 +4199,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const isPlaceholderFolderGesture = (page: GraphPage, event: MouseEvent<HTMLDivElement>): boolean =>
     Boolean(Keymap.isModEvent(event.nativeEvent)) && !page.file && !page.url && !page.isFolder && !page.isTag && !page.transient;
 
-  /** The definition chooses primary expansion or activation. Expansion selects the exact occurrence without opening a native editor or changing the map root. */
+  /** The definition chooses primary branch toggling or activation. Shared branch guards refuse folds that would remove a live editor; root and attention remain unchanged. */
   const activateOccurrence = (page: GraphPage, occurrenceId: string | undefined, primary: boolean): void => {
     if (primary && viewDefinition.hierarchy?.primary === "expand" && occurrenceId) {
       const node = scene.nodes.find(value => occurrenceKey(value) === occurrenceId);
       selection.select(occurrenceId);
-      if (node?.branch?.canExpand && !node.branch.expanded) runNodeAction("branch.toggle", page, occurrenceId);
+      if (node?.branch && (node.branch.canExpand || node.branch.expanded)) runNodeAction("branch.toggle", page, occurrenceId);
       return;
     }
     if (!primary || viewDefinition.hierarchy?.primary !== "activate-editor" || !occurrenceId || !supportsBoundEditor(page)) {
