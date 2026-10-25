@@ -4,6 +4,7 @@ import {join} from 'node:path';
 import {runControlledProbe} from './controlledProbe.mjs';
 import {acceptWuXingEditor} from './wuxingEditor.mjs';
 import {acceptWuXingPairs} from './wuxingPairs.mjs';
+import {acceptFacetsFeatures} from './facetsFeatures.mjs';
 
 /** Keep every native effect under one exact controller lifetime; callbacks are serialized into the selected renderer, never production modules. */
 async function scenario(app,c){
@@ -42,7 +43,9 @@ async function scenario(app,c){
   const child=p.settings.hierarchy.children[0];check(child,'Configured child ontology required');
   const phase={Memory:'water',Concept:'wood',Concept2:'wood',Goal:'fire',Review:'earth',Method:'metal',Conflict:['water','wood'],Unmapped:null};
   for(const [name,value]of Object.entries(phase)){
-   const frontmatter={phase:value,[p.settings.noteTypeField]:'Example',tags:['wuxing-fixture']};if(name==='Memory')frontmatter[child]=Object.keys(phase).filter(key=>key!=='Memory').map(key=>'[['+path(key)+']]');
+   const index=Object.keys(phase).indexOf(name),frontmatter={phase:value,[p.settings.noteTypeField]:'Example',tags:['wuxing-fixture']};
+   for(const [field,values]of Object.entries({ace:['add','connect','express'],para:['projects','areas','resources','archives'],horizon:['actions','projects','areas','goals','vision','purpose'],access:['encounters','atlas','calendar','cards','extras','sources','spaces'],state:['seed','research','draft','published']}))if(value!==null)frontmatter[field]=name==='Conflict'?values.slice(0,2):values[index%values.length];
+   if(name==='Memory')frontmatter[child]=Object.keys(phase).filter(key=>key!=='Memory').map(key=>'[['+path(key)+']]');
    const yaml=Object.entries(frontmatter).map(([key,value])=>JSON.stringify(key)+': '+JSON.stringify(value)).join('\n');
    const file=await app.vault.create(path(name),'---\n'+yaml+'\n---\n# '+name+'\n\nDisposable Wu Xing native fixture.\n');files.push(file);p.index.insertCreatedFile(file);releases.push(p.index.acquireSemanticDemand(file.path));
   }
@@ -53,13 +56,13 @@ async function scenario(app,c){
   host.view.centerPresentation.update({embedCentralNode:false,centralNodeMarkdownMode:'source'});p.notifyNavigation(path('Memory'),host);await until(()=>center(host)===path('Memory')&&root(host)?.querySelector('.kplex-filter-trigger'),'Attention did not render');
   await until(localReady,'Requested local cached proof/active work did not settle');
   cases.push({id:'requested-local-cache-proof',current:true,coverage:'cached',globalSemanticPending:p.index.hasPendingSemanticPreparation()});await choose(host,'wuxing');
-  await until(()=>root(host).querySelectorAll('.kplex-view-region').length===8&&!root(host).querySelector('.kplex-view-error'),'Wu Xing production scene absent');panel(host).querySelector('.kplex-filter-panel-header button').click();
-  check(root(host).querySelectorAll('.kplex-view-guide').length===5,'Decorative cycle absent');
-  check(root(host).querySelector('[data-kplex-decoration="wuxing.conflicting"]').textContent.includes('1'),'Conflicting list missing');
-  cases.push({id:'production-registry-five-phases-canonical-links',regions:8,semanticConnectors:root(host).querySelectorAll('[data-kplex-edge-id]').length});
+  await until(()=>root(host).querySelectorAll('.kplex-view-region').length===7&&!root(host).querySelector('.kplex-view-error'),'Facets production scene absent');panel(host).querySelector('.kplex-filter-panel-header button').click();
+  check(root(host).querySelectorAll('.kplex-view-guide').length===10,'Generating/regulating decorative cycles absent');
+  const conflict=[...root(host).querySelectorAll('[data-kplex-decoration]')].find(element=>element.dataset.kplexDecoration===JSON.stringify(['facets','wuxing','status','conflicting']));check(conflict?.textContent.includes('1'),'Conflicting list missing');
+  cases.push({id:'production-registry-five-phases-canonical-links',regions:7,semanticConnectors:root(host).querySelectorAll('[data-kplex-edge-id]').length});
   const context={app,p,c,workspace,remote,native,bounds,host,hosts,files,releases,restores,cases,path,root,center,check,wait,until,localReady,choose,panel,reveal,observe,quiet};
   c.progress={phase:c.lane,cases};
-  if(c.lane==='editor')await c.acceptEditor(context);else await c.acceptPairs(context);
+  if(c.lane==='editor')await c.acceptEditor(context);else if(c.lane==='pairs')await c.acceptPairs(context);else await c.acceptFeatures(context);
   return {lane:c.lane,cases,cleanup,host:{node:process.version,electron:process.versions.electron,chrome:process.versions.chrome,hidden:document.hidden},limits:['Windows native automation is separate from macOS and physical mobile acceptance.','#215 extra-tab application restart/combined two-editor-pair baseline failures are not claimed fixed.']};
  }catch(error){failure=error;c.progress={...c.progress,cases};throw error}
  finally{
@@ -79,6 +82,7 @@ async function scenario(app,c){
 }
 
 if(process.env.KPLEX_TEST_VAULT_NAME!=='kplex-test-small')throw Error('Explicit disposable Small required');
-const lane=process.env.KPLEX_WUXING_NATIVE_LANE??'editor';if(!['editor','pairs'].includes(lane))throw Error('Unknown Wu Xing native lane');
-const definitions='c.lane='+JSON.stringify(lane)+';c.osInput='+JSON.stringify(process.env.KPLEX_WUXING_OS_INPUT==='true')+';c.loadedCompanion='+JSON.stringify(process.env.KPLEX_WUXING_LOADED_COMPANION==='true')+';c.originalData='+JSON.stringify(readFileSync(join(process.env.KPLEX_TEST_CONFIG_DIR,'plugins/k-plex/data.json'),'utf8'))+';c.acceptEditor='+acceptWuXingEditor.toString()+';c.acceptPairs='+acceptWuXingPairs.toString()+';';
-await runControlledProbe('wuxing-220-'+lane,scenario,definitions,['src/ui/PlexGraph.tsx','src/core/plex/views/wuxing/definition.ts','src/core/plex/views/wuxing/layout.ts','src/adapters/obsidian/predicateContracts.ts'],{maximumMs:480000});
+const lane=process.env.KPLEX_WUXING_NATIVE_LANE??'editor';if(!['editor','pairs','features'].includes(lane))throw Error('Unknown Wu Xing native lane');
+const definitions='c.screenshotPrefix='+JSON.stringify(join(process.env.KPLEX_HOST_REPORT_DIR??'','facets'))+';c.lane='+JSON.stringify(lane)+';c.osInput='+JSON.stringify(process.env.KPLEX_WUXING_OS_INPUT==='true')+';c.loadedCompanion='+JSON.stringify(process.env.KPLEX_WUXING_LOADED_COMPANION==='true')+';c.stateExample='+JSON.stringify(JSON.parse(readFileSync('tests/fixtures/facets-vault/.obsidian/plugins/k-plex/data.json','utf8')).canvasViewSettings.wuxing.values.presets.state)+';c.originalData='+JSON.stringify(readFileSync(join(process.env.KPLEX_TEST_CONFIG_DIR,'plugins/k-plex/data.json'),'utf8'))+';c.acceptEditor='+acceptWuXingEditor.toString()+';c.acceptPairs='+acceptWuXingPairs.toString()+';c.acceptFeatures='+acceptFacetsFeatures.toString()+';';
+await runControlledProbe('wuxing-220-'+lane,scenario,definitions,['src/ui/PlexGraph.tsx','src/core/plex/views/wuxing/definition.ts','src/core/plex/views/facets/projection.ts','src/core/plex/views/facets/layout.ts','src/core/plex/views/facets/rules.ts','src/core/plex/predicate.ts','src/ui/plexViews/facets/FacetPresetEditor.ts','src/ui/CanvasPropertyAssignmentActions.ts','src/adapters/obsidian/predicateContracts.ts'],{maximumMs:480000});
+

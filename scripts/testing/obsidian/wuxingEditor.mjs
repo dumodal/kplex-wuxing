@@ -2,14 +2,21 @@
 export async function acceptWuXingEditor(x){
  const {app,p,c,workspace,native,host,restores,cases,path,root,check,wait,until,localReady,choose,panel,reveal,quiet}=x;
  const tab=p.settingsTab,session=host.view.documentSession.plexView;
- const stop=quiet();await p.updateCanvasViewSetting('wuxing','spacing',80);await until(localReady,'Configuration local proof/active work did not settle');await wait(200);stop('type-configuration-zero-source-work');
+ const configure=(path,value)=>p.updateCanvasViewConfiguration('wuxing',{field:'presets',path:['wuxing',...path]},{kind:'set',value});
+ const region=id=>[...root(host).querySelectorAll('[data-kplex-decoration]')].find(element=>element.dataset.kplexDecoration===JSON.stringify(['facets','wuxing','category',id]));
+ const stop=quiet();await configure(['spacing'],80);await until(localReady,'Configuration local proof/active work did not settle');await wait(200);stop('type-configuration-zero-source-work');
  p.openSettings();await until(()=>tab.containerEl.isConnected,'Native Settings absent');
- for(const key of ['settings.ui.plex.behavior','view.wuxing','wuxing.water']){check(tab.openSettingsPage(p.translator(key)),'Native view settings page absent: '+key);await wait(80)}
+ for(const key of ['settings.ui.plex.behavior','view.wuxing']){check(tab.openSettingsPage(p.translator(key)),'Native view settings page absent: '+key);await wait(80)}
+ const ownerDocument=tab.containerEl.ownerDocument;
+ const manage=[...ownerDocument.querySelectorAll('.setting-item')].find(row=>row.querySelector('.setting-item-name')?.textContent===p.translator('facets.manage')&&row.getBoundingClientRect().height>0)?.querySelector('button');check(manage,'Native preset manager action absent');manage.click();
+ await until(()=>ownerDocument.querySelector('.kplex-style-manager-row'),'Native preset library absent');
+ const preset=[...ownerDocument.querySelectorAll('.kplex-style-manager-row')].find(row=>row.querySelector('.kplex-style-manager-name')?.textContent===p.translator('facets.presetWuXing'));check(preset,'Native Wu Xing preset absent');preset.click();await wait(120);
  // Native declarative subpages can live outside PluginSettingTab.containerEl. Use the owning Settings document, as the existing accepted settings driver does.
  const row=[...tab.containerEl.ownerDocument.querySelectorAll('.setting-item')].find(element=>element.querySelector('.setting-item-name')?.textContent===p.translator('wuxing.label')&&element.getBoundingClientRect().height>0);
  const input=row?.querySelector('input');check(input,'Native phase label field absent');input.value='Memory / 記憶';input.dispatchEvent(new input.ownerDocument.defaultView.Event('input',{bubbles:true}));
- await until(()=>p.settings.canvasViewSettings.wuxing?.values.waterLabel==='Memory / 記憶','Native setting did not publish');await p.settingsWriteQueue;app.setting.close();
- await until(()=>root(host).querySelector('[data-kplex-decoration="wuxing.water"]')?.textContent.includes('Memory / 記憶'),'Native label did not reach the region');cases.push({id:'native-settings-phase-page-durable-multilingual-label'});
+ const save=[...ownerDocument.querySelectorAll('.modal button')].find(button=>button.textContent===p.translator('common.save')&&button.getBoundingClientRect().height>0);check(save&&!save.disabled,'Native preset Save absent/disabled');save.click();
+ await until(()=>p.settings.canvasViewSettings.wuxing?.values.presets?.wuxing?.categories.water.label==='Memory / 記憶','Native setting did not publish');await p.settingsWriteQueue;app.setting.close();
+ await until(()=>region('water')?.textContent.includes('Memory / 記憶'),'Native label did not reach the region');cases.push({id:'native-settings-preset-manager-durable-multilingual-label'});
  host.view.centerPresentation.update({embedCentralNode:true,centralNodeMarkdownMode:'source'});
  await until(()=>root(host).querySelector('.kplex-central-editor-content .cm-content'),'Attention native source editor absent');
  await reveal(host);const content=root(host).querySelector('.kplex-central-editor-content .cm-content');content.focus();
@@ -28,10 +35,9 @@ export async function acceptWuXingEditor(x){
  const centeredExpanded=()=>{const box=overlay.getBoundingClientRect(),viewport=root(host).querySelector('.kplex-plex').getBoundingClientRect();
   c.progress={phase:'expanded-native-phase-anchor',cases,geometry:{centerX:box.x+box.width/2-viewport.x,centerY:box.y+box.height/2-viewport.y,viewportWidth:viewport.width,viewportHeight:viewport.height}};
   check(Math.abs(c.progress.geometry.centerX-viewport.width/2)<3&&Math.abs(c.progress.geometry.centerY-viewport.height/2)<3,'Expanded Wu Xing attention editor is not centered in the owning viewport')};
- centeredExpanded();await p.updateCanvasViewSetting('wuxing','waterValues','water-not-mapped');await wait(100);centeredExpanded();
- const expandedPhase=root(host).querySelector('[data-kplex-decoration="wuxing.unmapped"] rect').getBoundingClientRect(),movedEditor=overlay.getBoundingClientRect();
- check(movedEditor.left>=expandedPhase.left-1&&movedEditor.right<=expandedPhase.right+1&&movedEditor.top>=expandedPhase.top-1&&movedEditor.bottom<=expandedPhase.bottom+1,'Expanded editor did not follow actual phase reclassification');
- await p.updateCanvasViewSetting('wuxing','waterValues','water');await wait(100);centeredExpanded();
+ centeredExpanded();await configure(['categories','water','values'],['water-not-mapped']);await wait(100);centeredExpanded();
+ check(root(host).querySelector('.kplex-central-editor-content')===element&&leaf.view.file.path===path('Memory'),'Expanded reclassification retargeted the centered attention editor');
+ await configure(['categories','water','values'],['water']);await wait(100);centeredExpanded();
  const expandedNativeBounds=native.getBounds(),expandedViewportSize={width:root(host).clientWidth,height:root(host).clientHeight};
  native.setBounds({...expandedNativeBounds,width:Math.max(1000,expandedNativeBounds.width-120),height:Math.max(700,expandedNativeBounds.height-50)});
  await until(()=>root(host).clientWidth!==expandedViewportSize.width||root(host).clientHeight!==expandedViewportSize.height,'Expanded native resize did not change the viewport');await wait(100);centeredExpanded();
@@ -42,9 +48,10 @@ export async function acceptWuXingEditor(x){
  const marker='\nKplex-220-dirty-content\n';editor.replaceRange(marker,editor.getCursor('to'));const line=editor.getValue().split('\n').findIndex(text=>text.includes('Kplex-220-dirty-content'));editor.setCursor({line,ch:8});
  const value=editor.getValue(),cursor=JSON.stringify(editor.getCursor());
  const dirtyAtReclassification=!(await app.vault.read(app.vault.getFileByPath(path('Memory')))).includes(marker.trim());check(dirtyAtReclassification,'Dirty native editor precondition was not observed');
- await p.updateCanvasViewSetting('wuxing','waterValues','unmapped-water');await until(()=>root(host).querySelector('[data-kplex-decoration="wuxing.water"]')?.textContent.includes('0 shown locally'),'Reclassification did not remove attention from Water');
- const phaseBounds=root(host).querySelector('[data-kplex-decoration="wuxing.unmapped"] rect').getBoundingClientRect(),editorBounds=overlay.getBoundingClientRect();
- check(editorBounds.left>=phaseBounds.left-1&&editorBounds.right<=phaseBounds.right+1&&editorBounds.top>=phaseBounds.top-1&&editorBounds.bottom<=phaseBounds.bottom+1,'Native editor is outside its current phase bounds');
+ const attentionBounds=overlay.getBoundingClientRect();
+ await configure(['categories','water','values'],['unmapped-water']);await until(()=>root(host).querySelector('.kplex-node-badge')?.textContent.includes(p.translator('facets.unassigned')),'Reclassification did not update the focused category badge');
+ const editorBounds=overlay.getBoundingClientRect();
+ check(Math.abs(editorBounds.x-attentionBounds.x)<1&&Math.abs(editorBounds.y-attentionBounds.y)<1,'Presentation-only reclassification moved the centered attention editor');
  c.progress={phase:'reclassification-native-identity',cases,identity:{element:root(host).querySelector('.kplex-central-editor-content')===element,editor:leaf.view.editor===editor,document:leaf.view.file.path===path('Memory'),content:editor.getValue()===value,caret:JSON.stringify(editor.getCursor())===cursor,focus:element.contains(element.ownerDocument.activeElement),documentFocused:element.ownerDocument.hasFocus(),activeTag:element.ownerDocument.activeElement?.tagName}};
  check(Object.entries(c.progress.identity).filter(([key])=>!['documentFocused','activeTag'].includes(key)).every(([,value])=>value),'Reclassification retargeted or replaced native content/caret/focus');
  const viewportBefore={width:root(host).clientWidth,height:root(host).clientHeight};
@@ -59,7 +66,7 @@ export async function acceptWuXingEditor(x){
  await p.actionManager.dispatch({id:'graph.focus',source:'internal',surfaceId:surface});
  const selection=await p.actionManager.dispatch({id:'selection.center',source:'internal',surfaceId:surface});check(selection.status==='completed','Shared native selection did not execute');await p.actionManager.dispatch({id:'selection.move.right',source:'internal',surfaceId:surface});
  check(leaf.view.file.path===path('Memory')&&p.sidecarLeaves.get(host)===side&&side.view.file.path===path('Memory')&&editor.getValue()===value,'Selection redirected editor or Sidecar');
- await p.updateCanvasViewSetting('wuxing','fireValues','fire,water');await wait(100);check(leaf.view.file.path===path('Memory')&&p.sidecarLeaves.get(host)===side&&side.view.file.path===path('Memory'),'Mapping redirected native documents');
+ await configure(['categories','fire','values'],['fire','water']);await wait(100);check(leaf.view.file.path===path('Memory')&&p.sidecarLeaves.get(host)===side&&side.view.file.path===path('Memory'),'Mapping redirected native documents');
  cases.push({id:'selection-and-phase-mapping-preserve-editor-and-owned-sidecar'});
  await p.closeSidecar(host);await reveal(host);content.focus();editor.setCursor(editor.lastLine(),editor.getLine(editor.lastLine()).length);
  // Follow the existing support-report driver's guarded text/empty policy. Raw writeBuffer does
