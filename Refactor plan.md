@@ -6244,3 +6244,6 @@ B1 closeout adds the explicit collection-reset guard: restoring view defaults re
 
 
 2026-10-25 PR220 C2b: native registered preset manager uses existing list/modal/color components and queued scoped writer. Optional pre-acceptance lifetime; sparse inherited entry fix, protected palette ownership, maximum legacy alias preserved.118 affected checks +final11 native-control Chromium cases, build/scanner/indexing/startup/section suite pass; architecture zero violations. Highest risk: native editor/metadata write interference in next assignment phase; exact-final-head Windows required. No C15-C26 or vault deployment.
+
+
+2026-10-25 PR220 D: shared explicit drop meanings and native property assignment/Undo use existing transport, actions, FileManager/convergence and native editor owner.141 affected +final25/35/41 overlapping targeted checks, build/scanner/architecture pass. Full npm test1570 first-lane pass;3 browser fixture/intent failures corrected and focused rerun green, final full rerun pending. Highest risks: actual Windows native buffer/content/focus, metadata field edits and cross-view source identity; final exact-head native verification required. No structural refactor or production deployment.

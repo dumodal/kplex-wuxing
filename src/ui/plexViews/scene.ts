@@ -2,6 +2,7 @@
 import type {PlexArea, PlexProjection, PlexDecoration} from "../../core/plex/views/contracts";
 import type {PositionedNode, PositionedEdge} from "../../types";
 import type {AdmittedOccurrenceEditor} from "./occurrenceEditors";
+import type {PlexPropertyAssignment} from "../../core/plex/views/propertyAssignment";
 
 export type SceneViewport = {key: string; left: number; top: number; width: number; height: number;
   contentTop: number; contentHeight: number; initialScrollTop: number};
@@ -13,6 +14,7 @@ export type HostPlexScene = {
   projection?: PlexProjection;
   areas?: readonly PlexArea[];
   decorations?: readonly PlexDecoration[];
+  propertyAssignments?: readonly PlexPropertyAssignment[];
   /** World rectangles are fit-only; the shared ThoughtNode paints its own attached badge. */
   badgeBounds?: readonly Readonly<{occurrenceId: string; bounds: import("../../core/plex/views/contracts").ViewRect}>[];
   entryOccurrence?: string; editorOccurrence?: string; frameOccurrence?: string;

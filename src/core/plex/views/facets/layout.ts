@@ -6,6 +6,7 @@ import {measuredAreaGrid} from "../areaLayout";
 import {nodeBadgeBounds} from "../decorations";
 import {facetCategoryLabel} from "./labels";
 import {facetAreaId} from "./projection";
+import {facetPresetAssignments} from "./assignment";
 
 /** Reuse the shared measured grid and native area reflow owner. Fixed attention never belongs
  * to a scroll surface, and empty regions retain their visible bounds and controls. */
@@ -25,6 +26,7 @@ function pack(id: string, bounds: ViewRect, projection: PlexProjection, measured
 export function layoutFacets(projection: PlexProjection, measured: readonly PlexMeasurement[], presetId: string, preset: FacetPreset,
   areaHeights: Readonly<Record<string, number>> = {}, editable = true): PlexViewLayout {
   const measurements = new Map(measured.map(row => [row.id, row])), attention = measurements.get(projection.entry);
+  const assignments = new Set(editable ? facetPresetAssignments(presetId, preset).map(target => target.id) : []);
   if (!attention || preset.order.length < 3 || preset.order.length > 7) throw new Error("Invalid Facets center/categories");
   const peripherals = measured.filter(row => row.id !== projection.entry);
   const width = Math.max(preset.regionWidth, ...peripherals.map(row => row.width + 48));
@@ -41,7 +43,8 @@ export function layoutFacets(projection: PlexProjection, measured: readonly Plex
     const categoryId = order[index], id = facetAreaId(presetId, "category", categoryId), category = preset.categories[categoryId];
     const angle = -Math.PI / 2 + index * Math.PI * 2 / order.length, center = {x: Math.cos(angle) * radius, y: Math.sin(angle) * radius};centers.push(center);
     const region = {x: center.x - width / 2, y: center.y - height(id) / 2, width, height: height(id)}, label = facetCategoryLabel(category, categoryId);
-    areas.push(pack(id, region, projection, measurements, positions, label, editable));
+    areas.push({...pack(id, region, projection, measurements, positions, label, editable),
+      ...(assignments.has(id) ? {dropTarget: {kind: "property" as const, assignmentId: id}} : {})});
     decorations.push({id, kind: "region", bounds: region, labelKey: "key" in label ? label.key : "", ...("literal" in label ? {label: label.literal} : {}),
       areaId: id, count: true, ...(preset.tints ? {color: category.color} : {})});
   }
@@ -56,7 +59,8 @@ export function layoutFacets(projection: PlexProjection, measured: readonly Plex
     if ((status === "checking" || status === "unresolved") && !projection.occurrences.some(row => row.areaId === id)) continue;
     const region = {x: radius + width / 2 + preset.spacing, y: top, width, height: Math.max(160, Math.min(220, height(id)))};
     const label = {key: status === "unresolved" ? "facets.cannotClassify" : `facets.${status}`};
-    areas.push(pack(id, region, projection, measurements, positions, label, false));decorations.push({id, kind: "region", bounds: region, labelKey: label.key, areaId: id, count: true,
+    areas.push({...pack(id, region, projection, measurements, positions, label, false),
+      ...(assignments.has(id) ? {dropTarget: {kind: "property" as const, assignmentId: id}} : {})});decorations.push({id, kind: "region", bounds: region, labelKey: label.key, areaId: id, count: true,
       ...(status === "unassigned" ? {color: preset.unassignedColor} : status === "conflicting" ? {color: preset.conflictingColor} : {})});top += region.height + 20;
   }
   if (positions.size !== measured.length) throw new Error("Invalid Facets membership geometry");

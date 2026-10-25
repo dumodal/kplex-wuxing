@@ -96,6 +96,8 @@ import { createTranslator, type Translator } from "./lang";
 import { isGraphTabCommandAvailable, isPopoutCommandAvailable, primaryOpenSurface } from "./core/plex/viewPresentation";
 import { createAdjacentFileLeaf } from "./adapters/obsidian/adjacentFileLeaf";
 import { isEmbeddedMarkdownLeaf } from "./adapters/obsidian/embeddedMarkdownLeaf";
+import {CanvasPropertyAssignmentActions, type CanvasPropertyAssignmentRequest} from "./ui/CanvasPropertyAssignmentActions";
+import type {PlexPropertyAssignment} from "./core/plex/views/propertyAssignment";
 import { StartupDiagnostics } from "./adapters/obsidian/startupDiagnostics";
 import { writeRelationshipMetadata, SavedRelationshipPendingError, relationshipMetadataPayload } from "./adapters/obsidian/relationshipMetadataWrite";
 import { SOURCE_DECODE_BUDGET_BYTES } from "./index/SourceFacts";
@@ -299,6 +301,7 @@ export default class KplexPlugin extends Plugin {
   /** Pending saved relationship observers release on unload, rename/delete or actual convergence. */
   private readonly relationshipWriteCancels = new Set<() => void>();
   private structuralDrops: StructuralNodeDropActions | null = null;
+  private canvasPropertyAssignments: CanvasPropertyAssignmentActions | null = null;
   /** Paths suppress the synchronous vault:create rebuild; object identity protects optimistic UI. */
   private readonly managedCreatedPaths = new Map<string, number>();
   private readonly managedCreatedFiles = new WeakSet<TFile>();
@@ -608,6 +611,7 @@ export default class KplexPlugin extends Plugin {
     this.externalSettingsRetryTimers.clear();
     this.structuralDrops?.dispose();
     this.structuralDrops = null;
+    this.canvasPropertyAssignments?.dispose();this.canvasPropertyAssignments = null;
     this.settingsTab?.disposeActionSettings();
     this.settingsTab = null;
     for (const dialog of this.actionDialogs.keys()) dialog.close();
@@ -6935,6 +6939,35 @@ export default class KplexPlugin extends Plugin {
       /** Reuse exact-file saved-metadata observation and plugin cancellation ownership. */ (file, fields, mutate) => this.mutateCreatedNodeMetadata(file, fields, mutate), () => this.settings.noteTypeField);
     return this.structuralDrops;
   }
+
+  /** Reuse the plugin's native metadata/convergence lifetime, keeping real property edits on
+   * ordinary incremental indexing. No managed relationship feedback or whole-vault work. */
+  private canvasPropertyOwner(): CanvasPropertyAssignmentActions {
+    this.canvasPropertyAssignments ??= new CanvasPropertyAssignmentActions(this.app, this.translator,
+      () => [...this.allOntologyFields(), this.settings.noteTypeField, this.settings.primaryTagField, this.settings.thumbnailProperty,
+        this.settings.nodeImageProperty, ...this.settings.nameFields.split(",").map(name => name.trim())],
+      async (file, field, mutate, current) => {
+        await writeRelationshipMetadata(this.app, file, new Set([normalizeFieldName(field)]), mutate, {
+          own: cancel => {this.relationshipWriteCancels.add(cancel);return () => {this.relationshipWriteCancels.delete(cancel);};},
+          pending: () => {new Notice(this.translator("note.savedMetadataPending"), 4000);},
+          savedPendingMessage: () => this.translator("note.savedMetadataPending"),
+          current: () => !this.unloading && current(), preparingMessage: () => this.translator("assignment.unavailable"),
+        });
+      });
+    return this.canvasPropertyAssignments;
+  }
+  /** Shared action/drop admission supplies no relationship removal or document navigation. */
+  canAssignCanvasProperty(page: GraphPage, assignment: PlexPropertyAssignment): boolean {
+    return !this.unloading && this.canvasPropertyOwner().eligible(page, assignment);
+  }
+  /** Both drag/drop and the accessible node action use this one captured native confirmation. */
+  openCanvasPropertyAssignment(request: CanvasPropertyAssignmentRequest): boolean {
+    return !this.unloading && this.canvasPropertyOwner().open(request);
+  }
+  /** At most one applied-value-guarded field receipt belongs to each live canvas. */
+  canUndoCanvasPropertyAssignment(scope: HTMLElement): boolean {return !this.unloading && !!this.canvasPropertyAssignments?.canUndo(scope);}
+  /** Undo uses the same native writer; it cannot overwrite a later field value. */
+  undoCanvasPropertyAssignment(scope: HTMLElement): boolean {return !this.unloading && !!this.canvasPropertyAssignments?.undo(scope);}
 
   /** Handle explicit structural drops without changing ontology relationship semantics. */
   openStructuralNodeDrop(origin: GraphPage, target: GraphPage, options: {immediateMove?: boolean} = {}): boolean {

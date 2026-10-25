@@ -5,12 +5,14 @@ import {facetsConfigurationSchema, facetLibrary} from "../facets/configuration";
 import {projectFacets} from "../facets/projection";
 import {layoutFacets} from "../facets/layout";
 import {facetState, resolveFacetPreset, restoreFacetState, reduceFacetState, orderedFacetPresets} from "../facets/state";
+import {facetPropertyAssignments} from "../facets/assignment";
 
 export const wuXingViewDefinition: PlexViewDefinition = {
   id: "wuxing", version: 1, labelKey: "view.wuxing", icon: "orbit",
   capabilities: {sections: false, descendants: false, editor: true, compact: false, properties: true, badges: true},
   defaultState: {version: 1, preset: "wuxing"}, configuration: facetsConfigurationSchema,
   restoreState: restoreFacetState, reduceState: reduceFacetState, project: projectFacets,
+  propertyAssignments: facetPropertyAssignments,
   /** Resolve the same captured preset without source reads or session mutation. */
   layout: (projection, measurements, state, _editor, context) => {
     const library = facetLibrary(context?.configuration);

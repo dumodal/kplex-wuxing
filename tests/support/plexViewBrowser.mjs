@@ -1,8 +1,9 @@
 /** Compile the actual shared canvas for browser consumers. Native host constructors remain finite explicit doubles; no production scene or property behavior is replaced. */
 import {build} from 'esbuild';
-import {nativeDomHelpers} from './nativeColorControls.mjs';
+import {nativeDomHelpers,nativeColorControls} from './nativeColorControls.mjs';
 /** Each test owns a real browser and its root lifetimes; this helper only bundles source with the same native boundary. */
-export async function plexViewBrowserModules({captureNotices=false}={}){
+export async function plexViewBrowserModules({captureNotices=false,nativeControls=false}={}){
+const nativeNames=[...nativeColorControls.matchAll(/export (?:const|class) (\w+)/g)].map(match=>match[1]);
 const nativeStub=`
   ${nativeDomHelpers}
   class NativeBase {constructor(){} register(){} registerEvent(){} addChild(){} removeChild(){}}
@@ -16,6 +17,7 @@ const nativeStub=`
   exports.Notice=class Notice {constructor(message,duration){${captureNotices ? '(window.testNotices ??= []).push({message,duration});' : "throw Error('Unexpected notice: '+message)"}}};
   exports.Menu=class Menu {items=[];addItem(prepare){const item={setTitle(){return item},setIcon(){return item},setChecked(){return item},setDisabled(){return item},onClick(fn){item.click=fn;return item}};prepare(item);this.items.push(item);return this;}addSeparator(){return this;}};
   exports.MarkdownRenderer={render:async()=>{}};
+  ${nativeControls ? nativeColorControls.replaceAll('export ','')+';'+nativeNames.map(name=>'exports.'+name+'='+name+';').join('') : ''}
 `;
 return await build({stdin:{resolveDir:process.cwd(),contents:`
   export {createElement,useSyncExternalStore} from 'react';export {createRoot} from 'react-dom/client';export {flushSync} from 'react-dom';
@@ -27,6 +29,10 @@ return await build({stdin:{resolveDir:process.cwd(),contents:`
   export {mindMapViewDefinition} from './src/core/plex/views/mindmap/definition';
   export {builtInCanvasViewSettings} from './src/ui/plexViews/settingsContributions';
   export {CanvasViewContributionController} from './src/ui/plexViews/CanvasViewContributionController';
+  export {CanvasPropertyAssignmentActions} from './src/ui/CanvasPropertyAssignmentActions';
+  export {writeRelationshipMetadata} from './src/adapters/obsidian/relationshipMetadataWrite';
+  export {normalizeFieldName} from './src/core/contracts/fieldName';
+  export {defaultColorPreferences} from './src/core/plex/colorPreferences';export {Modal as TestModal,TextFileView} from 'obsidian';
   export {compileGraphPredicate} from './src/core/plex/predicate';
   export {WanderController} from './src/application/WanderController';export {exampleViewDefinition} from './src/core/plex/views/example';
 `},write:false,bundle:true,platform:'browser',format:'iife',globalName:'sourceModules',plugins:[{name:'finite-native-host',setup(builder){

@@ -18,6 +18,8 @@ import {hierarchyPathClosure} from "../../core/plex/views/hierarchy";
 import {validCanvasViewText} from "../../core/plex/views/presentation";
 import {validPlexNodeBadge, nodeBadgeBounds, boundedViewColors} from "../../core/plex/views/decorations";
 import {canvasViewText} from "./labels";
+import {validPropertyAssignment} from "../../core/plex/views/propertyAssignment";
+import {validPlexDropMeaning, plexAreaDropMeaning} from "../../core/plex/views/dropTargets";
 
 type SceneRead = Pick<GraphIndex, "get" | "neighbours" | "sortNeighbours" | "titleFor" | "captureSemanticGateRead" | "isVisiblePage" | "explainRelationship">
   & Partial<Pick<GraphIndex, "viewScopeCoverage" | "cachedViewRelation">>;
@@ -159,6 +161,9 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
     const maximum = Math.min(2048, Math.max(1, settings.maxItemCount * 8 + 1));
     const configuration = readViewConfiguration(definition, settings.canvasViewSettings === undefined ? {} : settings.canvasViewSettings);
     if (configuration.status !== "available") return {scene: empty, projection: null, failure: true};
+    const propertyAssignments = definition.propertyAssignments?.(state, configuration) ?? [];
+    if (!Array.isArray(propertyAssignments) || propertyAssignments.length > 32 || !propertyAssignments.every(validPropertyAssignment)
+      || new Set(propertyAssignments.map(target => target.id)).size !== propertyAssignments.length) throw new Error("Invalid property assignment targets");
     const layoutRoot = definition.navigation === "rooted" ? grouping?.layoutRoot ?? nodeId(attention) : undefined;
     const projection = definition.project({attention: nodeId(attention), layoutRoot, retainedScopes: grouping?.retainedScopes,
       editors: editorHost?.bindings.map(binding => ({occurrenceId: binding.occurrenceId, nodeId: binding.target.nodeId})),
@@ -292,7 +297,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
           typeDefinition: edge.relation.definition, linkDirection: edge.relation.direction}, settings, pages.get(edge.source)) : settings.baseLinkStyle};
     });
     const scene: HostPlexScene = {nodes: [...nodes.values()], edges, zoneViewports: {}, zoneAreas: {}, projection: filtered, areas: layout.areas,
-      entryOccurrence: filtered.entry, editorOccurrence: filtered.editor, frameOccurrence: filtered.frame, decorations: layout.decorations};
+      entryOccurrence: filtered.entry, editorOccurrence: filtered.editor, frameOccurrence: filtered.frame, decorations: layout.decorations, propertyAssignments};
     scene.badgeBounds = [...nodes].flatMap(([id, node]) => node.viewBadge ? [{occurrenceId: id, bounds: nodeBadgeBounds(node, node.viewBadge)}] : []);
     if (boundEditors.size) scene.boundEditors = [...boundEditors.values()];
     const areaIds = new Set<string>();
@@ -301,6 +306,10 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
       if (!area.id || ["__proto__", "constructor", "prototype"].includes(area.id) || areaIds.has(area.id) || !Object.values(area.bounds).every(Number.isFinite) || area.bounds.width <= 0 || area.bounds.height <= 0) throw new Error("Invalid view area");
       areaIds.add(area.id);
       if (area.dropRole !== undefined && !["parent", "child", "left", "right"].includes(area.dropRole)) throw new Error("Invalid area drop role");
+      if (area.dropTarget !== undefined && !validPlexDropMeaning(area.dropTarget)) throw new Error("Invalid area drop meaning");
+      const drop = plexAreaDropMeaning(area);
+      if (drop.kind === "property" && !propertyAssignments.some(target => target.id === drop.assignmentId)) throw new Error("Missing property assignment target");
+      if (drop.kind === "relationship" && drop.origin !== undefined && !nodes.has(drop.origin)) throw new Error("Missing relationship area origin");
       if (area.dropOrigin !== undefined && (typeof area.dropOrigin !== "string" || !nodes.has(area.dropOrigin)
         || !filtered.occurrences.some(row => row.id === area.dropOrigin && row.nodeId))) throw new Error("Invalid area drop origin");
       if (area.viewport && (!Object.values(area.viewport).every(Number.isFinite) || area.viewport.width <= 0 || area.viewport.height <= 0

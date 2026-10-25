@@ -159,7 +159,7 @@ test('non-Classic definition uses the production scene, selection, Find and acti
       const hierarchyFindProof={selected:actionPorts.current.readSelected()?.occurrenceId,attention:props.activePath,root:hierarchySession.layoutRoot(props.activePath),editors:hierarchySession.editors.bindings.length};
       await act('view.layout-controls');
       const layoutBefore={semantic:work.semantic,root:hierarchySession.layoutRoot(props.activePath),camera:mount.querySelector('.kplex-camera').style.transform},layoutWrites=[];
-      plugin.updateCanvasViewSetting=async(id,field,value)=>{if(id!=='mindmap')throw Error('Foreign view setting');layoutWrites.push([id,field,value]);settings.canvasViewSettings=M.editViewConfiguration(M.mindMapViewDefinition,settings.canvasViewSettings,field,value);props.renderRevision++;renderHierarchy()};
+      plugin.updateCanvasViewConfiguration=async(id,address,edit)=>{if(id!=='mindmap')throw Error('Foreign view setting');layoutWrites.push([id,address.field,edit.value]);settings.canvasViewSettings=M.editViewConfigurationAt(M.mindMapViewDefinition,settings.canvasViewSettings,address,edit);props.renderRevision++;renderHierarchy()};
       const rails=[...mount.querySelectorAll('.kplex-layout-panel input[type=range]')];
       for(const [label,value]of [['Horizontal density',2],['Vertical density',1.5]]){
         const rail=rails.find(element=>element.getAttribute('aria-label')===label);if(!rail)throw Error('Registered density rail missing');

@@ -23,6 +23,7 @@ export type EmbeddedMarkdownMode = "preview" | "source";
 export type EmbeddedDocumentView = "markdown" | "excalidraw";
 
 const embeddedMarkdownLeaves = new WeakSet<WorkspaceLeaf>();
+const embeddedLeavesByApp = new WeakMap<App, Set<WorkspaceLeaf>>();
 const embeddedScopeOwners = new WeakMap<Element, () => Scope | null>();
 
 /** Read the actual native view Scope owning a focused embedded element without exposing its leaf. */
@@ -37,6 +38,24 @@ export function getEmbeddedMarkdownScope(element: Element | null): Scope | null 
 /** True only for native leaves owned by the central-node editor rather than the workspace tree. */
 export function isEmbeddedMarkdownLeaf(leaf: WorkspaceLeaf | null | undefined): boolean {
   return Boolean(leaf && embeddedMarkdownLeaves.has(leaf));
+}
+
+/** Query the existing native leaf owner only during an explicitly submitted metadata edit.
+ * Buffers must match the current saved body; this never focuses, saves or retargets an editor. */
+export function markdownBuffersMatchSaved(app: App, file: TFile, savedBody: string): boolean {
+  let matches = true;
+  // Native Markdown buffers may normalize Windows CRLF to LF. That representation change
+  // alone is not an unsaved content edit and never rewrites the actual saved body here.
+  const saved = savedBody.replace(/\r\n/g, "\n");
+  const check = (leaf: WorkspaceLeaf): void => {
+    const view = leaf.view;
+    if (view instanceof TextFileView && view.file === file && view.getViewType() === "markdown") {
+      try {if (view.getViewData().replace(/\r\n/g, "\n") !== saved) matches = false;} catch {matches = false;}
+    }
+  };
+  app.workspace.iterateAllLeaves(check);
+  for (const leaf of embeddedLeavesByApp.get(app) ?? []) check(leaf);
+  return matches;
 }
 
 export interface EmbeddedMarkdownLeafController {
@@ -265,6 +284,7 @@ export function mountEmbeddedMarkdownLeaf(
   split.insertChild(0, leaf);
   split.containerEl.classList.remove("workspace-split");
   embeddedMarkdownLeaves.add(leaf);
+  let owned: Set<WorkspaceLeaf> | null = null;
   let disposed = false;
   let closePromise: Promise<void> | null = null;
   embeddedScopeOwners.set(mountEl, /** Native view replacements retain the mount but change its actual parent Scope. */ () => disposed ? null : leaf.view.scope ?? null);
@@ -884,6 +904,7 @@ export function mountEmbeddedMarkdownLeaf(
       // The host may already have detached the leaf during window/workspace teardown.
     }
     embeddedMarkdownLeaves.delete(leaf);
+    if (owned) {owned.delete(leaf);if (!owned.size && embeddedLeavesByApp.get(app) === owned) embeddedLeavesByApp.delete(app);owned = null;}
     split.containerEl.remove();
     if (mountEl.isConnected) mountEl.replaceChildren();
   };
@@ -915,6 +936,8 @@ export function mountEmbeddedMarkdownLeaf(
     return operation;
   };
 
+  // Do not retain a half-constructed native leaf if an earlier host initialization throws.
+  if (!disposed) {owned = embeddedLeavesByApp.get(app) ?? new Set<WorkspaceLeaf>();embeddedLeavesByApp.set(app, owned);owned.add(leaf);}
   return {
     /**
      * Open the exact file with its current initial representation preference and read/edit mode.

@@ -6,6 +6,7 @@ import type {LinkDirection, RelationType, Role} from "../../graph/relations";
 import type {PlexViewConfiguration, PlexViewConfigurationSchema} from "./configuration";
 import type {NotePropertyAvailability, NotePropertyRead} from "../noteProperties";
 import type {ColorValue} from "../../contracts/colorValue";
+import type {PlexPropertyAssignment} from "./propertyAssignment";
 
 /** Policy API compatibility, independent of configuration and session payload schema versions. */
 export const CANVAS_VIEW_API_VERSION = 1 as const;
@@ -22,6 +23,9 @@ export type AreaId = string;
 export type PhysicalPort = "top" | "bottom" | "left" | "right";
 export type ViewPoint = Readonly<{x: number; y: number}>;
 export type ViewRect = ViewPoint & Readonly<{width: number; height: number}>;
+/** Area meaning is explicit and independent of scroll/resize or decorative presentation. */
+export type PlexDropMeaning = Readonly<{kind: "navigation"} | {kind: "relationship"; role: "parent" | "child" | "left" | "right"; origin?: OccurrenceId}
+  | {kind: "property"; assignmentId: string} | {kind: "none"}>;
 export type ViewCoverage = "local" | "cached" | "unavailable";
 /** Owning a frontier lease is distinct from prepared local incidence and certified complete incidence. */
 export type PlexViewScopeRead = Readonly<{coverage: ViewCoverage; prepared: boolean; complete: boolean; pending: boolean}>;
@@ -101,6 +105,7 @@ export type PlexArea = Readonly<{
   viewport?: ViewRect & {contentTop: number; contentHeight: number; initialScrollTop: number};
   /** Physical area action is explicit; arbitrary areas have no relationship-write meaning by default. */
   dropRole?: "parent" | "child" | "left" | "right";
+  dropTarget?: PlexDropMeaning;
   /** Exact admitted canonical origin; omission means projection root/entry. Area placement is never relationship provenance. */
   dropOrigin?: OccurrenceId;
   reflow?: Readonly<{columns: number; columnGap: number; rowGap: number; paddingTop?: number; paddingBottom?: number}>;
@@ -146,6 +151,9 @@ export interface PlexViewDefinition {
   /** Bounded configured colors join the existing owning-document theme/palette projection.
    * It receives this view's configuration only, and grants no style or settings write. */
   readonly colorReferences?: (configuration: PlexViewConfiguration) => readonly ColorValue[];
+  /** Declarative assignment choices join the shared native action/write owner. Omit to remain
+   * read-only; categories/regions never derive a YAML or relationship edit from their geometry. */
+  readonly propertyAssignments?: (state: unknown, configuration: PlexViewConfiguration) => readonly PlexPropertyAssignment[];
   /** Optional pure presentation-state actions. The session still validates/persists bounded state
    * and protects native editors; this reducer receives no host or file mutation capability. */
   readonly reduceState?: (state: unknown, action: PlexViewStateAction, configuration: PlexViewConfiguration) => PlexViewStateResult;
