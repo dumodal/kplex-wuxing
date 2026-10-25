@@ -97,6 +97,8 @@ Host updates rebase through the existing queue and incoming owner epochs. The op
 
 `CanvasViewContributionController` captures the opening session/definition/configuration/lifetime and rechecks received owners. Moving focus to another canvas does not redirect the selector, controls or a pending action. Stale/retired/one-shot commands return unavailable, not a write to another canvas.
 
+The shared view selector exposes a settings cog. A choice may contribute an optional `settings: {kind: "settings", target?: string}` command; the bounded stable target is forwarded to the existing native manager factory as its optional third argument. Facets uses its selected preset ID to open the existing detached editor. Repeated clicks capture fresh commands for the same current choice; they never reuse a consumed command or follow global focus. These links reuse native Settings navigation and the existing queued writer, and opening/cancelling creates no configuration write.
+
 Menus allow 64 total items, 32 siblings and depth 3. Choices allow 8 groups with 32 options each. Live rails allow 16 validated sliders/checkboxes. Every rail addresses the same schema/queued writer as native Settings. Do not add view-ID dropdown options or a separate settings path.
 
 Native manager factories receive App only on the host side and a narrow `CanvasViewManagerContext`: own configuration/address reads, captured ownership, guarded save, presentation subscription, existing color/modal context, bounded cached suggestions and close. Shared `StyleEditorModal`, `StyleManagerList`, `StyleColorControls`, `PredicateConditions` and `PredicateRuleEditor` preserve their existing focus/cleanup owners.

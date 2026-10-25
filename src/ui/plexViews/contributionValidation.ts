@@ -14,7 +14,12 @@ export function copyCanvasViewCommand(command: CanvasViewCommand): CanvasViewCom
   const value = boundedViewState(command);
   if (!value || typeof value !== "object") throw new Error("Invalid canvas view command");
   const kind: unknown = Reflect.get(value, "kind");
-  if (kind === "settings") return {kind};
+  if (kind === "settings") {
+    const target: unknown = Reflect.get(value, "target");
+    if (target === undefined) return {kind};
+    if (contributionId(target)) return {kind, target};
+    throw new Error("Invalid canvas settings target");
+  }
   if (kind === "state") {
     const action: unknown = Reflect.get(value, "action");
     if (validPlexViewStateAction(action)) return {kind, action};
@@ -56,6 +61,7 @@ export function validateCanvasViewChoices(choices: readonly CanvasViewChoice[]):
     if (!contributionId(choice.id) || ids.has(choice.id) || !validCanvasViewText(choice.label)
       || typeof choice.selected !== "string" || choice.selected.length > 80 || !contributionArray(choice.options) || choice.options.length > 32) throw new Error("Invalid canvas view choice");
     ids.add(choice.id);
+    if (choice.settings && copyCanvasViewCommand(choice.settings).kind !== "settings") throw new Error("Invalid choice settings navigation");
     const options: CanvasViewChoice["options"] = choice.options;
     validateCanvasViewMenus(options.map(option => ({...option, kind: "action"})));
   }

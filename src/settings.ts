@@ -2051,10 +2051,10 @@ export class KplexSettingTab extends PluginSettingTab {
 
   /** Instantiate one registered native manager with its own sparse settings and existing queue.
    * The opening definition, appearance, incoming-entry epochs and modal lifetime stay captured. */
-  private openCanvasViewManager(id: string): void {
+  openCanvasViewManager(id: string, target?: string): boolean {
     const plugin = this.kplexPlugin, definition = this.viewSettings.definition(id);
     const factory = definition && this.viewSettings.contribution(definition)?.manager;
-    if (!definition || !factory || plugin.readCanvasViewConfiguration(id).status !== "available") return;
+    if (!definition || !factory || plugin.readCanvasViewConfiguration(id).status !== "available") return false;
     const appearance = plugin.captureAppearanceOwner();
     const registered = (): boolean => this.viewSettings.definition(id) === definition && plugin.isAppearanceOwnerCurrent(appearance);
     const dialog = factory(this.app, {
@@ -2071,8 +2071,9 @@ export class KplexSettingTab extends PluginSettingTab {
         await plugin.updateCanvasViewConfiguration(id, address, edit, expected, () => registered() && current());
         return {refreshPending: false};
       }, closed: () => this.colorDialogs.delete(dialog),
-    });
+    }, target);
     this.colorDialogs.add(dialog); dialog.open();
+    return true;
   }
 
   /** Enumerate the exact reviewed sources; palette definitions and non-color styling are never reset slots. */

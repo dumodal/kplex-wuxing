@@ -6,17 +6,21 @@ Open **Views and lenses → Canvas view → Facets**. Choose a preset in the sam
 
 ## Choose a preset
 
-| Preset | Default property | Categories |
-| --- | --- | --- |
-| ACE | `ace` | Add, Connect, Express |
-| PARA | `para` | Projects, Areas, Resources, Archives |
-| Wu Xing | `phase` | Water, Wood, Fire, Earth, Metal |
-| GTD | `horizon` | Actions, Projects, Areas of focus, Goals, Vision, Purpose and principles |
-| eACCESS | `access` | Encounters, Atlas, Calendar, Cards, Extras, Sources, Spaces |
+The view and preset dropdowns share a row when space allows. Select the cog beside the view to open its settings page. Select the cog beside the preset to edit that preset directly. Opening settings keeps the canvas selection; Cancel discards the preset draft.
+
+| Preset | Default property | Categories | Preview |
+| --- | --- | --- | --- |
+| ACE | `ace` | Add, Connect, Express | [Obsidian screenshot](images/facets/ace.png) |
+| PARA | `para` | Projects, Areas, Resources, Archives | [Obsidian screenshot](images/facets/para.png) |
+| Wu Xing | `phase` | Water, Wood, Fire, Earth, Metal | [Obsidian screenshot](images/facets/wuxing.png) |
+| GTD | `horizon` | Actions, Projects, Areas of focus, Goals, Vision, Purpose and principles | [Obsidian screenshot](images/facets/gtd.png) |
+| eACCESS | `access` | Encounters, Atlas, Calendar, Cards, Extras, Sources, Spaces | [Obsidian screenshot](images/facets/eaccess.png) |
 
 These are editable examples inside one Facets view. You can create/duplicate presets with three to seven stable categories, rename/reorder them, choose colors, matching aliases and explicit assignment values, and adjust layout defaults. Deleting a preset asks for an explicit replacement so saved canvases remain recoverable. Restore defaults changes the local draft until Save. Cancel keeps the accepted definition.
 
-The supplied [sample vault](../tests/fixtures/facets-vault/README.md) includes all five presets plus a custom four-category **State** example (`seed`, `research`, `draft`, `published`). It contains Markdown/configuration only, with no executable plugin. Use a separate disposable copy with the matching reviewed build; do not overwrite an existing vault's settings.
+The supplied [sample vault](../tests/fixtures/facets-vault/README.md) includes all five presets plus a custom four-category **State** example (`seed`, `research`, `draft`, `published`; [screenshot](images/facets/state.png)). It contains Markdown/configuration only, with no executable plugin. Use a separate disposable copy with the matching reviewed build; do not overwrite an existing vault's settings.
+
+![Wu Xing preset in Obsidian, with the current note centered and separate category and diagnostic regions](images/facets/wuxing.png)
 
 ## Classify from one source
 

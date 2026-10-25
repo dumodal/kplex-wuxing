@@ -67,6 +67,7 @@ const spanishTranslations = {
   "facets.chooseReplacement": "Elegir reemplazo",
   "facets.about": "Facetas",
   "facets.aboutHelp": "Explora esta nota y sus relaciones directas mediante categorías configurables.",
+  "view.settingsFor": "Configuración de {name}",
   "facets.settings": "Ajustes de facetas",
   "facets.preset": "Preajuste",
   "facets.presetUnavailable": "Preajuste no disponible; se muestra uno alternativo.",

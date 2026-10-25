@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {colorEditorScenario} from './support/colorEditorBrowser.mjs';
+import {readFileSync} from 'node:fs';
 const initialize=`
 const M=sourceModules,R=M.React,t=M.createTranslator('en'),check=(value,message)=>{if(!value)throw Error(message)},equal=(a,b,message)=>check(JSON.stringify(a)===JSON.stringify(b),message+' '+JSON.stringify([a,b]));
 const definition=M.exampleViewDefinition,views=new M.PlexViewRegistry([M.classicViewDefinition,definition]),registry=new M.CanvasViewSettingsRegistry(views,[M.exampleSettingsContribution]);
@@ -21,6 +22,30 @@ const create=async()=>{
 };
 `;
 const scenario=body=>colorEditorScenario(`(async()=>{${initialize}${body};return true})()`);
+
+test('adjacent view/choice cogs retain the opening canvas and selected entry, repeat safely and wrap on narrow panels',async()=>{
+ assert.equal(await scenario(`
+ const a=await create(),b=await create(),calls=[],style=document.createElement('style');style.textContent=${JSON.stringify(readFileSync('styles.css','utf8'))};document.head.append(style);
+ const contribution={...M.exampleSettingsContribution,choices:context=>M.exampleSettingsContribution.choices(context).map(choice=>({...choice,settings:{kind:'settings',target:choice.selected}}))};
+ const localRegistry=new M.CanvasViewSettingsRegistry(views,[contribution]);
+ a.controller=new M.CanvasViewContributionController(a.session,localRegistry,{settings:()=>a.p.settings.canvasViewSettings,mounted:()=>true,beforePresentationChange:()=>{},update:()=>{throw Error('Unexpected settings write')},openSettings:(id,target)=>{calls.push({id,target});return true},failed:error=>{throw error}});
+ const container=createDiv();document.body.append(container);const root=M.createRoot(container),index={suggestionCatalog:()=>({tags:[],noteTypes:[],folders:[],properties:[],paths:[]})};let owner=a;
+ const render=()=>M.flushSync(()=>root.render(R.createElement(M.PlexFilter,{index,revision:0,value:{...M.EMPTY_PLEX_FILTER},onChange:()=>{},lenses:[],onLensesChange:()=>{},layoutMode:'keep',onLayoutModeChange:()=>{},showSiblings:false,onShowSiblingsChange:()=>{},visibility:{},onVisibilityChange:()=>{},sortOrder:'name-asc',onSortOrderChange:()=>{},translate:t,viewSession:owner.session,viewContributions:owner.controller})));
+ render();M.flushSync(()=>container.querySelector('.kplex-filter-trigger').click());await waitFor(()=>document.querySelector('.kplex-view-choice button'));
+ const panel=document.querySelector('.kplex-filter-panel'),view=()=>panel.querySelector('.kplex-view-selector select'),choice=()=>panel.querySelector('[data-kplex-view-choice] select');
+ check(Math.abs(view().getBoundingClientRect().top-choice().getBoundingClientRect().top)<2,'Selectors share a row when space allows');
+ panel.style.width='230px';await new Promise(resolve=>setTimeout(resolve,40));check(choice().getBoundingClientRect().top>view().getBoundingClientRect().bottom,'Narrow panel wraps the same controls');
+ const frame=document.createElement('iframe');document.body.append(frame);const input=frame.contentDocument.createElement('input');frame.contentDocument.body.append(input);input.focus();owner=b;render();
+ panel.querySelector('.kplex-view-selector button').click();await waitFor(()=>calls.length===1);equal(calls[0],{id:definition.id},'View cog uses opening owner');
+ for(let repeat=0;repeat<2;repeat++){panel.querySelector('.kplex-view-choice button').click();await waitFor(()=>calls.length===repeat+2)}
+ equal(calls.slice(1),[{id:definition.id,target:'right'},{id:definition.id,target:'right'}],'Preset/choice navigation can reopen without writes');
+ choice().value='left';M.flushSync(()=>choice().dispatchEvent(new Event('change',{bubbles:true})));await waitFor(()=>a.session.state.side===-1);
+ panel.querySelector('.kplex-view-choice button').click();await waitFor(()=>calls.length===4);equal(calls[3],{id:definition.id,target:'left'},'Cog follows the selected stable entry');
+ equal(b.session.state.side,1,'Other canvas retained');equal(a.p.writes.length+b.p.writes.length,0,'Navigation never persists settings');equal(a.work.semantic+b.work.semantic,0,'Navigation starts no semantics');
+ check([...panel.querySelectorAll('[data-kplex-control-tooltip]')].every(button=>!button.hasAttribute('title')),'Cogs use one shared accessible tooltip');
+ root.unmount();a.controller.dispose();b.controller.dispose();a.session.dispose();b.session.dispose();container.remove();frame.remove();style.remove();
+ `),true);
+});
 
 test('open Views and lenses choices retain the opening canvas when props/focus move to another document',async()=>{
  assert.equal(await scenario(`

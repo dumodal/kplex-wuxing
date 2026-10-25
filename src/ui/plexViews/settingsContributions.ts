@@ -26,7 +26,7 @@ export type CanvasViewSettingsContext = Readonly<{
 }>;
 export type CanvasViewSettingsContribution = Readonly<{
   id: string;
-  manager?: (app: App, context: CanvasViewManagerContext) => StyleEditorModal;
+  manager?: (app: App, context: CanvasViewManagerContext, target?: string) => StyleEditorModal;
   items: (context: CanvasViewSettingsContext) => SettingDefinitionItem<DeclarativeSettingKey>[];
   /** Optional live canvas rails address the same registered type fields as native Settings. */
   layoutControls?: readonly CanvasViewLayoutControl[] | ((context: CanvasViewContributionContext) => readonly CanvasViewLayoutControl[]);

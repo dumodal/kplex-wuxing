@@ -67,6 +67,7 @@ const japaneseTranslations = {
   "facets.chooseReplacement": "置き換え先を選択",
   "facets.about": "ファセット",
   "facets.aboutHelp": "このノートと直接の関連を設定可能なカテゴリで探索します。",
+  "view.settingsFor": "{name}の設定",
   "facets.settings": "ファセット設定",
   "facets.preset": "プリセット",
   "facets.presetUnavailable": "プリセットが利用できないため代替を表示しています。",

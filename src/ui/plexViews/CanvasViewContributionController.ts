@@ -14,7 +14,7 @@ export type CanvasViewContributionPorts = Readonly<{
   mounted: () => boolean;
   beforePresentationChange: () => void;
   update: (id: string, address: ViewConfigurationAddress, edit: ViewConfigurationEdit, expected?: ViewConfigurationExpected) => Promise<void>;
-  openSettings: (id: string) => boolean;
+  openSettings: (id: string, target?: string) => boolean;
   failed: (error: unknown) => void;
 }>;
 
@@ -40,7 +40,7 @@ export class CanvasViewContributionController {
         || this.session.getSnapshot() !== revision || JSON.stringify(this.context()?.configuration) !== configuration) return {status: "unavailable"};
       used = true;
       try {
-        if (command.kind === "settings") return {status: this.ports.openSettings(definition.id) ? "completed" : "unavailable"};
+        if (command.kind === "settings") return {status: this.ports.openSettings(definition.id, command.target) ? "completed" : "unavailable"};
         if (context.configuration.status !== "available") return {status: "unavailable"};
         if (command.kind === "configuration") {
           this.ports.beforePresentationChange();
@@ -81,7 +81,7 @@ export class CanvasViewContributionController {
       const choices = this.registry.contribution(this.session.definition)?.choices?.(context) ?? [];
       validateCanvasViewChoices(choices);
       return choices.filter(choice => choice.visible !== false).map(choice => ({id: choice.id, label: {...choice.label},
-        selected: choice.selected, enabled: choice.enabled !== false, options: choice.options.filter(option => option.visible !== false)
+        selected: choice.selected, enabled: choice.enabled !== false, ...(choice.settings ? {settings: this.capture(choice.settings)} : {}), options: choice.options.filter(option => option.visible !== false)
           .map(option => ({id: option.id, label: {...option.label}, enabled: option.enabled !== false,
             unavailableReason: option.unavailableReason, command: this.capture(option.command)}))}));
     } catch (error) {this.ports.failed(error); return [];}

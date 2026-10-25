@@ -245,7 +245,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
       mounted: () => Boolean(rootRef.current?.isConnected),
       beforePresentationChange: () => graphActionPorts.current?.preparePresentationChange?.(),
       update: (id, address, edit, expected) => plugin.updateCanvasViewConfiguration(id, address, edit, expected),
-      openSettings: id => plugin.openCanvasViewSettings(id),
+      openSettings: (id, target) => plugin.openCanvasViewSettings(id, target),
       failed: error => {console.error("K-Plex canvas contribution was not completed", error); new Notice(plugin.translator("view.settingsSaveFailed"));},
     }), [documentSession, plugin]);
   useEffect(/** Retire all captured view callbacks before this native App generation disappears. */ () => () => viewContributions.dispose(), [viewContributions]);

@@ -67,6 +67,7 @@ const germanTranslations = {
   "facets.chooseReplacement": "Ersatz wählen",
   "facets.about": "Facetten",
   "facets.aboutHelp": "Diese Notiz und ihre direkten Beziehungen in konfigurierbaren Kategorien erkunden.",
+  "view.settingsFor": "Einstellungen für {name}",
   "facets.settings": "Facetten-Einstellungen",
   "facets.preset": "Vorlage",
   "facets.presetUnavailable": "Vorlage nicht verfügbar; Ersatz wird angezeigt.",

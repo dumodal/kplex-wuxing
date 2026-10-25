@@ -67,6 +67,7 @@ const frenchTranslations = {
   "facets.chooseReplacement": "Choisir un remplacement",
   "facets.about": "Facettes",
   "facets.aboutHelp": "Explorez cette note et ses relations directes par catégories configurables.",
+  "view.settingsFor": "Paramètres de {name}",
   "facets.settings": "Paramètres des facettes",
   "facets.preset": "Préréglage",
   "facets.presetUnavailable": "Préréglage indisponible ; affichage de secours.",

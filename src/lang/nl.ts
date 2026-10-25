@@ -67,6 +67,7 @@ const dutchTranslations = {
   "facets.chooseReplacement": "Kies een vervanger",
   "facets.about": "Facetten",
   "facets.aboutHelp": "Verken deze notitie en directe relaties in instelbare categorieën.",
+  "view.settingsFor": "Instellingen voor {name}",
   "facets.settings": "Facetinstellingen",
   "facets.preset": "Voorinstelling",
   "facets.presetUnavailable": "Voorinstelling niet beschikbaar; alternatief getoond.",

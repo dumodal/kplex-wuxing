@@ -21,6 +21,15 @@ const initialize=`
 `;
 const scenario=body=>colorEditorScenario(`(async()=>{${initialize}\n${body}\ntab.hide();return true})()`);
 
+test('selected preset deep link opens the existing editor without activating or saving a preset',async()=>{
+ assert.equal(await scenario(`
+ check(tab.openCanvasViewManager('wuxing','para'),'Registered target opens');
+ const editor=last(),parent=M.TestModal.instances.at(-2);equal(fields(editor,t('facets.name'))[0].value,'PARA','Exact selected preset draft');
+ check(fields(editor,t('wuxing.label')).length===4,'Existing four-category editor reused');equal(p.writes,[],'Opening does not save or activate');
+ close(editor);close(parent);check(window.migrationListeners===0,'Deep-link child and manager retire original lifetimes');
+ `),true);
+});
+
 test('Wu Xing model controls use the original preset draft and queued writer, with read-only explanatory help',async()=>{
  assert.equal(await scenario(`
  const m=manager(),editor=edit(m,'Wu Xing');

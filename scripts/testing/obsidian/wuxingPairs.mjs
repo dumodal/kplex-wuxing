@@ -6,17 +6,17 @@ export async function acceptWuXingPairs(x){
  await until(()=>center(companion)===path('Goal')&&root(companion)?.querySelector('.kplex-filter-trigger')&&companion.view.containerEl.ownerDocument!==document,'Independent native popout absent');
  await choose(companion,'classic');panel(companion).querySelector('.kplex-filter-panel-header button').click();
  for(const [leaf,name]of[[host,'Memory'],[companion,'Goal']]){
-  if(leaf===companion&&c.loadedCompanion){
+  if(c.loadedCompanion){
    // This explicit lane tests the supported attach-existing-document workflow. It never converts the separately recorded fresh-popout empty-leaf failure into a pass.
    await reveal(host);const loaded=workspace.getLeaf('tab');hosts.push(loaded);await loaded.openFile(app.vault.getFileByPath(path(name)),{active:true});
    await until(()=>loaded.view.file?.path===path(name)&&loaded.view.getViewType()==='markdown','Main-window native document did not load');
-   await reveal(companion);const position=companion.view.documentSession.preferences.sidecarPosition;
-   const target=workspace.createLeafBySplit(companion,position==='left'||position==='right'?'vertical':'horizontal',position==='left'||position==='above');hosts.push(target);
+   await reveal(leaf);const position=leaf.view.documentSession.preferences.sidecarPosition;
+   const target=workspace.createLeafBySplit(leaf,position==='left'||position==='right'?'vertical':'horizontal',position==='left'||position==='above');hosts.push(target);
    const parent=target.parent,offset=parent.children.indexOf(target);loaded.parent.removeChild(loaded);parent.insertChild(offset,loaded);target.detach();await workspace.revealLeaf(loaded);
-   await until(()=>loaded.view.file?.path===path(name)&&loaded.view.containerEl.ownerDocument===companion.view.containerEl.ownerDocument,'Loaded document did not migrate to the popout');
-   await until(()=>p.getAdjacentSidecarCandidate(companion)===loaded,'Exact adjacent native companion candidate absent');
-   const attached=await p.attachAdjacentSidecar(companion,'to-plex');check(attached?.file?.path===path(name)&&p.sidecarLeaves.get(companion)===loaded,'Explicit native Sidecar attachment failed');
-   cases.push({id:'popout-sidecar-explicit-loaded-native-document-attachment',freshCreationTested:false});continue;
+   await until(()=>loaded.view.file?.path===path(name)&&loaded.view.containerEl.ownerDocument===leaf.view.containerEl.ownerDocument,'Loaded document did not reach its owning canvas window');
+   await until(()=>p.getAdjacentSidecarCandidate(leaf)===loaded,'Exact adjacent native companion candidate absent');
+   const attached=await p.attachAdjacentSidecar(leaf,'to-plex');check(attached?.file?.path===path(name)&&p.sidecarLeaves.get(leaf)===loaded,'Explicit native Sidecar attachment failed');
+   cases.push({id:'sidecar-explicit-loaded-native-document-attachment',owner:leaf===host?'main':'popout',freshCreationTested:false});continue;
   }
   await reveal(leaf);await p.openSidecar(leaf,p.index.get(path(name)));
   c.progress={phase:'native-sidecar-open',cases,owner:leaf===host?'main':'popout',sidecarType:p.sidecarLeaves.get(leaf)?.view.getViewType(),expectedDocument:p.sidecarLeaves.get(leaf)?.view.file?.path===path(name)};

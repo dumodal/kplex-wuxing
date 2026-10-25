@@ -69,6 +69,7 @@ export const englishCatalog = {
   "facets.chooseReplacement": {message: "Choose a replacement", context: "Native Facets preset manager and detached category drafts.", params: []},
   "facets.about": {message: "Facets", context: "Facets preset classification and shared canvas presentation.", params: []},
   "facets.aboutHelp": {message: "Explore this note and its direct relationships through configurable categories.", context: "Facets preset classification and shared canvas presentation.", params: []},
+  "view.settingsFor": {"message":"{name} settings","context":"Opens the selected canvas view or preset in its existing native settings owner.","params":["name"],"referenceParams":[]},
   "facets.settings": {message: "Facets settings", context: "Facets preset classification and shared canvas presentation.", params: []},
   "facets.preset": {message: "Preset", context: "Facets preset classification and shared canvas presentation.", params: []},
   "facets.presetUnavailable": {message: "Preset unavailable; showing a fallback.", context: "Facets preset classification and shared canvas presentation.", params: []},

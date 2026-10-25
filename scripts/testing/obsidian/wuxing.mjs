@@ -5,6 +5,7 @@ import {runControlledProbe} from './controlledProbe.mjs';
 import {acceptWuXingEditor} from './wuxingEditor.mjs';
 import {acceptWuXingPairs} from './wuxingPairs.mjs';
 import {acceptFacetsFeatures} from './facetsFeatures.mjs';
+import {nativeHtmlDrag} from './nativeHtmlDrag.mjs';
 
 /** Keep every native effect under one exact controller lifetime; callbacks are serialized into the selected renderer, never production modules. */
 async function scenario(app,c){
@@ -55,11 +56,13 @@ async function scenario(app,c){
    const file=await app.vault.create(path(name),'---\n'+yaml+'\n---\n# '+name+'\n\nDisposable Wu Xing native fixture.\n');files.push(file);p.index.insertCreatedFile(file);releases.push(p.index.acquireSemanticDemand(file.path));
   }
   await until(()=>files.every(file=>app.metadataCache.getFileCache(file))&&!p.index.hasActiveSemanticPreparation(),'Fixture metadata/active work did not settle');
-  Object.assign(p.settings,{canvasViewSettings:{},maxItemCount:100,documentSyncMode:'off',sidecarOpen:false,embedCentralNode:false,autoOpenCentralDocument:false,followActiveFile:false,centralNodeMarkdownMode:'source',animationSpeed:0,graphDepth:1,renderSiblings:false,showPageNodes:true,showInferredNodes:true,showFolderNodes:false,showTagNodes:false,graphLenses:[],applyPowerFilter:false});p.index.notifyPresentation();
+  Object.assign(p.settings,{canvasViewSettings:{},maxItemCount:100,documentSyncMode:'off',sidecarOpen:false,embedCentralNode:false,autoOpenCentralDocument:false,followActiveFile:false,centralNodeMarkdownMode:'source',animationSpeed:0,graphDepth:1,renderSiblings:false,showPageNodes:true,showVirtualNodes:true,showInferredNodes:true,showFolderNodes:false,showTagNodes:false,graphLenses:[],applyPowerFilter:false});p.index.notifyPresentation();
   await until(()=>p.index.neighbours(p.index.get(path('Memory')),'child').length>=7,'Canonical direct relationships absent');
-  // Use an owned main-root leaf, as the accepted Mind Map native driver does. getLeaf('tab')
-  // can inherit a previously active128px companion group and invalidate native split geometry.
-  const host=workspace.createLeafInParent(workspace.rootSplit,0);hosts.push(host);await host.setViewState({type:'k-plex-react-view',active:true});await host.view.waitUntilReady();await reveal(host);await p.setDocumentSyncMode(host,'off');
+  // Use a real native tab in the widest main-window group. A direct leaf under rootSplit is
+  // unsuitable for native Sidecar adjacency; an arbitrary active group can be only128px wide.
+  const anchors=[];workspace.iterateRootLeaves(leaf=>{if(leaf.view.containerEl.ownerDocument===document&&leaf.view.containerEl.getBoundingClientRect().width>0)anchors.push(leaf)});
+  anchors.sort((a,b)=>b.view.containerEl.getBoundingClientRect().width-a.view.containerEl.getBoundingClientRect().width);check(anchors[0],'Native main-window tab anchor absent');await workspace.revealLeaf(anchors[0]);workspace.setActiveLeaf(anchors[0],{focus:true});
+  const host=workspace.getLeaf('tab');hosts.push(host);await host.setViewState({type:'k-plex-react-view',active:true});await host.view.waitUntilReady();await reveal(host);await p.setDocumentSyncMode(host,'off');
   host.view.centerPresentation.update({embedCentralNode:false,centralNodeMarkdownMode:'source'});p.notifyNavigation(path('Memory'),host);await until(()=>center(host)===path('Memory')&&root(host)?.querySelector('.kplex-filter-trigger'),'Attention did not render');
   await until(localReady,'Requested local cached proof/active work did not settle');
   cases.push({id:'requested-local-cache-proof',current:true,coverage:'cached',globalSemanticPending:p.index.hasPendingSemanticPreparation()});await choose(host,'wuxing');
@@ -91,6 +94,6 @@ async function scenario(app,c){
 
 if(process.env.KPLEX_TEST_VAULT_NAME!=='kplex-test-small')throw Error('Explicit disposable Small required');
 const lane=process.env.KPLEX_WUXING_NATIVE_LANE??'editor';if(!['editor','editor-isolated','pairs','features'].includes(lane))throw Error('Unknown Wu Xing native lane');
-const definitions='c.includeSidecar='+JSON.stringify(lane==='editor')+';c.compareSidecar='+JSON.stringify(process.env.KPLEX_WUXING_SIDECAR_COMPARATOR==='true')+';c.screenshotPrefix='+JSON.stringify(join(process.env.KPLEX_HOST_REPORT_DIR??'','facets'))+';c.lane='+JSON.stringify(lane)+';c.osInput='+JSON.stringify(process.env.KPLEX_WUXING_OS_INPUT==='true')+';c.loadedCompanion='+JSON.stringify(process.env.KPLEX_WUXING_LOADED_COMPANION==='true')+';c.stateExample='+JSON.stringify(JSON.parse(readFileSync('tests/fixtures/facets-vault/.obsidian/plugins/k-plex/data.json','utf8')).canvasViewSettings.wuxing.values.presets.state)+';c.originalData='+JSON.stringify(readFileSync(join(process.env.KPLEX_TEST_CONFIG_DIR,'plugins/k-plex/data.json'),'utf8'))+';c.acceptEditor='+acceptWuXingEditor.toString()+';c.acceptPairs='+acceptWuXingPairs.toString()+';c.acceptFeatures='+acceptFacetsFeatures.toString()+';';
+const definitions='c.htmlDrag='+nativeHtmlDrag.toString()+';c.includeSidecar='+JSON.stringify(lane==='editor')+';c.compareSidecar='+JSON.stringify(process.env.KPLEX_WUXING_SIDECAR_COMPARATOR==='true')+';c.screenshotPrefix='+JSON.stringify(join(process.env.KPLEX_HOST_REPORT_DIR??'','facets'))+';c.lane='+JSON.stringify(lane)+';c.osInput='+JSON.stringify(process.env.KPLEX_WUXING_OS_INPUT==='true')+';c.loadedCompanion='+JSON.stringify(process.env.KPLEX_WUXING_LOADED_COMPANION==='true')+';c.stateExample='+JSON.stringify(JSON.parse(readFileSync('tests/fixtures/facets-vault/.obsidian/plugins/k-plex/data.json','utf8')).canvasViewSettings.wuxing.values.presets.state)+';c.originalData='+JSON.stringify(readFileSync(join(process.env.KPLEX_TEST_CONFIG_DIR,'plugins/k-plex/data.json'),'utf8'))+';c.acceptEditor='+acceptWuXingEditor.toString()+';c.acceptPairs='+acceptWuXingPairs.toString()+';c.acceptFeatures='+acceptFacetsFeatures.toString()+';';
 await runControlledProbe('wuxing-220-'+lane,scenario,definitions,['src/ui/PlexGraph.tsx','src/core/plex/views/wuxing/definition.ts','src/core/plex/views/facets/projection.ts','src/core/plex/views/facets/layout.ts','src/core/plex/views/facets/rules.ts','src/core/plex/predicate.ts','src/ui/plexViews/facets/FacetPresetEditor.ts','src/ui/CanvasPropertyAssignmentActions.ts','src/adapters/obsidian/predicateContracts.ts'],{maximumMs:480000});
 

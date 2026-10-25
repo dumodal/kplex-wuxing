@@ -67,6 +67,7 @@ const russianTranslations = {
   "facets.chooseReplacement": "Выберите замену",
   "facets.about": "Фасеты",
   "facets.aboutHelp": "Изучайте заметку и её прямые связи в настраиваемых категориях.",
+  "view.settingsFor": "Настройки: {name}",
   "facets.settings": "Настройки фасетов",
   "facets.preset": "Набор",
   "facets.presetUnavailable": "Набор недоступен; показан запасной.",

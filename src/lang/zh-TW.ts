@@ -67,6 +67,7 @@ const traditionalChineseTranslations = {
   "facets.chooseReplacement": "選擇替代組",
   "facets.about": "分面",
   "facets.aboutHelp": "以可設定的分類探索此筆記及其直接關係。",
+  "view.settingsFor": "{name} 設定",
   "facets.settings": "分面設定",
   "facets.preset": "預設組",
   "facets.presetUnavailable": "預設組無法使用，正在顯示替代組。",

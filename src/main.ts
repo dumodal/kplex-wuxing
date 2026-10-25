@@ -2508,10 +2508,11 @@ export default class KplexPlugin extends Plugin {
   }
 
   /** Reuse native page-path navigation with the existing owning-tab fallback for settings cross-links. */
-  openCanvasViewSettings(id: string): boolean {
+  openCanvasViewSettings(id: string, target?: string): boolean {
     const definition = this.viewSettingsRegistry.definition(id);
     if (!definition) return false;
-    return this.openSettingsPage(this.translator("settings.ui.plex.behavior"), viewLabel(definition.labelKey, this.translator));
+    const opened = this.openSettingsPage(this.translator("settings.ui.plex.behavior"), viewLabel(definition.labelKey, this.translator));
+    return opened && (target === undefined || !!this.settingsTab?.openCanvasViewManager(id, target));
   }
 
   /** Reuse native page-path navigation with the existing owning-tab fallback for settings cross-links. */

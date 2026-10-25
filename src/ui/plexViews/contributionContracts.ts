@@ -8,13 +8,13 @@ export type CanvasViewContributionContext = Readonly<{viewId: string; state: unk
 export type CanvasViewCommand = Readonly<
   {kind: "state"; action: PlexViewStateAction}
   | {kind: "configuration"; address: ViewConfigurationAddress; edit: ViewConfigurationEdit}
-  | {kind: "settings"}>;
+  | {kind: "settings"; target?: string}>;
 export type CanvasViewAvailability = Readonly<{visible?: boolean; enabled?: boolean; unavailableReason?: CanvasViewText}>;
 export type CanvasViewMenuItem = Readonly<{id: string} & (
   {kind: "separator"}
   | ({kind: "action"; label: CanvasViewText; icon?: string; checked?: boolean; command: CanvasViewCommand} & CanvasViewAvailability)
   | ({kind: "submenu"; label: CanvasViewText; icon?: string; items: readonly CanvasViewMenuItem[]} & CanvasViewAvailability))>;
-export type CanvasViewChoice = Readonly<{id: string; label: CanvasViewText; selected: string;
+export type CanvasViewChoice = Readonly<{id: string; label: CanvasViewText; selected: string; settings?: CanvasViewCommand;
   options: readonly Readonly<{id: string; label: CanvasViewText; command: CanvasViewCommand} & CanvasViewAvailability>[]} & CanvasViewAvailability>;
 /** Legacy scalar rails retain their catalog metadata. Addressed controls also support explicit
  * literal labels and checkbox values; both use the existing layout components and settings writer. */
@@ -30,6 +30,6 @@ export type CapturedCanvasViewMenuItem = Readonly<{id: string} & (
   | {kind: "action"; label: CanvasViewText; icon?: string; checked?: boolean; enabled: boolean;
     unavailableReason?: CanvasViewText; command: CapturedCanvasViewCommand}
   | {kind: "submenu"; label: CanvasViewText; icon?: string; enabled: boolean; items: readonly CapturedCanvasViewMenuItem[]})>;
-export type CapturedCanvasViewChoice = Readonly<{id: string; label: CanvasViewText; selected: string; enabled: boolean;
+export type CapturedCanvasViewChoice = Readonly<{id: string; label: CanvasViewText; selected: string; enabled: boolean; settings?: CapturedCanvasViewCommand;
   options: readonly Readonly<{id: string; label: CanvasViewText; enabled: boolean; unavailableReason?: CanvasViewText;
     command: CapturedCanvasViewCommand}>[]}>;

@@ -469,8 +469,10 @@ export function PlexFilter({
     <datalist id={pathListId}>{suggestions.relatedPaths.map((path) => <option key={path} value={path} />)}</datalist>
     <datalist id={folderListId}>{suggestions.folders.map((folder) => <option key={folder} value={folder} />)}</datalist>
 
-    {panelViewSession && <PlexViewSelector session={panelViewSession} translate={translate} />}
-    {panelContributions && <CanvasViewChoices controller={panelContributions} translate={translate} />}
+    <div className="kplex-view-controls">
+      {panelViewSession && <PlexViewSelector session={panelViewSession} translate={translate} contributions={panelContributions} />}
+      {panelContributions && <CanvasViewChoices controller={panelContributions} translate={translate} />}
+    </div>
 
     <section className="kplex-filter-section">
       <div className="kplex-filter-section-heading">{translate("filter.visibility")}</div>

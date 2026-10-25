@@ -11,6 +11,7 @@ import {FACET_TEMPLATES} from "../../../core/plex/views/facets/templates";
 import {canvasViewText} from "../labels";
 import type {FacetPreset} from "../../../core/plex/views/facets/contracts";
 import {FacetPresetEditor} from "./FacetPresetEditor";
+import {isFacetPreset} from "../../../core/plex/views/facets/validation";
 
 export class FacetPresetManager extends StyleEditorModal {
   private list: StyleManagerList | null = null;
@@ -18,7 +19,7 @@ export class FacetPresetManager extends StyleEditorModal {
   private readonly children = new Set<StyleEditorModal>();
   private query = "";
   /** The native composition root supplies the sole configuration/color/lifetime capabilities. */
-  constructor(app: App, private readonly options: CanvasViewManagerContext) {super(app);}
+  constructor(app: App, private readonly options: CanvasViewManagerContext, private readonly initialId?: string) {super(app);}
   /** Opening and filtering never create settings records or change a canvas's chosen preset. */
   onOpen(): void {
     const t = this.translate;
@@ -27,7 +28,10 @@ export class FacetPresetManager extends StyleEditorModal {
     this.contentEl.createEl("p", {text: t("facets.managerHelp")});
     this.list = new StyleManagerList(this.contentEl, t, {placeholder: t("facets.search"), aria: t("facets.search")}, query => {this.query = query;this.render();});
     this.list.action(t("facets.create"), "plus", () => this.edit(null, {...structuredClone(FACET_TEMPLATES.ace), name: t("facets.newPreset")}));
-    this.release = this.options.subscribe(() => this.render());this.render();this.focusAfterAttachment(this.list.search);
+    this.release = this.options.subscribe(() => this.render());this.render();
+    const preset = this.initialId && facetLibrary(this.options.configuration())?.presets[this.initialId];
+    if (this.initialId && isFacetPreset(preset)) this.edit(this.initialId, preset);
+    else this.focusAfterAttachment(this.list.search);
   }
   /** Resolve only bounded saved entries; native search/windowing owns list presentation. */
   private render(): void {

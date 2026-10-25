@@ -197,4 +197,4 @@ Refresh feedback ownership: saved/pending-result dialogs retain their existing l
 
 ## Mind Map limit update (2026-10-25)
 
-Mind Map's maximum depth defaults to10 and accepts up to20. Maximum displayed notes defaults to500 and accepts up to2,000. Native Settings and configuration validation share the same upper bounds. Existing saved values remain valid; these defaults apply when values are absent. Compass/Facets and the shared per-area node limit are unchanged. The maintainer explicitly requested this configuration-only change without additional retesting; existing range expectations are updated to the new contract.
+Mind Map's maximum depth defaults to 10 and accepts up to 20. Maximum displayed notes defaults to 500 and accepts up to 2,000. Native Settings and configuration validation share the same upper bounds. Existing saved values remain valid; these defaults apply when values are absent. Compass/Facets and the shared per-area node limit are unchanged. The maintainer explicitly requested this configuration-only change without additional retesting; existing range expectations are updated to the new contract.

@@ -15,12 +15,13 @@ function presetChoice(context: CanvasViewContributionContext): CanvasViewChoice 
     label: facetPresetLabel(preset), command: {kind: "state", action: {id: "preset.select", args: id}}}));
   if (!options.some(option => option.id === state.preset)) options.unshift({id: state.preset,
     label: {key: "facets.presetUnavailable"}, enabled: false, command: {kind: "state", action: {id: "preset.select", args: state.preset}}});
-  return {id: "preset", label: {key: "facets.preset"}, selected: selected.status === "replaced" ? selected.id : state.preset, options};
+  return {id: "preset", label: {key: "facets.preset"}, selected: selected.status === "replaced" ? selected.id : state.preset, options,
+    ...(selected.status === "ready" || selected.status === "replaced" ? {settings: {kind: "settings" as const, target: selected.id}} : {})};
 }
 
 export const wuXingSettingsContribution: CanvasViewSettingsContribution = {
   id: "wuxing",
-  manager: (app, context) => new FacetPresetManager(app, context),
+  manager: (app, context, target) => new FacetPresetManager(app, context, target),
   items: ({translate, manage}) => [{name: translate("facets.about"), desc: translate("facets.aboutHelp")},
     ...(manage ? [{name: translate("facets.manage"), desc: translate("facets.managerHelp"), action: manage}] : [])],
   choices: context => {const choice = presetChoice(context); return choice ? [choice] : [];},
