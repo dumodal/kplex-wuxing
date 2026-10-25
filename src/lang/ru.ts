@@ -1568,6 +1568,19 @@ const russianTranslations = {
   "facets.horizontal": "Горизонтально",
   "facets.vertical": "Вертикально",
   "facets.diagnosticsShowEmpty": "Показывать пустые области диагностики",
+  "facets.layout": "Компоновка",
+  "facets.layout.circular": "Круговая",
+  "facets.layout.concentric": "Концентрические прямоугольники",
+  "facets.layout.vertical": "Вертикальная стопка",
+  "facets.layout.horizontal": "Горизонтальный ряд",
+  "facets.layout.quadrants": "Квадранты",
+  "facets.quadrantsUnavailable": "Для квадрантов нужны четыре категории. Показана круговая компоновка.",
+  "facets.reverseOrder": "Обратный порядок категорий",
+  "facets.focusAnchor": "Положение текущей заметки",
+  "facets.anchorPreview": "Предпросмотр текущей заметки и категорий",
+  "facets.focus": "Текущая заметка",
+  "facets.bandSizeHelp": "В концентрической компоновке ширина и высота задают горизонтальную и вертикальную толщину полосы. Заметки прокручиваются в верхней части каждой полосы.",
+  "facets.areaSizeHelp": "Необязательное значение: {minimum}–{maximum}. Пустое поле наследует настройку. Изменение размера на холсте заменяет это значение.",
 } as const satisfies LocaleTranslationMap;
 
 export const russianCatalog = buildLocaleCatalog(russianTranslations);

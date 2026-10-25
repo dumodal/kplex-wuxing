@@ -143,7 +143,7 @@ export class PlexViewSession {
   private setAreaDimension(areas: Map<string, Readonly<Record<string, number>>>, key: string, value: number): boolean {
     if (this.closed || !key || ["__proto__", "constructor", "prototype"].includes(key) || key.length > 128 || !Number.isFinite(value) || value <= 0 || value > 100_000) return false;
     const previous = areas.get(this.definition.id) ?? {};
-    if (previous[key] === value || Object.keys(previous).length >= 64 && !(key in previous)) return false;
+    if (previous[key] === value || Object.keys(previous).length >= (this.definition.areaPreferenceBudget ?? 64) && !(key in previous)) return false;
     areas.set(this.definition.id, {...previous, [key]: value});this.notify();this.persist();return true;
   }
   /** Persist one bounded view-local payload without sharing another view's transient state. */
@@ -189,7 +189,8 @@ export class PlexViewSession {
       const heights: unknown = rawHeights;
       if (!/^[a-z][a-z0-9.-]{0,79}$/.test(view) || !heights || typeof heights !== "object") continue;
       const admitted: Record<string, number> = {};
-      for (const [key, height] of Object.entries(heights).slice(0, 64)) if (key && !["__proto__", "constructor", "prototype"].includes(key) && key.length <= 128 && typeof height === "number" && Number.isFinite(height) && height > 0 && height <= 100_000) admitted[key] = height;
+      const maximum = this.registry.has(view) ? this.registry.resolve(view).areaPreferenceBudget ?? 64 : 64;
+      for (const [key, height] of Object.entries(heights).slice(0, maximum)) if (key && !["__proto__", "constructor", "prototype"].includes(key) && key.length <= 128 && typeof height === "number" && Number.isFinite(height) && height > 0 && height <= 100_000) admitted[key] = height;
       target.set(view, admitted);
     }
   }

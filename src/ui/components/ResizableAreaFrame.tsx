@@ -23,12 +23,13 @@ function resizeKey(event: KeyboardEvent<HTMLDivElement>, axis: "height" | "width
 }
 
 /** Render a region boundary and expose its current height when editing is enabled. */
-export function ResizableAreaFrame({ className, left, top, width, height, edge, editing, heightEditing = editing, widthControl, label, value, min, max, onHeightChange }: {
+export function ResizableAreaFrame({ className, left, top, width, height, shapePath, edge, editing, heightEditing = editing, widthControl, label, value, min, max, onHeightChange }: {
   className: string;
   left: number;
   top: number;
   width: number;
   height: number;
+  shapePath?: string;
   edge: "top" | "bottom";
   editing: boolean;
   heightEditing?: boolean;
@@ -39,7 +40,10 @@ export function ResizableAreaFrame({ className, left, top, width, height, edge, 
   max: number;
   onHeightChange: (height: number) => void;
 }) {
-  return <div className={className} style={{ left, top, width, height }}>
+  return <div className={`${className}${shapePath ? " is-shaped-area" : ""}`} style={{ left, top, width, height }}>
+    {shapePath && <svg className="kplex-area-shape" viewBox={`${left} ${top} ${width} ${height}`} aria-hidden="true" focusable="false">
+      <path d={shapePath} fillRule="evenodd" vectorEffect="non-scaling-stroke" />
+    </svg>}
     {heightEditing && <div
       className="kplex-area-keyboard-handle is-height-handle"
       role="separator"

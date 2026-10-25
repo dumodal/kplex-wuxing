@@ -18,6 +18,18 @@ The view and preset dropdowns share a row when space allows. Select the cog besi
 
 These are editable examples inside one Facets view. You can create/duplicate presets with three to seven stable categories, rename/reorder them, choose colors, matching aliases and explicit assignment values, and adjust layout defaults. Deleting a preset asks for an explicit replacement so saved canvases remain recoverable. Restore defaults changes the local draft until Save. Cancel keeps the accepted definition.
 
+## Choose a layout
+
+The **Layout** dropdown beside **Preset** applies to the canvas that opened the panel. Choose circular, concentric rectangles, vertical stack, horizontal spread or four-category quadrants. Other canvases keep their own choice. Quadrants is unavailable for other category counts; a saved incompatible choice visibly falls back to circular while preserving every category.
+
+The preset editor sets the shared default layout, category order and reversal. Linear layouts also offer top, bottom, left or right placement of the focused note, with a schematic preview. The note and its native editor appear once. These controls change placement without changing classification or recorded relationships.
+
+Resize a category or diagnostic area using its side and top/bottom handles. Keyboard arrows adjust the selected handle; Home/End choose its limits. Width uses Shift for one-unit steps. Wider areas automatically use more columns when measured cards fit. In the preset editor, optional exact width/height values set individual area defaults; blank inherits the preset default, and canvas handle adjustments take precedence.
+
+Concentric categories are distinct rounded rectangular bands with genuine inner holes. Width and height mean horizontal and vertical **band thickness**, rather than the full outer frame. Notes use a bounded scrollable top strip in each band. Resizing an inner band moves its enclosing bands; the outer band cannot intercept a drop inside an inner category.
+
+Diagnostics are combined by default, with each note's own status chip. **Configure Canvas Layout → Combine diagnostics** changes only this canvas. The preset editor sets the shared default, dock side, separate-area orientation, status order and empty-area visibility. Combined and separate modes retain independent sizes. Dropping into the combined Diagnostics area never means clearing a property; use the explicit category actions or a writable, separately labeled Unassigned area.
+
 The supplied [sample vault](../tests/fixtures/facets-vault/README.md) includes all five presets plus a custom four-category **State** example (`seed`, `research`, `draft`, `published`; [screenshot](images/facets/state.png)). It contains Markdown/configuration only, with no executable plugin. Use a separate disposable copy with the matching reviewed build; do not overwrite an existing vault's settings.
 
 ![Wu Xing preset in Obsidian, with the current note centered and separate category and diagnostic regions](images/facets/wuxing.png)

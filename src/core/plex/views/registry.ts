@@ -26,6 +26,8 @@ export class PlexViewRegistry {
       if (definition.configuration) validateViewConfigurationSchema(definition.configuration);
       if (definition.badgeBudget !== undefined && (definition.capabilities.badges !== true || !Number.isInteger(definition.badgeBudget)
         || definition.badgeBudget < 1 || definition.badgeBudget > 2048)) throw new Error("Invalid view badge budget");
+      if (definition.areaPreferenceBudget !== undefined && (!Number.isInteger(definition.areaPreferenceBudget)
+        || definition.areaPreferenceBudget < 1 || definition.areaPreferenceBudget > 192)) throw new Error("Invalid area preference budget");
       if (definition.editorHosting !== undefined && (definition.editorHosting !== "occurrence" || !definition.capabilities.editor)) {
         throw new Error("Unsupported internal editor hosting policy");
       }

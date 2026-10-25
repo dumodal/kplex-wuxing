@@ -1556,6 +1556,19 @@ const japaneseTranslations = {
   "facets.horizontal": "横方向",
   "facets.vertical": "縦方向",
   "facets.diagnosticsShowEmpty": "空の診断領域を表示",
+  "facets.layout": "レイアウト",
+  "facets.layout.circular": "円形",
+  "facets.layout.concentric": "同心角丸長方形",
+  "facets.layout.vertical": "縦並び",
+  "facets.layout.horizontal": "横並び",
+  "facets.layout.quadrants": "四象限",
+  "facets.quadrantsUnavailable": "四象限には4つのカテゴリが必要です。円形レイアウトで表示します。",
+  "facets.reverseOrder": "カテゴリの順序を逆にする",
+  "facets.focusAnchor": "注目ノートの位置",
+  "facets.anchorPreview": "注目ノートとカテゴリの配置プレビュー",
+  "facets.focus": "注目ノート",
+  "facets.bandSizeHelp": "同心レイアウトでは、幅と高さは帯の横方向と縦方向の厚さです。ノートは各帯の上部でスクロールします。",
+  "facets.areaSizeHelp": "任意の既定値：{minimum}–{maximum}。空欄で継承します。キャンバスでのサイズ変更はこの値を上書きします。",
 } as const satisfies LocaleTranslationMap;
 
 export const japaneseCatalog = buildLocaleCatalog(japaneseTranslations);

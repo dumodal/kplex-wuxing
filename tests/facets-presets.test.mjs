@@ -8,7 +8,8 @@ const M=await plexViewModules(['src/core/plex/views/facets/contracts.ts','src/co
  'src/core/plex/views/facets/classification.ts','src/core/plex/views/configurationValues.ts',
  'src/core/plex/views/configuration.ts','src/core/plex/views/facets/projection.ts','src/core/plex/views/facets/layout.ts',
  'src/core/plex/views/decorations.ts','src/core/plex/views/facets/presentation.ts',
- 'src/core/plex/views/facets/assignment.ts','src/core/plex/views/wuxing/definition.ts','src/core/plex/views/registry.ts']);
+ 'src/core/plex/views/facets/assignment.ts','src/core/plex/views/wuxing/definition.ts','src/core/plex/views/registry.ts',
+ 'src/core/contracts/areaGeometry.ts']);
 const definition={id:'wuxing',configuration:M.facetsConfigurationSchema};
 const available=stored=>M.readViewConfiguration(definition,stored),library=stored=>M.facetLibrary(available(stored));
 const node={id:'A',kind:'document',file:{extension:'md'},noteType:'water',tags:['wood']};
@@ -27,6 +28,39 @@ function diagnosticScene(additional=0){
  const measure=p=>p.occurrences.map(row=>({id:row.id,width:160,height:44,expandedWidth:160,expandedReserve:0,mini:null,envelope:null,...(row.badge?{badge:{width:120,height:24}}:{})}));
  return {values,work,project,measure};
 }
+
+test('all five measured layouts retain one attention editor, category identities and canonical edges',()=>{
+ const f=diagnosticScene(),projection=f.project(),measure=f.measure(projection),before=JSON.stringify(projection);
+ for(const layout of ['circular','concentric','vertical','horizontal','quadrants'])for(const focusAnchor of ['top','bottom','left','right']){
+  const preset={...M.FACET_TEMPLATES.wuxing,layout,focusAnchor},state={version:1,preset:'wuxing'};
+  const result=M.layoutFacets(projection,measure,'wuxing',preset,{},true,{},state),focus=result.positions.get(projection.entry);
+  assert.equal(result.positions.size,measure.length);assert.equal(focus.x,0);assert.equal(focus.y,0);
+  assert.equal(result.areas.filter(area=>JSON.parse(area.id)[2]==='category').length,5);
+  for(const occurrence of projection.occurrences)if(occurrence.areaId){const area=result.areas.find(area=>area.id===occurrence.areaId),point=result.positions.get(occurrence.id);assert(point.x>=area.viewport.x&&point.x<=area.viewport.x+area.viewport.width);assert(point.y>=area.viewport.contentTop&&point.y<=area.viewport.contentTop+area.viewport.contentHeight);if(point.y<=area.viewport.y+area.viewport.height)assert(M.areaContains(area.bounds,point,area.shape),'Visible cards belong to their actual physical area');}
+  assert.equal(JSON.stringify(projection),before,'Layout never changes classification or canonical relationships');
+  if(layout==='concentric'){
+   const bands=result.areas.filter(area=>area.shape);assert.equal(bands.length,5);
+   for(const area of bands){assert.equal(M.areaContains(area.bounds,focus,area.shape),false);assert.equal(area.heightPreference.value,preset.regionHeight);assert.equal(area.widthPreference.value,preset.regionWidth);assert.equal(area.resizeEdge,'top');}
+   for(const band of bands)for(const other of bands)if(band!==other){const strip={x:other.viewport.x+other.viewport.width/2,y:other.viewport.y+10};assert.equal(M.areaContains(band.bounds,strip,band.shape),false,'Outer bands do not intercept an inner content strip');}
+  }
+ }
+ const para=M.FACET_TEMPLATES.para,occurrences=[{id:'focus'},...para.order.map(id=>({id,areaId:M.facetAreaId('para','category',id)}))],p={entry:'focus',occurrences};
+ const result=M.layoutFacets(p,occurrences.map(row=>({id:row.id,width:900,height:500})),'para',{...para,layout:'quadrants'});
+ assert(result.areas.filter(area=>JSON.parse(area.id)[2]==='category').every(area=>!M.areaContains(area.bounds,{x:0,y:0})));
+});
+
+test('layout overrides restore independently, guard quadrants and preserve individual size precedence',()=>{
+ const config=available({}),initial={version:1,preset:'wuxing'},choice=M.reduceFacetState(initial,{id:'layout.select',args:'concentric'},config);
+ assert.equal(choice.status,'updated');assert.equal(M.facetLayout(M.FACET_TEMPLATES.wuxing,'wuxing',choice.state).effective,'concentric');
+ assert.equal(M.facetLayout(M.FACET_TEMPLATES.wuxing,'wuxing',initial).effective,'circular');assert.deepEqual(M.facetState(JSON.parse(JSON.stringify(choice.state))),choice.state);
+ assert.equal(M.reduceFacetState(initial,{id:'layout.select',args:'quadrants'},config).status,'unavailable');assert.equal(M.facetLayout({...M.FACET_TEMPLATES.wuxing,layout:'quadrants'},'wuxing').fallback,true);
+ assert.equal(M.reduceFacetState({version:1,preset:'para'},{id:'layout.select',args:'quadrants'},config).status,'updated');
+ const f=diagnosticScene(),p=f.project(),measured=f.measure(p),id=M.facetAreaId('wuxing','category','wood'),preset={...M.FACET_TEMPLATES.wuxing,areaSizes:{categories:{wood:{width:900,height:500}},diagnostics:{combined:{width:800,height:400}}}};
+ const defaults=M.layoutFacets(p,measured,'wuxing',preset),override=M.layoutFacets(p,measured,'wuxing',preset,{[id]:300},true,{[id]:600});
+ assert.equal(defaults.areas.find(area=>area.id===id).bounds.width,900);assert.equal(defaults.areas.find(area=>area.id===id).bounds.height,500);
+ assert.equal(override.areas.find(area=>area.id===id).bounds.width,600);assert.equal(override.areas.find(area=>area.id===id).bounds.height,300);
+ for(const alter of [{layout:'force'},{focusAnchor:'center'},{reverse:'yes'},{areaSizes:{categories:{wood:{width:2401}}}},{areaSizes:{diagnostics:{invented:{height:300}}}}])assert.equal(M.isFacetPreset({...preset,...alter}),false);
+});
 
 test('combined diagnostics defaults preserve distinct statuses, personal phases and exact canonical relations',()=>{
  const f=diagnosticScene(),before=JSON.stringify([...f.values]),combined=f.project(),separate=f.project({version:1,preset:'wuxing',combinedDiagnostics:{wuxing:false}});

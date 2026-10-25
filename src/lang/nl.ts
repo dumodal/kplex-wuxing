@@ -1560,6 +1560,19 @@ const dutchTranslations = {
   "facets.horizontal": "Horizontaal",
   "facets.vertical": "Verticaal",
   "facets.diagnosticsShowEmpty": "Lege diagnostiek tonen",
+  "facets.layout": "Indeling",
+  "facets.layout.circular": "Cirkelvormig",
+  "facets.layout.concentric": "Concentrische rechthoeken",
+  "facets.layout.vertical": "Verticale stapel",
+  "facets.layout.horizontal": "Horizontale spreiding",
+  "facets.layout.quadrants": "Kwadranten",
+  "facets.quadrantsUnavailable": "Kwadranten vereisen vier categorieën. De cirkelvormige indeling wordt getoond.",
+  "facets.reverseOrder": "Categorievolgorde omkeren",
+  "facets.focusAnchor": "Positie van de gefocuste notitie",
+  "facets.anchorPreview": "Voorbeeld van de gefocuste notitie en categorieën",
+  "facets.focus": "Gefocuste notitie",
+  "facets.bandSizeHelp": "Bij concentrische indelingen bepalen breedte en hoogte de horizontale en verticale banddikte. Notities scrollen in de bovenste strook van elke band.",
+  "facets.areaSizeHelp": "Optionele standaard: {minimum}–{maximum}. Laat leeg om over te nemen. Formaatgrepen op het canvas overschrijven deze waarde.",
 } as const satisfies LocaleTranslationMap;
 
 export const dutchCatalog = buildLocaleCatalog(dutchTranslations);

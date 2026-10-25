@@ -9,7 +9,7 @@ import {facetState, resolveFacetPreset} from "./state";
 import {compileFacetValues, classifyFacetNode} from "./classification";
 import {facetMembershipBadge, facetMembershipDescription, facetPresetLabel} from "./labels";
 import {compileFacetRules, facetRuleClassifier} from "./rules";
-import {facetDiagnostics} from "./presentation";
+import {facetDiagnostics, facetLayout} from "./presentation";
 
 /** Collision-free bounded identity includes the preset and separates diagnostics from categories.
  *48-character component bounds keep every existing session area-height key below128 characters. */
@@ -64,5 +64,6 @@ export function projectFacets(input: PlexViewInput): PlexProjection | null {
   const entry = occurrences.get(attention.id)!;
   return input.read.isCurrent() && (!classifyRules || classifyRules.isCurrent()) ? {attention: attention.id, layoutRoot: attention.id, entry: entry.id, editor: entry.id, frame: entry.id,
     occurrences: [...occurrences.values()], edges, truncated, coverage, heading: facetPresetLabel(preset),
-    ...(!state || selected.status === "future" || selected.status === "missing" ? {status: {key: "facets.presetUnavailable"}} : {})} : null;
+    ...(!state || selected.status === "future" || selected.status === "missing" ? {status: {key: "facets.presetUnavailable"}}
+      : facetLayout(preset, selected.id, state).fallback ? {status: {key: "facets.quadrantsUnavailable"}} : {})} : null;
 }

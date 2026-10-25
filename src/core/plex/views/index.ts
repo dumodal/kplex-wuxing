@@ -4,7 +4,7 @@ export {CANVAS_VIEW_API_VERSION} from "./contracts";
 export type {CanvasViewText, PlexNodeBadge, PlexViewStateAction, PlexViewStateResult, PlexViewDefinition, PlexViewInput,
   PlexViewRead, PlexProjection, PlexOccurrence, PlexViewEdge, PlexViewRelation, PlexRelationRead, PlexEvidenceRead,
   PlexMeasurement, PlexArea, PlexAreaDimension, PlexDecoration, PlexViewLayout, PlexViewScopeRead, PhysicalPort, OccurrenceId,
-  AreaId, ViewPoint, ViewRect, ViewCoverage, PlexDropMeaning, PlexViewPropertyDependencies} from "./contracts";
+  AreaId, ViewPoint, ViewRect, ViewCoverage, PlexDropMeaning, PlexViewPropertyDependencies, PlexAreaShape} from "./contracts";
 export {GraphPredicateEngine, compileGraphPredicate} from "../predicate";
 export type {GraphPredicateContext, GraphPredicateResult, GraphPredicateRead, GraphPredicateDependencies} from "../predicate";
 export {parseGraphPredicateExpression, tryParseGraphPredicateExpression} from "../predicateParser";
@@ -26,4 +26,5 @@ export type {PlexPropertyAssignment, PropertyFieldValue, PropertyAssignmentPlan}
 export {validPropertyAssignment, writableAssignmentField, assignmentField, samePropertyField, planPropertyAssignment, applyPropertyField} from "./propertyAssignment";
 export {validPlexDropMeaning, plexAreaDropMeaning} from "./dropTargets";
 export {measuredAreaGrid, measuredAreaColumns} from "./areaLayout";
+export {areaContains, areaShapePath, validAreaShape, transformAreaShape} from "../../contracts/areaGeometry";
 export type {MeasuredAreaItem, MeasuredAreaInsets, MeasuredAreaGrid} from "./areaLayout";

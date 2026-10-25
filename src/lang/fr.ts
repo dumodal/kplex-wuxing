@@ -1564,6 +1564,19 @@ const frenchTranslations = {
   "facets.horizontal": "Horizontale",
   "facets.vertical": "Verticale",
   "facets.diagnosticsShowEmpty": "Afficher les diagnostics vides",
+  "facets.layout": "Disposition",
+  "facets.layout.circular": "Circulaire",
+  "facets.layout.concentric": "Rectangles concentriques",
+  "facets.layout.vertical": "Pile verticale",
+  "facets.layout.horizontal": "Étalement horizontal",
+  "facets.layout.quadrants": "Quadrants",
+  "facets.quadrantsUnavailable": "Les quadrants nécessitent quatre catégories. La disposition circulaire est affichée.",
+  "facets.reverseOrder": "Inverser l’ordre des catégories",
+  "facets.focusAnchor": "Position de la note ciblée",
+  "facets.anchorPreview": "Aperçu de la note ciblée et des catégories",
+  "facets.focus": "Note ciblée",
+  "facets.bandSizeHelp": "En disposition concentrique, la largeur et la hauteur définissent l’épaisseur horizontale et verticale des bandes. Les notes défilent dans leur partie supérieure.",
+  "facets.areaSizeHelp": "Valeur facultative : {minimum}–{maximum}. Laissez vide pour hériter. Le redimensionnement du canevas remplace cette valeur.",
 } as const satisfies LocaleTranslationMap;
 
 export const frenchCatalog = buildLocaleCatalog(frenchTranslations);

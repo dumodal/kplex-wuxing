@@ -9,6 +9,15 @@ const M=await plexViewModules(['src/application/PlexViewSession.ts','src/applica
 const occurrenceIntent = (occurrenceId='B1',fileIdentity='native-B') => ({viewId:'test.bound',occurrenceId,
  target:{nodeId:'B.md',path:'B.md',fileIdentity},dimensions:{width:600,height:360},mode:'source'});
 
+test('only opted-in presets retain the bounded full size inventory across layout and mode switches',()=>{
+ const normal=new M.PlexViewSession(M.builtInPlexViews,()=>{}),facets=new M.PlexViewSession(M.builtInPlexViews,()=>{});facets.select('wuxing');
+ for(let i=0;i<192;i++){assert.equal(facets.setAreaWidth('area'+i,300+i),true);assert.equal(facets.setAreaHeight('area'+i,200+i),true);assert.equal(normal.setAreaWidth('area'+i,300),i<64);}
+ assert.equal(facets.setAreaWidth('overflow',300),false);assert.equal(facets.setAreaHeight('overflow',300),false);
+ const restored=new M.PlexViewSession(M.builtInPlexViews,()=>{});restored.restore(JSON.parse(JSON.stringify(facets.getState())));
+ assert.equal(Object.keys(restored.getAreaWidths()).length,192);assert.equal(Object.keys(restored.getAreaHeights()).length,192);
+ normal.dispose();facets.dispose();restored.dispose();
+});
+
 test('independent canvas width and height preferences restore without retargeting another view or canvas',()=>{
  const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.probeViewDefinition]);let writes=0;
  const a=new M.PlexViewSession(registry,()=>writes++),b=new M.PlexViewSession(registry,()=>{});

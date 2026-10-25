@@ -5522,6 +5522,19 @@ export const englishCatalog = {
   "facets.horizontal": {message:"Horizontal",context:"Facets area arrangement.",params:[]},
   "facets.vertical": {message:"Vertical",context:"Facets area arrangement.",params:[]},
   "facets.diagnosticsShowEmpty": {message:"Show empty diagnostics",context:"Hiding empty frames never hides populated diagnostic notes.",params:[]},
+  "facets.layout": {message:"Layout",context:"Captured per-canvas Facets choice; native preset editor sets its shared default.",params:[]},
+  "facets.layout.circular": {message:"Circular",context:"Facets layout.",params:[]},
+  "facets.layout.concentric": {message:"Concentric rectangles",context:"Disjoint nested rounded rectangular category bands.",params:[]},
+  "facets.layout.vertical": {message:"Vertical stack",context:"Facets layout.",params:[]},
+  "facets.layout.horizontal": {message:"Horizontal spread",context:"Facets layout.",params:[]},
+  "facets.layout.quadrants": {message:"Quadrants",context:"Four-category Facets layout.",params:[]},
+  "facets.quadrantsUnavailable": {message:"Quadrants needs four categories. Showing the circular layout.",context:"Explicit safe fallback without dropping categories.",params:[]},
+  "facets.reverseOrder": {message:"Reverse category order",context:"Presentation order leaves stored membership unchanged.",params:[]},
+  "facets.focusAnchor": {message:"Focused note position",context:"Cardinal anchor outside linear category regions.",params:[]},
+  "facets.anchorPreview": {message:"Focused note and category layout preview",context:"Accessible native layout schematic.",params:[]},
+  "facets.focus": {message:"Focused note",context:"Native layout schematic.",params:[]},
+  "facets.bandSizeHelp": {message:"In concentric layouts, width and height set horizontal and vertical band thickness. Notes scroll in each band's top strip.",context:"Honest dimensions for shared concentric area controls.",params:[]},
+  "facets.areaSizeHelp": {message:"Optional default: {minimum}–{maximum}. Leave blank to inherit. Canvas resize handles override this default.",context:"Exact optional per-area preset size.",params:["minimum","maximum"],referenceParams:[]},
 } as const;
 
 export type EnglishCatalog = typeof englishCatalog;

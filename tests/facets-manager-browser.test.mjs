@@ -21,6 +21,18 @@ const initialize=`
 `;
 const scenario=body=>colorEditorScenario(`(async()=>{${initialize}\n${body}\ntab.hide();return true})()`);
 
+test('native layout defaults preview anchors and preserve exact independent area defaults through one save',async()=>{
+ assert.equal(await scenario(`
+ const m=manager(),editor=edit(m,'PARA'),select=(key,value)=>{const node=fields(editor,t(key))[0];node.value=value;node.dispatchEvent(new Event('change',{bubbles:true}))};
+ select('facets.layout','horizontal');check(editor.contentEl.querySelector('.kplex-facet-anchor-preview.is-horizontal.is-anchor-top'),'Native anchor preview matches the horizontal default');
+ select('facets.focusAnchor','right');check(editor.contentEl.querySelector('.kplex-facet-anchor-preview.is-anchor-right'),'Explicit cardinal anchor is previewed');
+ const first=editor.contentEl.querySelector('h3').parentElement,width=[...first.querySelectorAll('input')].find(node=>node.parentElement.parentElement.firstElementChild.textContent===t('wuxing.width'));
+ input(width,920);const height=[...first.querySelectorAll('input')].find(node=>node.parentElement.parentElement.firstElementChild.textContent===t('wuxing.height'));input(height,460);
+ equal(p.writes,[],'Layout and exact dimensions remain detached');await save(editor);await drain();
+ const preset=disk.canvasViewSettings.wuxing.values.presets.para;equal([preset.layout,preset.focusAnchor],['horizontal','right'],'Layout and anchor use the existing preset writer');equal(preset.areaSizes.categories.projects,{width:920,height:460},'Exact area defaults compose without overwriting their other axis');close(m);
+ `),true);
+});
+
 test('diagnostics dock edits compose in one detached native draft and save through the existing queue',async()=>{
  assert.equal(await scenario(`
  const m=manager(),editor=edit(m,'Wu Xing');

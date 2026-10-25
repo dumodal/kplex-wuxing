@@ -66,6 +66,7 @@ import {readViewConfiguration, readViewConfigurationAt} from "../core/plex/views
 import {boundedViewColors} from "../core/plex/views/decorations";
 import {canvasViewText} from "./plexViews/labels";
 import {plexAreaDropMeaning} from "../core/plex/views/dropTargets";
+import {areaContains, areaShapePath, transformAreaShape} from "../core/contracts/areaGeometry";
 import type {CanvasViewContributionController} from "./plexViews/CanvasViewContributionController";
 import type {CanvasViewLayoutControl} from "./plexViews/contributionContracts";
 import {CanvasViewLayoutControls} from "./plexViews/CanvasViewLayoutControls";
@@ -1946,7 +1947,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         const distance = Math.abs(point.x - (widthConfig.edge === "left" ? area.left : right));
         if (distance <= threshold && (!edgeMatch || distance < edgeMatch.distance)) edgeMatch = {zone, distance, axis: "width"};
       }
-      if (!emptyTarget || point.x < area.left || point.x > right || point.y < area.top || point.y > bottom) continue;
+      if (!emptyTarget || !areaContains({x: area.left, y: area.top, width: area.width, height: area.height}, point, area.shape)) continue;
       const horizontalDistance = Math.abs(point.x - (area.left + area.width / 2)) / Math.max(1, area.width);
       const verticalDistance = Math.abs(point.y - (area.top + area.height / 2)) / Math.max(1, area.height);
       interiorMatches.push({ zone, score: horizontalDistance + verticalDistance * 0.12 });
@@ -4946,6 +4947,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       key={zone}
       className={`kplex-area-frame kplex-area-${zone} is-edge-${area.resizeEdge}${widthConfig ? ` is-width-resizable is-side-${widthConfig.edge}` : ""}${!config ? " is-no-height-resize" : ""}${areaSettingsMode ? " is-settings-mode" : ""}${edgeActive ? " is-active" : ""}${resizingArea === zone ? " is-resizing" : ""}`}
       left={area.left} top={area.top} width={area.width} height={area.height}
+      shapePath={area.shape ? areaShapePath({x: area.left, y: area.top, width: area.width, height: area.height}, area.shape) : undefined}
       edge={area.resizeEdge} editing={areaSettingsMode && Boolean(config || widthConfig)} heightEditing={areaSettingsMode && Boolean(config)} label={zoneTitle(zone, translate, settings.lateralArrangement)}
       value={areaHeight(zone)} min={config?.min ?? area.height} max={config?.max ?? area.height}
       onHeightChange={/** Persist keyboard height edits through the same presentation-only path as pointer edits. */ (height) => { if (setAreaHeight(zone, height)) persistAreaSize(zone); }}
@@ -5203,8 +5205,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const previewCenter = previewRoot ? renderedNodeMap.get(occurrenceKey(previewRoot)) ?? previewRoot : undefined;
   const previewPoint = externalDropZone ? externalDropPoint.current : connectDrag?.current ?? nodeDrag;
   const declaredPreviewArea = scene.areas?.filter(area => area.dropRole === dropAreaZone).find(area => previewPoint
-    && previewPoint.x >= area.bounds.x && previewPoint.x <= area.bounds.x + area.bounds.width
-    && previewPoint.y >= area.bounds.y && previewPoint.y <= area.bounds.y + area.bounds.height);
+    && areaContains(area.bounds, previewPoint, area.shape));
   const previewArea = dropAreaZone === "center" && previewCenter
     ? { left: previewCenter.x - previewCenter.width / 2, top: previewCenter.y - previewCenter.height / 2, width: previewCenter.width, height: previewCenter.height }
     : dropAreaZone && dropAreaZone !== "center" ? declaredPreviewArea ? scene.zoneAreas[declaredPreviewArea.id]
@@ -5222,6 +5223,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     return target && assignment && plugin.canAssignCanvasProperty(original.page, assignment) ? scene.zoneAreas[target.areaId] : undefined;
   };
   const propertyPreviewBounds = propertyPreview();
+  /** Generic paint components receive only validated path data, retaining their domain-free
+   * boundary. The shared geometry owner supplies the same band as world-space hit testing. */
+  const dropPreviewPath = (area: ZoneAreaBounds | undefined): string | undefined => {
+    if (!area?.shape) return undefined;
+    const {scale, x, y} = camera.current, shape = transformAreaShape(area.shape, scale, x, y);
+    return shape ? areaShapePath({x: x + area.left * scale, y: y + area.top * scale, width: area.width * scale, height: area.height * scale}, shape) : undefined;
+  };
 
   const connectionSearchHint = effectiveActionBindings(plugin.settings.actionPreferences, "search.focus")
     .map(binding => formatActionBinding(binding, readObsidianPresentationEnvironment(viewport.current?.ownerDocument.defaultView ?? undefined), translate)).filter(Boolean).join(" / ");
@@ -5416,11 +5424,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       top={camera.current.y + previewArea.top * camera.current.scale - centerPreviewPadding}
       width={previewArea.width * camera.current.scale + centerPreviewPadding * 2}
       height={previewArea.height * camera.current.scale + centerPreviewPadding * 2}
+      shapePath={dropPreviewPath(declaredPreviewArea ? scene.zoneAreas[declaredPreviewArea.id] : undefined)}
       viewportWidth={viewport.current.clientWidth} viewportHeight={viewport.current.clientHeight}
     />}
     {propertyPreviewBounds && viewport.current && <DropAreaPreview className="is-property-drop-target"
       left={camera.current.x + propertyPreviewBounds.left * camera.current.scale} top={camera.current.y + propertyPreviewBounds.top * camera.current.scale}
       width={propertyPreviewBounds.width * camera.current.scale} height={propertyPreviewBounds.height * camera.current.scale}
+      shapePath={dropPreviewPath(propertyPreviewBounds)}
       viewportWidth={viewport.current.clientWidth} viewportHeight={viewport.current.clientHeight} />}
 
     {centralEditorPage && displayedEditorNode && <div

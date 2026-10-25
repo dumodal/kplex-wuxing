@@ -4,7 +4,7 @@ import {sanitizeColorValue, isThemeColorName, isPaletteColorId} from "../../../c
 import {configurationRecord as record, viewConfigurationEntryKey} from "../configurationValues";
 import type {FacetPreset, FacetPresetReplacement} from "./contracts";
 import {FACET_TEMPLATES} from "./templates";
-import {isFacetDiagnosticStatus} from "./presentation";
+import {isFacetDiagnosticStatus, isFacetLayout} from "./presentation";
 export const FACET_LIMITS = {presets: 16, entries: 32, categories: 7, aliases: 512, label: 80, expression: 2048} as const;
 
 /** Stable keys do not depend on translated labels or mutable note fields. */
@@ -35,6 +35,22 @@ export function isFacetPreset(value: unknown): value is FacetPreset {
   if (value.interpretation !== undefined && value.interpretation !== "wuxing"
     || value.relativeLabels !== undefined && typeof value.relativeLabels !== "boolean"
     || value.regulatingGuides !== undefined && typeof value.regulatingGuides !== "boolean") return false;
+  if (value.layout !== undefined && !isFacetLayout(value.layout)
+    || value.focusAnchor !== undefined && (typeof value.focusAnchor !== "string" || !["top", "bottom", "left", "right"].includes(value.focusAnchor))
+    || value.reverse !== undefined && typeof value.reverse !== "boolean") return false;
+  if (value.areaSizes !== undefined) {
+    if (!record(value.areaSizes) || Object.keys(value.areaSizes).some(/** Unknown dimension groups cannot create unbounded identities. */ key => key !== "categories" && key !== "diagnostics")) return false;
+    for (const group of ["categories", "diagnostics"] as const) {
+      const sizes = value.areaSizes[group];if (sizes === undefined) continue;
+      if (!record(sizes) || Object.keys(sizes).length > 7) return false;
+      for (const [id, size] of Object.entries(sizes)) {
+        if (!(group === "categories" ? value.order.includes(id) : id === "combined" || isFacetDiagnosticStatus(id)) || !record(size)
+          || Object.keys(size).some(/** Size defaults contain only the two independently editable dimensions. */ key => key !== "width" && key !== "height")) return false;
+        for (const field of ["width", "height"] as const) if (size[field] !== undefined && (typeof size[field] !== "number" || !Number.isFinite(size[field])
+          || size[field] < (field === "width" ? 200 : 160) || size[field] > (field === "width" ? 2400 : 1200))) return false;
+      }
+    }
+  }
   if (value.diagnostics !== undefined) {
     const dock = value.diagnostics;
     if (!record(dock) || dock.combined !== undefined && typeof dock.combined !== "boolean"

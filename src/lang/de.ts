@@ -1560,6 +1560,19 @@ const germanTranslations = {
   "facets.horizontal": "Horizontal",
   "facets.vertical": "Vertikal",
   "facets.diagnosticsShowEmpty": "Leere Diagnosebereiche anzeigen",
+  "facets.layout": "Anordnung",
+  "facets.layout.circular": "Kreisförmig",
+  "facets.layout.concentric": "Konzentrische Rechtecke",
+  "facets.layout.vertical": "Vertikaler Stapel",
+  "facets.layout.horizontal": "Horizontale Reihe",
+  "facets.layout.quadrants": "Quadranten",
+  "facets.quadrantsUnavailable": "Quadranten erfordern vier Kategorien. Die kreisförmige Anordnung wird angezeigt.",
+  "facets.reverseOrder": "Kategorienreihenfolge umkehren",
+  "facets.focusAnchor": "Position der fokussierten Notiz",
+  "facets.anchorPreview": "Vorschau der fokussierten Notiz und Kategorien",
+  "facets.focus": "Fokussierte Notiz",
+  "facets.bandSizeHelp": "Bei konzentrischen Anordnungen bestimmen Breite und Höhe die horizontale und vertikale Bandstärke. Notizen scrollen im oberen Streifen jedes Bands.",
+  "facets.areaSizeHelp": "Optionaler Standard: {minimum}–{maximum}. Leer lassen zum Vererben. Größenänderungen auf der Zeichenfläche überschreiben diesen Standard.",
 } as const satisfies LocaleTranslationMap;
 
 export const germanCatalog = buildLocaleCatalog(germanTranslations);

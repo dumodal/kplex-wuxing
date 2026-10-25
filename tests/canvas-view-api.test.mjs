@@ -9,6 +9,17 @@ const M=await plexViewModules(['src/core/plex/views/index.ts','src/core/plex/vie
   'src/ui/plexViews/prepareScene.ts','src/ui/plexViews/labels.ts']);
 const definition=M.exampleViewDefinition;
 
+test('shared rounded band occupancy excludes its true inner hole and matches circular corners',()=>{
+ const bounds={x:-300,y:-200,width:600,height:400},shape={kind:'rounded-band',inner:{x:-180,y:-100,width:360,height:200},radius:20};
+ assert.equal(M.validAreaShape(bounds,shape),true);
+ for(const point of [{x:0,y:0},{x:0,y:-100},{x:-300,y:-200},{x:-299,y:-199}])assert.equal(M.areaContains(bounds,point,shape),false);
+ for(const point of [{x:0,y:-180},{x:290,y:0},{x:-180,y:-99},{x:-294,y:-194}])assert.equal(M.areaContains(bounds,point,shape),true);
+ assert.equal(M.areaContains(bounds,{x:-300,y:-200}),true,'Omitted shape preserves the inclusive rectangular contract');
+ for(const invalid of [{...shape,radius:101},{...shape,inner:bounds},{...shape,inner:{...shape.inner,width:Infinity}},{...shape,kind:'circle'}])assert.equal(M.validAreaShape(bounds,invalid),false);
+ const transformed=M.transformAreaShape(shape,2,40,-20);assert.deepEqual(transformed.inner,{x:-320,y:-220,width:720,height:400});assert.equal(transformed.radius,40);
+ assert.equal((M.areaShapePath(bounds,shape).match(/M /g)||[]).length,2,'Shared paint path contains the exact outer and inner rounded boundary');
+});
+
 test('shared area grid preserves unadorned geometry and native dimensions',()=>{
   const items=[{id:'a',width:100,height:40},{id:'b',width:200,height:80},{id:'c',width:120,height:30}];
   const grid=M.measuredAreaGrid(items,2,20,10);

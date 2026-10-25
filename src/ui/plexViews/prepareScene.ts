@@ -22,6 +22,7 @@ import {validPropertyAssignment} from "../../core/plex/views/propertyAssignment"
 import {plexSectionReference, visiblePlexSection, plexSectionAnchor} from "../../core/plex/views/sections";
 import type {PlexSectionViewContext} from "./sections";
 import {validPlexDropMeaning, plexAreaDropMeaning} from "../../core/plex/views/dropTargets";
+import {validAreaShape} from "../../core/contracts/areaGeometry";
 
 /** One text/font/color path serves real occurrences and the shared synthetic group row. */
 function measuredViewBadge(badge: PlexNodeBadge | undefined, settings: KplexSettings, translate?: Translator): PositionedNode["viewBadge"] {
@@ -374,6 +375,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
     for (const area of layout.areas) {
       if (!area.id || ["__proto__", "constructor", "prototype"].includes(area.id) || areaIds.has(area.id) || !Object.values(area.bounds).every(Number.isFinite) || area.bounds.width <= 0 || area.bounds.height <= 0) throw new Error("Invalid view area");
       areaIds.add(area.id);
+      if (area.shape && !validAreaShape(area.bounds, area.shape)) throw new Error("Invalid area shape");
       if (area.dropRole !== undefined && !["parent", "child", "left", "right"].includes(area.dropRole)) throw new Error("Invalid area drop role");
       if (area.dropTarget !== undefined && !validPlexDropMeaning(area.dropTarget)) throw new Error("Invalid area drop meaning");
       const drop = plexAreaDropMeaning(area);
@@ -395,7 +397,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
           || area.reflow.columns > 32 || area.reflow.columnGap < 0 || area.reflow.rowGap < 0 || autoColumns !== undefined && typeof autoColumns !== "boolean")
           throw new Error("Invalid area reflow");
       }
-      scene.zoneAreas[area.id] = {key: area.id, left: area.bounds.x, top: area.bounds.y, width: area.bounds.width, height: area.bounds.height, resizeEdge: area.resizeEdge ?? "bottom"};
+      scene.zoneAreas[area.id] = {key: area.id, left: area.bounds.x, top: area.bounds.y, width: area.bounds.width, height: area.bounds.height, resizeEdge: area.resizeEdge ?? "bottom", ...(area.shape ? {shape: area.shape} : {})};
       if (area.viewport) scene.zoneViewports[area.id] = {key: area.id, left: area.viewport.x, top: area.viewport.y, ...area.viewport};
     }
     const decorationIds = new Set<string>();
@@ -404,6 +406,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
       if (!mark.id || decorationIds.has(mark.id)) throw new Error("Invalid decoration identity");
       decorationIds.add(mark.id);
       if (mark.kind === "region") {
+        if (mark.shape && !validAreaShape(mark.bounds, mark.shape)) throw new Error("Invalid decoration shape");
         if (mark.color !== undefined) boundedViewColors([mark.color]);
         if (!Object.values(mark.bounds).every(Number.isFinite) || mark.bounds.width <= 0 || mark.bounds.height <= 0
           || mark.labelKey.length > 128 || (mark.label?.length ?? 0) > 128 || mark.areaId && !areaIds.has(mark.areaId)

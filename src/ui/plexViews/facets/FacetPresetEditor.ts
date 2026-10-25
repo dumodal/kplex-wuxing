@@ -16,6 +16,9 @@ import {createRoot, type Root} from "react-dom/client";
 import {PredicateRuleEditor} from "../../predicates/PredicateRuleEditor";
 import {compileFacetRules} from "../../../core/plex/views/facets/rules";
 import {renderDiagnosticSettings} from "./diagnosticSettings";
+import {renderFacetLayoutSettings} from "./layoutSettings";
+import {renderAreaSizeSettings} from "./areaSizeSettings";
+import {FACET_DIAGNOSTIC_ORDER} from "../../../core/plex/views/facets/presentation";
 
 export class FacetPresetEditor extends StyleEditorModal {
   private draft: FacetPreset;
@@ -66,6 +69,9 @@ export class FacetPresetEditor extends StyleEditorModal {
     new Setting(body).setName(t("wuxing.source")).addDropdown(input => input.addOptions({property: t("wuxing.property"), type: t("wuxing.noteType"), tag: t("wuxing.tags"), rules: t("facets.rules")})
       .setValue(this.draft.source).onChange(source => {if (source === "property" || source === "type" || source === "tag" || source === "rules") this.draft = {...this.draft, source};this.render();}));
     new Setting(body).setName(t("wuxing.field")).setDesc(t("wuxing.fieldHelp")).addText(input => input.setValue(this.draft.field).onChange(field => {this.draft = {...this.draft, field};this.validate();}));
+    renderFacetLayoutSettings(body, /** Keep sibling settings current through structural rerenders. */ () => this.draft, /** Only this detached preset's structure changes. */ preset => {
+      if (!this.canEdit()) return;this.draft = preset;this.render();
+    }, t);
     new Setting(body).setName(t("facets.start")).addDropdown(input => input.addOptions(Object.fromEntries(this.draft.order.map(id => [id, canvasViewText(facetCategoryLabel(this.draft.categories[id], id), t)])))
       .setValue(this.draft.start).onChange(start => {this.draft = {...this.draft, start};this.validate();}));
     for (const [field, label, minimum, maximum, step] of [["spacing", "wuxing.spacing", 24, 200, 8],
@@ -97,6 +103,11 @@ export class FacetPresetEditor extends StyleEditorModal {
     }));
     for (const [field, label] of [["conflictingColor", "facets.conflicting"], ["unassignedColor", "facets.unassigned"]] as const)
       this.colors.add(body, t(label), {kind: "node", field: "backgroundColor"}, () => this.draft[field], color => {if (color !== undefined) this.draft = {...this.draft, [field]: color};this.validate();}, () => undefined);
+    for (const id of ["combined", ...FACET_DIAGNOSTIC_ORDER] as const) {
+      body.createEl("h4", {text: t(id === "combined" ? "facets.diagnostics" : id === "unresolved" ? "facets.cannotClassify" : `facets.${id}`)});
+      renderAreaSizeSettings(body, "diagnostics", id, /** Exact values read the current detached draft. */ () => this.draft,
+        /** Save remains the existing atomic preset operation. */ preset => {if (this.canEdit()) {this.draft = preset;this.validate();}}, t);
+    }
     this.validate();
   }
   /** Every category edit replaces its local value only; aliases retain exact trimmed case. */
@@ -117,6 +128,8 @@ export class FacetPresetEditor extends StyleEditorModal {
     }
     this.colors?.add(section, t("facets.color"), {kind: "node", field: "backgroundColor"}, () => this.draft.categories[id].color,
       color => {if (color !== undefined) this.changeCategory(id, {color});}, () => undefined);
+    renderAreaSizeSettings(section, "categories", id, /** Reacquire current sibling category/default edits. */ () => this.draft,
+      /** Exact defaults never write per-canvas dimensions or mutate note properties. */ preset => {if (this.canEdit()) {this.draft = preset;this.validate();}}, t);
     new Setting(section).addButton(button => button.setButtonText(t("facets.moveUp")).setDisabled(index === 0).onClick(() => this.move(id, -1)))
       .addButton(button => button.setButtonText(t("facets.moveDown")).setDisabled(index === this.draft.order.length - 1).onClick(() => this.move(id, 1)))
       .addButton(button => button.setButtonText(t("common.delete")).setDisabled(this.draft.order.length <= 3).onClick(() => {

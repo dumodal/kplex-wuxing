@@ -35,6 +35,7 @@ return await build({stdin:{resolveDir:process.cwd(),contents:`
   export {plexSectionReference,plexSectionAnchor,visiblePlexSection} from './src/core/plex/views/sections';
   export {builtInCanvasViewSettings} from './src/ui/plexViews/settingsContributions';
   export {CanvasViewContributionController} from './src/ui/plexViews/CanvasViewContributionController';
+  export {CanvasViewChoices} from './src/ui/plexViews/CanvasViewChoices';
   export {CanvasPropertyAssignmentActions} from './src/ui/CanvasPropertyAssignmentActions';
   export {writeRelationshipMetadata} from './src/adapters/obsidian/relationshipMetadataWrite';
   export {normalizeFieldName} from './src/core/contracts/fieldName';

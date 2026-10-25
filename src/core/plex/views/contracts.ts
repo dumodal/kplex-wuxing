@@ -8,6 +8,7 @@ import type {NotePropertyAvailability, NotePropertyRead} from "../noteProperties
 import type {ColorValue} from "../../contracts/colorValue";
 import type {PlexPropertyAssignment} from "./propertyAssignment";
 import type {PlexSectionRef, PlexSectionRead} from "./sections";
+import type {AreaBandShape} from "../../contracts/areaGeometry";
 
 /** Policy API compatibility, independent of configuration and session payload schema versions. */
 export const CANVAS_VIEW_API_VERSION = 1 as const;
@@ -105,8 +106,12 @@ export type PlexMeasurement = Readonly<{
 /** A bounded canvas-owned dimension. Optional value describes the editable dimension when
  * an area's frame is larger than its usable band thickness or other measured content. */
 export type PlexAreaDimension = Readonly<{key: string; minimum: number; maximum: number; value?: number}>;
+/** Optional disjoint rounded band. Bounds describe its outer frame; the inner rounded hole
+ * excludes focus/inner categories from hits, highlights, counts and drop authority. */
+export type PlexAreaShape = AreaBandShape;
 export type PlexArea = Readonly<{
   id: AreaId; labelKey: string; bounds: ViewRect; resizeEdge?: "top" | "bottom";
+  shape?: PlexAreaShape;
   /** User labels are literal vault configuration, never translated as catalog keys. */
   label?: string;
   heightPreference?: PlexAreaDimension;
@@ -125,7 +130,7 @@ export type PlexArea = Readonly<{
 }>;
 /** Pure presentation marks have no semantic endpoints or interaction/write authority. */
 export type PlexDecoration = Readonly<{id: string} & (
-  {kind: "region"; bounds: ViewRect; labelKey: string; label?: string; description?: CanvasViewText; areaId?: AreaId; tint?: "water" | "wood" | "fire" | "earth" | "metal"; color?: ColorValue; count?: boolean}
+  {kind: "region"; bounds: ViewRect; shape?: PlexAreaShape; labelKey: string; label?: string; description?: CanvasViewText; areaId?: AreaId; tint?: "water" | "wood" | "fire" | "earth" | "metal"; color?: ColorValue; count?: boolean}
   | {kind: "guide"; points: readonly ViewPoint[]; directed?: boolean; variant?: "generating" | "regulating"}
 )>;
 export type PlexViewLayout = Readonly<{
@@ -155,6 +160,8 @@ export interface PlexViewDefinition {
   readonly capabilities: Readonly<{sections?: boolean; descendants?: boolean; editor?: boolean; compact?: boolean; properties?: boolean; badges?: boolean}>;
   /** Optional adornment admission within the unchanged 2048-occurrence scene cap; old views retain16. */
   readonly badgeBudget?: number;
+  /** Optional retained size-key budget across presets; ordinary views keep64 per dimension. */
+  readonly areaPreferenceBudget?: number;
   readonly defaultState: unknown;
   /** Omit for the existing attention-following host. Occurrence hosting requires explicit shared bindings. */
   readonly editorHosting?: "occurrence";

@@ -1556,6 +1556,19 @@ const traditionalChineseTranslations = {
   "facets.horizontal": "水平",
   "facets.vertical": "垂直",
   "facets.diagnosticsShowEmpty": "顯示空的診斷區",
+  "facets.layout": "配置",
+  "facets.layout.circular": "環形",
+  "facets.layout.concentric": "同心圓角矩形",
+  "facets.layout.vertical": "垂直堆疊",
+  "facets.layout.horizontal": "水平排列",
+  "facets.layout.quadrants": "四象限",
+  "facets.quadrantsUnavailable": "四象限需要四個分類。目前顯示環形配置。",
+  "facets.reverseOrder": "反轉分類順序",
+  "facets.focusAnchor": "焦點筆記位置",
+  "facets.anchorPreview": "焦點筆記與分類配置預覽",
+  "facets.focus": "焦點筆記",
+  "facets.bandSizeHelp": "同心配置中的寬度與高度表示區帶的水平與垂直厚度。筆記在各區帶頂端捲動。",
+  "facets.areaSizeHelp": "選填預設值：{minimum}–{maximum}。留空以繼承。畫布上的調整大小控制會覆寫此值。",
 } as const satisfies LocaleTranslationMap;
 
 export const traditionalChineseCatalog = buildLocaleCatalog(traditionalChineseTranslations);

@@ -23,7 +23,7 @@ A view does not receive App, a plugin/index instance, file-writing access or a p
 
 ## Definition and scene
 
-Required definition members: `id`, `version`, `labelKey`, `icon`, `capabilities`, `defaultState`, `restoreState`, `project`, `layout`. Optional members are declared in `contracts.ts`: `configuration`, `reduceState`, `navigation`, `navigationEntry`, `editorHosting`, `hierarchy`, `colorReferences`, `propertyAssignments`, `propertyDependencies`.
+Required definition members: `id`, `version`, `labelKey`, `icon`, `capabilities`, `defaultState`, `restoreState`, `project`, `layout`. Optional members are declared in `contracts.ts`: `configuration`, `reduceState`, `navigation`, `navigationEntry`, `editorHosting`, `hierarchy`, `colorReferences`, `propertyAssignments`, `propertyDependencies`, `badgeBudget`, `areaPreferenceBudget`.
 
 `project(PlexViewInput)` receives attention, optional layout root/retained hierarchy scopes/editor identities, its own configuration/state and `PlexViewRead`. It returns a `PlexProjection` or null. `layout` receives the admitted projection, actual `PlexMeasurement[]`, state/editor information and context containing area heights/configuration. Layout has no source reader or scheduling port.
 
@@ -38,6 +38,12 @@ Required definition members: `id`, `version`, `labelKey`, `icon`, `capabilities`
 Node position `x/y` is its **center** in world coordinates. Area/decoration bounds use top-left `x/y`. Never substitute viewport center for an off-origin frame/editor occurrence. Physical port placement is separate from a semantic role.
 
 The adapter validates identities, canonical endpoints, finite geometry, bounds and capabilities. Invalid/unavailable scenes fall back to the actual attention/editor host; stale graph payloads do not gain action authority. One scene admits at most 2,048 occurrences; areas/decorations are each capped at 64. Specialized definitions apply tighter bounds.
+
+`badgeBudget` optionally admits 1–2,048 badges within that unchanged occurrence cap; omitted definitions retain 16. `areaPreferenceBudget` optionally retains up to 192 workspace size keys per dimension across presets; omitted definitions retain 64. Facets opts into 192 for 16 presets with at most seven category, four separate diagnostic and one combined diagnostic identities. Width and height remain independent maps in the existing canvas session; no setting, graph or source read is implied.
+
+Areas may declare independent `heightPreference`/`resizeEdge` and `widthPreference`/`widthResizeEdge`. A dimension's optional `value` describes its editable thickness when the outer frame is larger. `measuredAreaColumns` and `measuredAreaGrid` use actual per-area node/badge envelopes and world-space dimensions; camera zoom does not change columns.
+
+An optional `shape: {kind: "rounded-band", inner, radius}` excludes one strictly enclosed rounded hole from the outer `bounds`. The shared `areaContains`/`areaShapePath` geometry owns physical hits, counts and painting. Regions, resize frames and drop highlights retain the same hole; generic paint components receive path data from the host, with no canvas-domain dependency. Omitted shapes keep the established inclusive rectangle. Scrolling content uses the area's independent viewport; the unused band has only the explicitly declared area meaning and never derives relationship authority from an outline.
 
 `CanvasViewText` is `{literal: string}` or `{key: string}`. Literal user/vault labels never become catalog keys. Catalog keys used here have no required parameters. A heading omitted inherits host presentation; null/empty literal hides it.
 
@@ -99,7 +105,7 @@ Host updates rebase through the existing queue and incoming owner epochs. The op
 
 The shared view selector exposes a settings cog. A choice may contribute an optional `settings: {kind: "settings", target?: string}` command; the bounded stable target is forwarded to the existing native manager factory as its optional third argument. Facets uses its selected preset ID to open the existing detached editor. Repeated clicks capture fresh commands for the same current choice; they never reuse a consumed command or follow global focus. These links reuse native Settings navigation and the existing queued writer, and opening/cancelling creates no configuration write.
 
-Menus allow 64 total items, 32 siblings and depth 3. Choices allow 8 groups with 32 options each. Live rails allow 16 validated sliders/checkboxes. Every rail addresses the same schema/queued writer as native Settings. Do not add view-ID dropdown options or a separate settings path.
+Menus allow 64 total items, 32 siblings and depth 3. Choices allow 8 groups with 32 options each. Live rails allow 16 validated sliders/checkboxes. Configuration rails address the same schema/queued writer as native Settings. An optional checkbox `state: {value, actionId}` instead dispatches its boolean through the captured contribution controller and existing session reducer; this is an explicit per-canvas preference such as Combine diagnostics. Its declared schema address still identifies the relevant preset/default. Do not add view-ID dropdown options or a separate settings path.
 
 Native manager factories receive App only on the host side and a narrow `CanvasViewManagerContext`: own configuration/address reads, captured ownership, guarded save, presentation subscription, existing color/modal context, bounded cached suggestions and close. Shared `StyleEditorModal`, `StyleManagerList`, `StyleColorControls`, `PredicateConditions` and `PredicateRuleEditor` preserve their existing focus/cleanup owners.
 

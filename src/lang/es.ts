@@ -1564,6 +1564,19 @@ const spanishTranslations = {
   "facets.horizontal": "Horizontal",
   "facets.vertical": "Vertical",
   "facets.diagnosticsShowEmpty": "Mostrar diagnósticos vacíos",
+  "facets.layout": "Disposición",
+  "facets.layout.circular": "Circular",
+  "facets.layout.concentric": "Rectángulos concéntricos",
+  "facets.layout.vertical": "Pila vertical",
+  "facets.layout.horizontal": "Distribución horizontal",
+  "facets.layout.quadrants": "Cuadrantes",
+  "facets.quadrantsUnavailable": "Cuadrantes requiere cuatro categorías. Se muestra la disposición circular.",
+  "facets.reverseOrder": "Invertir el orden de categorías",
+  "facets.focusAnchor": "Posición de la nota enfocada",
+  "facets.anchorPreview": "Vista previa de la nota enfocada y las categorías",
+  "facets.focus": "Nota enfocada",
+  "facets.bandSizeHelp": "En disposiciones concéntricas, la anchura y la altura definen el grosor horizontal y vertical de cada banda. Las notas se desplazan en su franja superior.",
+  "facets.areaSizeHelp": "Valor opcional: {minimum}–{maximum}. Déjalo vacío para heredar. Los controles del lienzo anulan este valor.",
 } as const satisfies LocaleTranslationMap;
 
 export const spanishCatalog = buildLocaleCatalog(spanishTranslations);

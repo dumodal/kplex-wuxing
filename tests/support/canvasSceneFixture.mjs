@@ -34,7 +34,7 @@ const mount=async definition=>{
  onActivate:()=>{},onWanderActivate:page=>{moves.push(page.path);props.activePath=page.path;render()},onOpen:()=>{},onOpenInSidecar:async()=>{},onCentralNodeEditorChange:()=>{},onCentralNodeModeChange:()=>{},
  actionPorts:ports,actionSurfaceId:'wander-'+definition.id,displayState:{zen:false,fullscreen:false},fullscreenAvailable:false,sidecarOpen:false,viewDefinition:definition,viewSession:session,viewContributions:contributions,viewRevision:session.getSnapshot()};
  const render=()=>{props.viewRevision=session.getSnapshot();M.flushSync(()=>root.render(M.createElement(M.PlexGraph,props)))};render();await wait();await wait();
- return{container,ports,session,props,moves,render,close:()=>{M.flushSync(()=>root.unmount());contributions.dispose();session.dispose();container.remove()}};
+ return{container,ports,session,contributions,props,moves,render,close:()=>{M.flushSync(()=>root.unmount());contributions.dispose();session.dispose();container.remove()}};
 };
 `;
 

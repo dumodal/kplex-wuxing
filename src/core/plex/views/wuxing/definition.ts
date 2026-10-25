@@ -12,6 +12,7 @@ export const wuXingViewDefinition: PlexViewDefinition = {
   id: "wuxing", version: 1, labelKey: "view.wuxing", icon: "orbit",
   capabilities: {sections: false, descendants: false, editor: true, compact: false, properties: true, badges: true},
   badgeBudget: 2048,
+  areaPreferenceBudget: 192,
   defaultState: {version: 1, preset: "wuxing"}, configuration: facetsConfigurationSchema,
   restoreState: restoreFacetState, reduceState: reduceFacetState, project: projectFacets,
   propertyAssignments: facetPropertyAssignments,

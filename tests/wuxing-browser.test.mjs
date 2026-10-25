@@ -7,6 +7,31 @@ import {plexViewBrowserModules} from './support/plexViewBrowser.mjs';
 import {canvasSceneFixture} from './support/canvasSceneFixture.mjs';
 const output=await plexViewBrowserModules();
 
+test('captured shared layout dropdown preserves two canvases and paints true concentric holes',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ fieldCaches.get('A.md').frontmatter.phase='wood';fieldCaches.get('B.md').frontmatter.phase='metal';
+ const a=await mount(M.wuXingViewDefinition),b=await mount(M.wuXingViewDefinition),beforeB=JSON.stringify(b.session.getState()),stored=JSON.stringify(settings),before={...work};
+ const focused=a.container.querySelector('[data-kplex-path="A.md"]'),camera=a.container.querySelector('.kplex-camera').style.transform;
+ const surface=document.createElement('div');document.body.append(surface);const choices=M.createRoot(surface);M.flushSync(()=>choices.render(M.createElement(M.CanvasViewChoices,{controller:a.contributions,translate:plugin.translator})));
+ const select=()=>surface.querySelector('select[aria-label="Layout"]');check(select().options.length===5&&select().querySelector('option[value="quadrants"]').disabled,'Shared dropdown declares every layout and guards incompatible quadrants');
+ for(const layout of ['concentric','vertical','horizontal','circular']){
+  b.container.tabIndex=0;b.container.focus();const input=select();input.value=layout;input.dispatchEvent(new Event('change',{bubbles:true}));await wait();a.render();await wait();
+  check(a.session.state.layouts.wuxing===layout&&select().value===layout,'The captured dropdown targets its opening canvas after focus moves');
+  check(a.container.querySelector('[data-kplex-path="A.md"]')===focused&&a.container.querySelector('.kplex-camera').style.transform===camera,'Layout changes preserve native focus occurrence and manual camera');
+  check(a.container.querySelectorAll('[data-kplex-decoration]').length===6,'All categories and combined diagnostics stay visible');
+  if(layout==='concentric'){
+   const paths=[...a.container.querySelectorAll('.kplex-view-region > path')];check(paths.length===5,'Concentric categories use shared band paths');
+   check(paths.every(path=>path.getAttribute('fill-rule')==='evenodd'&&!path.isPointInFill(new DOMPoint(0,0))),'Every painted inner hole excludes the focused note');
+   check(a.container.querySelectorAll('[data-kplex-path="B.md"]').length===1,'A categorized note retains one canonical occurrence');
+  }
+  check(JSON.stringify(b.session.getState())===beforeB&&JSON.stringify(settings)===stored,'Layout selection leaves the other canvas and shared defaults unchanged');
+ }
+ check(work.body===before.body&&work.scans===before.scans&&work.acquisitions===before.acquisitions,'Layout changes do not acquire, parse or scan sources');
+ M.flushSync(()=>choices.unmount());surface.remove();a.close();b.close();plugin.actionManager.dispose();check(events.size===0,'Dropdown and view lifetimes retire');style.remove();return true;
+ })()`),true)}finally{await host.cleanup()}
+});
+
 test('combined diagnostics uses shared measured status chips and a captured canvas-only toggle',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}

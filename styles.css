@@ -3902,12 +3902,29 @@ button.kplex-sidecar-unfold-plex:focus-visible,
   pointer-events: none;
 }
 
-.kplex-view-region rect {
+.kplex-view-region rect,
+.kplex-view-region > path {
   fill: var(--background-secondary);
   fill-opacity: 0.24;
   stroke: var(--background-modifier-border);
   stroke-width: 1;
 }
+
+.kplex-area-frame.is-shaped-area { border: none; }
+.kplex-area-shape { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.kplex-area-shape path { fill: none; stroke: var(--background-modifier-border-focus); stroke-width: 1; stroke-dasharray: 4 4; }
+.kplex-area-frame.is-active .kplex-area-shape path { stroke: var(--interactive-accent); stroke-dasharray: none; }
+.kplex-drop-area-shape { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 20; }
+.kplex-drop-area-shape path { fill: var(--interactive-accent); fill-opacity: .15; stroke: var(--interactive-accent); stroke-width: 2; }
+.kplex-facet-anchor-preview { display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto 1fr auto; gap: 12px; padding: 16px; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); }
+.kplex-facet-anchor-focus { padding: 6px; border: 1px solid var(--interactive-accent); border-radius: var(--radius-s); text-align: center; }
+.kplex-facet-anchor-categories { grid-area: 2 / 2; display: flex; gap: 6px; }
+.kplex-facet-anchor-categories span { padding: 6px; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-s); }
+.kplex-facet-anchor-preview.is-vertical .kplex-facet-anchor-categories { flex-direction: column; }
+.kplex-facet-anchor-preview.is-anchor-top .kplex-facet-anchor-focus { grid-area: 1 / 2; }
+.kplex-facet-anchor-preview.is-anchor-bottom .kplex-facet-anchor-focus { grid-area: 3 / 2; }
+.kplex-facet-anchor-preview.is-anchor-left .kplex-facet-anchor-focus { grid-area: 2 / 1; align-self: center; }
+.kplex-facet-anchor-preview.is-anchor-right .kplex-facet-anchor-focus { grid-area: 2 / 3; align-self: center; }
 
 .kplex-view-region.is-water rect { fill: var(--color-blue); fill-opacity: 0.06; }
 .kplex-view-region.is-wood rect { fill: var(--color-green); fill-opacity: 0.06; }

@@ -7,6 +7,8 @@ import {facetLibrary} from "./configuration";
 import {FACET_TEMPLATES} from "./templates";
 import {facetId, isFacetPreset, isFacetReplacement} from "./validation";
 import type {FacetPresetLibrary, FacetPresetSelection, FacetPreset, FacetCanvasState} from "./contracts";
+import {isFacetLayout} from "./presentation";
+import type {FacetLayout} from "./contracts";
 
 /** Existing null state means the original Wu Xing preset. Unsupported versions remain opaque. */
 export function restoreFacetState(value: unknown): unknown {return value ?? {version: 1, preset: "wuxing"};}
@@ -17,6 +19,14 @@ export function facetState(value: unknown): FacetCanvasState | null {
   if (!record(value) || value.version !== 1 || !facetId(value.preset)) return null;
   const combined = value.combinedDiagnostics;
   const overrides: Record<string, boolean> = {};
+  const layouts: Record<string, FacetLayout> = {};
+  if (value.layouts !== undefined) {
+    if (!record(value.layouts) || Object.keys(value.layouts).length > 16) return null;
+    for (const [id, layout] of Object.entries(value.layouts)) {
+      if (!facetId(id) || !isFacetLayout(layout)) return null;
+      layouts[id] = layout;
+    }
+  }
   if (combined !== undefined) {
     if (!record(combined) || Object.keys(combined).length > 16) return null;
     for (const [id, choice] of Object.entries(combined)) {
@@ -24,7 +34,7 @@ export function facetState(value: unknown): FacetCanvasState | null {
       overrides[id] = choice;
     }
   }
-  return {version: 1, preset: value.preset, ...(combined !== undefined ? {combinedDiagnostics: overrides} : {})};
+  return {version: 1, preset: value.preset, ...(combined !== undefined ? {combinedDiagnostics: overrides} : {}), ...(value.layouts !== undefined ? {layouts} : {})};
 }
 /** Resolve one finite explicit replacement chain. Missing/future/cyclic entries never execute. */
 export function resolveFacetPreset(library: FacetPresetLibrary, requestedId = "wuxing"): FacetPresetSelection {
@@ -52,6 +62,11 @@ export function reduceFacetState(state: unknown, action: PlexViewStateAction, co
   if (action.id === "preset.select" && facetId(action.args) && isFacetPreset(library.presets[action.args]))
     return {status: "updated", state: {...(record(state) ? state : {}), version: 1, preset: action.args}};
   const selected = resolveFacetPreset(library, current.preset);
+  if (action.id === "layout.select" && isFacetLayout(action.args) && (selected.status === "ready" || selected.status === "replaced")
+    && (action.args !== "quadrants" || selected.preset.order.length === 4)) {
+    const layouts = {...current.layouts, [selected.id]: action.args};if (Object.keys(layouts).length > 16) return {status: "unavailable"};
+    return {status: "updated", state: {...(record(state) ? state : {}), version: 1, preset: current.preset, layouts}};
+  }
   if (action.id === "diagnostics.combine" && typeof action.args === "boolean" && (selected.status === "ready" || selected.status === "replaced")) {
     const combined = {...current.combinedDiagnostics, [selected.id]: action.args};
     if (Object.keys(combined).length > 16) return {status: "unavailable"};
