@@ -56,7 +56,7 @@ test('non-Classic definition uses the production scene, selection, Find and acti
       const failedDefinition={...M.probeViewDefinition,id:'test.failed',layout(){throw Error('Deliberate scene failure')}};
       const unavailableDefinition={...M.probeViewDefinition,id:'test.unavailable',project(){return null}};
       const rootedDefinition={...M.probeViewDefinition,id:'test.rooted',navigation:'rooted'};
-      const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.mindMapViewDefinition,M.probeViewDefinition,groupedDefinition,failedDefinition,unavailableDefinition,rootedDefinition]);const session=new M.PlexViewSession(registry,()=>{});session.select('test.situated');
+      const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.probeViewDefinition,groupedDefinition,failedDefinition,unavailableDefinition,rootedDefinition]);const session=new M.PlexViewSession(registry,()=>{});session.select('test.situated');
       const actionPorts={current:null},activations=[],plugin={settings,index,translator:M.createTranslator('en'),app:{workspace:{...nativeEvents},metadataCache:{...nativeEvents,getFileCache:()=>null},vault:{getFileByPath:path=>pages.get(path)?.file??null,cachedRead:()=>{work.reads++;throw Error('Unexpected note read')}}},
         saveSettings:()=>{work.settingsWrites++;throw Error('Unexpected global settings write')},getTypographyDevice:()=> 'desktop',isKplexLeafVisible:()=>true,subscribeKplexVisibility:subscribe,subscribeNodeFlair:subscribe,getHierarchyColorRevision:()=>0,
         isActionSurfaceCurrent:()=>true,getSavedSettingsPolicy:()=>null};
@@ -154,18 +154,27 @@ test('non-Classic definition uses the production scene, selection, Find and acti
       for(const key of Object.keys(work))work[key]=0;
       index.neighbours=(page,role)=>role==='child'&&(page.path==='Root.md'||page.path==='Repeated.md')?[{page:pages.get(page.path==='Root.md'?'Repeated.md':'Other.md'),role:'child',relationType:1,typeDefinition:'Child',linkDirection:1}]:[];
       index.viewScopeCoverage=()=>({coverage:'local',prepared:true,complete:true,pending:false});
+      plugin.actionManager=new M.ActionManager({readCommandContext:()=>({sharedCenter:null,focusRegion:'graph'}),validateNode:()=>true});
       const hierarchySession=new M.PlexViewSession(registry,()=>{});hierarchySession.select('mindmap');hierarchySession.setRoot('Root.md');
       props.viewSession=hierarchySession;props.activePath='Focus.md';const hierarchyRoot=M.createRoot(mount);
       function HierarchyHarness(){const revision=M.useSyncExternalStore(hierarchySession.subscribe,hierarchySession.getSnapshot);return M.createElement(M.PlexGraph,{...props,viewDefinition:hierarchySession.definition,viewRevision:revision})}
       const renderHierarchy=()=>M.flushSync(()=>hierarchyRoot.render(M.createElement(HierarchyHarness)));
       renderHierarchy();await new Promise(resolve=>setTimeout(resolve,30));const initialHierarchy={semantic:work.semantic,nodes:mount.querySelectorAll('[data-kplex-keyboard-id]').length};
-      const branchId=JSON.stringify(['Root.md','Repeated.md']);M.flushSync(()=>hierarchySession.updateState({...hierarchySession.state,expanded:[branchId]}));await new Promise(resolve=>setTimeout(resolve,30));
+      const releaseHierarchyAction=plugin.actionManager.registerSurface({id:'probe',generation:3,get implementations(){return actionPorts.current.implementations},
+        readSnapshot:()=>({mounted:true,visible:true,windowId:'test',center:M.actionNodeRef(pages.get(props.activePath)),selected:actionPorts.current.readSelected(),focusRegion:'graph',interactionRevision:0,viewRevision:hierarchySession.getSnapshot()})});
+      const branchId=JSON.stringify(['Root.md','Repeated.md']),branchTarget={kind:'explicit',node:M.actionNodeRef(pages.get('Repeated.md')),occurrenceId:branchId};
+      const mismatched=await act('branch.toggle',{...branchTarget,node:M.actionNodeRef(pages.get('Other.md'))});
+      const toggleOutcome=await act('branch.toggle',branchTarget);await new Promise(resolve=>setTimeout(resolve,30));
       const expandedHierarchy={semantic:work.semantic,nodes:mount.querySelectorAll('[data-kplex-keyboard-id]').length,failed:!!mount.querySelector('.kplex-view-error')};
       settings.canvasViewSettings=M.editViewConfiguration(M.mindMapViewDefinition,settings.canvasViewSettings,'horizontalSpacing',160);props.renderRevision++;renderHierarchy();await new Promise(resolve=>setTimeout(resolve,20));
       props.activePath='Other.md';renderHierarchy();await new Promise(resolve=>setTimeout(resolve,20));const attentionHierarchy={semantic:work.semantic,root:hierarchySession.layoutRoot(props.activePath)};
-      M.flushSync(()=>hierarchySession.updateState({...hierarchySession.state,expanded:[],collapsed:[branchId]}));await new Promise(resolve=>setTimeout(resolve,20));
+      M.flushSync(()=>mount.querySelector('[aria-label="Collapse one generation"]').click());await new Promise(resolve=>setTimeout(resolve,20));
       const collapsedHierarchy={semantic:work.semantic,releases:work.releases,nodes:mount.querySelectorAll('[data-kplex-keyboard-id]').length};
-      hierarchyRoot.unmount();hierarchySession.dispose();const hierarchyProof={initial:initialHierarchy,expanded:expandedHierarchy,attention:attentionHierarchy,collapsed:collapsedHierarchy,after:{...work},events:events.size,errors:[...errors]};
+      await act('selection.center');await act('selection.move.right');const keyboardHierarchy={editors:hierarchySession.editors.bindings.length,root:hierarchySession.layoutRoot(props.activePath)};
+      const heldBranch=plugin.actionManager.prepare({id:'branch.toggle',source:'local-menu',surfaceId:'probe',target:branchTarget});
+      const rerootOutcome=await act('view.root.selected',{kind:'explicit',node:M.actionNodeRef(pages.get('Other.md'))});await new Promise(resolve=>setTimeout(resolve,20));
+      const staleBranch=heldBranch.state==='accepted'?await heldBranch.run():null,rerooted=hierarchySession.layoutRoot(props.activePath);
+      releaseHierarchyAction();hierarchyRoot.unmount();hierarchySession.dispose();plugin.actionManager.dispose();const hierarchyProof={initial:initialHierarchy,expanded:expandedHierarchy,attention:attentionHierarchy,collapsed:collapsedHierarchy,after:{...work},events:events.size,errors:[...errors],mismatched,toggleOutcome,keyboard:keyboardHierarchy,rerootOutcome,staleBranch,rerooted};
       style.remove();mount.remove();return {...snapshot,events:legacyEvents,after:legacyAfter,rooted:rootedProof,hierarchy:hierarchyProof};
     })()`);
     assert.deepEqual(result.physicalPorts,['left']);assert.equal(result.physicalCount,'1');
@@ -190,7 +199,9 @@ test('non-Classic definition uses the production scene, selection, Find and acti
     assert.equal(result.rooted.releases,3);assert.equal(result.rooted.events,0);
     assert.deepEqual(result.hierarchy.initial,{semantic:2,nodes:2});assert.deepEqual(result.hierarchy.expanded,{semantic:3,nodes:3,failed:false});
     assert.deepEqual(result.hierarchy.attention,{semantic:4,root:'Root.md'},'Geometry settings do not reacquire frontiers, attention adds only its independent lease');
-    assert.deepEqual(result.hierarchy.collapsed,{semantic:4,releases:2,nodes:2});assert.equal(result.hierarchy.after.releases,4);assert.equal(result.hierarchy.events,0);assert.deepEqual(result.hierarchy.errors,[]);
+    assert.deepEqual(result.hierarchy.collapsed,{semantic:4,releases:2,nodes:2});assert.equal(result.hierarchy.after.releases,result.hierarchy.after.semantic);assert.equal(result.hierarchy.events,0);assert.deepEqual(result.hierarchy.errors,[]);
+    assert.equal(result.hierarchy.mismatched.status,'unavailable');assert.equal(result.hierarchy.toggleOutcome.status,'completed');assert.deepEqual(result.hierarchy.keyboard,{editors:0,root:'Root.md'});
+    assert.equal(result.hierarchy.rerootOutcome.status,'completed');assert.equal(result.hierarchy.rerooted,'Other.md');assert.notEqual(result.hierarchy.staleBranch?.status,'completed');
     assert.equal(result.hierarchy.after.reads,0);assert.equal(result.hierarchy.after.parses,0);assert.equal(result.hierarchy.after.publishes,0);assert.equal(result.hierarchy.after.settingsWrites,0);
   } finally {await host.cleanup();}
 });

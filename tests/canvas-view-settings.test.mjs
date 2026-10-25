@@ -33,6 +33,26 @@ const flatten=(items,path=[])=>items.flatMap(item=>[...('control'in item?[{...it
 `;
 const scenario=body=>colorEditorScenario(`(async()=>{${initialize}\n${body}\nreturn true})()`);
 
+test('production Mind Map contributes six localized native fields and persists type settings independently of canvas intent',async()=>{
+ assert.equal(await scenario(`
+ const p=await create();p.viewSettingsRegistry=M.builtInCanvasViewSettings;const tab=new M.KplexSettingTab({},p),rows=flatten(tab.getSettingDefinitions());
+ const controls=rows.filter(row=>row.control.key.replace(/^received:\\d+:/,'').startsWith('canvasView:mindmap:'));equal(controls.length,6,'One native control per Mind Map field');
+ for(const row of controls)equal(row.path,['Canvas behavior','Mind Map'],'Type settings route');
+ const spacing=controls.find(row=>row.control.key.endsWith(':horizontalSpacing')),arrangement=controls.find(row=>row.control.key.endsWith(':arrangement'));
+ equal(arrangement.control.options,{balanced:'Balanced',left:'Left',right:'Right'},'Localized finite arrangement');
+ const a=new M.PlexViewSession(M.builtInPlexViews,()=>{}),b=new M.PlexViewSession(M.builtInPlexViews,()=>{});a.select('mindmap');a.setRoot('R');
+ const intent=[copy(a.getState()),copy(b.getState())],signature=M.encodeIndexSettingsSignature(p.settings);
+ await tab.setControlValue(spacing.control.key,160);equal(disk.canvasViewSettings.mindmap,{version:1,values:{horizontalSpacing:160}},'Durable edited field only');
+ await tab.setControlValue(arrangement.control.key,'left');equal(M.readViewConfiguration(a.definition,p.settings.canvasViewSettings).values.horizontalSpacing,160,'Other field retained');
+ equal([a.getState(),b.getState()],intent,'Shared type settings never change either canvas choice/root');equal(M.encodeIndexSettingsSignature(p.settings),signature,'Source signature unchanged');
+ equal([p.work.semantic,p.work.invalidate],[0,0],'No semantic invalidation or refresh');
+ const incoming=copy(disk);incoming.canvasViewSettings.mindmap.values.verticalSpacing=44;incoming.canvasViewSettings['future.view']={version:9,values:{inert:true}};
+ await receive(p,incoming);equal(tab.getControlValue('canvasView:mindmap:verticalSpacing'),44,'Incoming type values synchronize');
+ await tab.setControlValue(spacing.control.key,164);equal(disk.canvasViewSettings['future.view'],incoming.canvasViewSettings['future.view'],'Future independent view retained');
+ equal([a.getState(),b.getState()],intent,'Incoming settings cannot retarget sessions');a.dispose();b.dispose();
+ `),true);
+});
+
 test('all moved controls have one native location and original ownership/bounds',async()=>{
  assert.equal(await scenario(`
  const p=await create(),tab=new M.KplexSettingTab({},p);const definitions=tab.getSettingDefinitions(),rows=flatten(definitions);

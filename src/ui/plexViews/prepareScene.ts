@@ -13,6 +13,7 @@ import type {HostPlexScene} from "./scene";
 import {readViewConfiguration} from "../../core/plex/views/configuration";
 import {admitOccurrenceEditors, type OccurrenceEditorHost} from "./occurrenceEditors";
 import {boundedViewState} from "../../core/plex/views/state";
+import {hierarchyPathClosure} from "../../core/plex/views/hierarchy";
 
 type SceneRead = Pick<GraphIndex, "get" | "neighbours" | "sortNeighbours" | "titleFor" | "captureSemanticGateRead" | "isVisiblePage" | "explainRelationship">
   & Partial<Pick<GraphIndex, "viewScopeCoverage" | "cachedViewRelation">>;
@@ -176,13 +177,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
     if (definition.hierarchy) {
       // A matching descendant retains its genuine displayed path. No semantic shortcut is invented
       // across a removed parent, and the fixed root remains visible even for an empty match set.
-      const keep = new Set<string>(rootOccurrence && nodes.has(rootOccurrence) ? [rootOccurrence] : []);
-      for (const id of matched) {
-        const path: string[] = []; let currentId: string | undefined = id;
-        while (currentId && path.length <= 8 && nodes.has(currentId)) {path.push(currentId);currentId = occurrences.get(currentId)?.branch?.parent;}
-        if (currentId) continue;
-        for (const member of path) keep.add(member);
-      }
+      const keep = hierarchyPathClosure(projection.occurrences.filter(row => nodes.has(row.id)).map(row => ({id: row.id, parent: row.branch?.parent})), matched, rootOccurrence);
       for (const id of nodes.keys()) if (!keep.has(id)) {nodes.delete(id); pages.delete(id);}
       for (let position = measurements.length - 1; position >= 0; position--) if (!keep.has(measurements[position].id)) measurements.splice(position, 1);
     }

@@ -6137,3 +6137,8 @@ Clean runtime905b777/main4687f9b7 passed complete Node22.22.2 verify:obsidian (7
 ### PR219 M1 hierarchy foundation - 2026-10-25 - Zsolt's Codex Agent
 
 Add optional bounded frontier/read/branch policy and Mind Map pure lineage/state/subtree geometry through existing source/session/scene owners. No production registry exposure, no new scheduler or classifier, no partner220 code/dependency.42 focused tests, core130, architecture7/169 roots/309 files, actual Chromium shared renderer, real build and scanner pass. Cold/native/action/settings/full final acceptance pending; preserve M0 FileManager gate limit. See docs/validation/mind-map-219-2026-10-25.md. C15-C26 stay paused.
+
+
+### PR219 Mind Map M1-M3 integrated checkpoint - 2026-10-25 - Zsolt's Codex Agent
+
+Register mindmap through existing view/settings owners; add bounded branch/generation/reroot actions, primary exact-occurrence editor intent and all29 strings in8 catalogs. Shared native host remains capacityone; attention-host consumers stay unchanged. Genuine GraphIndex/IndexedDB on-demand/Eager preparation/retirement passes. Correct local-prepared initial framing and partial-coverage side balancing from preserved negative controls. Current63 focused/17 integrated browser-source/build/scanner pass. Full1481functional passed, browser2 missing extracted contexts corrected without assertion changes; clean full/native/exactheadCI still pending. Preserve CI477 inventory failure and M0 FileManager/215 native limits. No general indexing campaign; C15-C26 paused. See docs/validation/mind-map-219-2026-10-25.md.

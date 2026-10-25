@@ -1,6 +1,6 @@
 # Mind Map canvas view
 
-Prepared by Zsolt's Codex Agent, 2026-10-24. **Implementation started; bounded ordinary-Markdown M0 proof is validated at905b777. M1 hierarchy foundation is implemented but not production-registered; remaining integration/cold/native/full acceptance and the documented FileManager gate limit remain pending.**
+Prepared by Zsolt's Codex Agent, 2026-10-24. **Implementation started; bounded ordinary-Markdown M0 proof is validated at905b777. M1–M3 production integration and real source-demand proof are implemented; complete native/full/CI acceptance and the documented FileManager gate limit remain pending.**
 
 ## Baseline and start gate
 
@@ -151,3 +151,13 @@ M0 source905b777 passed full `verify:obsidian`, CI475 and the isolated fresh-ren
 ## M1 hierarchy foundation checkpoint
 
 Optional finite frontier demand, cache-only coverage/pair reads, bounded canonical child projection, stable occurrence sides/folds, cycle references, measured subtree layout and real shared-renderer integration are implemented. No production registry exposure yet. See [the Mind Map checkpoint report](validation/mind-map-219-2026-10-25.md) for actual42 focused/core130/architecture/Chromium/build/scanner evidence and failed samples. Genuine cold acquisition, shared actions/settings/primary editor UI and complete native/full/CI acceptance remain pending. #220 remains independent.
+
+## M1–M3 integrated candidate, native acceptance pending
+
+The existing production registry now includes `mindmap`, and the existing settings registry contributes six localized fields under Canvas behavior → Views → Mind Map. Branch/generation/reroot actions reuse the catalog/manager; primary pointer activation requests the exact occurrence editor, while Find/keyboard selection does not. Future/invalid state stays inert. Native editor-host policy transitions are guarded separately from the broad editor capability. Existing attention-following definitions remain unchanged.
+
+Shared occurrence-path filtering retains genuine ancestors in Keep/Reflow without revealing another same-note copy. Rooted edge styles/evidence keep real endpoints/root context. A hierarchy's native link export cannot borrow Compass's attention-neighbor move authority. Lowering type limits retains a live editor's genuine ancestry within the hard safety bounds. The current-note root button makes outside attention an explicit reroot choice.
+
+Actual GraphIndex/IndexedDB tests start with an unprepared branch in both on-demand and source-ready Eager mode, admit only its requested frontier, and reject held publication after retirement. These use real source/demand/cache owners with finite native file/metadata inputs, not a fully prepared DTO fixture or a native disk-cache benchmark. Production selector/settings tests cover two documents, independent restoration, incoming merges and unchanged source signatures. All29 new strings are localized in every shipped catalog.
+
+Native acceptance uses `verify:obsidian:mindmap` with `KPLEX_MINDMAP_LANE=editor` and `sessions` separately, through the existing guarded Small transport. They remain unrun at this writing. Full verification found an omitted explicit transpilation inventory and four extracted-fixture dependencies; original assertions are retained and131 focused correction tests pass. Fresh complete verification is underway. Keep the PR draft; no merge/release/production deployment is authorized. See the checkpoint report for actual evidence and remaining limits.

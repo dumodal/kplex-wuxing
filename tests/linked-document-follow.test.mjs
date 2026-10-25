@@ -799,6 +799,7 @@ test("stationary central double taps open in the main tab on a sidepanel and con
       requests.push(id); if (id === "node.open") { assert(available({page: target,request:{id}})); open({page: target, request:{id}, target: {kind: "node"}}); }
       else dependencies.onActivate(target);
     }};
+  touchDependencies.activateOccurrence=production("activateOccurrence",{viewDefinition:{hierarchy:undefined},runNodeAction:touchDependencies.runNodeAction},"src/ui/PlexGraph.tsx");
   const complete = production("completeTouchTap", touchDependencies, "src/ui/PlexGraph.tsx");
   /** Supply only the owning document hit query consumed by a stationary completed tap. */
   const event = timeStamp => ({timeStamp, clientX: 100, clientY: 120, currentTarget: {ownerDocument: {elementFromPoint: () => null}}});
@@ -812,6 +813,19 @@ test("stationary central double taps open in the main tab on a sidepanel and con
   const modifier={page:ghost,request:{id:"node.open",args:{chooseFolder:true}},target:{kind:"node"}};
   assert.equal(available(modifier),true);open(modifier);
   assert.deepEqual(folderPrompts,[{target:ghost,doc:dependencies.viewport.current.ownerDocument,options:{chooseFolder:true,preserveCenter:false,hostLeaf:dependencies.hostLeaf}}]);
+});
+
+test('Mind Map primary opening captures its exact occurrence and retirement prevents a late editor request',async()=>{
+ const page={path:'B.md',file:{path:'B.md'}},requests=[],legacy=[],notices=[];let current=true,eligible=true;
+ const dependencies={viewDefinition:{hierarchy:{primary:'activate-editor'}},supportsBoundEditor:()=>eligible,viewSession:{capture:()=>()=>current},actionNodeRef,
+  actionSurfaceId:'owned-canvas',runNodeAction:(...args)=>legacy.push(args),plugin:{actionManager:{dispatch:async request=>{requests.push(request);return{status:'completed'}}}},
+  Notice:class{constructor(message){notices.push(message)}},translate:key=>key,translateActionText:(_translate,key)=>key};
+ const primary=production('activateOccurrence',dependencies,'src/ui/PlexGraph.tsx');
+ primary(page,'B1',true);await new Promise(resolve=>setImmediate(resolve));
+ assert.deepEqual(requests.map(request=>[request.id,request.surfaceId,request.target.occurrenceId,request.target.node.identity]),[['node.activate','owned-canvas','B1','B.md'],['editor.expand','owned-canvas','B1','B.md']]);
+ primary(page,'B2',false);assert.deepEqual(legacy,[['node.activate',page,'B2']],'Modifiers retain ordinary activation without requesting an editor');
+ requests.length=0;primary(page,'B1',true);current=false;await new Promise(resolve=>setImmediate(resolve));assert.deepEqual(requests.map(request=>request.id),['node.activate'],'Retired view cannot open an editor after accepted navigation settles');
+ current=true;eligible=false;primary(page,'B2',true);assert.equal(requests.length,1);assert.deepEqual(legacy.at(-1),['node.activate',page,'B2']);assert.deepEqual(notices,[]);
 });
 
 test('color publication never promotes a pending native follow or expands its demand',()=>{

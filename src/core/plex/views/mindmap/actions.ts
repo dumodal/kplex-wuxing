@@ -4,7 +4,8 @@ import {admitMindMapState, restoreMindMapState, type MindMapState} from "./state
 
 /** Change only represented expandable occurrences and refuse invalid, future-version or over-budget intent. */
 export function reduceMindMap(state: unknown, projection: PlexProjection, action: PlexBranchAction): MindMapState | null {
-  const restored = restoreMindMapState(projection.stateSuggestion ?? state);
+  const current = restoreMindMapState(state);
+  const restored = current.version === 1 && current.scope === projection.layoutRoot ? current : restoreMindMapState(projection.stateSuggestion);
   if (restored.version !== 1 || restored.scope !== projection.layoutRoot) return null;
   const expanded = new Set(restored.expanded), collapsed = new Set(restored.collapsed);
   let rows = projection.occurrences.filter(row => row.branch?.canExpand && !row.branch.reference);

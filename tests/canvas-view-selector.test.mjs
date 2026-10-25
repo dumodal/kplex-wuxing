@@ -27,9 +27,9 @@ const mount=(owner,doc=document,extra={})=>{
 `;
 const scenario=body=>colorEditorScenario(`(async()=>{${initialize}\n${body}\nreturn true})()`);
 
-test('the production panel shows labelled disabled Compass and no unfinished definitions',async()=>{
+test('a one-definition panel shows labelled disabled Compass and no test definitions',async()=>{
  assert.equal(await scenario(`
- const owner=session('a',M.builtInPlexViews),ui=mount(owner);ui.open();await waitFor(ui.select);
+ const owner=session('a',new M.PlexViewRegistry([M.classicViewDefinition])),ui=mount(owner);ui.open();await waitFor(ui.select);
  equal([...ui.select().options].map(option=>[option.value,option.textContent]),[['classic','Compass']],'Production options');
  check(ui.select().disabled,'Single option remains visible and disabled');
  check(ui.panel().querySelector('label[for="'+ui.select().id+'"]')?.textContent==='Canvas viewCompass','Label names the native select');
@@ -38,6 +38,28 @@ test('the production panel shows labelled disabled Compass and no unfinished def
  equal(ui.panel().querySelector('.kplex-filter-panel-header span').textContent,'Views and lenses','Panel title');
  check(!ui.panel().textContent.includes('Probe alpha'),'Test definition is absent from production registry');
  equal(writes,{a:0,b:0,lenses:0,filter:0,settings:0,sources:0},'Opening has no write/acquisition');ui.close();
+ `),true);
+});
+
+test('production selection exposes only localized Compass and Mind Map definitions',async()=>{
+ assert.equal(await scenario(`
+ const owner=session('a',M.builtInPlexViews),ui=mount(owner);ui.open();await waitFor(ui.select);
+ equal([...ui.select().options].map(option=>[option.value,option.textContent]),[['classic','Compass'],['mindmap','Mind Map']],'Production definitions only');
+ check(!ui.select().disabled,'Implemented second production definition enables selection');ui.change('mindmap');
+ check(ui.select().value==='mindmap'&&owner.definition.navigation==='rooted'&&owner.definition.editorHosting==='occurrence','Actual selected Mind Map contract');
+ equal([writes.sources,writes.lenses,writes.filter,writes.settings],[0,0,0,0],'Registration/selection alone never acquires or mutates shared owners');ui.close();
+ `),true);
+});
+
+test('Compass and Mind Map selection and rooted intent restore independently in two owning documents',async()=>{
+ assert.equal(await scenario(`
+ const a=session('a',M.builtInPlexViews),b=session('b',M.builtInPlexViews),iframe=document.createElement('iframe');document.body.append(iframe);
+ await new Promise(resolve=>setTimeout(resolve,20));const first=mount(a),second=mount(b,iframe.contentDocument);first.open();second.open();await waitFor(()=>first.select()&&second.select());
+ first.change('mindmap');a.setRoot('R');second.select().focus();equal([first.select().value,second.select().value],['mindmap','classic'],'Focused second document cannot steal first session');
+ const state=[structuredClone(a.getState()),structuredClone(b.getState())],restoredA=session('a',M.builtInPlexViews),restoredB=session('b',M.builtInPlexViews);restoredA.restore(state[0]);restoredB.restore(state[1]);
+ equal([restoredA.definition.id,restoredA.layoutRoot('C'),restoredB.definition.id],['mindmap','R','classic'],'Independent choice and root restoration');
+ equal([writes.sources,writes.lenses,writes.filter,writes.settings],[0,0,0,0],'Selector and restoration perform no acquisition/global mutation');
+ first.close();second.close();restoredA.dispose();restoredB.dispose();iframe.remove();
  `),true);
 });
 

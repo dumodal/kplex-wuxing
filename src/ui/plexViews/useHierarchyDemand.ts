@@ -13,7 +13,10 @@ export function useHierarchyDemand(session: PlexViewSession | undefined, definit
   const lifetime = session?.getLifetime() ?? 0, key = JSON.stringify([definition.id, lifetime, root]);
   useLayoutEffect(/** Register with the selected native-session lifetime before admitting this commit's frontier requests. */ () => {
     if (!session || !definition.hierarchy) return;
-    const value = {owner: new PlexHierarchyDemand(acquire, definition.hierarchy.maximumScopes), key, current: session.capture()};
+    const selected = session.capture();
+    const value = {owner: new PlexHierarchyDemand(acquire, definition.hierarchy.maximumScopes), key,
+      current: /** An explicit root replacement retires callback authority even before React commits its cleanup. */ () =>
+        selected() && session.definition === definition && session.layoutRoot(root) === root};
     holder.current = value;
     return session.own(/** No late selected-view callback can reuse a retired resource incarnation. */ () => {
       if (holder.current === value) holder.current = null;

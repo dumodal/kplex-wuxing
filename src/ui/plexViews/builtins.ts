@@ -1,4 +1,5 @@
 /** Static internal composition root. Test definitions are injected into independent test registries only. */
 import {classicViewDefinition} from "../../core/plex/views/classic/definition";
+import {mindMapViewDefinition} from "../../core/plex/views/mindmap/definition";
 import {PlexViewRegistry} from "../../core/plex/views/registry";
-export const builtInPlexViews = new PlexViewRegistry([classicViewDefinition]);
+export const builtInPlexViews = new PlexViewRegistry([classicViewDefinition, mindMapViewDefinition]);

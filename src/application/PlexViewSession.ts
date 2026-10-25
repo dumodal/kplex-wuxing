@@ -52,9 +52,9 @@ export class PlexViewSession {
     if (this.closed || id === this.requestedId || !this.canSelect(id) || !/^[a-z][a-z0-9.-]{0,79}$/.test(id)) return;
     this.retire(); this.requestedId = id; this.notify(); this.persist();
   }
-  /** An incompatible definition cannot silently destroy a live native editor. Closing it is a shared explicit action. */
+  /** An incompatible definition/hosting mode cannot silently destroy a live native editor. Compatible legacy attention hosts retain their exact instance. */
   canSelect(id: string): boolean { return !this.closed && (!this.editors.bindings.length || this.registry.resolve(id).id === this.definition.id)
-    && (!this.editorUsers || this.registry.resolve(id).capabilities.editor); }
+    && (!this.editorUsers || this.registry.resolve(id).capabilities.editor && this.registry.resolve(id).editorHosting === this.definition.editorHosting); }
   /** Lease only actual editor hosting; a compatible geometry change keeps the same native instance. */
   retainEditor(): () => void { this.editorUsers++; let alive = true; return () => {if (alive) {alive = false; this.editorUsers--;}}; }
   /** A rooted definition retains one explicit root while ordinary attention changes independently. */

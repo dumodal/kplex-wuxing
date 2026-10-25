@@ -20,7 +20,8 @@ export const mindMapConfigurationSchema: PlexViewConfigurationSchema = {version:
 export function mindMapConfiguration(configuration?: PlexViewConfiguration): MindMapConfiguration | null {
   if (configuration?.status === "unavailable") return null;
   const values = configuration?.values ?? {};
-  const read = (name: string): unknown => values[name] ?? mindMapConfigurationSchema.fields[name].defaultValue;
+  /** Only an absent field inherits defaults; a present null remains invalid schema input. */
+  const read = (name: string): unknown => Object.prototype.hasOwnProperty.call(values, name) ? values[name] : mindMapConfigurationSchema.fields[name].defaultValue;
   for (const [name, field] of Object.entries(mindMapConfigurationSchema.fields)) if (!field.validate(read(name))) return null;
   const arrangement = read("arrangement");
   if (arrangement !== "balanced" && arrangement !== "left" && arrangement !== "right") return null;

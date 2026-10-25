@@ -1442,7 +1442,7 @@ Direct isolated GraphIndex fixtures retain their explicit legacy constructor inp
 
 ## Internal Plex view validation
 
-Classic remains the only shipped definition. `plex-view-classic` protects the
+Compass and Mind Map are registered in the #219 implementation branch; its final native acceptance remains pending. `plex-view-classic` protects the
 pre-extraction membership/caps and 16-case exact geometry golden; contract/session
 checks exercise bounded cached reads, malformed output, unknown state, independent
 lifetimes and editor compatibility. `plex-view-probe` mounts the actual shared
@@ -1492,3 +1492,10 @@ recreation is not a whole-application restart, native Electron input is not phys
 mobile/Windows acceptance, and simultaneous editors are unsupported. See the
 [interim report](docs/validation/occurrence-editors-219-2026-10-25.md) for evidence,
 restoration and remaining checks.
+
+
+### Production Mind Map acceptance
+
+After exact-build staging in backed-up Small, run `npm run verify:obsidian:mindmap` with the three explicit test-vault variables and a fresh report directory. Run `KPLEX_MINDMAP_LANE=editor` and `sessions` serially. The editor lane uses the real registered definition, canonical diamonds/cycles, Find, trusted native primary input, dirty editor/caret/focus, actual spacing/resize, camera and branch/root/filter/selector guards, migration, durable close and bounded native-view restoration. The session lane uses production Compass/Mind Map in actual main/popout documents, captured selectors, a retained draft and independent roots/cameras/Sidecar association/restoration. All test-owned notes/leaves/settings/layout/wrappers are restored. No test definition or production debug API is installed.
+
+`tests/mind-map-source-demand.test.mjs` uses actual GraphIndex, source acquisition and Chromium IndexedDB in both modes to prove unprepared branch preparation and cancellation of held native/canonical covers. This is distinct from portable DTO tests and native editor acceptance. Existing scaling guards remain enabled. Native-view recreation is not whole-application restart; physical touch/Windows and the documented M0 FileManager cache gate remain separate limits. See [the current evidence](docs/validation/mind-map-219-2026-10-25.md); a written driver is not a passing receipt.

@@ -1,4 +1,4 @@
-/** Exact-build native Canvas/Compass settings proof. Test-only registration is scoped to this owned native session. */
+/** Exact-build native Canvas settings/selector proof, including production Compass/Mind Map. Additional test registration stays scoped to owned native sessions. */
 import {buildSync} from 'esbuild';
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
@@ -58,8 +58,8 @@ async function scenario(app,c){
   const productionRoot=()=>host.view.contentEl.querySelector('.kplex-app');await until(()=>productionRoot()?.querySelector('.kplex-filter-trigger'),'Production panel trigger absent');
   productionRoot().querySelector('.kplex-filter-trigger').click();
   const productionSelect=()=>host.view.containerEl.ownerDocument.querySelector('.kplex-filter-panel .kplex-view-selector select');
-  await until(productionSelect,'Production selector absent');check(productionSelect().disabled&&productionSelect().options.length===1&&productionSelect().value==='classic','Production exposes an unfinished view');
-  host.view.containerEl.ownerDocument.querySelector('.kplex-filter-panel-header button').click();cases.push({id:'production-one-option-compass'});
+  await until(productionSelect,'Production selector absent');check(!productionSelect().disabled&&JSON.stringify([...productionSelect().options].map(option=>[option.value,option.textContent]))===JSON.stringify([['classic',p.translator('view.classic')],['mindmap',p.translator('view.mindmap')]])&&productionSelect().value==='classic','Production registry selection mismatch');
+  host.view.containerEl.ownerDocument.querySelector('.kplex-filter-panel-header button').click();cases.push({id:'production-compass-mindmap-only'});
   const session=host.view.documentSession.plexView;session.registry=views;await p.setDocumentSyncMode(host,'off');
   host.view.centerPresentation.update({embedCentralNode:false});p.notifyNavigation(path('Focus'),host);session.select(probe.id);
   const root=()=>host.view.contentEl.querySelector('.kplex-app'),node=()=>root()?.querySelector('[data-kplex-keyboard-id="layout-root"]');
@@ -87,12 +87,21 @@ async function scenario(app,c){
   const legacyControlWork={...work};for(const key of Object.keys(work))work[key]=0;
   await wait(100);check(Object.values(work).every(value=>value===0),'Type-configuration quiet control did work');
   await open('settings.ui.plex.behavior');check(tab.openSettingsPage(probe.labelKey),'Test-only contributed page missing');await wait(70);
-  const contributedRow=row('Probe ridge offset'),contributedSlider=contributedRow?.querySelector('input[type=range]');check(contributedSlider,'Actual contributed native slider absent');
+  const contributedRow=row('Probe ridge offset');let contributedSlider=contributedRow?.querySelector('input[type=range]');check(contributedSlider,'Actual contributed native slider absent');
   contributedSlider.focus();input(contributedSlider,50);await until(()=>node()?.style.left!==before.left,'Type configuration did not reach native renderer');await p.settingsWriteQueue;
   check(settingsDocument().activeElement===contributedSlider,'Background reflow stole native Settings focus');
   check(node().dataset.kplexPath===before.root&&JSON.stringify(session.getState())===before.state,'Type setting retargeted root/session');
   check((await p.loadData()).canvasViewSettings[probe.id].values.ridgeOffset===50,'Contributed setting not durable');
   cases.push({id:'main-test-contribution-to-effective-native-view',beforeLeft:before.left,afterLeft:node().style.left,rootRetained:true,sessionRetained:true,focusRetained:true});
+  await open('settings.ui.plex.behavior','view.mindmap');
+  for(const key of ['mindmap.arrangement','mindmap.horizontalSpacing','mindmap.verticalSpacing','mindmap.initialGenerations','mindmap.maximumDepth','mindmap.maximumOccurrences'])check(keyRow(key),'Mind Map native control missing: '+key);
+  const mindMapSpacing=keyRow('mindmap.horizontalSpacing').querySelector('input[type=range]'),spacingValue=Number(mindMapSpacing.value)===240?40:240;
+  mindMapSpacing.focus();input(mindMapSpacing,spacingValue);await until(()=>p.settings.canvasViewSettings.mindmap?.values.horizontalSpacing===spacingValue,'Mind Map native spacing did not save');await p.settingsWriteQueue;
+  check((await p.loadData()).canvasViewSettings.mindmap.values.horizontalSpacing===spacingValue,'Mind Map type control not durable');
+  check(JSON.stringify(session.getState())===before.state,'Background Mind Map settings changed the owning test session');
+  cases.push({id:'production-mindmap-native-settings-save',horizontalSpacing:spacingValue});
+  await open('settings.ui.plex.behavior');check(tab.openSettingsPage(probe.labelKey),'Test-only contribution did not reopen');await wait(70);
+  contributedSlider=row('Probe ridge offset')?.querySelector('input[type=range]');check(contributedSlider,'Reopened contribution input absent');
   await until(()=>pendingObserved===0,'Type-configuration writer did not complete');
   for(const restore of stop)restore();check(Object.values(work).every(value=>value===0),'New type configuration performed source/semantic or compatibility-save work');
   cases.push({id:'native-type-configuration-zero-work',work:{...work}});

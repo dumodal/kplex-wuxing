@@ -1863,6 +1863,20 @@ button.kplex-sidecar-unfold-plex,
   border-color: var(--interactive-accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--interactive-accent) 16%, transparent);
 }
+.kplex-thought-branch-status {
+  position: absolute;
+  left: 24px;
+  bottom: -16px;
+  max-width: calc(100% - 28px);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 10px;
+  line-height: 12px;
+  color: var(--text-muted);
+  background: var(--background-primary);
+  pointer-events: none;
+}
 
 /* Relationship edits are optimistic, but briefly block accidental follow-up clicks until the
    metadata cache + authoritative index have caught up. */

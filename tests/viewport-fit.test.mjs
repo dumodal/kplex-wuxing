@@ -19,12 +19,27 @@ function callback(name, dependencies) {
     if(name==='sidecar'&&ts.isCallExpression(node)&&node.expression.getText(source)==='useEffect'
       &&node.arguments[0]?.getText(source).includes('previousSidecarOpen.current === sidecarOpen'))selected=node.arguments[0].getText(source);
     if(name==='reframeSidecarViewport'&&ts.isBinaryExpression(node)&&node.left.getText(source)==='reframeSidecarViewport.current')selected=node.right.getText(source);
+    if(name==='hierarchyInitialFrame'&&ts.isCallExpression(node)&&node.expression.getText(source)==='useLayoutEffect'
+      &&node.arguments[0]?.getText(source).includes('hierarchyInitialFrame.current'))selected=node.arguments[0].getText(source);
     ts.forEachChild(node,visit);
   };
   visit(source);assert(selected,name);
   const js=ts.transpileModule(`const selected=${selected};`,{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
   return Function(...Object.keys(dependencies),`${js}\nreturn selected;`)(...Object.values(dependencies));
 }
+
+test('a cold rooted map fits its first prepared local cover once without claiming complete incidence or overriding manual/editor ownership',()=>{
+ for(const mode of ['automatic','manual','editor','restored','retired']){
+  const definition={id:'mindmap',hierarchy:{}},camera={x:20,y:30,scale:1};let prepared=false,fits=0,flushes=0;
+  const context={viewDefinition:definition,viewLifetime:1,sceneScope:'R',activePath:'A',nodeId:value=>value,
+   viewSession:{definition,getLifetime:()=>mode==='retired'?2:1,layoutRoot:()=> 'R',readTransient:()=>mode==='restored'?{camera}:undefined},hierarchyInitialFrame:{current:null},viewFailed:false,
+   index:{viewScopeCoverage:()=>({prepared,complete:false})},boundEditorBinding:mode==='editor'?{id:'B1'}:undefined,
+   settings:{allowAutozoom:true},automaticFit:{current:{path:'R',camera}},camera:{current:mode==='manual'?{...camera,x:21}:camera},sameFitCamera,
+   fitCurrentScene:{current:()=>fits++},flushCameraTransform:()=>flushes++};
+  const run=callback('hierarchyInitialFrame',context);run();assert.equal(fits,0);prepared=true;run();assert.equal(fits,mode==='automatic'?1:0,mode);
+  context.boundEditorBinding=undefined;callback('hierarchyInitialFrame',context)();assert.equal(fits,mode==='automatic'?1:0,'No late fit after editor close or ordinary geometry change');assert.equal(flushes,fits);
+ }
+});
 
 /** Supply an asymmetric displayed scene and real camera application/fit/layout owners. */
 function graphFixture() {

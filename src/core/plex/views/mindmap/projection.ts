@@ -11,8 +11,10 @@ type BranchWork = {id: string; lineage: readonly NodeId[]; depth: number; side: 
 export function projectMindMap(input: PlexViewInput): PlexProjection | null {
   const configuration = mindMapConfiguration(input.configuration), restored = restoreMindMapState(input.state), root = input.layoutRoot;
   if (!configuration || restored.version !== 1 || !root || !Number.isInteger(input.maximum) || input.maximum < 1
-    || !input.read.node(root) || !input.read.isCurrent()) return null;
-  let state = scopeMindMapState(restored, root, Math.min(configuration.initialGenerations, configuration.maximumDepth));
+    || input.read.node(root)?.id !== root || !input.read.isCurrent()) return null;
+  const scoped = admitMindMapState(scopeMindMapState(restored, root, Math.min(configuration.initialGenerations, configuration.maximumDepth)));
+  if (!scoped) return null;
+  let state = scoped;
   const maximum = Math.min(configuration.maximumOccurrences, MIND_MAP_LIMITS.occurrences, Math.max(1, input.maximum * 8 + 1));
   const expanded = new Set(state.expanded), collapsed = new Set(state.collapsed), editorPaths = mindMapEditorPaths(input, root);
   const pinned = new Set<string>(), pinChildren = new Map<string, Set<NodeId>>(), pinScopes = new Set<NodeId>();
@@ -35,17 +37,19 @@ export function projectMindMap(input: PlexViewInput): PlexProjection | null {
   while (queue.length && occurrences.length < maximum) {
     const work = queue.shift()!, canonical = work.lineage[work.lineage.length - 1];
     if (visited.has(work.id)) continue; visited.add(work.id);
-    const node = input.read.node(canonical); if (!node || !input.read.isCurrent()) return null;
+    const node = input.read.node(canonical); if (!node || node.id !== canonical || !input.read.isCurrent()) return null;
     const reference = work.lineage.slice(0, -1).includes(canonical);
+    // Lowering type limits cannot remove an existing native editor's genuine ancestry. The hard depth/occurrence bounds still apply.
+    const maximumDepth = pinChildren.has(work.id) ? Math.max(configuration.maximumDepth, work.depth + 1) : configuration.maximumDepth;
     const scope = input.read.scope?.(canonical) ?? {coverage: "unavailable", prepared: false, complete: false, pending: false};
     const probe = reference ? {items: [], truncated: false, coverage: "cached" as const} : input.read.relations(canonical, "child", 1);
-    const wantExpanded = !reference && work.depth < configuration.maximumDepth
+    const wantExpanded = !reference && work.depth < maximumDepth
       && !collapsed.has(work.id) && (expanded.has(work.id) || work.depth < state.initialGenerations!);
-    const canExpand = !reference && work.depth < configuration.maximumDepth && !(scope.complete && probe.items.length === 0 && !probe.truncated);
+    const canExpand = !reference && work.depth < maximumDepth && !(scope.complete && probe.items.length === 0 && !probe.truncated);
     const admitted = wantExpanded && canExpand && admitScope(canonical);
     const rows = admitted ? input.read.relations(canonical, "child", Math.min(input.maximum, 128)) : probe;
     let status: PlexBranch["status"] = reference ? "ready" : scope.pending ? "loading" : scope.complete ? "ready" : scope.prepared ? "partial" : "unavailable";
-    if (wantExpanded && canExpand && !admitted || admitted && rows.truncated || !reference && work.depth >= configuration.maximumDepth
+    if (wantExpanded && canExpand && !admitted || admitted && rows.truncated || !reference && work.depth >= maximumDepth
       && (rows.items.length > 0 || !scope.complete)) {status = "limited"; truncated = true;}
     const children: {id: string; lineage: readonly NodeId[]; relation: PlexViewRelation}[] = [];
     if (admitted) {
@@ -72,7 +76,12 @@ export function projectMindMap(input: PlexViewInput): PlexProjection | null {
         const futurePins = [...pinned].filter(id => id !== work.id && !visited.has(id) && !queue.some(row => row.id === id) && !children.some(row => row.id === id) && id !== candidate.id).length;
         if (remaining <= 0 || !pinned.has(candidate.id) && remaining <= futurePins) {truncated = true; status = "limited"; continue;}
         if (work.depth === 0 && state.sides[candidate.id] === undefined) {
-          const values = Object.values(state.sides), side = values.filter(value => value === -1).length < values.filter(value => value === 1).length ? -1 : 1;
+          // Retained unshown branches keep their own future side, but cannot bias today's visible split under partial coverage.
+          const values = [...relations.keys()].flatMap(/** Count only real current root candidates, not stale or unavailable saved branches. */ id => {
+            const occurrence = mindMapOccurrence([root, id]), side = occurrence ? state.sides[occurrence] : undefined;
+            return side === -1 || side === 1 ? [side] : [];
+          });
+          const side = values.filter(value => value === -1).length < values.filter(value => value === 1).length ? -1 : 1;
           const next = admitMindMapState({...state, sides: {...state.sides, [candidate.id]: side}});
           if (!next) {truncated = true; status = "limited"; continue;} state = next;
         }

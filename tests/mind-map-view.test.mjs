@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {loadPortableModules} from './support/portableTypeScript.mjs';
-const {exports:M}=loadPortableModules(['src/core/plex/views/mindmap/state.ts','src/core/plex/views/mindmap/configuration.ts','src/core/plex/views/mindmap/layout.ts','src/core/plex/views/mindmap/definition.ts','src/core/plex/views/mindmap/occurrences.ts']);
+const {exports:M}=loadPortableModules(['src/core/plex/views/mindmap/state.ts','src/core/plex/views/mindmap/configuration.ts','src/core/plex/views/mindmap/layout.ts','src/core/plex/views/mindmap/definition.ts','src/core/plex/views/mindmap/occurrences.ts','src/core/plex/views/hierarchy.ts']);
 
 /** Finite canonical incidence and explicit coverage certificates; no reader, scheduler or native API is supplied to the policy. */
 function graphInput(children,options={}){
@@ -13,6 +13,20 @@ function graphInput(children,options={}){
   relation:(id,target)=>({items:rows(id).filter(row=>row.node.id===target),coverage:'cached',truncated:false}),compare:(a,b)=>a.id.localeCompare(b.id)};
  return{input:{attention:'A',layoutRoot:'R',maximum:32,state:null,read,...options.input},nodes,project(){return M.mindMapViewDefinition.project(this.input)},get reads(){return reads},retire(){current=false}};
 }
+
+test('matching one duplicate occurrence keeps only its real ancestor path, and broken/cyclic ancestry confers no visibility',()=>{
+ const rows=[{id:'root'},{id:'B',parent:'root'},{id:'C',parent:'root'},{id:'D1',parent:'B'},{id:'D2',parent:'C'},
+  {id:'missing-parent',parent:'absent'},{id:'cycle',parent:'cycle'}];
+ assert.deepEqual([...M.hierarchyPathClosure(rows,['D2'],'root')],['root','D2','C']);
+ assert.deepEqual([...M.hierarchyPathClosure(rows,['missing-parent','cycle'],'root')],['root']);
+});
+
+test('retained unshown branches cannot bias the visible root split under partial coverage',()=>{
+ const sides=Object.fromEntries(Array.from({length:20},(_,i)=>[M.mindMapOccurrence(['R','Previously-shown-'+i]),1]));
+ const f=graphInput({R:['B','C']},{scope:()=>({coverage:'local',prepared:true,complete:false,pending:false}),input:{state:{version:1,scope:'R',initialGenerations:1,expanded:[],collapsed:[],sides}}});
+ const p=f.project();assert.deepEqual([...new Set(p.occurrences.filter(row=>row.branch.depth===1).map(row=>row.branch.side))].sort(),[-1,1]);
+ for(const[id,side]of Object.entries(sides))assert.equal(p.stateSuggestion.sides[id],side,'Partial absence cannot delete retained intent');
+});
 
 test('canonical children form stable two-sided occurrences, diamonds remain distinct and ancestor cycles are references',()=>{
  const f=graphInput({R:['B','C','R'],B:['D'],C:['D'],D:['R']},{input:{configuration:{status:'available',values:{initialGenerations:3}}}});
@@ -59,7 +73,14 @@ test('fold/sides restoration is detached, bounded, future-safe and scoped to the
 test('type configuration validates exact ranges and leaves unavailable payloads inert',()=>{
  const defaults=M.mindMapConfiguration();assert.equal(defaults.initialGenerations,1);assert.equal(defaults.maximumOccurrences,256);
  assert.equal(M.mindMapConfiguration({status:'unavailable',reason:'unsupported'}),null);
- for(const values of [{maximumDepth:9},{initialGenerations:1.5},{maximumOccurrences:257},{arrangement:'unknown'},{verticalSpacing:NaN}])assert.equal(M.mindMapConfiguration({status:'available',values}),null);
+ for(const values of [{maximumDepth:9},{initialGenerations:1.5},{maximumOccurrences:257},{arrangement:'unknown'},{verticalSpacing:NaN},{maximumDepth:null}])assert.equal(M.mindMapConfiguration({status:'available',values}),null);
+});
+
+test('renamed or missing roots require explicit recovery, and reduced limits retain a live editor path only through real canonical pairs',()=>{
+ const f=graphInput({R:['B'],B:['D'],D:['E']},{input:{configuration:{status:'available',values:{initialGenerations:3}}}});let p=f.project();
+ const D=p.occurrences.find(row=>row.nodeId==='D');f.input.state=p.stateSuggestion;f.input.editors=[{occurrenceId:D.id,nodeId:'D'}];
+ f.input.configuration={status:'available',values:{maximumDepth:1,maximumOccurrences:16}};p=f.project();assert(p.occurrences.some(row=>row.id===D.id));assert(!p.occurrences.some(row=>row.nodeId==='E'));
+ f.nodes.set('R',{id:'Renamed'});assert.equal(f.project(),null,'An old root alias cannot silently reroot the map');f.nodes.delete('R');assert.equal(f.project(),null);
 });
 
 test('measured subtree bands preserve the root and prevent overlaps before/after an editor expands',()=>{

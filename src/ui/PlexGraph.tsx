@@ -16,6 +16,9 @@
  * Central-editor corner clicks share modifier expansion; expanded mini rows retain one native title
  * with a separate full accessible name, avoiding competing aria-label tooltips.
  * Startup recovery remains eligible across visibility changes until its current check completes.
+ * Opt-in rooted hierarchies retain root/attention/editor intent separately, reconcile finite frontier
+ * leases after scene admission and share exact ancestor filtering and catalog-backed branch actions.
+ * Their first current local preparation may fit once; manual/restored cameras and live editors win.
  */
 import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
 import {hasDirectionalCaption,directionalRelationCaption} from "../core/plex/directionalRelationCaption";
@@ -64,7 +67,8 @@ import { ResizableAreaFrame } from "./components/ResizableAreaFrame";
 import { ThoughtNode, type ConnectionDragState } from "./ThoughtNode";
 import {nodeId, type NodeId} from "../core/graph/model";
 import {useHierarchyDemand} from "./plexViews/useHierarchyDemand";
-import type {AreaId as ScrollZone, PlexViewDefinition} from "../core/plex/views/contracts";
+import {hierarchyPathClosure} from "../core/plex/views/hierarchy";
+import type {AreaId as ScrollZone, PlexViewDefinition, PlexBranchAction} from "../core/plex/views/contracts";
 import type {PlexViewSession} from "../application/PlexViewSession";
 import {classicViewDefinition, classicPorts} from "../core/plex/views/classic/definition";
 import {plexViewContributionFor} from "./plexViews/contributions";
@@ -931,9 +935,11 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     [classic, viewDefinition, viewRevision, viewSession, index, activePath, renderRevision, semanticRevision, settings, centralEditorSize, globalFiltering, filterLayoutMode, predicateEngine, predicate, lenses, predicateRevision, unfoldedGroups, translate, rooted, sceneScope, occurrenceEditorPolicy, predicateCenter, hierarchyDemand.revision]);
   useLayoutEffect(/** Only an actually admitted selected scene can request finite source frontiers or commit stable side/fold intent. */ () => {
     if (!viewDefinition.hierarchy || !viewSession) return;
+    const current = viewSession.capture();
     const projection = preparedDefinitionScene && !preparedDefinitionScene.failure ? preparedDefinitionScene.projection : null;
     hierarchyDemand.synchronize(projection);
-    if (projection?.stateSuggestion !== undefined) viewSession.updateState(projection.stateSuggestion);
+    if (current() && viewSession.definition === viewDefinition && viewSession.layoutRoot(nodeId(activePath)) === sceneScope
+      && projection?.stateSuggestion !== undefined) viewSession.updateState(projection.stateSuggestion);
   }, [preparedDefinitionScene, viewDefinition, viewSession, viewLifetime, hierarchyDemand.revision]);
   useLayoutEffect(/** Reacquire native identity and exact admission before restored intent becomes a live editor. */ () => {
     if (!pendingEditorIntent || !viewSession || boundEditorBinding) return;
@@ -1116,6 +1122,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const camera = useRef({ x: 0, y: 0, scale: 1 });
   const cameraIntentPlaced = useRef(false);
   const automaticFit = useRef<{ path: string; camera: FitCamera } | null>(null);
+  const hierarchyInitialFrame = useRef<{key: string; settled: boolean} | null>(null);
   const miniNamePrefix = useId();
   const previousSidecarOpen = useRef(sidecarOpen);
   const reframeSidecarViewport = useRef<() => void>(/** Deferred native transitions use only the latest composed scene/settings. */ () => {});
@@ -1728,6 +1735,20 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       { left: minX, top: minY, right: maxX, bottom: maxY }, maxScale), true);
   };
   fitCurrentScene.current = fit;
+  useLayoutEffect(/** A cold rooted map fits its first current local preparation once; this is not a complete-incidence claim. Manual/restored camera and live editors outrank it. */ () => {
+    if (!viewDefinition.hierarchy || !viewSession || viewSession.definition !== viewDefinition || viewSession.getLifetime() !== viewLifetime
+      || viewSession.layoutRoot(nodeId(activePath)) !== sceneScope) return;
+    const key = JSON.stringify([viewDefinition.id, viewLifetime, sceneScope]);
+    if (hierarchyInitialFrame.current?.key !== key) hierarchyInitialFrame.current = {key,
+      settled: Boolean(viewSession.readTransient(viewDefinition.id, nodeId(activePath)))};
+    const frame = hierarchyInitialFrame.current;
+    if (frame.settled || viewFailed || !index.viewScopeCoverage(sceneScope).prepared) return;
+    frame.settled = true;
+    if (!boundEditorBinding && settings.allowAutozoom && automaticFit.current?.path === sceneScope
+      && sameFitCamera(automaticFit.current.camera, camera.current)) {
+      fitCurrentScene.current(); flushCameraTransform();
+    }
+  }, [viewDefinition, viewSession, viewLifetime, sceneScope, sceneLayoutKey, renderRevision, semanticRevision, viewFailed, boundEditorBinding?.id, settings.allowAutozoom]);
   reframeSidecarViewport.current = /** Reframe only a usable native viewport; disabled autozoom retains the exact scale. */ () => {
     const el = viewport.current;
     if (!el || !el.isConnected || el.clientWidth <= 0 || el.clientHeight <= 0) return;
@@ -2084,7 +2105,16 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     }, 180);
   };
 
+  const hierarchyMatchedOccurrences = useMemo(/** Keep/Reflow and interaction candidates use the same real ancestor closure, with exact duplicate-occurrence identity. */ () => {
+    if (!viewDefinition.hierarchy) return null;
+    const matched = scene.nodes.filter(/** A live editor is pinned exactly; matching one same-note occurrence grants no authority to another path. */ node =>
+      occurrenceKey(node) === boundEditorBinding?.occurrenceId || !globalFiltering || node.page.transient?.kind === "group"
+      || matchesGraphPredicateNode(predicateEngine, predicate, node, predicateCenter) && matchesVisibleLensNode(predicateEngine, index, lenses, node, predicateCenter));
+    return hierarchyPathClosure(scene.nodes.map(/** Reuse only the displayed, admitted parent identities. */ node => ({id: occurrenceKey(node), parent: node.branch?.parent})),
+      matched.map(/** Selection and Find retain occurrence identity. */ occurrenceKey), scene.entryOccurrence);
+  }, [viewDefinition, scene.nodes, scene.entryOccurrence, boundEditorBinding?.id, globalFiltering, predicateEngine, predicate, predicateCenter, index, lenses, predicateRevision]);
   const filterMatchedNodePaths = useMemo(() => {
+    if (hierarchyMatchedOccurrences) return new Set(scene.nodes.filter(node => hierarchyMatchedOccurrences.has(occurrenceKey(node))).map(node => node.page.path));
     const matches = new Set<string>();
     for (const node of scene.nodes) {
       if (!globalFiltering || node.role === "center" || node.page.transient?.kind === "group" || (matchesGraphPredicateNode(predicateEngine, predicate, node, predicateCenter) && matchesVisibleLensNode(predicateEngine, index, lenses, node, predicateCenter))) matches.add(node.page.path);
@@ -2099,10 +2129,11 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       }
     }
     return matches;
-  }, [scene.nodes, scene.edges, globalFiltering, predicate, lenses, predicateRevision, predicateEngine, index, predicateCenter, sectionExpansion]);
+  }, [scene.nodes, scene.edges, globalFiltering, predicate, lenses, predicateRevision, predicateEngine, index, predicateCenter, sectionExpansion, hierarchyMatchedOccurrences]);
 
   const nodeMatchesCurrentFilter = (node: PositionedNode): boolean =>
-    occurrenceEditorPolicy && occurrenceKey(node) === boundEditorBinding?.occurrenceId || filterMatchedNodePaths.has(node.page.path);
+    hierarchyMatchedOccurrences ? hierarchyMatchedOccurrences.has(occurrenceKey(node))
+      : occurrenceEditorPolicy && occurrenceKey(node) === boundEditorBinding?.occurrenceId || filterMatchedNodePaths.has(node.page.path);
   const zoneDisplayLayouts = useMemo(() => {
     const layouts: Partial<Record<ScrollZone, ZoneDisplayLayout>> = {};
     for (const zone of ZONES) {
@@ -2600,12 +2631,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         });
     }
     return edges.map((edge) => {
-      const target = scene.nodes.find((node) => node.page.path === edge.targetPath);
-      if (!target || !neighborhood) return edge;
+      const target = scene.nodes.find((node) => occurrenceKey(node) === edgeOccurrence(edge, "target"));
+      if (!target || !predicateCenter) return edge;
       const lensStyle = graphLensEdgeStyle(predicateEngine, index, lenses, {
         page: target.page,
         label: target.label,
-        center: neighborhood.center,
+        center: predicateCenter,
         edge: {
           role: edge.role, relationType: edge.relationType, definition: edge.typeDefinition, linkDirection: edge.direction,
           sourcePath: edge.explanationSourcePath ?? edge.sourcePath, targetPath: edge.explanationTargetPath ?? edge.targetPath,
@@ -2614,25 +2645,25 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       return Object.keys(lensStyle).length ? { ...edge, style: { ...edge.style, ...lensStyle } } : edge;
     });
   }, [scene.edges, scene.nodes, visibleNodePaths, neighborhood, predicateEngine, index, settings, lenses,
-    predicateRevision, showCrossLinks, globalFiltering, layoutSectionExpansion, crossLinkPeek, connectDrag, nodeDrag, resizingArea, areaSettingsMode]);
+    predicateRevision, showCrossLinks, globalFiltering, layoutSectionExpansion, crossLinkPeek, connectDrag, nodeDrag, resizingArea, areaSettingsMode, predicateCenter]);
 
   useEffect(/** Scrolling/filtering/removal retires an occurrence; a later same-path row needs a new mouse entry. */ () => {
     if (crossLinkPeek && !visibleNodePaths.has(crossLinkPeek.path)) clearHoverIntent(true);
   }, [crossLinkPeek, visibleNodePaths]);
 
   const paintedEdges = useMemo(/** Re-layer visible edge colors without rebuilding their route or scene. */ () => visibleEdges.map(edge => {
-    const target = renderedNodeMap.get(edgeOccurrence(edge, "target")); if (!target || !neighborhood) return edge;
+    const target = renderedNodeMap.get(edgeOccurrence(edge, "target")); if (!target || !predicateCenter) return edge;
     if (!semanticSceneEdge(edge)) return edge;
     const current = resolveLinkStyle({page: target.page, role: edge.role, relationType: edge.relationType, typeDefinition: edge.typeDefinition, linkDirection: edge.direction}, paintSettings,
       renderedNodeMap.get(edgeOccurrence(edge, "source"))?.page);
-    const layered = graphLensEdgeStyle(predicateEngine, index, paintLenses, {page: target.page, label: target.label, center: neighborhood.center,
+    const layered = graphLensEdgeStyle(predicateEngine, index, paintLenses, {page: target.page, label: target.label, center: predicateCenter,
       edge: {role: edge.role, relationType: edge.relationType, definition: edge.typeDefinition, linkDirection: edge.direction,
         sourcePath: edge.explanationSourcePath ?? edge.sourcePath, targetPath: edge.explanationTargetPath ?? edge.targetPath}});
     const style={...edge.style,strokeColor:current.strokeColor,textColor:current.textColor,...layered};
     const sourcePath=edge.explanationSourcePath??edge.sourcePath,targetPath=edge.explanationTargetPath??edge.targetPath;
     return {...edge,style,caption:connectionCaption(edge.typeDefinition,style.showLabel,sourcePath,targetPath,
       (renderedNodeMap.get(sourcePath)??renderedNodeMap.get(edgeOccurrence(edge, "source")))?.page,(renderedNodeMap.get(targetPath)??renderedNodeMap.get(edgeOccurrence(edge, "target")))?.page)};
-  }), [visibleEdges, renderedNodeMap, neighborhood, paintSettings, predicateEngine, index, paintLenses, connectionCaption, renderRevision, semanticRevision]);
+  }), [visibleEdges, renderedNodeMap, neighborhood, paintSettings, predicateEngine, index, paintLenses, connectionCaption, renderRevision, semanticRevision, predicateCenter]);
 
   const interaction = useMemo(() => {
     const edgeIds = new Set<string>();
@@ -3113,7 +3144,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       runNodeAction("node.open", target);
     } else {
       const occurrence = event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-kplex-keyboard-id]")?.dataset.kplexKeyboardId;
-      runNodeAction("node.activate", target, occurrence);
+      activateOccurrence(target, occurrence, true);
     }
   };
 
@@ -3585,8 +3616,15 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const runNodeAction = (id: ActionId, target: GraphPage, occurrenceId?: string): void => {
     void plugin.actionManager.dispatch({ id, source: "context-menu", surfaceId: actionSurfaceId,
       target: { kind: "explicit", node: actionNodeRef(target), occurrenceId } }).then(outcome => {
-        if (id === "editor.expand" && outcome.status === "unavailable") new Notice(translateActionText(translate, outcome.reasonKey));
+        if (["editor.expand", "branch.toggle", "branches.expand-generation", "branches.collapse-generation", "view.root.selected"].includes(id)
+          && outcome.status === "unavailable") new Notice(translateActionText(translate, outcome.reasonKey));
       });
+  };
+  /** Generation controls address only this canvas surface; failed editor-removing transitions remain visible and unchanged. */
+  const runGenerationAction = (id: "branches.expand-generation" | "branches.collapse-generation"): void => {
+    void plugin.actionManager.dispatch({id, source: "toolbar", surfaceId: actionSurfaceId}).then(/** Refusal is a result, never an optimistic fold. */ outcome => {
+      if (outcome.status === "unavailable") new Notice(translateActionText(translate, outcome.reasonKey));
+    });
   };
   /** Reuse current section-fold state and descendant policy for pointer, menu and keyboard routes. */
   const applySectionAction = (page: GraphPage, id: "section.toggle-level" | "section.fold-descendants" | "section.unfold-descendants"): void => {
@@ -3630,7 +3668,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       if (!current()) return {status: "cancelled"};
       const sessionId = `${actionSurfaceId}:details:${++graphDialogSerial.current}`;
       const dialog = new RelationshipExplanationModal(plugin, explanation, {
-        role: edge.role, centerPath: neighborhood?.center.path, hostLeaf, initialFocus: "sources",
+        role: edge.role, centerPath: viewDefinition.hierarchy ? sourcePath : neighborhood?.center.path, hostLeaf, initialFocus: "sources",
         sourceTitle: scene.nodes.find(node => node.page.path === sourcePath)?.label,
         targetTitle: scene.nodes.find(node => node.page.path === targetPath)?.label,
       }, /** Native close/window teardown release the exact captured pair session. */ () => { graphDialogs.current.delete(dialog); plugin.actionManager.closeSession(sessionId); });
@@ -3810,7 +3848,51 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       return id ? closeBoundEditor(id) : {status: "unavailable", reasonKey: "actions.target-unavailable"};
     },
   };
+  /** Exact selected occurrence/canonical pairing precedes a pure state reduction; neither a foreign node nor a missing row grants branch authority. */
+  const nextBranchState = (context: ActionContext, kind: PlexBranchAction["kind"]): unknown => {
+    if (!viewDefinition.hierarchy || !viewSession || viewSession.definition !== viewDefinition || viewSession.getLifetime() !== viewLifetime
+      || viewSession.layoutRoot(nodeId(activePath)) !== sceneScope) return null;
+    const prepared = prepareSelectedDefinition(viewSession.state), projection = prepared.projection;
+    if (!projection || prepared.failure) return null;
+    if (kind === "toggle") {
+      if (context.target.kind !== "node") return null;
+      const target = context.target, node = scene.nodes.find(row => occurrenceKey(row) === target.occurrenceId);
+      if (!node || graphActionPage(context) !== node.page || node.page.path !== target.node.identity) return null;
+      return viewDefinition.hierarchy.reduce(viewSession.state, projection, {kind, occurrenceId: occurrenceKey(node)});
+    }
+    return viewDefinition.hierarchy.reduce(viewSession.state, projection, {kind});
+  };
+  /** Resolve branch intent against this committed projection; only the existing session may commit guarded folds. */
+  const branchAction = (kind: PlexBranchAction["kind"]): ActionImplementation => ({
+    availability: /** Pure preflight cannot acquire scopes or remove a live native editor. */ context => {
+      const next = nextBranchState(context, kind);
+      if (!next || !viewSession) return {state: "disabled", reasonKey: "actions.target-unavailable"};
+      return viewSession.editors.bindings.length && !branchPreflight.current(next)
+        ? {state: "disabled", reasonKey: "actions.branch-editor-blocked"} : {state: "enabled"};
+    },
+    execute: /** Recheck actual current branch state and editor admission at accepted execution. */ context => {
+      const next = nextBranchState(context, kind);
+      if (!next || !viewSession) return {status: "unavailable", reasonKey: "actions.target-unavailable"};
+      preserveCameraOnNextLayout.current = true;
+      return viewSession.updateState(next) ? {status: "completed"} : {status: "unavailable", reasonKey: "actions.branch-editor-blocked"};
+    },
+  });
   const graphImplementations: SurfaceActionImplementations = {
+    "branch.toggle": branchAction("toggle"),
+    "branches.expand-generation": branchAction("expand-generation"),
+    "branches.collapse-generation": branchAction("collapse-generation"),
+    "view.root.selected": {
+      availability: /** Reroot is explicit and never implicitly closes a native editor. */ context => {
+        const page = graphActionPage(context);
+        if (!viewDefinition.hierarchy || !viewSession || !page || page.transient) return {state: "disabled", reasonKey: "actions.target-unavailable"};
+        return viewSession.editors.bindings.length && page.path !== sceneScope ? {state: "disabled", reasonKey: "actions.branch-editor-blocked"} : {state: "enabled"};
+      },
+      execute: /** The rooted session retires outgoing frontier/camera scope through its existing lifetime. */ context => {
+        const page = graphActionPage(context);
+        if (!viewDefinition.hierarchy || !viewSession || !page || page.transient) return {status: "unavailable", reasonKey: "actions.target-unavailable"};
+        return viewSession.setRoot(nodeId(page.path)) ? {status: "completed"} : {status: "unavailable", reasonKey: "actions.branch-editor-blocked"};
+      },
+    },
     "editor.expand": editorExpandAction,
     "editor.collapse": editorCollapseAction,
     "editor.resize": {
@@ -3832,7 +3914,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       if (!page) return;
       if (page.transient?.kind === "group") { unfoldGroup(page); return; }
       if (page.transient?.kind === "section") return plugin.openSection(page, hostLeaf);
-      if (context.request.source === "local-hotkey" && page.path === activePath && page.file) return renameFrom(context);
+      if (!viewDefinition.hierarchy && context.request.source === "local-hotkey" && page.path === activePath && page.file) return renameFrom(context);
       if (context.target.kind === "node" && context.target.occurrenceId) navigationOccurrence.current = { identity: page.path, id: context.target.occurrenceId };
       onActivate(page);
       return;
@@ -3989,7 +4071,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     });
   }
   actionPorts.current = {
-    implementations: viewFailed ? Object.fromEntries(Object.keys(graphImplementations).map(id => [id, id === "editor.collapse" || id === "view.center-editor.toggle" && occurrenceEditorPolicy && boundEditorBinding ? graphImplementations[id as ActionId] : {
+    implementations: viewFailed ? Object.fromEntries(Object.keys(graphImplementations).map(id => [id, id === "editor.collapse" || id === "view.root.selected" || id === "view.center-editor.toggle" && occurrenceEditorPolicy && boundEditorBinding ? graphImplementations[id as ActionId] : {
       availability: () => ({state: "disabled" as const, reasonKey: "actions.target-unavailable"}),
       execute: () => ({status: "unavailable" as const, reasonKey: "actions.target-unavailable"}),
     }])) : graphImplementations,
@@ -4092,6 +4174,22 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const isPlaceholderFolderGesture = (page: GraphPage, event: MouseEvent<HTMLDivElement>): boolean =>
     Boolean(Keymap.isModEvent(event.nativeEvent)) && !page.file && !page.url && !page.isFolder && !page.isTag && !page.transient;
 
+  /** Explicit primary activation may request this exact eligible occurrence's editor; navigation and native hosting keep their separate shared owners. */
+  const activateOccurrence = (page: GraphPage, occurrenceId: string | undefined, primary: boolean): void => {
+    if (!primary || viewDefinition.hierarchy?.primary !== "activate-editor" || !occurrenceId || !supportsBoundEditor(page)) {
+      runNodeAction("node.activate", page, occurrenceId); return;
+    }
+    const current = viewSession?.capture() ?? (() => true), reference = actionNodeRef(page);
+    void plugin.actionManager.dispatch({id: "node.activate", source: "context-menu", surfaceId: actionSurfaceId,
+      target: {kind: "explicit", node: reference, occurrenceId}}).then(/** A retired view or rejected activation cannot authorize a late editor at a reused occurrence ID. */ outcome => {
+      if (!current() || outcome.status !== "completed") return;
+      return plugin.actionManager.dispatch({id: "editor.expand", source: "context-menu", surfaceId: actionSurfaceId,
+        target: {kind: "explicit", node: reference, occurrenceId}}).then(/** Capacity and stale-native admission retain the existing buffer and explain refusal. */ result => {
+          if (current() && result.status === "unavailable") new Notice(translateActionText(translate, result.reasonKey));
+        });
+    });
+  };
+
   /** Materialize a modified placeholder in place; ordinary clicks retain normal navigation. */
   const activateNode = (page: GraphPage, occurrenceId?: string, event?: MouseEvent<HTMLDivElement>): void => {
     if (page.transient?.kind === "group") {
@@ -4108,7 +4206,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         target: { kind: "explicit", node: actionNodeRef(target) }, args: { chooseFolder: true, preserveCenter: true } });
       return;
     }
-    runNodeAction("node.activate", target, occurrenceId);
+    activateOccurrence(target, occurrenceId, !event || !(event.ctrlKey || event.metaKey || event.shiftKey || event.altKey));
   };
 
   /** Open through mouse double-click unless a completed touch pair already performed the same action. */
@@ -4151,6 +4249,16 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       void plugin.actionManager.dispatch({ id, source: "context-menu", surfaceId: actionSurfaceId,
         target: { kind: "explicit", node: reference, occurrenceId: occurrenceId ?? sceneNodeKeys.get(node) } });
     };
+
+    if (viewDefinition.hierarchy && persistent) {
+      if (node.branch?.canExpand) menu.addItem(/** Branch disclosure is independent of native editor expansion. */ item => item
+        .setTitle(translate(node.branch?.expanded ? "mindmap.collapseBranch" : "mindmap.expandBranch")).setIcon(node.branch?.expanded ? "minus" : "plus")
+        .onClick(/** The manager rechecks the exact captured occurrence and native editor guard. */ () => runCapturedNodeAction("branch.toggle", persistent)));
+      menu.addItem(/** Explicit root choice keeps ordinary activation and Sidecar ownership separate. */ item => item
+        .setTitle(translate("actions.view.root.selected")).setIcon("git-fork")
+        .onClick(/** Native confirmation cannot borrow a new menu target. */ () => runCapturedNodeAction("view.root.selected", persistent)));
+      menu.addSeparator();
+    }
 
     const persistentFile = persistent?.file;
     if (persistentFile && persistent && page.transient?.kind !== "section") {
@@ -4376,6 +4484,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       key={JSON.stringify([viewDefinition.id, viewLifetime, sceneNodeKeys.get(baseNode)])}
       node={nodeForDisplay}
       translate={translate}
+      branchStatus={baseNode.branch?.reference ? translate("mindmap.reference") : baseNode.branch?.status === "loading" ? translate("mindmap.loading")
+        : baseNode.branch?.status === "limited" ? translate("mindmap.limited") : baseNode.branch?.status === "partial" ? translate("mindmap.partial")
+        : baseNode.branch?.status === "unavailable" ? translate("mindmap.unavailable") : undefined}
       visual={hasCentralEditor ? undefined : nodeVisuals.get(baseNode.page.path)}
       content={hasCentralEditor ? <div className="kplex-central-editor-placeholder" aria-hidden="true" /> : undefined}
       cornerAction={canOpenCentralEditor ? {
@@ -4397,7 +4508,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       onActivate={/** Capture the clicked occurrence; explicit placeholder folder gestures retain their target. */ (_node, event) => {if (!viewFailed) activateNode(baseNode.page, sceneNodeKeys.get(baseNode), event);}}
       onOpen={/** Modified placeholder clicks already opened the one in-place creation dialog. */ (_, event) => { if (!viewFailed && !isPlaceholderFolderGesture(baseNode.page, event)) openNode(baseNode.page); }}
       nativeDraggable={!viewFailed && canDragNodeLink(baseNode.page) && !hasCentralEditor}
-      onNativeDragStart={/** Regular rows retain the viewport's same-view relink authority. */ (_, event) => beginNativeNodeDrag(baseNode.page, baseNode.role, baseNode.label, event)}
+      onNativeDragStart={/** A rooted hierarchy exports its exact note as a copy, never a fabricated attention-to-child move. */ (_, event) => beginNativeNodeDrag(baseNode.page, baseNode.role, baseNode.label, event, viewDefinition.hierarchy ? baseNode : undefined)}
       onNativeDragEnd={endNativeNodeDrag}
       onHoverNode={(_, event) => { if (!connectDrag && !nodeDrag) scheduleHoverIntent({ kind: "node", path: baseNode.page.path }, event); }}
       onHoverGate={(_, gate, event) => { if (!connectDrag && !nodeDrag) scheduleHoverIntent({ kind: "gate", path: baseNode.page.path, gate }, event); }}
@@ -4410,7 +4521,11 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       onGatePointerDown={(_, gate, event) => startGateDrag(baseNode, gate, event)}
       onNodePointerDown={(_, event) => startNodeDrag(baseNode, event)}
       onContextMenu={(_, event) => {if (!viewFailed) showNodeContextMenu(baseNode, event);}}
-      sectionFold={baseNode.page.transient?.kind === "section" ? (() => {
+      sectionFold={baseNode.branch?.canExpand && viewDefinition.hierarchy ? {
+        hasChildren: true, expanded: baseNode.branch.expanded, hiddenDescendantCount: 0,
+        expandedTitle: translate("mindmap.collapseBranch"), foldedTitle: translate("mindmap.expandBranch"),
+        onToggle: /** Separate branch disclosure dispatches the same guarded action as menus and keys. */ () => runNodeAction("branch.toggle", baseNode.page, occurrenceKey(baseNode)),
+      } : baseNode.page.transient?.kind === "section" ? (() => {
         const section = sectionExpansion?.sections.find((candidate) => candidate.id === baseNode.page.transient?.sectionId);
         if (!section) return undefined;
         const descendants = new Set<string>();
@@ -4805,6 +4920,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     </svg>
     {viewFailed && <div className="kplex-view-error" role="status">{translate("view.failed")}
       <button type="button" onClick={() => viewSession?.recover()}>{translate("view.recover")}</button>
+      {viewDefinition.hierarchy && <button type="button" onClick={/** A missing/renamed root has an explicit recovery path; attention never implicitly reroots it. */ () => {
+        const page = index.get(activePath);if (page) runNodeAction("view.root.selected", page);
+      }}>{translate("mindmap.useAttentionRoot")}</button>}
       {boundEditorBinding && <button type="button" data-kplex-close-bound-editor disabled={boundEditorBinding.closing}
         onClick={/** Hidden buffers remain recoverable through the same explicit save-aware action. */ () => {
           void plugin.actionManager.dispatch({id: "editor.collapse", source: "toolbar", surfaceId: actionSurfaceId, args: {bindingId: boundEditorBinding.id}});
@@ -5005,6 +5123,18 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     </LayoutControls>
 
     <div className="kplex-zoom-controls">
+      {viewDefinition.hierarchy && <>
+        {activePath !== sceneScope && <button type="button" aria-label={translate("mindmap.useAttentionRoot")}
+          onClick={/** External navigation keeps this map intact; only this explicit action adopts the current note as its new root. */ event => {
+            event.stopPropagation();const page=index.get(activePath);if(page)runNodeAction("view.root.selected",page);
+          }}><ObsidianIcon name="git-fork" size={16} /></button>}
+        <button type="button" aria-label={translate("actions.branches.expand-generation")}
+          disabled={!preparedDefinitionScene?.projection?.occurrences.some(row => row.branch?.canExpand && !row.branch.expanded)}
+          onClick={/** Bounded next frontier is a shared action, not recursive source work in the control. */ event => {event.stopPropagation();runGenerationAction("branches.expand-generation");}}><ObsidianIcon name="list-plus" size={16} /></button>
+        <button type="button" aria-label={translate("actions.branches.collapse-generation")}
+          disabled={!preparedDefinitionScene?.projection?.occurrences.some(row => row.branch?.canExpand && row.branch.expanded)}
+          onClick={/** Collapsing a generation uses the same exact editor-removal guard as one branch. */ event => {event.stopPropagation();runGenerationAction("branches.collapse-generation");}}><ObsidianIcon name="list-minus" size={16} /></button>
+      </>}
       <button aria-label={translate("graph.zoomIn")} onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); void plugin.actionManager.dispatch({ id: "view.zoom-in", source: "toolbar", surfaceId: actionSurfaceId }); }}><ObsidianIcon name="zoom-in" size={16} /></button>
       <button aria-label={translate("graph.zoomOut")} onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); void plugin.actionManager.dispatch({ id: "view.zoom-out", source: "toolbar", surfaceId: actionSurfaceId }); }}><ObsidianIcon name="zoom-out" size={16} /></button>
       <button aria-label={translate("graph.fitGraph")} onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); void plugin.actionManager.dispatch({ id: "view.fit", source: "toolbar", surfaceId: actionSurfaceId }); }}><ObsidianIcon name="focus" size={16} /></button>

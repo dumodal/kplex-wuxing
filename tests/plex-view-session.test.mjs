@@ -94,8 +94,8 @@ test('root restoration at capacity still captures a stable active root',()=>{
  session.ensureRoot('Actual.md');session.ensureRoot('Other.md');assert.equal(session.layoutRoot('Other.md'),'Actual.md');assert.equal(Object.keys(session.getState().roots).length,16);session.dispose();
 });
 
-test('static registration validates identity/version and ships Classic only',()=>{
-  assert.deepEqual(M.builtInPlexViews.available.map(view=>view.id),['classic']);
+test('static registration validates identity/version and ships Compass and Mind Map without test definitions',()=>{
+  assert.deepEqual(M.builtInPlexViews.available.map(view=>view.id),['classic','mindmap']);
   assert.throws(()=>new M.PlexViewRegistry([M.builtInPlexViews.resolve('classic'),M.builtInPlexViews.resolve('classic')]));
   assert.throws(()=>new M.PlexViewRegistry([M.probeViewDefinition]));
   assert.throws(()=>new M.PlexViewRegistry([{...M.builtInPlexViews.resolve('classic'),version:2}]));
@@ -148,6 +148,13 @@ test('compatible editor leases, per-view heights and transient geometry survive 
   const b=new M.PlexViewSession(registry,()=>{});b.restore(saved);assert.deepEqual(b.getAreaHeights(),{groveHeight:170});assert.equal(b.readTransient('test.situated','Focus.md'),undefined);
   assert.equal(a.readTransient('test.situated','Other.md'),undefined);assert.equal(a.readTransient('test.situated','Focus.md'),undefined,'A root change permanently retires old transient state');
   release();release();a.select('test.no-editor');assert.equal(a.definition.id,'test.no-editor');a.dispose();b.dispose();
+});
+
+test('a live attention editor blocks occurrence-host selection while unchanged attention definitions remain compatible',()=>{
+ const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.probeViewDefinition]),session=new M.PlexViewSession(registry,()=>{}),release=session.retainEditor();
+ assert.equal(session.canSelect('mindmap'),false);session.select('mindmap');assert.equal(session.definition.id,'classic');
+ assert.equal(session.canSelect('test.situated'),true);session.select('test.situated');assert.equal(session.definition.id,'test.situated');
+ session.select('mindmap');assert.equal(session.definition.id,'test.situated');release();assert.equal(session.canSelect('mindmap'),true);session.select('mindmap');assert.equal(session.definition.id,'mindmap');session.dispose();
 });
 
 

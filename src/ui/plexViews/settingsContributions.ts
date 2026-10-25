@@ -7,6 +7,7 @@ import type {PlexViewDefinition} from "../../core/plex/views/contracts";
 import {viewConfigurationKey} from "../../core/plex/views/configuration";
 import {builtInPlexViews} from "./builtins";
 import {classicSettingsContribution} from "./classic/settings";
+import {mindMapSettingsContribution} from "./mindmap/settings";
 import {viewLabel} from "./labels";
 
 export type CanvasViewSettingsContext = Readonly<{
@@ -52,4 +53,4 @@ export class CanvasViewSettingsRegistry {
   }
 }
 
-export const builtInCanvasViewSettings = new CanvasViewSettingsRegistry(builtInPlexViews, [classicSettingsContribution]);
+export const builtInCanvasViewSettings = new CanvasViewSettingsRegistry(builtInPlexViews, [classicSettingsContribution, mindMapSettingsContribution]);
