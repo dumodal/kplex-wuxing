@@ -1,6 +1,6 @@
 /** Mind Map native Settings and live canvas density contribution. Shared typography/editor/visibility and per-canvas root/folds remain under their existing owners. */
 import type {CanvasViewSettingsContribution} from "../settingsContributions";
-import {MIND_MAP_DENSITY} from "../../../core/plex/views/mindmap/configuration";
+import {MIND_MAP_DENSITY, MIND_MAP_LIMITS} from "../../../core/plex/views/mindmap/configuration";
 
 export const mindMapSettingsContribution: CanvasViewSettingsContribution = {
   id: "mindmap",
@@ -22,7 +22,7 @@ export const mindMapSettingsContribution: CanvasViewSettingsContribution = {
     {name: translate("graph.horizontalDensity"), desc: translate("settings.ui.horizontal.density.help"), control: {type: "slider", key: key("horizontalDensity"), ...MIND_MAP_DENSITY}},
     {name: translate("graph.verticalDensity"), desc: translate("settings.ui.vertical.density.help"), control: {type: "slider", key: key("verticalDensity"), ...MIND_MAP_DENSITY}},
     {name: translate("mindmap.initialGenerations"), desc: translate("mindmap.initialGenerationsHelp"), control: {type: "slider", key: key("initialGenerations"), min: 1, max: 3, step: 1}},
-    {name: translate("mindmap.maximumDepth"), control: {type: "slider", key: key("maximumDepth"), min: 1, max: 8, step: 1}},
-    {name: translate("mindmap.maximumOccurrences"), desc: translate("mindmap.limitHelp"), control: {type: "slider", key: key("maximumOccurrences"), min: 16, max: 256, step: 1}},
+    {name: translate("mindmap.maximumDepth"), control: {type: "slider", key: key("maximumDepth"), min: 1, max: MIND_MAP_LIMITS.depth, step: 1}},
+    {name: translate("mindmap.maximumOccurrences"), desc: translate("mindmap.limitHelp"), control: {type: "slider", key: key("maximumOccurrences"), min: 16, max: MIND_MAP_LIMITS.occurrences, step: 1}},
   ],
 };

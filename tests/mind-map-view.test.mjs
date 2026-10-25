@@ -134,9 +134,9 @@ test('fold/sides restoration is detached, bounded, future-safe and scoped to the
 });
 
 test('type configuration validates exact ranges and leaves unavailable payloads inert',()=>{
- const defaults=M.mindMapConfiguration();assert.equal(defaults.initialGenerations,1);assert.equal(defaults.maximumOccurrences,256);
+ const defaults=M.mindMapConfiguration();assert.equal(defaults.initialGenerations,1);assert.equal(defaults.maximumDepth,10);assert.equal(defaults.maximumOccurrences,500);
  assert.equal(M.mindMapConfiguration({status:'unavailable',reason:'unsupported'}),null);
- for(const values of [{maximumDepth:9},{initialGenerations:1.5},{maximumOccurrences:257},{arrangement:'unknown'},{verticalSpacing:NaN},{maximumDepth:null},{horizontalDensity:0},{horizontalDensity:0.05},{verticalDensity:Infinity}])assert.equal(M.mindMapConfiguration({status:'available',values}),null);
+ for(const values of [{maximumDepth:21},{initialGenerations:1.5},{maximumOccurrences:2001},{arrangement:'unknown'},{verticalSpacing:NaN},{maximumDepth:null},{horizontalDensity:0},{horizontalDensity:0.05},{verticalDensity:Infinity}])assert.equal(M.mindMapConfiguration({status:'available',values}),null);
 });
 
 test('Mind Map horizontal and vertical density independently compact measured gaps without changing root, occurrence identity or node/editor dimensions',()=>{
