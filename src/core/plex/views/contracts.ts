@@ -153,6 +153,8 @@ export interface PlexViewDefinition {
   readonly labelKey: string;
   readonly icon: string;
   readonly capabilities: Readonly<{sections?: boolean; descendants?: boolean; editor?: boolean; compact?: boolean; properties?: boolean; badges?: boolean}>;
+  /** Optional adornment admission within the unchanged 2048-occurrence scene cap; old views retain16. */
+  readonly badgeBudget?: number;
   readonly defaultState: unknown;
   /** Omit for the existing attention-following host. Occurrence hosting requires explicit shared bindings. */
   readonly editorHosting?: "occurrence";

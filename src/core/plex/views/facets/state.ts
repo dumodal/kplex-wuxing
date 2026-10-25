@@ -6,15 +6,25 @@ import {configurationRecord as record} from "../configurationValues";
 import {facetLibrary} from "./configuration";
 import {FACET_TEMPLATES} from "./templates";
 import {facetId, isFacetPreset, isFacetReplacement} from "./validation";
-import type {FacetPresetLibrary, FacetPresetSelection, FacetPreset} from "./contracts";
+import type {FacetPresetLibrary, FacetPresetSelection, FacetPreset, FacetCanvasState} from "./contracts";
 
 /** Existing null state means the original Wu Xing preset. Unsupported versions remain opaque. */
 export function restoreFacetState(value: unknown): unknown {return value ?? {version: 1, preset: "wuxing"};}
 /** A malformed/current or future payload is displayable through fallback but has no implicit
  * mutation authority. Explicit session recovery remains owned by the existing host. */
-export function facetState(value: unknown): Readonly<{version: 1; preset: string}> | null {
-  return value === null || value === undefined ? {version: 1, preset: "wuxing"}
-    : record(value) && value.version === 1 && facetId(value.preset) ? {version: 1, preset: value.preset} : null;
+export function facetState(value: unknown): FacetCanvasState | null {
+  if (value === null || value === undefined) return {version: 1, preset: "wuxing"};
+  if (!record(value) || value.version !== 1 || !facetId(value.preset)) return null;
+  const combined = value.combinedDiagnostics;
+  const overrides: Record<string, boolean> = {};
+  if (combined !== undefined) {
+    if (!record(combined) || Object.keys(combined).length > 16) return null;
+    for (const [id, choice] of Object.entries(combined)) {
+      if (!facetId(id) || typeof choice !== "boolean") return null;
+      overrides[id] = choice;
+    }
+  }
+  return {version: 1, preset: value.preset, ...(combined !== undefined ? {combinedDiagnostics: overrides} : {})};
 }
 /** Resolve one finite explicit replacement chain. Missing/future/cyclic entries never execute. */
 export function resolveFacetPreset(library: FacetPresetLibrary, requestedId = "wuxing"): FacetPresetSelection {
@@ -38,8 +48,16 @@ export function orderedFacetPresets(library: FacetPresetLibrary): readonly Reado
 /** The menu and panel dispatch this same pure action through the existing guarded session. */
 export function reduceFacetState(state: unknown, action: PlexViewStateAction, configuration: PlexViewConfiguration): PlexViewStateResult {
   const library = facetLibrary(configuration), current = facetState(state);
-  if (!current || !library || action.id !== "preset.select" || !facetId(action.args) || !isFacetPreset(library.presets[action.args])) return {status: "unavailable"};
-  return {status: "updated", state: {...(record(state) ? state : {}), version: 1, preset: action.args}};
+  if (!current || !library) return {status: "unavailable"};
+  if (action.id === "preset.select" && facetId(action.args) && isFacetPreset(library.presets[action.args]))
+    return {status: "updated", state: {...(record(state) ? state : {}), version: 1, preset: action.args}};
+  const selected = resolveFacetPreset(library, current.preset);
+  if (action.id === "diagnostics.combine" && typeof action.args === "boolean" && (selected.status === "ready" || selected.status === "replaced")) {
+    const combined = {...current.combinedDiagnostics, [selected.id]: action.args};
+    if (Object.keys(combined).length > 16) return {status: "unavailable"};
+    return {status: "updated", state: {...(record(state) ? state : {}), version: 1, preset: current.preset, combinedDiagnostics: combined}};
+  }
+  return {status: "unavailable"};
 }
 /** Deletion needs an explicit current replacement even for closed canvases. One atomic entry
  * update preserves sibling presets and makes old restored intent resolve deterministically. */

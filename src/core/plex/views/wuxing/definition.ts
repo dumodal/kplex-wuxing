@@ -11,6 +11,7 @@ import {compileFacetRules} from "../facets/rules";
 export const wuXingViewDefinition: PlexViewDefinition = {
   id: "wuxing", version: 1, labelKey: "view.wuxing", icon: "orbit",
   capabilities: {sections: false, descendants: false, editor: true, compact: false, properties: true, badges: true},
+  badgeBudget: 2048,
   defaultState: {version: 1, preset: "wuxing"}, configuration: facetsConfigurationSchema,
   restoreState: restoreFacetState, reduceState: reduceFacetState, project: projectFacets,
   propertyAssignments: facetPropertyAssignments,
@@ -29,7 +30,7 @@ export const wuXingViewDefinition: PlexViewDefinition = {
     if (!library) throw new Error("Unavailable Facets configuration");
     const intent = facetState(state), selected = resolveFacetPreset(library, intent?.preset);
     return layoutFacets(projection, measurements, selected.id, selected.preset, context?.areaHeights,
-      !!intent && (selected.status === "ready" || selected.status === "replaced"), context?.areaWidths);
+      !!intent && (selected.status === "ready" || selected.status === "replaced"), context?.areaWidths, intent);
   },
   /** Configured colors join the existing owning-document theme and palette projection. */
   colorReferences: configuration => {

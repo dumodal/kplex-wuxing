@@ -7,6 +7,40 @@ import {plexViewBrowserModules} from './support/plexViewBrowser.mjs';
 import {canvasSceneFixture} from './support/canvasSceneFixture.mjs';
 const output=await plexViewBrowserModules();
 
+test('combined diagnostics uses shared measured status chips and a captured canvas-only toggle',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ const extra=Array.from({length:24},(_,i)=>'Diagnostic '+i+'.md');
+ for(const path of extra){const base=pages.get('B.md');pages.set(path,{...base,path,name:path,file:{...base.file,path,name:path}});fieldCaches.set(path,{frontmatter:{}})}
+ const related=['B.md','C.md',...extra];index.neighbours=(page,role)=>page.path==='A.md'&&role==='child'?related.map(path=>({page:pages.get(path),role,relationType:1,typeDefinition:'Related',linkDirection:1})):[];
+ index.getNeighborhood=path=>({center:pages.get(path),parents:[],children:index.neighbours(pages.get(path),'child'),leftFriends:[],rightFriends:[],siblings:[]});
+ fieldCaches.get('A.md').frontmatter.phase='wood';fieldCaches.get('B.md').frontmatter.phase=['wood','metal'];fieldCaches.delete('C.md');
+ const a=await mount(M.wuXingViewDefinition),b=await mount(M.wuXingViewDefinition);a.props.areaSettingsMode=true;b.props.areaSettingsMode=true;a.render();b.render();await wait();
+ const before={...work},stored=JSON.stringify(settings),bState=JSON.stringify(b.session.getState());
+ const combined=JSON.stringify(['facets','wuxing','diagnostics']),unassigned=JSON.stringify(['facets','wuxing','status','unassigned']);
+ const frame=(ui,id)=>ui.container.querySelector('.'+CSS.escape('kplex-area-'+id)),nodes=ui=>[...ui.container.querySelectorAll('[data-kplex-keyboard-id]')];
+ check(frame(a,combined)&&nodes(a).length===27,'Default combined dock admits the full bounded scene');
+ check(a.container.querySelectorAll('.kplex-node-badge').length===27,'More than sixteen diagnostic chips use the declared bounded badge capability');
+ const badge=path=>nodes(a).find(row=>row.dataset.kplexPath===path)?.querySelector('.kplex-node-badge');
+ check(badge('B.md').textContent==='Conflicting'&&badge('C.md').textContent==='Cannot classify'&&badge(extra[0]).textContent==='Unassigned','Shared chips retain each diagnostic result');
+ check(!frame(a,combined).dataset.kplexAssignment,'Combined dock grants no property-clearing target');
+ const camera=a.container.querySelector('.kplex-camera').style.transform,focus=nodes(a).find(row=>row.dataset.kplexPath==='A.md');
+ a.session.setAreaWidth(unassigned,610);a.session.setAreaHeight(unassigned,350);a.session.setAreaWidth(combined,700);a.render();await wait();
+ await a.ports.current.implementations['view.layout-controls'].execute({});await wait();
+ let checkbox=a.container.querySelector('input[aria-label="Combine diagnostics"]');check(checkbox?.checked,'Shared rail reflects lazy combined default');checkbox.click();await wait();a.render();await wait();
+ check(!frame(a,combined)&&frame(a,unassigned),'Rail toggles only the owning canvas to separate diagnostic surfaces');
+ check(a.session.getAreaWidths()[unassigned]===610&&a.session.getAreaHeights()[unassigned]===350&&a.session.getAreaWidths()[combined]===700,'Both modes retain independent dimension identities');
+ check(frame(b,combined)&&JSON.stringify(b.session.getState())===bState&&JSON.stringify(settings)===stored,'Toggle leaves the other canvas and shared preset settings unchanged');
+ check(nodes(a).find(row=>row.dataset.kplexPath==='A.md')===focus&&a.container.querySelector('.kplex-camera').style.transform===camera,'Toggle preserves focused occurrence and manual camera');
+ checkbox=a.container.querySelector('input[aria-label="Combine diagnostics"]');checkbox.click();await wait();a.render();await wait();
+ check(frame(a,combined)&&a.session.state.combinedDiagnostics.wuxing===true,'Returning to combined records an explicit canvas preference');
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing','diagnostics']},{kind:'set',value:{combined:false}});a.props.settings={...settings};a.props.paintSettings=a.props.settings;a.render();await wait();
+ check(frame(a,combined),'An explicit canvas preference survives later shared-default changes');
+ check(work.body===before.body&&work.scans===before.scans&&work.acquisitions===before.acquisitions&&work.properties-before.properties<300,'Presentation-only changes retain bounded cached-field reads and acquire no sources');
+ a.close();b.close();plugin.actionManager.dispose();check(events.size===0,'Combined and separate presentation subscriptions retire');style.remove();return true;
+ })()`),true)}finally{await host.cleanup()}
+});
+
 test('shared width side handle and keyboard edits resize only the owning Facets area without source work',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{
@@ -44,6 +78,7 @@ test('shared bottom-edge pointer resize grows and shrinks Facets category and st
   await host.evaluate(`(async()=>{${canvasSceneFixture}
    fieldCaches.get('A.md').frontmatter.phase='wood';fieldCaches.get('B.md').frontmatter.phase=['water','metal'];fieldCaches.delete('C.md');
    settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing','categories','wood','label']},{kind:'set',value:'My wood'});
+   settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings, {field:'presets',path:['wuxing','diagnostics']},{kind:'set',value:{combined:false}});
    const ui=await mount(M.wuXingViewDefinition);ui.props.areaSettingsMode=true;ui.render();
    await ui.ports.current.implementations['view.fit'].execute({});await wait();await wait();
    window.resizeFacets={ui,work,before:{...work},style};return true;
@@ -74,7 +109,7 @@ test('advanced Facets rules use current/candidate cached metadata in the product
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
  fieldCaches.get('A.md').frontmatter.phase='wood';fieldCaches.get('B.md').frontmatter.phase='metal';fieldCaches.get('C.md').frontmatter.phase='water';
- const preset=structuredClone(M.FACET_TEMPLATES.ace);preset.source='rules';preset.categories.add.rule='note.phase == this.phase';preset.categories.connect.rule='note.phase == "metal"';preset.categories.express.rule='edge.role == "child" and note.phase == "water"';
+ const preset=structuredClone(M.FACET_TEMPLATES.ace);preset.diagnostics={combined:false};preset.source='rules';preset.categories.add.rule='note.phase == this.phase';preset.categories.connect.rule='note.phase == "metal"';preset.categories.express.rule='edge.role == "child" and note.phase == "water"';
  settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['ace']},{kind:'set',value:preset});
  const a=await mount(M.wuXingViewDefinition);M.flushSync(()=>a.session.updateState({version:1,preset:'ace'}));a.render();await wait();
  const node=id=>[...a.container.querySelectorAll('[data-kplex-keyboard-id]')].find(row=>row.dataset.kplexPath===id);
@@ -139,7 +174,9 @@ test('Facets production presets share captured controls, measured badges and liv
    check(JSON.stringify(bounds())===JSON.stringify(position),'Attention remains centered through preset changes');
    check(a.container.querySelector('.kplex-camera').style.transform===camera,'Preset change preserves manual camera');
    const context={viewId:'wuxing',state:a.session.state,configuration:{status:'available',values:settings.canvasViewSettings.wuxing?.values??{}}};
-   const controls=M.builtInCanvasViewSettings.layoutControls(M.wuXingViewDefinition,context);check(controls.length===(preset==='wuxing'?7:5)&&controls.every(control=>control.field==='presets'&&control.path[0]===preset),'Shared rails address only the selected preset and its optional interpretation');
+   const controls=M.builtInCanvasViewSettings.layoutControls(M.wuXingViewDefinition,context),configControls=controls.filter(control=>!control.state),combine=controls.find(control=>control.state);
+   check(configControls.length===(preset==='wuxing'?7:5)&&controls.every(control=>control.field==='presets'&&control.path[0]===preset),'Shared rails address only the selected preset and its optional interpretation');
+   check(combine?.kind==='checkbox'&&combine.state.value===true&&combine.state.actionId==='diagnostics.combine'&&combine.path.join('/')===preset+'/diagnostics/combined','Combine control captures the selected canvas presentation action');
    check(JSON.stringify(b.session.getState())===beforeB,'Other canvas retains independent selection');
  }
  check(b.container.querySelector('.kplex-node-badge').textContent==='Water','Other canvas retains its own badge');
@@ -168,6 +205,7 @@ test('production Wu Xing decorates real local notes, refreshes cached fields, re
  const caches=new Map([...fields].map(([id,frontmatter])=>[id,{frontmatter}])),work={semantic:0,releases:0,presentation:0,reads:0,parses:0,publishes:0,settingsWrites:0},events=new Set();
  const subscribe=fn=>{events.add(fn);return()=>events.delete(fn)},nativeEvents={on:(name,callback)=>{const ref={name,callback};events.add(ref);return ref},offref:ref=>events.delete(ref)};
  const settings=M.migrateAndMergeSettings({animationSpeed:0,graphDepth:1,allowAutozoom:false,embedCentralNode:false,showFolderNodes:false,showTagNodes:false});
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing','diagnostics']},{kind:'set',value:{combined:false}});
  const gate=()=>({top:{visibleCount:0,hasAny:false,complete:true},bottom:{visibleCount:5,hasAny:true,complete:true},left:{visibleCount:0,hasAny:false,complete:true},right:{visibleCount:0,hasAny:false,complete:true}});
  const index={isVisiblePage:()=>true,get:path=>pages.get(path),titleFor:page=>page.name,
  neighbours:(page,role)=>page.path==='Focus.md'&&role==='child'?[...pages.values()].slice(1).map(page=>({page,role,relationType:1,typeDefinition:'Related',linkDirection:1})):[],

@@ -22,7 +22,7 @@ export type CanvasViewLayoutControl = Readonly<{field: string; path?: readonly (
   labelKey?: PlainTranslationKey; captionKey?: PlainTranslationKey; hintKey?: PlainTranslationKey;
   label?: CanvasViewText; caption?: CanvasViewText; hint?: CanvasViewText} & (
     {kind?: "slider"; icon: string; min: number; max: number; step: number}
-    | {kind: "checkbox"})>;
+    | {kind: "checkbox"; state?: Readonly<{value: boolean; actionId: string}>})>;
 export type CapturedCanvasViewCommand = Readonly<{run: () => Promise<CanvasViewCommandOutcome>}>;
 export type CanvasViewCommandOutcome = Readonly<{status: "completed" | "unavailable" | "failed"; reason?: CanvasViewText}>;
 export type CapturedCanvasViewMenuItem = Readonly<{id: string} & (

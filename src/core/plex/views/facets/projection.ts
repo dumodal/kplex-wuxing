@@ -9,10 +9,13 @@ import {facetState, resolveFacetPreset} from "./state";
 import {compileFacetValues, classifyFacetNode} from "./classification";
 import {facetMembershipBadge, facetMembershipDescription, facetPresetLabel} from "./labels";
 import {compileFacetRules, facetRuleClassifier} from "./rules";
+import {facetDiagnostics} from "./presentation";
 
 /** Collision-free bounded identity includes the preset and separates diagnostics from categories.
  *48-character component bounds keep every existing session area-height key below128 characters. */
 export function facetAreaId(preset: string, kind: "category" | "status", id: string): string {return JSON.stringify(["facets", preset, kind, id]);}
+/** Combined diagnostics never shares the specifically writable Unassigned area's identity. */
+export function facetCombinedAreaId(preset: string): string {return JSON.stringify(["facets", preset, "diagnostics"]);}
 /** Physical direction is a layout policy; it never substitutes for the canonical role. */
 function ports(role: Role): Readonly<{source: PhysicalPort; target: PhysicalPort}> {
   return role === "parent" ? {source: "top", target: "bottom"} : role === "child" ? {source: "bottom", target: "top"}
@@ -25,6 +28,7 @@ export function projectFacets(input: PlexViewInput): PlexProjection | null {
   const library = facetLibrary(input.configuration), state = facetState(input.state), attention = input.read.node(input.attention);
   if (!library || !attention || !input.read.isCurrent()) return null;
   const selected = resolveFacetPreset(library, state?.preset), preset = selected.preset, match = compileFacetValues(preset);
+  const diagnostics = facetDiagnostics(preset, selected.id, state);
   const admitted = new Map<NodeId, {node: typeof attention; relations: NonNullable<PlexOccurrence["relation"]>[]}>();
   admitted.set(attention.id, {node: attention, relations: []});
   const occurrenceId = (id: NodeId): string => JSON.stringify(["facets", id]);
@@ -50,8 +54,10 @@ export function projectFacets(input: PlexViewInput): PlexProjection | null {
       ? {status: "unresolved", reason: "preset"} : classifyRules ? classifyRules.classify(node, admitted.get(node.id)?.relations ?? []) : classifyFacetNode(node, input.read, preset, match);
     const area = facetAreaId(selected.id, membership.status === "assigned" ? "category" : "status",
       membership.status === "assigned" ? membership.category : membership.status);
+    const diagnostic = membership.status !== "assigned", combined = diagnostics.combined && diagnostic;
     return {id: occurrenceId(node.id), nodeId: node.id, representation: "thought", role: center ? undefined : role, relation,
-      groupingPartition: area, ...(center ? {badge: facetMembershipBadge(membership, preset)} : {areaId: area}),
+      groupingPartition: area, ...(center || combined ? {badge: facetMembershipBadge(membership, preset)} : {}),
+      ...(!center ? {areaId: combined ? facetCombinedAreaId(selected.id) : area} : {}),
       description: facetMembershipDescription(membership), ports: {top: "parent", bottom: "child", left: "left", right: "right"}};
   };
   for (const {node, relations} of admitted.values()) occurrences.set(node.id, occurrence(node, relations[0]?.role, relations[0]));

@@ -33,6 +33,6 @@ export function nodeBadgeBounds(node: ViewRect, measured: Readonly<{width: numbe
  * Packing receives geometry only; it never enlarges the native node or editor rectangle. */
 export function nodeBadgeInsets(node: Readonly<{width: number; height: number}>, badge?: Readonly<{width: number; height: number}>): MeasuredAreaInsets | undefined {
   if (!badge) return undefined;
-  const bounds = nodeBadgeBounds({x: 0, y: 0, ...node}, badge);
+  const bounds = nodeBadgeBounds({x: 0, y: 0, width: node.width, height: node.height}, badge);
   return {top: -node.height / 2 - bounds.y, right: Math.max(0, bounds.x + bounds.width - node.width / 2)};
 }

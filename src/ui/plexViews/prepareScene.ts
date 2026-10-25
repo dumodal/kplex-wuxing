@@ -3,7 +3,7 @@ import type {GraphIndex} from "../../index/GraphIndex";
 import type {KplexSettings} from "../../settings";
 import {graphNodeViewFromLegacy} from "../../adapters/obsidian/graphContracts";
 import {nodeId, type NodeId, type GraphNodeView} from "../../core/graph/model";
-import type {PlexViewDefinition, PlexViewRead, PlexProjection, PlexMeasurement, PlexOccurrence, PlexViewEdge, PlexViewPropertyDependencies} from "../../core/plex/views/contracts";
+import type {PlexViewDefinition, PlexViewRead, PlexProjection, PlexMeasurement, PlexOccurrence, PlexViewEdge, PlexViewPropertyDependencies, PlexNodeBadge} from "../../core/plex/views/contracts";
 import {RelationType, type GraphPage, type PositionedNode, type PositionedEdge, type Role, type Neighbour} from "../../types";
 import {resolveNodeStyle, resolveLinkStyle} from "../../index/style";
 import {deferredNodeCounts, nodeSize, nodeBadgeSize} from "./measurement";
@@ -22,6 +22,24 @@ import {validPropertyAssignment} from "../../core/plex/views/propertyAssignment"
 import {plexSectionReference, visiblePlexSection, plexSectionAnchor} from "../../core/plex/views/sections";
 import type {PlexSectionViewContext} from "./sections";
 import {validPlexDropMeaning, plexAreaDropMeaning} from "../../core/plex/views/dropTargets";
+
+/** One text/font/color path serves real occurrences and the shared synthetic group row. */
+function measuredViewBadge(badge: PlexNodeBadge | undefined, settings: KplexSettings, translate?: Translator): PositionedNode["viewBadge"] {
+  if (!badge) return undefined;
+  const label = translate ? canvasViewText(badge.label, translate) : "literal" in badge.label ? badge.label.literal : badge.label.key;
+  const description = badge.description && (translate ? canvasViewText(badge.description, translate) : "literal" in badge.description ? badge.description.literal : badge.description.key);
+  return {label, ...(description ? {description} : {}), background: badge.background, ...nodeBadgeSize(label, settings)};
+}
+
+/** A group may retain only a common declared chip. Different reasons remain with individual
+ * members after expansion; a representative cannot assert its reason for every grouped note. */
+function sharedGroupBadge(members: readonly PlexOccurrence[]): PlexNodeBadge | undefined {
+  const first = members[0]?.badge;if (!first) return undefined;
+  const identity = JSON.stringify([first.label, first.background]), description = JSON.stringify(first.description);
+  if (!members.every(/** Label/color identity is presentation data, never relationship evidence. */ member => member.badge && JSON.stringify([member.badge.label, member.badge.background]) === identity)) return undefined;
+  const sameReason = members.every(/** Only equal explanations can describe the entire collapsed row. */ member => JSON.stringify(member.badge?.description) === description);
+  return {label: first.label, background: first.background, ...(sameReason && first.description ? {description: first.description} : {})};
+}
 
 type SceneRead = Pick<GraphIndex, "get" | "neighbours" | "sortNeighbours" | "titleFor" | "captureSemanticGateRead" | "isVisiblePage" | "explainRelationship">
   & Partial<Pick<GraphIndex, "viewScopeCoverage" | "cachedViewRelation">>;
@@ -116,7 +134,7 @@ export function plexViewRead(source: SceneRead, current: () => boolean, maximum:
 function validateProjection(projection: PlexProjection, maximum: number, definition: PlexViewDefinition): void {
   if (projection.occurrences.length > maximum || projection.edges.length > maximum * 8) throw new Error("View projection exceeds its bound");
   const ids = new Map(projection.occurrences.map(row => [row.id, row]));
-  if (projection.occurrences.filter(row => row.badge).length > 16) throw new Error("Too many node badges");
+  if (projection.occurrences.filter(row => row.badge).length > Math.min(maximum, definition.badgeBudget ?? 16)) throw new Error("Too many node badges");
   if (ids.size !== projection.occurrences.length) throw new Error("Duplicate view occurrence");
   for (const occurrence of projection.occurrences) {
     if (occurrence.badge && (definition.capabilities.badges !== true || !validPlexNodeBadge(occurrence.badge))
@@ -222,10 +240,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
           style.maxLabelLength, style.maxWidth, style.strokeWidth));
       const translate = grouping?.translate;
       const description = occurrence.description && (translate ? canvasViewText(occurrence.description, translate) : "literal" in occurrence.description ? occurrence.description.literal : occurrence.description.key);
-      const badge = occurrence.badge && {label: translate ? canvasViewText(occurrence.badge.label, translate) : "literal" in occurrence.badge.label ? occurrence.badge.label.literal : occurrence.badge.label.key,
-        ...(occurrence.badge.description ? {description: translate ? canvasViewText(occurrence.badge.description, translate)
-          : "literal" in occurrence.badge.description ? occurrence.badge.description.literal : occurrence.badge.description.key} : {}), background: occurrence.badge.background};
-      const viewBadge = badge && {...badge, ...nodeBadgeSize(badge.label, settings)};
+      const viewBadge = measuredViewBadge(occurrence.badge, settings, translate);
       const node: PositionedNode = {page, occurrenceId: occurrence.id, areaId: occurrence.areaId, representation: occurrence.representation,
         ...(viewBadge ? {viewBadge} : {}), ...(description ? {viewDescription: description} : {}),
         role, relationType: relation?.relationType, typeDefinition: relation?.typeDefinition, linkDirection: relation?.linkDirection,
@@ -274,17 +289,21 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
           const ids = row.page.transient.groupMembers!.map(member => origins.get(member)!.id);
           const representative = origins.get(row.page.transient.groupMembers![0])!;
           const id = JSON.stringify(["group", row.page.transient.sectionId]);
+          const badge = sharedGroupBadge(ids.map(/** Group members retain exact original occurrence metadata. */ member => occurrences.get(member)!));
           const occurrence: PlexOccurrence = {id, synthetic: {kind: "group", members: ids}, representation: "thought",
             areaId: representative.areaId, groupingPartition: representative.groupingPartition, role: representative.role,
+            ...(badge ? {badge} : {}),
             ...(representative.branch ? {branch: {...representative.branch, expanded: false, canExpand: false, reference: false}} : {})};
           const style = resolveNodeStyle(row.page, row, row.role, settings);
           const size = nodeSize(row.page.name, style.fontSize ?? 18, settings, false, style.maxLabelLength, style.maxWidth, style.strokeWidth);
+          const viewBadge = measuredViewBadge(badge, settings, grouping.translate);
           const node: PositionedNode = {page: row.page, occurrenceId: id, areaId: occurrence.areaId, representation: "thought", role: row.role,
+            ...(viewBadge ? {viewBadge} : {}),
             ...(occurrence.branch ? {branch: occurrence.branch, semanticSourceId: groupSource} : {}),
             x: 0, y: 0, ...size, label: row.page.name, style, physicalPorts: {}, ...deferredNodeCounts()};
           for (const member of ids) {aliases.set(member, id);grouped.delete(member);nodes.delete(member);}
           grouped.set(id, occurrence); nodes.set(id, node); pages.set(id, row.page);
-          measurements.push({id, ...size, expandedWidth: size.width, expandedReserve: 0, mini: null, envelope: null});
+          measurements.push({id, ...size, expandedWidth: size.width, expandedReserve: 0, ...(viewBadge ? {badge: {width: viewBadge.width, height: viewBadge.height}} : {}), mini: null, envelope: null});
         }
       }
       const activeMeasurements = new Set(nodes.keys());
@@ -340,7 +359,15 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
       return sourceOccurrence && sourcePage && targetPage ? [{id: `section-tree-${targetOccurrence}`, sourceOccurrence, targetOccurrence,
         sourcePath: sourcePage.path, targetPath: targetPage.path}] : [];
     });
-    scene.badgeBounds = [...nodes].flatMap(([id, node]) => node.viewBadge ? [{occurrenceId: id, bounds: nodeBadgeBounds(node, node.viewBadge)}] : []);
+    const viewports = new Map(layout.areas.flatMap(/** Overflow badges fit through the same declared viewport as their cards. */ area => area.viewport ? [[area.id, area.viewport] as const] : []));
+    scene.badgeBounds = [...nodes].flatMap(/** Offscreen overflow cannot enlarge a fitted scene through a detached status chip. */ ([id, node]) => {
+      if (!node.viewBadge) return [];
+      const bounds = nodeBadgeBounds(node, node.viewBadge), viewport = node.areaId ? viewports.get(node.areaId) : undefined;
+      if (!viewport) return [{occurrenceId: id, bounds}];
+      const left = Math.max(bounds.x, viewport.x), top = Math.max(bounds.y - viewport.initialScrollTop, viewport.y);
+      const right = Math.min(bounds.x + bounds.width, viewport.x + viewport.width), bottom = Math.min(bounds.y - viewport.initialScrollTop + bounds.height, viewport.y + viewport.height);
+      return right > left && bottom > top ? [{occurrenceId: id, bounds: {x: left, y: top, width: right - left, height: bottom - top}}] : [];
+    });
     if (boundEditors.size) scene.boundEditors = [...boundEditors.values()];
     const areaIds = new Set<string>();
     if (layout.areas.length > 64) throw new Error("Too many view areas");

@@ -1555,6 +1555,15 @@ const frenchTranslations = {
   "actions.editor-capacity": "Fermez l’éditeur actuel avant d’en ouvrir un autre.",
   "actions.editor-save-failed": "L’enregistrement a échoué. L’éditeur reste ouvert.",
   "graph.areaWidth": "Largeur de {zone}",
+  "facets.diagnostics": "Diagnostics",
+  "facets.combineDiagnostics": "Regrouper les diagnostics",
+  "facets.combineDiagnosticsHelp": "Afficher les notes de diagnostic ensemble, avec un statut sur chaque nœud.",
+  "facets.combineDiagnosticsCanvasHint": "Uniquement pour ce canevas. Le préréglage définit la valeur par défaut.",
+  "facets.diagnosticsSide": "Position des diagnostics",
+  "facets.diagnosticsArrangement": "Disposition des zones séparées",
+  "facets.horizontal": "Horizontale",
+  "facets.vertical": "Verticale",
+  "facets.diagnosticsShowEmpty": "Afficher les diagnostics vides",
 } as const satisfies LocaleTranslationMap;
 
 export const frenchCatalog = buildLocaleCatalog(frenchTranslations);

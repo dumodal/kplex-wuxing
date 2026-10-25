@@ -27,6 +27,7 @@ test('shared area envelopes reserve badges without resizing nodes or overlapping
   assert.equal(a.y-a.height/2-items[0].insets.top,42);
   assert.equal(b.x-b.width/2-(a.x+a.width/2+items[0].insets.right),16);
   assert.deepEqual([...M.measuredAreaGrid(items,2,16,18).positions],[...grid.positions]);
+  assert.deepEqual(M.nodeBadgeInsets({x:800,y:-900,width:160,height:44},{width:200,height:16}),{top:28,right:40},'World position must not enter an area-local envelope');
 });
 
 test('automatic area columns use actual cell envelopes at exact world-width thresholds',()=>{
@@ -76,6 +77,13 @@ test('versioned public registration rejects incompatible contracts and omitted c
   assert.throws(()=>new M.PlexViewRegistry([definition,definition],definition.id));
   const f=fixture(),release=f.session.retainEditor();assert.equal(f.session.canSelect('org.example.other'),false);release();
   assert.equal(f.session.canSelect('org.example.other'),true);
+});
+
+test('badge budgets are explicit bounded capabilities and preserve the ordinary default',()=>{
+  for(const budget of [0,-1,1.5,2049,NaN,Infinity])assert.throws(()=>new M.PlexViewRegistry([{...definition,capabilities:{badges:true},badgeBudget:budget}],definition.id));
+  assert.throws(()=>new M.PlexViewRegistry([{...definition,badgeBudget:20}],definition.id));
+  for(const budget of [1,16,2048])assert.equal(new M.PlexViewRegistry([{...definition,capabilities:{badges:true},badgeBudget:budget}],definition.id).resolve(definition.id).badgeBudget,budget);
+  assert.equal(new M.PlexViewRegistry([definition],definition.id).resolve(definition.id).badgeBudget,undefined);
 });
 
 test('example projection/layout uses shared measurements and real canonical edge evidence without source access',()=>{

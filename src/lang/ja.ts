@@ -1547,6 +1547,15 @@ const japaneseTranslations = {
   "actions.editor-capacity": "別のエディターを開く前に、現在のエディターを閉じてください。",
   "actions.editor-save-failed": "保存できませんでした。エディターは開いたままです。",
   "graph.areaWidth": "{zone}の幅",
+  "facets.diagnostics": "診断",
+  "facets.combineDiagnostics": "診断をまとめる",
+  "facets.combineDiagnosticsHelp": "診断対象のノートをまとめ、各ノードに状態を表示します。",
+  "facets.combineDiagnosticsCanvasHint": "このキャンバスだけに適用します。既定値はプリセットで設定します。",
+  "facets.diagnosticsSide": "診断領域の位置",
+  "facets.diagnosticsArrangement": "個別領域の配置",
+  "facets.horizontal": "横方向",
+  "facets.vertical": "縦方向",
+  "facets.diagnosticsShowEmpty": "空の診断領域を表示",
 } as const satisfies LocaleTranslationMap;
 
 export const japaneseCatalog = buildLocaleCatalog(japaneseTranslations);

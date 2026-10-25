@@ -1551,6 +1551,15 @@ const dutchTranslations = {
   "actions.editor-capacity": "Sluit de huidige knooppunteditor voordat je een andere opent.",
   "actions.editor-save-failed": "Opslaan is mislukt. De editor blijft open.",
   "graph.areaWidth": "Breedte van {zone}",
+  "facets.diagnostics": "Diagnostiek",
+  "facets.combineDiagnostics": "Diagnostiek combineren",
+  "facets.combineDiagnosticsHelp": "Toon diagnostische notities samen, met een status bij elke node.",
+  "facets.combineDiagnosticsCanvasHint": "Alleen dit canvas. De voorinstelling bepaalt de standaard.",
+  "facets.diagnosticsSide": "Positie van diagnostiek",
+  "facets.diagnosticsArrangement": "Indeling van afzonderlijke gebieden",
+  "facets.horizontal": "Horizontaal",
+  "facets.vertical": "Verticaal",
+  "facets.diagnosticsShowEmpty": "Lege diagnostiek tonen",
 } as const satisfies LocaleTranslationMap;
 
 export const dutchCatalog = buildLocaleCatalog(dutchTranslations);

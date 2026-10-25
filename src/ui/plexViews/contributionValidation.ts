@@ -74,4 +74,6 @@ export function validateCanvasViewLayoutControl(control: CanvasViewLayoutControl
     || control.kind !== undefined && control.kind !== "checkbox" && control.kind !== "slider") throw new Error("Invalid canvas view layout control");
   if (control.kind !== "checkbox" && (![control.min, control.max, control.step].every(Number.isFinite)
     || control.max <= control.min || control.step <= 0 || !/^[a-z][a-z0-9-]{0,79}$/.test(control.icon))) throw new Error("Invalid view slider");
+  if (control.kind === "checkbox" && control.state !== undefined && (!control.state || typeof control.state.value !== "boolean"
+    || !validPlexViewStateAction({id: control.state.actionId, args: control.state.value}))) throw new Error("Invalid canvas state checkbox");
 }

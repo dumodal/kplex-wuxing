@@ -18,7 +18,8 @@ export function CanvasViewLayoutControls({controls, configuration, translate, on
   if (configuration.status !== "available" || !controls.length) return null;
   return <div className="kplex-density-axes">{controls.map(control => {
     const key = `${control.field}:${JSON.stringify(control.path ?? [])}`;
-    const value = (readValue ? readValue(control) : configurationLeaf(configuration.values[control.field], control.path ?? [])).value;
+    const value = control.kind === "checkbox" && control.state ? control.state.value
+      : (readValue ? readValue(control) : configurationLeaf(configuration.values[control.field], control.path ?? [])).value;
     const label = control.label ? canvasViewText(control.label, translate) : control.labelKey ? translate(control.labelKey) : "";
     const hint = control.hint ? canvasViewText(control.hint, translate) : control.hintKey ? translate(control.hintKey) : undefined;
     return control.kind === "checkbox" ? <LayoutCheckbox key={key} label={label} hint={hint} checked={value === true}

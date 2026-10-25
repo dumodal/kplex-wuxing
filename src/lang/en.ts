@@ -5513,6 +5513,15 @@ export const englishCatalog = {
   "actions.editor-capacity": {"message":"Close the current node editor before opening another.","context":"Shared occurrence editor action or explicit native save/capacity result.","params":[],"referenceParams":[]},
   "actions.editor-save-failed": {"message":"The editor could not be saved. It remains open.","context":"Shared occurrence editor action or explicit native save/capacity result.","params":[],"referenceParams":[]},
   "graph.areaWidth": {"message":"{zone} width","context":"Accessible horizontal area resize handle; zone is the literal or translated area name.","params":["zone"],"referenceParams":[]},
+  "facets.diagnostics": {"message":"Diagnostics","context":"Facets combined diagnostic area and shared captured canvas/preset controls.","params":[],"referenceParams":[]},
+  "facets.combineDiagnostics": {"message":"Combine diagnostics","context":"Facets combined diagnostic area and shared captured canvas/preset controls.","params":[],"referenceParams":[]},
+  "facets.combineDiagnosticsHelp": {"message":"Show diagnostic notes together, with a status on each node.","context":"Facets combined diagnostic area and shared captured canvas/preset controls.","params":[],"referenceParams":[]},
+  "facets.combineDiagnosticsCanvasHint": {"message":"Only this canvas. Preset settings define the default.","context":"Facets combined diagnostic area and shared captured canvas/preset controls.","params":[],"referenceParams":[]},
+  "facets.diagnosticsSide": {message:"Diagnostics position",context:"Physical side of the Facets diagnostic dock.",params:[]},
+  "facets.diagnosticsArrangement": {message:"Separate areas arrangement",context:"Orientation of separate Facets diagnostic frames.",params:[]},
+  "facets.horizontal": {message:"Horizontal",context:"Facets area arrangement.",params:[]},
+  "facets.vertical": {message:"Vertical",context:"Facets area arrangement.",params:[]},
+  "facets.diagnosticsShowEmpty": {message:"Show empty diagnostics",context:"Hiding empty frames never hides populated diagnostic notes.",params:[]},
 } as const;
 
 export type EnglishCatalog = typeof englishCatalog;

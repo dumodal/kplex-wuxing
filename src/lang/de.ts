@@ -1551,6 +1551,15 @@ const germanTranslations = {
   "actions.editor-capacity": "Schließe den aktuellen Knoteneditor, bevor du einen anderen öffnest.",
   "actions.editor-save-failed": "Speichern fehlgeschlagen. Der Editor bleibt geöffnet.",
   "graph.areaWidth": "Breite von {zone}",
+  "facets.diagnostics": "Diagnose",
+  "facets.combineDiagnostics": "Diagnosebereiche zusammenfassen",
+  "facets.combineDiagnosticsHelp": "Zeigt Diagnose-Notizen gemeinsam mit einem Status an jedem Knoten.",
+  "facets.combineDiagnosticsCanvasHint": "Nur für diese Zeichenfläche. Die Voreinstellung legt den Standard fest.",
+  "facets.diagnosticsSide": "Position der Diagnosebereiche",
+  "facets.diagnosticsArrangement": "Anordnung getrennter Bereiche",
+  "facets.horizontal": "Horizontal",
+  "facets.vertical": "Vertikal",
+  "facets.diagnosticsShowEmpty": "Leere Diagnosebereiche anzeigen",
 } as const satisfies LocaleTranslationMap;
 
 export const germanCatalog = buildLocaleCatalog(germanTranslations);

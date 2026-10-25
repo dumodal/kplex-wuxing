@@ -21,6 +21,19 @@ const initialize=`
 `;
 const scenario=body=>colorEditorScenario(`(async()=>{${initialize}\n${body}\ntab.hide();return true})()`);
 
+test('diagnostics dock edits compose in one detached native draft and save through the existing queue',async()=>{
+ assert.equal(await scenario(`
+ const m=manager(),editor=edit(m,'Wu Xing');
+ check(!fields(editor,t('facets.diagnosticsArrangement')).length,'Combined mode hides the irrelevant inter-area arrangement');
+ const combine=fields(editor,t('facets.combineDiagnostics'))[0];combine.checked=false;combine.dispatchEvent(new Event('change',{bubbles:true}));
+ for(const [label,value]of [['facets.diagnosticsSide','left'],['facets.diagnosticsArrangement','horizontal']]){const select=fields(editor,t(label))[0];select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}))}
+ const empty=fields(editor,t('facets.diagnosticsShowEmpty'))[0];empty.checked=false;empty.dispatchEvent(new Event('change',{bubbles:true}));
+ equal(p.writes,[],'Dock remains a detached draft until Save');await save(editor);await drain();
+ equal(disk.canvasViewSettings.wuxing.values.presets.wuxing.diagnostics,{combined:false,side:'left',orientation:'horizontal',showEmpty:false},'Sequential controls retain sibling draft changes in one queued save');
+ check(p.writes.length===1,'One durable preset update');close(m);
+ `),true);
+});
+
 test('selected preset deep link opens the existing editor without activating or saving a preset',async()=>{
  assert.equal(await scenario(`
  check(tab.openCanvasViewManager('wuxing','para'),'Registered target opens');

@@ -7,10 +7,68 @@ const M=await plexViewModules(['src/core/plex/views/facets/contracts.ts','src/co
  'src/core/plex/views/facets/validation.ts','src/core/plex/views/facets/configuration.ts','src/core/plex/views/facets/state.ts',
  'src/core/plex/views/facets/classification.ts','src/core/plex/views/configurationValues.ts',
  'src/core/plex/views/configuration.ts','src/core/plex/views/facets/projection.ts','src/core/plex/views/facets/layout.ts',
- 'src/core/plex/views/decorations.ts']);
+ 'src/core/plex/views/decorations.ts','src/core/plex/views/facets/presentation.ts',
+ 'src/core/plex/views/facets/assignment.ts','src/core/plex/views/wuxing/definition.ts','src/core/plex/views/registry.ts']);
 const definition={id:'wuxing',configuration:M.facetsConfigurationSchema};
 const available=stored=>M.readViewConfiguration(definition,stored),library=stored=>M.facetLibrary(available(stored));
 const node={id:'A',kind:'document',file:{extension:'md'},noteType:'water',tags:['wood']};
+
+/** Explicit cached facts cover every diagnostic meaning without a parser or source acquisition. */
+function diagnosticScene(additional=0){
+ const values=new Map([['focus',{status:'available',value:'water'}],['assigned',{status:'available',value:'wood'}],
+  ['unassigned',{status:'available',value:undefined}],['conflicting',{status:'available',value:['wood','fire']}],
+  ['checking',{status:'unavailable'}],['unresolved',{status:'unavailable'}],['unsupported',{status:'available',value:{bad:true}}],
+  ...Array.from({length:additional},(_,i)=>['extra'+i,{status:'available',value:undefined}])]);
+ const nodes=new Map([...values.keys()].map(id=>[id,{...node,id}])),work={fields:0};
+ const read={coverage:'cached',isCurrent:()=>true,node:id=>nodes.get(id),compare:(a,b)=>a.id.localeCompare(b.id),
+  relations:(id,role)=>({items:id==='focus'&&role==='child'?[...nodes.values()].slice(1).map(node=>({node,role,relationType:1,direction:1})):[],coverage:'cached',truncated:false}),
+  properties:{availability:()=> 'available',read:id=>{work.fields++;return values.get(id)}},scope:id=>({pending:id==='checking'})};
+ const project=(state={version:1,preset:'wuxing'})=>M.projectFacets({attention:'focus',maximum:128,state,configuration:available({}),read});
+ const measure=p=>p.occurrences.map(row=>({id:row.id,width:160,height:44,expandedWidth:160,expandedReserve:0,mini:null,envelope:null,...(row.badge?{badge:{width:120,height:24}}:{})}));
+ return {values,work,project,measure};
+}
+
+test('combined diagnostics defaults preserve distinct statuses, personal phases and exact canonical relations',()=>{
+ const f=diagnosticScene(),before=JSON.stringify([...f.values]),combined=f.project(),separate=f.project({version:1,preset:'wuxing',combinedDiagnostics:{wuxing:false}});
+ const diagnostics=combined.occurrences.filter(row=>row.nodeId!=='focus'&&row.nodeId!=='assigned'),id=M.facetCombinedAreaId('wuxing');
+ assert.equal(diagnostics.length,5);assert(diagnostics.every(row=>row.areaId===id&&row.badge));assert.equal(new Set(diagnostics.map(row=>row.id)).size,5);
+ assert.deepEqual(new Set(diagnostics.map(row=>JSON.parse(row.groupingPartition)[3])),new Set(['unassigned','conflicting','checking','unresolved']));
+ assert.equal(diagnostics.find(row=>row.nodeId==='checking').badge.label.key,'facets.checking');
+ assert.equal(diagnostics.find(row=>row.nodeId==='unresolved').badge.description.key,'facets.reason.metadata');
+ assert.equal(diagnostics.find(row=>row.nodeId==='unsupported').badge.description.key,'facets.reason.unsupported');
+ assert.deepEqual(combined.edges,separate.edges);assert.equal(JSON.stringify([...f.values]),before);
+ const layout=M.layoutFacets(combined,f.measure(combined),'wuxing',M.FACET_TEMPLATES.wuxing),area=layout.areas.find(area=>area.id===id);
+ assert.equal(layout.areas.length,6);assert.equal(area.dropTarget,undefined);assert(M.facetPresetAssignments('wuxing',M.FACET_TEMPLATES.wuxing).some(target=>target.id===M.facetAreaId('wuxing','status','unassigned')));
+ assert.equal(layout.positions.size,combined.occurrences.length);assert.equal(combined.occurrences.find(row=>row.id===combined.entry).areaId,undefined);
+});
+
+test('combined dock sides and separate arrangements stay outside measured guides and retain dimension identities',()=>{
+ const f=diagnosticScene(20),combined=f.project(),measured=f.measure(combined),id=M.facetCombinedAreaId('wuxing');
+ for(const side of ['top','right','bottom','left']){
+  const preset={...M.FACET_TEMPLATES.wuxing,diagnostics:{side}},layout=M.layoutFacets(combined,measured,'wuxing',preset,{[id]:480},true,{[id]:600}),dock=layout.areas.find(area=>area.id===id);
+  assert.equal(dock.bounds.width,600);assert.equal(dock.bounds.height,480);assert.equal(dock.reflow.columns,3);assert.equal(dock.heightPreference.key,id);
+  const marks=layout.decorations.filter(mark=>mark.kind==='guide').flatMap(mark=>mark.points);
+  if(side==='right')assert(dock.bounds.x>Math.max(...marks.map(p=>p.x)));
+  if(side==='left')assert(dock.bounds.x+dock.bounds.width<Math.min(...marks.map(p=>p.x)));
+  if(side==='top')assert(dock.bounds.y+dock.bounds.height<Math.min(...marks.map(p=>p.y)));
+  if(side==='bottom')assert(dock.bounds.y>Math.max(...marks.map(p=>p.y)));
+ }
+ const state={version:1,preset:'wuxing',combinedDiagnostics:{wuxing:false}},p=f.project(state),preset={...M.FACET_TEMPLATES.wuxing,diagnostics:{orientation:'horizontal'}};
+ const separate=M.layoutFacets(p,f.measure(p),'wuxing',preset,{[id]:480},true,{[id]:600},state),areas=separate.areas.filter(area=>area.id.includes('"status"'));
+ assert.equal(areas.length,4);assert(areas.every(area=>area.bounds.y===areas[0].bounds.y));assert(areas.every(area=>area.bounds.width!==600));
+ assert.equal(areas.find(area=>area.id===M.facetAreaId('wuxing','status','unassigned')).dropTarget.kind,'property');
+});
+
+test('canvas diagnostic overrides remain explicit across preset defaults and support bounded restoration',()=>{
+ const config=available({}),initial={version:1,preset:'wuxing'},off=M.reduceFacetState(initial,{id:'diagnostics.combine',args:false},config);
+ assert.equal(off.status,'updated');assert.equal(M.facetDiagnostics(M.FACET_TEMPLATES.wuxing,'wuxing',off.state).combined,false);
+ assert.equal(M.facetDiagnostics(M.FACET_TEMPLATES.wuxing,'wuxing',initial).combined,true);
+ const on=M.reduceFacetState(off.state,{id:'diagnostics.combine',args:true},config),changedDefault={...M.FACET_TEMPLATES.wuxing,diagnostics:{combined:false}};
+ assert.equal(M.facetDiagnostics(changedDefault,'wuxing',on.state).combined,true);assert.equal(M.facetDiagnostics(changedDefault,'wuxing',initial).combined,false);
+ assert.deepEqual(M.facetState(JSON.parse(JSON.stringify(on.state))),on.state);assert.equal(M.facetState({...initial,combinedDiagnostics:{wuxing:'true'}}),null);
+ assert.equal(M.reduceFacetState(initial,{id:'diagnostics.combine',args:'false'},config).status,'unavailable');
+ for(const diagnostics of [{combined:'yes'},{side:'middle'},{orientation:'diagonal'},{order:['unassigned','unassigned','checking','unresolved']}])assert.equal(M.isFacetPreset({...M.FACET_TEMPLATES.wuxing,diagnostics}),false);
+});
 
 test('individual Facets widths drive one, two and three measured columns without enlarging unrelated regions',()=>{
  const preset=M.FACET_TEMPLATES.wuxing,wood=M.facetAreaId('wuxing','category','wood'),water=M.facetAreaId('wuxing','category','water');
@@ -146,12 +204,14 @@ test('one explicit source uses bounded cached fields and distinguishes checking,
 
 /** Direct admitted canonical facts with no acquisition, body, write, or corpus capability. */
 function scene(presetId='wuxing',count=8){
- const preset=M.FACET_TEMPLATES[presetId],nodes=new Map(Array.from({length:count+1},(_,i)=>['N'+i,{...node,id:'N'+i}]));
+ // These existing geometry/status assertions characterize the retained separate-area mode.
+ const preset={...M.FACET_TEMPLATES[presetId],diagnostics:{combined:false}},nodes=new Map(Array.from({length:count+1},(_,i)=>['N'+i,{...node,id:'N'+i}]));
  const work={fields:[],relations:0};const read={coverage:'cached',isCurrent:()=>true,node:id=>nodes.get(id)??null,compare:(a,b)=>a.id.localeCompare(b.id),
   relations:(id,role)=>{work.relations++;return{items:id==='N0'&&role==='child'?[...nodes.values()].slice(1).map(node=>({node,role,relationType:1,direction:1})):[],coverage:'cached',truncated:false}},
   properties:{read:(id,field)=>{work.fields.push([id,field]);return{status:'available',value:id==='N0'?preset.categories[preset.order[0]].values[0]:preset.categories[preset.order[Number(id.slice(1))%preset.order.length]].values[0]}},availability:()=> 'available'},
   scope:()=>({pending:false})};
- const projection=M.projectFacets({attention:'N0',maximum:count+1,state:{version:1,preset:presetId},configuration:available({}),read});
+ const configuration=available({wuxing:{version:2,values:{presets:{[presetId]:preset}}}});
+ const projection=M.projectFacets({attention:'N0',maximum:count+1,state:{version:1,preset:presetId},configuration,read});
  const measured=projection.occurrences.map(row=>({id:row.id,width:row.id===projection.entry?600:240,height:row.id===projection.entry?700:40,
   expandedWidth:600,expandedReserve:0,mini:null,envelope:null,...(row.id===projection.entry?{badge:{width:120,height:24}}:{})}));
  return{preset,projection,measured,work,layout:(heights={})=>M.layoutFacets(projection,measured,presetId,preset,heights)};

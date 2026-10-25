@@ -1559,6 +1559,15 @@ const russianTranslations = {
   "actions.editor-capacity": "Закройте текущий редактор узла, прежде чем открывать другой.",
   "actions.editor-save-failed": "Не удалось сохранить. Редактор остаётся открытым.",
   "graph.areaWidth": "Ширина: {zone}",
+  "facets.diagnostics": "Диагностика",
+  "facets.combineDiagnostics": "Объединить диагностику",
+  "facets.combineDiagnosticsHelp": "Показывать диагностические заметки вместе, со статусом у каждого узла.",
+  "facets.combineDiagnosticsCanvasHint": "Только для этого холста. Настройки пресета задают значение по умолчанию.",
+  "facets.diagnosticsSide": "Положение диагностики",
+  "facets.diagnosticsArrangement": "Расположение отдельных областей",
+  "facets.horizontal": "Горизонтально",
+  "facets.vertical": "Вертикально",
+  "facets.diagnosticsShowEmpty": "Показывать пустые области диагностики",
 } as const satisfies LocaleTranslationMap;
 
 export const russianCatalog = buildLocaleCatalog(russianTranslations);

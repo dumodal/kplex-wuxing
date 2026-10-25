@@ -5120,6 +5120,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     if (!contributedLayoutControls.includes(control) || viewSession?.definition !== viewDefinition || viewSession.getSnapshot() !== viewRevision) return;
     const current = viewSession.capture();
     sceneMotion.cancelAll(); preserveCameraOnNextLayout.current = true;
+    if (control.kind === "checkbox" && control.state) {
+      if (typeof value !== "boolean" || !viewContributions) return;
+      void viewContributions.capture({kind: "state", action: {id: control.state.actionId, args: value}}).run().then(/** A retired canvas cannot borrow another panel's state action or show its feedback. */ outcome => {
+        if (current() && outcome.status !== "completed") new Notice(translate("view.unavailable"));
+      });
+      return;
+    }
     void plugin.updateCanvasViewConfiguration(viewDefinition.id, {field: control.field, path: control.path}, {kind: "set", value}).catch(/** The queued writer retains committed values on failure; report it without inventing an optimistic setting. */ error => {
       console.error("K-Plex view layout setting was not saved", error);
       if (current()) new Notice(translate("view.settingsSaveFailed"));

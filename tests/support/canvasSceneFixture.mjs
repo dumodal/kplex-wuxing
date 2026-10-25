@@ -27,12 +27,14 @@ const mount=async definition=>{
  const registry=new M.PlexViewRegistry(registered),session=new M.PlexViewSession(registry,()=>{});session.select(definition.id);
  const container=document.createElement('div');container.className='kplex-app';container.style.cssText='width:1200px;height:900px;position:relative';document.body.append(container);
  const root=M.createRoot(container),ports={current:null},moves=[];
+ const contributions=new M.CanvasViewContributionController(session,plugin.viewSettingsRegistry,{settings:()=>settings.canvasViewSettings??{},mounted:()=>container.isConnected,
+  beforePresentationChange:()=>ports.current?.preparePresentationChange?.(),update:async(id,address,edit,expected)=>{settings.canvasViewSettings=M.editViewConfigurationAt(registry.resolve(id),settings.canvasViewSettings??{},address,edit,expected)},openSettings:()=>false,failed:error=>{throw error}});
  const props={plugin,index,settings,paintSettings:settings,paintLenses:{lenses:[]},surface:'leaf',hostLeaf:{},predicate:null,lenses:{lenses:[]},filterLayoutMode:'keep',predicateRevision:0,
  showCrossLinks:true,activePath:'A.md',renderRevision:0,semanticRevision:0,findFocusRequest:0,areaSettingsMode:false,onAreaSettingsModeChange:()=>{},onApplyFindFilter:()=>{},appliedFindFilterQuery:null,onClearFindFilter:()=>{},
  onActivate:()=>{},onWanderActivate:page=>{moves.push(page.path);props.activePath=page.path;render()},onOpen:()=>{},onOpenInSidecar:async()=>{},onCentralNodeEditorChange:()=>{},onCentralNodeModeChange:()=>{},
- actionPorts:ports,actionSurfaceId:'wander-'+definition.id,displayState:{zen:false,fullscreen:false},fullscreenAvailable:false,sidecarOpen:false,viewDefinition:definition,viewSession:session,viewRevision:session.getSnapshot()};
+ actionPorts:ports,actionSurfaceId:'wander-'+definition.id,displayState:{zen:false,fullscreen:false},fullscreenAvailable:false,sidecarOpen:false,viewDefinition:definition,viewSession:session,viewContributions:contributions,viewRevision:session.getSnapshot()};
  const render=()=>{props.viewRevision=session.getSnapshot();M.flushSync(()=>root.render(M.createElement(M.PlexGraph,props)))};render();await wait();await wait();
- return{container,ports,session,props,moves,render,close:()=>{M.flushSync(()=>root.unmount());session.dispose();container.remove()}};
+ return{container,ports,session,props,moves,render,close:()=>{M.flushSync(()=>root.unmount());contributions.dispose();session.dispose();container.remove()}};
 };
 `;
 

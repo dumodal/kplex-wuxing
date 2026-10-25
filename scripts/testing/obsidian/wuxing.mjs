@@ -57,6 +57,9 @@ async function scenario(app,c){
   }
   await until(()=>files.every(file=>app.metadataCache.getFileCache(file))&&!p.index.hasActiveSemanticPreparation(),'Fixture metadata/active work did not settle');
   Object.assign(p.settings,{canvasViewSettings:{},maxItemCount:100,documentSyncMode:'off',sidecarOpen:false,embedCentralNode:false,autoOpenCentralDocument:false,followActiveFile:false,centralNodeMarkdownMode:'source',animationSpeed:0,graphDepth:1,renderSiblings:false,showPageNodes:true,showVirtualNodes:true,showInferredNodes:true,showFolderNodes:false,showTagNodes:false,graphLenses:[],applyPowerFilter:false});p.index.notifyPresentation();
+  // Legacy area/editor lanes deliberately characterize separate diagnostic regions. Combined
+  // defaults and their captured canvas toggle have independent expanded acceptance coverage.
+  await p.updateCanvasViewConfiguration('wuxing',{field:'presets',path:['wuxing','diagnostics']},{kind:'set',value:{combined:false}});
   await until(()=>p.index.neighbours(p.index.get(path('Memory')),'child').length>=7,'Canonical direct relationships absent');
   // Use a real native tab in the widest main-window group. A direct leaf under rootSplit is
   // unsuitable for native Sidecar adjacency; an arbitrary active group can be only128px wide.

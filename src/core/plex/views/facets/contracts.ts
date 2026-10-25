@@ -2,6 +2,11 @@
  * and explicit assignment values are separate. No setting, note or native effect is owned here. */
 import type {ColorValue} from "../../../contracts/colorValue";
 export type FacetSource = "property" | "type" | "tag" | "rules";
+export type FacetDiagnosticStatus = "unassigned" | "conflicting" | "checking" | "unresolved";
+export type FacetDiagnostics = Readonly<{combined?: boolean; side?: "top" | "right" | "bottom" | "left";
+  orientation?: "horizontal" | "vertical"; showEmpty?: boolean; order?: readonly FacetDiagnosticStatus[]}>;
+/** Explicit choices override a preset default without changing any other canvas's configuration. */
+export type FacetCanvasState = Readonly<{version: 1; preset: string; combinedDiagnostics?: Readonly<Record<string, boolean>>}>;
 export type FacetCategory = Readonly<{label: string; labelKey?: string; color: ColorValue;
   values: readonly string[]; assignment?: string; rule?: string}>;
 export type FacetPreset = Readonly<{version: 1; name: string; nameKey?: string; source: FacetSource; field: string;
@@ -9,6 +14,7 @@ export type FacetPreset = Readonly<{version: 1; name: string; nameKey?: string; 
   spacing: number; regionWidth: number; regionHeight: number; guides: boolean; tints: boolean;
   /** Optional model reading; ordered phase identities remain separate from geometry/order. */
   interpretation?: "wuxing"; relativeLabels?: boolean; regulatingGuides?: boolean;
+  diagnostics?: FacetDiagnostics;
   conflictingColor: ColorValue; unassignedColor: ColorValue}>;
 /** Explicit deletion replacements also cover closed/restored canvases without editing their
  * opaque saved intent. They never reclassify or rewrite a note. Unknown future entries stay inert. */

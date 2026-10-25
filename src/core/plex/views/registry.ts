@@ -24,6 +24,8 @@ export class PlexViewRegistry {
         || definition.propertyDependencies !== undefined && typeof definition.propertyDependencies !== "function"
         || definition.defaultState !== null && boundedViewState(definition.defaultState) === null) throw new Error("Invalid canvas view policy contract");
       if (definition.configuration) validateViewConfigurationSchema(definition.configuration);
+      if (definition.badgeBudget !== undefined && (definition.capabilities.badges !== true || !Number.isInteger(definition.badgeBudget)
+        || definition.badgeBudget < 1 || definition.badgeBudget > 2048)) throw new Error("Invalid view badge budget");
       if (definition.editorHosting !== undefined && (definition.editorHosting !== "occurrence" || !definition.capabilities.editor)) {
         throw new Error("Unsupported internal editor hosting policy");
       }

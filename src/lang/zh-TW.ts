@@ -1547,6 +1547,15 @@ const traditionalChineseTranslations = {
   "actions.editor-capacity": "請先關閉目前的節點編輯器，再開啟另一個。",
   "actions.editor-save-failed": "無法儲存。編輯器仍保持開啟。",
   "graph.areaWidth": "{zone} 寬度",
+  "facets.diagnostics": "診斷",
+  "facets.combineDiagnostics": "合併診斷區域",
+  "facets.combineDiagnosticsHelp": "集中顯示診斷筆記，並在各節點上標示狀態。",
+  "facets.combineDiagnosticsCanvasHint": "只套用於此畫布。預設值由預設組合設定。",
+  "facets.diagnosticsSide": "診斷區位置",
+  "facets.diagnosticsArrangement": "個別區域排列",
+  "facets.horizontal": "水平",
+  "facets.vertical": "垂直",
+  "facets.diagnosticsShowEmpty": "顯示空的診斷區",
 } as const satisfies LocaleTranslationMap;
 
 export const traditionalChineseCatalog = buildLocaleCatalog(traditionalChineseTranslations);

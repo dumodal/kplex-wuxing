@@ -29,7 +29,7 @@ export function facetCategoryLabel(category: FacetCategory, id: string): CanvasV
 export function facetMembershipDescription(membership: FacetMembership): CanvasViewText {
   return {key: membership.status === "unresolved" ? `facets.reason.${membership.reason}` : `facets.reason.${membership.status}`};
 }
-/** Only the focus requests a visible badge; peripheral accessibility uses the same explanation. */
+/** Focus classification and combined diagnostic chips share exact labels, reasons and colors. */
 export function facetMembershipBadge(membership: FacetMembership, preset: FacetPreset): PlexNodeBadge {
   const label = membership.status === "assigned" ? facetCategoryLabel(preset.categories[membership.category], membership.category)
     : {key: membership.status === "unresolved" ? "facets.cannotClassify" : `facets.${membership.status}`};

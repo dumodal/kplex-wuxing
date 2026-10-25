@@ -15,6 +15,7 @@ import {createElement as reactElement} from "react";
 import {createRoot, type Root} from "react-dom/client";
 import {PredicateRuleEditor} from "../../predicates/PredicateRuleEditor";
 import {compileFacetRules} from "../../../core/plex/views/facets/rules";
+import {renderDiagnosticSettings} from "./diagnosticSettings";
 
 export class FacetPresetEditor extends StyleEditorModal {
   private draft: FacetPreset;
@@ -73,6 +74,10 @@ export class FacetPresetEditor extends StyleEditorModal {
         .onChange(value => {this.draft = {...this.draft, [field]: value};this.validate();}));
     for (const [field, label] of [["guides", "wuxing.guides"], ["tints", "wuxing.tints"]] as const)
       new Setting(body).setName(t(label)).addToggle(input => input.setValue(this.draft[field]).onChange(value => {this.draft = {...this.draft, [field]: value};this.validate();}));
+    renderDiagnosticSettings(body, /** Read current sibling edits before merging one dock control. */ () => this.draft.diagnostics, t, /** Retain all dock edits in this exact guarded native draft. */ (diagnostics, structural) => {
+      if (!this.canEdit()) return;
+      this.draft = {...this.draft, diagnostics};if (structural) this.render();else this.validate();
+    });
     if (facetHasWuXingPhases(this.draft)) {
       new Setting(body).setName(t("facets.relativeLabels")).setDesc(t("facets.wuxingHelp")).addToggle(input => input
         .setValue(this.draft.interpretation === "wuxing" && this.draft.relativeLabels === true).onChange(relativeLabels => {

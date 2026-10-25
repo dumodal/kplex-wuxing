@@ -5,6 +5,7 @@ import {facetLibrary} from "../../../core/plex/views/facets/configuration";
 import {facetState, orderedFacetPresets, resolveFacetPreset} from "../../../core/plex/views/facets/state";
 import {facetPresetLabel, facetHasWuXingPhases} from "../../../core/plex/views/facets/labels";
 import {FacetPresetManager} from "../facets/FacetPresetManager";
+import {facetDiagnostics} from "../../../core/plex/views/facets/presentation";
 
 /** Both entry points dispatch the same state reducer, preserving independent canvas intent. */
 function presetChoice(context: CanvasViewContributionContext): CanvasViewChoice | null {
@@ -38,6 +39,8 @@ export const wuXingSettingsContribution: CanvasViewSettingsContribution = {
     if (selected.status !== "ready" && selected.status !== "replaced") return [];
     const address = (field: string) => ({field: "presets", path: [selected.id, field]});
     return [
+      {...address("diagnostics"), path: [selected.id, "diagnostics", "combined"], kind: "checkbox", labelKey: "facets.combineDiagnostics",
+        hintKey: "facets.combineDiagnosticsCanvasHint", state: {value: facetDiagnostics(selected.preset, selected.id, state).combined, actionId: "diagnostics.combine"}},
       {...address("spacing"), labelKey: "wuxing.spacing", icon: "move-horizontal", min: 24, max: 200, step: 8},
       {...address("regionWidth"), labelKey: "wuxing.width", icon: "move-horizontal", min: 200, max: 640, step: 20},
       {...address("regionHeight"), labelKey: "wuxing.height", icon: "move-vertical", min: 160, max: 600, step: 20},
