@@ -1,6 +1,6 @@
 # Occurrence-based editor hosting prerequisite
 
-Status: required M0 for Mind Map after the verified #215 extraction and #218 settings/selector contract. Wu Xing is independent and may implement and validate its complete view using the existing attention-following native editor. M0 must extend that host compatibly, without requiring Compass or non-Classic attention-following definitions to adopt its new API simultaneously. This is an implementation assignment, not a supported runtime capability. Zsolt's Codex Agent, 2026-10-24, following the maintainer's corrected steer.
+Status: required M0 for Mind Map after the verified #215 extraction and #218 settings/selector contract. Wu Xing is independent and may implement and validate its complete view using the existing attention-following native editor. M0 must extend that host compatibly, without requiring Compass or non-Classic attention-following definitions to adopt its new API simultaneously. The bounded ordinary-Markdown shared-host proof is validated on Mac at905b777; production Mind Map and final feature acceptance remain pending, including the documented native FileManager gate limit. Zsolt's Codex Agent, 2026-10-24, following the maintainer's corrected steer.
 
 ## Required behavior and current limit
 
@@ -37,7 +37,7 @@ For every binding, require a unique admitted occurrence whose canonical node mat
 
 Use the existing host-side eligibility and canonical lookup owners. The initial non-Classic proof uses genuine Markdown files. Preserve Classic's existing Markdown, attachment/drawing and URL-host behavior through its compatibility policy; do not claim arbitrary-node support for unvalidated target kinds.
 
-Move Classic's attention-following selection and legacy global editor-mode/dimension interpretation into Classic compatibility policy. Other views retain bindings across attention changes instead of inheriting that policy.
+Keep attention-following selection and legacy global editor-mode/dimension interpretation behind the compatibility path for Compass and unchanged non-Classic definitions. Opt-in occurrence definitions resolve explicit bindings across attention changes; they do not inherit global editor mode/dimensions.
 
 ### 3. Feed occurrence dimensions through shared layout
 
@@ -95,3 +95,8 @@ The rooted-session checkpoint adds optional `navigation: "rooted"` independently
 The optional host now routes shared `editor.expand`, `editor.collapse` and `editor.resize` through the existing session/action/native-controller owners. It validates the exact occurrence and current canonical/native file, measures only that occurrence, keeps a stable native component through ordinary geometry changes, and serializes bounded intent without native tokens. Explicit collapse awaits native save; a rejected save retains the binding. Legacy attention-following definitions need no changes.
 
 Eight actual Mac native cases pass on the runtime identified in the [interim report](validation/occurrence-editors-219-2026-10-25.md). A stronger second run passed the first seven cases and precise clipped placement, then stalled before physical rename inside Obsidian FileManager's metadata-cache-clean gate. Its normal cleanup also timed out; independent guarded restoration succeeded. This is not a passing rename/deletion/teardown result or full M0 acceptance. The next bounded experiment compares that host gate with accepted main; no indexing scheduler change is justified. Full verification and exact-head CI remain pending.
+
+
+## Validated bounded proof at905b777
+
+Full exact-head `verify:obsidian` and CI475 pass. A fresh-renderer twelve-case native probe passes with exact runtime source hashes, capacity one, ordinary Markdown and normal cleanup. The shared native host is validated for that bounded scope; no production definition opts into it yet. The intermittent native FileManager cache-clean condition after a longer sequence remains causally unproven and is not counted as a passing workflow. See the [final checkpoint and minimized receipts](validation/occurrence-editors-219-2026-10-25.md). Mind Map implementation/actual workflow acceptance follows; Wu Xing remains independent.

@@ -1,6 +1,6 @@
 # Mind Map canvas view
 
-Prepared by Zsolt's Codex Agent, 2026-10-24. **Implementation started; M0 native hosting is not yet supported or accepted.**
+Prepared by Zsolt's Codex Agent, 2026-10-24. **Implementation started; bounded ordinary-Markdown M0 proof is validated at905b777. Mind Map M1–M4 and the documented native FileManager gate limit remain pending.**
 
 ## Baseline and start gate
 
@@ -144,3 +144,6 @@ M0 rooted interface now implemented: optional `navigation: "rooted"`, per-sessio
 
 
 M0 native integration is implemented and twelve actual Mac native cases pass, including external-Vault mutation and teardown; the FileManager cache-gate limitation and final full verification remain pending. See [the interim evidence and preserved failed sample](validation/occurrence-editors-219-2026-10-25.md). No production definition opts into occurrence hosting yet. M1–M3 remain unimplemented; this checkpoint is not a completed Mind Map.
+
+
+M0 source905b777 passed full `verify:obsidian`, CI475 and the isolated fresh-renderer twelve-case ordinary-Markdown proof. [Ordered receipts and limits](validation/occurrence-editors-219-receipts.json) include the real authoritative-hide correction and preserved failed controls. The longer-sequence native FileManager cache-gate cause remains unproven. This is a validated shared-host checkpoint, not completed Mind Map acceptance. Continue M1 with explicit bounded frontier preparation, stable session-owned sides/folds and shared actions/settings, retaining the open native limit through M4.
