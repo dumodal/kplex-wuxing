@@ -9071,6 +9071,76 @@
         "url": "https://github.com/zsviczian/kplex/actions/runs/40166345707"
       },
       "scope": "Before expanded-camera correction and new common requirements"
+    },
+    {
+      "sample": "clean-68fe6af",
+      "schemaVersion": 1,
+      "status": "passed",
+      "startedAt": "2026-10-25T07:14:19.092Z",
+      "source": {
+        "revision": "68fe6af425d8f7754667bdc230709b5d4125aa33",
+        "dirty": false,
+        "node": "v22.22.2",
+        "os": "win32 10.0.26200"
+      },
+      "target": {
+        "vaultName": "kplex-test-small",
+        "vaultPath": "C:\\Obsidian\\kplex-test-small",
+        "configDir": "C:\\Obsidian\\kplex-test-small\\.obsidian"
+      },
+      "capabilities": {
+        "version": "1.14.5 (installer 1.14.0)",
+        "commands": [
+          "version",
+          "vault",
+          "plugin:disable",
+          "plugin:enable",
+          "commands",
+          "command",
+          "dev:dom",
+          "dev:errors"
+        ]
+      },
+      "artifacts": {
+        "sourceHashes": {
+          "main.js": "69dd4f50187443cfe53c950663c091ae6b436538d5592eb120c1094ef5f2cdfb",
+          "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+          "styles.css": "d317aa613453656bf25518e01af9d8bc04073590dac0b2553891a88055dd5229"
+        },
+        "pluginVersion": "0.2.4",
+        "stagedHashes": {
+          "main.js": "69dd4f50187443cfe53c950663c091ae6b436538d5592eb120c1094ef5f2cdfb",
+          "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+          "styles.css": "d317aa613453656bf25518e01af9d8bc04073590dac0b2553891a88055dd5229"
+        }
+      },
+      "scenarios": [
+        {
+          "id": "open-kplex",
+          "status": "passed",
+          "assertions": [
+            "plugin command registered",
+            "rendered .kplex-app contains K-Plex",
+            "no captured JavaScript errors"
+          ],
+          "elapsedMs": 327
+        }
+      ],
+      "completedAt": "2026-10-25T07:42:29.479Z",
+      "counts": {
+        "architecture": 7,
+        "core": 130,
+        "functional": 1459,
+        "browser": 242,
+        "sources": 357,
+        "indexedDB": 775
+      },
+      "ci": {
+        "run": 492,
+        "status": "success",
+        "url": "https://github.com/zsviczian/kplex/actions/runs/40171998661"
+      },
+      "scope": "Expanded attention-editor correction; common partner extensions not adopted"
     }
   ],
   "freshLifetime": {
@@ -9092,5 +9162,32 @@
     "contentDigest": "f07acc49f8576cd6a148ca60ae110a5c7bdd1035d6d975125d0af47229875f9f",
     "completedAt": "2026-10-25T06:22:09.399Z"
   },
-  "currentOuterRestoration": "Corrected candidate restaged after this interim receipt; final restoration pending"
+  "currentOuterRestoration": "Original resources restored; candidate is no longer staged",
+  "finalRestoration": {
+    "restored": true,
+    "configurationFiles": 9,
+    "contentFiles": 107,
+    "contentDigest": "f07acc49f8576cd6a148ca60ae110a5c7bdd1035d6d975125d0af47229875f9f",
+    "completedAt": "2026-10-25T07:43:40.526Z"
+  },
+  "sharedReview": {
+    "runtime": "d07f2a87be65c373b3f7b318bc9c8756f4b8f7ee",
+    "report": "030ec8e9a04051042c10b3ecdc54005c31706139",
+    "common": "2e2fcbb0c25c4be6755e43ba96c7a6692174392d",
+    "feedback": "5ccde10a8d8b205f0bd2698d00f0810d24da710c",
+    "adopted": false,
+    "acceptedMain": "998781070a9382005154f4f884ed753280a9cf52"
+  },
+  "publicationVerification": {
+    "status": "pending",
+    "scope": "Maintainer requested exact final published-head Windows verification; final result and subsequent restoration on PR220 timeline",
+    "integration": "Separate pass after common219 changes accepted on main; no partner code or common-only extract",
+    "pending": [
+      "shared area-mode retirement",
+      "generic cross-links",
+      "cross-view drag/drop",
+      "captured source-occurrence identity",
+      "protection against unintended source-relationship removal"
+    ]
+  }
 }

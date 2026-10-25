@@ -1,6 +1,6 @@
 # Wu Xing five-phase canvas view
 
-Prepared by Zsolt's Codex Agent, 2026-10-24. **Implementation in progress on Windows; final acceptance remains pending.**
+Prepared by Zsolt's Codex Agent, 2026-10-24; implementation validated on Windows, 2026-10-25. **Delivered independently for review; later common-contract composition and device limitations remain explicit.**
 
 ## Implementation checkpoint
 
@@ -12,7 +12,9 @@ Optional `PlexViewRead.properties` delegates to `createLegacyPropertyProvider` f
 
 The attention occurrence is fixed inside its phase, outside the neighboring notes' shared scroller. This keeps the existing native editor/ports aligned during overflow scrolling. Unmapped, conflicting and unavailable lanes form the reachable Unclassified area outside the cycle. Shared grouping partitions remain phase/status-local. Type settings remain in #218's versioned namespace; per-canvas state and editor/Sidecar ownership retain their existing owners. Compass quadrant relinking is restricted to Compass; arbitrary regions require explicit drop roles.
 
-Focused pure/property/shared-view tests and Chromium production rendering pass. The earlier full verify:obsidian passed7/130/1454/242/357/775; the corrected camera/UTF-8 build passes Windows native editor9 and independent main/popout selector/Sidecar7 cases, including actual OS clipboard and selector keys. Final clean-head verification/CI and outer cleanup remain pending; see the validation report and HANDOFF.md. Fresh popout Sidecar creation reproduces as an empty leaf on exact accepted main9987810; loaded-document attachment passes separately. No M0/independent occurrence editing, #215 baseline fix, full-app restart or physical-device pass is claimed.
+Clean committed68fe6af Node22.22.2 full verify:obsidian passes7/130/1459/242/357/775, official scanner, real build and exact native smoke. Corrected runtime69dd4f50 passes Windows native editor12 and independent main/popout pair10 receipts, including expanded reclassification/real resize/exact camera restore, actual OS clipboard/selector keys and verified clipboard cleanup. Outer restoration passes for nine original configuration/plugin files,107 content hashes and live layout/window; CI492 passes. The requested final-published-head Windows verification and subsequent restoration will be recorded on the PR timeline. Fresh popout Sidecar creation reproduces as an empty leaf on exact accepted main9987810; loaded-document attachment passes separately. No M0/independent occurrence editing, #215 baseline fix, full-app restart or physical-device pass is claimed.
+
+The agreed Mac-owned common area/drop/cross-link/notification extensions are reviewed through2e2fcbb0 and5ccde10 but are not yet accepted on main or consumed here. Wu Xing retains attention-following navigation and declares no heightPreference/dropRole/dropOrigin for classification areas. Later composition must preserve both camera fixes, numeric-fifth/property-sixth reader arguments, decorations plus crossLinksLimited, literal area labels and both registry contributions. Shared area-mode retirement, generic cross-links, cross-view drag/drop, exact captured source-occurrence identity and protection against unintended source-relationship removal remain pending combined-source checks. The maintainer explicitly selected independent delivery and a separate integration pass after acceptance on main; no M0 gate, common-only extraction or private implementation is introduced.
 
 ## Baseline and dependencies
 
