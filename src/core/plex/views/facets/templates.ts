@@ -18,8 +18,8 @@ export const FACET_TEMPLATE_ORDER = ["ace", "para", "wuxing", "gtd", "eaccess"] 
 export const FACET_TEMPLATES: Readonly<Record<string, FacetPreset>> = {
   ace: template("facets.presetAce", "ace", [{id: "add"}, {id: "connect"}, {id: "express"}]),
   para: template("facets.presetPara", "para", [{id: "projects"}, {id: "areas"}, {id: "resources"}, {id: "archives"}]),
-  wuxing: template("facets.presetWuXing", "phase", ["water", "wood", "fire", "earth", "metal"].map(id => ({id, labelKey: `wuxing.${id}`,
-    ...(id === "metal" ? {color: "--text-muted"} : {})})), true),
+  wuxing: {...template("facets.presetWuXing", "phase", ["water", "wood", "fire", "earth", "metal"].map(id => ({id, labelKey: `wuxing.${id}`,
+    ...(id === "metal" ? {color: "--text-muted"} : {})})), true), interpretation: "wuxing", relativeLabels: true, regulatingGuides: true},
   gtd: template("facets.presetGtd", "horizon", [{id: "actions"}, {id: "projects"}, {id: "areas", labelKey: "facets.areasOfFocus"},
     {id: "goals"}, {id: "vision"}, {id: "purpose", labelKey: "facets.purposeAndPrinciples"}]),
   eaccess: template("facets.presetEaccess", "access", [{id: "encounters"}, {id: "atlas"}, {id: "calendar"}, {id: "cards"}, {id: "extras"}, {id: "sources"}, {id: "spaces"}]),

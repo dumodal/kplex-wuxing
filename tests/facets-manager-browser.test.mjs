@@ -21,6 +21,20 @@ const initialize=`
 `;
 const scenario=body=>colorEditorScenario(`(async()=>{${initialize}\n${body}\ntab.hide();return true})()`);
 
+test('Wu Xing model controls use the original preset draft and queued writer, with read-only explanatory help',async()=>{
+ assert.equal(await scenario(`
+ const m=manager(),editor=edit(m,'Wu Xing');
+ const name=t('facets.relativeLabels'),control=fields(editor,name)[0];
+ check(control&&editor.contentEl.textContent.includes(t('facets.wuxingHelp')),'Relative role help is reachable in the native preset editor');
+ check(editor.contentEl.textContent.includes(t('facets.cyclesHelp')),'Both model cycles are explained');
+ check(control.type==='checkbox','Original native toggle');control.checked=false;control.dispatchEvent(new Event('change',{bubbles:true}));
+ equal(p.writes,[],'Model controls remain local until Save');await save(editor);await drain();
+ const preset=M.facetLibrary(M.readViewConfiguration(M.builtInPlexViews.resolve('wuxing'),p.settings.canvasViewSettings)).presets.wuxing;
+ check(preset.relativeLabels===false&&preset.interpretation==='wuxing','Same entry writer persists optional model presentation');
+ check(preset.categories.wood.assignment==='wood','Model control does not change assignment values');close(m);
+ `),true);
+});
+
 test('registered Settings opens searchable presets without saving defaults or choosing a canvas preset',async()=>{
  assert.equal(await scenario(`
  const a=new M.PlexViewSession(M.builtInPlexViews,()=>{}),b=new M.PlexViewSession(M.builtInPlexViews,()=>{});a.select('wuxing');b.select('wuxing');

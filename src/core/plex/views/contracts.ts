@@ -112,8 +112,8 @@ export type PlexArea = Readonly<{
 }>;
 /** Pure presentation marks have no semantic endpoints or interaction/write authority. */
 export type PlexDecoration = Readonly<{id: string} & (
-  {kind: "region"; bounds: ViewRect; labelKey: string; label?: string; areaId?: AreaId; tint?: "water" | "wood" | "fire" | "earth" | "metal"; color?: ColorValue; count?: boolean}
-  | {kind: "guide"; points: readonly ViewPoint[]}
+  {kind: "region"; bounds: ViewRect; labelKey: string; label?: string; description?: CanvasViewText; areaId?: AreaId; tint?: "water" | "wood" | "fire" | "earth" | "metal"; color?: ColorValue; count?: boolean}
+  | {kind: "guide"; points: readonly ViewPoint[]; directed?: boolean; variant?: "generating" | "regulating"}
 )>;
 export type PlexViewLayout = Readonly<{
   positions: ReadonlyMap<OccurrenceId, ViewRect>; areas: readonly PlexArea[];

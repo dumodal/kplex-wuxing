@@ -3,7 +3,7 @@ import type {CanvasViewSettingsContribution} from "../settingsContributions";
 import type {CanvasViewContributionContext, CanvasViewChoice} from "../contributionContracts";
 import {facetLibrary} from "../../../core/plex/views/facets/configuration";
 import {facetState, orderedFacetPresets, resolveFacetPreset} from "../../../core/plex/views/facets/state";
-import {facetPresetLabel} from "../../../core/plex/views/facets/labels";
+import {facetPresetLabel, facetHasWuXingPhases} from "../../../core/plex/views/facets/labels";
 import {FacetPresetManager} from "../facets/FacetPresetManager";
 
 /** Both entry points dispatch the same state reducer, preserving independent canvas intent. */
@@ -42,6 +42,10 @@ export const wuXingSettingsContribution: CanvasViewSettingsContribution = {
       {...address("regionHeight"), labelKey: "wuxing.height", icon: "move-vertical", min: 160, max: 600, step: 20},
       {...address("guides"), kind: "checkbox", labelKey: "wuxing.guides"},
       {...address("tints"), kind: "checkbox", labelKey: "wuxing.tints"},
+      ...(selected.preset.interpretation === "wuxing" && facetHasWuXingPhases(selected.preset) ? [
+        {...address("relativeLabels"), kind: "checkbox" as const, labelKey: "facets.relativeLabels" as const},
+        {...address("regulatingGuides"), kind: "checkbox" as const, labelKey: "facets.regulatingGuides" as const},
+      ] : []),
     ];
   },
 };

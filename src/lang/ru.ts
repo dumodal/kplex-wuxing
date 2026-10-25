@@ -7,6 +7,16 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const russianTranslations = {
+  "facets.relativeLabels": "Показывать относительные подписи У-син",
+  "facets.regulatingGuides": "Показывать цикл регулирования",
+  "facets.wuxingHelp": "Назначенная фаза отражает вашу интерпретацию заметки. Относительные подписи сравнивают её с фазой текущей заметки; они не меняют фазы или записанные связи и не доказывают причинность. Неназначенная или противоречивая фаза фокуса не даёт точки отсчёта.",
+  "facets.cyclesHelp": "Сплошные стрелки показывают порождение: Дерево → Огонь → Земля → Металл → Вода → Дерево. Пунктирные пропускают одну фазу и показывают регулирование. Оба вида — декоративные подсказки модели.",
+  "facets.relativeSame": "То, что разделяет мою фазу",
+  "facets.relativeGenerate": "То, что я порождаю",
+  "facets.relativeRegulate": "То, что я регулирую",
+  "facets.relativeRegulated": "То, что регулирует меня",
+  "facets.relativeGenerated": "То, что порождает меня",
+  "facets.relativeUnavailable": "Опорная фаза недоступна",
   "assignment.title": "Назначить категорию",
   "assignment.undo": "Отменить назначение",
   "assignment.apply": "Назначить категорию",

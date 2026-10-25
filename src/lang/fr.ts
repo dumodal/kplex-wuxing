@@ -7,6 +7,16 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const frenchTranslations = {
+  "facets.relativeLabels": "Afficher les libellés relatifs Wu Xing",
+  "facets.regulatingGuides": "Afficher le cycle de régulation",
+  "facets.wuxingHelp": "L’attribution d’une phase traduit votre interprétation d’une note. Les libellés relatifs comparent cette phase à celle de la note ciblée ; ils ne changent ni les phases ni les liens enregistrés et ne prouvent aucune causalité. Une cible sans phase ou en conflit ne fournit pas de référence.",
+  "facets.cyclesHelp": "Les flèches pleines montrent la génération : Bois → Feu → Terre → Métal → Eau → Bois. Les flèches en pointillés sautent une phase pour montrer la régulation. Ce sont des repères décoratifs du modèle.",
+  "facets.relativeSame": "Ce qui partage ma phase",
+  "facets.relativeGenerate": "Ce que je génère",
+  "facets.relativeRegulate": "Ce que je régule",
+  "facets.relativeRegulated": "Ce qui me régule",
+  "facets.relativeGenerated": "Ce qui me génère",
+  "facets.relativeUnavailable": "Phase de référence indisponible",
   "assignment.title": "Affecter une catégorie",
   "assignment.undo": "Annuler l’affectation",
   "assignment.apply": "Affecter une catégorie",

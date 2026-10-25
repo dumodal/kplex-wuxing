@@ -7,6 +7,8 @@ export type FacetCategory = Readonly<{label: string; labelKey?: string; color: C
 export type FacetPreset = Readonly<{version: 1; name: string; nameKey?: string; source: FacetSource; field: string;
   categories: Readonly<Record<string, FacetCategory>>; order: readonly string[]; start: string;
   spacing: number; regionWidth: number; regionHeight: number; guides: boolean; tints: boolean;
+  /** Optional model reading; ordered phase identities remain separate from geometry/order. */
+  interpretation?: "wuxing"; relativeLabels?: boolean; regulatingGuides?: boolean;
   conflictingColor: ColorValue; unassignedColor: ColorValue}>;
 /** Explicit deletion replacements also cover closed/restored canvases without editing their
  * opaque saved intent. They never reclassify or rewrite a note. Unknown future entries stay inert. */

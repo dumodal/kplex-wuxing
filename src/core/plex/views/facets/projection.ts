@@ -32,7 +32,7 @@ export function projectFacets(input: PlexViewInput): PlexProjection | null {
     const area = facetAreaId(selected.id, membership.status === "assigned" ? "category" : "status",
       membership.status === "assigned" ? membership.category : membership.status);
     return {id: JSON.stringify(["facets", node.id]), nodeId: node.id, representation: "thought", role: center ? undefined : role, relation,
-      ...(center ? {badge: facetMembershipBadge(membership, preset)} : {areaId: area, groupingPartition: area}),
+      groupingPartition: area, ...(center ? {badge: facetMembershipBadge(membership, preset)} : {areaId: area}),
       description: facetMembershipDescription(membership), ports: {top: "parent", bottom: "child", left: "left", right: "right"}};
   };
   const entry = occurrence(attention);occurrences.set(attention.id, entry);

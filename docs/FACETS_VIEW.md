@@ -1,6 +1,22 @@
 # Facets and canvas-view API: implementation specification
 
-Current assignment: checkpoint A, accepted-main integration in progress. Accepted base26623c8393bddc0c3bcac39468078ec20ceccbc8; prior validated220 head016919893b13a99867a14336680debb29d1b6f54 is preserved. The following maintainer requirements supersede the earlier Wu Xing-only scope; prior validation records remain historical and do not certify this extension. Actual implemented interfaces/results will be documented in CANVAS_VIEW_API.md, CANVAS_VIEW_DEVELOPER_GUIDE.md and a separate validation record.
+Current assignment: accepted-main integration and checkpoints B/C/D are published; E/F and final expanded acceptance remain in progress. Accepted base26623c8393bddc0c3bcac39468078ec20ceccbc8; prior validated220 head016919893b13a99867a14336680debb29d1b6f54 is preserved. The following maintainer requirements supersede the earlier Wu Xing-only scope; prior validation records remain historical and do not certify this extension. Actual implemented interfaces/results are recorded in CANVAS_VIEW_API.md and docs/validation/facets-220-2026-10-25.md; the complete developer guide remains required.
+
+## Functional reference: Dumo's fixed Wu Xing prototype
+
+Reviewed [fa038f0af796a9a6f42e6f8eb91e44c13ba3e067](https://github.com/dumodal/kplex-wuxing/commit/fa038f0af796a9a6f42e6f8eb91e44c13ba3e067), including `src/core/plex/wuxing.ts`, the GraphIndex neighborhood/status paths, WuXingGuide, onboarding helper/content and methodology. This is a functional reference, with no fork code/artifact import.
+
+| Reference behavior | Fixed-commit implementation versus proposal | Facets composition |
+| --- | --- | --- |
+| Local five-phase classification | Implemented: existing neighbors, saved emoji `status`, single unique phase; invalid connected notes counted but excluded from phase groups. Classified focus sits in its phase. | One configured source, exact aliases and explicit diagnostics; focus stays centered with its badge. Empty categories and Unassigned remain reachable. |
+| Five relative families | Implemented: a modulo-five phase-pair function populates relative neighborhood roles. Onboarding explains the temporary focused-note reference separately from personal assignment. | Optional explanatory region labels only. Canonical note roles/evidence and stored phases remain intact. No phase-derived semantic edges. |
+| Generating/regulating cycles | Implemented: directed phase-to-phase graphics, with outward regulating curves. | Both cycles are noninteractive decorations. Solid generation follows Wood → Fire → Earth → Metal → Water → Wood; dashed regulation skips one phase. Neither supplies relationship endpoints or edit authority. |
+| Guide and visual enhancements | Implemented: manual guide with selectable example reference, saved English/Chinese display preference, count-weighted color star, automatic perspective plus manual adjustments and overview framing. | Concise localized preset help now; richer onboarding, balance star, perspective and separate bilingual display preference are future opportunities, not acceptance gates. |
+| Central holding area and drag-to-classify | Explicitly proposed in onboarding; not implemented at this SHA. Its read-only fork blocks ontology/section actions. An automatic Wood assignment or persistent first-use default is also not implemented. | Shared explicit assignment preview/Undo exists on #220; no automatic assignment on focus, and no fork-specific metadata writer or action blocklist. |
+
+The phase is a personal classification. The relative role is a model reading against the current focus. Recorded graph evidence remains a separate fact; neither color nor a cycle guide establishes causation. For the ordered cycle, offsets 0/1/2/3/4 mean shares my phase / I generate / I regulate / regulates me / generates me. Reordering visible categories does not reorder this model. Unassigned, conflicting or unavailable focus phases supply no default reference. Configuration and layout do not edit notes or acquire metadata.
+
+The existing predicate `this` namespace exposes fixed page attributes and does **not** automatically read Markdown properties such as `this.phase`. E must explicitly define and test current/candidate property availability through the shared field-scoped reader before offering that expression. No private rule interpreter, parser or metadata owner is permitted.
 
 # PR #220 — Facets and the canvas-view plugin API
 

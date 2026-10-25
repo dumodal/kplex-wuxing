@@ -31,6 +31,9 @@ export function isFacetPreset(value: unknown): value is FacetPreset {
     || !value.order.every(facetId) || new Set(value.order).size !== value.order.length || Object.keys(value.categories).length !== value.order.length
     || !facetId(value.start) || !value.order.includes(value.start) || typeof value.guides !== "boolean" || typeof value.tints !== "boolean"
     || !color(value.conflictingColor) || !color(value.unassignedColor)) return false;
+  if (value.interpretation !== undefined && value.interpretation !== "wuxing"
+    || value.relativeLabels !== undefined && typeof value.relativeLabels !== "boolean"
+    || value.regulatingGuides !== undefined && typeof value.regulatingGuides !== "boolean") return false;
   for (const [field, minimum, maximum] of [["spacing", 24, 200], ["regionWidth", 200, 640], ["regionHeight", 160, 600]] as const) {
     const scalar = value[field]; if (typeof scalar !== "number" || !Number.isFinite(scalar) || scalar < minimum || scalar > maximum) return false;
   }

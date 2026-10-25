@@ -7,6 +7,16 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const dutchTranslations = {
+  "facets.relativeLabels": "Relatieve Wu Xing-labels tonen",
+  "facets.regulatingGuides": "Regulerende cyclus tonen",
+  "facets.wuxingHelp": "Een fasetoewijzing legt je interpretatie van een notitie vast. Relatieve labels vergelijken die fase met de gerichte notitie; ze veranderen geen fasen of vastgelegde koppelingen en bewijzen geen oorzaak. Een niet-toegewezen of conflicterende focus levert geen referentiefase.",
+  "facets.cyclesHelp": "Doorgetrokken pijlen tonen generatie: Hout → Vuur → Aarde → Metaal → Water → Hout. Gestreepte pijlen slaan één fase over voor regulering. Beide zijn decoratieve modelhulpen.",
+  "facets.relativeSame": "Wat mijn fase deelt",
+  "facets.relativeGenerate": "Wat ik voortbreng",
+  "facets.relativeRegulate": "Wat ik reguleer",
+  "facets.relativeRegulated": "Wat mij reguleert",
+  "facets.relativeGenerated": "Wat mij voortbrengt",
+  "facets.relativeUnavailable": "Referentiefase niet beschikbaar",
   "assignment.title": "Categorie toewijzen",
   "assignment.undo": "Toewijzing ongedaan maken",
   "assignment.apply": "Categorie toewijzen",

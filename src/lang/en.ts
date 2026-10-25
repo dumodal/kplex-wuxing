@@ -9,6 +9,16 @@
  * parameters remain unquoted regardless of their names. Locale catalogs inherit this classification.
  */
 export const englishCatalog = {
+  "facets.relativeLabels": {message: "Show relative Wu Xing labels", context: "Optional read-only Wu Xing model interpretation and decorative cycles.", params: []},
+  "facets.regulatingGuides": {message: "Show regulating cycle guides", context: "Optional read-only Wu Xing model interpretation and decorative cycles.", params: []},
+  "facets.wuxingHelp": {message: "Phase assignment records your interpretation of a note. Relative labels read that phase against the focused note; they do not change phases or recorded links and do not prove causation. An unassigned or conflicting focus supplies no reference phase.", context: "Optional read-only Wu Xing model interpretation and decorative cycles.", params: []},
+  "facets.cyclesHelp": {message: "Solid arrows show generation: Wood → Fire → Earth → Metal → Water → Wood. Dashed arrows skip one phase to show regulation. Both are decorative model guides.", context: "Optional read-only Wu Xing model interpretation and decorative cycles.", params: []},
+  "facets.relativeSame": {message: "What shares my phase", context: "Optional read-only Wu Xing model interpretation and decorative cycles.", params: []},
+  "facets.relativeGenerate": {message: "What I generate", context: "Optional read-only Wu Xing model interpretation and decorative cycles.", params: []},
+  "facets.relativeRegulate": {message: "What I regulate", context: "Optional read-only Wu Xing model interpretation and decorative cycles.", params: []},
+  "facets.relativeRegulated": {message: "What regulates me", context: "Optional read-only Wu Xing model interpretation and decorative cycles.", params: []},
+  "facets.relativeGenerated": {message: "What generates me", context: "Optional read-only Wu Xing model interpretation and decorative cycles.", params: []},
+  "facets.relativeUnavailable": {message: "Reference phase unavailable", context: "Optional read-only Wu Xing model interpretation and decorative cycles.", params: []},
   "assignment.title": {message: "Assign category", context: "Shared native canvas property assignment preview, safeguards and bounded undo.", params: [], referenceParams: []},
   "assignment.undo": {message: "Undo assignment", context: "Shared native canvas property assignment preview, safeguards and bounded undo.", params: [], referenceParams: []},
   "assignment.apply": {message: "Assign category", context: "Shared native canvas property assignment preview, safeguards and bounded undo.", params: [], referenceParams: []},

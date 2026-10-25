@@ -330,9 +330,12 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
       if (mark.kind === "region") {
         if (mark.color !== undefined) boundedViewColors([mark.color]);
         if (!Object.values(mark.bounds).every(Number.isFinite) || mark.bounds.width <= 0 || mark.bounds.height <= 0
-          || mark.labelKey.length > 128 || (mark.label?.length ?? 0) > 128 || mark.areaId && !areaIds.has(mark.areaId)) throw new Error("Invalid decoration region");
+          || mark.labelKey.length > 128 || (mark.label?.length ?? 0) > 128 || mark.areaId && !areaIds.has(mark.areaId)
+          || mark.description !== undefined && !validCanvasViewText(mark.description)) throw new Error("Invalid decoration region");
       } else if (mark.kind !== "guide" || mark.points.length < 2 || mark.points.length > 32
-        || !mark.points.every(point => Number.isFinite(point.x) && Number.isFinite(point.y))) throw new Error("Invalid decoration guide");
+        || !mark.points.every(point => Number.isFinite(point.x) && Number.isFinite(point.y))
+        || mark.directed !== undefined && typeof mark.directed !== "boolean"
+        || mark.variant !== undefined && mark.variant !== "generating" && mark.variant !== "regulating") throw new Error("Invalid decoration guide");
     }
     return {scene, projection: filtered, failure: false};
   } catch { return {scene: empty, projection: null, failure: true}; }

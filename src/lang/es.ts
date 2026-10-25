@@ -7,6 +7,16 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const spanishTranslations = {
+  "facets.relativeLabels": "Mostrar etiquetas relativas de Wu Xing",
+  "facets.regulatingGuides": "Mostrar el ciclo de regulación",
+  "facets.wuxingHelp": "La fase asignada refleja tu interpretación de una nota. Las etiquetas relativas comparan esa fase con la nota enfocada; no cambian fases ni enlaces registrados y no prueban causalidad. Un foco sin fase o con conflicto no aporta una fase de referencia.",
+  "facets.cyclesHelp": "Las flechas continuas muestran la generación: Madera → Fuego → Tierra → Metal → Agua → Madera. Las discontinuas saltan una fase para mostrar la regulación. Ambas son guías decorativas del modelo.",
+  "facets.relativeSame": "Lo que comparte mi fase",
+  "facets.relativeGenerate": "Lo que genero",
+  "facets.relativeRegulate": "Lo que regulo",
+  "facets.relativeRegulated": "Lo que me regula",
+  "facets.relativeGenerated": "Lo que me genera",
+  "facets.relativeUnavailable": "Fase de referencia no disponible",
   "assignment.title": "Asignar categoría",
   "assignment.undo": "Deshacer asignación",
   "assignment.apply": "Asignar categoría",

@@ -165,7 +165,7 @@ test('measured3/4/5/6/7 regions stay disjoint from one another and the expanded 
    assert.equal(overlaps(regions[i].bounds,body),false,id+' center');assert.equal(overlaps(regions[i].bounds,badge),false,id+' badge');
    for(let j=i+1;j<regions.length;j++)assert.equal(overlaps(regions[i].bounds,regions[j].bounds),false,id+' disjoint regions');
   }
-  assert.equal(layout.decorations.filter(mark=>mark.kind==='guide').length,id==='wuxing'?5:0);
+  assert.equal(layout.decorations.filter(mark=>mark.kind==='guide').length,id==='wuxing'?10:0);
   assert.deepEqual([...f.layout().positions],[...layout.positions],'Deterministic measured layout');
  }
 });
@@ -197,4 +197,51 @@ test('a wide measured badge contributes its complete envelope to region separati
  for(const mark of layout.decorations.filter(mark=>mark.kind==='region')){
   const b=mark.bounds;assert.equal(badge.x<b.x+b.width&&badge.x+badge.width>b.x&&badge.y<b.y+b.height&&badge.y+badge.height>b.y,false);
  }
+});
+
+test('Wu Xing relative regions follow all25 phase pairs, independent of category order',()=>{
+ const cycle=['wood','fire','earth','metal','water'],keys=['Same','Generate','Regulate','Regulated','Generated'];
+ const preset=M.FACET_TEMPLATES.wuxing;
+ for(const [i,focus]of cycle.entries())for(const [j,target]of cycle.entries()){
+  const f=scene('wuxing',0);f.projection.occurrences[0].groupingPartition=M.facetAreaId('wuxing','category',focus);
+  const layout=M.layoutFacets(f.projection,f.measured,'wuxing',{...preset,order:['metal','earth','wood','water','fire']});
+  const region=layout.decorations.find(mark=>mark.id===M.facetAreaId('wuxing','category',target));
+  assert.equal(region.description.key,'facets.relative'+keys[(j-i+5)%5]);
+ }
+});
+
+test('Wood to Metal focus changes only the model reading, preserving phase assignments and canonical evidence',()=>{
+ const phases=['wood','fire','earth','metal','water'],nodes=new Map(phases.map(id=>[id,Object.freeze({id,kind:'document',path:id+'.md',name:id,file:{extension:'md'}})]));
+ const values=new Map(phases.map(id=>[id,{status:'available',value:id}]));let reads=0;
+ const relations=new Map(phases.map(id=>[id,phases.filter(other=>other!==id).map(other=>Object.freeze({node:nodes.get(other),role:'child',relationType:1,direction:1,definition:'Recorded'}))]));
+ const before=JSON.stringify([...relations]),beforeValues=JSON.stringify([...values]),preset=M.FACET_TEMPLATES.wuxing;
+ const read={coverage:'cached',isCurrent:()=>true,node:id=>nodes.get(id),compare:(a,b)=>a.id.localeCompare(b.id),scope:()=>({pending:false}),
+  relations:(id,role)=>({items:role==='child'?relations.get(id):[],coverage:'cached',truncated:false}),
+  properties:{read:id=>{reads++;return values.get(id)},availability:()=> 'available'}};
+ const project=attention=>M.projectFacets({attention,maximum:20,state:{version:1,preset:'wuxing'},configuration:available({}),read});
+ const render=p=>M.layoutFacets(p,p.occurrences.map(row=>({id:row.id,width:240,height:40,mini:null,envelope:null})),'wuxing',preset);
+ const wood=project('wood'),metal=project('metal');assert.equal(reads,10,'One classified field per unique occurrence');
+ const descriptions=p=>Object.fromEntries(render(p).decorations.filter(row=>row.kind==='region'&&row.description).map(row=>[JSON.parse(row.id)[3],row.description.key]));
+ assert.deepEqual(descriptions(wood),{water:'facets.relativeGenerated',wood:'facets.relativeSame',fire:'facets.relativeGenerate',earth:'facets.relativeRegulate',metal:'facets.relativeRegulated'});
+ assert.deepEqual(descriptions(metal),{water:'facets.relativeGenerate',wood:'facets.relativeRegulate',fire:'facets.relativeRegulated',earth:'facets.relativeGenerated',metal:'facets.relativeSame'});
+ for(const p of [wood,metal])for(const row of p.occurrences)assert.equal(row.groupingPartition,M.facetAreaId('wuxing','category',row.nodeId));
+ for(const p of [wood,metal])for(const edge of p.edges){assert.equal(edge.kind,'semantic');assert(relations.get(p.attention).includes(edge.relation));assert.equal(edge.relation.definition,'Recorded');}
+ assert.equal(JSON.stringify([...relations]),before);assert.equal(JSON.stringify([...values]),beforeValues);
+ for(const result of [{status:'available',value:undefined},{status:'available',value:['wood','metal']},{status:'unavailable'},{status:'unsupported'}]){
+  values.set('wood',result);const projection=project('wood'),layout=render(projection);
+  assert.equal(layout.decorations.filter(row=>row.description?.key==='facets.relativeUnavailable').length,5);
+  assert.equal(projection.edges.length,4,'Unavailable phases never remove recorded connectors');
+ }
+});
+
+test('cycle guides remain bounded optional phase decorations without note endpoints or action authority',()=>{
+ const f=scene('wuxing',10),before=JSON.stringify(f.projection.edges),layout=f.layout(),guides=layout.decorations.filter(row=>row.kind==='guide');
+ assert.equal(guides.filter(row=>row.variant==='generating').length,5);assert.equal(guides.filter(row=>row.variant==='regulating').length,5);
+ for(const guide of guides){assert(guide.directed);assert(guide.points.length<=32);assert(!('relation'in guide));assert(!('sourceNode'in guide));assert(!('dropTarget'in guide));}
+ const generating=guides.find(row=>row.id==='facets-guide-1-wood-fire'),regulating=guides.find(row=>row.id==='facets-guide-2-wood-earth');assert(generating&&regulating);
+ for(const point of regulating.points)assert(Math.hypot(point.x,point.y)>100,'Regulating guides stay outside the centered editor');
+ assert.equal(JSON.stringify(f.projection.edges),before);assert.equal(f.work.fields.length,11);
+ for(const preset of [{...f.preset,relativeLabels:false},{...f.preset,interpretation:undefined}])assert(M.layoutFacets(f.projection,f.measured,'wuxing',preset).decorations.every(row=>!row.description));
+ assert.equal(M.layoutFacets(f.projection,f.measured,'wuxing',{...f.preset,guides:false}).decorations.filter(row=>row.kind==='guide').length,0);
+ assert.equal(M.layoutFacets(f.projection,f.measured,'wuxing',{...f.preset,regulatingGuides:false}).decorations.filter(row=>row.kind==='guide').length,5);
 });

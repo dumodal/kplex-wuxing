@@ -6,7 +6,7 @@ import {StyleColorControls} from "../../StyleColorControls";
 import type {CanvasViewManagerContext} from "../managerContracts";
 import type {FacetPreset, FacetCategory} from "../../../core/plex/views/facets/contracts";
 import {isFacetPreset} from "../../../core/plex/views/facets/validation";
-import {facetCategoryLabel, facetPresetLabel} from "../../../core/plex/views/facets/labels";
+import {facetCategoryLabel, facetPresetLabel, facetHasWuXingPhases} from "../../../core/plex/views/facets/labels";
 import {FACET_TEMPLATES} from "../../../core/plex/views/facets/templates";
 import {canvasViewText} from "../labels";
 import {FacetPresetRemoval} from "./FacetPresetRemoval";
@@ -67,6 +67,16 @@ export class FacetPresetEditor extends StyleEditorModal {
         .onChange(value => {this.draft = {...this.draft, [field]: value};this.validate();}));
     for (const [field, label] of [["guides", "wuxing.guides"], ["tints", "wuxing.tints"]] as const)
       new Setting(body).setName(t(label)).addToggle(input => input.setValue(this.draft[field]).onChange(value => {this.draft = {...this.draft, [field]: value};this.validate();}));
+    if (facetHasWuXingPhases(this.draft)) {
+      new Setting(body).setName(t("facets.relativeLabels")).setDesc(t("facets.wuxingHelp")).addToggle(input => input
+        .setValue(this.draft.interpretation === "wuxing" && this.draft.relativeLabels === true).onChange(relativeLabels => {
+          this.draft = {...this.draft, interpretation: "wuxing", relativeLabels};this.validate();
+        }));
+      new Setting(body).setName(t("facets.regulatingGuides")).setDesc(t("facets.cyclesHelp")).addToggle(input => input
+        .setValue(this.draft.interpretation === "wuxing" && this.draft.regulatingGuides === true).onChange(regulatingGuides => {
+          this.draft = {...this.draft, interpretation: "wuxing", regulatingGuides};this.validate();
+        }));
+    }
     for (const [index, id] of this.draft.order.entries()) this.category(body, id, index);
     new Setting(body).addButton(button => button.setButtonText(t("facets.addCategory")).setDisabled(this.draft.order.length >= 7).onClick(() => {
       if (!this.canEdit() || this.draft.order.length >= 7) return;

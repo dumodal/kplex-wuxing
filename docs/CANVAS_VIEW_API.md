@@ -127,3 +127,10 @@ For primary-expand hierarchy views, clicking a terminal ancestor-cycle reference
 The implemented configuration batch passes 45 pure/actual Settings-host Chromium tests, including independent queued/received presets, stale same-preset and container epochs, A→B→A, reset scope, durable/idempotent migration, future payloads, disk rejection and retired registration. Architecture/core/scanner/build are separate gates. Native migration/preset UI and the remaining expanded API/Facets acceptance are still pending; see [the current validation record](validation/facets-220-2026-10-25.md).
 
 B2 adds a clean78-case API/menu/actual Chromium/settings/selector/session/renderer batch, plus the repository indexing/startup/watchdog/section suite and architecture7 with zero violations. Real production build and official scanner pass. Expanded final-head/native acceptance remains pending.
+
+
+## Optional model explanations
+
+PlexDecoration regions may supply a bounded CanvasViewText description below their title. Guides may declare directed=true and variant=generating or regulating. The existing adapter validates these optional presentation values; ViewDecorations paints them with per-canvas marker IDs. They carry no canonical endpoints, hit targets, drop meaning or relationship actions. Omitted fields preserve existing consumers.
+
+The Wu Xing Facets preset optionally uses these marks for five relative explanations. Its fixed model cycle is independent of category placement; existing center groupingPartition preserves the classified category without assigning the focus to a scroll area. A missing/conflicting/unavailable phase never becomes a default reference. Native controls and live rails remain CanvasViewSettingsContribution contributions under the same queued writer.

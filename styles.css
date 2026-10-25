@@ -3885,6 +3885,9 @@ button.kplex-sidecar-unfold-plex:focus-visible,
 .kplex-view-region text { fill: var(--text-normal); font-size: 16px; }
 .kplex-view-region .kplex-view-region-count { fill: var(--text-muted); font-size: 11px; }
 .kplex-view-guide { stroke: var(--text-faint); stroke-width: 1; stroke-dasharray: 5 7; opacity: 0.5; }
+.kplex-view-guide.is-generating { stroke: var(--text-muted); stroke-dasharray: none; }
+.kplex-view-guide.is-regulating { stroke: var(--text-muted); stroke-dasharray: 3 5; }
+.kplex-view-region .kplex-view-region-description { fill: var(--text-muted); font-size: 12px; }
 .kplex-view-heading {
   position: absolute;
   z-index: 2;

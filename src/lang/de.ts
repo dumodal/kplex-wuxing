@@ -7,6 +7,16 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const germanTranslations = {
+  "facets.relativeLabels": "Relative Wu-Xing-Beschriftungen anzeigen",
+  "facets.regulatingGuides": "Regulierenden Zyklus anzeigen",
+  "facets.wuxingHelp": "Die Phasenzuordnung hält deine Interpretation einer Notiz fest. Relative Beschriftungen vergleichen sie mit der fokussierten Notiz; sie ändern weder Phasen noch gespeicherte Verbindungen und belegen keine Ursache. Ein nicht zugeordneter oder widersprüchlicher Fokus liefert keine Referenzphase.",
+  "facets.cyclesHelp": "Durchgezogene Pfeile zeigen die Erzeugung: Holz → Feuer → Erde → Metall → Wasser → Holz. Gestrichelte Pfeile überspringen eine Phase und zeigen Regulierung. Beide sind dekorative Modellhilfen.",
+  "facets.relativeSame": "Was meine Phase teilt",
+  "facets.relativeGenerate": "Was ich erzeuge",
+  "facets.relativeRegulate": "Was ich reguliere",
+  "facets.relativeRegulated": "Was mich reguliert",
+  "facets.relativeGenerated": "Was mich erzeugt",
+  "facets.relativeUnavailable": "Referenzphase nicht verfügbar",
   "assignment.title": "Kategorie zuweisen",
   "assignment.undo": "Zuweisung rückgängig machen",
   "assignment.apply": "Kategorie zuweisen",

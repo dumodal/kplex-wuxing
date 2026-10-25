@@ -7,6 +7,16 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const traditionalChineseTranslations = {
+  "facets.relativeLabels": "顯示五行相對標籤",
+  "facets.regulatingGuides": "顯示相剋循環指引",
+  "facets.wuxingHelp": "五行歸類記錄你對筆記的詮釋。相對標籤將該行與目前焦點筆記的行比較；不會變更歸類或已記錄的連結，也不代表因果證據。未歸類或歸類衝突的焦點不提供參照行。",
+  "facets.cyclesHelp": "實線箭頭表示相生：木 → 火 → 土 → 金 → 水 → 木。虛線箭頭跨過一行表示相剋。兩者都是解釋模型的裝飾指引。",
+  "facets.relativeSame": "同我",
+  "facets.relativeGenerate": "我生",
+  "facets.relativeRegulate": "我剋",
+  "facets.relativeRegulated": "剋我",
+  "facets.relativeGenerated": "生我",
+  "facets.relativeUnavailable": "參照行無法取得",
   "assignment.title": "指派分類",
   "assignment.undo": "復原指派",
   "assignment.apply": "指派分類",

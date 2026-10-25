@@ -7,6 +7,16 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const japaneseTranslations = {
+  "facets.relativeLabels": "五行の相対ラベルを表示",
+  "facets.regulatingGuides": "相克の循環ガイドを表示",
+  "facets.wuxingHelp": "相の割り当てはノートに対するあなたの解釈です。相対ラベルはその相を注目中のノートの相と比較します。相や記録済みリンクを変更せず、因果関係の証拠にもなりません。注目中の相が未割り当て・競合の場合、参照相はありません。",
+  "facets.cyclesHelp": "実線の矢印は相生（木 → 火 → 土 → 金 → 水 → 木）を示します。破線は一つ先を飛ばす相克を示します。どちらもモデルを説明する装飾ガイドです。",
+  "facets.relativeSame": "私と同じ相",
+  "facets.relativeGenerate": "私が生むもの",
+  "facets.relativeRegulate": "私が制御するもの",
+  "facets.relativeRegulated": "私を制御するもの",
+  "facets.relativeGenerated": "私を生むもの",
+  "facets.relativeUnavailable": "参照相を利用できません",
   "assignment.title": "カテゴリを割り当て",
   "assignment.undo": "割り当てを元に戻す",
   "assignment.apply": "カテゴリを割り当て",
