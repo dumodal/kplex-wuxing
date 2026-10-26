@@ -255,11 +255,11 @@ test('the actual thought-corner control forwards modifier-bearing events while s
   /** Confirm the rendered graph connects the corner control to the tested opening owner. */
   const graphVisit=node=>{if(ts.isJsxAttribute(node)&&node.name.text==='cornerAction')corner=node.initializer.expression.whenTrue;ts.forEachChild(node,graphVisit);};graphVisit(source);assert(corner);
   const routing=ts.transpileModule(`const route=${corner.properties.find(p=>p.name.text==='onClick').initializer.getText(source)};`,{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
-  for(const occurrenceEditorPolicy of [false,true]){
+  for(const occurrenceEditorPolicy of [false,true])for(const central of [false,true]){
     let forwarded,request;const baseNode={page:{path:'B.md'},occurrenceId:'B1'};
-    const route=Function('occurrenceEditorPolicy','openCentralEditor','runNodeAction','baseNode','occurrenceKey',`${routing};return route;`)(occurrenceEditorPolicy,event=>{forwarded=event},(...args)=>{request=args},baseNode,node=>node.occurrenceId);
+    const route=Function('occurrenceEditorPolicy','isEditorOccurrence','openCentralEditor','runNodeAction','baseNode','occurrenceKey',`${routing};return route;`)(occurrenceEditorPolicy,()=>central,event=>{forwarded=event},(...args)=>{request=args},baseNode,node=>node.occurrenceId);
     const event={metaKey:true};route(event);
-    if(occurrenceEditorPolicy){assert.deepEqual(request,['editor.expand',baseNode.page,'B1']);assert.equal(forwarded,undefined)}
+    if(occurrenceEditorPolicy||!central){assert.deepEqual(request,['editor.expand',baseNode.page,'B1']);assert.equal(forwarded,undefined)}
     else{assert.equal(forwarded,event);assert.equal(request,undefined)}
   }
   let actual;const handler=Function('cornerAction',`${output};return handler;`)({onClick:event=>{actual=event;}});
