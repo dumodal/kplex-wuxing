@@ -13,12 +13,13 @@ export function renderPresetHelpSettings(app: App, body: HTMLElement, id: string
   change: (preset: FacetPreset, structural: boolean) => void, current: () => boolean, t: Translator, open = false): () => void {
   let alive = true, renderer: NativeMarkdownHelp | null = null;
   const section = body.createEl("details", {cls: "kplex-facet-help-settings", ...(open ? {attr: {open: ""}} : {})});section.createEl("summary", {text: t("facets.help")});
-  new Setting(section).setName(t("facets.help")).setDesc(t("facets.helpHint")).addTextArea(/** Native source is an ordinary editable value, never rendered HTML. */ input => {
+  const source = new Setting(section).setName(t("facets.help")).setDesc(t("facets.helpHint")).addTextArea(/** Native source occupies its own full-width row below the description. */ input => {
     input.inputEl.maxLength = MARKDOWN_HELP_LIMIT;input.inputEl.rows = 12;
     input.setValue(read().helpMarkdown ?? effectiveFacetHelp(id, read(), t)).onChange(/** Explicit blank source remains blank across locale changes. */ helpMarkdown => {
       if (alive && current()) change({...read(), helpMarkdown, helpSourceLocale: getLanguage() || "en"}, false);
     });
   });
+  source.settingEl.addClass("kplex-facet-help-source");
   const preview = section.createDiv({cls: "kplex-preset-help-preview"});
   new Setting(section).addButton(/** The same bounded native renderer serves Info and unsaved preview. */ button => button.setButtonText(t("facets.previewHelp"))
     .onClick(/** Preview reads only the detached draft and cannot acquire note data. */ () => {

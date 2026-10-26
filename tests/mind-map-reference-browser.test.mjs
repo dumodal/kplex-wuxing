@@ -7,6 +7,32 @@ import {plexViewBrowserModules} from './support/plexViewBrowser.mjs';
 import {canvasSceneFixture} from './support/canvasSceneFixture.mjs';
 const output=await plexViewBrowserModules({captureNotices:true});
 
+test('Mind Map hydrates canonical gate counts and cached branch status independently of expansion prefixes',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ index.viewScopeCoverage=()=>({coverage:'cached',prepared:false,complete:false,pending:false});
+ index.gateStats=()=>{work.gateReads++;return {top:{visibleCount:7,hasAny:true},bottom:{visibleCount:16,hasAny:true},left:{visibleCount:1,hasAny:true},right:{visibleCount:1,hasAny:true}}};
+ const ui=await mount(M.builtInPlexViews.resolve('mindmap')),root=()=>ui.container.querySelector('[data-kplex-keyboard-id="root"]');
+ const count=side=>root().querySelector('.gate-wrap-'+side+' .kplex-gate-count')?.textContent;
+ check(count('top')==='7'&&count('bottom')==='16'&&count('left')==='2','Exact canonical totals replace truncated incidence: '+root().textContent);
+ const status=root().querySelector('.kplex-thought-branch-status');check(status.textContent===plugin.translator('mindmap.partial')&&status.ariaLabel===plugin.translator('mindmap.partialHint'),'Known cached children have explanatory incomplete metadata status');
+ check(ui.container.querySelector('[data-kplex-path="B.md"]'),'Cached children remain visible');
+ check(work.body===0&&work.scans===0,'Count rendering never parses or scans');ui.close();return true})()`),true)}finally{await host.cleanup()}
+});
+
+test('Facets area width reflows measured cards into columns and back without semantic work',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ const ui=await mount(M.builtInPlexViews.resolve('wuxing')),id=JSON.stringify(['facets','wuxing','category','water']);
+ const cards=()=>['B.md','C.md'].map(path=>ui.container.querySelector('[data-kplex-path="'+path+'"]'));
+ const lefts=()=>cards().map(el=>Math.round(el.getBoundingClientRect().left));
+ const before={acquisitions:work.acquisitions,body:work.body,scans:work.scans};
+ ui.session.setAreaWidth(id,1000);ui.render();await wait();let positions=lefts();check(positions[0]!==positions[1],'Wide area should use multiple columns: '+JSON.stringify(positions));
+ ui.session.setAreaWidth(id,220);ui.render();await wait();positions=lefts();check(positions[0]===positions[1],'Narrow area returns to one column: '+JSON.stringify(positions));
+ check(work.acquisitions===before.acquisitions&&work.body===before.body&&work.scans===before.scans,'Presentation-only resizing adds no source work');
+ check(ui.props.activePath==='A.md','Resize preserves attention');ui.close();return true})()`),true)}finally{await host.cleanup()}
+});
+
 test('cycle click reveals the genuine earlier occurrence and explains it without attention/root/editor/source changes',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}

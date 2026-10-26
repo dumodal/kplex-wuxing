@@ -4848,6 +4848,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       branchStatus={visibleEdgeProjection.limited && baseNode === navigationNode() ? translate("mindmap.limited") : baseNode.branch?.reference ? translate("mindmap.reference") : baseNode.branch?.status === "loading" ? translate("mindmap.loading")
         : baseNode.branch?.status === "limited" ? translate("mindmap.limited") : baseNode.branch?.status === "partial" ? translate("mindmap.partial")
         : baseNode.branch?.status === "unavailable" ? translate("mindmap.unavailable") : undefined}
+      branchStatusHint={baseNode.branch?.reference ? translate("mindmap.cycleReference")
+        : baseNode.branch?.status === "partial" ? translate("mindmap.partialHint")
+        : baseNode.branch?.status === "unavailable" ? translate("mindmap.unavailableHint") : undefined}
       visual={hasCentralEditor ? undefined : nodeVisuals.get(baseNode.page.path)}
       content={hasCentralEditor ? <div className="kplex-central-editor-placeholder" aria-hidden="true" /> : undefined}
       cornerAction={canOpenCentralEditor ? {

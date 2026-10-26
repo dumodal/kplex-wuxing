@@ -61,3 +61,20 @@ test('the shared peer port displays the bounded aggregate without adding or dupl
  root.peerPort={side:'left',count:4,complete:false,shownCount:2};root.gateStats={top:{visibleCount:1,hasAny:true},bottom:{visibleCount:10,hasAny:true},left:{visibleCount:99,hasAny:true},right:{visibleCount:99,hasAny:true}};
  const stats=M.physicalGateStats(root);assert.deepEqual(stats.left,{visibleCount:4,complete:false,hasAny:true,shownCount:2});assert.equal(stats.bottom.visibleCount,10);assert.equal(stats.top.visibleCount,1);
 });
+
+test('visible Mind Map peer gates reuse canonical count proof independently of truncated branch incidence',()=>{
+ const f=fixture(),root=f.prepare().scene.nodes.find(node=>node.occurrenceId==='root');
+ root.peerPort={side:'left',count:2,complete:false};let calls=0;
+ const gates={top:{visibleCount:3,hasAny:true},bottom:{visibleCount:3,hasAny:true},left:{visibleCount:7,hasAny:true,complete:false,coverage:'local'},right:{visibleCount:9,hasAny:true,complete:false,coverage:'local'}};
+ const source={get:f.source.get,gateStats:()=>{calls++;return gates}};
+ const node=M.projectNodeCounts(root,source),stats=M.physicalGateStats(node);
+ assert.equal(calls,1,'One existing count-owner read; no additional source or role traversal');
+ assert.equal(stats.left.visibleCount,16);assert.equal(stats.left.coverage,'local');assert.equal(stats.left.complete,false);
+ assert.equal(stats.top.visibleCount,3);assert.equal(stats.bottom.visibleCount,3);assert.equal(root.peerPort.count,2,'Projection remains detached');
+ gates.left={visibleCount:0,hasAny:true,complete:true};gates.right={visibleCount:0,hasAny:false,complete:true};
+ const zero=M.physicalGateStats(M.projectNodeCounts(root,source)).left;
+ assert.equal(zero.visibleCount,0);assert.equal(zero.complete,true);assert.equal(zero.hasAny,true,'Filtered relationship fill survives zero visible peers');
+ gates.right={visibleCount:0,hasAny:false,complete:false,countUnavailable:true};
+ assert.equal(M.physicalGateStats(M.projectNodeCounts(root,source)).left.countUnavailable,true,'Missing metadata cannot become certified zero');
+ assert.equal(M.projectNodeCounts({...root,page:{...root.page,transient:{kind:'section'}}},source).peerPort.count,2,'Synthetic section proof is never substituted');
+});

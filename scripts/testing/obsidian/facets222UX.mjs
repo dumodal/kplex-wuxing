@@ -41,6 +41,11 @@ export async function acceptFacets222UX(x){
  check(footer.querySelectorAll('.setting-item').length===1&&buttons.length>=7,'Preset actions do not share one row');
  const tops=buttons.map(el=>Math.round(el.getBoundingClientRect().top));check(Math.max(...tops)-Math.min(...tops)<3,'Wide-screen footer wrapped');
  check(buttons.every(el=>el.getAttribute('aria-label')&&el.querySelector('svg')&&!el.hasAttribute('title')),'Icon/name/tooltip contract failed');
+ const help=form.querySelector('.kplex-facet-help-settings');help.open=true;await wait(120);
+ const sourceRow=help.querySelector('.kplex-facet-help-source'),info=sourceRow.querySelector('.setting-item-info').getBoundingClientRect(),area=sourceRow.querySelector('textarea').getBoundingClientRect();
+ check(area.top>=info.bottom&&area.width>=sourceRow.getBoundingClientRect().width-4,'Help textarea does not fill a separate row below its description');
+ cases.push({id:'native-preset-help-full-width-below-description',width:area.width,rowWidth:sourceRow.getBoundingClientRect().width});
+ help.open=false;
  await capture('preset-editor',form);cases.push({id:'native-wide-preset-editor-single-icon-row',width:form.getBoundingClientRect().width,buttons:buttons.length});
  const before=JSON.stringify(p.readPortableSharingState().presets.wuxing),attention=center(host);
  await wait(300);const stop=quiet();
@@ -66,6 +71,17 @@ export async function acceptFacets222UX(x){
  await capture('format-help',guide);await close(guide);guideStop('native-import-format-help-zero-source-work');
  await close(incoming);await close(manager());restoreSettingsBounds();if(app.setting.isOpen)app.setting.close();await wait(250);
  cases.push({id:'native-import-paste-file-guidance-single-footer-and-readonly-help'});
+ await reveal(host);await action('view.areas.toggle');
+ const wood=JSON.stringify(['facets','wuxing','category','wood']);
+ const widthHandle=()=>root(host).querySelector('.'+doc.defaultView.CSS.escape('kplex-area-'+wood)+' .is-width-handle');
+ const columns=()=>['Concept','Concept2'].map(name=>[...root(host).querySelectorAll('.kplex-thought')].find(el=>el.dataset.kplexPath===path(name))?.getBoundingClientRect().x);
+ const columnStop=quiet();
+ for(const [keyCode,multiple]of [['End',true],['Home',false]]){
+  check(widthHandle(),'Native shared width control absent');widthHandle().focus();await key(keyCode);await wait(200);
+  const xs=columns();check(xs.every(Number.isFinite)&&(xs[0]!==xs[1])===multiple,'Native area width did not reflow measured columns: '+JSON.stringify({keyCode,xs}));
+ }
+ columnStop('native-facets-area-columns-zero-source-work');cases.push({id:'native-facets-width-keyboard-one-and-multiple-columns'});
+ await action('view.areas.toggle');
  // Real incremental note edits are outside zero-work presentation intervals.
  const child=p.settings.hierarchy.children[0],parents=[];
  for(let i=0;i<3;i++){
@@ -77,6 +93,11 @@ export async function acceptFacets222UX(x){
  await choose(host,'mindmap');panel(host).querySelector('.kplex-filter-panel-header button').click();session.setAreaHeight('parentHeight',800);await reveal(host);
  const card=name=>[...root(host).querySelectorAll('.kplex-thought')].find(el=>el.dataset.kplexPath===path(name)&&!el.querySelector('.kplex-reference-label'));
  await until(()=>parents.every((_,i)=>card('Parent '+i)),'Native parent occurrences absent');
+ await until(()=>!p.index.hasActiveSemanticPreparation(),'Native Mind Map metadata did not settle');
+ const rootCard=root(host).querySelector('[data-kplex-keyboard-id="root"]'),gates=p.index.gateStats(p.index.get(path('Memory')));
+ const expected={top:gates.top.visibleCount,bottom:gates.bottom.visibleCount,left:gates.left.visibleCount+gates.right.visibleCount};
+ for(const [side,value]of Object.entries(expected))check(rootCard.querySelector('.gate-wrap-'+side+' .kplex-gate-count')?.textContent===String(value),'Native Mind Map count differs from canonical owner: '+side);
+ cases.push({id:'native-mindmap-canonical-gate-counts',expected});
  await action('selection.center');await action('graph.focus');await key('Up',['alt']);await key('Right');
  check(selected()?.node.path?.includes('/Parent '),'Native arrow selection did not enter a parent');
  const picked=selected().node.path,initialRoot=session.layoutRoot(path('Memory'));await key('Enter');await until(()=>session.state.expanded.includes(selected()?.occurrenceId),'Enter did not expand selected parent');

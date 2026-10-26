@@ -206,3 +206,11 @@ Mind Map's maximum depth defaults to 10 and accepts up to 20. Maximum displayed 
 ## Maintainer depth admission correction
 
 Mind Map declares its existing hard maximum of 20 through optional hierarchy.maximumDepth; its configured default remains 10. Shared scene admission, ancestor visibility/selection and cycle-reference reveal honor that declaration. Other definitions retain 8 when omitted. The separate eight non-root source-scope budget is unchanged and may stop expansion earlier; its terminal frontier remains visible. See [depth correction evidence](validation/facets-222-depth-correction.json).
+
+### Gate counts and branch metadata
+
+Gate totals use the same canonical count owner as Compass, mapped to Mind Map's physical ports. Its combined peer port adds the disjoint left/previous and right/next totals; a traversal prefix is not a count. Exact counts can be known before the full branch metadata is loaded. Missing count inputs retain the shared unavailable/cached/local presentation and never become a certified zero or relationship-edit permission.
+
+**Incomplete metadata** means known children are usable, but the full branch has not been certified. **Metadata unavailable** means no usable branch metadata is available for that expansion; it does not prove the note has no children. Their tooltips explain this distinction. **Expansion limit** remains separate: configured depth/display limits and the bounded source-scope budget can stop expansion. Counts describe canonical notes, independently of display truncation and folding.
+
+**Cycle reference** means the note appears earlier on this same branch. An ordinary click reveals that nearest earlier occurrence and explains the cycle. A note appearing on a different branch is an independent occurrence, not automatically a cycle reference.

@@ -121,7 +121,7 @@ test('measured parent columns occupy a bounded area above root and reserve the h
 test('fold and generation reducers are occurrence-scoped, bounded, and do not confuse unknown empty incidence with a proven leaf',()=>{
  const f=graphInput({R:['B','C'],B:['D'],C:['D']},{scope:id=>id==='B'?{coverage:'cached',prepared:false,complete:false,pending:false}:{coverage:'local',prepared:true,complete:true,pending:false}});
  let p=f.project();const B=p.occurrences.find(row=>row.nodeId==='B');assert.equal(B.branch.canExpand,true);assert.equal(B.branch.expanded,false);
- f.input.state=M.mindMapViewDefinition.hierarchy.reduce(null,p,{kind:'toggle',occurrenceId:B.id});p=f.project();assert(p.occurrences.some(row=>row.nodeId==='D'));assert.deepEqual(p.preparation.parents,['B']);assert.equal(p.occurrences.find(row=>row.nodeId==='B').branch.status,'unavailable');
+ f.input.state=M.mindMapViewDefinition.hierarchy.reduce(null,p,{kind:'toggle',occurrenceId:B.id});p=f.project();assert(p.occurrences.some(row=>row.nodeId==='D'));assert.deepEqual(p.preparation.parents,['B']);assert.equal(p.occurrences.find(row=>row.nodeId==='B').branch.status,'partial','Known cached children are usable even before full metadata preparation');
  f.input.state=M.mindMapViewDefinition.hierarchy.reduce(f.input.state,p,{kind:'expand-generation'});p=f.project();assert.equal(p.occurrences.filter(row=>row.nodeId==='D').length,2);
  f.input.state=M.mindMapViewDefinition.hierarchy.reduce(f.input.state,p,{kind:'collapse-generation'});p=f.project();assert.equal(p.occurrences.filter(row=>row.nodeId==='D').length,0);
  assert.equal(M.mindMapViewDefinition.hierarchy.reduce(f.input.state,p,{kind:'toggle',occurrenceId:'foreign'}),null);

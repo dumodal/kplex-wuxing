@@ -77,10 +77,19 @@ export function presentationPage(page: GraphPage, index: Pick<GraphIndex, "get">
   return page.transient.actualPath ? index.get(page.transient.actualPath) ?? null : null;
 }
 
-/** Read current gate counts without changing geometry, synthetic heading gates or the unused legacy total. */
+/** Read current canonical counts without changing geometry or count/write authority. The shared
+ * resolver makes left/previous and right/next incidence disjoint, so a merged peer port sums
+ * those two certified gate totals rather than the view's truncated traversal prefix. */
 export function projectNodeCounts(node: PositionedNode, index: Pick<GraphIndex, "get" | "gateStats">): PositionedNode {
   const page = presentationPage(node.page, index);
-  return page ? { ...node, gateStats: index.gateStats(page) } : node;
+  if (!page) return node;
+  const gateStats = index.gateStats(page), left = gateStats.left, right = gateStats.right;
+  return {...node, gateStats, ...(node.peerPort ? {peerPort: {...node.peerPort,
+    count: left.visibleCount + right.visibleCount, hasAny: left.hasAny || right.hasAny,
+    complete: left.complete !== false && right.complete !== false,
+    countUnavailable: left.countUnavailable || right.countUnavailable,
+    coverage: left.coverage === "cached" || right.coverage === "cached" ? "cached" as const
+      : left.coverage === "local" || right.coverage === "local" ? "local" as const : undefined}} : {})};
 }
 
 /** Include partially clipped rows while excluding offscreen rows from optional count projection. */
@@ -110,7 +119,9 @@ export function physicalGateStats(node: Pick<PositionedNode, "gateStats" | "phys
   }
   if (node.peerPort) {
     const peer = node.peerPort;
-    result[peer.side] = {visibleCount: peer.count, complete: peer.complete, hasAny: peer.count > 0, shownCount: peer.shownCount};
+    result[peer.side] = {visibleCount: peer.count, complete: peer.complete, hasAny: peer.hasAny ?? peer.count > 0,
+      shownCount: peer.shownCount, ...(peer.coverage ? {coverage: peer.coverage} : {}),
+      ...(peer.countUnavailable ? {countUnavailable: true} : {})};
   }
   return result;
 }

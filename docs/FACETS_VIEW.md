@@ -653,3 +653,9 @@ The maintainer's supplied drawings are the source for the requested ACE wording 
 
 
 Current area behavior: bottom-edge pointer direction follows the existing declared resizeEdge. All status regions share bounded per-canvas resizing with compact220 defaults and independent160-1200 overrides. The status column sits beyond the measured category envelope with extra spacing. Literal area labels are preserved in the shared accessible controls.
+
+## Responsive area contents and Help editing
+
+Area width uses the shared measured grid: cards automatically fill multiple columns when their measured widths, badge reserves, gaps and padding fit. Narrowing the area returns to fewer columns. No camera scale, classification, property read or semantic rebuild is needed to choose columns. Width remains per-canvas state, separate from saved preset defaults.
+
+The preset Help source occupies a full-width row below its description. It retains the existing detached draft, native preview, Save/Cancel and stale-owner guards.

@@ -58,6 +58,7 @@ export function ThoughtNode({
   onContextMenu,
   sectionFold,
   branchStatus,
+  branchStatusHint,
   badgeColorRevision = 0,
   visual,
   content,
@@ -105,6 +106,8 @@ export function ThoughtNode({
   };
   /** Optional hierarchy coverage/reference label; canonical note text and editor content are unchanged. */
   branchStatus?: string;
+  /** Explanation of coverage/cycle status, independent of counts and relationship authority. */
+  branchStatusHint?: string;
   badgeColorRevision?: number;
 }) {
   const accessibleNameId = useId();
@@ -203,7 +206,8 @@ export function ThoughtNode({
     aria-labelledby={group ? undefined : accessibleNameId}
   >
     <span id={accessibleNameId} className="kplex-accessible-name">{group ? node.label : translate("node.accessibleLabel", { label: node.label, path: node.page.path })}
-      {node.viewBadge ? ` ${node.viewBadge.label}. ${node.viewBadge.description ?? node.viewDescription ?? ""}` : node.viewDescription ? ` ${node.viewDescription}` : ""}</span>
+      {node.viewBadge ? ` ${node.viewBadge.label}. ${node.viewBadge.description ?? node.viewDescription ?? ""}` : node.viewDescription ? ` ${node.viewDescription}` : ""}
+      {branchStatusHint ? ` ${branchStatusHint}` : ""}</span>
     {node.viewBadge && <MeasuredNodeBadge badge={node.viewBadge} colorRevision={badgeColorRevision} />}
     {content ? <div
       className="kplex-thought-embedded-content"
@@ -250,7 +254,8 @@ export function ThoughtNode({
       onPointerDown={(e: ReactPointerEvent<HTMLButtonElement>) => { e.preventDefault(); e.stopPropagation(); }}
       onClick={(e: MouseEvent<HTMLButtonElement>) => { e.preventDefault(); e.stopPropagation(); sectionFold.onToggle(); }}
     />}
-    {branchStatus && <span className="kplex-thought-branch-status">{branchStatus}</span>}
+    {branchStatus && <span className="kplex-thought-branch-status" aria-label={branchStatusHint}
+      data-kplex-control-tooltip={branchStatusHint ? true : undefined}>{branchStatus}</span>}
     {group && <span className="kplex-group-count" aria-hidden="true">{group.groupMembers?.length}</span>}
     {!group && GATES.filter(gate => !node.physicalPorts || Boolean(node.physicalPorts[gate])).map((gate) => {
       // Structural nodes have no lateral relationship vocabulary, even before other counts close.

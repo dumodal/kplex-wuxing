@@ -3939,6 +3939,9 @@ button.kplex-sidecar-unfold-plex:focus-visible,
 .kplex-markdown-help-content { overflow-wrap: break-word; }
 .kplex-markdown-help-content pre { overflow-x: auto; }
 .kplex-facet-help-settings textarea { width: 100%; min-height: 180px; }
+.kplex-facet-help-source { flex-direction: column; align-items: stretch; gap: 12px; }
+.kplex-facet-help-source .setting-item-info { margin-right: 0; }
+.kplex-facet-help-source .setting-item-control { width: 100%; }
 .kplex-preset-help-preview { padding: 12px; }
 
 .kplex-view-region.is-water rect { fill: var(--color-blue); fill-opacity: 0.06; }

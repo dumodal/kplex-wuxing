@@ -57,7 +57,11 @@ export function projectMindMap(input: PlexViewInput): PlexProjection | null {
     const canExpand = !reference && work.depth < maximumDepth && !(scope.complete && probe.coverage !== "unavailable" && probe.items.length === 0 && !probe.truncated);
     const admitted = wantExpanded && canExpand && admitScope(canonical);
     const rows = admitted ? readBranches(canonical, Math.min(input.maximum, 128), work.depth === 0) : probe;
-    let status: PlexBranch["status"] = reference || !wantExpanded ? "ready" : scope.pending ? "loading" : rows.coverage === "unavailable" ? "unavailable" : scope.complete ? "ready" : scope.prepared ? "partial" : "unavailable";
+    // Cached children remain usable before their full scope is prepared. Missing completeness
+    // does not mean the displayed branch is unavailable, nor does a count-only proof certify it.
+    let status: PlexBranch["status"] = reference || !wantExpanded ? "ready" : scope.pending ? "loading"
+      : rows.coverage === "unavailable" ? "unavailable" : scope.complete ? "ready"
+        : scope.prepared || rows.items.length > 0 ? "partial" : "unavailable";
     if (wantExpanded && canExpand && !admitted || admitted && rows.truncated || !reference && work.depth >= maximumDepth
       && (rows.items.length > 0 || !scope.complete)) {status = "limited"; truncated = true;}
     const children: {id: string; lineage: readonly NodeId[]; relation: PlexViewRelation}[] = [];
