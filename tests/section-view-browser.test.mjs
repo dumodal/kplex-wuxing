@@ -11,6 +11,37 @@ const actionSurface=`
   readSnapshot:()=>({mounted:true,visible:true,windowId:'section-test',center:M.actionNodeRef(pages.get(a.props.activePath)),selected:a.ports.current.readSelected(),focusRegion:'graph',interactionRevision:0,viewRevision:a.session.getSnapshot()})});
 `;
 
+for(const view of ['classic','mindmap'])test(`${view}: saved section relationships remain visible and physically attached while evidence is pending`,async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(String.raw`(async()=>{${canvasSceneFixture}${actionSurface}
+ settings.inferAllLinksAsFriends=false;settings.inverseInfer=false;settings.renderSiblings=false;
+ const file=pages.get('A.md').file,body='# First\n[[B]]\n# Second\n[[C]]';file.stat.size=body.length;
+ fieldCaches.set('A.md',{frontmatter:{},links:[...body.matchAll(/\[\[([^\]]+)\]\]/g)].map(match=>({link:match[1],position:{start:{line:body.slice(0,match.index).split('\n').length-1,col:0,offset:match.index},end:{offset:match.index+match[0].length}}}))});
+ plugin.app.vault.cachedRead=async requested=>{check(requested===file,'Only central source can be read');work.body++;return body};
+ plugin.app.metadataCache.getFirstLinkpathDest=link=>pages.get(link+'.md')?.file??null;
+ index.evidenceFrom=()=>[];index.publishedInferAllLinksAsFriends=()=>false;
+ const canonical=(page,role)=>rows(page,role).map(row=>({...row,relationType:2,linkDirection:2}));
+ index.neighbours=canonical;index.getNeighborhood=path=>({center:pages.get(path),parents:canonical(pages.get(path),'parent'),children:canonical(pages.get(path),'child'),leftFriends:[],rightFriends:[],siblings:[]});
+ let cached=true,retired=false;index.getSectionPreviewNeighborhood=path=>cached?{...index.getNeighborhood(path),children:index.getNeighborhood(path).children.filter(row=>!retired||row.page.path!=='B.md')}:null;
+ const definition=M.builtInPlexViews.resolve('${view}'),project=definition.project,projections=[];
+ definition.project=input=>{const p=project(input);projections.push(p);return p};
+ const a=await mount(definition),release=register(a),root=()=>a.container.querySelector('[data-kplex-path="A.md"]');
+ root().querySelector('.kplex-section-fold-handle:not(.is-branch-disclosure)').click();for(let n=0;n<5;n++)await wait();
+ check(a.container.querySelectorAll('.is-kplex-section').length===2,'Both headings shown before hydration');
+ if('${view}'==='classic'){
+  check(a.container.querySelector('[data-kplex-path$=":B.md"]')&&a.container.querySelector('[data-kplex-path$=":C.md"]'),'Compass outline retains both link targets before hydration');
+ }else{
+  const edges=projections.at(-1).edges;check(edges.length===2&&edges.every(edge=>edge.sourceSection),'Mind Map canonical edges immediately attach to sections');
+  check(edges[0].sourceSection.sectionId!==edges[1].sourceSection.sectionId,'Each connector uses its own heading');
+ }
+ check(work.body===1&&work.scans===0,'Expansion reads only the source once');
+ a.props.renderRevision++;a.render();await wait();check(work.body===1,'Passive presentation never rereads Markdown');
+ retired=true;a.props.renderRevision++;a.render();await wait();
+ if('${view}'==='classic')check(!a.container.querySelector('[data-kplex-path$=":B.md"]'),'A removed canonical row cannot be resurrected from cached local evidence');
+ release();a.close();plugin.actionManager.dispose();style.remove();return true;
+ })()`),true)}finally{await host.cleanup()}
+});
+
 test('Mind Map section labels reserve the same heading chrome as Compass without clipping short names',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(String.raw`(async()=>{${canvasSceneFixture}${actionSurface}

@@ -19,14 +19,13 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR222 heading fix: implementation and native evidence complete
 
-Branch2026-10-25-facets-layouts-and-sharing; runtimecd82da8d95acf69446f0fa4fa5b8b83107127768; accepted main7064644 included. Final documentation checkpoint changes no production/tests/scripts/packages/styles. Keep222 draft/open/unmerged. No production files/settings/workspace/deployment changed. No merge/release/force-push.
+# PR222 section hydration fix: focused verification complete
 
-Shared sectionNodeSize fixes short-heading clipping by reserving marker/padding/readable width across plugin views. Compass keeps exact density-adjusted geometry. Configured text/width limits remain; source text/provenance/parser/index/editor ownership are unchanged. Earlier canonical counts, central section source policy and independent controls remain.
+Starting head bebbb9a58449a9be53fcc43917ce297e24eca459, branch 2026-10-25-facets-layouts-and-sharing, accepted main7064644 included. Keep draft/open/unmerged. No production deployment or file/settings/workspace changes.
 
-Actual current results:55 focused tests PASS with real text-fit at several font sizes, Compass parity and editor admission; official scanner/real Node22.22.2 build PASS. Native UX31/pairs13/editor11 PASS55 on identical main6c56ff064a927ad5b43bffc4958409c1a9630f48a2d72cacfd67e8d3980a05dd/styles19a1bb1a25bfbc6db417420e2a07a281e50b48cb5f121ff52d486d9cc3dd47d5. All restored9configs/117contents/original workspace/window/digest; final native13:49:46.496Z. Receipts docs/validation/section-heading-222-native-summary.json and section-heading-222-2026-10-26.md.
+Saved adjacency already supports Compass while detailed evidence loads privately. Reprojection erased explicit source placements against the empty evidence store. GraphIndex.getSectionPreviewNeighborhood exposes only that existing read; SectionPreview retains canonical rows and source-owned physical occurrences without creating indexed/editable evidence. Existing shared owners and source bounds remain. Native identity/stat/metadata fences retire stale placements.
 
-Clean runtime-head full verify:obsidian and exact final documentation-head CI conclusions, actual suite totals, final artifact equality/restoration and remote readback are recorded in PR222 before final delivery. No incomplete check is presented as a pass. This documentation publication overlaps those checks; runtime/tests remain frozen. Earlier full3223/native54/CI553/CI554 receipts retain their pre-heading attribution and do not substitute for new-head acceptance.
+Actual Node22.22.2:39 affected section/browser/anchor/scene/source-replay tests PASS;2 real-IDB held-hydration eager/On-demand regressions PASS; installed type check, touched-source scanner and production build PASS. Native driver adds controlled missing-evidence rendering checks for both views. Native/full/exact-head CI still pending; do not substitute previous3225/native55/CI556 receipts for this changed artifact.
 
-Coverage limits: Mac/physical mobile/minimumhost/OSclipboard, known215 fresh-popout Sidecar/two simultaneous editor-Sidecar pairs/application restart. Priority manual follow-ups: Mac section/editor/focus/popout, physical touch, minimum host. No additional source work or partner-adoption gate. Await maintainer review after final PR verification readback.
+Details: docs/validation/section-preview-222-2026-10-26.md. Final exact head, full/native results, artifact hashes, restoration and remote readback will be reported in PR222. Preserve Mac/physical mobile/minimum-host/OS clipboard and known215 limits. Highest-risk manual follow-ups remain Mac sections/editor/focus/popout, physical touch and minimum host.

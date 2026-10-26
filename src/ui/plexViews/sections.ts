@@ -55,6 +55,13 @@ export function createPlexSectionViewContext(expansion: CentralSectionExpansion,
   };
   append(expansion.centerNeighborhood, null);
   for (const row of expansion.sections) {if (overflow) return null;append(row.neighborhood, row.id);}
+  // A saved canonical edge can be placed immediately using this current file's physical body
+  // occurrence. These read-only placements are not RelationshipExplanation/editable evidence.
+  for (const placement of expansion.previewPlacements ?? []) {
+    if (provenance.length >= 4096) return null;
+    const key = JSON.stringify([placement.sectionId, placement.targetPath, placement.role]);
+    if (!seen.has(key)) {seen.add(key);provenance.push({sectionId: placement.sectionId, target: nodeId(placement.targetPath), role: placement.role});}
+  }
   if (overflow) return null;
   const snapshot: PlexSectionSnapshot = {documentId: nodeId(path), path, revision, rows, visible, provenance};
   if (!validPlexSectionSnapshot(snapshot) || !isCurrent()) return null;

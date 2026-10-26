@@ -6511,3 +6511,8 @@ Maintainer supplied new clipping repro. Shared sectionNodeSize reserves marker/p
 ### PR222 heading documentation delivery checkpoint (2026-10-26)
 
 Freeze production/tests/scripts/packages/styles atcd82da8 while required full verification runs. Publish final documentation-only checkpoint concurrently so exact-head CI can cover the unchanged code without an extra sequential verification cycle.55 focused and55 native assertions remain actual passes; no full/CI conclusion is inferred before completion. Actual runtime full verification, final exact-head CI, artifact equality, restoration and remote readback are reported in PR222 before delivery. No more source edits planned absent a failure. Mac/physical mobile/minimum-host and known215 limitations remain explicit; highest-risk native section/editor workflows already pass Windows, with separate platform checks recommended.
+
+
+### PR222 section preview checkpoint (2026-10-26)
+
+Fix source-owned section placement during saved-adjacency/private-evidence hydration. Add narrow read-only GraphIndex preview neighborhood plus presentation composition in SectionPreview; retain canonical rows/roles/direction/style without fabricating indexed/editable evidence. Existing parser/resolver/source/index/renderer/editor owners remain. File/stat/native metadata identity fence placements; loaded provenance and canonical removals win.39 affected tests and2 real-IDB held-evidence cases PASS on Node22.22.2, installed types/scanner/production build PASS. Native/full/CI pending and separately attributed in PR222. No production deployment. Highest-risk workflow: cold saved preview switching Compass outline/Mind Map; exact-build Windows checks next, Mac/mobile/minimum host remain separate. No merge/release.

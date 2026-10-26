@@ -128,7 +128,7 @@ export async function acceptFacets222UX(x){
  // Only this controller's generated root is edited; ordinary incremental indexing settles
  // before measuring presentation-only heading folds and native editor coexistence.
  const memoryFile=app.vault.getFileByPath(path('Memory'));
- await app.vault.modify(memoryFile,(await app.vault.read(memoryFile))+'\n## Summary\nRoot outline text.\n## Links\nMore root outline text.\n## Notes\nAdditional outline text.\n');
+ await app.vault.modify(memoryFile,(await app.vault.read(memoryFile))+'\n## Summary\n[['+path('Outward 0')+']]\n## Links\n[['+path('Outward 1')+']]\n## Notes\nAdditional outline text.\n');
  await until(()=>(app.metadataCache.getFileCache(memoryFile)?.headings?.length??0)>=3&&!p.index.hasActiveSemanticPreparation(),'Root note edit did not settle');await wait(250);
  const central=()=>root(host).querySelector('[data-kplex-keyboard-id="root"]');
  const sectionControl=()=>central().querySelector('.kplex-section-fold-handle:not(.is-branch-disclosure)');
@@ -186,6 +186,33 @@ export async function acceptFacets222UX(x){
  await choose(host,'mindmap');panel(host).querySelector('.kplex-filter-panel-header button').click();
  p.notifyNavigation(path('Memory'),host);await until(()=>center(host)===path('Memory'),'Owned attention did not restore');
  cases.push({id:'native-facets-sections-disabled-after-view-switch'});
+ // Controlled native presentation interval: forward the actual canonical neighborhood while
+ // withholding detailed evidence. Genuine private snapshot holds are covered by the real-IDB
+ // browser regression; this checks exact-build native rendering, not whole-app restart timing.
+ const sourceEvidence=p.index.evidenceFrom,savedRead=p.index.getSectionPreviewNeighborhood;
+ let restoredPreview=false;
+ const restorePreview=()=>{if(restoredPreview)return;restoredPreview=true;p.index.evidenceFrom=sourceEvidence;p.index.getSectionPreviewNeighborhood=savedRead;p.index.notifyPresentation()};
+ restores.push(restorePreview);
+ p.index.evidenceFrom=function(id){return id===memoryFile.path?[]:sourceEvidence.call(this,id)};
+ p.index.getSectionPreviewNeighborhood=function(id){return id===memoryFile.path?this.getNeighborhood(id):savedRead.call(this,id)};
+ try{
+  await choose(host,'classic');panel(host).querySelector('.kplex-filter-panel-header button').click();await until(compassSections,'Preview Compass central toggle absent');
+  await click(compassSections());
+  const previewTarget=name=>[...root(host).querySelectorAll('.kplex-thought')].find(el=>el.dataset.kplexPath?.startsWith('kplex-section-target:')&&el.dataset.kplexPath.endsWith(':'+path(name)));
+  await until(()=>previewTarget('Outward 0')&&previewTarget('Outward 1'),'Compass dropped section targets while evidence was withheld');
+  cases.push({id:'native-compass-outline-retains-saved-targets-before-evidence',controlledEvidenceHold:true});
+  await choose(host,'mindmap');panel(host).querySelector('.kplex-filter-panel-header button').click();await until(sectionControl,'Preview Mind Map central toggle absent');
+  if(!headings().length)await click(sectionControl());await until(()=>headings().some(el=>el.querySelector('.kplex-thought-text')?.textContent==='Summary'),'Preview outline absent');
+  await action('view.fit');await wait(100);
+  for(const [name,label]of [['Outward 0','Summary'],['Outward 1','Links']]){
+   const id=JSON.stringify([memoryFile.path,path(name)]),edge=[...root(host).querySelectorAll('[data-kplex-edge-id]')].find(el=>el.dataset.kplexEdgeId===id);
+   const heading=headings().find(el=>el.querySelector('.kplex-thought-text')?.textContent===label);check(edge&&heading,'Preview canonical edge/heading absent');
+   const start=edge.getPointAtLength(0),point=new doc.defaultView.DOMPoint(start.x,start.y).matrixTransform(edge.getScreenCTM()),box=heading.getBoundingClientRect();
+   check(Math.abs(point.x-(box.left+box.right)/2)<3&&Math.abs(point.y-box.bottom)<3,'Mind Map edge starts at root instead of '+label+' while evidence is withheld');
+  }
+  cases.push({id:'native-mindmap-saved-connectors-start-at-physical-sections-before-evidence',controlledEvidenceHold:true});
+  await wait(250);const previewStop=quiet();p.index.notifyPresentation();await wait(250);previewStop('native-preview-section-presentation-zero-source-work');
+ }finally{restorePreview();}
  // The root does not consume a non-root scope. Eight admitted branch scopes can therefore
  // expose depth9; host admission must preserve that card without enlarging source demand.
  await wait(250);const depthSettingStop=quiet();await p.updateCanvasViewSetting('mindmap','maximumDepth',20);await wait(160);
