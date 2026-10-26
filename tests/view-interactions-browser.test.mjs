@@ -53,7 +53,10 @@ test('touch disclosure keeps a 16px symbol inside an isolated 44px hit target an
   const control=ui.container.querySelector('[data-kplex-keyboard-id="root"] .is-branch-disclosure'),box=control.getBoundingClientRect(),symbol=control.querySelector('.kplex-branch-disclosure-symbol').getBoundingClientRect();
   check(box.width===44&&box.height===44&&symbol.width===16&&symbol.height===16,'Small visual symbol / larger measured touch target');
   const overlaps=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
-  for(const card of ui.container.querySelectorAll('.kplex-thought'))check(!overlaps(box,card.getBoundingClientRect()),'Touch target cannot steal a thought-body tap');
+  const rootCard=ui.container.querySelector('[data-kplex-keyboard-id="root"]'),rootBox=rootCard.getBoundingClientRect();
+  check(symbol.left<rootBox.right&&symbol.right>rootBox.right&&symbol.top<rootBox.bottom&&symbol.bottom>rootBox.bottom,'Visible glyph must straddle the note corner');
+  for(const card of ui.container.querySelectorAll('.kplex-thought')){const r=card.getBoundingClientRect();if(!overlaps(box,r))continue;
+   check(card===rootCard&&Math.max(box.left,r.left)>=symbol.left&&Math.min(box.right,r.right)<=symbol.right&&Math.max(box.top,r.top)>=symbol.top&&Math.min(box.bottom,r.bottom)<=symbol.bottom,'Only the visible corner glyph may overlap its own note; the transparent target must not steal body/adjacent-node taps');}
   for(const gate of ui.container.querySelectorAll('.kplex-gate'))check(!overlaps(box,gate.getBoundingClientRect()),'Touch target cannot steal a gate gesture');
   window.interactionFixture.point={x:box.left+36,y:box.top+36};window.interactionFixture.events=[];
   check(document.elementFromPoint(window.interactionFixture.point.x,window.interactionFixture.point.y)===control,'Trusted tap must target the actual visible transparent hit area');
@@ -68,4 +71,15 @@ test('touch disclosure keeps a 16px symbol inside an isolated 44px hit target an
   await host.evaluate(`(()=>{const f=window.interactionFixture;if(f){f.releases.forEach(release=>release());f.ui.close();f.plugin.actionManager.dispose();f.style.remove();delete window.interactionFixture;}return true})()`);
   await host.cleanup();
  }
+});
+
+for(const view of ['classic','mindmap','wuxing'])test(`${view}: every eligible note receives the shared editor control`,async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert(await host.evaluate(`(async()=>{${canvasSceneFixture}${register}
+ const ui=attach(await mount(M.builtInPlexViews.resolve('${view}')));
+ try{const cards=[...ui.container.querySelectorAll('.kplex-thought')];check(cards.length>=3,'Real note fixture');
+ for(const card of cards)check(card.querySelector('.kplex-thought-corner-action:not(:disabled)'),'Eligible note lacks shared editor control');
+ if('${view}'==='mindmap'){const card=cards.find(card=>card.querySelector('.is-branch-disclosure')),r=card.getBoundingClientRect(),f=card.querySelector('.kplex-branch-disclosure-symbol').getBoundingClientRect();
+ check(f.width===16&&f.height===16&&f.left<r.right&&f.right>r.right&&f.top<r.bottom&&f.bottom>r.bottom,'Small desktop disclosure belongs on the node corner');}
+ return true;}finally{releases.forEach(release=>release());ui.close();plugin.actionManager.dispose();style.remove()}})()`));}finally{await host.cleanup();}
 });

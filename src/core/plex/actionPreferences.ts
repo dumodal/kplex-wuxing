@@ -32,7 +32,7 @@ export const ACTION_BINDING_DEFAULTS: Readonly<Partial<Record<ActionId, readonly
   "selection.move.up": [key("ArrowUp")], "selection.move.down": [key("ArrowDown")], "selection.move.left": [key("ArrowLeft")], "selection.move.right": [key("ArrowRight")],
   "selection.section.up": [key("ArrowUp", "alt")], "selection.section.down": [key("ArrowDown", "alt")], "selection.section.left": [key("ArrowLeft", "alt")], "selection.section.right": [key("ArrowRight", "alt")],
   "node.activate": [key("Enter")], "search.focus": [code("Slash", "alt")], "find.focus": [key("f", "mod")], "relationship.create-center.parent": [key("ArrowUp", "mod")], "relationship.create-center.child": [key("ArrowDown", "mod")], "relationship.create-center.left": [key("ArrowLeft", "mod")], "relationship.create-center.right": [key("ArrowRight", "mod")],
-  "actions.open": [code("Period", "alt")], "keyboard.help": [code("Slash", "alt", "shift")], "node.rename": [code("KeyR", "alt")], "graph.focus": [key("g", "mod", "shift")], "editor.focus": [key("e", "mod", "shift")], "selection.center": [code("Digit0", "alt")], "pin.toggle": [code("KeyP", "alt")], "pins.open": [code("KeyB", "alt")], "history.open": [code("KeyH", "alt")], "history.back": [key("Backspace")], "history.forward": [key("Backspace", "shift")], "relationship.connect": [code("KeyC", "alt")], "branch.toggle": [key("Enter", "ctrl"), key("Enter", "meta"), key("Enter", "alt"), key("Enter", "shift")], "node.context-menu": [code("KeyM", "alt")],
+  "actions.open": [code("Period", "alt")], "keyboard.help": [code("Slash", "alt", "shift")], "node.rename": [code("KeyR", "alt")], "graph.focus": [key("g", "mod", "shift")], "editor.focus": [key("e", "mod", "shift")], "selection.center": [code("Digit0", "alt")], "pin.toggle": [code("KeyP", "alt")], "pins.open": [code("KeyB", "alt")], "history.open": [code("KeyH", "alt")], "history.back": [key("Backspace")], "history.forward": [key("Backspace", "shift")], "relationship.connect": [code("KeyC", "alt")], "node.open.new-tab": [key("Enter", "mod")], "branch.toggle": [key("Enter", "alt")], "node.context-menu": [code("KeyM", "alt")],
 };
 /** Accept only bounded plain records from persisted data. */
 function record(raw: unknown): Record<string, unknown> { return raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {}; }
@@ -150,12 +150,12 @@ export function sanitizeActionPreferences(raw: unknown, fresh = false, conventio
   }
   if (Object.keys(record(saved.localBindings)).length > 256) issues.push({reason: "too-many-entries"});
   for (const [id, value] of Object.entries(record(saved.publishedCommands)).slice(0, 256)) if (id.length <= 128 && !["__proto__", "prototype", "constructor"].includes(id) && typeof value === "boolean") publishedCommands[id] = value;
-  const preferences: ActionPreferencesV1 = {version: 1, defaultBindingsVersion: 2, localBindings, publishedCommands, characterShortcutsEnabled: saved.characterShortcutsEnabled !== false, crossSectionAtBoundary: typeof saved.crossSectionAtBoundary === "boolean" ? saved.crossSectionAtBoundary : fresh, ...(saved.legacyUnknown ? {legacyUnknown: boundedUnknown(record(saved.legacyUnknown))} : {})};
+  const preferences: ActionPreferencesV1 = {version: 1, defaultBindingsVersion: 3, localBindings, publishedCommands, characterShortcutsEnabled: saved.characterShortcutsEnabled !== false, crossSectionAtBoundary: typeof saved.crossSectionAtBoundary === "boolean" ? saved.crossSectionAtBoundary : fresh, ...(saved.legacyUnknown ? {legacyUnknown: boundedUnknown(record(saved.legacyUnknown))} : {})};
   const unsupportedVersion = typeof saved.version === "number" && saved.version !== 1 ? saved.version
-    : typeof saved.defaultBindingsVersion === "number" && saved.defaultBindingsVersion > 2 ? saved.defaultBindingsVersion : undefined;
+    : typeof saved.defaultBindingsVersion === "number" && saved.defaultBindingsVersion > 3 ? saved.defaultBindingsVersion : undefined;
   if (unsupportedVersion !== undefined) issues.push({reason: "unsupported-version"});
-  const skippedDefaults = preserveDefaultConflicts || typeof saved.defaultBindingsVersion === "number" && saved.defaultBindingsVersion >= 2 ? []
-    : skipDefaultConflicts(preferences, convention, saved.defaultBindingsVersion === 1 ? ["branch.toggle"] : undefined);
+  const skippedDefaults = preserveDefaultConflicts || typeof saved.defaultBindingsVersion === "number" && saved.defaultBindingsVersion >= 3 ? []
+    : skipDefaultConflicts(preferences, convention, typeof saved.defaultBindingsVersion === "number" && saved.defaultBindingsVersion >= 1 ? ["branch.toggle", "node.open.new-tab"] : undefined);
   return {preferences, issues, skippedDefaults, migrated: false, ...(unsupportedVersion === undefined ? {} : {unsupportedVersion})};
 }
 /** Preserve bounded JSON compatibility facts only, excluding functions and oversized data. */
@@ -186,7 +186,7 @@ function boundedJsonValue(value: unknown, depth = 0, budget = {remaining: 1024})
 export function migrateActionPreferences(rawPersistedSettings: unknown, convention: KeyConvention = "windows"): PreferenceResult {
   const saved = record(rawPersistedSettings), fresh = rawPersistedSettings === undefined || rawPersistedSettings === null;
   if (record(saved.actionPreferences).version !== undefined) return sanitizeActionPreferences(saved.actionPreferences, fresh, convention);
-  const preferences: ActionPreferencesV1 = {version: 1, defaultBindingsVersion: 2, localBindings: {}, publishedCommands: {}, characterShortcutsEnabled: true, crossSectionAtBoundary: fresh};
+  const preferences: ActionPreferencesV1 = {version: 1, defaultBindingsVersion: 3, localBindings: {}, publishedCommands: {}, characterShortcutsEnabled: true, crossSectionAtBoundary: fresh};
   if (!fresh) {
     const legacy = sanitizeInternalHotkeys(saved.internalHotkeys);
     for (const id of INTERNAL_HOTKEY_ACTIONS) {

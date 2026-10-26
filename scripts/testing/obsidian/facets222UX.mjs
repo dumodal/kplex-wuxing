@@ -114,9 +114,9 @@ export async function acceptFacets222UX(x){
  cases.push({id:'native-mindmap-canonical-gate-counts',expected});
  await action('selection.center');await action('graph.focus');await key('Up',['alt']);await key('Right');
  check(selected()?.node.path?.includes('/Parent '),'Native arrow selection did not enter a parent');
- const picked=selected().node.path,initialRoot=session.layoutRoot(path('Memory'));await key('Enter',['shift']);await until(()=>session.state.expanded.includes(selected()?.occurrenceId),'Modified Enter did not expand selected parent');
- await key('Enter',['shift']);await until(()=>session.state.collapsed.includes(selected()?.occurrenceId),'Modified Enter did not fold selected parent');
- check(center(host)===path('Memory')&&session.layoutRoot(path('Memory'))===initialRoot&&selected().node.path===picked,'Enter changed root/attention/selection');cases.push({id:'native-arrow-selected-enter-fold-unfold-no-navigation'});
+ const picked=selected().node.path,initialRoot=session.layoutRoot(path('Memory'));await key('Enter',['alt']);await until(()=>session.state.expanded.includes(selected()?.occurrenceId),'Modified Enter did not expand selected parent');
+ await key('Enter',['alt']);await until(()=>session.state.collapsed.includes(selected()?.occurrenceId),'Modified Enter did not fold selected parent');
+ check(center(host)===path('Memory')&&session.layoutRoot(path('Memory'))===initialRoot&&selected().node.path===picked,'Enter changed root/attention/selection');cases.push({id:'native-arrow-selected-alt-enter-fold-unfold-no-navigation'});
  for(let i=0;i<3;i++){await click(card('Parent '+i).querySelector('.is-branch-disclosure'));await until(()=>card('Outward '+i),'Parent did not expand');}
  for(const columns of [1,2,3]){
   await wait(250);const columnsStop=quiet();await p.updateCanvasViewSetting('mindmap','parentColumns',columns);await wait(250);columnsStop('native-parent-columns-'+columns+'-zero-source-work');

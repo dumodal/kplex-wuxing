@@ -56,7 +56,7 @@ Omitted optional capabilities are unavailable.
 | Capability | Compass (`classic`) | Mind Map (`mindmap`) | Facets (`wuxing`) |
 | --- | --- | --- | --- |
 | Navigation | Attention-following | Rooted; explicit destinations reroot | Attention-following |
-| Native editor | Existing attention-following | Accepted capacity-one occurrence host | Existing attention-following |
+| Native editor | Existing attention-following, all-note buttons | Capacity-one occurrence host, save-before-switch | Existing attention-following, all-note buttons |
 | Sections | Central attention note | Pinned root note | Disabled for every preset |
 | Descendant presentation | Existing Compass expansion | Bounded hierarchy capability | Disabled |
 | Cached-property classification / badges | Not declared | Not declared | Enabled |
@@ -71,11 +71,11 @@ An optional `hierarchy.maximumDepth` declares a finite occurrence-admission limi
 
 `PlexOccurrence.branch` already supplies the shared branch disclosure; `branch.toggle` uses the definition's pure hierarchy reducer and existing session/editor preflight. A view implements neither a private button nor a second fold owner. The same action can delegate to supported central Markdown sections or a selected heading through their existing owners. Unsupported notes have no fold control/action.
 
-Mind Map declares additive `hierarchy.primary: "center"`: a plain note activation uses the existing destination/root/navigation lifecycle. Existing `activate`, `activate-editor` and explicit legacy `expand` primary policies remain valid for other consumers. Plain Enter centers in every registered view; rename and native document opening remain separate actions. Modified Enter folds only in graph focus, leaving native editors/fields in charge of their own keys. Four single-modifier defaults cover Control, Command, Alt/Option and Shift; default generation2 adds them without overwriting explicit shortcut choices or previously accepted conflicts.
+Mind Map declares additive `hierarchy.primary: "center"`: a plain note activation uses the existing destination/root/navigation lifecycle. Existing `activate`, `activate-editor` and explicit legacy `expand` primary policies remain valid for other consumers. Plain Enter centers in every registered view; rename and native document opening remain separate actions. Alt/Option+Enter folds only in graph focus; Control/Command+Enter uses the existing new-tab destination action. Native editors/fields retain their own keys. Default generation3 migrates inherited defaults without overwriting explicit shortcut choices or previously accepted conflicts.
 
 Plain arrows cross an exhausted area boundary using the existing spatial selection/reveal owner. Explicit area-jump actions remain optional shortcuts; `crossSectionAtBoundary` is retained in serialized preferences but no longer stops plain-arrow traversal or appears in Settings.
 
-Optional `hierarchy.controls: "measured"` opts into larger shared touch targets. The host supplies `PlexMeasurement.controlReserve {right,bottom}` and paints a 16px symbol in a transparent 44px canvas-space button with a4px body/gate gap. Layout packs the reserve while preserving the actual node/editor rectangle and semantic ports. Mind Map subtree/parent-area geometry, shared filtered repacking and Fit include this clearance. Existing consumers omit the capability and retain their prior geometry. Controls follow the normal canvas scale; physical phone/tablet input still needs device acceptance.
+Optional `hierarchy.controls: "measured"` opts into larger shared touch targets. The host supplies `PlexMeasurement.controlReserve {right,bottom}` and paints a 16px symbol in a transparent 44px canvas-space button anchored on the same lower-right node corner as its small mouse control; the transparent remainder extends outward. Layout packs the reserve while preserving the actual node/editor rectangle and semantic ports. Mind Map subtree/parent-area geometry, shared filtered repacking and Fit include this clearance. Existing consumers omit the capability and retain their prior geometry. Controls follow the normal canvas scale; physical phone/tablet input still needs device acceptance.
 
 ## Bounded reads and availability
 
@@ -154,3 +154,7 @@ A view can emit `PlexOccurrence.section` referring to a source-owned `PlexSectio
 ## Validation and limits
 
 See the [ordered validation record](validation/facets-220-2026-10-25.md) for exact commits, passing checks, earlier failures and pending final native/CI acceptance. Preserve the documented #215 baseline failures. Browser input is not physical mobile, macOS or minimum-host acceptance. No merge, release, remote loader or personal-vault deployment is part of this API delivery.
+
+### Shared editor-button switching
+
+Every eligible note in an editor-capable view receives the shared corner action. Attention hosts center the chosen note through accepted navigation and use their existing native editor; they do not adopt occurrence bindings. Occurrence hosts keep their root/attention policy. `editor.expand` serializes explicit switching through the existing native save/close transaction, then reacquires the captured displayed occurrence, exact native file and selected-view lifetime. Failed saves keep the original editor recoverable; stale/retired requests cannot open a replacement. Capacity remains one. Area-hosted editors keep their toolbar within the clipped visible area; native content retains its existing scroll/resize/zoom/lifecycle owner.

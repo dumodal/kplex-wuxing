@@ -1891,7 +1891,7 @@ button.kplex-sidecar-unfold-plex,
 }
 .kplex-section-fold-handle.is-branch-disclosure {
   left: auto;
-  right: 6px;
+  right: -6px;
   transform: none;
   width: 16px;
   height: 16px;
@@ -1902,7 +1902,7 @@ button.kplex-sidecar-unfold-plex,
   max-inline-size: 16px;
   max-block-size: 16px;
   flex: 0 0 16px;
-  bottom: -9px;
+  bottom: -6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1920,8 +1920,8 @@ button.kplex-sidecar-unfold-plex,
   height: 100%;
 }
 .kplex-section-fold-handle.is-branch-disclosure.has-expanded-hit-target {
-  left: calc(100% + 4px);
-  top: calc(100% + 4px);
+  left: calc(100% - 10px);
+  top: calc(100% - 10px);
   right: auto;
   bottom: auto;
   width: 44px;
@@ -3449,6 +3449,21 @@ button.kplex-style-manager-row { height: fit-content; }
   border-radius: 6px;
   background: var(--kplex-panel, var(--background-primary));
   box-shadow: var(--shadow-s);
+}
+/* Area editors keep their native controls inside the visible viewport, including while
+   the tall document scrolls behind the shared area clip. Native content retains its own host. */
+.kplex-central-editor-overlay.is-area-clipped .kplex-central-editor-toolbar {
+  top: calc(var(--kplex-editor-area-top, 0px) + 4px);
+  right: calc(var(--kplex-editor-area-right, 0px) + 4px);
+  max-width: calc(100% - var(--kplex-editor-area-left, 0px) - var(--kplex-editor-area-right, 0px) - 8px);
+  flex-wrap: wrap;
+}
+.kplex-central-editor-overlay.is-area-clipped .kplex-central-editor-leaf-host {
+  top: 36px;
+  height: calc(100% - 36px);
+}
+.kplex-central-editor-overlay.is-area-clipped .is-markdown-zoom-scaled > .kplex-central-editor-leaf-host {
+  height: calc((100% - 36px) / var(--kplex-editor-camera-scale, 1));
 }
 .kplex-central-editor-status {
   position: absolute;

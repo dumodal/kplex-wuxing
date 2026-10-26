@@ -99,6 +99,7 @@ export function ThoughtNode({
   cornerAction?: {
     icon: string;
     label: string;
+    disabled?: boolean;
     onClick: (event: MouseEvent<HTMLButtonElement>) => void;
   };
   translate: Translator;
@@ -248,6 +249,7 @@ export function ThoughtNode({
       type="button"
       className="kplex-thought-corner-action"
       aria-label={cornerAction.label}
+      disabled={cornerAction.disabled}
       onPointerDown={(e: ReactPointerEvent<HTMLButtonElement>) => { e.stopPropagation(); }}
       onClick={(e: MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();

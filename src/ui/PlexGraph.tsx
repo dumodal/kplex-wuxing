@@ -737,6 +737,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const boundEditorBinding = occurrenceEditorPolicy ? viewSession?.editors.bindings[0] : undefined;
   const pendingEditorIntent = useMemo(() => viewSession?.readEditorIntent() ?? null, [viewSession, viewRevision, viewDefinition]);
   const boundEditorClose = useRef<{id: string; close: () => Promise<void>} | null>(null);
+  const editorSwitch = useRef<object | null>(null);
+  const [editorSwitching, setEditorSwitching] = useState(false);
+  const editorExpansionCurrent = useRef<(context: ActionContext) => PositionedNode | null>(() => null);
+  const editorAttention = useRef(activePath);editorAttention.current = activePath;
   const retainedBoundEditor = useRef<{id: string; page: GraphPage; node: PositionedNode} | null>(null);
   const automaticEditorClose = useRef<string | null>(null);
   /** Native eligibility is current-file identity, independent of attention or layout geometry. */
@@ -1541,7 +1545,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     if (clip) {
       const left = node.x - node.width / 2, top = node.y - node.height / 2;
       overlay.style.clipPath = `inset(${Math.max(0, clip.top - top) * current.scale}px ${Math.max(0, left + node.width - clip.left - clip.width) * current.scale}px ${Math.max(0, top + node.height - clip.top - clip.height) * current.scale}px ${Math.max(0, clip.left - left) * current.scale}px)`;
-    } else overlay.style.removeProperty("clip-path");
+      overlay.style.setProperty("--kplex-editor-area-top", `${Math.max(0, clip.top - top) * current.scale}px`);
+      overlay.style.setProperty("--kplex-editor-area-right", `${Math.max(0, left + node.width - clip.left - clip.width) * current.scale}px`);
+      overlay.style.setProperty("--kplex-editor-area-left", `${Math.max(0, clip.left - left) * current.scale}px`);
+    } else {
+      overlay.style.removeProperty("clip-path");
+      for (const side of ["top", "right", "left"]) overlay.style.removeProperty(`--kplex-editor-area-${side}`);
+    }
   };
 
   /** Share the existing camera callback with finite center-motion paint; never poll an idle scene. */
@@ -4117,39 +4127,63 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   };
   /** Admit only the captured displayed occurrence with current filter, native-file and visible-area authority. */
   const editorExpansion = (context: ActionContext): PositionedNode | null => {
-    if (!occurrenceEditorPolicy || !viewSession || context.target.kind !== "node" || !context.target.occurrenceId) return null;
+    if (!viewDefinition.capabilities.editor || !viewSession || context.target.kind !== "node" || !context.target.occurrenceId) return null;
     const target = context.target, page = graphActionPage(context);
     const node = scene.nodes.find(item => occurrenceKey(item) === target.occurrenceId);
-    if (!node || node.page !== page || !page || !supportsBoundEditor(page) || !index.isVisiblePage(page)
+    if (!node || node.page !== page || !page || !(occurrenceEditorPolicy ? supportsBoundEditor(page) : supportsCentralEditorFile(page) && !page.transient
+      && page.file && plugin.app.vault.getFileByPath(page.file.path) === page.file) || !index.isVisiblePage(page)
       || actionNodeRef(page).path !== target.node.path || !nodeMatchesCurrentFilter(node)) return null;
     const area = areaForNode(node);
     if (area && scene.zoneViewports[area] && !zoneDisplayLayouts[area]?.localPositions.has(occurrenceKey(node))) return null;
     return node;
   };
+  editorExpansionCurrent.current = editorExpansion;
   /** Close/resize retain the invocation incarnation instead of inheriting a later editor opened at that occurrence. */
   const capturedEditorId = (context: ActionContext): string | undefined =>
     context.request.id === "editor.collapse" || context.request.id === "editor.resize"
       ? context.request.args?.bindingId ?? context.invocationSnapshot?.editorBindingId : context.invocationSnapshot?.editorBindingId;
   const editorExpandAction: ActionImplementation = {
-    availability: context => {
-      const node = editorExpansion(context);
-      if (!node) return {state: "disabled", reasonKey: "actions.target-unavailable"};
-      const binding = viewSession?.editors.bindings[0];
-      return binding && (binding.closing || binding.occurrenceId !== occurrenceKey(node))
-        ? {state: "disabled", reasonKey: "actions.editor-capacity"} : {state: "enabled"};
-    },
-    execute: context => {
-      const node = editorExpansion(context), file = node?.page.file;
-      if (!node || !file || !viewSession) return {status: "unavailable", reasonKey: "actions.target-unavailable"};
-      const reference = actionNodeRef(node.page);
-      if (!reference.fileIdentity) return {status: "unavailable", reasonKey: "actions.target-unavailable"};
-      preserveCameraOnNextLayout.current = true;
-      const result = viewSession.editors.open({viewId: viewDefinition.id, occurrenceId: occurrenceKey(node),
-        target: {nodeId: nodeId(reference.identity), path: file.path, fileIdentity: reference.fileIdentity},
-        dimensions: {width: Math.max(360, Math.min(720, settings.centerEmbedWidth)), height: Math.max(260, Math.min(460, settings.centerEmbedHeight))},
-        mode: settings.centralNodeMarkdownMode});
-      return result.status === "unavailable" ? {status: "unavailable", reasonKey: result.reason === "capacity" || result.reason === "closing" ? "actions.editor-capacity" : "actions.target-unavailable"}
-        : {status: "completed"};
+    availability: context => editorExpansion(context) && !editorSwitch.current && !viewSession?.editors.bindings[0]?.closing
+      ? {state: "enabled"} : {state: "disabled", reasonKey: "actions.target-unavailable"},
+    execute: async context => {
+      const initial = editorExpansion(context), file = initial?.page.file;
+      if (!initial || !file || !viewSession || editorSwitch.current) return {status: "unavailable", reasonKey: "actions.target-unavailable"};
+      const reference = actionNodeRef(initial.page), current = viewSession.capture(), attention = activePath;
+      const token = {};editorSwitch.current = token;setEditorSwitching(true);
+      try {
+        const previous = viewSession.editors.bindings[0];
+        if (occurrenceEditorPolicy && previous && (previous.occurrenceId !== occurrenceKey(initial) || previous.target.fileIdentity !== reference.fileIdentity)) {
+          const outcome = await closeBoundEditor(previous.id);
+          if (outcome.status !== "completed") return outcome;
+        } else if (!occurrenceEditorPolicy && centralEditorAvailable && centralEditorPage?.path !== initial.page.path) {
+          const native = boundEditorClose.current;
+          if (!native) return {status: "unavailable", reasonKey: "actions.target-unavailable"};
+          try {await native.close();} catch {
+            new Notice(translate("actions.editor-save-failed"));return {status: "failed", reasonKey: "actions.editor-save-failed"};
+          }
+          if (!current() || editorAttention.current !== attention) return {status: "cancelled"};
+          onCentralNodeEditorChange(false);
+        }
+        // Saving may publish new canonical pages or retire the captured area/filter/view. Reacquire
+        // the same occurrence and native file through the latest committed shared action boundary.
+        if (!current() || editorAttention.current !== attention || editorSwitch.current !== token) return {status: "cancelled"};
+        const node = editorExpansionCurrent.current(context);
+        if (!node || node.page.file !== file || actionNodeRef(node.page).fileIdentity !== reference.fileIdentity)
+          return {status: "unavailable", reasonKey: "actions.target-unavailable"};
+        preserveCameraOnNextLayout.current = true;
+        if (!occurrenceEditorPolicy) {
+          if (onActivate(node.page, "destination") === false) return {status: "unavailable", reasonKey: "actions.target-unavailable"};
+          onCentralNodeEditorChange(true);return {status: "completed"};
+        }
+        if (!reference.fileIdentity) return {status: "unavailable", reasonKey: "actions.target-unavailable"};
+        const result = viewSession.editors.open({viewId: viewDefinition.id, occurrenceId: occurrenceKey(node),
+          target: {nodeId: nodeId(reference.identity), path: file.path, fileIdentity: reference.fileIdentity},
+          dimensions: {width: Math.max(360, Math.min(720, settings.centerEmbedWidth)), height: Math.max(260, Math.min(460, settings.centerEmbedHeight))},
+          mode: settings.centralNodeMarkdownMode});
+        return result.status === "unavailable" ? {status: "unavailable", reasonKey: "actions.target-unavailable"} : {status: "completed"};
+      } finally {
+        if (editorSwitch.current === token) {editorSwitch.current = null;if (viewport.current?.isConnected) setEditorSwitching(false);}
+      }
     },
   };
   const editorCollapseAction: ActionImplementation = {
@@ -4884,7 +4918,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       : styledDisplayNode;
     const hasCentralEditor = isEditorOccurrence(baseNode) && centralEditorPage !== null;
     const canOpenCentralEditor = occurrenceEditorPolicy ? supportsBoundEditor(baseNode.page) && !hasCentralEditor
-      : isEditorOccurrence(baseNode) && centralEditorCapable && !hasCentralEditor;
+      : viewDefinition.capabilities.editor && !baseNode.page.transient && !hasCentralEditor
+        && (supportsCentralEditorFile(baseNode.page) || isEditorOccurrence(baseNode) && Boolean(baseNode.page.url && urlEmbed(baseNode.page.url)));
 
     return <ThoughtNode
       key={JSON.stringify([viewDefinition.id, viewLifetime, sceneNodeKeys.get(baseNode)])}
@@ -4901,8 +4936,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       content={hasCentralEditor ? <div className="kplex-central-editor-placeholder" aria-hidden="true" /> : undefined}
       cornerAction={canOpenCentralEditor ? {
         icon: "file-text",
-        label: translate(occurrenceEditorPolicy ? "actions.editor.expand" : centralEditorCanMaximize ? "app.useCentralNodeEditorExpandedHint" : "app.useCentralNodeEditor"),
-        onClick: event => occurrenceEditorPolicy ? runNodeAction("editor.expand", baseNode.page, occurrenceKey(baseNode)) : openCentralEditor(event),
+        label: translate(occurrenceEditorPolicy || !isEditorOccurrence(baseNode) ? "actions.editor.expand" : centralEditorCanMaximize ? "app.useCentralNodeEditorExpandedHint" : "app.useCentralNodeEditor"),
+        disabled: editorSwitching,
+        onClick: event => !occurrenceEditorPolicy && isEditorOccurrence(baseNode) ? openCentralEditor(event)
+          : runNodeAction("editor.expand", baseNode.page, occurrenceKey(baseNode)),
       } : undefined}
       settings={settings}
       selected={baseNode.page.path === activePath}
@@ -5501,7 +5538,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       data-kplex-editor-binding={boundEditorBinding?.id}
       data-kplex-editor-occurrence={boundEditorBinding?.occurrenceId}
       inert={boundEditorConcealed || undefined}
-      className={`kplex-central-editor-overlay${centralEditorMaximized ? " is-maximized" : ""}`}
+      className={`kplex-central-editor-overlay${centralEditorMaximized ? " is-maximized" : ""}${editorClip ? " is-area-clipped" : ""}`}
       style={{
         left: camera.current.x + (displayedEditorNode.x - displayedEditorNode.width / 2) * camera.current.scale,
         top: camera.current.y + (displayedEditorNode.y - displayedEditorNode.height / 2) * camera.current.scale,
@@ -5515,10 +5552,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       <CentralNodeEditor
         key={boundEditorBinding?.id ?? centralEditorPage.path}
         bindingId={boundEditorBinding?.id}
-        onCloseReady={boundEditorBinding ? close => {
-          const registration = {id: boundEditorBinding.id, close}; boundEditorClose.current = registration;
+        onCloseReady={close => {
+          const registration = {id: boundEditorBinding?.id ?? centralEditorPage.path, close}; boundEditorClose.current = registration;
           return () => {if (boundEditorClose.current === registration) boundEditorClose.current = null;};
-        } : undefined}
+        }}
         plugin={plugin}
         hostLeaf={hostLeaf}
         page={centralEditorPage}
