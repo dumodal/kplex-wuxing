@@ -25,6 +25,8 @@ ARC replaces the earlier uncustomized ACE example. Explicit saved ACE definition
 
 Select the Info button immediately after the preset cog to read that preset's Help. Built-in Help follows the application language until you save a literal override. **Edit → Help** offers Markdown source and a native preview; Save uses the existing preset writer, Cancel discards the draft, and Reset restores the localized default. A deliberately blank override stays blank. Help supports headings, lists, code examples and HTTPS links. Code fences are displayed as plain examples; HTML, embeds and executable Markdown are not enabled.
 
+Current native interface examples: [wide preset editor](images/facets/ux-preset-editor.png), [wide selectors](images/facets/ux-selectors-1280.png), [narrow selectors](images/facets/ux-selectors-640.png). These are genuine Windows captures; [current acceptance limits](validation/facets-222-ux-2026-10-26.md) remain explicit.
+
 ## Choose a layout
 
 Open the preset cog, then choose **Layout** in the preset editor. Choose circular, concentric rectangles, vertical stack, horizontal spread or four-category quadrants. Layout belongs to the preset: saving it updates canvases using that preset. Canvases keep their independent selected presets, attention, editor and camera intent. Legacy per-canvas layout overrides no longer take precedence. Quadrants is unavailable for other category counts; a saved incompatible choice visibly falls back to circular while preserving every category.

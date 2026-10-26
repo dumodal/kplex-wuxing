@@ -3,7 +3,7 @@ export async function acceptFacets222Layouts(x){
  const {app,p,c,host,native,workspace,cases,path,root,center,check,wait,until,choose,panel,quiet,reveal}=x,session=host.view.documentSession.plexView,doc=root(host).ownerDocument;
  const surface=()=>[...p.actionSurfaceHosts].find(([,registration])=>registration.leaf===host)?.[0];
  const action=async(id,args)=>{const result=await p.actionManager.dispatch({id,source:'internal',surfaceId:surface(),...(args?{args}:{})});check(result.status==='completed',id+': '+JSON.stringify(result));return result};
- const choice=async(key,value)=>{await choose(host,'wuxing');const select=panel(host).querySelector('[data-kplex-view-choice="'+key+'"] select');check(select,'Captured '+key+' choice absent');select.focus();select.value=value;select.dispatchEvent(new doc.defaultView.Event('change',{bubbles:true}));await wait(120);panel(host).querySelector('.kplex-filter-panel-header button').click();};
+ const choice=async(key,value)=>{if(key==='layout'){const id=session.state.preset,preset=p.readPortableSharingState().presets[id];await p.updateCanvasViewConfiguration('wuxing',{field:'presets',path:[id]},{kind:'set',value:{...preset,layout:value}});await wait(180);return;}await choose(host,'wuxing');const select=panel(host).querySelector('[data-kplex-view-choice="'+key+'"] select');check(select,'Captured '+key+' choice absent');select.focus();select.value=value;select.dispatchEvent(new doc.defaultView.Event('change',{bubbles:true}));await wait(120);panel(host).querySelector('.kplex-filter-panel-header button').click();};
  const decoration=id=>[...root(host).querySelectorAll('[data-kplex-decoration]')].find(element=>element.dataset.kplexDecoration===id);
  const box=element=>{const rect=element.getBBox();return {x:rect.x,y:rect.y,width:rect.width,height:rect.height}};
  const snapshot=()=>({attention:center(host),camera:root(host).querySelector('.kplex-camera').style.transform,state:JSON.stringify(session.getState())});
@@ -21,7 +21,7 @@ export async function acceptFacets222Layouts(x){
  const stop=quiet();await choice('preset','para');
  const endpointIds=()=>[...root(host).querySelectorAll('[data-kplex-edge-id]')].map(element=>element.dataset.kplexEdgeId).sort();let endpoints;
  for(const mode of ['circular','concentric','vertical','horizontal','quadrants']){
-  await choice('layout',mode);await until(()=>session.state.layouts?.para===mode,'Captured canvas layout did not save');
+  await choice('layout',mode);await until(()=>p.readPortableSharingState().presets.para.layout===mode,'Preset layout did not save');
   check(!root(host).querySelector('.kplex-view-error')&&root(host).querySelectorAll('.kplex-view-region').length===5,'Four categories plus combined Diagnostics lost: '+mode);
   check(root(host).querySelector('.kplex-central-editor-content')===editor&&editorLeaf.view.editor===nativeEditor&&nativeEditor.getValue()===editorValue&&editorLeaf.view.file.path===attention&&center(host)===attention,'Layout retargeted/remounted attention editor: '+mode);
   if(endpoints)check(JSON.stringify(endpointIds())===JSON.stringify(endpoints),'Layout changed canonical displayed endpoints');else endpoints=endpointIds();

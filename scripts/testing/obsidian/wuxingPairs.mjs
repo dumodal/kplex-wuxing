@@ -44,20 +44,15 @@ export async function acceptWuXingPairs(x){
  check(session(companion).definition.id==='classic'&&center(companion)===path('Goal'),'Delayed selector touched another canvas');
  check(panel(host)===openingPanel,'Compatible change replaced the open filter panel');cases.push({id:'opening-canvas-selector-owner-survives-window-focus-change'});
  await choose(host,'wuxing');
- // Two Facets canvases may choose different layouts of the same shared preset. Capture the
- // first choice before focusing the second native window; no active-window lookup may retarget it.
- const facetChoice=async(leaf,key,value)=>{
-  await choose(leaf,'wuxing');const choice=panel(leaf).querySelector('[data-kplex-view-choice="'+key+'"] select');check(choice,'Native '+key+' choice absent');choice.focus();choice.value=value;choice.dispatchEvent(new choice.ownerDocument.defaultView.Event('change',{bubbles:true}));
-  await until(()=>key==='preset'?session(leaf).state.preset===value:session(leaf).state.layouts?.para===value,'Native per-canvas '+key+' choice failed');
-  panel(leaf).querySelector('.kplex-filter-panel-header button').click();await wait(120);
- };
- for(const leaf of [host,companion])await facetChoice(leaf,'preset','para');await facetChoice(companion,'layout','horizontal');
- await choose(host,'wuxing');const capturedLayout=panel(host).querySelector('[data-kplex-view-choice="layout"] select');check(capturedLayout,'Captured native layout select absent');
- await reveal(companion);const otherLayout=snapshot(companion);capturedLayout.value='concentric';capturedLayout.dispatchEvent(new capturedLayout.ownerDocument.defaultView.Event('change',{bubbles:true}));
- await until(()=>session(host).state.layouts?.para==='concentric','Captured layout lost its opening canvas');check(same(companion,otherLayout),'Main layout changed popout state/camera/editor/Sidecar');
- check(session(companion).state.layouts?.para==='horizontal'&&center(host)===path('Memory')&&center(companion)===path('Goal'),'Two Facets layouts lost independent intent/attention');
- const mainLayout=snapshot(host);await facetChoice(companion,'layout','vertical');check(same(host,mainLayout),'Popout layout changed main state/camera/editor/Sidecar');await facetChoice(companion,'layout','horizontal');
- cases.push({id:'native-two-facets-same-preset-independent-layouts-captured-window-owner',main:'concentric',popout:'horizontal'});
+ // Preset selection stays per canvas; the saved layout is shared by users of that preset.
+ const facetChoice=async(leaf,value)=>{await choose(leaf,'wuxing');const choice=panel(leaf).querySelector('[data-kplex-view-choice="preset"] select');choice.value=value;choice.dispatchEvent(new choice.ownerDocument.defaultView.Event('change',{bubbles:true}));await until(()=>session(leaf).state.preset===value,'Native preset selection failed');panel(leaf).querySelector('.kplex-filter-panel-header button').click();await wait(120)};
+ for(const leaf of [host,companion])await facetChoice(leaf,'para');
+ const own=[host,companion].map(leaf=>({leaf,state:JSON.stringify(session(leaf).getState()),attention:center(leaf)}));
+ const layout=async value=>{const preset=p.readPortableSharingState().presets.para;await p.updateCanvasViewConfiguration('wuxing',{field:'presets',path:['para']},{kind:'set',value:{...preset,layout:value}});await wait(250)};
+ await reveal(companion);await layout('concentric');
+ for(const item of own){check(JSON.stringify(session(item.leaf).getState())===item.state&&center(item.leaf)===item.attention,'Shared layout changed independent session/attention');check(root(item.leaf).querySelectorAll('.kplex-view-region > path').length===4,'Same preset did not share its configured layout');}
+ await facetChoice(companion,'publishing');const otherPreset=snapshot(companion);await layout('horizontal');check(same(companion,otherPreset),'Editing PARA changed a canvas using Publishing');
+ cases.push({id:'native-shared-preset-layout-and-independent-preset-selection',main:'para',popout:'publishing'});
  await choose(companion,'classic');await choose(host,'wuxing');
  // Recreate only owned native views through Obsidian's serialized state owner; never claim a full application restart.
  for(const leaf of [host,companion])await p.closeSidecar(leaf);
@@ -78,7 +73,7 @@ export async function acceptWuXingPairs(x){
  const saved=[host,companion].map(leaf=>({leaf,state:structuredClone(leaf.getViewState()),view:session(leaf).definition.id,attention:center(leaf)}));
  for(const item of saved){await item.leaf.setViewState({type:'empty'});await item.leaf.setViewState(item.state);await item.leaf.view.waitUntilReady();await until(()=>session(item.leaf).definition.id===item.view&&center(item.leaf)===item.attention&&root(item.leaf)?.querySelector('.kplex-filter-trigger'),'Independent native restoration failed');await choose(item.leaf,item.view)}
  check(session(host).definition.id==='wuxing'&&session(companion).definition.id==='classic','Independent restored selections differ');
- check(session(host).getState().states.wuxing?.layouts?.para==='concentric'&&session(companion).getState().states.wuxing?.layouts?.para==='horizontal','Independent per-canvas layout intent did not restore');
+ check(session(host).getState().states.wuxing?.preset==='para'&&session(companion).getState().states.wuxing?.preset==='publishing','Independent hidden-view preset intent did not restore');
  cases.push({id:'independent-owned-native-workspace-view-restoration',applicationRestart:false});
  await choose(host,'wuxing');await reveal(host);
  const surface=[...p.actionSurfaceHosts].find(([,registration])=>registration.leaf===host)?.[0];check(surface,'Native Wu Xing action surface absent');

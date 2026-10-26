@@ -1,0 +1,58 @@
+{
+  "scope": "Partial native UX evidence only; full native run failed and latest outer restoration remains pending host recovery.",
+  "revision": "4fc8c40bb1ef6e31dc5606f009780122aa0075fa",
+  "artifacts": {
+    "main.js": "f3dfe5b2b28f452aa1891dcd722f7ca89e244fe22787a01a582ababfc955b2dd",
+    "styles.css": "8d1191d97810d38680697800625b1219b9e834752e561e795c2690b0ed61cc0e"
+  },
+  "confirmed": [
+    {
+      "case": "selector-preset-cog-info-single-line",
+      "windowWidths": [
+        1280,
+        640
+      ],
+      "controlWidths": [
+        222,
+        40,
+        40
+      ]
+    },
+    {
+      "case": "preset-editor-responsive-single-footer",
+      "ownerWindowWidth": 1280,
+      "editorWidth": 1120,
+      "editorHeight": 810,
+      "buttons": 7,
+      "iconsAndAccessibleNames": true
+    },
+    {
+      "case": "separate-settings-owner",
+      "initialOwnerWidth": 900,
+      "initialEditorWidth": 846,
+      "mainDocumentDistinct": true
+    },
+    {
+      "case": "native-json-save-pickers-observed-and-cancelled",
+      "fileName": "kplex-preset.json",
+      "completedFileWrite": false,
+      "osClipboardAccessed": false
+    }
+  ],
+  "unverified": [
+    "completed native file export",
+    "import guide native rendering/fit",
+    "Mind Map native Enter/parent columns",
+    "refreshed full layouts/editor/main-popout pairs"
+  ],
+  "restoration": {
+    "samples1Through9": "passed after each run: 9 configuration/117 content files/original digest",
+    "sample10": "pending: intact private backup, unresponsive Small host; user recovery requested",
+    "baselineContentDigest": "7bdaf015f88c6ee1945410755a5aaccf7e04408fe597e729cafca24c5bc332ba"
+  },
+  "productionVault": "untouched",
+  "limitations": [
+    "Browser tests cover actual transfer logic with mocked clipboard and controlled native Markdown, not OS clipboard/native syntax acceptance.",
+    "No main-process download hook retained in committed test code."
+  ]
+}

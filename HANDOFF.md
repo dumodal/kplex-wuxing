@@ -20,6 +20,24 @@ Obsidian is the production host; preserve the established portable semantic, ide
 ---
 
 
+# PRIORITY: Small native recovery / restoration pending
+
+
+### Native recovery required (2026-10-26 05:56Z)
+
+Runtime4fc8c40 mainf3dfe5b2/styles8d1191. Refreshed native sample1 correctly caught that the test assumed the main-window width for a separate Settings window. Actual editor846px in900px Settings window=94%; resizing the actual test-owned Settings window to1280px produces1120px editor and seven icons on one row. Both1280/640 selector groups pass. Source product sizing was correct; input/screenshots must use the element's actual owning window.
+
+Stage samples2-5 stopped on an unsupported intermediate persisted-enable-list assumption; actual CLI unload was confirmed loaded=false/enabled=false while the file still retained its original entry. Stage now proves actual unload before artifact replacement and retains final enablement-file/byte checks. Foreground before disable. All those outer restorations passed9/117/digest.
+
+UX samples7-9 opened native Save pickers; async remote will-download callbacks did not complete the redirected download. No file was saved. Sample10 tried a synchronous main-process test hook and CLI became unresponsive. This experimental hook is removed from the driver; no main-process eval or download-hook code is being committed. Four test-generated kplex-preset.json pickers were identified with computer-use skill and cancelled, no production-window input. Small Settings/root remain unresponsive; no global restart/kill authorized while production has unsaved-state uncertainty. User asked asynchronously to reload onlySmall or confirm production saved before whole-app restart.
+
+**RESTORATION PENDING** for private backup TEMP/kplex-facets-222-ux-17b76e1b. Do not claim restored. Earlier1-9 receipts passed; latest10 did not. The backup is intact (9 configs/117 content baseline/digest7bdaf015f88c6ee1945410755a5aaccf7e04408fe597e729cafca24c5bc332ba). Small may retain8 generated fixture notes under one Kplex-220-WuXing timestamp folder, plus test settings/layout. After recovery, use Vault API to remove only verified test-owned extras against baseline, then run existing outer restore. Do not delete arbitrary user additions. Native probe controller/main-hook retirement cannot be confirmed until recovery. Production Zsolt's Brain unchanged.
+
+Continue independent full portable verification on realNode22.22.2 and CI while waiting. Keep222 draft/open/unmerged. Remaining refreshed native dialogs/import/Enter/parent columns/layout/editor/pairs and actual file completion remain UNVERIFIED. Existing111focused+arch/core/scanner/build actualpasses preserved.
+
+--- Current implementation checkpoint ---
+
+
 # PR #222 maintainer UX revision - native verification next
 
 Latest user requests override the earlier per-canvas layout requirement: layout is preset-owned, remove it from Views/lenses; keep preset+cog+Info together; Mind Map Enter toggles selected branch; parent columns expand left/right (2:firstleft/secondright;3:firstleft/middle-right/right-right;1:right); improve dialogs with large responsive preset editor, compact icon action row, useful Reset feedback, direct JSON file/copy and explanatory import Info.

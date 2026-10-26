@@ -24,8 +24,15 @@ async function enabledState(expected){
  while(true){const value=JSON.parse(readFileSync(enabledPath,'utf8'));if(Array.isArray(value)&&JSON.stringify([...value].sort())===targetState)return;
   assert(Date.now()<end,'Native enablement write did not settle');await new Promise(resolve=>setTimeout(resolve,100))}
 }
+// Enablement-file writes are host tasks too. Foreground the explicitly owned Small before
+// disable, rather than waiting until after a minimized window's throttled write must settle.
+cli('eval','code=(()=>{const win=require("@electron/remote").getCurrentWindow();win.restore();win.show();win.focus();win.webContents.focus();return JSON.stringify({foreground:true})})()');
 cli('plugin:disable','id=k-plex');
-await enabledState(originalEnabled.filter(id=>id!=='k-plex'));
+// The host can retire an enabled plugin without immediately rewriting its persisted list.
+// Actual unload is the authority for safe artifact replacement; the final enablement-file
+// and probe byte-preservation checks below remain required.
+const retired=cli('eval','code=JSON.stringify({loaded:!!app.plugins.plugins["k-plex"],enabled:app.plugins.enabledPlugins.has("k-plex")})');
+assert(retired.includes('"loaded":false')&&retired.includes('"enabled":false'),'Native plugin must be fully retired before replacing artifacts');
 for(const name of names){copyFileSync(join(source,name),join(target.pluginDir,name));assert.equal(hash(join(target.pluginDir,name)),hashes[name])}
 cli('plugin:enable','id=k-plex');
 await enabledState([...new Set([...originalEnabled,'k-plex'])]);
