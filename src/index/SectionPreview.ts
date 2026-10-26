@@ -17,21 +17,23 @@ const roles: Readonly<Record<typeof buckets[number], Role>> = {parents: "parent"
 export function projectSectionPreview(plugin: KplexPlugin, index: GraphIndex, expansion: CentralSectionExpansion,
   center: Neighborhood, sections: ExpandedSection[], indexedTargets: ReadonlySet<string>): readonly SectionPreviewPlacement[] {
   const proof = expansion.sourceRevision, path = expansion.centerPath;
-  if (!proof || proof.path !== path || proof.file.path !== path || proof.file.stat.mtime !== proof.mtime
-    || proof.file.stat.size !== proof.size || index.get(path)?.file !== proof.file) return [];
   const preview = index.getSectionPreviewNeighborhood?.(path);
   if (!preview) return [];
-  if (proof.cache !== undefined && plugin.app.metadataCache.getFileCache(proof.file) !== proof.cache) return [];
+  // Losing a physical occurrence proof retires its anchor, never the already readable canonical
+  // relationship. Keep that row on the note header until a current source/evidence owner replaces it.
+  const physicalCurrent = Boolean(proof && proof.path === path && proof.file.path === path && proof.file.stat.mtime === proof.mtime
+    && proof.file.stat.size === proof.size && index.get(path)?.file === proof.file
+    && (proof.cache === undefined || plugin.app.metadataCache.getFileCache(proof.file) === proof.cache));
   const source = expansion.projectionSource, byId = new Map(sections.map(section => [section.id, section]));
   const inference = index.publishedInferAllLinksAsFriends(path), placements: SectionPreviewPlacement[] = [];
   const owners = new Map<string, Array<{raw: typeof source.sections[number]; relation: Relation}>>();
   const preamblePaths = new Set<string>(), preambleFiles = new Set();
-  for (const placement of source.linkPlacements) if (placement.sectionId === null) {
+  for (const placement of physicalCurrent ? source.linkPlacements : []) if (placement.sectionId === null) {
     preamblePaths.add(placement.initialPath);if (placement.file) preambleFiles.add(placement.file);
   }
   // Index this one source's already resolved local occurrences once, avoiding a heading scan
   // for every displayed relationship. Classification stays in the existing canonical owner.
-  for (const raw of source.sections) for (const relation of raw.page.neighbours.values()) {
+  for (const raw of physicalCurrent ? source.sections : []) for (const relation of raw.page.neighbours.values()) {
     const actual = relation.target.transient?.actualPath;
     if (!actual) continue;
     for (const role of ["parent", "child", "left", "right", "previous", "next"] as const) {
@@ -49,7 +51,7 @@ export function projectSectionPreview(plugin: KplexPlugin, index: GraphIndex, ex
     const matches = owners.get(JSON.stringify([actual, role, row.relationType])) ?? [];
     if (!matches.length || preamblePaths.has(actual) || row.page.file && preambleFiles.has(row.page.file) || source.headerTargets.has(actual)) {
       center[bucket].push(row);
-      placements.push({sectionId: null, targetPath: actual, role});
+      if (physicalCurrent) placements.push({sectionId: null, targetPath: actual, role});
     }
     for (const {raw, relation} of matches) {
       const section = byId.get(raw.id);

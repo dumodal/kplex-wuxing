@@ -56,9 +56,12 @@ for (const mode of ['eager', 'on-demand']) test(`${mode}: central sections reuse
         for(let n=0;n<3;n++)M.projectCentralSectionExpansion(q.plugin,i,expanded);
         equal(f.reads,[file.path],'Presentation never rereads Markdown');equal(f.work.snapshot(),work,'No index/store/inventory work');
         file.stat.mtime++;const stale=M.projectCentralSectionExpansion(q.plugin,i,expanded);
-        equal(stale.previewPlacements,[],'Changed native source retires physical preview proof');file.stat.mtime--;
+        equal(stale.previewPlacements,[],'Changed native source retires physical preview proof');
+        equal(paths(stale.centerNeighborhood),q.targets,'Changed native source still retains all readable canonical relationships at the header');file.stat.mtime--;
         const cache=f.metadata.get(file.path);f.metadata.set(file.path,{...cache});
-        equal(M.projectCentralSectionExpansion(q.plugin,i,expanded).previewPlacements,[],'Same-stat metadata replacement retires physical preview proof');f.metadata.set(file.path,cache);
+        const replaced=M.projectCentralSectionExpansion(q.plugin,i,expanded);
+        equal(replaced.previewPlacements,[],'Same-stat metadata replacement retires physical preview proof');
+        equal(paths(replaced.centerNeighborhood),q.targets,'Metadata replacement cannot erase readable canonical relationships');f.metadata.set(file.path,cache);
         release();
         if('${mode}'==='eager'){
           ok((await deadline(i.waitForSnapshotHydration(),'Full evidence promotion')).restored,'Real evidence eventually promotes');

@@ -36,6 +36,10 @@ for(const view of ['classic','mindmap'])test(`${view}: saved section relationshi
  }
  check(work.body===1&&work.scans===0,'Expansion reads only the source once');
  a.props.renderRevision++;a.render();await wait();check(work.body===1,'Passive presentation never rereads Markdown');
+ const cache=fieldCaches.get('A.md');fieldCaches.set('A.md',{...cache});a.props.renderRevision++;a.render();await wait();
+ check(a.container.querySelector('[data-kplex-path="B.md"]')&&a.container.querySelector('[data-kplex-path="C.md"]'),'Retired physical metadata proof must retain canonical note targets at the header');
+ if('${view}'==='mindmap')check(projections.at(-1).edges.every(edge=>!edge.sourceSection),'Stale metadata must not retain a physical section endpoint');
+ fieldCaches.set('A.md',cache);a.props.renderRevision++;a.render();await wait();
  retired=true;a.props.renderRevision++;a.render();await wait();
  if('${view}'==='classic')check(!a.container.querySelector('[data-kplex-path$=":B.md"]'),'A removed canonical row cannot be resurrected from cached local evidence');
  release();a.close();plugin.actionManager.dispose();style.remove();return true;

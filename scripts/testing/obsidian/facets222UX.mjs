@@ -219,7 +219,21 @@ export async function acceptFacets222UX(x){
   }
   cases.push({id:'native-mindmap-saved-connectors-start-at-physical-sections-before-evidence',controlledEvidenceHold:true});
   await wait(250);const previewStop=quiet();p.index.notifyPresentation();await wait(250);previewStop('native-preview-section-presentation-zero-source-work');
+  const sourceCache=app.metadataCache.getFileCache,replacedCache={...sourceCache.call(app.metadataCache,memoryFile)};
+  app.metadataCache.getFileCache=function(file){return file===memoryFile?replacedCache:sourceCache.call(this,file)};
+  try{
+   await choose(host,'classic');panel(host).querySelector('.kplex-filter-panel-header button').click();await until(compassSections,'Retired-proof Compass toggle absent');
+   if(!root(host).querySelector('.is-kplex-section'))await click(compassSections());
+   // Replacing metadata before the new read yields a current proof. Replace it once more after
+   // expansion so this interval exercises actual proof retirement rather than an initial cache.
+   await until(()=>root(host).querySelector('.is-kplex-section'),'Retired-proof outline absent');
+   app.metadataCache.getFileCache=function(file){return file===memoryFile?{...replacedCache}:sourceCache.call(this,file)};
+   p.index.notifyPresentation();
+   await until(()=>[...root(host).querySelectorAll('.kplex-thought')].some(el=>el.dataset.kplexPath===path('Outward 0')),'Metadata proof retirement erased the canonical Compass target');
+   cases.push({id:'native-retired-section-metadata-proof-retains-canonical-header-targets',controlledEvidenceHold:true});
+  }finally{app.metadataCache.getFileCache=sourceCache;p.index.notifyPresentation();}
  }finally{restorePreview();}
+ await choose(host,'mindmap');panel(host).querySelector('.kplex-filter-panel-header button').click();
  // The root does not consume a non-root scope. Eight admitted branch scopes can therefore
  // expose depth9; host admission must preserve that card without enlarging source demand.
  await wait(250);const depthSettingStop=quiet();await p.updateCanvasViewSetting('mindmap','maximumDepth',20);await wait(160);
