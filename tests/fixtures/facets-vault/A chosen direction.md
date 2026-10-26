@@ -1,5 +1,8 @@
 ---
-ace: "add"
+approach: "top-down"
+mode: "reflection"
+map-role: "hub"
+arc: "add"
 para: "archives"
 phase: "earth"
 horizon: "goals"

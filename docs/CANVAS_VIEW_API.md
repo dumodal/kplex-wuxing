@@ -101,7 +101,7 @@ Host updates rebase through the existing queue and incoming owner epochs. The op
 
 ## Captured UI contributions
 
-`CanvasViewSettingsContribution` composes native `items`, optional `manager`, `choices`, `menus` and `layoutControls`. `CanvasViewContributionContext` contains the captured view ID/state and own configuration. Commands are finite descriptors: `state`, `configuration` or `settings`.
+`CanvasViewSettingsContribution` composes native `items`, optional `manager`, `choices`, `menus`, `layoutControls` and `help(context, target)`. `CanvasViewContributionContext` contains the captured view ID/state and own configuration. Commands are finite descriptors: `state`, `configuration`, `settings` or `help`. Help choices carry a captured target; the controller rechecks definition/configuration/session/revision and the currently selected target before handing bounded Markdown to the optional native Help port. Existing consumers may omit it.
 
 `CanvasViewContributionController` captures the opening session/definition/configuration/lifetime and rechecks received owners. Moving focus to another canvas does not redirect the selector, controls or a pending action. Stale/retired/one-shot commands return unavailable, not a write to another canvas.
 
@@ -110,6 +110,8 @@ The shared view selector exposes a settings cog. A choice may contribute an opti
 Menus allow 64 total items, 32 siblings and depth 3. Choices allow 8 groups with 32 options each. Live rails allow 16 validated sliders/checkboxes. Configuration rails address the same schema/queued writer as native Settings. An optional checkbox `state: {value, actionId}` instead dispatches its boolean through the captured contribution controller and existing session reducer; this is an explicit per-canvas preference such as Combine diagnostics. Its declared schema address still identifies the relevant preset/default. Do not add view-ID dropdown options or a separate settings path.
 
 Native manager factories receive App only on the host side and a narrow `CanvasViewManagerContext`: own configuration/address reads, captured ownership, guarded save, presentation subscription, existing color/modal context, bounded cached suggestions and close. Shared `StyleEditorModal`, `StyleManagerList`, `StyleColorControls`, `PredicateConditions` and `PredicateRuleEditor` preserve their existing focus/cleanup owners.
+
+The optional manager `sharing` context grants read-only finite preset/lens/palette data and a reviewed package commit through the existing settings queue. It exposes no plugin, vault, index, session selection or note writer. `PortablePackageModal` composes canonical package validation/import planning, shared ClipboardSession and NativeMarkdownHelp. `updateStyleSettings` can atomically include one registered-view leaf with palette/disabled-lens dependencies; it retains disk-before-publication, scoped expected values, theme/retirement fences and the existing palette-reference validation. Invalid/future packages and failed/stale writes are refused without partial publication. Details and schema: [Portable presets](PORTABLE_PRESETS.md).
 
 ## Targets, assignments and decorations
 

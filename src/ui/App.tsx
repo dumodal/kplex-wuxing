@@ -24,7 +24,10 @@ import {MarkdownHelpModal} from "./MarkdownHelpModal";
 import {canvasViewText} from "./plexViews/labels";
 import type {AppearanceOwner} from "../core/plex/appearanceThemes";
 import { ColorSourceModal } from "./ColorSourceModal";
-import type { LensColorRequest, LensColorDialog } from "./PlexFilter";
+import type { LensColorRequest, LensColorDialog, LensSharingRequest } from "./PlexFilter";
+import {PortablePackageModal} from "./sharing/PortablePackageModal";
+import {exportLensPackage} from "../core/plex/sharing/transfer";
+import {LENS_AUTHORING_CONTEXT} from "../core/plex/sharing/authoring";
 import { appearanceWithoutColors } from "../core/contracts/appearance";
 import {
   useCallback,
@@ -830,6 +833,17 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
   }, [plugin, hostLeaf]);
 
   const updateGraphLenses = useCallback((next: GraphLensDefinition[], baseline?: GraphLensDefinition[], owner?: AppearanceOwner) => plugin.setGraphLenses(next, baseline, owner), [plugin]);
+  /** Native sharing stays bound to this invoking canvas and appearance epoch, including when focus moves. */
+  const shareGraphLens = useCallback((request: LensSharingRequest): LensColorDialog => {
+    const owner = plugin.captureAppearanceOwner(), sourceScope = rootRef.current ?? request.sourceScope, lens = request.lens;
+    const current = (): boolean => sourceScope.isConnected && plugin.isAppearanceOwnerCurrent(owner);
+    const dialog = new PortablePackageModal(plugin.app, {kind: "lens", mode: request.mode,
+      context: {sourceScope, current, read: () => plugin.readPortableSharingState(), bindEditor: editor => plugin.bindAppearanceEditor(editor, owner),
+        save: (plan, alive) => plugin.importPortableSharing(plan, () => current() && alive(), owner)},
+      build: lens ? (_selected, allowPrivate) => exportLensPackage(lens, plugin.settings.colorPreferences.palette, LENS_AUTHORING_CONTEXT, allowPrivate) : undefined,
+      closed: () => actionDialogs.current.delete(dialog)});
+    actionDialogs.current.add(dialog);dialog.open();return {element: dialog.containerEl, retire: () => dialog.retire()};
+  }, [plugin]);
 
   const lensAppearance = useMemo(/** Only the lens control subscribes; inactive metadata cannot rebuild the parent scene. */ () => ({
     capture: /** Capture at editor/action opening, not when Save eventually runs. */ () => plugin.captureAppearanceOwner(),
@@ -1382,7 +1396,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
               setFindFilterOwner(null); setPlexFilter(next);
             }}
             lenses={plugin.settings.graphLenses} colorPalette={plugin.settings.colorPreferences.palette}
-            onLensesChange={updateGraphLenses} onEditColor={editLensColor} appearance={lensAppearance} lensesReadOnly={plugin.settings.graphLensesColorFuture !== undefined || plugin.settings.appearanceThemesFuture !== undefined}
+            onLensesChange={updateGraphLenses} onEditColor={editLensColor} onShareLens={shareGraphLens} appearance={lensAppearance} lensesReadOnly={plugin.settings.graphLensesColorFuture !== undefined || plugin.settings.appearanceThemesFuture !== undefined}
             layoutMode={filterLayoutMode}
             onLayoutModeChange={/** An explicit layout choice belongs to the filter panel. */ (mode) => {
               setFindFilterOwner(null); setFilterLayoutMode(mode);

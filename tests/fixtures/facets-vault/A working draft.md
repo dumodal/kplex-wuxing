@@ -1,5 +1,8 @@
 ---
-ace: "express"
+approach: "bottom-up"
+mode: "reflection"
+map-role: "concept"
+arc: "communicate"
 para: "resources"
 phase: "fire"
 horizon: "areas"

@@ -10,9 +10,10 @@ const targets=(preset=M.FACET_TEMPLATES.wuxing,state={version:1,preset:'wuxing'}
 const metal=()=>targets().find(row=>row.value==='metal'),clear=()=>targets().find(row=>row.value===undefined);
 const present=value=>({present:true,value});
 
-test('all five templates declare finite explicit category and safe-clear property targets',()=>{
+test('all eight templates grant targets only to explicit property presets, retaining safe clear',()=>{
  for(const [id,preset]of Object.entries(M.FACET_TEMPLATES)){
   const entries=M.facetPropertyAssignments({version:1,preset:id},configuration({}));
+  if(preset.source!=='property'){assert.deepEqual(entries,[],id+' rules/type/tag preset must not acquire property write authority');continue;}
   assert.equal(entries.length,preset.order.length+1);assert(entries.every(M.validPropertyAssignment));
   assert(entries.every(entry=>entry.field===preset.field));assert.equal(entries.at(-1).value,undefined);
   assert.equal(new Set(entries.map(entry=>entry.id)).size,entries.length);

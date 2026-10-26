@@ -1,6 +1,9 @@
 ---
+approach: "top-down"
+mode: "reflection"
+map-role: "hub"
 phase: "metal"
-ace: "express"
+arc: "communicate"
 para: "resources"
 horizon: "vision"
 access: "spaces"

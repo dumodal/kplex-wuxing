@@ -1,5 +1,8 @@
 ---
-ace: "connect"
+approach: "top-down"
+mode: "expression"
+map-role: "supporting-map"
+arc: "relate"
 para: "projects"
 phase: "metal"
 horizon: "vision"

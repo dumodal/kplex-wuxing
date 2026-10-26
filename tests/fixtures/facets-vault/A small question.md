@@ -1,5 +1,8 @@
 ---
-ace: "add"
+approach: "bottom-up"
+mode: "expression"
+map-role: "reference"
+arc: "add"
 para: "projects"
 phase: "water"
 horizon: "actions"

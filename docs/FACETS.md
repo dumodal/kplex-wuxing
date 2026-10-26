@@ -41,7 +41,7 @@ In **Workflow guides**, configure decorative arrows for vertical and horizontal 
 
 Guides route outside category regions on the side away from the focused editor. Captions use the shared measured text treatment and are bounded to 80 characters; long visible copy stays clipped to its measured background. They never create relationships or receive graph editing actions. Concentric/quadrant layouts use their category geometry without workflow rails; circular Wu Xing retains its distinct generating and regulating cycles.
 
-The supplied [sample vault](../tests/fixtures/facets-vault/README.md) currently documents the earlier five-preset baseline plus a custom four-category **State** example (`seed`, `research`, `draft`, `published`; [screenshot](images/facets/state.png)). Its ARC and expanded-preset refresh is pending in #222. It contains Markdown/configuration only, with no executable plugin. Use a separate disposable copy with the matching reviewed build; do not overwrite an existing vault's settings.
+The supplied [sample vault](../tests/fixtures/facets-vault/README.md) includes all eight built-in presets plus a custom four-category **State** example (`seed`, `research`, `draft`, `published`; [earlier screenshot](images/facets/state.png)). Ready for review is recognized by Publishing and intentionally Unassigned in the custom State definition. The vault contains Markdown/configuration only, with no executable plugin. Use a separate disposable copy with the matching reviewed build; do not overwrite an existing vault's settings.
 
 ![Wu Xing preset in Obsidian, with the current note centered and separate category and diagnostic regions](images/facets/wuxing.png)
 
@@ -103,6 +103,8 @@ Alt/Option-click explicitly centers a note through the shared navigation action.
 Section expansion remains hidden in production Facets and Mind Map. Compass retains its existing section behavior. The reusable section boundary is tested separately and is not a shipped Mind Map section mode.
 
 ## Attribution and validation
+
+Preset and lens import/export use one versioned data-only format, native preview and the existing queued writer. Exports include effective Help and separate inert AI authoring context. Optional lens dependencies must be selected explicitly; imported lenses remain disabled. See [portable sharing](PORTABLE_PRESETS.md), [authoring instructions](FACETS_AUTHORING.md) and [validated example JSON](../tests/fixtures/portable-presets/README.md).
 
 PARA terminology is informed by [Forte Labs](https://fortelabs.com/blog/para/). GTD horizons are informed by [Getting Things Done](https://gettingthingsdone.com/2011/01/the-6-horizons-of-focus/). ARC and the seven-category eACCESS arrangement are editable K-Plex adaptations, with [Linking Your Thinking](https://www.linkingyourthinking.com/) as related background; they are not claims of an official workflow definition.
 

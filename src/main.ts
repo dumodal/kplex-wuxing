@@ -49,6 +49,8 @@ import {assertExternalSettingsRecord} from "./adapters/obsidian/settingsInput";
 import { graphTagValue } from "./adapters/obsidian/tagMembership";
 import { StructuralNodeDropActions } from "./ui/StructuralNodeDropActions";
 import { mergeGraphLensDefinitions } from "./lens/GraphLens";
+import {facetLibrary} from "./core/plex/views/facets/configuration";
+import {applyPortableImport, type PreparedImport, type SharingState} from "./core/plex/sharing/transfer";
 import { appearanceColorReferences } from "./core/contracts/appearance";
 import { requireNamedColor } from "./core/plex/colorEditing";
 import * as appearanceThemes from "./core/plex/appearanceThemes";
@@ -59,7 +61,7 @@ import {NotificationModal} from "./ui/NotificationModal";
 import { FileView, ItemView, MarkdownView, Menu, Notice, Platform, Plugin, TFile, TFolder, apiVersion, getLanguage, getAllTags, normalizePath, type Editor, type HoverParent, type WorkspaceLeaf } from "obsidian";
 import { captureSettingsPolicy, classifySettingsChange, isStyleOnlySettingsChange, type SettingsPolicy } from "./core/graph/settingsPolicy";
 import {builtInCanvasViewSettings} from "./ui/plexViews/settingsContributions";
-import {editViewConfigurationAt, migrateViewConfiguration, readViewConfiguration, resetViewConfiguration,
+import {editViewConfigurationAt, migrateViewConfiguration, readViewConfiguration, readViewConfigurationAt, resetViewConfiguration,
   viewConfigurationOwnerDomains, viewConfigurationUpdateDomain, type ViewConfigurationAddress, type ViewConfigurationEdit,
   type ViewConfigurationExpected, type PlexViewConfiguration} from "./core/plex/views/configuration";
 import {configurationJson} from "./core/plex/views/configurationValues";
@@ -181,6 +183,8 @@ type RecentIndexedNavigationTarget = {
 
 /** Finite appearance intents cross the same settings queue; initialization/import never add another writer. */
 type StyleCommitOptions = Readonly<{themeAction?: appearanceThemes.AppearanceThemeAction; legacyImport?: unknown; initializeThemes?: {existing: boolean; adoptNativeBase?: boolean; notifyMigration?: boolean};
+  /** Optional registered-view leaf joins the same atomic appearance/dependency snapshot. */
+  canvasViewEdit?: Readonly<{id: string; address: ViewConfigurationAddress; value: unknown; expected: ViewConfigurationExpected; current: () => boolean}>;
   /** Imperative compatibility callers may replace a coherent root/library pair that still differs from disk. */
   persistExistingChanges?: boolean}>;
 
@@ -2362,6 +2366,8 @@ export default class KplexPlugin extends Plugin {
       if (options.initializeThemes && this.externalSettingsReceived) return;
       if (!this.isAppearanceOwnerCurrent(owner)) throw new Error("Appearance editor belongs to an earlier theme activation");
       const source = this.settingsForWrite();
+      const viewEdit = options.canvasViewEdit, viewDefinition = viewEdit && (this.viewSettingsRegistry ?? builtInCanvasViewSettings).definition(viewEdit.id);
+      if (viewEdit && (!viewDefinition || !viewEdit.current())) throw new Error(this.translator("settingsSync.conflict"));
       if (source.appearanceThemesFuture !== undefined && !options.initializeThemes) throw new Error("Newer appearance themes are read-only");
       const importing = "legacyImport" in options && !(options.initializeThemes && this.externalSettingsReceived);
       const working = importing ? importExcaliBrainGraphSettings(options.legacyImport, source) : source;
@@ -2404,6 +2410,10 @@ export default class KplexPlugin extends Plugin {
       }
       const next = {...working};
       for (const key of STYLE_SETTINGS_KEYS) Object.assign(next, {[key]: draft[key]});
+      if (viewEdit && viewDefinition) {
+        next.canvasViewSettings = editViewConfigurationAt(viewDefinition, source.canvasViewSettings, viewEdit.address, {kind: "set", value: viewEdit.value}, viewEdit.expected);
+        (this.viewSettingsRegistry ?? builtInCanvasViewSettings).validatePaletteReferences(viewDefinition, source.canvasViewSettings, next.canvasViewSettings, draft.colorPreferences.palette);
+      }
       if (library) next.appearanceThemes = library;
       if (options.initializeThemes) next.kplexInitialized = true;
       const policy = captureSettingsPolicy(next), effects = classifySettingsChange(before, policy);
@@ -2428,6 +2438,8 @@ export default class KplexPlugin extends Plugin {
         if (!effects.changedKeys.includes(key) || current.values[key] !== before.values[key]) continue;
         Object.assign(this.settings, {[key]: draft[key]});
       }
+      if (viewEdit && viewDefinition) this.settings.canvasViewSettings = editViewConfigurationAt(viewDefinition, this.settings.canvasViewSettings,
+        viewEdit.address, {kind: "set", value: viewEdit.value});
       for (const field of importedFields) if (appearanceThemes.themeValuesEqual(Reflect.get(this.settings, field.key), field.before)) Object.assign(this.settings, {[field.key]: field.after});
       for (const key of effects.changedKeys) if (current.values[key] === before.values[key]) values[key] = policy.values[key];
       // Compatibility callers already published their live fields. Record the exact queued disk
@@ -4124,6 +4136,31 @@ export default class KplexPlugin extends Plugin {
       draft.graphLenses = merged;
     }, owner);
     return result;
+  }
+
+  /** Read only selected settings data for a native sharing preview, never graph/vault/device state. */
+  readPortableSharingState(source = this.settings): SharingState {
+    const definition = (this.viewSettingsRegistry ?? builtInCanvasViewSettings).definition("wuxing");
+    const library = definition && facetLibrary(readViewConfiguration(definition, source.canvasViewSettings));
+    return {presets: library?.presets ?? {}, lenses: source.graphLenses, palette: source.colorPreferences.palette};
+  }
+
+  /** Import one reviewed plan through the existing atomic appearance/view writer. No view selection or lens activation is granted. */
+  async importPortableSharing(plan: PreparedImport, current: () => boolean, owner = this.captureAppearanceOwner()): Promise<StyleCommitResult> {
+    const submitted = JSON.parse(JSON.stringify(plan)) as PreparedImport;
+    const definition = (this.viewSettingsRegistry ?? builtInCanvasViewSettings).definition("wuxing");
+    if (submitted.package.kind === "facets" && !definition) throw new Error("Facets configuration is unavailable");
+    const address = {field: "presets", path: [submitted.choices.targetId]}, expected = definition
+      ? readViewConfigurationAt(definition, this.settings.canvasViewSettings, address) : {present: false};
+    const incoming = this.receivedSettingsOwner(submitted.package.kind === "facets" && definition
+      ? viewConfigurationUpdateDomain(definition, address) : "graphLenses");
+    return this.updateStyleSettings(draft => {
+      if (!current() || !incoming() || this.unloading) throw new Error(this.translator("settingsSync.conflict"));
+      if (this.settings.graphLensesColorFuture !== undefined || this.settings.colorPreferencesFuture !== undefined) throw new Error("Newer sharing dependencies are read-only");
+      const applied = applyPortableImport(submitted, this.readPortableSharingState(this.settingsForWrite()));
+      draft.graphLenses = applied.lenses;draft.colorPreferences = {...draft.colorPreferences, palette: applied.palette};
+    }, owner, submitted.package.kind === "facets" ? {canvasViewEdit: {id: "wuxing", address, value: submitted.package.preset, expected,
+      current: () => current() && incoming()}} : {});
   }
 
   subscribeNodeFlair(listener: (path: string) => void): () => void {

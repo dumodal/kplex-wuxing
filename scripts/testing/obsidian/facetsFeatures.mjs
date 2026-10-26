@@ -24,7 +24,7 @@ export async function acceptFacetsFeatures(x){
  }
  areaStop('native-area-resize-zero-source-work');await action('view.areas.toggle');
  if(c.lane==='areas')return;
- await configure(['state'],c.stateExample);await until(localReady,'Custom preset configuration did not settle');
+ await configure(['state'],{...c.stateExample,diagnostics:{...c.stateExample.diagnostics,combined:false}});await until(localReady,'Custom preset configuration did not settle');
  const settingsBefore=JSON.stringify(p.settings.canvasViewSettings);
  for(const id of ['classic','mindmap','wuxing']){
   await choose(host,id);await wait(100);const settingsStop=quiet(),before=center(host),controls=panel(host).querySelector('.kplex-view-controls');
@@ -49,13 +49,13 @@ export async function acceptFacetsFeatures(x){
  }
  check(JSON.stringify(p.settings.canvasViewSettings)===settingsBefore,'Opening/cancelling settings cogs wrote configuration');
  const stop=quiet();
- for(const [id,count]of[['ace',3],['para',4],['wuxing',5],['gtd',6],['eaccess',7],['state',4]]){
+ for(const [id,count]of[['arc',3],['para',4],['wuxing',5],['gtd',6],['eaccess',7],['sensemaking',4],['publishing',5],['map-roles',4],['state',4]]){
   await preset(id);check(root(host).querySelectorAll('.kplex-view-region').length===count+2+(id==='wuxing'?1:0),'Preset category/status region count differs: '+id);
   check(root(host).querySelector('.kplex-node-badge')?.textContent.trim(),'Centered category badge absent: '+id);
   cases.push({id:'native-preset-'+id,categories:count});
  }
  stop('all-preset-switches-zero-source-work');
- await action('view.fullscreen.toggle');for(const id of ['ace','para','wuxing','gtd','eaccess','state']){await preset(id);await capture(id)}await action('view.fullscreen.toggle');
+ await action('view.fullscreen.toggle');for(const id of ['arc','para','wuxing','gtd','eaccess','sensemaking','publishing','map-roles','state']){await preset(id);await capture(id)}await action('view.fullscreen.toggle');
  await preset('wuxing');
  const cycle=['wood','fire','earth','metal','water'],roles=['facets.relativeSame','facets.relativeGenerate','facets.relativeRegulate','facets.relativeRegulated','facets.relativeGenerated'];
  const originalBody=await app.vault.read(app.vault.getFileByPath(path('Memory')));

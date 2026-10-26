@@ -37,7 +37,7 @@ await build({
     `}));
     builder.onResolve({ filter: /^obsidian$/ }, () => ({ path: "obsidian", namespace: "double" }));
     builder.onLoad({ filter: /.*/, namespace: "double" }, () => ({ contents: `
-      export class App {}
+      export class Component {load(){} unload(){}} export const MarkdownRenderer={render:()=>{throw Error("Native Markdown is outside this finite fixture")}}; export class App {}
       export class ExtraButtonComponent {} export class Scope {}
       export const Platform = {};
       /** Narrow form-shell double: production modal fields, listeners and save callbacks remain real. */

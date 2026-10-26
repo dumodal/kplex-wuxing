@@ -2059,6 +2059,9 @@ export class KplexSettingTab extends PluginSettingTab {
     const registered = (): boolean => this.viewSettings.definition(id) === definition && plugin.isAppearanceOwnerCurrent(appearance);
     const dialog = factory(this.app, {
       colors: this.styleColorContext(appearance), configuration: () => plugin.readCanvasViewConfiguration(id),
+      sharing: {read: () => plugin.readPortableSharingState(), current: registered, sourceScope: this.colorSourceScope(),
+        bindEditor: editor => plugin.bindAppearanceEditor(editor, appearance),
+        save: (plan, current) => plugin.importPortableSharing(plan, () => registered() && current(), appearance)},
       read: address => readViewConfigurationAt(definition, plugin.settings.canvasViewSettings, address),
       capture: address => {const incoming = plugin.receivedSettingsOwner(viewConfigurationUpdateDomain(definition, address));return () => registered() && incoming();},
       subscribe: changed => plugin.index?.subscribePresentation(changed) ?? (() => {}),

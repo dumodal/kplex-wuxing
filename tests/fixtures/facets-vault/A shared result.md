@@ -1,5 +1,8 @@
 ---
-ace: "add"
+approach: "bottom-up"
+mode: "reflection"
+map-role: "concept"
+arc: "add"
 para: "resources"
 phase: "wood"
 horizon: "actions"

@@ -58,6 +58,8 @@ export type LensColorRequest = Readonly<{owner?: AppearanceOwner; sourceScope: H
 
 /** The parent owns a nested native surface through its concrete root and exact retirement action. */
 export type LensColorDialog = Readonly<{element: HTMLElement; retire: () => void}>;
+/** Native package UI uses the same invoking-document and exact-child retirement contract. */
+export type LensSharingRequest = Readonly<{mode: "import" | "export" | "prompt"; lens?: GraphLensDefinition; sourceScope: HTMLElement}>;
 
 type LensEditorMode = "simple" | "code";
 type LensDraft = Pick<GraphLensDefinition, "id" | "name" | "scope" | "mode" | "expression"> & {
@@ -162,7 +164,7 @@ export function PlexFilter({
   value,
   onChange,
   lenses,
-  onLensesChange, onEditColor, lensesReadOnly = false, colorPalette = [], appearance,
+  onLensesChange, onEditColor, onShareLens, lensesReadOnly = false, colorPalette = [], appearance,
   layoutMode,
   onLayoutModeChange,
   showSiblings,
@@ -184,6 +186,7 @@ export function PlexFilter({
   appearance?: LensAppearanceContext;
   onLensesChange: (lenses: GraphLensDefinition[], baseline?: GraphLensDefinition[], owner?: AppearanceOwner) => Promise<StyleCommitResult> | void;
   onEditColor?: (request: LensColorRequest) => LensColorDialog;
+  onShareLens?: (request: LensSharingRequest) => LensColorDialog;
   lensesReadOnly?: boolean;
   colorPalette?: readonly SemanticColorPair[];
   layoutMode: GraphFilterLayoutMode;
@@ -235,6 +238,13 @@ export function PlexFilter({
   const [pending, setPending] = useState(false), [operationMessage, setOperationMessage] = useState<string | null>(null);
   const operation = useRef({alive: true, busy: false, token: 0});
   const childColor = useRef<LensColorDialog | null>(null), draftRef = useRef(draft); draftRef.current = draft;
+  const childSharing = useRef<LensColorDialog | null>(null);
+  useEffect(() => () => {childSharing.current?.retire();childSharing.current = null;}, [open, triggerRef.current?.ownerDocument]);
+  /** Keep unsaved lens drafts intact while a source-scoped native transfer surface is open. */
+  const shareLens = (element: HTMLElement, mode: LensSharingRequest["mode"], lens?: GraphLensDefinition): void => {
+    if (!onShareLens || operation.current.busy || lensesReadOnly || draftStale) return;
+    childSharing.current?.retire();childSharing.current = onShareLens({mode, lens, sourceScope: element});
+  };
   useEffect(() => {const owner = operation.current; owner.alive = true; return () => {owner.alive = false; owner.token++; childColor.current?.retire(); childColor.current = null;};}, []);
   useEffect(() => () => {childColor.current?.retire(); childColor.current = null;}, [draft?.id, draft?.session, open, triggerRef.current?.ownerDocument]);
 
@@ -567,6 +577,10 @@ export function PlexFilter({
       <div className="kplex-filter-section-heading kplex-lens-heading">
         <span>{translate("filter.graphLenses")}</span>
         <div className="kplex-lens-heading-actions">
+          {onShareLens && <>
+            <button onClick={event => shareLens(event.currentTarget, "import")}>{translate("sharing.importLens")}</button>
+            <button onClick={event => shareLens(event.currentTarget, "prompt")}>{translate("sharing.copyPrompt")}</button>
+          </>}
           {activeLensCount > 0 && <button className="kplex-lens-disable-all" onClick={() => submitLenses(lenses.map((lens) => ({ ...lens, enabled: false })))}>{translate("filter.turnAllOff")}</button>}
           <button className="kplex-icon-button" aria-label={translate("filter.newLens")} disabled={pending || lensesReadOnly || draftStale} onClick={() => { if (operation.current.busy || lensesReadOnly || draftStale) return; setDraft({...EMPTY_DRAFT(), appearanceOwner: appearance?.capture(), themeName: appearance?.name(), session: ++draftSequence.current}); setDraftError(null); }}>
             <ObsidianIcon name="plus" size={15} />
@@ -591,6 +605,7 @@ export function PlexFilter({
               <span className="kplex-lens-meta">{translate(lens.enabled ? "filter.on" : "filter.off")} · {modeLabel(lens.mode, translate)} · {scopeLabel(lens.scope, translate)}</span>
             </button>
             {expressionErrorMessage && <span className="kplex-lens-error-dot" aria-label={expressionErrorMessage} data-kplex-control-tooltip>!</span>}
+            {onShareLens && <button className="kplex-icon-button" disabled={draftStale} aria-label={translate("sharing.exportLens")} onClick={event => shareLens(event.currentTarget, "export", lens)}><ObsidianIcon name="download" size={13} /></button>}
             <button className="kplex-icon-button" disabled={draftStale} aria-label={translate("filter.editLens", { name: displayName })} onClick={() => editLens(lens)}><ObsidianIcon name="pencil" size={13} /></button>
             <button className="kplex-icon-button" aria-label={translate("filter.deleteLens", { name: displayName })} onClick={() => submitLenses(lenses.filter((item) => item.id !== lens.id))}><ObsidianIcon name="trash-2" size={13} /></button>
           </div>;
@@ -662,9 +677,9 @@ export function PlexFilter({
       anchorRef={triggerRef}
       panelRef={panelRef}
       dragHandleRef={dragHandleRef}
-      insideRoots={() => [triggerRef.current, panelRef.current, childColor.current?.element]}
-      handleEscape={event => {const child = childColor.current?.element; return !child || (!child.isConnected && !event.composedPath().includes(child));}}
-      onDismiss={() => {if (!operation.current.busy && !childColor.current?.element.isConnected) setOpen(false);}}
+      insideRoots={() => [triggerRef.current, panelRef.current, childColor.current?.element, childSharing.current?.element]}
+      handleEscape={event => [childColor.current?.element, childSharing.current?.element].every(child => !child || (!child.isConnected && !event.composedPath().includes(child)))}
+      onDismiss={() => {if (!operation.current.busy && !childColor.current?.element.isConnected && !childSharing.current?.element.isConnected) setOpen(false);}}
       portalTarget={ownerDocumentBody}
       positioning={FILTER_PANEL_POSITIONING}
     >

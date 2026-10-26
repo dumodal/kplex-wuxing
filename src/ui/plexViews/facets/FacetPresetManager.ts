@@ -13,6 +13,10 @@ import type {FacetPreset} from "../../../core/plex/views/facets/contracts";
 import {FacetPresetEditor} from "./FacetPresetEditor";
 import {isFacetPreset} from "../../../core/plex/views/facets/validation";
 import {effectiveFacetHelp} from "./help";
+import {PortablePackageModal} from "../../sharing/PortablePackageModal";
+import {exportFacetPackage} from "../../../core/plex/sharing/transfer";
+import {FACETS_AUTHORING_CONTEXT} from "../../../core/plex/sharing/authoring";
+import {facetCategoryLabel} from "../../../core/plex/views/facets/labels";
 
 export class FacetPresetManager extends StyleEditorModal {
   private list: StyleManagerList | null = null;
@@ -29,6 +33,10 @@ export class FacetPresetManager extends StyleEditorModal {
     this.contentEl.createEl("p", {text: t("facets.managerHelp")});
     this.list = new StyleManagerList(this.contentEl, t, {placeholder: t("facets.search"), aria: t("facets.search")}, query => {this.query = query;this.render();});
     this.list.action(t("facets.create"), "plus", () => this.edit(null, {...structuredClone(FACET_TEMPLATES.arc), name: t("facets.newPreset")}));
+    if (this.options.sharing) {
+      this.list.action(t("sharing.importPreset"), "import", () => this.share("import"));
+      this.list.action(t("sharing.copyPrompt"), "copy", () => this.share("prompt"));
+    }
     this.release = this.options.subscribe(() => this.render());this.render();
     const preset = this.initialId && facetLibrary(this.options.configuration())?.presets[this.initialId];
     if (this.initialId && isFacetPreset(preset)) this.edit(this.initialId, preset);
@@ -48,6 +56,8 @@ export class FacetPresetManager extends StyleEditorModal {
       const copy = row.createDiv({cls: "kplex-style-manager-copy"});copy.createSpan({cls: "kplex-style-manager-name", text: name});
       copy.createDiv({cls: "kplex-style-manager-summary", text: this.translate("facets.summary", {count: preset.order.length, field: preset.field})});
       const controls = this.list.list.createDiv({cls: "kplex-style-manager-controls"});
+      if (this.options.sharing) controls.createEl("button", {text: this.translate("sharing.exportPreset"), attr: {type: "button"}})
+        .addEventListener("click", () => this.share("export", id, preset));
       for (const [offset, label] of [[-1, "facets.moveUp"], [1, "facets.moveDown"]] as const) {
         const index = presets.findIndex(item => item.id === id), target = presets[index + offset];
         const button = controls.createEl("button", {text: this.translate(label), attr: {type: "button", "aria-label": `${name}: ${this.translate(label)}`}});
@@ -66,6 +76,19 @@ export class FacetPresetManager extends StyleEditorModal {
     }
     this.list.more(windowed, () => this.render());
     if (!matches.length) this.list.list.createDiv({text: this.translate("styles.noMatches")});
+  }
+  /** The shared transfer surface captures one preset, explicit dependencies and this manager's lifetime. */
+  private share(mode: "import" | "export" | "prompt", id?: string, preset?: FacetPreset): void {
+    const sharing = this.options.sharing;if (!sharing || !this.canEdit()) return;
+    const context = {...sharing, current: () => this.canEdit() && sharing.current()};
+    const child = new PortablePackageModal(this.app, {kind: "facets", mode, context,
+      build: id && preset ? (selected, privateContent) => {
+        const state = sharing.read();return exportFacetPackage(id, preset, {name: canvasViewText(facetPresetLabel(preset), this.translate),
+          labels: Object.fromEntries(preset.order.map(key => [key, canvasViewText(facetCategoryLabel(preset.categories[key], key), this.translate)])),
+          helpMarkdown: effectiveFacetHelp(id, preset, this.translate), locale: (preset.helpSourceLocale ?? getLanguage()) || "en"},
+        state.palette, state.lenses, selected, FACETS_AUTHORING_CONTEXT, privateContent);
+      } : undefined, closed: () => this.children.delete(child)});
+    this.children.add(child);child.open();
   }
   /** Duplicates get new stable identity only in the draft, with no implicit preset activation. */
   private edit(id: string | null, preset: FacetPreset): void {

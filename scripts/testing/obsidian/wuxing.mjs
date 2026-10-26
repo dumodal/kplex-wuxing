@@ -7,6 +7,8 @@ import {acceptWuXingPairs} from './wuxingPairs.mjs';
 import {acceptFacetsFeatures} from './facetsFeatures.mjs';
 import {nativeHtmlDrag} from './nativeHtmlDrag.mjs';
 import {acceptFacets222Help} from './facets222Help.mjs';
+import {acceptFacets222Sharing} from './facets222Sharing.mjs';
+import {acceptFacets222Layouts} from './facets222Layouts.mjs';
 
 /** Keep every native effect under one exact controller lifetime; callbacks are serialized into the selected renderer, never production modules. */
 async function scenario(app,c){
@@ -45,13 +47,22 @@ async function scenario(app,c){
   // With no demand, global pending can describe an unprepared dormant subject. It must not be
   // misreported as ready or require a whole-vault completion before this cached local-view test.
   c.progress={phase:'pre-demand-readiness',pending:p.index.hasPendingSemanticPreparation(),active:p.index.hasActiveSemanticPreparation()};
+  // Use a real native tab in the widest main-window group. A direct leaf under rootSplit is
+  // unsuitable for native Sidecar adjacency; an arbitrary active group can be only128px wide.
+  const anchors=[];workspace.iterateRootLeaves(leaf=>{if(leaf.view.containerEl.ownerDocument===document&&leaf.view.containerEl.getBoundingClientRect().width>0)anchors.push(leaf)});
+  anchors.sort((a,b)=>b.view.containerEl.getBoundingClientRect().width-a.view.containerEl.getBoundingClientRect().width);check(anchors[0],'Native main-window tab anchor absent');await workspace.revealLeaf(anchors[0]);workspace.setActiveLeaf(anchors[0],{focus:true});
+  const host=workspace.getLeaf('tab');hosts.push(host);await host.setViewState({type:'k-plex-react-view',active:true});await host.view.waitUntilReady();await reveal(host);await p.setDocumentSyncMode(host,'off');
+  // Normal view-open admission owns preparation. Establish it before real fixture edits so
+  // cached incidence is never mistaken for Wander-ready source coverage. Small only.
+  await p.ensureIndexReady("view-open");await until(()=>!p.index.hasActiveSemanticPreparation()&&!p.rebuildTask,"Normal view-open preparation did not settle");
   createdFolder=await app.vault.createFolder(folder);
   const child=p.settings.hierarchy.children[0];check(child,'Configured child ontology required');
   const phase={Memory:'water',Concept:'wood',Concept2:'wood',Goal:'fire',Review:'earth',Method:'metal',Conflict:['water','wood'],Unmapped:null};
-  if(c.lane==='features'||c.lane==='areas')phase.Unsupported={unrecognized:true};
+  if(['features','areas','layouts'].includes(c.lane))phase.Unsupported={unrecognized:true};
   for(const [name,value]of Object.entries(phase)){
    const index=Object.keys(phase).indexOf(name),frontmatter={phase:value,[p.settings.noteTypeField]:'Example',tags:['wuxing-fixture']};
-   for(const [field,values]of Object.entries({ace:['add','connect','express'],para:['projects','areas','resources','archives'],horizon:['actions','projects','areas','goals','vision','purpose'],access:['encounters','atlas','calendar','cards','extras','sources','spaces'],state:['seed','research','draft','published']}))if(value!==null)frontmatter[field]=name==='Conflict'?values.slice(0,2):values[index%values.length];
+   for(const [field,values]of Object.entries({arc:['add','relate','communicate'],para:['projects','areas','resources','archives'],horizon:['actions','projects','areas','goals','vision','purpose'],access:['encounters','atlas','calendar','cards','extras','sources','spaces'],state:['seed','research','draft','review','published'],'map-role':['hub','supporting-map','concept','reference']}))if(value!==null)frontmatter[field]=name==='Conflict'?values.slice(0,2):values[index%values.length];
+   if(value!==null){frontmatter.approach=name==='Conflict'?['top-down','bottom-up']:index%4<2?'top-down':'bottom-up';frontmatter.mode=index%2?'expression':'reflection';}
    if(name==='Memory')frontmatter[child]=Object.keys(phase).filter(key=>key!=='Memory').map(key=>'[['+path(key)+']]');
    const yaml=Object.entries(frontmatter).map(([key,value])=>JSON.stringify(key)+': '+JSON.stringify(value)).join('\n');
    const file=await app.vault.create(path(name),'---\n'+yaml+'\n---\n# '+name+'\n\nDisposable Wu Xing native fixture.\n');files.push(file);p.index.insertCreatedFile(file);releases.push(p.index.acquireSemanticDemand(file.path));
@@ -60,13 +71,9 @@ async function scenario(app,c){
   Object.assign(p.settings,{canvasViewSettings:{},maxItemCount:100,documentSyncMode:'off',sidecarOpen:false,embedCentralNode:false,autoOpenCentralDocument:false,followActiveFile:false,centralNodeMarkdownMode:'source',animationSpeed:0,graphDepth:1,renderSiblings:false,showPageNodes:true,showVirtualNodes:true,showInferredNodes:true,showFolderNodes:false,showTagNodes:false,graphLenses:[],applyPowerFilter:false});p.index.notifyPresentation();
   // Legacy area/editor lanes deliberately characterize separate diagnostic regions. Combined
   // defaults and their captured canvas toggle have independent expanded acceptance coverage.
-  await p.updateCanvasViewConfiguration('wuxing',{field:'presets',path:['wuxing','diagnostics']},{kind:'set',value:{combined:false}});
+  for(const id of c.lane==='features'?['arc','para','wuxing','gtd','eaccess','sensemaking','publishing','map-roles']:['wuxing'])
+   await p.updateCanvasViewConfiguration('wuxing',{field:'presets',path:[id,'diagnostics']},{kind:'set',value:{combined:false}});
   await until(()=>p.index.neighbours(p.index.get(path('Memory')),'child').length>=7,'Canonical direct relationships absent');
-  // Use a real native tab in the widest main-window group. A direct leaf under rootSplit is
-  // unsuitable for native Sidecar adjacency; an arbitrary active group can be only128px wide.
-  const anchors=[];workspace.iterateRootLeaves(leaf=>{if(leaf.view.containerEl.ownerDocument===document&&leaf.view.containerEl.getBoundingClientRect().width>0)anchors.push(leaf)});
-  anchors.sort((a,b)=>b.view.containerEl.getBoundingClientRect().width-a.view.containerEl.getBoundingClientRect().width);check(anchors[0],'Native main-window tab anchor absent');await workspace.revealLeaf(anchors[0]);workspace.setActiveLeaf(anchors[0],{focus:true});
-  const host=workspace.getLeaf('tab');hosts.push(host);await host.setViewState({type:'k-plex-react-view',active:true});await host.view.waitUntilReady();await reveal(host);await p.setDocumentSyncMode(host,'off');
   host.view.centerPresentation.update({embedCentralNode:false,centralNodeMarkdownMode:'source'});p.notifyNavigation(path('Memory'),host);await until(()=>center(host)===path('Memory')&&root(host)?.querySelector('.kplex-filter-trigger'),'Attention did not render');
   await until(localReady,'Requested local cached proof/active work did not settle');
   cases.push({id:'requested-local-cache-proof',current:true,coverage:'cached',globalSemanticPending:p.index.hasPendingSemanticPreparation()});await choose(host,'wuxing');
@@ -77,7 +84,7 @@ async function scenario(app,c){
   cases.push({id:'production-registry-five-phases-canonical-links',regions:expectedRegions,semanticConnectors:root(host).querySelectorAll('[data-kplex-edge-id]').length});
   const context={app,p,c,workspace,remote,native,bounds,host,hosts,files,releases,restores,cases,path,root,center,check,wait,until,localReady,choose,panel,reveal,observe,quiet};
   c.progress={phase:c.lane,cases};
-  if(c.lane==='editor'||c.lane==='editor-isolated')await c.acceptEditor(context);else if(c.lane==='pairs')await c.acceptPairs(context);else if(c.lane==='help')await c.acceptHelp(context);else await c.acceptFeatures(context);
+  if(c.lane==='editor'||c.lane==='editor-isolated')await c.acceptEditor(context);else if(c.lane==='pairs')await c.acceptPairs(context);else if(c.lane==='help')await c.acceptHelp(context);else if(c.lane==='sharing')await c.acceptSharing(context);else if(c.lane==='layouts')await c.acceptLayouts(context);else await c.acceptFeatures(context);
   return {lane:c.lane,cases,cleanup,host:{node:process.version,electron:process.versions.electron,chrome:process.versions.chrome,hidden:document.hidden},limits:['Windows native automation is separate from macOS and physical mobile acceptance.','#215 extra-tab application restart/combined two-editor-pair baseline failures are not claimed fixed.',...(c.lane==='areas'?['Area-only acceptance: no Wander, assignment, preset manager or editor pass is claimed.']:[]),...(c.lane==='editor-isolated'?['Combined editor/Sidecar acceptance is excluded from this isolated lane; its failing Facets/Compass observations remain separate.']:[]),...(!c.osInput?['Native trusted input uses Electron; this is not an OS clipboard acceptance receipt.']:[])]};
  }catch(error){failure=error;c.progress={...c.progress,cases,errorStack:error?.stack??String(error)};throw error}
  finally{
@@ -97,7 +104,7 @@ async function scenario(app,c){
 }
 
 if(process.env.KPLEX_TEST_VAULT_NAME!=='kplex-test-small')throw Error('Explicit disposable Small required');
-const lane=process.env.KPLEX_WUXING_NATIVE_LANE??'editor';if(!['editor','editor-isolated','pairs','features','areas','help'].includes(lane))throw Error('Unknown Wu Xing native lane');
-const definitions='c.htmlDrag='+nativeHtmlDrag.toString()+';c.includeSidecar='+JSON.stringify(lane==='editor')+';c.compareSidecar='+JSON.stringify(process.env.KPLEX_WUXING_SIDECAR_COMPARATOR==='true')+';c.screenshotPrefix='+JSON.stringify(join(process.env.KPLEX_HOST_REPORT_DIR??'','facets'))+';c.lane='+JSON.stringify(lane)+';c.osInput='+JSON.stringify(process.env.KPLEX_WUXING_OS_INPUT==='true')+';c.loadedCompanion='+JSON.stringify(process.env.KPLEX_WUXING_LOADED_COMPANION==='true')+';c.stateExample='+JSON.stringify(JSON.parse(readFileSync('tests/fixtures/facets-vault/.obsidian/plugins/k-plex/data.json','utf8')).canvasViewSettings.wuxing.values.presets.state)+';c.originalData='+JSON.stringify(readFileSync(join(process.env.KPLEX_TEST_CONFIG_DIR,'plugins/k-plex/data.json'),'utf8'))+';c.acceptEditor='+acceptWuXingEditor.toString()+';c.acceptPairs='+acceptWuXingPairs.toString()+';c.acceptFeatures='+acceptFacetsFeatures.toString()+';c.acceptHelp='+acceptFacets222Help.toString()+';';
+const lane=process.env.KPLEX_WUXING_NATIVE_LANE??'editor';if(!['editor','editor-isolated','pairs','features','areas','help','sharing','layouts'].includes(lane))throw Error('Unknown Wu Xing native lane');
+const definitions='c.htmlDrag='+nativeHtmlDrag.toString()+';c.includeSidecar='+JSON.stringify(lane==='editor')+';c.compareSidecar='+JSON.stringify(process.env.KPLEX_WUXING_SIDECAR_COMPARATOR==='true')+';c.screenshotPrefix='+JSON.stringify(join(process.env.KPLEX_HOST_REPORT_DIR??'','facets'))+';c.lane='+JSON.stringify(lane)+';c.osInput='+JSON.stringify(process.env.KPLEX_WUXING_OS_INPUT==='true')+';c.loadedCompanion='+JSON.stringify(process.env.KPLEX_WUXING_LOADED_COMPANION==='true')+';c.stateExample='+JSON.stringify(JSON.parse(readFileSync('tests/fixtures/facets-vault/.obsidian/plugins/k-plex/data.json','utf8')).canvasViewSettings.wuxing.values.presets.state)+';c.originalData='+JSON.stringify(readFileSync(join(process.env.KPLEX_TEST_CONFIG_DIR,'plugins/k-plex/data.json'),'utf8'))+';c.acceptEditor='+acceptWuXingEditor.toString()+';c.acceptPairs='+acceptWuXingPairs.toString()+';c.acceptFeatures='+acceptFacetsFeatures.toString()+';c.acceptHelp='+acceptFacets222Help.toString()+';c.acceptSharing='+acceptFacets222Sharing.toString()+';c.acceptLayouts='+acceptFacets222Layouts.toString()+';';
 await runControlledProbe('wuxing-220-'+lane,scenario,definitions,['src/ui/PlexGraph.tsx','src/core/plex/views/wuxing/definition.ts','src/core/plex/views/facets/projection.ts','src/core/plex/views/facets/layout.ts','src/core/plex/views/facets/rules.ts','src/core/plex/predicate.ts','src/ui/plexViews/facets/FacetPresetEditor.ts','src/ui/CanvasPropertyAssignmentActions.ts','src/adapters/obsidian/predicateContracts.ts','src/ui/NativeMarkdownHelp.ts','src/ui/MarkdownHelpModal.ts','src/core/contracts/markdownHelp.ts','src/ui/plexViews/facets/helpSettings.ts','src/core/plex/views/facets/templates.ts'],{maximumMs:480000});
 
