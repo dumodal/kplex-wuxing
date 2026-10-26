@@ -1367,6 +1367,8 @@ const centralEditorCapable = true, finding = false, hover = null, crossLinkPeek 
 const connectionStateFor = () => "normal", onCentralNodeEditorChange = () => {}, openCentralEditor = () => {}, centralEditorCanMaximize = true, gateKey = (path, gate) => path + ":" + gate;
 const persistentPageFor = (page) => page;
 const activePath = "Editor.md", centralEditorAvailable = true, sectionExpanded = false;
+// Match the production Classic section-source context used by the extracted renderer.
+const sectionDocument = activePath, sectionEditorAvailable = centralEditorAvailable;
 const page = (path, materialized = true) => ({ path, name: path, file: materialized ? { extension: "png", path } : null });
 const centerPage = page(activePath), attachmentPage = page("Before.png"), placeholderPage = page("After.png", false), sentinelPage = page("Other.png");
 const neighborhood = { center: centerPage }, miniPage = page("Descendant.png");
