@@ -19,12 +19,14 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR222 targeted heading measurement follow-up
+# PR222 heading fix: implementation and native evidence complete
 
-Baseline6f630d967c03862fe8c7f87a0254a32e6f026a3a on2026-10-25-facets-layouts-and-sharing; accepted main7064644 included. Prior full3223/native54/CI553 and final pre-heading CI554 are explicitly historical for that artifact. Keep222 draft/open/unmerged. No production files/settings/workspace/deployment changed.
+Branch2026-10-25-facets-layouts-and-sharing; runtimecd82da8d95acf69446f0fa4fa5b8b83107127768; accepted main7064644 included. Final documentation checkpoint changes no production/tests/scripts/packages/styles. Keep222 draft/open/unmerged. No production files/settings/workspace/deployment changed. No merge/release/force-push.
 
-New maintainer clipping repro fixed through shared sectionNodeSize: all section-capable view hosts reserve heading marker/padding and readable minimum; Compass keeps its exact density-adjusted geometry. Configured text/width limits remain. No renderer/parser/index/source scheduler/writer or editor lifecycle change. Earlier canonical counts, central-source policy and independent controls remain.
+Shared sectionNodeSize fixes short-heading clipping by reserving marker/padding/readable width across plugin views. Compass keeps exact density-adjusted geometry. Configured text/width limits remain; source text/provenance/parser/index/editor ownership are unchanged. Earlier canonical counts, central section source policy and independent controls remain.
 
-Actual current checks:55 focused PASS (real text-fit at several font sizes, Compass parity, section/root/editor admission); scanner and real Node22.22.2 build PASS. Native UX28 PASS31, pairs6 PASS13, editor-lifecycle5 PASS11 =55 on identical main6c56ff064a927ad5b43bffc4958409c1a9630f48a2d72cacfd67e8d3980a05dd/styles19a1bb1a25bfbc6db417420e2a07a281e50b48cb5f121ff52d486d9cc3dd47d5. Every lane restored9configs/117contents/original workspace/window/digest; final13:49:46.496Z. No active native owner. Receipts docs/validation/section-heading-222-native-summary.json and section-heading-222-2026-10-26.md.
+Actual current results:55 focused tests PASS with real text-fit at several font sizes, Compass parity and editor admission; official scanner/real Node22.22.2 build PASS. Native UX31/pairs13/editor11 PASS55 on identical main6c56ff064a927ad5b43bffc4958409c1a9630f48a2d72cacfd67e8d3980a05dd/styles19a1bb1a25bfbc6db417420e2a07a281e50b48cb5f121ff52d486d9cc3dd47d5. All restored9configs/117contents/original workspace/window/digest; final native13:49:46.496Z. Receipts docs/validation/section-heading-222-native-summary.json and section-heading-222-2026-10-26.md.
 
-Next: clean full verify:obsidian on this published source with unconditional outer restoration, exact-head CI and final PR readback. Native artifact must match final build. Source/performance guards unchanged. Mac/physical mobile/minimumhost/OSclipboard and known215 baseline limitations remain separate. No merge/release/force-push.
+Clean runtime-head full verify:obsidian and exact final documentation-head CI conclusions, actual suite totals, final artifact equality/restoration and remote readback are recorded in PR222 before final delivery. No incomplete check is presented as a pass. This documentation publication overlaps those checks; runtime/tests remain frozen. Earlier full3223/native54/CI553/CI554 receipts retain their pre-heading attribution and do not substitute for new-head acceptance.
+
+Coverage limits: Mac/physical mobile/minimumhost/OSclipboard, known215 fresh-popout Sidecar/two simultaneous editor-Sidecar pairs/application restart. Priority manual follow-ups: Mac section/editor/focus/popout, physical touch, minimum host. No additional source work or partner-adoption gate. Await maintainer review after final PR verification readback.

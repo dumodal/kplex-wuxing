@@ -505,7 +505,8 @@
     }
   ],
   "remaining": [
-    "Clean full verify:obsidian and exact-head CI on the new artifact",
     "Mac/physical mobile/minimum-host/OSclipboard and known215 coverage limits retained"
-  ]
+  ],
+  "runtimeCommit": "cd82da8d95acf69446f0fa4fa5b8b83107127768",
+  "fullVerification": "Clean runtime-head verify:obsidian and exact final documentation-head CI results are recorded in the PR before delivery."
 }
