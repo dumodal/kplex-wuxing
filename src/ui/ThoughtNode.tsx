@@ -127,14 +127,14 @@ export function ThoughtNode({
   /** Both controls stop native-body gestures before dispatching their distinct shared action. */
   const disclosure = (fold: ThoughtDisclosure | undefined, branch = false): ReactNode => !fold?.hasChildren ? null : <button
     type="button"
-    className={`kplex-section-fold-handle${branch || fold.kind === "branch" ? " is-branch-disclosure" : ""}${fold.expanded ? " is-expanded" : " is-folded"}`}
+    className={`kplex-section-fold-handle${branch || fold.kind === "branch" ? " is-branch-disclosure" : ""}${branch && node.controlReserve ? " has-expanded-hit-target" : ""}${fold.expanded ? " is-expanded" : " is-folded"}`}
     aria-expanded={fold.expanded}
     aria-label={fold.expanded ? fold.expandedTitle ?? translate("node.foldSectionChildren")
       : `${fold.foldedTitle ?? translate("node.unfoldSectionChildren")}${fold.hiddenDescendantCount ? ` · ${translate("node.hiddenCount", {count: fold.hiddenDescendantCount})}` : ""}`}
     onPointerDown={/** Disclosure input never starts node dragging. */ (e: ReactPointerEvent<HTMLButtonElement>) => { e.preventDefault();e.stopPropagation(); }}
     onClick={/** Exactly one caller action; note activation cannot receive this click. */ (e: MouseEvent<HTMLButtonElement>) => { e.preventDefault();e.stopPropagation();fold.onToggle(); }}
     onDoubleClick={/** A disclosure cannot also open the document. */ (e: MouseEvent<HTMLButtonElement>) => { e.preventDefault();e.stopPropagation(); }}
-  >{(branch || fold.kind === "branch") && <ObsidianIcon name={fold.expanded ? "chevron-down" : "chevron-right"} size={12} />}</button>;
+  >{(branch || fold.kind === "branch") && <span className="kplex-branch-disclosure-symbol"><ObsidianIcon name={fold.expanded ? "chevron-down" : "chevron-right"} size={12} /></span>}</button>;
   const paint = nodePaint(style, nodePaintFallbacks(node));
   const gateSize = gateDiameter(style);
   const nodeCss = {

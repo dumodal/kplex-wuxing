@@ -20,6 +20,7 @@ import {validPlexNodeBadge, nodeBadgeBounds, boundedViewColors} from "../../core
 import {canvasViewText} from "./labels";
 import {validPropertyAssignment} from "../../core/plex/views/propertyAssignment";
 import {plexSectionReference, visiblePlexSection, plexSectionAnchor, plexSectionDocument} from "../../core/plex/views/sections";
+import {branchDisclosureReserve} from "./branchDisclosure";
 import type {PlexSectionViewContext} from "./sections";
 import {validPlexDropMeaning, plexAreaDropMeaning} from "../../core/plex/views/dropTargets";
 import {validAreaShape} from "../../core/contracts/areaGeometry";
@@ -185,7 +186,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
   attention: string, state: unknown, settings: KplexSettings, current: () => boolean,
   editorSize?: {width: number; height: number}, matches: (node: PositionedNode) => boolean = () => true,
   grouping?: {translate: Translator; unfolded: ReadonlySet<string>; areaHeights?: Readonly<Record<string, number>>; areaWidths?: Readonly<Record<string, number>>; layoutRoot?: NodeId; retainedScopes?: readonly NodeId[];
-    sections?: PlexSectionViewContext | null},
+    sections?: PlexSectionViewContext | null; touchControls?: boolean},
   editorHost?: OccurrenceEditorHost): PreparedViewScene {
   const empty: HostPlexScene = {nodes: [], edges: [], zoneViewports: {}, zoneAreas: {}};
   try {
@@ -247,8 +248,10 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
       const translate = grouping?.translate;
       const description = occurrence.description && (translate ? canvasViewText(occurrence.description, translate) : "literal" in occurrence.description ? occurrence.description.literal : occurrence.description.key);
       const viewBadge = measuredViewBadge(occurrence.badge, settings, translate);
+      const controlReserve = branchDisclosureReserve(occurrence.branch, grouping?.touchControls === true && definition.hierarchy?.controls === "measured");
       const node: PositionedNode = {page, occurrenceId: occurrence.id, areaId: occurrence.areaId, representation: occurrence.representation,
         ...(viewBadge ? {viewBadge} : {}), ...(description ? {viewDescription: description} : {}),
+        ...(controlReserve ? {controlReserve} : {}),
         role, relationType: relation?.relationType, typeDefinition: relation?.typeDefinition, linkDirection: relation?.linkDirection,
         ...(occurrence.branch ? {branch: occurrence.branch, semanticSourceId: occurrence.branch.parent ? occurrences.get(occurrence.branch.parent)?.nodeId : undefined} : {}),
         physicalPorts: occurrence.ports ?? {}, peerPort: occurrence.peerPort, x: 0, y: 0, ...size, label, style, ...deferredNodeCounts()};
@@ -257,6 +260,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
       if (!matching && occurrence.id !== legacyEditor && !boundEditor && !definition.hierarchy) continue;
       nodes.set(occurrence.id, node); measurements.push({id: occurrence.id, ...size, expandedWidth: size.width, expandedReserve: 0,
         ...(viewBadge ? {badge: {width: viewBadge.width, height: viewBadge.height}} : {}),
+        ...(controlReserve ? {controlReserve} : {}),
         ...(boundEditor ? {editor: true as const} : {}), mini: null, envelope: null});
     }
     if (definition.hierarchy) {

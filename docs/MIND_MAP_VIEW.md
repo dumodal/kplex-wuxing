@@ -4,7 +4,11 @@ Prepared by Zsolt's Codex Agent, 2026-10-25. **Revised implementation independen
 
 ## Maintainer interaction update (2026-10-26)
 
-Keyboard Enter on a selected Mind Map occurrence folds or unfolds through the same guarded action as a branch click. Cycle references reveal the earlier occurrence and explain the cycle. Explicit destination activation remains separate. Parent-area columns expand outward: the left column goes left for two or three columns; the middle/right columns and the single-column arrangement go right. Their physical gates and measured subtree spacing follow the same direction, including filtered forests. Current validation is tracked in [the #222 UX record](validation/facets-222-ux-2026-10-26.md).
+Plain click/tap and Enter center the selected note through the shared destination action; in Mind Map this also makes it the root, subject to existing native-editor safeguards. The separate lower-right chevron or modified Enter folds/unfolds without navigating. Control, Command, Alt/Option and Shift each have an Enter fold default in graph focus; explicitly customized bindings keep priority. Plain arrows stay within the current area when possible and cross its boundary without a modifier. Existing explicit area-jump actions remain available; the old stop-at-area-boundary setting is retained only as serialized compatibility.
+
+Touch keeps the same small chevron while enlarging its transparent target. Opt-in measured controls reserve clearance outside the note body and gates, including during parent-area repacking and Fit. A pointer tap in that reserved area invokes the same fold action exactly once. Browser touch emulation is distinct from physical-device acceptance. Cycle references remain terminal copies in the current traversal; ordinary activation centers their canonical note. Legacy custom views with an explicit expand-primary policy retain ancestor-reveal behavior.
+
+Parent-area columns expand outward: the left column goes left for two or three columns; the middle/right columns and the single-column arrangement go right. Their physical gates and measured subtree spacing follow the same direction, including filtered forests. The new interaction changes receive targeted checks; full regression is deferred until the maintainer requests final merge acceptance.
 
 ## Baseline and start gate
 
@@ -35,9 +39,11 @@ Outline can later reuse this hierarchy projection with a one-sided layout. A com
 | Intent | Result |
 | --- | --- |
 | Enter Mind Map through the selector | Capture that canvas’s current attention as root, including when re-entering a previously used Mind Map. Native workspace restoration independently retains its saved root. Show children to the right, peers to the left and parents above. |
-| Primary click/tap on an eligible occurrence | Select and expand its next bounded child/peer frontier through shared actions. Preserve root, attention and editors; a second primary click folds it through the same editor-safe action. Respect modifier-open behavior and ignore drags/control clicks. |
+| Primary click/tap on an eligible occurrence | Center it through the accepted destination action and make it the map root. Refuse a root change that would remove a live editor; preserve placeholder materialization and drag/control ownership. |
+| Select the lower-right chevron or use modified Enter in graph focus | Fold/unfold its bounded branch through the shared editor-safe action; retain root, attention, camera and native document identity. |
 | Select the explicit editor control | Request that exact occurrence’s in-place native editor through shared actions. Branch expansion is independent. |
 | Select through arrows, typing or Find | Select/reveal the exact occurrence without opening an editor or rerooting. |
+| Press Enter after keyboard selection | Center the selected note; on the existing center, remain centered rather than starting rename. Rename remains its own action. |
 | Click within an expanded editor | Focus its existing native editor. Never toggle-collapse it because the click bubbles to the node. |
 | Expand/collapse branch | Change that occurrence's displayed descendants; independent of editor expansion. |
 | Expand/collapse one generation | Bounded frontier operation over current expansion, not an unbounded recursive scan. |

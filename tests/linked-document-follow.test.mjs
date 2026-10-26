@@ -831,7 +831,7 @@ test('opt-in activate-editor primary opening captures its exact occurrence and r
  current=true;eligible=false;primary(page,'B2',true);assert.equal(requests.length,1);assert.deepEqual(legacy.at(-1),['node.activate',page,'B2']);assert.deepEqual(notices,[]);
 });
 
-test('Mind Map primary click toggles the exact branch without navigation or editor opening',()=>{
+test('legacy opt-in expand primary still toggles its exact branch while center policy uses accepted destination action',()=>{
  const page={path:'B.md'},branch={canExpand:true,expanded:false},requests=[],selected=[];
  const dependencies={viewDefinition:{hierarchy:{primary:'expand'}},scene:{nodes:[{page,occurrenceId:'B1',branch}]},occurrenceKey:node=>node.occurrenceId,
   selection:{select:id=>selected.push(id)},runNodeAction:(...args)=>requests.push(args)};
@@ -841,6 +841,8 @@ test('Mind Map primary click toggles the exact branch without navigation or edit
  branch.canExpand=false;primary(page,'B1',true);assert.equal(requests.length,3,'An expanded branch can still request a guarded fold');
  branch.expanded=false;primary(page,'B1',true);assert.equal(requests.length,3,'Leaf click does not start acquisition or create an editor');
  primary(page,'B1',false);assert.deepEqual(requests.at(-1),['node.activate',page,'B1'],'Modifier route keeps explicit attention navigation');
+ dependencies.viewDefinition.hierarchy.primary='center';primary(page,'B1',true);
+ assert.deepEqual(requests.at(-1),['node.activate',page,'B1','destination'],'Centering reuses navigation/root/editor preflight');
 });
 
 test('history navigation explicitly requests the selected saved node as the rooted map destination',()=>{

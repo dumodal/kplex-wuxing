@@ -12,7 +12,7 @@ export const mindMapViewDefinition: PlexViewDefinition = {
   id: "mindmap", version: 1, labelKey: "view.mindmap", icon: "network", navigation: "rooted", navigationEntry: "attention", editorHosting: "occurrence",
   capabilities: {sections: true, descendants: false, editor: true, compact: false}, sectionSource: "layout-root", defaultState: defaultMindMapState,
   hierarchy: {maximumScopes: MIND_MAP_LIMITS.scopes, maximumDepth: MIND_MAP_LIMITS.depth,
-    primary: "expand", relations: "child-and-peer", reduce: reduceMindMap},
+    primary: "center", controls: "measured", relations: "child-and-peer", reduce: reduceMindMap},
   configuration: mindMapConfigurationSchema, restoreState: restoreMindMapState,
   /** Only the pinned root receives the shared current outline. Branch traversal and canonical
    * edges retain their original identities; sections consume the existing host scene bound. */

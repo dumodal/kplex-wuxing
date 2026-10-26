@@ -33,8 +33,8 @@ export function reflowArea(panel: SceneViewport, nodes: PositionedNode[], filter
     }
     const bounds = [...groups].map(([id, group]) => {
       const left = Math.min(...group.map(node => node.x - node.width / 2)), top = Math.min(...group.map(node => node.y - node.height / 2));
-      return {id, left, top, width: Math.max(...group.map(node => node.x + node.width / 2)) - left,
-        height: Math.max(...group.map(node => node.y + node.height / 2)) - top};
+      return {id, left, top, width: Math.max(...group.map(node => node.x + node.width / 2 + (node.controlReserve?.right ?? 0))) - left,
+        height: Math.max(...group.map(node => node.y + node.height / 2 + (node.controlReserve?.bottom ?? 0))) - top};
     });
     const grid = measuredAreaGrid(bounds, policy.columns, policy.columnGap, policy.rowGap, 24, policy.paddingTop ?? 42, policy.paddingBottom ?? 16);
     for (const bound of bounds) {

@@ -43,7 +43,8 @@ export class PlexViewRegistry {
         || definition.hierarchy.maximumDepth !== undefined && !validHierarchyDepth(definition.hierarchy.maximumDepth)
         || typeof definition.hierarchy.reduce !== "function"
         || definition.hierarchy.relations !== undefined && definition.hierarchy.relations !== "child-and-peer"
-        || !["activate", "activate-editor", "expand"].includes(definition.hierarchy.primary)
+        || !["activate", "activate-editor", "expand", "center"].includes(definition.hierarchy.primary)
+        || definition.hierarchy.controls !== undefined && definition.hierarchy.controls !== "measured"
         || definition.hierarchy.primary === "activate-editor" && definition.editorHosting !== "occurrence")) throw new Error("Unsupported hierarchy policy");
       this.definitions.set(definition.id, definition);
     }

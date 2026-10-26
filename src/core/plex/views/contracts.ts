@@ -97,6 +97,9 @@ export type PlexProjection = Readonly<{
 }>;
 export type PlexMeasurement = Readonly<{
   id: OccurrenceId; width: number; height: number; expandedWidth: number; expandedReserve: number;
+  /** Optional shared control footprint outside the thought body. Opt-in layouts reserve these
+   * extents for hit-testing without enlarging the label/editor rectangle or semantic ports. */
+  controlReserve?: Readonly<{right: number; bottom: number}>;
   badge?: Readonly<{width: number; height: number}>;
   /** Only this occurrence has a bound expanded editor; the legacy layout boolean does not describe it. */
   editor?: true;
@@ -180,7 +183,9 @@ export interface PlexViewDefinition {
   readonly hierarchy?: Readonly<{maximumScopes: number;
     /** Admitted occurrence depth from 1 through 20; omission preserves 8. This never enlarges the source-scope budget. */
     maximumDepth?: number;
-    primary: "activate" | "activate-editor" | "expand"; relations?: "child-and-peer";
+    primary: "activate" | "activate-editor" | "expand" | "center"; relations?: "child-and-peer";
+    /** Opt into packing the optional shared disclosure hit-target measurement. */
+    controls?: "measured";
     /** Return a small replacement view state, or null when the requested displayed branch is unavailable. */
     reduce: (state: unknown, projection: PlexProjection, action: PlexBranchAction) => unknown}>;
   readonly configuration?: PlexViewConfigurationSchema;

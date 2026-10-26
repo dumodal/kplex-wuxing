@@ -165,6 +165,8 @@ export type PositionedNode = {
   /** Canonical source of this occurrence's primary real relationship, independent of current attention. */
   semanticSourceId?: string;
   branch?: import("./core/plex/views/contracts").PlexBranch;
+  /** Shared touch disclosure clearance, independent of the note body and canonical gates. */
+  controlReserve?: Readonly<{right: number; bottom: number}>;
   page: GraphPage;
   role: Role | "center";
   relationType?: RelationType;

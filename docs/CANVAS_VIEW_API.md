@@ -67,6 +67,16 @@ Mind Map's hierarchy does not imply the legacy `descendants` flag. Corpus reads/
 
 An optional `hierarchy.maximumDepth` declares a finite occurrence-admission limit from 1 through 20. Omission preserves the existing limit of 8. Shared scene admission, ancestor-path visibility/selection and cycle-reference reveal use that same declared limit. Mind Map declares its existing hard maximum of 20; its configured default remains 10. This capability does not enlarge the independent source-scope budget (eight non-root frontiers for Mind Map), so another bounded-work limit can stop expansion earlier while retaining the visible frontier.
 
+### Shared disclosure and navigation
+
+`PlexOccurrence.branch` already supplies the shared branch disclosure; `branch.toggle` uses the definition's pure hierarchy reducer and existing session/editor preflight. A view implements neither a private button nor a second fold owner. The same action can delegate to supported central Markdown sections or a selected heading through their existing owners. Unsupported notes have no fold control/action.
+
+Mind Map declares additive `hierarchy.primary: "center"`: a plain note activation uses the existing destination/root/navigation lifecycle. Existing `activate`, `activate-editor` and explicit legacy `expand` primary policies remain valid for other consumers. Plain Enter centers in every registered view; rename and native document opening remain separate actions. Modified Enter folds only in graph focus, leaving native editors/fields in charge of their own keys. Four single-modifier defaults cover Control, Command, Alt/Option and Shift; default generation2 adds them without overwriting explicit shortcut choices or previously accepted conflicts.
+
+Plain arrows cross an exhausted area boundary using the existing spatial selection/reveal owner. Explicit area-jump actions remain optional shortcuts; `crossSectionAtBoundary` is retained in serialized preferences but no longer stops plain-arrow traversal or appears in Settings.
+
+Optional `hierarchy.controls: "measured"` opts into larger shared touch targets. The host supplies `PlexMeasurement.controlReserve {right,bottom}` and paints a 16px symbol in a transparent 44px canvas-space button with a4px body/gate gap. Layout packs the reserve while preserving the actual node/editor rectangle and semantic ports. Mind Map subtree/parent-area geometry, shared filtered repacking and Fit include this clearance. Existing consumers omit the capability and retain their prior geometry. Controls follow the normal canvas scale; physical phone/tablet input still needs device acceptance.
+
 ## Bounded reads and availability
 
 `PlexViewRead` exports current/coverage checks, admitted-node lookup, bounded direct `relations`, optional exact cached `relation`/`scope`, pair `evidence`, comparison and optional `properties`. Corpus reports unavailable; an empty list never proves a whole-vault negative.

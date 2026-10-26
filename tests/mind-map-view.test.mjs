@@ -14,6 +14,23 @@ function graphInput(children,options={}){
  return{input:{attention:'A',layoutRoot:'R',maximum:32,state:null,read,...options.input},nodes,project(){return M.mindMapViewDefinition.project(this.input)},get reads(){return reads},retire(){current=false}};
 }
 
+test('measured touch control envelopes remain disjoint at dense spacing and preserve thought/editor rectangles',()=>{
+ const g=graphInput({R:['A','B','C'],A:['D','E'],B:['F']});
+ g.input.state={version:1,scope:'R',initialGenerations:1,expanded:[JSON.stringify(['R','A']),JSON.stringify(['R','B'])],collapsed:[],sides:{}};
+ const projection=g.project();assert(projection);
+ const measurements=projection.occurrences.map(row=>({id:row.id,width:row.id==='root'?220:120,height:row.id==='root'?90:32,
+  expandedWidth:120,expandedReserve:0,mini:null,envelope:null,...(row.branch.canExpand?{controlReserve:{right:48,bottom:48}}:{})}));
+ for(const arrangement of ['left','right','balanced']){
+  const layout=M.layoutMindMap(projection,measurements,{...M.mindMapConfiguration(),arrangement,horizontalDensity:4,verticalDensity:4}),rects=[];
+  for(const m of measurements){const r=layout.positions.get(m.id);assert.equal(r.width,m.width);assert.equal(r.height,m.height);
+   const box={id:m.id,left:r.x-r.width/2,top:r.y-r.height/2,right:r.x+r.width/2+(m.controlReserve?.right??0),bottom:r.y+r.height/2+(m.controlReserve?.bottom??0)};
+   for(const other of rects)assert(box.right<=other.left||box.left>=other.right||box.bottom<=other.top||box.top>=other.bottom,'Measured control overlaps '+box.id+' / '+other.id);
+   rects.push(box);
+  }
+ }
+ assert.equal(M.mindMapViewDefinition.hierarchy.primary,'center');assert.equal(M.mindMapViewDefinition.hierarchy.controls,'measured');
+});
+
 test('matching one duplicate occurrence keeps only its real ancestor path, and broken/cyclic ancestry confers no visibility',()=>{
  const rows=[{id:'root'},{id:'B',parent:'root'},{id:'C',parent:'root'},{id:'D1',parent:'B'},{id:'D2',parent:'C'},
   {id:'missing-parent',parent:'absent'},{id:'cycle',parent:'cycle'}];

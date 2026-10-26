@@ -114,10 +114,10 @@ export async function acceptFacets222UX(x){
  cases.push({id:'native-mindmap-canonical-gate-counts',expected});
  await action('selection.center');await action('graph.focus');await key('Up',['alt']);await key('Right');
  check(selected()?.node.path?.includes('/Parent '),'Native arrow selection did not enter a parent');
- const picked=selected().node.path,initialRoot=session.layoutRoot(path('Memory'));await key('Enter');await until(()=>session.state.expanded.includes(selected()?.occurrenceId),'Enter did not expand selected parent');
- await key('Enter');await until(()=>session.state.collapsed.includes(selected()?.occurrenceId),'Enter did not fold selected parent');
+ const picked=selected().node.path,initialRoot=session.layoutRoot(path('Memory'));await key('Enter',['shift']);await until(()=>session.state.expanded.includes(selected()?.occurrenceId),'Modified Enter did not expand selected parent');
+ await key('Enter',['shift']);await until(()=>session.state.collapsed.includes(selected()?.occurrenceId),'Modified Enter did not fold selected parent');
  check(center(host)===path('Memory')&&session.layoutRoot(path('Memory'))===initialRoot&&selected().node.path===picked,'Enter changed root/attention/selection');cases.push({id:'native-arrow-selected-enter-fold-unfold-no-navigation'});
- for(let i=0;i<3;i++){await click(card('Parent '+i));await until(()=>card('Outward '+i),'Parent did not expand');}
+ for(let i=0;i<3;i++){await click(card('Parent '+i).querySelector('.is-branch-disclosure'));await until(()=>card('Outward '+i),'Parent did not expand');}
  for(const columns of [1,2,3]){
   await wait(250);const columnsStop=quiet();await p.updateCanvasViewSetting('mindmap','parentColumns',columns);await wait(250);columnsStop('native-parent-columns-'+columns+'-zero-source-work');
   for(let i=0;i<3;i++){const a=card('Parent '+i).getBoundingClientRect(),b=card('Outward '+i).getBoundingClientRect(),direction=columns>1&&i%columns===0?-1:1;
@@ -248,13 +248,13 @@ export async function acceptFacets222UX(x){
   &&depthFiles.slice(0,-1).every((file,i)=>{const page=p.index.get(file.path);return page&&p.index.neighbours(page,'child').some(row=>row.page.path===depthFiles[i+1].path)}),'Canonical depth chain did not settle');
  session.setRoot(path('Depth 0'));p.notifyNavigation(path('Depth 0'),host);await until(()=>card('Depth 1')&&center(host)===path('Depth 0'),'Depth root did not render');
  for(let i=1;i<=8;i++){
-  await action('view.fit');await wait(80);await click(card('Depth '+i));
+  await action('view.fit');await wait(80);await click(card('Depth '+i).querySelector('.is-branch-disclosure'));
   await until(()=>card('Depth '+(i+1))||root(host).querySelector('.kplex-view-error'),'Expanded depth frontier did not settle');
   check(!root(host).querySelector('.kplex-view-error')&&card('Depth '+(i+1)),'Deep bounded branch invalidated the entire view at '+(i+1));
  }
  check(card('Depth 9')&&!card('Depth 10'),'Ninth-depth admission changed the bounded frontier');
  cases.push({id:'native-mindmap-depth-nine-admission',configuredMaximumDepth:20});
- await action('view.fit');await wait(80);await click(card('Depth 9'));await wait(200);
+ await action('view.fit');await wait(80);await click(card('Depth 9').querySelector('.is-branch-disclosure'));await wait(200);
  check(card('Depth 9')&&!card('Depth 10')&&!root(host).querySelector('.kplex-view-error')
   &&center(host)===path('Depth 0')&&session.layoutRoot(path('Depth 0'))===path('Depth 0'),'Existing eight-scope limit broke the view or changed navigation');
  cases.push({id:'native-mindmap-eight-scope-limit-retains-visible-frontier'});
