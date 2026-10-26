@@ -1035,6 +1035,7 @@ const spanishTranslations = {
   "graph.deleteNote": "Eliminar nota…",
   "graph.deletePlaceholder": "Eliminar marcador de posición…",
   "graph.collapseSections": "Contraer secciones de la nota",
+  "graph.sectionLoadFailed": "No se pudieron cargar las secciones. Vuelve a expandir la nota.",
   "graph.expandSections": "Expandir nota a secciones",
   "graph.foldAllSections": "Plegar todas las secciones",
   "graph.unfoldAllSections": "Desplegar todas las secciones",

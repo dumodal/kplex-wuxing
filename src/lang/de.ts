@@ -1034,6 +1034,7 @@ const germanTranslations = {
   "graph.deleteNote": "Notiz löschen…",
   "graph.deletePlaceholder": "Platzhalter löschen…",
   "graph.collapseSections": "Notizabschnitte einklappen",
+  "graph.sectionLoadFailed": "Abschnitte konnten nicht geladen werden. Versuche erneut, die Notiz aufzuklappen.",
   "graph.expandSections": "Notiz in Abschnitte erweitern",
   "graph.foldAllSections": "Alle Abschnitte einklappen",
   "graph.unfoldAllSections": "Alle Abschnitte ausklappen",

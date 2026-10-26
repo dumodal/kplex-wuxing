@@ -126,7 +126,7 @@ Only the accepted capacity-one Mind Map occurrence host opts into `editorHosting
 
 ## Optional sections: reuse the source and renderer
 
-Production Facets/Mind Map keep sections disabled. Compass retains its production section behavior. A new opt-in must prove the complete boundary before enabling a production mode.
+Declare `capabilities.sections: true` and an optional `sectionSource` (`attention`, the compatibility default, or `layout-root` for rooted policies). Use `plexSectionDocument` to resolve the source and `appendPlexSections` for a central-root projection. The existing host owns explicit source loading, cancellation, folding, measurement, rendering and proven physical anchors. Compass follows attention; Mind Map's #222 integration follows only its pinned root, with native acceptance tracked separately. Facets deliberately keeps sections disabled and shows no section toggle. A new opt-in must prove source/geometry/folding/navigation/editor behavior before acceptance.
 
 The host adapts one explicitly expanded document using `createPlexSectionViewContext`. It exposes current source-owned row IDs, hierarchy/ranges/visibility and projected canonical provenance, with native file/stat lifetime proof. It does not scan headings again. Missing/oversized/retired source remains unavailable; body acquisition occurs only through the existing explicit source operation.
 

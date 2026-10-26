@@ -1035,6 +1035,7 @@ const frenchTranslations = {
   "graph.deleteNote": "Supprimer la note…",
   "graph.deletePlaceholder": "Supprimer l’espace réservé…",
   "graph.collapseSections": "Replier les sections de la note",
+  "graph.sectionLoadFailed": "Impossible de charger les sections. Essayez de d?velopper ? nouveau la note.",
   "graph.expandSections": "Développer la note en sections",
   "graph.foldAllSections": "Replier toutes les sections",
   "graph.unfoldAllSections": "Déplier toutes les sections",

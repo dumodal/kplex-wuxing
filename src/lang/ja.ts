@@ -1033,6 +1033,7 @@ const japaneseTranslations = {
   "graph.deleteNote": "ノートを削除…",
   "graph.deletePlaceholder": "プレースホルダーを削除…",
   "graph.collapseSections": "ノートセクションを折りたたむ",
+  "graph.sectionLoadFailed": "??????????????????????????????????",
   "graph.expandSections": "ノートをセクションに展開",
   "graph.foldAllSections": "すべてのセクションを折りたたむ",
   "graph.unfoldAllSections": "すべてのセクションを展開",

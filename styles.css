@@ -1890,8 +1890,18 @@ button.kplex-sidecar-unfold-plex,
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--interactive-accent) 16%, transparent);
 }
 .kplex-section-fold-handle.is-branch-disclosure {
+  left: auto;
+  right: 6px;
+  transform: none;
   width: 16px;
   height: 16px;
+  inline-size: 16px;
+  block-size: 16px;
+  min-inline-size: 16px;
+  min-block-size: 16px;
+  max-inline-size: 16px;
+  max-block-size: 16px;
+  flex: 0 0 16px;
   bottom: -9px;
   display: flex;
   align-items: center;

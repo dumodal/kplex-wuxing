@@ -3537,6 +3537,7 @@ export const englishCatalog = {
     context: "Plex graph controls, menus, relationship evidence, and accessibility copy.",
     params: [],
   },
+  "graph.sectionLoadFailed": {"message":"Could not load sections. Try expanding the note again.","context":"Actionable failure of an explicitly requested central Markdown outline. Does not appear for routine layout or settings changes.","params":[]},
   "graph.expandSections": {
     message: "Expand note to sections",
     context: "Plex graph controls, menus, relationship evidence, and accessibility copy.",

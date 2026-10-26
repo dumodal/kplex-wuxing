@@ -7,6 +7,14 @@ const M=await plexViewModules(['src/core/plex/views/index.ts','src/core/plex/vie
   'src/application/PlexViewSession.ts','src/ui/plexViews/settingsContributions.ts','src/ui/plexViews/example.ts',
   'src/ui/plexViews/CanvasViewContributionController.ts','src/ui/plexViews/contributionValidation.ts',
   'src/ui/plexViews/prepareScene.ts','src/ui/plexViews/labels.ts','src/core/plex/views/mindmap/definition.ts']);
+
+test('registry admits additive central section policies and refuses unsupported or unrooted sources',()=>{
+ const base=M.mindMapViewDefinition;
+ assert.equal(new M.PlexViewRegistry([base],base.id).resolve(base.id).sectionSource,'layout-root');
+ for(const changes of [{sectionSource:'selected'},{capabilities:{...base.capabilities,sections:false}},{navigation:undefined}])
+  assert.throws(()=>new M.PlexViewRegistry([{...base,...changes}],base.id));
+ const legacy={...base,sectionSource:undefined};assert.equal(new M.PlexViewRegistry([legacy],base.id).resolve(base.id),legacy);
+});
 const definition=M.exampleViewDefinition;
 
 test('shared rounded band occupancy excludes its true inner hole and matches circular corners',()=>{

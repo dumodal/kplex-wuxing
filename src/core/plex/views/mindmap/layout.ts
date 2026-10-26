@@ -9,7 +9,8 @@ export function layoutMindMap(projection: PlexProjection, measurements: readonly
   areaHeights: Readonly<Record<string, number>> = {}): PlexViewLayout {
   const horizontalSpacing = configuration.horizontalSpacing / configuration.horizontalDensity;
   const verticalSpacing = configuration.verticalSpacing / configuration.verticalDensity;
-  const root = projection.entry, branches = projection.occurrences, sizes = new Map(measurements.map(row => [row.id, row]));
+  const root = projection.entry, branches = projection.occurrences.filter(row => !row.section), sections = projection.occurrences.filter(row => row.section),
+    sizes = new Map(measurements.map(row => [row.id, row]));
   if (branches.length > MIND_MAP_LIMITS.occurrences || new Set(branches.map(row => row.id)).size !== branches.length) throw new Error("Invalid hierarchy identity");
   const children = new Map<string, typeof branches[number][]>();
   for (const branch of branches) {
@@ -58,7 +59,11 @@ export function layoutMindMap(projection: PlexProjection, measurements: readonly
   const grid = measuredAreaGrid(ordered.map((row, index) => row ? {id: row.id, width: width(row.id), height: extents.get(row.id)!}
     : {id: `empty-parent-cell-${index}`, width: 1, height: 1}),
     configuration.parentColumns, horizontalSpacing, verticalSpacing);
-  const parentWidth = Math.max(rootSize.width, grid.width), height = Math.max(140, Math.min(800, areaHeights.parentHeight ?? 300));
+  const sectionSizes = sections.map(/** Heading dimensions come from the same native measurement pipeline as note cards. */ row => {
+    const size = sizes.get(row.id);if (!size) throw new Error("Missing measured section");return size;
+  });
+  const parentWidth = Math.max(rootSize.width, grid.width, ...sectionSizes.map(/** Reserve the central outline envelope before placing any lateral branches. */ size => size.width)),
+    height = Math.max(140, Math.min(800, areaHeights.parentHeight ?? 300));
   const parentBounds = {x: -parentWidth / 2, y: -rootSize.height / 2 - verticalSpacing - height, width: parentWidth, height};
   if (!Number.isFinite(height)) throw new Error("Invalid parent area height");
   for (const parent of above) {
@@ -76,6 +81,11 @@ export function layoutMindMap(projection: PlexProjection, measurements: readonly
     place([...rows.filter(row => row.role !== "child"), ...rows.filter(row => row.role === "child")], lateralRoot, side);
   }
   if (positions.size !== branches.length) throw new Error("Disconnected hierarchy");
+  let sectionY = rootSize.height / 2 + Math.min(24, verticalSpacing);
+  for (const size of sectionSizes) {
+    positions.set(size.id, {x: 0, y: sectionY + size.height / 2, width: size.width, height: size.height});
+    sectionY += size.height + Math.min(24, verticalSpacing);
+  }
   const areas: PlexViewLayout["areas"][number][] = [{id: "parent", labelKey: "graph.zoneParents", bounds: {...parentBounds, height}, resizeEdge: "top",
     heightPreference: {key: "parentHeight", minimum: 140, maximum: 800}, dropRole: "parent",
     viewport: {...parentBounds, height, contentTop: parentBounds.y, contentHeight: Math.max(height, grid.height), initialScrollTop: 0},

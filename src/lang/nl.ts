@@ -1034,6 +1034,7 @@ const dutchTranslations = {
   "graph.deleteNote": "Notitie verwijderen…",
   "graph.deletePlaceholder": "Tijdelijke aanduiding verwijderen…",
   "graph.collapseSections": "Notitiesecties inklappen",
+  "graph.sectionLoadFailed": "Secties konden niet worden geladen. Probeer de notitie opnieuw uit te vouwen.",
   "graph.expandSections": "Notitie uitvouwen naar secties",
   "graph.foldAllSections": "Alle secties inklappen",
   "graph.unfoldAllSections": "Alle secties uitklappen",

@@ -169,6 +169,9 @@ export interface PlexViewDefinition {
   readonly defaultState: unknown;
   /** Omit for the existing attention-following host. Occurrence hosting requires explicit shared bindings. */
   readonly editorHosting?: "occurrence";
+  /** Single central Markdown document. Requires sections capability; omission preserves the
+   * attention source. Rooted policies may explicitly follow their pinned layout root instead. */
+  readonly sectionSource?: "attention" | "layout-root";
   /** Omit for attention-scoped geometry and navigation compatibility. */
   readonly navigation?: "rooted";
   /** Explicit selector entry may start at this canvas's current attention; workspace restoration still retains its saved root. */

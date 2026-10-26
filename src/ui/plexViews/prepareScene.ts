@@ -19,7 +19,7 @@ import {validCanvasViewText} from "../../core/plex/views/presentation";
 import {validPlexNodeBadge, nodeBadgeBounds, boundedViewColors} from "../../core/plex/views/decorations";
 import {canvasViewText} from "./labels";
 import {validPropertyAssignment} from "../../core/plex/views/propertyAssignment";
-import {plexSectionReference, visiblePlexSection, plexSectionAnchor} from "../../core/plex/views/sections";
+import {plexSectionReference, visiblePlexSection, plexSectionAnchor, plexSectionDocument} from "../../core/plex/views/sections";
 import type {PlexSectionViewContext} from "./sections";
 import {validPlexDropMeaning, plexAreaDropMeaning} from "../../core/plex/views/dropTargets";
 import {validAreaShape} from "../../core/contracts/areaGeometry";
@@ -197,12 +197,14 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
       || new Set(propertyAssignments.map(target => target.id)).size !== propertyAssignments.length) throw new Error("Invalid property assignment targets");
     const layoutRoot = definition.navigation === "rooted" ? grouping?.layoutRoot ?? nodeId(attention) : undefined;
     const requestedSections = definition.capabilities.sections === true ? grouping?.sections : undefined;
-    const sectionHost = !editorSize && !editorHost?.bindings.length && requestedSections?.isCurrent() ? requestedSections : null;
+    const sectionDocument = plexSectionDocument(definition, nodeId(attention), layoutRoot);
+    const sectionEditor = editorSize || editorHost?.bindings.some(binding => binding.target.nodeId === sectionDocument);
+    const sectionHost = !sectionEditor && requestedSections?.isCurrent() && requestedSections.snapshot.documentId === sectionDocument ? requestedSections : null;
     const projection = definition.project({attention: nodeId(attention), layoutRoot, retainedScopes: grouping?.retainedScopes,
       editors: editorHost?.bindings.map(binding => ({occurrenceId: binding.occurrenceId, nodeId: binding.target.nodeId})),
       read, maximum: settings.maxItemCount, state, configuration,
       ...(requestedSections !== undefined ? {sections: sectionHost ? {status: "available", snapshot: sectionHost.snapshot}
-        : {status: "unavailable", reason: editorSize || editorHost?.bindings.length ? "editor" : "source"}} : {})});
+        : {status: "unavailable", reason: sectionEditor ? "editor" : "source"}} : {})});
     if (!projection || !current() || !read.isCurrent()) return {scene: empty, projection: null, failure: true};
     validateProjection(projection, maximum, definition);
     const sectionOccurrences = new Map<string, string>();
@@ -259,8 +261,11 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
     if (definition.hierarchy) {
       // A matching descendant retains its genuine displayed path. No semantic shortcut is invented
       // across a removed parent, and the fixed root remains visible even for an empty match set.
-      const keep = hierarchyPathClosure(projection.occurrences.filter(row => nodes.has(row.id)).map(row => ({id: row.id, parent: row.branch?.parent})),
-        matched, rootOccurrence, definition.hierarchy.maximumDepth);
+      const keep = new Set(hierarchyPathClosure(projection.occurrences.filter(row => nodes.has(row.id)).map(row => ({id: row.id, parent: row.branch?.parent})),
+        matched, rootOccurrence, definition.hierarchy.maximumDepth));
+      // Current source-validated headings are presentation children of the one central document,
+      // never canonical graph branches. Their own source tree remains with the section owner.
+      for (const row of projection.occurrences) if (row.section && nodes.has(row.id)) keep.add(row.id);
       for (const id of nodes.keys()) if (!keep.has(id)) {nodes.delete(id); pages.delete(id);}
       for (let position = measurements.length - 1; position >= 0; position--) if (!keep.has(measurements[position].id)) measurements.splice(position, 1);
     }

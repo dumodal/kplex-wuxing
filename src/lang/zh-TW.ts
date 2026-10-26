@@ -1033,6 +1033,7 @@ const traditionalChineseTranslations = {
   "graph.deleteNote": "刪除筆記…",
   "graph.deletePlaceholder": "刪除預留位置…",
   "graph.collapseSections": "收合筆記區段",
+  "graph.sectionLoadFailed": "???????????????",
   "graph.expandSections": "將筆記展開為區段",
   "graph.foldAllSections": "收合所有區段",
   "graph.unfoldAllSections": "展開所有區段",

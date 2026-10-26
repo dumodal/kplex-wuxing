@@ -14,7 +14,7 @@ export async function acceptFacets222UX(x){
  const click=async element=>{check(element?.isConnected,'Native click target absent');element.scrollIntoView({block:'nearest'});const r=element.getBoundingClientRect();
   const owner=element.ownerDocument.defaultView.require('@electron/remote').getCurrentWindow();owner.restore();owner.show();owner.focus();owner.webContents.focus();await until(()=>element.ownerDocument.hasFocus(),'Invoking dialog focus absent');for(const type of ['mouseDown','mouseUp'])owner.webContents.sendInputEvent({type,x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2),button:'left',clickCount:1});await wait(120);};
  const key=async(keyCode,modifiers=[],owner=doc)=>{const contents=owner.defaultView.require('@electron/remote').getCurrentWindow().webContents;for(const type of ['keyDown','keyUp'])contents.sendInputEvent({type,keyCode,modifiers});await wait(160);};
- const action=async id=>{const surface=[...p.actionSurfaceHosts].find(([,entry])=>entry.leaf===host)?.[0];check(surface,'Native action surface absent');return p.actionManager.dispatch({id,source:'internal',surfaceId:surface});};
+ const action=async(id,args)=>{const surface=[...p.actionSurfaceHosts].find(([,entry])=>entry.leaf===host)?.[0];check(surface,'Native action surface absent');return p.actionManager.dispatch({id,source:'internal',surfaceId:surface,...(args?{args}:{})});};
  const selected=()=>{const surface=[...p.actionSurfaceHosts].find(([,entry])=>entry.leaf===host)?.[0];return p.actionManager.readSnapshot(surface)?.selected;};
  /** Captures contain only this controller's generated notes and owned settings dialogs. */
  const capture=async(name,element)=>{const r=element.getBoundingClientRect();require('node:fs').writeFileSync(c.screenshotPrefix+'-ux-'+name+'.png',(await element.ownerDocument.defaultView.require('@electron/remote').getCurrentWindow().webContents.capturePage({x:Math.max(0,Math.ceil(r.x)),y:Math.max(0,Math.ceil(r.y)),width:Math.floor(r.width),height:Math.floor(r.height)})).toPNG());};
@@ -74,6 +74,7 @@ export async function acceptFacets222UX(x){
  await reveal(host);await action('view.areas.toggle');
  const wood=JSON.stringify(['facets','wuxing','category','wood']);
  const widthHandle=()=>root(host).querySelector('.'+doc.defaultView.CSS.escape('kplex-area-'+wood)+' .is-width-handle');
+ await until(widthHandle,'Native shared width control absent after area mode commit');
  const columns=()=>['Concept','Concept2'].map(name=>[...root(host).querySelectorAll('.kplex-thought')].find(el=>el.dataset.kplexPath===path(name))?.getBoundingClientRect().x);
  const columnStop=quiet();
  for(const [keyCode,multiple]of [['End',true],['Home',false]]){
@@ -112,6 +113,55 @@ export async function acceptFacets222UX(x){
   cases.push({id:'native-parent-column-outward-directions',columns});
  }
  await action('view.fit');await capture('mindmap-parent-columns',root(host).querySelector('.kplex-plex'));
+ // Only this controller's generated root is edited; ordinary incremental indexing settles
+ // before measuring presentation-only heading folds and native editor coexistence.
+ const memoryFile=app.vault.getFileByPath(path('Memory'));
+ await app.vault.modify(memoryFile,(await app.vault.read(memoryFile))+'\n## Native heading one\nRoot outline text.\n## Native heading two\nMore root outline text.\n');
+ await until(()=>(app.metadataCache.getFileCache(memoryFile)?.headings?.length??0)>=3&&!p.index.hasActiveSemanticPreparation(),'Root note edit did not settle');await wait(250);
+ const central=()=>root(host).querySelector('[data-kplex-keyboard-id="root"]');
+ const sectionControl=()=>central().querySelector('.kplex-section-fold-handle:not(.is-branch-disclosure)');
+ const headings=()=>[...root(host).querySelectorAll('.is-kplex-section')];
+ check(sectionControl()&&central().querySelector('.is-branch-disclosure'),'Root must expose independent section and branch controls');
+ check([...root(host).querySelectorAll('.kplex-thought:not(.is-kplex-section)')].filter(el=>el!==central()).every(el=>!el.querySelector('.kplex-section-fold-handle:not(.is-branch-disclosure)')),'A noncentral note exposes a Markdown section toggle');
+ await action('view.pan.right');await wait(100);const manualCamera=root(host).querySelector('.kplex-camera').style.transform;
+ await click(sectionControl());await until(()=>headings().length>=3,'Native central outline did not appear');
+ check(root(host).querySelectorAll('.kplex-section-tree-edge').length===headings().length,'Native root outline bypassed the shared tree renderer');
+ check(root(host).querySelector('.kplex-camera').style.transform===manualCamera,'Section expansion lost manual camera intent');
+ const allHeadings=headings().length,headingFold=headings().find(el=>el.querySelector('.kplex-section-fold-handle'))?.querySelector('.kplex-section-fold-handle');
+ check(headingFold,'Native nested heading fold absent');await wait(300);const foldStop=quiet();await click(headingFold);
+ await until(()=>headings().length<allHeadings,'Native heading fold did not work');foldStop('native-mindmap-heading-fold-zero-source-work');
+ check(central().querySelector('.is-branch-disclosure').getAttribute('aria-expanded')==='true','Heading fold collapsed the graph branch');
+ cases.push({id:'native-mindmap-central-only-sections-shared-tree-independent-fold-camera',headings:allHeadings});
+ p.notifyNavigation(path('Concept'),host);await until(()=>center(host)===path('Concept'),'Attention move absent');await wait(150);
+ check(headings().length>0&&central().dataset.kplexPath===path('Memory')&&session.layoutRoot(path('Concept'))===path('Memory'),'Ordinary attention replaced the pinned root outline');
+ cases.push({id:'native-mindmap-attention-retains-root-outline'});
+ // Open an actual existing occurrence editor without replacing the root's section source.
+ await action('view.fit');await wait(100);await click(card('Parent 1').querySelector('.kplex-thought-corner-action'));
+ await until(()=>session.editors.bindings.length===1&&root(host).querySelector('.kplex-central-editor-content .cm-content'),'Native nonroot editor did not open');
+ check(headings().length>0&&session.editors.bindings[0].target.nodeId===path('Parent 1'),'Root outline replaced or retargeted the other editor');
+ const content=root(host).querySelector('.kplex-central-editor-content .cm-content');content.focus();
+ await until(()=>workspace.activeLeaf?.view.file?.path===path('Parent 1'),'Native editor focus did not select its own document');
+ const leaf=workspace.activeLeaf,editor=leaf.view.editor,binding=session.editors.bindings[0];
+ editor.setCursor(editor.lastLine(),editor.getLine(editor.lastLine()).length);await native.webContents.insertText('Kplex-222-root-outline-editor');
+ await until(()=>editor.getValue().includes('Kplex-222-root-outline-editor'),'Native typed text did not reach the owned editor');
+ const value=editor.getValue(),cursor=JSON.stringify(editor.getCursor()),node=headings()[0].querySelector('.kplex-section-fold-handle');
+ await click(node);await wait(150);
+ check(workspace.activeLeaf===leaf&&leaf.view.editor===editor&&editor.getValue()===value&&JSON.stringify(editor.getCursor())===cursor
+  &&content.contains(doc.activeElement)&&session.editors.bindings[0].id===binding.id,'Heading folding disturbed editor document/content/caret/focus');
+ check((await action('editor.collapse',{bindingId:binding.id})).status==='completed','Existing native editor collapse/save failed');
+ await until(()=>!session.editors.bindings.length&&!root(host).querySelector('.kplex-central-editor-content'),'Native editor cleanup incomplete');
+ check((await app.vault.read(app.vault.getFileByPath(path('Parent 1')))).includes('Kplex-222-root-outline-editor'),'Native editor collapse lost content');
+ cases.push({id:'native-mindmap-root-outline-other-editor-focus-content-caret-save-cleanup'});
+ await click(central().querySelector('.kplex-thought-corner-action'));
+ await until(()=>session.editors.bindings.length===1&&session.editors.bindings[0].target.nodeId===path('Memory'),'Root editor identity absent');
+ await until(()=>!headings().length&&!sectionControl(),'Root editor did not exclude its own section outline/control');
+ const rootBinding=session.editors.bindings[0];check((await action('editor.collapse',{bindingId:rootBinding.id})).status==='completed','Root editor cleanup failed');
+ await until(()=>!session.editors.bindings.length&&sectionControl(),'Root section control did not return after editor close');
+ cases.push({id:'native-mindmap-root-editor-excludes-only-own-outline'});
+ await choose(host,'wuxing');await until(()=>!root(host).querySelector('.kplex-section-fold-handle'),'Unsupported Facets exposes a section toggle');
+ await choose(host,'mindmap');panel(host).querySelector('.kplex-filter-panel-header button').click();
+ p.notifyNavigation(path('Memory'),host);await until(()=>center(host)===path('Memory'),'Owned attention did not restore');
+ cases.push({id:'native-facets-sections-disabled-after-view-switch'});
  // The root does not consume a non-root scope. Eight admitted branch scopes can therefore
  // expose depth9; host admission must preserve that card without enlarging source demand.
  await wait(250);const depthSettingStop=quiet();await p.updateCanvasViewSetting('mindmap','maximumDepth',20);await wait(160);

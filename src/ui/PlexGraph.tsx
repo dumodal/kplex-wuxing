@@ -1,4 +1,7 @@
 /**
+ * Central Markdown outlines use the definition's explicit attention/root source, independent
+ * from branch disclosure and other editor documents. The existing section owner loads only
+ * explicit requests, fences rerooted reads and shares measurement, tree drawing and actions.
  * Host-bound Plex scene composition, shared captured center-arrival motion and finite Wander navigation ports, layout and relationship interactions. Semantic resolution stays index/core-owned; UI labels and on-demand evidence hints use the injected translator. Navigation fits keep the central node centered and follow late geometry until manual camera input; publication and ordinary pane resizing preserve manual intent. Sidecar open/close transitions explicitly reframe the current viewport after native layout settles, with pending work retired by input, navigation or unmount. View-owned display transitions retain camera coordinates and scene settings. Device typography stages scalar live preferences and persists after input settles; unmount flushes storage without replaying stale overrides. Area-height gestures own viewport pointer capture and persist existing presentation settings on completion or interruption. History and pinned drag targets share composer eligibility; external file drops follow the rendered area's semantic role. Theme-native area previews follow the existing drop action without intercepting capture or moving the dragged thought. Visible rows retain finite cache-only presentation demand; hidden surfaces and effect teardown release it. Geometry defers gate/count queries until a row intersects the displayed viewport, including partially clipped rows. Ordinary unfiltered scenes project cross-links for clipped visible rows; filtered and section scenes retain their established edge/count policy. Scene-local React keys capture paths before canonical pages can mutate during rename; semantic pages and actions retain their live identity. Normal-mode keyboard and exact-phrase typing selection are view-local; the displayed occurrence projection supplies all candidates and the shared selection owner reveals them without changing the center, filters or native search. Host methods own activation/rename/creation. Filtered badge numerators use revision-scoped semantic endpoint membership independently of connector routing and viewport clipping. Pane-fit native layout controls own local touch containment and bounded scrolling without changing preferences or browser range behavior. Accessible layout-wrapper hints use the shell's shared tooltip owner; inputs retain concise accessible names.
  * Hierarchy Find selects and reveals exact occurrences without activating attention or opening an editor.
  * Registered view layout rails share the native Settings queued writer and measured layout pipeline;
@@ -66,6 +69,7 @@ import {readViewConfiguration, readViewConfigurationAt} from "../core/plex/views
 import {boundedViewColors} from "../core/plex/views/decorations";
 import {canvasViewText} from "./plexViews/labels";
 import {plexAreaDropMeaning} from "../core/plex/views/dropTargets";
+import {plexSectionDocument} from "../core/plex/views/sections";
 import {areaContains, areaShapePath, transformAreaShape} from "../core/contracts/areaGeometry";
 import type {CanvasViewContributionController} from "./plexViews/CanvasViewContributionController";
 import type {CanvasViewLayoutControl} from "./plexViews/contributionContracts";
@@ -809,6 +813,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const center = index.get(activePath);
     return center ? {center, parents: [], children: [], leftFriends: [], rightFriends: [], siblings: []} : null;
   }, [classic, index, activePath, renderRevision, semanticRevision]);
+  const sectionDocument = plexSectionDocument(viewDefinition, nodeId(activePath), rooted ? nodeId(sceneScope) : undefined);
+  const sectionDocumentOwner = useRef(sectionDocument);sectionDocumentOwner.current = sectionDocument;
+  const sectionDocumentPage = useMemo(/** The declared central source is a cached canonical page, independent of attention/editor identity. */ () =>
+    sectionDocument ? index.get(sectionDocument) : undefined, [index, sectionDocument, renderRevision, semanticRevision]);
   const recoveryNeighborhood = useRef(persistentNeighborhood), recoveryCenter = useRef(activePath);
   const initialCenterChecked = useRef(false);
   recoveryNeighborhood.current = persistentNeighborhood; recoveryCenter.current = activePath;
@@ -818,6 +826,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   );
   const centralEditorAvailable = occurrenceEditorPolicy ? Boolean(boundEditorBinding)
     : viewDefinition.capabilities.editor && settings.embedCentralNode && centralEditorCapable;
+  const sectionEditorAvailable = occurrenceEditorPolicy ? boundEditorBinding?.target.nodeId === sectionDocument : centralEditorAvailable;
   useLayoutEffect(/** A live native editor blocks incompatible view transitions without changing its document owner. */ () =>
     centralEditorAvailable ? viewSession?.retainEditor() : undefined, [centralEditorAvailable, viewSession]);
   useLayoutEffect(/** Retain only the actual bound document through ordinary attention changes. */ () =>
@@ -848,6 +857,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     };
   }, [centralEditorAvailable, centralEditorCanMaximize, centralEditorMaximized, viewportSize.width, viewportSize.height, settings.centerEmbedWidth, settings.centerEmbedHeight, occurrenceEditorPolicy]);
   const [sectionExpanded, setSectionExpanded] = useState(false);
+  const sectionRequestedDocument = useRef<string | null>(null);
   const [sectionExpansion, setSectionExpansion] = useState<CentralSectionExpansion | null>(null);
   const sectionProjectionRevision = [
     settings.showFolderNodes ? "1" : "0",
@@ -863,9 +873,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   ].join("|");
   // Presentation publications reproject cached section evidence; only semantic/source revisions
   // above may trigger the asynchronous Markdown expansion again.
-  const projectedSectionExpansion = useMemo(() => sectionExpansion
+  const projectedSectionExpansion = useMemo(() => sectionExpansion && sectionExpansion.centerPath === sectionDocument
     ? projectCentralSectionExpansion(plugin, index, sectionExpansion)
-    : null, [sectionExpansion, plugin, index, sectionProjectionRevision, renderRevision, semanticRevision]);
+    : null, [sectionExpansion, sectionDocument, plugin, index, sectionProjectionRevision, renderRevision, semanticRevision]);
   const [expandedSectionIds, setExpandedSectionIds] = useState<Set<string>>(new Set());
   const sectionRevision = useRef({source: sectionExpansion, value: 0});
   if (sectionRevision.current.source !== sectionExpansion) sectionRevision.current = {source: sectionExpansion, value: sectionRevision.current.value + 1};
@@ -897,10 +907,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const effectivePersistentNeighborhood = useMemo(() => persistentNeighborhood && optimisticRelink
     ? applyOptimisticRelink(persistentNeighborhood, optimisticRelink.targetPath, optimisticRelink.role)
     : persistentNeighborhood, [persistentNeighborhood, optimisticRelink]);
-  const effectiveSectionExpansion = useMemo(() => projectedSectionExpansion && optimisticRelink
+  const effectiveSectionExpansion = useMemo(() => projectedSectionExpansion && optimisticRelink && projectedSectionExpansion.centerPath === activePath
     ? { ...projectedSectionExpansion, centerNeighborhood: applyOptimisticRelink(projectedSectionExpansion.centerNeighborhood, optimisticRelink.targetPath, optimisticRelink.role) }
-    : projectedSectionExpansion, [projectedSectionExpansion, optimisticRelink]);
-  const neighborhood = effectiveSectionExpansion?.centerNeighborhood ?? effectivePersistentNeighborhood;
+    : projectedSectionExpansion, [projectedSectionExpansion, optimisticRelink, activePath]);
+  const neighborhood = classic ? effectiveSectionExpansion?.centerNeighborhood ?? effectivePersistentNeighborhood : effectivePersistentNeighborhood;
   const predicateCenter = viewDefinition.hierarchy ? index.get(sceneScope) ?? neighborhood?.center : neighborhood?.center;
   const globalFiltering = predicate !== null || lenses.lenses.some((lens) => lens.mode === "include" || lens.mode === "exclude");
   const [unfoldedGroups, setUnfoldedGroups] = useState<{ center: string; keys: ReadonlySet<string> }>({ center: sceneScope, keys: new Set() });
@@ -1273,10 +1283,11 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     setExpandedSectionIds(updater);
   };
   const toggleCentralSections = (): void => {
-    if (viewDefinition.capabilities.sections !== true || centralEditorAvailable) return;
+    if (viewDefinition.capabilities.sections !== true || sectionEditorAvailable) return;
     preserveCameraOnNextLayout.current = true;
     suppressAutoFitUntil.current = Date.now() + 2500;
-    setSectionExpanded((current) => !current);
+    sectionRequestedDocument.current = sectionExpanded ? null : sectionDocument;
+    setSectionExpanded(!sectionExpanded);
   };
   const sceneTransitionTimer = useRef<number | null>(null);
   const sceneTransitionTimerWindow = useRef<Window | null>(null);
@@ -1437,14 +1448,14 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   }, [sceneScope, navigationOrigin, settings.animationSpeed]);
 
   useEffect(() => {
-    if (!centralEditorAvailable || !sectionExpanded) return;
+    if (!sectionEditorAvailable || !sectionExpanded) return;
     preserveCameraOnNextLayout.current = true;
     suppressAutoFitUntil.current = Date.now() + 2500;
     setSectionExpanded(false);
     setSectionExpansion(null);
     setExpandedSectionIds(new Set());
     sectionFoldCenter.current = null;
-  }, [centralEditorAvailable, sectionExpanded]);
+  }, [sectionEditorAvailable, sectionExpanded]);
 
   useEffect(() => {
     if (centralEditorAvailable || !centralEditorMaximized) return;
@@ -1457,12 +1468,16 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   useEffect(/** Load this center's outline and fence late results when expansion or its native owner changes. */ () => {
     let cancelled = false;
     const currentView = viewSession?.capture() ?? (() => true);
-    if (!viewDefinition.capabilities.sections || !sectionExpanded || !persistentNeighborhood?.center.file || persistentNeighborhood.center.file.extension !== "md") {
+    /** Rerooting is distinct from a view lifetime; an old read must lose authority immediately. */
+    const currentSource = (): boolean => !cancelled && currentView() && sectionRequestedDocument.current === sectionDocument && sectionDocumentOwner.current === sectionDocument
+      && (viewDefinition.sectionSource !== "layout-root" || !viewSession || viewSession.layoutRoot(nodeId(activePath)) === sectionDocument);
+    if (!viewDefinition.capabilities.sections || !sectionExpanded || sectionRequestedDocument.current !== sectionDocument
+      || !sectionDocumentPage?.file || sectionDocumentPage.file.extension !== "md") {
       setSectionExpansion(null);
       return () => { cancelled = true; };
     }
-    void buildCentralSectionExpansion(plugin, index, persistentNeighborhood.center, () => !cancelled && currentView()).then((expanded) => {
-      if (cancelled || !currentView()) return;
+    void buildCentralSectionExpansion(plugin, index, sectionDocumentPage, currentSource).then((expanded) => {
+      if (!currentSource()) return;
       if (!expanded) {
         setSectionExpansion(null);
         setSectionExpanded(false);
@@ -1486,9 +1501,14 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         sceneTransitionTimerWindow.current = null;
         setSceneTransitioning(false);
       }, settings.animationSpeed <= 0 ? 0 : Math.max(140, Math.round(620 / Math.max(0.25, settings.animationSpeed))));
+    }).catch(/** Failed explicit source loading stays retryable and cannot publish after retirement. */ () => {
+      if (!currentSource()) return;
+      sectionRequestedDocument.current = null;
+      setSectionExpanded(false);setSectionExpansion(null);setExpandedSectionIds(new Set());
+      new Notice(translate("graph.sectionLoadFailed"));
     });
     return () => { cancelled = true; };
-  }, [sectionExpanded, persistentNeighborhood?.center.path, persistentNeighborhood?.center.mtime, plugin, index, settings.animationSpeed, viewDefinition, viewLifetime]);
+  }, [sectionExpanded, sectionDocumentPage?.path, sectionDocumentPage?.mtime, plugin, index, settings.animationSpeed, viewDefinition, viewLifetime]);
   /** Keep native editor geometry in viewport coordinates; expose camera scale only to opt-in Markdown content, never host canvases. */
   const syncCentralEditorOverlay = (): void => {
     const overlay = centralEditorOverlayElement.current;
@@ -2243,8 +2263,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const matched = scene.nodes.filter(/** A live editor is pinned exactly; matching one same-note occurrence grants no authority to another path. */ node =>
       occurrenceKey(node) === boundEditorBinding?.occurrenceId || !globalFiltering || node.page.transient?.kind === "group"
       || matchesGraphPredicateNode(predicateEngine, predicate, node, predicateCenter) && matchesVisibleLensNode(predicateEngine, index, lenses, node, predicateCenter));
-    return hierarchyPathClosure(scene.nodes.map(/** Reuse only the displayed, admitted parent identities. */ node => ({id: occurrenceKey(node), parent: node.branch?.parent})),
-      matched.map(/** Selection and Find retain occurrence identity. */ occurrenceKey), scene.entryOccurrence, viewDefinition.hierarchy.maximumDepth);
+    const keep = new Set(hierarchyPathClosure(scene.nodes.map(/** Reuse only the displayed, admitted parent identities. */ node => ({id: occurrenceKey(node), parent: node.branch?.parent})),
+      matched.map(/** Selection and Find retain occurrence identity. */ occurrenceKey), scene.entryOccurrence, viewDefinition.hierarchy.maximumDepth));
+    // Source-validated outline rows are structural presentation, not graph branches. They
+    // remain available to the existing heading-fold/Find owners alongside the fixed root.
+    for (const node of scene.nodes) if (node.page.transient?.kind === "section") keep.add(occurrenceKey(node));
+    return keep;
   }, [viewDefinition, scene.nodes, scene.entryOccurrence, boundEditorBinding?.id, globalFiltering, predicateEngine, predicate, predicateCenter, index, lenses, predicateRevision]);
   const filterMatchedNodePaths = useMemo(() => {
     if (hierarchyMatchedOccurrences) return new Set(scene.nodes.filter(node => hierarchyMatchedOccurrences.has(occurrenceKey(node))).map(node => node.page.path));
@@ -4289,7 +4313,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       const rect = element?.getBoundingClientRect() ?? viewport.current?.getBoundingClientRect();
       if (rect) showNodeContextMenuAt(node, rect.left + rect.width / 2, rect.top + rect.height / 2, occurrence);
     }, context => Boolean(graphActionPage(context))),
-    "sections.toggle": graphAction(/** Reuse current center Markdown projection folding. */ () => toggleCentralSections(), () => viewDefinition.capabilities.sections === true && canExpandCentralSections(persistentNeighborhood?.center, activePath) && !centralEditorAvailable),
+    "sections.toggle": graphAction(/** Reuse the declared central document's existing outline owner. */ () => toggleCentralSections(), () => viewDefinition.capabilities.sections === true && canExpandCentralSections(sectionDocumentPage, sectionDocument ?? "") && !sectionEditorAvailable),
     "sections.fold-all": graphAction(/** Fold only this center's current section projection. */ () => updateSectionFolds(() => new Set()), () => viewDefinition.capabilities.sections === true && Boolean(sectionExpansion)),
     "sections.unfold-all": graphAction(/** Expand only actual current sections with children. */ () => updateSectionFolds(() => new Set(sectionExpansion?.sections.filter(section => section.childIds.length).map(section => section.id))), () => viewDefinition.capabilities.sections === true && Boolean(sectionExpansion)),
     "view.zoom-in": graphAction(/** Keep existing platform clamp and zoom increment. */ () => zoomFromCenter(Math.min(Platform.isIosApp ? IOS_MAX_ZOOM : MAX_ZOOM, camera.current.scale * 1.15))),
@@ -4565,9 +4589,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     touchDoubleTap.current.reset();
     const page = node.page;
     const persistent = persistentPageFor(page);
-    const isCenter = node.role === "center" && page.path === neighborhood?.center.path;
     const isMarkdown = Boolean(persistent?.file?.extension === "md");
-    const canExpand = viewDefinition.capabilities.sections === true && canExpandCentralSections(persistent, activePath);
+    const canExpand = viewDefinition.capabilities.sections === true && canExpandCentralSections(persistent, sectionDocument ?? "");
     const menu = new Menu();
     if (page.transient?.kind === "group") {
       menu.addItem(item => item.setTitle(translate("groups.unfold", { name: page.name, count: page.transient?.groupMembers?.length ?? 0 }))
@@ -4693,7 +4716,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         .onClick(() => runCapturedNodeAction("node.delete", persistent)));
     }
 
-    if (isCenter && isMarkdown && persistent && !page.transient && canExpand && !centralEditorAvailable) {
+    if (isMarkdown && persistent && !page.transient && canExpand && !sectionEditorAvailable) {
       menu.addSeparator();
       menu.addItem((item) => item
         .setTitle(translate(sectionExpanded ? "graph.collapseSections" : "graph.expandSections"))
@@ -4885,12 +4908,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       onGatePointerDown={(_, gate, event) => startGateDrag(baseNode, gate, event)}
       onNodePointerDown={(_, event) => startNodeDrag(baseNode, event)}
       onContextMenu={(_, event) => {if (!viewFailed) showNodeContextMenu(baseNode, event);}}
-      sectionFold={baseNode.branch?.canExpand && viewDefinition.hierarchy ? {
+      branchFold={baseNode.branch?.canExpand && viewDefinition.hierarchy ? {
         kind: "branch",
         hasChildren: true, expanded: baseNode.branch.expanded, hiddenDescendantCount: 0,
         expandedTitle: translate("mindmap.collapseBranch"), foldedTitle: translate("mindmap.expandBranch"),
         onToggle: /** Separate branch disclosure dispatches the same guarded action as menus and keys. */ () => runNodeAction("branch.toggle", baseNode.page, occurrenceKey(baseNode)),
-      } : baseNode.page.transient?.kind === "section" ? (() => {
+      } : undefined}
+      sectionFold={baseNode.page.transient?.kind === "section" ? (() => {
         const section = sectionExpansion?.sections.find((candidate) => candidate.id === baseNode.page.transient?.sectionId);
         if (!section) return undefined;
         const descendants = new Set<string>();
@@ -4906,7 +4930,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
           hiddenDescendantCount: expandedSectionIds.has(section.id) ? 0 : descendants.size,
           onToggle: /** Pointer folding uses the same accepted occurrence as keyboard and native menus. */ () => runNodeAction("section.toggle-level", baseNode.page, sceneNodeKeys.get(baseNode)),
         };
-      })() : (viewDefinition.capabilities.sections && baseNode.role === "center" && !centralEditorAvailable && persistentPageFor(baseNode.page)?.file?.extension === "md" ? {
+      })() : (viewDefinition.capabilities.sections && baseNode.role === "center" && baseNode.page.path === sectionDocument
+        && !sectionEditorAvailable && persistentPageFor(baseNode.page)?.file?.extension === "md" ? {
         hasChildren: true,
         expanded: sectionExpanded,
         hiddenDescendantCount: 0,

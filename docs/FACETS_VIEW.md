@@ -1,6 +1,6 @@
 # Facets and canvas-view API: implementation specification
 
-Implementation status: accepted-main integration, Facets presets, safe shared assignment/Undo, shared advanced rules and the optional section boundary are implemented. Developer/API/end-user guides, the five-preset/custom-State sample vault and authentic native screenshots are included. Native feature, editor, selector/settings, independent-canvas and source-occurrence/relink checks pass against runtime ced2825; final published-head verification/CI is recorded in the PR handoff. Accepted base: 26623c8393bddc0c3bcac39468078ec20ceccbc8. Prior validated head 016919893b13a99867a14336680debb29d1b6f54 remains historical. The requirements below supersede the earlier Wu Xing-only scope. Current contracts: CANVAS_VIEW_API.md and CANVAS_VIEW_DEVELOPER_GUIDE.md; ordered evidence: docs/validation/facets-220-2026-10-25.md. Production Mind Map sections remain an explicit optional follow-up.
+Implementation status: accepted-main integration, Facets presets, safe shared assignment/Undo, shared advanced rules and the optional section boundary are implemented. Developer/API/end-user guides, the five-preset/custom-State sample vault and authentic native screenshots are included. Native feature, editor, selector/settings, independent-canvas and source-occurrence/relink checks pass against runtime ced2825; final published-head verification/CI is recorded in the PR handoff. Accepted base: 26623c8393bddc0c3bcac39468078ec20ceccbc8. Prior validated head 016919893b13a99867a14336680debb29d1b6f54 remains historical. The requirements below supersede the earlier Wu Xing-only scope. Current contracts: CANVAS_VIEW_API.md and CANVAS_VIEW_DEVELOPER_GUIDE.md; ordered evidence: docs/validation/facets-220-2026-10-25.md. The #222 central Mind Map section extension is implemented against this shared boundary; its final native/CI acceptance is tracked separately. Facets deliberately keeps sections disabled.
 
 ## Functional reference: Dumo's fixed Wu Xing prototype
 
@@ -301,7 +301,7 @@ Distinguish three different features:
 
 They must not share state or be confused in the interface.
 
-Current #219 Mind Map declares `sections: false`. A boolean change alone does not implement section-aware projection or connector routing.
+The accepted #219 baseline declared `sections: false`. The #222 extension explicitly selects the pinned root through `sectionSource: "layout-root"`, composes source-owned rows/provenance and reserves measured outline space. A boolean change alone does not implement section-aware projection or connector routing. Facets deliberately remains unsupported.
 
 Required now:
 
