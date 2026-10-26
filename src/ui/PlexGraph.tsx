@@ -26,6 +26,7 @@
  * leases after scene admission and share exact ancestor filtering and catalog-backed branch actions.
  * Their first current local preparation may fit once; manual/restored cameras and live editors win.
  */
+import {edgeViewportClip, revealRowScrollTop} from "./plexViews/areaVisibility";
 import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
 import {hasDirectionalCaption,directionalRelationCaption} from "../core/plex/directionalRelationCaption";
 import { connectionActionAllowed, tagMembershipPair } from "./structuralConnectionActions";
@@ -582,6 +583,7 @@ function filterNeighborhoodForLenses(
 function Edge({
   edge,
   nodes,
+  clip,
   inverseArrowDirection,
   connectorStyle,
   labelBackground,
@@ -596,6 +598,7 @@ function Edge({
 }: {
   edge: PositionedEdge;
   nodes: Map<string, PositionedNode>;
+  clip?: {left: number; top: number; width: number; height: number};
   inverseArrowDirection: boolean;
   connectorStyle: "bezier" | "straight";
   labelBackground: string;
@@ -628,7 +631,7 @@ function Edge({
 
   const resolvedCrossLinkOpacity = edge.isCrossLink && !highlighted ? crossLinkOpacity : undefined;
 
-  return <g className={`kplex-edge${edge.isCrossLink ? " is-cross-link" : ""}${passive ? " is-hover-peek" : ""}${highlighted ? " is-highlighted" : ""}${dimmed ? " is-dimmed" : ""}`}>
+  const content = <g className={`kplex-edge${edge.isCrossLink ? " is-cross-link" : ""}${passive ? " is-hover-peek" : ""}${highlighted ? " is-highlighted" : ""}${dimmed ? " is-dimmed" : ""}`}>
     <path
       className="kplex-edge-visible"
       opacity={resolvedCrossLinkOpacity}
@@ -656,6 +659,8 @@ function Edge({
     />
     <EdgeLabel label={label} midpoint={geometry.midpoint} style={style} background={labelBackground} opacity={resolvedCrossLinkOpacity} />
   </g>;
+  return clip ? <svg x={clip.left} y={clip.top} width={clip.width} height={clip.height}
+    viewBox={`${clip.left} ${clip.top} ${clip.width} ${clip.height}`} overflow="hidden">{content}</svg> : content;
 }
 
 /** Shared SVG label presentation for ordinary and expanded-descendant connectors. Caption text
@@ -2467,6 +2472,33 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     finishFlair(pending.path, null);
   }, [pendingNodeFlair, scene.nodes, scene.zoneViewports, zoneDisplayLayouts]);
 
+  const pendingBranchReveal = useRef<{id: string; lifetime: number; scope: string; previousScene: HostPlexScene; scrollTop?: number} | null>(null);
+  useLayoutEffect(/** An accepted single-branch expansion reveals its exact row after measured reflow, without changing selection, camera or editor focus. */ () => {
+    const pending = pendingBranchReveal.current;
+    if (!pending) return;
+    if (pending.lifetime !== viewLifetime || pending.scope !== sceneScope) { pendingBranchReveal.current = null; return; }
+    if (scene === pending.previousScene) return;
+    const node = scene.nodes.find(row => occurrenceKey(row) === pending.id), zone = node ? areaForNode(node) : null;
+    const panel = zone ? scene.zoneViewports[zone] : undefined, scroll = zone ? zoneScrollRefs.current[zone] : undefined;
+    const local = zone ? zoneDisplayLayouts[zone]?.localPositions.get(pending.id) : undefined;
+    if (node?.branch?.expanded && zone && panel && scroll && local) {
+      const top = revealRowScrollTop(local.y, node.height, scroll.scrollTop, scroll.clientHeight, scroll.scrollHeight);
+      pending.scrollTop = top;
+      if (top !== scroll.scrollTop) { scroll.scrollTop = top; setZoneScrollTop(current => ({...current, [zone]: top})); }
+    }
+    if (node?.branch?.status !== "loading") pendingBranchReveal.current = null;
+  }, [scene, zoneDisplayLayouts, viewLifetime, sceneScope]);
+
+  const admittedEdgeOccurrences = useMemo(/** Scroll position never removes an admitted relationship; real filters and area membership still do. */ () => {
+    const admitted = new Set<string>();
+    for (const node of scene.nodes) {
+      if (!nodeMatchesCurrentFilter(node)) continue;
+      const zone = areaForNode(node), panel = zone ? scene.zoneViewports[zone] : undefined;
+      if (isDraggedNode(node) || !zone || !panel || zoneDisplayLayouts[zone]?.localPositions.has(occurrenceKey(node))) admitted.add(occurrenceKey(node));
+    }
+    return admitted;
+  }, [scene.nodes, scene.zoneViewports, filterMatchedNodePaths, zoneDisplayLayouts, nodeDrag]);
+
   const visibleOccurrenceIds = useMemo(() => {
     const paths = new Set<string>();
     for (const node of scene.nodes) {
@@ -2485,7 +2517,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       const rendered = renderedNodeMap.get(occurrenceKey(node));
       if (!rendered) continue;
       const panelBottom = panel.top + panel.height;
-      // Connectors only exist while the corresponding clipped node is actually visible.
+      // Visible rows drive finite metadata demand and discovery; admitted edges have independent paint clipping.
       if (rendered.y - rendered.height / 2 >= panel.top && rendered.y + rendered.height / 2 <= panelBottom) {
         paths.add(occurrenceKey(node));
       }
@@ -2849,7 +2881,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
 
   /** Ordinary scenes acquire cross-links only for clipped visible rows; filtering retains the full-scene edge/count policy. */
   const visibleEdgeProjection = useMemo(() => {
-    const edges = scene.edges.filter((edge) => visibleOccurrenceIds.has(edgePhysicalOccurrence(edge, "source")) && visibleOccurrenceIds.has(edgePhysicalOccurrence(edge, "target")));
+    const edges = scene.edges.filter((edge) => admittedEdgeOccurrences.has(edgePhysicalOccurrence(edge, "source")) && admittedEdgeOccurrences.has(edgePhysicalOccurrence(edge, "target")));
     const crossLinks = !classic && showCrossLinks && !globalFiltering ? appendOccurrenceCrossLinks(
       scene.nodes.filter(node => visibleOccurrenceIds.has(occurrenceKey(node))).map(node => renderedNodeMap.get(occurrenceKey(node)) ?? node), edges, index, settings) : {limited: false};
     if (classic && showCrossLinks && !globalFiltering && !layoutSectionExpansion && neighborhood) {
@@ -2882,7 +2914,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       });
       return Object.keys(lensStyle).length ? { ...edge, style: { ...edge.style, ...lensStyle } } : edge;
     })};
-  }, [scene.edges, scene.nodes, scene.crossLinksLimited, visibleNodePaths, visibleOccurrenceIds, renderedNodeMap, neighborhood, predicateEngine, index, settings, lenses,
+  }, [scene.edges, scene.nodes, scene.crossLinksLimited, admittedEdgeOccurrences, visibleNodePaths, visibleOccurrenceIds, renderedNodeMap, neighborhood, predicateEngine, index, settings, lenses,
     predicateRevision, showCrossLinks, globalFiltering, layoutSectionExpansion, crossLinkPeek, connectDrag, nodeDrag, resizingArea, areaSettingsMode, predicateCenter]);
   const visibleEdges = visibleEdgeProjection.edges;
   const actionEdges = useMemo(/** Visible extra canonical links share the existing evidence/action owner; decorations remain excluded by each action gate. */ () =>
@@ -4268,7 +4300,14 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       const next = nextBranchState(context, kind);
       if (!next || !viewSession) return {status: "unavailable", reasonKey: "actions.target-unavailable"};
       preserveCameraOnNextLayout.current = true;
-      return viewSession.updateState(next) ? {status: "completed"} : {status: "unavailable", reasonKey: "actions.branch-editor-blocked"};
+      const accepted = viewSession.updateState(next);
+      if (accepted && kind === "toggle" && context.target.kind === "node") {
+        const id = context.target.occurrenceId;
+        const node = scene.nodes.find(row => occurrenceKey(row) === id);
+        if (node?.branch && !node.branch.expanded) pendingBranchReveal.current = {id: occurrenceKey(node), lifetime: viewLifetime, scope: sceneScope, previousScene: scene};
+        else pendingBranchReveal.current = null;
+      }
+      return accepted ? {status: "completed"} : {status: "unavailable", reasonKey: "actions.branch-editor-blocked"};
     },
   });
   const graphImplementations: SurfaceActionImplementations = {
@@ -5158,6 +5197,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         className="kplex-zone-scroll"
         onScroll={(event: { currentTarget: HTMLDivElement }) => {
           const scrollTop = event.currentTarget.scrollTop;
+          if (pendingBranchReveal.current && pendingBranchReveal.current.scrollTop !== scrollTop) pendingBranchReveal.current = null;
           setZoneScrollTop((current) => ({ ...current, [zone]: scrollTop }));
         }}
       >
@@ -5516,6 +5556,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
           key={edge.id}
           edge={edge}
           nodes={renderedNodeMap}
+          clip={edgeViewportClip(edge, renderedNodeMap, node => {const zone = areaForNode(node);return zone ? scene.zoneViewports[zone] : undefined;})}
           inverseArrowDirection={settings.inverseArrowDirection}
           connectorStyle={settings.connectorStyle}
           labelBackground={NATIVE_LINK_LABEL_FILL}

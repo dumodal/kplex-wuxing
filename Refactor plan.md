@@ -6574,3 +6574,10 @@ Runtime ca7220bfdc9828498aaa9f6f316e9e707f37c400: captured session requestSelect
 Validation:140focused tests;53supplemental affected tests in aggregate (viewport19rerun after fixture-only screen/world correction, other34unchanged); installed types, official touched-source scanner, actual production build on Node22.22.2. Exact-build Windows22PASS, including save/retry, in-place switching, actual center tint, native content/caret, owned occurrence restoration and captured main/popout selection isolation. Main116028b94f47c62d7d73313b553144d668d12630fb4a71e0185d395f068705cf; stylescbb5af8aa1cf8b66d95e93e5f39a70f8df8283617e20aa402fdfc6d4b8dbef9b. Restored20:46:44.969Z,9configs/117content/original workspace/window/digest. No production access. Detailed docs/validation/compass-editor-transitions-222-2026-10-26.md and native summary.
 
 Risk-based checks: no additional manual Windows check for this narrow request; physical mobile, macOS/minimum-host remain separate. Owned-view recreation is not whole-app restart; one-editor main/popout case is not two editor/Sidecar pairs. Known215limits retained. Full regression/CI deferred by maintainer. Keep222draft/open/unmerged.
+
+
+### 2026-10-26 ? PR222 overflow source checkpoint
+
+Starting5e1926e. Retain admitted canonical connector endpoints independently of scroll; shared areaVisibility SVG apertures clip paint/markers/labels/hit targets. Existing visible-row demand and bounded extra cross-link discovery unchanged. Accepted branch expansion minimally reveals its exact occurrence after measured layout, without camera/focus/attention changes. Manual scroll or scope retirement cancels settlement. No semantic/source owner added.
+
+Node22.22.2:30focused view/viewport/clip/reveal +1affected cross-link browser guard PASS, installed types/scanner/actual production build PASS. Native overflow fixture pending. Full regression/CI deferred. Multiple-editor capacity and Properties focus-target mismatch assessed separately, not implemented. See docs/validation/mindmap-overflow-222-2026-10-26.md. Keep222draft/open/unmerged.

@@ -83,3 +83,31 @@ for(const view of ['classic','mindmap','wuxing'])test(`${view}: every eligible n
  check(f.width===16&&f.height===16&&f.left<r.right&&f.right>r.right&&f.top<r.bottom&&f.bottom>r.bottom,'Small desktop disclosure belongs on the node corner');}
  return true;}finally{releases.forEach(release=>release());ui.close();plugin.actionManager.dispose();style.remove()}})()`));}finally{await host.cleanup();}
 });
+
+
+test('Mind Map parent overflow retains admitted connectors, clips their paint and reveals only the expanded row',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert(await host.evaluate(`(async()=>{${canvasSceneFixture}${register}
+ settings.animationSpeed=0;
+ const children=Array.from({length:28},(_,i)=>'Overflow '+i+'.md');
+ for(const path of children)pages.set(path,{...pages.get('C.md'),path,name:path,file:{...pages.get('C.md').file,path}});
+ index.neighbours=(page,role)=>(page.path==='A.md'&&role==='parent'?['B.md']:page.path==='B.md'&&role==='child'?['A.md',...children]:[]).map(path=>({page:pages.get(path),role,relationType:1,linkDirection:1}));
+ const ui=attach(await mount(M.builtInPlexViews.resolve('mindmap')));
+ const card=path=>[...ui.container.querySelectorAll('.kplex-thought')].find(el=>el.dataset.kplexPath===path);
+ const panel=()=>ui.container.querySelector('.kplex-zone-parent .kplex-zone-scroll');
+ card('B.md').querySelector('.is-branch-disclosure').click();await wait();ui.render();await wait();ui.render();await wait();
+ check(card(children[27]),'Wide parent branch must be admitted');
+ const scroll=panel(),b=card('B.md').getBoundingClientRect(),v=scroll.getBoundingClientRect();
+ check(scroll.scrollHeight>scroll.clientHeight&&b.top>=v.top-1&&b.bottom<=v.bottom+1,'Expansion must reveal its exact parent after measured reflow');
+ const count=()=>ui.container.querySelectorAll('.kplex-edge-hit').length,before=count(),attention=ui.props.activePath,root=ui.session.layoutRoot(attention);
+ check(before>=children.length,'All admitted canonical routes exist before clipping');
+ scroll.scrollTop=0;scroll.dispatchEvent(new Event('scroll',{bubbles:true}));await wait();ui.render();await wait();
+ check(card('B.md').getBoundingClientRect().top>scroll.getBoundingClientRect().bottom,'Expanded parent is genuinely outside the area aperture');
+ check(count()===before,'Offscreen source must not erase its visible connector segments');
+ const clipped=[...ui.container.querySelectorAll('.kplex-edge-hit')].filter(path=>path.closest('svg')!==ui.container.querySelector('.kplex-links'));
+ check(clipped.length>=children.length,'Bounded routes must clip visible stroke and actual hit paths together');
+ for(const path of clipped){const svg=path.closest('svg');check(svg.getAttribute('overflow')==='hidden'&&Number(svg.getAttribute('height'))>0,'Measured SVG aperture');}
+ scroll.scrollTop=scroll.scrollHeight;scroll.dispatchEvent(new Event('scroll',{bubbles:true}));await wait();ui.render();await wait();check(count()===before,'Opposite scroll retains routes');
+ check(ui.props.activePath===attention&&ui.session.layoutRoot(attention)===root&&work.body===0&&work.scans===0,'Overflow remains presentation-only without navigation, body parsing or inventory');
+ releases.forEach(release=>release());ui.close();plugin.actionManager.dispose();style.remove();return true})()`));}finally{await host.cleanup()}
+});

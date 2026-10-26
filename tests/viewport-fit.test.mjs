@@ -4,8 +4,8 @@ import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import ts from 'typescript';
 import {loadPortableModules} from './support/portableTypeScript.mjs';
-const {exports: {centeredViewportFit, sameFitCamera, EmbeddedDrawingFit, centerArrivalFrames, hasClickModifier}} = loadPortableModules([
-  'src/ui/components/viewportFit.ts', 'src/adapters/obsidian/EmbeddedDrawingFit.ts', 'src/ui/components/centerArrival.ts', 'src/ui/components/modifierClick.ts']);
+const {exports: {centeredViewportFit, sameFitCamera, EmbeddedDrawingFit, centerArrivalFrames, hasClickModifier, edgeViewportClip, revealRowScrollTop}} = loadPortableModules([
+  'src/ui/components/viewportFit.ts', 'src/adapters/obsidian/EmbeddedDrawingFit.ts', 'src/ui/components/centerArrival.ts', 'src/ui/components/modifierClick.ts', 'src/ui/plexViews/areaVisibility.ts']);
 const source=ts.createSourceFile('graph.tsx',readFileSync('src/ui/PlexGraph.tsx','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
 
 /** Run production callbacks with explicit finite composition dependencies, without a second policy. */
@@ -318,4 +318,28 @@ test('Compass tint uses the actual center card while a different occurrence host
   assert(Math.abs(actual.width*camera.scale-(role==='center'?580:200))<1e-8);
   assert.equal(actual.element===null,role==='center','Only a central editor replaces the center-card measurement owner');
  }
+});
+
+
+test('area edge clipping follows physical occurrences independently of canonical endpoints and scroll visibility',()=>{
+ const area={key:'parent',left:-400,top:-700,width:900,height:160};
+ const a={x:20,y:-1200,width:150,height:40},b={x:250,y:-630,width:160,height:40},root={x:0,y:0,width:300,height:80};
+ const nodes=new Map([['a',a],['heading',a],['b',b],['root',root]]),viewport=node=>node===root?undefined:area;
+ const edge={sourcePath:'canonical-source',targetPath:'canonical-target',sourceOccurrence:'a',targetOccurrence:'b'};
+ assert.deepEqual(edgeViewportClip(edge,nodes,viewport),{left:-400,top:-700,width:900,height:160});
+ assert.deepEqual(edgeViewportClip({...edge,sourceOccurrence:'absent',sourceSectionOccurrence:'heading'},nodes,viewport),{left:-400,top:-700,width:900,height:160});
+ const crossing=edgeViewportClip({...edge,targetOccurrence:'root'},nodes,viewport);
+ assert(crossing.top===area.top&&crossing.top+crossing.height>=root.y+root.height/2,'Cross-area route includes bounded source aperture and actual external target');
+ assert.equal(edgeViewportClip(edge,nodes,()=>undefined),undefined);
+ assert.equal(edgeViewportClip({...edge,targetOccurrence:'missing'},nodes,viewport),undefined);
+ assert.equal(edge.sourcePath,'canonical-source');assert.equal(a.y,-1200,'Clipping never moves the physical source to a fabricated gate');
+});
+
+test('expansion reveal minimally scrolls measured rows and clamps large or edge rows to content bounds',()=>{
+ assert.equal(revealRowScrollTop(500,40,0,160,1000),360);
+ assert.equal(revealRowScrollTop(500,40,360,160,1000),360);
+ assert.equal(revealRowScrollTop(100,40,360,160,1000),80);
+ assert.equal(revealRowScrollTop(980,40,0,160,1000),840);
+ assert.equal(revealRowScrollTop(0,40,100,160,1000),0);
+ assert.equal(revealRowScrollTop(500,400,0,160,1000),300);
 });
