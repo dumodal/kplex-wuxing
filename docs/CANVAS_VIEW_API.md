@@ -56,7 +56,7 @@ Omitted optional capabilities are unavailable.
 | Capability | Compass (`classic`) | Mind Map (`mindmap`) | Facets (`wuxing`) |
 | --- | --- | --- | --- |
 | Navigation | Attention-following | Rooted; explicit destinations reroot | Attention-following |
-| Native editor | Existing attention-following, all-note buttons | Capacity-one occurrence host, save-before-switch | Existing attention-following, all-note buttons |
+| Native editor | Legacy central editor plus in-place noncentral occurrences | Capacity-one occurrence host, save-before-switch | Existing attention-following, all-note buttons |
 | Sections | Central attention note | Pinned root note | Disabled for every preset |
 | Descendant presentation | Existing Compass expansion | Bounded hierarchy capability | Disabled |
 | Cached-property classification / badges | Not declared | Not declared | Enabled |
@@ -158,3 +158,9 @@ See the [ordered validation record](validation/facets-220-2026-10-25.md) for exa
 ### Shared editor-button switching
 
 Every eligible note in an editor-capable view receives the shared corner action. Attention hosts center the chosen note through accepted navigation and use their existing native editor; they do not adopt occurrence bindings. Occurrence hosts keep their root/attention policy. `editor.expand` serializes explicit switching through the existing native save/close transaction, then reacquires the captured displayed occurrence, exact native file and selected-view lifetime. Failed saves keep the original editor recoverable; stale/retired requests cannot open a replacement. Capacity remains one. Area-hosted editors keep their toolbar within the clipped visible area; native content retains its existing scroll/resize/zoom/lifecycle owner.
+
+### Captured editor transitions and Compass occurrences
+
+`PlexViewSession.requestSelection(id)` awaits the captured host?s optional `guardSelection` preflight, then rechecks the canvas/view lifetime and direct `canSelect` safeguards. The native host saves/closes through its existing editor transaction and releases its lease only after success. Failed saves retain the old editor/view. The selector stays attached to its opening canvas while focus moves elsewhere; lens drafts, filters and per-view state retain their owners. Synchronous `select` cannot bypass a live-editor guard.
+
+Compass declares occurrence capability while its registered Classic adapter preserves the existing central attention editor, maximization and native non-Markdown center representations. A noncentral Markdown editor instead uses the shared capacity-one binding. The adapter derives an exact bounded role/center/note occurrence key, measures the native rectangle through existing Classic geometry, and changes only physical connector occurrence endpoints. Canonical evidence/paths stay unchanged. Duplicate roles are distinct; ambiguous same-role section copies cannot acquire a binding. Filtering/grouping retain the live occurrence. Explicit attention navigation saves/closes that occurrence before moving; passive follow cannot remove it. Restoration reacquires native identity and current exact occurrence; no native buffer enters workspace state. Facets keeps its attention-following policy.

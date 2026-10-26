@@ -21,7 +21,7 @@ const mount=(owner,doc=document,extra={})=>{
  const render=()=>flushSync(()=>root.render(R.createElement(Shell)));render();
  const open=()=>flushSync(()=>container.querySelector('.kplex-filter-trigger').click());
  const panel=()=>doc.querySelector('.kplex-filter-panel'),select=()=>panel()?.querySelector('.kplex-view-selector select');
- const change=id=>flushSync(()=>{select().value=id;select().dispatchEvent(new doc.defaultView.Event('change',{bubbles:true}))});
+ const change=async id=>{flushSync(()=>{select().value=id;select().dispatchEvent(new doc.defaultView.Event('change',{bubbles:true}))});await waitFor(()=>!select().disabled);};
  return{container,root,open,panel,select,change,render,props,close:()=>{flushSync(()=>root.unmount());container.remove();style.remove()}};
 };
 `;
@@ -45,7 +45,7 @@ test('production selection exposes localized Compass, Mind Map and Wu Xing defin
  assert.equal(await scenario(`
  const owner=session('a',M.builtInPlexViews),ui=mount(owner);ui.open();await waitFor(ui.select);
  equal([...ui.select().options].map(option=>[option.value,option.textContent]),[['classic','Compass'],['mindmap','Mind Map'],['wuxing','Facets']],'Production definitions only');
- check(!ui.select().disabled,'Implemented second production definition enables selection');ui.change('mindmap');
+ check(!ui.select().disabled,'Implemented second production definition enables selection');await ui.change('mindmap');
  check(ui.select().value==='mindmap'&&owner.definition.navigation==='rooted'&&owner.definition.editorHosting==='occurrence','Actual selected Mind Map contract');
  equal([writes.sources,writes.lenses,writes.filter,writes.settings],[0,0,0,0],'Registration/selection alone never acquires or mutates shared owners');ui.close();
  `),true);
@@ -55,7 +55,7 @@ test('Compass and Mind Map selection and rooted intent restore independently in 
  assert.equal(await scenario(`
  const a=session('a',M.builtInPlexViews),b=session('b',M.builtInPlexViews),iframe=document.createElement('iframe');document.body.append(iframe);
  await new Promise(resolve=>setTimeout(resolve,20));const first=mount(a),second=mount(b,iframe.contentDocument);first.open();second.open();await waitFor(()=>first.select()&&second.select());
- first.change('mindmap');a.setRoot('R');second.select().focus();equal([first.select().value,second.select().value],['mindmap','classic'],'Focused second document cannot steal first session');
+ await first.change('mindmap');a.setRoot('R');second.select().focus();equal([first.select().value,second.select().value],['mindmap','classic'],'Focused second document cannot steal first session');
  const state=[structuredClone(a.getState()),structuredClone(b.getState())],restoredA=session('a',M.builtInPlexViews),restoredB=session('b',M.builtInPlexViews);restoredA.restore(state[0]);restoredB.restore(state[1]);
  equal([restoredA.definition.id,restoredA.layoutRoot('C'),restoredB.definition.id],['mindmap','R','classic'],'Independent choice and root restoration');
  equal([writes.sources,writes.lenses,writes.filter,writes.settings],[0,0,0,0],'Selector and restoration perform no acquisition/global mutation');
@@ -66,8 +66,8 @@ test('Compass and Mind Map selection and rooted intent restore independently in 
 test('returning from Compass uses the opening canvas current attention rather than a stale Mind Map root',async()=>{
  assert.equal(await scenario(`
  let attention='First',otherAttention='Other';const a=new M.PlexViewSession(M.builtInPlexViews,()=>writes.a++,()=>attention),b=new M.PlexViewSession(M.builtInPlexViews,()=>writes.b++,()=>otherAttention);
- const first=mount(a);first.open();await waitFor(first.select);first.change('mindmap');equal(a.layoutRoot('unused'),'First','First entry uses own current note');a.setRoot('Old-map');
- first.change('classic');attention='Current-compass';b.select('mindmap');first.change('mindmap');
+ const first=mount(a);first.open();await waitFor(first.select);await first.change('mindmap');equal(a.layoutRoot('unused'),'First','First entry uses own current note');a.setRoot('Old-map');
+ await first.change('classic');attention='Current-compass';b.select('mindmap');await first.change('mindmap');
  equal([first.select().value,a.layoutRoot('unused'),b.layoutRoot('unused')],['mindmap','Current-compass','Other'],'Explicit view selection cannot restore an unrelated old root or target globally active canvas');
  equal([writes.sources,writes.lenses,writes.filter,writes.settings],[0,0,0,0],'Entry root is session intent without source/global mutation');first.close();b.dispose();
  `),true);
@@ -77,7 +77,7 @@ test('selection is registry populated, session owned, restorable and safe for un
  assert.equal(await scenario(`
  const a=session('a',registry),b=session('b',registry),first=mount(a);first.open();await waitFor(first.select);
  equal([...first.select().options].map(option=>option.value),['classic','test.alpha','test.beta','test.blocked'],'Compass first and registry order');
- first.change('test.alpha');check(first.select().value==='test.alpha'&&a.definition===alpha&&b.definition.id==='classic','Owner-only selection');
+ await first.change('test.alpha');check(first.select().value==='test.alpha'&&a.definition===alpha&&b.definition.id==='classic','Owner-only selection');
  b.select('test.beta');check(first.select().value==='test.alpha','Another canvas publication cannot retarget the opening owner');
  const savedA=JSON.parse(JSON.stringify(a.getState())),savedB=JSON.parse(JSON.stringify(b.getState())),restoredA=session('a',registry),restoredB=session('b',registry);
  restoredA.restore(savedA);restoredB.restore(savedB);equal([restoredA.definition.id,restoredB.definition.id],['test.alpha','test.beta'],'Independent native workspace payloads');
@@ -89,12 +89,12 @@ test('selection is registry populated, session owned, restorable and safe for un
 
 test('incompatible and retired submissions reflect actual selection and explain rejection',async()=>{
  assert.equal(await scenario(`
- const a=session('a',registry),ui=mount(a);ui.open();await waitFor(ui.select);ui.change('test.alpha');const release=a.retainEditor();
- ui.change('test.blocked');check(a.definition===alpha&&ui.select().value==='test.alpha','Rejected transition must not look selected');
+ const a=session('a',registry),ui=mount(a);ui.open();await waitFor(ui.select);await ui.change('test.alpha');const release=a.retainEditor();
+ await ui.change('test.blocked');check(a.definition===alpha&&ui.select().value==='test.alpha','Rejected transition must not look selected');
  check(ui.panel().querySelector('[role=status]')?.textContent===t('view.editorTransitionBlocked'),'Editor restriction explained');
- ui.change('test.blocked');check(ui.select().value==='test.alpha','Repeated rejection restores DOM even without a new state render');
- release();ui.change('test.blocked');check(a.definition===blocked&&ui.select().value==='test.blocked','Eligibility rechecked at submission');
- a.dispose();ui.change('classic');check(a.definition===blocked&&ui.select().value==='test.blocked','Retired owner cannot change');
+ await ui.change('test.blocked');check(ui.select().value==='test.alpha','Repeated rejection restores DOM even without a new state render');
+ release();await ui.change('test.blocked');check(a.definition===blocked&&ui.select().value==='test.blocked','Eligibility rechecked at submission');
+ a.dispose();await ui.change('classic');check(a.definition===blocked&&ui.select().value==='test.blocked','Retired owner cannot change');
  check(ui.panel().querySelector('[role=status]')?.textContent===t('view.unavailable'),'Retirement explained');ui.close();
  `),true);
 });
@@ -107,9 +107,9 @@ test('compatible switching retains the mounted panel, filters, unsaved lens draf
  const panel=ui.panel(),editor=panel.querySelector('.kplex-lens-editor'),name=editor.querySelector('input');
  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(name,'Unsaved lens');flushSync(()=>name.dispatchEvent(new Event('input',{bubbles:true})));
  flushSync(()=>[...panel.querySelectorAll('.kplex-lens-style-grid button')].at(-1).click());check(child,'Existing color port opened');
- ui.change('test.alpha');check(ui.panel()===panel&&panel.querySelector('.kplex-lens-editor')===editor&&name.value==='Unsaved lens','Compatible switch discarded panel/draft');
+ await ui.change('test.alpha');check(ui.panel()===panel&&panel.querySelector('.kplex-lens-editor')===editor&&name.value==='Unsaved lens','Compatible switch discarded panel/draft');
  check(retired===0&&child.apply('#112233'),'Compatible switch retired a valid color draft');
- const save=[...panel.querySelectorAll('.kplex-lens-editor-actions button')].find(button=>button.textContent==='Save lens');flushSync(()=>save.click());ui.change('test.beta');flushSync(()=>save.click());
+ const save=[...panel.querySelectorAll('.kplex-lens-editor-actions button')].find(button=>button.textContent==='Save lens');flushSync(()=>save.click());await ui.change('test.beta');flushSync(()=>save.click());
  check(calls===1&&panel.querySelector('.kplex-lens-fields').disabled&&!child.apply('#445566'),'Pending save safeguards survive switching');
  reject(Error('Expected owned storage fault'));await waitFor(()=>!panel.querySelector('.kplex-lens-fields').disabled);
  check(ui.panel()===panel&&name.value==='Unsaved lens','Failed save lost draft after switching');
@@ -124,9 +124,9 @@ test('two canvas panels retain owning-document and session identity across focus
  await new Promise(resolve=>setTimeout(resolve,20));const doc=iframe.contentDocument;
  const first=mount(a),second=mount(b,doc);first.open();second.open();await waitFor(()=>first.select()&&second.select());
  check(first.panel().ownerDocument===document&&second.panel().ownerDocument===doc,'Portal follows opening document');
- second.select().focus();check(doc.activeElement===second.select(),'Native select receives owning-document keyboard focus');first.change('test.alpha');
+ second.select().focus();check(doc.activeElement===second.select(),'Native select receives owning-document keyboard focus');await first.change('test.alpha');
  equal([first.select().value,second.select().value],['test.alpha','classic'],'Focused popout does not steal main selection');
- first.select().focus();second.change('test.beta');equal([a.definition.id,b.definition.id],['test.alpha','test.beta'],'Focused main does not steal popout selection');
+ first.select().focus();await second.change('test.beta');equal([a.definition.id,b.definition.id],['test.alpha','test.beta'],'Focused main does not steal popout selection');
  check(second.select().getBoundingClientRect().width>100&&second.select().getBoundingClientRect().right<=doc.defaultView.innerWidth,'Narrow native select fits');
  check(first.panel().querySelector('label[for="'+first.select().id+'"]')&&second.panel().querySelector('label[for="'+second.select().id+'"]'),'Each document has its own accessible label');
  equal([writes.lenses,writes.filter,writes.settings,writes.sources],[0,0,0,0],'Cross-document switching adds no unrelated work');
@@ -139,6 +139,6 @@ test('production registry exposes all three accepted definitions through the sam
  assert.equal(await scenario(`
  const owner=session('a',M.builtInPlexViews),ui=mount(owner);ui.open();await waitFor(ui.select);
  equal([...ui.select().options].map(option=>[option.value,option.textContent]),[['classic','Compass'],['mindmap','Mind Map'],['wuxing','Facets']],'Production registry options');
- check(!ui.select().disabled,'Implemented definitions selectable');ui.change('wuxing');check(owner.definition.id==='wuxing','Captured owner selects Wu Xing');ui.close();
+ check(!ui.select().disabled,'Implemented definitions selectable');await ui.change('wuxing');check(owner.definition.id==='wuxing','Captured owner selects Wu Xing');ui.close();
  `),true);
 });

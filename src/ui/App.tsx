@@ -244,6 +244,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
   const syncMenuButtonRef = useRef<HTMLButtonElement>(null);
   const sidecarMoveButtonRef = useRef<HTMLButtonElement>(null);
   const graphActionPorts = useRef<GraphActionPorts | null>(null);
+  const pendingEditorNavigation = useRef<{run: () => void} | null>(null);
   const viewContributions = useMemo(/** Own exactly this native canvas; focus never redirects a contributed request. */ () =>
     new CanvasViewContributionController(documentSession.plexView, plugin.viewSettingsRegistry, {
       settings: () => plugin.settings.canvasViewSettings,
@@ -384,8 +385,18 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
    * exact same-file observation, while other linked destinations still receive genuine navigation.
    * Explicit search/history/pin/drop destinations may reroot; refuse an editor-removing root before changing attention or history.
    */
-  const activate = useCallback((target: GraphPage, record = true, syncDocuments = true, origin: "user" | "wander" | "follow" = "user", reroot = false) => {
+  const activate = useCallback((target: GraphPage, record = true, syncDocuments = true, origin: "user" | "wander" | "follow" = "user", reroot = false): boolean => {
     if (reroot && target.file && plugin.app.vault.getFileByPath(target.file.path) !== target.file) return false;
+    if (documentSession.plexView.editors.bindings.length && documentSession.plexView.definition.navigation !== "rooted" && target.path !== activePathRef.current) {
+      if (origin === "follow" || target.file && plugin.app.vault.getFileByPath(target.file.path) !== target.file) return false;
+      const prepare = graphActionPorts.current?.prepareEditorTransition;if (!prepare) return false;
+      const current = documentSession.plexView.capture(), reference = actionNodeRef(target);
+      const run = (): void => {const page = resolveActionPage(plugin.index, reference);if (current() && page) activate(page, record, syncDocuments, origin, reroot);};
+      if (pendingEditorNavigation.current) {pendingEditorNavigation.current.run = run;return true;}
+      const pending = {run};pendingEditorNavigation.current = pending;
+      void prepare().then(accepted => {if (pendingEditorNavigation.current !== pending) return;pendingEditorNavigation.current = null;if (accepted && current()) pending.run();}).catch(() => {if (pendingEditorNavigation.current === pending) pendingEditorNavigation.current = null;new Notice(translate("actions.editor-save-failed"));});
+      return true;
+    }
     if (reroot && documentSession.plexView.definition.navigation === "rooted" && !documentSession.plexView.setRoot(nodeId(target.path))) {
       new Notice(translate("actions.branch-editor-blocked")); return false;
     }

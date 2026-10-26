@@ -17,6 +17,10 @@ const {exports: {DoubleTapGesture}} = loadPortableModules(["src/ui/components/Do
 /** Extract a real plugin method or App follow callback without invoking native plugin startup. */
 function production(name, dependencies = {}, filename = "src/main.ts") {
   dependencies = {isEmbeddedMarkdownLeaf: leaf => Boolean(leaf?.embedded), nativeLeafId: (_workspace, leaf) => leaf?.id ?? null, ...dependencies};
+  if (name === "activate" && filename === "src/ui/App.tsx") {
+    dependencies.pendingEditorNavigation ??= {current:null};
+    if (dependencies.documentSession) {dependencies.documentSession.plexView ??= {};dependencies.documentSession.plexView.editors ??= {bindings:[]};}
+  }
   const source = ts.createSourceFile(filename, readFileSync(new URL(`../${filename}`, import.meta.url), "utf8"), ts.ScriptTarget.Latest, true);
   let expression;
   /** Preserve the production implementation and its asynchronous boundaries verbatim. */
@@ -564,7 +568,7 @@ function appFollowFixture() {
     forceRender: /** Observe the actual render-only publication after pending settlement. */ () => { state.presentationRenders = (state.presentationRenders ?? 0) + 1; }}, "src/ui/App.tsx");
   state.reconcile = production("reconcileDocumentFollowVisibility", {...dependencies, activatePendingDocumentFollow: state.flush, observeDocumentFollow: state.observe,
     forceRender: /** Count visible geometry catch-up without synthesizing a plugin visibility notification. */ () => { state.visibilityRenders = (state.visibilityRenders ?? 0) + 1; }}, "src/ui/App.tsx");
-  return {state, files, pages};
+  return {state, files, pages, dependencies};
 }
 
 /** Publication remaps only a surface's accepted ghost identity, independently from shared last-active settings. */
@@ -882,7 +886,7 @@ test('partial startup cannot replace the saved center with an earlier available 
 
 /** Actual F4/App/graph activation callbacks distinguish explicit destination changes from independent occurrence attention. */
 test('F4 and center drops reroot only their owning rooted canvas and refuse editor-removing navigation before any side effect',()=>{
- const {state,files,pages}=appFollowFixture(),roots=[],other={root:'Other-root'},view=state.documentSession.plexView={definition:{navigation:'rooted'},setRoot:id=>{roots.push(id);view.root=id;return !view.blocked}};
+ const {state,files,pages}=appFollowFixture(),roots=[],other={root:'Other-root'},view=state.documentSession.plexView={editors:{bindings:[]},definition:{navigation:'rooted'},setRoot:id=>{roots.push(id);view.root=id;return !view.blocked}};
  state.plugin.index.getVaultSearchPage=id=>pages.get(id);
  let inserts=0;state.plugin.index.insertCreatedFile=file=>{inserts++;const page={path:file.path,file};pages.set(file.path,page);return page};
  const activate=state.activate,search=production('searchDestination',{plugin:state.plugin,activate},'src/ui/App.tsx'),graph=production('graphDestination',{activate},'src/ui/App.tsx');
@@ -895,4 +899,24 @@ test('F4 and center drops reroot only their owning rooted canvas and refuse edit
  search('D.md');assert.equal(inserts,0,'Blocked root cannot materialize a provisional native file');view.blocked=false;search('D.md');assert.equal(inserts,1);assert.equal(state.renderPath,'D.md');
  const replacement={...files.get('D.md')};files.set('D.md',replacement);const rootCount=roots.length;graph(cached,'destination');assert.equal(roots.length,rootCount,'Stale native incarnation cannot even request a root');
  view.definition.navigation='attention';graph(pages.get('B.md'),'destination');assert.equal(roots.length,rootCount);assert.equal(state.renderPath,'B.md','Existing attention-following views keep their navigation');
+});
+
+
+test('Compass explicit navigation saves its occurrence editor before accepting only the latest destination',async()=>{
+ const f=appFollowFixture();let finish,live=true,calls=0;const view={editors:{bindings:[{id:'native'}]},definition:{},capture:()=>()=>live};
+ f.state.documentSession.plexView=view;f.state.graphActionPorts.current={prepareEditorTransition:()=>{calls++;return new Promise(resolve=>finish=resolve)}};
+ let activate;const deps={...f.dependencies,pendingEditorNavigation:{current:null},resolveActionPage:(index,ref)=>index.get(ref.identity)??null,activate:(...args)=>activate(...args)};
+ activate=production('activate',deps,'src/ui/App.tsx');
+ assert.equal(activate(f.pages.get('B.md')),true);assert.equal(activate(f.pages.get('C.md')),true);assert.equal(calls,1);
+ assert.equal(f.state.renderPath,'A.md');assert.deepEqual(f.state.companions,[]);view.editors.bindings=[];finish(true);await Promise.resolve();await Promise.resolve();
+ assert.equal(f.state.renderPath,'C.md');assert.deepEqual(f.state.plugin.settings.navigationHistory,['A.md','C.md']);assert(f.state.companions.every(([,page])=>page.path==='C.md'));
+});
+test('Compass save failure, retired lifetime and passive follow cannot remove a bound editor through navigation',async()=>{
+ for(const mode of ['failure','retired','follow']){const f=appFollowFixture();let finish,live=true,calls=0;f.state.documentSession.plexView={editors:{bindings:[{id:'native'}]},definition:{},capture:()=>()=>live};
+  f.state.graphActionPorts.current={prepareEditorTransition:()=>{calls++;return new Promise(resolve=>finish=resolve)}};
+  let activate;const deps={...f.dependencies,pendingEditorNavigation:{current:null},resolveActionPage:(index,ref)=>index.get(ref.identity)??null,activate:(...args)=>activate(...args)};
+  activate=production('activate',deps,'src/ui/App.tsx');const accepted=activate(f.pages.get('B.md'),true,true,mode==='follow'?'follow':'user');
+  if(mode==='follow'){assert.equal(accepted,false);assert.equal(calls,0);}else{if(mode==='retired')live=false;finish(mode!=='failure');await Promise.resolve();await Promise.resolve();}
+  assert.equal(f.state.renderPath,'A.md');assert.deepEqual(f.state.companions,[]);assert.deepEqual(f.state.plugin.settings.navigationHistory,['A.md']);
+ }
 });

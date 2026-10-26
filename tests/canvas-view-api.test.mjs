@@ -242,3 +242,22 @@ test('nested native control addresses retain stable identities and reject ambigu
   assert.equal(M.validCanvasViewText({literal:''}),true);assert.equal(M.validCanvasViewText({literal:'view.choose'}),true);
   assert.equal(M.canvasViewText({literal:'view.choose'},()=>{throw Error('Literal must not use catalog')}),'view.choose');
 });
+
+
+test('captured view selection waits for the owning native save/close and retains direct guards',async()=>{
+ const a=fixture(),b=fixture(),release=a.session.retainEditor();let finish,calls=0;
+ a.session.guardSelection(async()=>{calls++;await new Promise(resolve=>finish=resolve);release();return true});
+ const pending=a.session.requestSelection('org.example.other');assert.equal(a.session.definition.id,definition.id);assert.equal(a.session.canSelect('org.example.other'),false);
+ b.session.select('org.example.other');finish();assert.equal(await pending,true);assert.equal(a.session.definition.id,'org.example.other');assert.equal(calls,1);
+ assert.equal(await a.session.requestSelection('org.example.other'),true);assert.equal(calls,1,'Same view never closes native content');
+});
+test('failed save and retired selection cannot change the captured canvas or clear its editor lease',async()=>{
+ const f=fixture(),release=f.session.retainEditor();f.session.guardSelection(async()=>false);
+ assert.equal(await f.session.requestSelection('org.example.other'),false);assert.equal(f.session.definition.id,definition.id);assert.equal(f.session.canSelect('org.example.other'),false);
+ release();let finish;f.session.guardSelection(()=>new Promise(resolve=>finish=resolve));const late=f.session.requestSelection('org.example.other');f.session.dispose();finish(true);assert.equal(await late,false);
+});
+test('invalid selection never invokes native preflight and newer selection requests supersede older ones',async()=>{
+ const f=fixture(),pending=[];f.session.guardSelection(()=>new Promise(resolve=>pending.push(resolve)));
+ assert.equal(await f.session.requestSelection('unknown'),false);assert.equal(pending.length,0);
+ const first=f.session.requestSelection('org.example.other'),last=f.session.requestSelection('org.example.other');pending[0](true);assert.equal(await first,false);pending[1](true);assert.equal(await last,true);
+});

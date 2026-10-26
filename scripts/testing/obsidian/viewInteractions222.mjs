@@ -129,16 +129,52 @@ export async function acceptViewInteractions222(x){
   const notes=[...root(host).querySelectorAll('.kplex-thought:not(.is-kplex-section)')].filter(el=>el.dataset.kplexPath?.startsWith(path('Memory').slice(0,-'Memory.md'.length)));
   check(notes.length>=5&&notes.every(el=>el.querySelector('.kplex-thought-corner-action')),'Eligible note editor icons missing in '+id);
   await click(card('Concept').querySelector('.kplex-thought-corner-action'));
-  await until(()=>{c.progress={...c.progress,attentionOpen:{view:id,center:center(host),overlay:!!root(host).querySelector('.kplex-central-editor-overlay'),status:root(host).querySelector('.kplex-central-editor-status')?.textContent,content:!!root(host).querySelector('.cm-content'),key:card('Concept')?.dataset.kplexKeyboardId}};return center(host)===concept.path&&editorReady()},'Noncentral note editor button did not center/open in '+id);
+  await until(()=>center(host)===(id==='classic'?path('Memory'):concept.path)&&editorReady(),'Noncentral editor button admission failed in '+id);
+  if(id==='classic')check(session.editors.bindings[0]?.target.nodeId===concept.path&&card('Concept')?.getBoundingClientRect().y!==card('Memory')?.getBoundingClientRect().y,'Compass editor moved to the center instead of its area');
   const firstContent=root(host).querySelector('.kplex-central-editor-content .cm-content');firstContent.focus();await until(()=>workspace.activeLeaf?.view.file?.path===concept.path&&firstContent.contains(doc.activeElement),'Attention native document identity absent');
   const firstEditor=workspace.activeLeaf.view.editor;firstEditor.setCursor(firstEditor.lastLine(),firstEditor.getLine(firstEditor.lastLine()).length);await native.webContents.insertText('Kplex-222-attention-switch-'+id);
   await until(()=>firstEditor.getValue().includes('Kplex-222-attention-switch-'+id),'Attention editor typed content absent');await action('view.fit');await wait(150);
-  await click(card('Input Leaf').querySelector('.kplex-thought-corner-action'));
-  await until(()=>center(host)===leaf.path&&!firstContent.isConnected&&editorReady(),'Attention editor did not switch document in '+id);
-  check(!session.editors.bindings.length,'Attention view adopted independent occurrence bindings');check((await app.vault.read(concept)).includes('Kplex-222-attention-switch-'+id),'Attention switch lost original content');
+  const next=id==='classic'?'Goal':'Input Leaf';await click(card(next).querySelector('.kplex-thought-corner-action'));
+  await until(()=>center(host)===(id==='classic'?path('Memory'):leaf.path)&&!firstContent.isConnected&&editorReady(),'Editor did not switch document in '+id);
+  check(id==='classic'?session.editors.bindings[0]?.target.nodeId===path(next):!session.editors.bindings.length,'Wrong editor hosting policy in '+id);check((await app.vault.read(concept)).includes('Kplex-222-attention-switch-'+id),'Attention switch lost original content');
   const close=[...root(host).querySelectorAll('.kplex-central-editor-toolbar button')].find(button=>accessible(button)===p.translator('app.useNormalCentralNode'));await click(close);
   await until(()=>!root(host).querySelector('.kplex-central-editor-overlay'),'Attention editor cleanup failed in '+id);
-  cases.push({id:'native-all-note-editor-icons-and-save-close-switch-via-attention-owner',view:id});
+  cases.push({id:id==='classic'?'native-compass-editor-opens-and-switches-in-area-without-centering':'native-all-note-editor-icons-and-save-close-switch-via-attention-owner',view:id});
  }
+ // Actual central attention editor crosses to occurrence-hosted Mind Map only after native save.
+ await destination('Memory');await selectView('classic');await action('view.fit');await wait(120);await click(card('Memory').querySelector('.kplex-thought-corner-action'));
+ await until(editorReady,'Compass central editor absent');let sourceContent=root(host).querySelector('.kplex-central-editor-content .cm-content');sourceContent.focus();
+ await until(()=>workspace.activeLeaf?.view.file?.path===path('Memory')&&sourceContent.contains(doc.activeElement),'Central document focus absent');
+ let sourceLeaf=workspace.activeLeaf,sourceEditor=sourceLeaf.view.editor;sourceEditor.setCursor(sourceEditor.lastLine(),sourceEditor.getLine(sourceEditor.lastLine()).length);await native.webContents.insertText('Kplex-222-view-change-marker');
+ await until(()=>sourceEditor.getValue().includes('Kplex-222-view-change-marker'),'Central typed marker absent');
+ await selectView('mindmap');await until(()=>!root(host).querySelector('.kplex-central-editor-overlay'),'View switch left old editor mounted');
+ check(center(host)===path('Memory')&&session.layoutRoot(path('Memory'))===path('Memory')&&!sourceContent.isConnected,'View switch changed attention or retained old document host');
+ check((await app.vault.read(app.vault.getFileByPath(path('Memory')))).includes('Kplex-222-view-change-marker'),'View switch lost native content');
+ cases.push({id:'native-selector-auto-saves-closes-central-compass-editor-before-mindmap'});
+ await selectView('classic');await action('view.fit');await wait(120);await click(card('Memory').querySelector('.kplex-thought-corner-action'));await until(editorReady,'Second central editor absent');
+ sourceContent=root(host).querySelector('.kplex-central-editor-content .cm-content');sourceContent.focus();await until(()=>workspace.activeLeaf?.view.file?.path===path('Memory'),'Failure source identity absent');sourceLeaf=workspace.activeLeaf;sourceEditor=sourceLeaf.view.editor;
+ const oldSave=sourceLeaf.view.save;sourceLeaf.view.save=async()=>{throw Error('Owned view transition save failure')};const restoreTransitionSave=()=>sourceLeaf.view.save=oldSave;restores.push(restoreTransitionSave);
+ await reveal(host);root(host).querySelector('.kplex-filter-trigger').click();await until(()=>panel(host)?.querySelector('.kplex-view-selector select'),'View failure selector absent');
+ let selector=panel(host).querySelector('.kplex-view-selector select');selector.value='mindmap';selector.dispatchEvent(new doc.defaultView.Event('change',{bubbles:true}));
+ await until(()=>!selector.disabled,'View failure did not settle');check(session.definition.id==='classic'&&selector.value==='classic'&&sourceContent.isConnected,'Failed save changed view or removed the editor');
+ restoreTransitionSave();selector.value='mindmap';selector.dispatchEvent(new doc.defaultView.Event('change',{bubbles:true}));await until(()=>session.definition.id==='mindmap'&&!root(host).querySelector('.kplex-central-editor-overlay'),'View transition retry did not complete');panel(host).querySelector('.kplex-filter-panel-header button').click();
+ cases.push({id:'native-selector-save-failure-retains-view-editor-and-successful-retry'});
+ // Save one Compass occurrence intent, close through its host and restore in an owned fresh leaf.
+ await selectView('classic');await action('view.fit');await wait(120);await click(card('Concept').querySelector('.kplex-thought-corner-action'));await until(()=>session.editors.bindings[0]?.target.nodeId===concept.path&&editorReady(),'Compass restored-intent source absent');
+ const saved=host.view.getState(),savedSize={...session.editors.bindings[0].dimensions};await action('editor.collapse',{bindingId:session.editors.bindings[0].id});await until(()=>!session.editors.bindings.length,'Original Compass occurrence did not close');
+ const restored=workspace.getLeaf('tab');hosts.push(restored);await restored.setViewState({type:'k-plex-react-view',state:saved,active:true});await restored.view.waitUntilReady();await reveal(restored);
+ const restoredSession=restored.view.documentSession.plexView;await until(()=>restoredSession.editors.bindings[0]?.target.nodeId===concept.path&&!root(restored).querySelector('.kplex-central-editor-status')&&root(restored).querySelector('.cm-content'),'Compass workspace occurrence intent did not restore');
+ check(center(restored)===path('Memory')&&JSON.stringify(restoredSession.editors.bindings[0].dimensions)===JSON.stringify(savedSize),'Restored Compass editor changed center or dimensions');
+ const restoredClose=[...root(restored).querySelectorAll('.kplex-central-editor-toolbar button')].find(button=>accessible(button)===p.translator('app.useNormalCentralNode'));await click(restoredClose);await until(()=>!restoredSession.editors.bindings.length,'Restored editor did not clean up');restored.detach();await reveal(host);
+ cases.push({id:'native-compass-occurrence-workspace-restoration-exact-note-size-and-center'});
+ // A main-window selector still owns its transition after focus moves to an independent popout.
+ await action('view.fit');await wait(120);await click(card('Concept').querySelector('.kplex-thought-corner-action'));await until(()=>session.editors.bindings.length&&editorReady(),'Captured selector editor absent');
+ await choose(host,'classic');selector=panel(host).querySelector('.kplex-view-selector select');
+ const popout=workspace.getLeaf('window');hosts.push(popout);await popout.setViewState({type:'k-plex-react-view',active:true});await popout.view.waitUntilReady();await p.setDocumentSyncMode(popout,'off');p.notifyNavigation(path('Goal'),popout);await choose(popout,'wuxing');panel(popout).querySelector('.kplex-filter-panel-header button').click();await wait(200);
+ const other={view:popout.view.documentSession.plexView.definition.id,attention:center(popout),camera:root(popout).querySelector('.kplex-camera').style.transform};
+ selector.value='mindmap';selector.dispatchEvent(new doc.defaultView.Event('change',{bubbles:true}));await until(()=>session.definition.id==='mindmap'&&!session.editors.bindings.length,'Captured main selector transition did not finish');
+ check(popout.view.documentSession.plexView.definition.id===other.view&&center(popout)===other.attention&&root(popout).querySelector('.kplex-camera').style.transform===other.camera&&!root(popout).querySelector('.kplex-central-editor-content'),'Main transition changed popout state/editor/camera');
+ check(popout.view.containerEl.ownerDocument.hasFocus(),'Main transition stole popout focus');panel(host).querySelector('.kplex-filter-panel-header button').click();popout.detach();await reveal(host);
+ cases.push({id:'native-main-selector-save-close-transition-keeps-popout-view-attention-camera-focus'});
  restores.push(()=>{check(!session.editors.bindings.length,'Owned editor survived acceptance');});
 }

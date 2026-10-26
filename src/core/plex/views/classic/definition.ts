@@ -36,7 +36,7 @@ function geometryPreferences(value: unknown): value is ClassicGeometryPreference
 
 /** Existing legacy surface/device preferences remain authoritative; this contract creates no settings migration. */
 export const classicViewDefinition: PlexViewDefinition = {
-  sectionSource: "attention",
+  sectionSource: "attention", editorHosting: "occurrence",
   id: "classic", version: 1, labelKey: "view.classic", icon: "brain-circuit",
   capabilities: {sections: true, descendants: true, editor: true, compact: false}, defaultState: null,
   restoreState: /** Classic has no additional persisted preference payload in this extraction. */ () => null,

@@ -5,7 +5,7 @@ import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import ts from 'typescript';
 import {loadPortableModules} from './support/portableTypeScript.mjs';
-const {exports:{PlexEditorBindings}}=loadPortableModules(['src/application/PlexEditorBindings.ts']);
+const {exports:{PlexEditorBindings,classicEditorKey}}=loadPortableModules(['src/application/PlexEditorBindings.ts','src/ui/plexViews/classic/occurrenceEditor.ts']);
 const source=ts.createSourceFile('PlexGraph.tsx',readFileSync(new URL('../src/ui/PlexGraph.tsx',import.meta.url),'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
 /** Extract actual action/close code without initializing a synthetic native Obsidian editor. */
 function production(name,deps){let expression;const visit=node=>{if(ts.isVariableDeclaration(node)&&node.name.getText(source)===name)expression=node.initializer.getText(source);ts.forEachChild(node,visit)};visit(source);assert(expression,name);
@@ -22,7 +22,7 @@ function fixture(occurrence=true){
  const viewSession={editors,capture:()=>()=>state.current},boundEditorClose={current:{id:old.id,close:async()=>{events.push('native-save');await gate.promise;events.push('native-close')}}};
  const shared={viewSession,boundEditorClose,preserveCameraOnNextLayout:{current:false},retainedBoundEditor:{current:{id:old.id}},Notice:class{constructor(message){notices.push(message)}},translate:key=>key};
  const deps={...shared,closeBoundEditor:production('closeBoundEditor',shared),editorExpansion:()=>state.node,
-  editorExpansionCurrent:{current:()=>state.node},occurrenceEditorPolicy:occurrence,editorSwitch:{current:null},setEditorSwitching:value=>events.push('busy:'+value),
+  editorExpansionCurrent:{current:()=>state.node},occurrenceEditorPolicy:occurrence,occurrenceEditorCapable:occurrence,classic:undefined,editorSwitch:{current:null},setEditorSwitching:value=>events.push('busy:'+value),
   activePath:'A.md',editorAttention:{current:'A.md'},centralEditorAvailable:true,centralEditorPage:{path:'A.md',file:oldFile},
   onCentralNodeEditorChange:value=>events.push('enabled:'+value),onActivate:page=>{events.push('navigate:'+page.path);return true},
   actionNodeRef:page=>({identity:page.path,path:page.path,fileIdentity:page.file===file?'file-B':'changed-file'}),occurrenceKey:row=>row.occurrenceId,
@@ -73,7 +73,7 @@ test('newer attention wins over a slow prior editor-button request',async()=>{
 /** Cached presentation may precede a metadata facade replacement; native identity stays exact. */
 function admissionFixture(){
  const file={path:'B.md',extension:'md'},page={path:'B.md',file},node={occurrenceId:'B',page:{...page}};
- const deps={viewDefinition:{capabilities:{editor:true}},viewSession:{},occurrenceEditorPolicy:false,
+ const deps={viewDefinition:{capabilities:{editor:true}},viewSession:{},occurrenceEditorPolicy:false,occurrenceEditorCapable:false,classic:undefined,
   graphActionPage:()=>page,scene:{nodes:[node],zoneViewports:{phase:{}}},occurrenceKey:node=>node.occurrenceId,
   supportsCentralEditorFile:page=>page.file.extension==='md',plugin:{app:{vault:{getFileByPath:()=>file}}},index:{isVisiblePage:()=>true},
   actionNodeRef:page=>({path:page.path}),nodeMatchesCurrentFilter:()=>true,areaForNode:()=> 'phase',zoneDisplayLayouts:{phase:{localPositions:new Map([['B',{}]])}}};
@@ -102,4 +102,12 @@ test('metadata facade admission retains current visibility, filter and exact are
   if(kind==='occurrence')f.context.target.occurrenceId='another-copy';
   assert.equal(f.read(),null,kind);
  }
+});
+
+
+test('Compass noncentral editor saves its legacy central host then binds in place without attention navigation',async()=>{
+ const f=fixture(false);f.deps.classic={editorKey:classicEditorKey};f.deps.occurrenceEditorCapable=true;f.deps.viewDefinition={id:'classic'};f.node.role='child';
+ f.action=production('editorExpandAction',f.deps);const pending=f.action.execute({});f.gate.resolve();assert.equal((await pending).status,'completed');
+ const binding=f.editors.bindings[0];assert.equal(binding.viewId,'classic');assert.equal(binding.occurrenceId,classicEditorKey(f.node,'A.md'));assert.equal(binding.target.path,'B.md');
+ assert(!f.events.some(event=>event.startsWith('navigate:')));assert(f.events.includes('enabled:false'));
 });

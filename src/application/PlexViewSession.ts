@@ -24,6 +24,8 @@ export class PlexViewSession {
   private readonly areaWidths = new Map<string, Readonly<Record<string, number>>>();
   private readonly roots = new Map<string, NodeId>();
   private stateGuard: ((state: unknown) => boolean) | null = null;
+  private selectionGuard: (() => Promise<boolean>) | null = null;
+  private selectionRequest = 0;
   private restoredEditors: unknown;
   private editorUsers = 0;
   private generation = 0;
@@ -60,9 +62,27 @@ export class PlexViewSession {
     }
     this.notify(); this.persist();
   }
+  /** The captured canvas host saves/closes native content before changing hosting policy. Direct
+   * synchronous selection retains its existing guard and cannot bypass native persistence. */
+  async requestSelection(id: string): Promise<boolean> {
+    if (this.closed || !this.registry.has(id)) return false;
+    if (id === this.requestedId) return true;
+    const request = ++this.selectionRequest, current = this.capture();
+    try {if (this.selectionGuard && !await this.selectionGuard()) return false;}
+    catch {return false;}
+    if (!current() || request !== this.selectionRequest || !this.canSelect(id)) return false;
+    this.select(id);return this.definition.id === id;
+  }
+  /** Lease one native preflight to this exact canvas; no native object or buffer enters state. */
+  guardSelection(prepare: () => Promise<boolean>): () => void {
+    if (this.closed) return () => {};
+    this.selectionGuard = prepare;
+    return () => {if (this.selectionGuard === prepare) this.selectionGuard = null;};
+  }
   /** An incompatible definition/hosting mode cannot silently destroy a live native editor. Compatible legacy attention hosts retain their exact instance. */
   canSelect(id: string): boolean { return !this.closed && (!this.editors.bindings.length || this.registry.resolve(id).id === this.definition.id)
-    && (!this.editorUsers || this.registry.resolve(id).capabilities.editor === true && this.registry.resolve(id).editorHosting === this.definition.editorHosting); }
+    && (!this.editorUsers || this.registry.resolve(id).id === this.definition.id || this.definition.editorHosting === undefined
+      && this.registry.resolve(id).capabilities.editor === true && this.registry.resolve(id).editorHosting === undefined); }
   /** Lease only actual editor hosting; a compatible geometry change keeps the same native instance. */
   retainEditor(): () => void { this.editorUsers++; let alive = true; return () => {if (alive) {alive = false; this.editorUsers--;}}; }
   /** A rooted definition retains one explicit root while ordinary attention changes independently. */
@@ -197,7 +217,7 @@ export class PlexViewSession {
   /** Isolate a failed definition without mutating its saved preferences or native document owner. */
   recover(): void { if (this.requestedId === this.registry.fallbackId) {this.retire();this.notify();} else this.select(this.registry.fallbackId); }
   /** Permanent native close, unlike a compatible view change or React remount. */
-  dispose(): void { if (this.closed) return; this.closed = true; this.editors.dispose(); this.retire(); this.listeners.clear(); this.states.clear(); this.transient.clear(); this.areaHeights.clear(); this.areaWidths.clear(); this.roots.clear(); this.stateGuard = null; this.restoredEditors = undefined; }
+  dispose(): void { if (this.closed) return; this.closed = true; this.editors.dispose(); this.retire(); this.listeners.clear(); this.states.clear(); this.transient.clear(); this.areaHeights.clear(); this.areaWidths.clear(); this.roots.clear(); this.stateGuard = null; this.selectionGuard = null; this.restoredEditors = undefined; }
   /** Every disposer runs even if another outgoing view resource fails to close. */
   private retire(): void { this.epoch++; this.generation++; this.stateGuard = null; for (const dispose of [...this.owned]) {this.owned.delete(dispose);try {dispose();} catch { /* resource failure cannot retain another owner's lifetime */ }} }
   /** Re-render session selection/state without semantic publication or a fake navigation visit. */
