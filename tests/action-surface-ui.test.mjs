@@ -674,7 +674,7 @@ test("explicit modified physical Dead shortcuts dispatch once on graph while log
   } finally { await browser.cleanup(); }
 });
 
-test("selection crosses only opted-in boundaries and permanently retires filtered or inactive occurrences", async () => {
+test("plain arrows cross boundaries regardless of the retired preference and permanently retire filtered or inactive occurrences", async () => {
   const browser = await chromiumHarness(await bundle());
   try {
     const result = await browser.evaluate(`(async()=>{
@@ -684,16 +684,17 @@ test("selection crosses only opted-in boundaries and permanently retires filtere
       function Harness(){selection=usePlexKeyboardNavigation(options);return h('div',null,selection.selectedId)}
       const mount=document.createElement('div');document.body.append(mount);const root=createRoot(mount);
       const render=()=>flushSync(()=>root.render(h(Harness)));render();
-      flushSync(()=>selection.move('up',false));const preserved=selection.selectedId==='center';
+      flushSync(()=>selection.move('up',false));const crossedLegacyFalse=selection.selectedId==='parent';
+      flushSync(()=>selection.select('center'));
       options={...options,crossSections:true};render();flushSync(()=>selection.move('up',false));const crossed=selection.selectedId==='parent';
       flushSync(()=>selection.move('up',false));const within=selection.selectedId==='parent2';
       options={...options,nodes:nodes.filter(node=>node.id!=='parent2')};render();await new Promise(r=>setTimeout(r,0));const filtered=selection.readSelected()===null;
       options={...options,nodes};render();const notResurrected=selection.readSelected()===null;
       flushSync(()=>selection.select('parent'));options={...options,normalMode:false};render();const inactive=selection.readSelected()===null;
       options={...options,normalMode:true};render();await new Promise(r=>setTimeout(r,0));const retiredMode=selection.readSelected()===null;
-      flushSync(()=>root.unmount());mount.remove();return{preserved,crossed,within,filtered,notResurrected,inactive,retiredMode};
+      flushSync(()=>root.unmount());mount.remove();return{crossedLegacyFalse,crossed,within,filtered,notResurrected,inactive,retiredMode};
     })()`);
-    assert.deepEqual(result, { preserved: true, crossed: true, within: true, filtered: true, notResurrected: true, inactive: true, retiredMode: true });
+    assert.deepEqual(result, { crossedLegacyFalse: true, crossed: true, within: true, filtered: true, notResurrected: true, inactive: true, retiredMode: true });
   } finally { await browser.cleanup(); }
 });
 

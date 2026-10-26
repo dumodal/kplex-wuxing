@@ -17,10 +17,11 @@ function graphInput(children,options={}){
 test('measured touch control envelopes remain disjoint at dense spacing and preserve thought/editor rectangles',()=>{
  const g=graphInput({R:['A','B','C'],A:['D','E'],B:['F']});
  g.input.state={version:1,scope:'R',initialGenerations:1,expanded:[JSON.stringify(['R','A']),JSON.stringify(['R','B'])],collapsed:[],sides:{}};
+ for(const arrangement of ['left','right','balanced']){
+ g.input.configuration={status:'available',values:{arrangement}};
  const projection=g.project();assert(projection);
  const measurements=projection.occurrences.map(row=>({id:row.id,width:row.id==='root'?220:120,height:row.id==='root'?90:32,
   expandedWidth:120,expandedReserve:0,mini:null,envelope:null,...(row.branch.canExpand?{controlReserve:{right:48,bottom:48}}:{})}));
- for(const arrangement of ['left','right','balanced']){
   const layout=M.layoutMindMap(projection,measurements,{...M.mindMapConfiguration(),arrangement,horizontalDensity:4,verticalDensity:4}),rects=[];
   for(const m of measurements){const r=layout.positions.get(m.id);assert.equal(r.width,m.width);assert.equal(r.height,m.height);
    const box={id:m.id,left:r.x-r.width/2,top:r.y-r.height/2,right:r.x+r.width/2+(m.controlReserve?.right??0),bottom:r.y+r.height/2+(m.controlReserve?.bottom??0)};
@@ -206,16 +207,17 @@ test('measured subtree bands preserve the root and prevent overlaps before/after
 test('parent forests expand outward by column with matching ports and disjoint measured tiles',()=>{
  const f=graphInput({R:['Child'],P0:['Q0'],P1:['Q1'],P2:['Q2'],Q0:['Grandchild']});const parents=['P0','P1','P2'],read=f.input.read.relations;
  f.input.read.relations=(id,role,max)=>id==='R'&&role==='parent'?{items:parents.slice(0,max).map(id=>({node:f.nodes.get(id),role:'parent',relationType:1,direction:1})),coverage:'local',truncated:false}:read(id,role,max);
- for(const columns of [1,2,3]){
-  f.input.configuration={status:'available',values:{parentColumns:columns,initialGenerations:3}};const p=f.project(),sizes=p.occurrences.map(row=>({id:row.id,width:row.nodeId==='P0'?360:180,height:40}));
+ for(const columns of [1,2,3])for(const touch of [false,true]){
+  f.input.configuration={status:'available',values:{parentColumns:columns,initialGenerations:3}};const p=f.project(),sizes=p.occurrences.map(row=>({id:row.id,width:row.nodeId==='P0'?360:180,height:40,...(touch&&(row.branch.canExpand||row.branch.expanded)?{controlReserve:{right:48,bottom:48}}:{})}));
   const verify=projection=>{
-   const layout=M.layoutMindMap(projection,sizes,{...M.mindMapConfiguration(),parentColumns:columns}),rects=[...layout.positions.values()];
+   // Give the complete forest visible room; the default300px parent viewport clips/scrolls overflow.
+   const layout=M.layoutMindMap(projection,sizes,{...M.mindMapConfiguration(),parentColumns:columns},{parentHeight:800}),rects=[...layout.positions].map(([id,r])=>{const reserve=sizes.find(size=>size.id===id)?.controlReserve;return {id,left:r.x-r.width/2,right:r.x+r.width/2+(reserve?.right??0),top:r.y-r.height/2,bottom:r.y+r.height/2+(reserve?.bottom??0)}});
    for(const row of projection.occurrences.filter(row=>parents.includes(row.nodeId))){
     const side=columns>1&&parents.indexOf(row.nodeId)%columns===0?-1:1,child=projection.occurrences.find(child=>child.branch.parent===row.id),a=layout.positions.get(row.id),b=layout.positions.get(child.id);
     assert.equal(row.branch.side,side);assert.equal(Math.sign(b.x-a.x),side);assert.equal(row.ports[side===1?'left':'right'],'parent');assert.equal(row.peerPort.side,side===1?'right':'left');
     assert.equal(projection.edges.find(edge=>edge.target===child.id).targetPort,side===1?'left':'right');
    }
-   for(let i=0;i<rects.length;i++)for(let j=i+1;j<rects.length;j++){const a=rects[i],b=rects[j];assert(Math.abs(a.x-b.x)>=(a.width+b.width)/2||Math.abs(a.y-b.y)>=(a.height+b.height)/2,'Outward subtree tiles overlap');}
+   for(let i=0;i<rects.length;i++)for(let j=i+1;j<rects.length;j++){const a=rects[i],b=rects[j];assert(a.right<=b.left||a.left>=b.right||a.bottom<=b.top||a.top>=b.bottom,'Outward subtree thought/control tiles overlap '+JSON.stringify({columns,touch,a,b,area:layout.areas[0]}));}
   };
   verify(p);const removed=new Set([p.occurrences.find(row=>row.nodeId==='P0').id]);for(const row of p.occurrences)if(removed.has(row.branch.parent))removed.add(row.id);
   verify({...p,occurrences:p.occurrences.filter(row=>!removed.has(row.id)),edges:p.edges.filter(edge=>!removed.has(edge.source)&&!removed.has(edge.target))});
