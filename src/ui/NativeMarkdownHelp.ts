@@ -2,7 +2,7 @@
  * profile, detached staging, native Component lifecycle and late-render retirement. No note,
  * graph, parser, custom HTML renderer, remote resource loader or durable writer is owned here. */
 import {Component, MarkdownRenderer, type App} from "obsidian";
-import {inertMarkdownHelpSource} from "../core/contracts/markdownHelp";
+import {inertMarkdownHelpSource, markdownHelpLinkTarget} from "../core/contracts/markdownHelp";
 
 export class NativeMarkdownHelp {
   private generation = 0;
@@ -25,7 +25,7 @@ export class NativeMarkdownHelp {
       if (staging.querySelector("script,style,iframe,object,embed,img,video,audio,source,link,canvas,form,input,image,use,foreignObject,animate,set")) throw new Error("Unsupported rendered help content");
       for (const anchor of Array.from(staging.querySelectorAll<HTMLAnchorElement>("a[href]"))) {
         const href = anchor.getAttribute("href") ?? "";
-        if (!href.startsWith("#") && !/^https:\/\//i.test(href)) throw new Error("Unsupported rendered help link");
+        if (!markdownHelpLinkTarget(href)) throw new Error("Unsupported rendered help link");
         anchor.rel = "noopener noreferrer";
       }
       this.container.append(staging);return true;

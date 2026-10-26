@@ -10,16 +10,16 @@ The view and preset dropdowns share a row when space allows. Select the cog besi
 
 | Preset | Default property | Categories | Preview |
 | --- | --- | --- | --- |
-| ARC | `arc` | Add, Relate, Communicate | Horizontal workflow |
-| PARA | `para` | Projects, Areas, Resources, Archives | [Obsidian screenshot](images/facets/para.png) |
-| Wu Xing | `phase` | Water, Wood, Fire, Earth, Metal | [Obsidian screenshot](images/facets/wuxing.png) |
-| GTD | `horizon` | Actions, Projects, Areas of focus, Goals, Vision, Purpose and principles | [Obsidian screenshot](images/facets/gtd.png) |
-| eACCESS | `access` | Encounters, Atlas, Calendar, Cards, Extras, Sources, Spaces | [Obsidian screenshot](images/facets/eaccess.png) |
-| Sensemaking | `approach` and `mode` rules | Synthesizer, Producer, Creative, Inner guide | Four quadrants |
-| Publishing | `state` | Seed, Research, Draft, Review, Published | Vertical workflow |
-| Map roles | `map-role` | Hub, Supporting map, Concept, Reference | Concentric bands |
+| ARC | `arc` | Add, Relate, Communicate | [Obsidian screenshot](images/facets/preset-arc.png) |
+| PARA | `para` | Projects, Areas, Resources, Archives | [Obsidian screenshot](images/facets/preset-para.png) |
+| Wu Xing | `phase` | Water, Wood, Fire, Earth, Metal | [Obsidian screenshot](images/facets/preset-wuxing.png) |
+| GTD | `horizon` | Actions, Projects, Areas of focus, Goals, Vision, Purpose and principles | [Obsidian screenshot](images/facets/preset-gtd.png) |
+| eACCESS | `access` | Encounters, Atlas, Calendar, Cards, Extras, Sources, Spaces | [Obsidian screenshot](images/facets/preset-eaccess.png) |
+| Sensemaking | `approach` and `mode` rules | Synthesizer, Producer, Creative, Inner guide | [Obsidian screenshot](images/facets/preset-sensemaking.png) |
+| Publishing | `state` | Seed, Research, Draft, Review, Published | [Obsidian screenshot](images/facets/preset-publishing.png) |
+| Map roles | `map-role` | Hub, Supporting map, Concept, Reference | [Obsidian screenshot](images/facets/preset-map-roles.png) |
 
-These are editable examples inside one Facets view. You can create/duplicate presets with three to seven stable categories, rename/reorder them, choose colors, matching aliases and explicit assignment values, and adjust layout defaults. Deleting a preset asks for an explicit replacement so saved canvases remain recoverable. Restore defaults changes the local draft until Save. Cancel keeps the accepted definition.
+Screenshots use separate diagnostic areas to show their individual states; new presets combine diagnostics by default. These are editable examples inside one Facets view. You can create/duplicate presets with three to seven stable categories, rename/reorder them, choose colors, matching aliases and explicit assignment values, and adjust layout defaults. Deleting a preset asks for an explicit replacement so saved canvases remain recoverable. Restore defaults changes the local draft until Save. Cancel keeps the accepted definition.
 
 ARC replaces the earlier uncustomized ACE example. Explicit saved ACE definitions retain their original name, property and categories. Sensemaking combines two explicit properties: `approach: top-down` or `bottom-up`, and `mode: reflection` or `expression`. Missing metadata stays unknown; these rules do not infer intent from prose. Map roles are personal classifications, with no importance score or vault-wide ranking.
 
@@ -43,7 +43,7 @@ In **Workflow guides**, configure decorative arrows for vertical and horizontal 
 
 Guides route outside category regions on the side away from the focused editor. Captions use the shared measured text treatment and are bounded to 80 characters; long visible copy stays clipped to its measured background. They never create relationships or receive graph editing actions. Concentric/quadrant layouts use their category geometry without workflow rails; circular Wu Xing retains its distinct generating and regulating cycles.
 
-The supplied [sample vault](../tests/fixtures/facets-vault/README.md) includes all eight built-in presets plus a custom four-category **State** example (`seed`, `research`, `draft`, `published`; [earlier screenshot](images/facets/state.png)). Ready for review is recognized by Publishing and intentionally Unassigned in the custom State definition. The vault contains Markdown/configuration only, with no executable plugin. Use a separate disposable copy with the matching reviewed build; do not overwrite an existing vault's settings.
+The supplied [sample vault](../tests/fixtures/facets-vault/README.md) includes all eight built-in presets plus a custom four-category **State** example (`seed`, `research`, `draft`, `published`; [Obsidian screenshot](images/facets/preset-state.png)). Ready for review is recognized by Publishing and intentionally Unassigned in the custom State definition. The vault contains Markdown/configuration only, with no executable plugin. Use a separate disposable copy with the matching reviewed build; do not overwrite an existing vault's settings.
 
 ![Wu Xing preset in Obsidian, with the current note centered and separate category and diagnostic regions](images/facets/wuxing.png)
 

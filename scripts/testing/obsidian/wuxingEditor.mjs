@@ -76,6 +76,8 @@ export async function acceptWuXingEditor(x){
  cases.push({id:'selection-and-phase-mapping-preserve-editor-and-owned-sidecar'});
  await p.closeSidecar(host);await reveal(host);content.focus();editor.setCursor(editor.lastLine(),editor.getLine(editor.lastLine()).length);
  }else{await reveal(host);content.focus();editor.setCursor(editor.lastLine(),editor.getLine(editor.lastLine()).length);}
+ /** Keep the original guarded clipboard lane intact and explicitly separate native typed-input lifecycle coverage. */
+ async function clipboardInsertion(){
  // Follow the existing support-report driver's guarded text/empty policy. Raw writeBuffer does
  // not certify restoration of standard native formats; never replace rich/custom clipboard data.
  const clipboard=require('electron').clipboard,formats=clipboard.availableFormats();
@@ -91,15 +93,22 @@ export async function acceptWuXingEditor(x){
  else{for(const code of ['A','C'])for(const type of ['keyDown','keyUp'])native.webContents.sendInputEvent({type,keyCode:code,modifiers:['control']});await until(()=>clipboard.readText().includes('Disposable Wu Xing native fixture.')&&clipboard.readText().includes(paste),'Trusted native copy did not copy the fixture')}
  check(keys.some(key=>key.trusted&&key.inEditor&&key.key.toLowerCase()==='v')&&keys.some(key=>key.trusted&&key.inEditor&&key.key.toLowerCase()==='c'),'Trusted exact native editor clipboard keys absent');
  cases.push({id:'windows-native-editor-clipboard-keys',transport:c.osInput?'OS_CUA':'Electron',keys});
- const modelBeforeNavigation={dirtyMarker:editor.getValue().includes(marker.trim()),paste:editor.getValue().includes(paste)};
- check(modelBeforeNavigation.dirtyMarker&&modelBeforeNavigation.paste,'Owned native content was lost before explicit navigation');
+  return paste;
+ }
+ let inserted;
+ if(c.lane==='editor-lifecycle'){
+  inserted='Kplex-222-native-typed-'+Date.now();await native.webContents.insertText(inserted);await until(()=>editor.getValue().includes(inserted),'Native typed insertion did not reach the owned editor');
+  cases.push({id:'windows-native-editor-typed-input-without-clipboard',transport:'Electron_insertText',clipboardAccessed:false});
+ }else inserted=await clipboardInsertion();
+ const modelBeforeNavigation={dirtyMarker:editor.getValue().includes(marker.trim()),nativeInsertion:editor.getValue().includes(inserted)};
+ check(modelBeforeNavigation.dirtyMarker&&modelBeforeNavigation.nativeInsertion,'Owned native content was lost before explicit navigation');
  p.notifyNavigation(path('Goal'),host);await until(()=>host.view.documentSession.centerPath===path('Goal')&&root(host).querySelector('.kplex-central-editor-content .cm-content'),'Explicit note activation did not navigate');
  await until(()=>!element.isConnected,'Explicit navigation did not retire the old native document');
  // Detachment initiates the host's asynchronous save; DOM retirement is not its completion signal. Observe the file under the same existing20-second native-step bound without forcing a save ourselves.
  const saveDeadline=Date.now()+20000;let saved=await app.vault.read(filesMemory());
- while(!(saved.includes(marker.trim())&&saved.includes(paste))&&Date.now()<saveDeadline){await wait(100);saved=await app.vault.read(filesMemory())}
- c.progress={phase:'native-save-result',cases,modelBeforeNavigation,savedMarkers:{dirtyMarker:saved.includes(marker.trim()),paste:saved.includes(paste)}};
- check(saved.includes(marker.trim())&&saved.includes(paste),'Normal explicit navigation failed to save native content');
+ while(!(saved.includes(marker.trim())&&saved.includes(inserted))&&Date.now()<saveDeadline){await wait(100);saved=await app.vault.read(filesMemory())}
+ c.progress={phase:'native-save-result',cases,modelBeforeNavigation,savedMarkers:{dirtyMarker:saved.includes(marker.trim()),nativeInsertion:saved.includes(inserted)}};
+ check(saved.includes(marker.trim())&&saved.includes(inserted),'Normal explicit navigation failed to save native content');
  /** Reacquire the owned file by its exact path rather than holding a stale native editor identity. */
  function filesMemory(){const file=app.vault.getFileByPath(path('Memory'));check(file,'Owned Memory fixture disappeared');return file}
  const currentContent=root(host).querySelector('.kplex-central-editor-content');check(currentContent!==element,'Explicit document change did not retire the old host');

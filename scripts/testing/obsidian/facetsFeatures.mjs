@@ -117,7 +117,14 @@ export async function acceptFacetsFeatures(x){
  // is enough for layout, but Wander correctly requires a prepared center. Establish that
  // distinct fixture precondition through the existing foreground owner, outside zero-work scopes.
  const beforeWanderScope=p.index.viewScopeCoverage(path('Memory'));
- if(!beforeWanderScope.prepared)check(await p.index.refreshOnDemandGraph([path('Memory')],false),'Normal foreground fixture preparation refused');
+ if(!beforeWanderScope.prepared){
+  // The local baseline producer deliberately refuses eager source-backed sessions. Reuse the
+  // same public, mode-aware visible-center watchdog that the real canvas owns after note edits.
+  await p.ensureIndexReady('view-open');const neighborhood=p.index.getNeighborhood(path('Memory'));
+  const presented=[neighborhood.parents.length,neighborhood.children.length,neighborhood.leftFriends.length,neighborhood.rightFriends.length,neighborhood.siblings.length];
+  const recovered=await p.index.recheckVisibleCenter(path('Memory'),presented,'local-ready',()=>center(host)===path('Memory')&&x.workspace.getLeafById(host.id)===host);
+  c.progress={...c.progress,wanderPreparation:{mode:p.index.isOnDemandMode()?'on-demand':'eager',recovered,before:beforeWanderScope,after:p.index.viewScopeCoverage(path('Memory')),sourceReady:p.index.isCenterRecoverySourceReady(),deferred:p.index.preparationDeferred,localForeground:p.index.usesLocalForeground(),sourceRevision:p.getIndexSourceRevision(),fullSourceRevision:p.index.fullSemanticSourceRevision,maintenanceCurrent:p.index.fullSemanticMaintenanceRevision===p.index.sourceAcquisition.getMaintenanceRevision(),policyCurrent:p.index.fullSemanticPolicyRevision===p.index.semanticPolicyRevision}};
+ }
  await until(()=>p.index.viewScopeCoverage(path('Memory')).prepared&&!p.index.hasActiveSemanticPreparation(),'Wander fixture did not acquire prepared local coverage');
  cases.push({id:'native-wander-prepared-fixture-after-real-note-edits',before:beforeWanderScope,after:p.index.viewScopeCoverage(path('Memory')),mode:p.index.isOnDemandMode()?'on-demand':'eager'});
  for(const id of ['classic','mindmap','wuxing']){

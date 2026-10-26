@@ -37,6 +37,12 @@ test('native Markdown help stages output and retires late Component work without
  const next=new M.NativeMarkdownHelp(app,container);let current=true;const stale=next.render('# New help',()=>current);current=false;finish();check((await stale)===false&&!container.textContent,'Changed target suppresses pending native completion');
  const prior=called;let refused=false;try{await next.render('![remote](https://example.com/image.png)')}catch{refused=true}check(refused&&called===prior,'Media source is rejected before invoking native rendering');
  window.testNativeMarkdownRender=async(_app,_source,element,_path,component)=>{component.register(()=>cleanups++);element.createEl('iframe')};refused=false;try{await next.render('# Plain help')}catch{refused=true}check(refused&&!container.textContent,'Unexpected active native extension output is refused before attachment');
+ for(const href of ['javascript:bad','https://user:secret@example.com','https://example..com','https://example.com:99999/']){
+  window.testNativeMarkdownRender=async(_app,_source,element)=>element.createEl('a',{text:'Native autolink',attr:{href}});refused=false;
+  try{await next.render('# Ordinary source')}catch{refused=true}check(refused&&!container.textContent,'Every actual native/autolink output uses the same strict target admission: '+href);
+ }
+ window.testNativeMarkdownRender=async(_app,_source,element)=>{for(const href of ['https://github.com/zsviczian/kplex','#local-heading'])element.createEl('a',{text:'Allowed link',attr:{href}})};
+ check(await next.render('# Ordinary source'),'Safe native links still attach');check([...container.querySelectorAll('a')].every(anchor=>anchor.rel==='noopener noreferrer'),'Safe native anchors retain their owned navigation protections');
  next.dispose();container.remove();delete window.testNativeMarkdownRender;return true;
  })()`),true)}finally{await host.cleanup()}
 });

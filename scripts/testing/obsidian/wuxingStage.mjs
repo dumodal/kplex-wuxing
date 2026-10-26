@@ -29,4 +29,14 @@ await enabledState(originalEnabled.filter(id=>id!=='k-plex'));
 for(const name of names){copyFileSync(join(source,name),join(target.pluginDir,name));assert.equal(hash(join(target.pluginDir,name)),hashes[name])}
 cli('plugin:enable','id=k-plex');
 await enabledState([...new Set([...originalEnabled,'k-plex'])]);
-console.log(JSON.stringify({staged:true,hashes,enablementWriteSettled:true,verificationClaim:false}));
+// Enablement-file completion does not establish completion of native settings/lifecycle setup.
+// Foreground the owned test window before waiting; do not await global source/index completion.
+cli('eval','code=(()=>{const win=require("@electron/remote").getCurrentWindow();win.restore();win.show();win.focus();win.webContents.focus();return JSON.stringify({foreground:true})})()');
+const readyEnd=Date.now()+30000;let lifecycleReady=false;
+while(Date.now()<readyEnd){
+ const value=cli('eval','code=JSON.stringify({ready:!!app.plugins.plugins["k-plex"]?.layoutReady&&!app.plugins.plugins["k-plex"]?.isStartupInitializing()})');
+ if(value.includes('"ready":true')){lifecycleReady=true;break;}
+ await new Promise(resolve=>setTimeout(resolve,100));
+}
+assert(lifecycleReady,'Native plugin settings/lifecycle did not settle');
+console.log(JSON.stringify({staged:true,hashes,enablementWriteSettled:true,lifecycleReady,verificationClaim:false}));
