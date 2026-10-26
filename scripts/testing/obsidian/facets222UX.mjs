@@ -128,7 +128,7 @@ export async function acceptFacets222UX(x){
  // Only this controller's generated root is edited; ordinary incremental indexing settles
  // before measuring presentation-only heading folds and native editor coexistence.
  const memoryFile=app.vault.getFileByPath(path('Memory'));
- await app.vault.modify(memoryFile,(await app.vault.read(memoryFile))+'\n## Native heading one\nRoot outline text.\n## Native heading two\nMore root outline text.\n');
+ await app.vault.modify(memoryFile,(await app.vault.read(memoryFile))+'\n## Summary\nRoot outline text.\n## Links\nMore root outline text.\n## Notes\nAdditional outline text.\n');
  await until(()=>(app.metadataCache.getFileCache(memoryFile)?.headings?.length??0)>=3&&!p.index.hasActiveSemanticPreparation(),'Root note edit did not settle');await wait(250);
  const central=()=>root(host).querySelector('[data-kplex-keyboard-id="root"]');
  const sectionControl=()=>central().querySelector('.kplex-section-fold-handle:not(.is-branch-disclosure)');
@@ -139,6 +139,11 @@ export async function acceptFacets222UX(x){
  await click(sectionControl());await until(()=>headings().length>=3,'Native central outline did not appear');
  check(root(host).querySelectorAll('.kplex-section-tree-edge').length===headings().length,'Native root outline bypassed the shared tree renderer');
  check(root(host).querySelector('.kplex-camera').style.transform===manualCamera,'Section expansion lost manual camera intent');
+ for(const label of ['Summary','Links','Notes']){
+  const card=headings().find(el=>el.querySelector('.kplex-thought-text')?.textContent===label),text=card?.querySelector('.kplex-thought-text');
+  check(text&&text.scrollWidth<=text.clientWidth+1,'Native Mind Map heading was clipped: '+label);
+ }
+ cases.push({id:'native-mindmap-heading-labels-fit-shared-section-measurement'});
  await capture('mindmap-root-sections',root(host).querySelector('.kplex-plex'));
  const allHeadings=headings().length,headingFold=headings().find(el=>el.querySelector('.kplex-section-fold-handle'))?.querySelector('.kplex-section-fold-handle');
  check(headingFold,'Native nested heading fold absent');await wait(300);const foldStop=quiet();await click(headingFold);

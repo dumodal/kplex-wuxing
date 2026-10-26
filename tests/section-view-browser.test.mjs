@@ -11,6 +11,23 @@ const actionSurface=`
   readSnapshot:()=>({mounted:true,visible:true,windowId:'section-test',center:M.actionNodeRef(pages.get(a.props.activePath)),selected:a.ports.current.readSelected(),focusRegion:'graph',interactionRevision:0,viewRevision:a.session.getSnapshot()})});
 `;
 
+test('Mind Map section labels reserve the same heading chrome as Compass without clipping short names',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(String.raw`(async()=>{${canvasSceneFixture}${actionSurface}
+ const names=['Summary','Links','Notes','Reference details'],body=names.map(name=>'# '+name).join('\n');
+ pages.get('A.md').file.stat.size=body.length;plugin.app.vault.cachedRead=async()=>{work.body++;return body};
+ index.evidenceFrom=()=>[];index.publishedInferAllLinksAsFriends=()=>false;
+ const a=await mount(M.mindMapViewDefinition),release=register(a);
+ a.container.querySelector('[data-kplex-keyboard-id="root"] .kplex-section-fold-handle:not(.is-branch-disclosure)').click();for(let i=0;i<5;i++)await wait();
+ const verify=()=>{const cards=[...a.container.querySelectorAll('.is-kplex-section')];check(cards.length===names.length,'Every source heading remains visible');
+  for(let i=0;i<cards.length;i++){const text=cards[i].querySelector('.kplex-thought-text');check(text.textContent===names[i],'Source label was character-truncated');
+   check(text.scrollWidth<=text.clientWidth+1,'Heading chrome clips '+names[i]+': '+JSON.stringify({scroll:text.scrollWidth,client:text.clientWidth,card:cards[i].style.width}));
+   check(Number.parseFloat(cards[i].style.width)>=172,'Shared heading minimum missing');}};
+ verify();for(const size of [16,20]){settings.baseFontSize=size;a.props.settings={...settings};a.props.paintSettings=a.props.settings;a.render();await wait();verify();}
+ check(work.body===1&&work.scans===0,'Font/layout changes never reread the section source or scan');
+ release();a.close();plugin.actionManager.dispose();style.remove();return true})()`),true)}finally{await host.cleanup()}
+});
+
 test('failed explicit section source reads leave a retryable closed outline and actionable feedback',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}${actionSurface}

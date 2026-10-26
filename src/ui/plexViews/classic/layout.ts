@@ -3,7 +3,7 @@ export {scrollZoneForRole, horizontalDensity, spacingPolicy, layoutColumns, sibl
 import {classicViewDefinition} from "../../../core/plex/views/classic/definition";
 import {nodeId} from "../../../core/graph/model";
 import type {PlexProjection} from "../../../core/plex/views/contracts";
-import {nodeSize, countsForLayout, nodeLabelFontSize} from "../measurement";
+import {nodeSize, sectionNodeSize, countsForLayout, nodeLabelFontSize} from "../measurement";
 /**
  * Classic host binding: arrange semantic neighborhoods into presentation zones.
  * Area resize bounds exist for empty groups independently of overflow viewports;
@@ -513,9 +513,8 @@ export function buildSectionExpandedScene(
   const makeSectionNode = (section: import("../../../index/SectionExpansion").ExpandedSection, depth: number, relations: ReturnType<typeof collectForVisibleSection>): PositionedNode => {
     const pseudo: Neighbour = { page: section.page, role: "child", relationType: RelationType.DEFINED, typeDefinition: "section", linkDirection: null };
     const node = makeNode(pseudo, "child", index, settings, deferCounts);
-    const maxSectionWidth = Math.max(172, node.style.maxWidth ?? settings.baseNodeStyle.maxWidth ?? 286);
-    node.width = Math.max(172, Math.min(maxSectionWidth, node.width + (16 + (2 - 16) * horizontalDensityT)));
-    node.height = Math.max(32, node.height + 3 * (1 - verticalDensityT));
+    Object.assign(node, sectionNodeSize(node, node.style.maxWidth ?? settings.baseNodeStyle.maxWidth,
+      16 + (2 - 16) * horizontalDensityT, 3 * (1 - verticalDensityT)));
     // x is the card centre; rootLeft is the left edge of the first heading card.
     node.x = rootLeft + node.width / 2 + depth * depthIndent;
     node.gateStats = {

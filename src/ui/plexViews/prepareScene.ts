@@ -6,7 +6,7 @@ import {nodeId, type NodeId, type GraphNodeView} from "../../core/graph/model";
 import type {PlexViewDefinition, PlexViewRead, PlexProjection, PlexMeasurement, PlexOccurrence, PlexViewEdge, PlexViewPropertyDependencies, PlexNodeBadge, PlexDecorationTextSize} from "../../core/plex/views/contracts";
 import {RelationType, type GraphPage, type PositionedNode, type PositionedEdge, type Role, type Neighbour} from "../../types";
 import {resolveNodeStyle, resolveLinkStyle} from "../../index/style";
-import {deferredNodeCounts, nodeSize, nodeBadgeSize} from "./measurement";
+import {deferredNodeCounts, nodeSize, sectionNodeSize, nodeBadgeSize} from "./measurement";
 import {projectRelationGroups} from "./groupRelations";
 import type {Translator} from "../../lang";
 import type {HostPlexScene} from "./scene";
@@ -240,9 +240,10 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
         relationType: occurrence.relation.relationType, typeDefinition: occurrence.relation.definition, linkDirection: occurrence.relation.direction} : null;
       const style = resolveNodeStyle(page, relation, role, settings), label = source.titleFor(page);
       const boundEditor = boundEditors.get(occurrence.id);
-      const size = boundEditor?.binding.dimensions ?? (occurrence.id === legacyEditor && editorSize ? editorSize
+      const measuredSize = boundEditor?.binding.dimensions ?? (occurrence.id === legacyEditor && editorSize ? editorSize
         : nodeSize(`${style.prefix ?? ""}${label}`, style.fontSize ?? 18, settings, isRoot,
           style.maxLabelLength, style.maxWidth, style.strokeWidth));
+      const size = occurrence.section ? sectionNodeSize(measuredSize, style.maxWidth ?? settings.baseNodeStyle.maxWidth) : measuredSize;
       const translate = grouping?.translate;
       const description = occurrence.description && (translate ? canvasViewText(occurrence.description, translate) : "literal" in occurrence.description ? occurrence.description.literal : occurrence.description.key);
       const viewBadge = measuredViewBadge(occurrence.badge, settings, translate);

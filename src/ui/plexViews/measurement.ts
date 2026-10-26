@@ -1,4 +1,4 @@
-/** Shared thought measurement and lazy displayed-count binding. No view topology or geometry policy. */
+/** Shared note/heading measurement and lazy displayed-count binding. No view topology or geometry policy. */
 import type {KplexSettings} from "../../settings";
 import type {GraphPage, NodeStyle, PositionedNode} from "../../types";
 import type {GraphIndex} from "../../index/GraphIndex";
@@ -51,6 +51,15 @@ export function nodeSize(
   const singleLineHeight = Math.max(center ? 48 : 26, Math.ceil(renderedFont * 1.6 + verticalInsets));
   const twoLineHeight = Math.ceil(Math.max(fontSize * fontScale, renderedFont) * 2.4 + renderedFont * 0.4 + verticalInsets);
   return { width, height: settings.wrapNodeLabels ? Math.max(singleLineHeight, twoLineHeight) : singleLineHeight };
+}
+
+/** Reserve the shared heading marker/padding and minimum readable label width. All section
+ * consumers start with ordinary measured text; Classic may retain its existing density insets.
+ * This changes presentation bounds only, never source text or its configured character limit. */
+export function sectionNodeSize(size: {width: number; height: number}, configuredMaxWidth?: number,
+  widthReserve = 16, heightReserve = 0): {width: number; height: number} {
+  const maximum = Math.max(172, configuredMaxWidth ?? 286);
+  return {width: Math.max(172, Math.min(maximum, size.width + widthReserve)), height: Math.max(32, size.height + heightReserve)};
 }
 
 /** Small non-wrapping node adornment uses the same label/font measurement pipeline. Full copy
