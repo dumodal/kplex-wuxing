@@ -6,7 +6,7 @@ import {plexViewModules,viewPage} from './support/plexViewFixture.mjs';
 const M=await plexViewModules(['src/core/plex/views/index.ts','src/core/plex/views/example.ts',
   'src/application/PlexViewSession.ts','src/ui/plexViews/settingsContributions.ts','src/ui/plexViews/example.ts',
   'src/ui/plexViews/CanvasViewContributionController.ts','src/ui/plexViews/contributionValidation.ts',
-  'src/ui/plexViews/prepareScene.ts','src/ui/plexViews/labels.ts']);
+  'src/ui/plexViews/prepareScene.ts','src/ui/plexViews/labels.ts','src/core/plex/views/mindmap/definition.ts']);
 const definition=M.exampleViewDefinition;
 
 test('shared rounded band occupancy excludes its true inner hole and matches circular corners',()=>{
@@ -88,6 +88,70 @@ test('versioned public registration rejects incompatible contracts and omitted c
   assert.throws(()=>new M.PlexViewRegistry([definition,definition],definition.id));
   const f=fixture(),release=f.session.retainEditor();assert.equal(f.session.canSelect('org.example.other'),false);release();
   assert.equal(f.session.canSelect('org.example.other'),true);
+});
+
+/** Optional host admission is independent from source-frontier ownership and remains finite. */
+test('hierarchy depth capabilities validate finite limits and preserve undeclared policies',()=>{
+  const hierarchy={maximumScopes:1,primary:'expand',reduce:()=>null};
+  const declared=maximumDepth=>({...definition,navigation:'rooted',hierarchy:{...hierarchy,maximumDepth}});
+  for(const maximum of [0,-1,1.5,21,NaN,Infinity,'20',null,true])
+    assert.throws(()=>new M.PlexViewRegistry([declared(maximum)],definition.id));
+  for(const maximum of [1,8,20])
+    assert.equal(new M.PlexViewRegistry([declared(maximum)],definition.id).resolve(definition.id).hierarchy.maximumDepth,maximum);
+  assert.equal(new M.PlexViewRegistry([{...definition,navigation:'rooted',hierarchy}],definition.id).resolve(definition.id).hierarchy.maximumDepth,undefined);
+});
+
+/** Canonical finite chains exercise the actual shared projection admission and measurement owner. */
+function depthSceneFixture(){
+  const chain=Array.from({length:22},(_,index)=>'Depth'+index+'.md'),pages=new Map(chain.map(id=>{
+    const page=viewPage(id);page.file={...page.file,name:id,basename:id.slice(0,-3),stat:{mtime:1,ctime:1,size:1}};return [id,page];
+  }));
+  const source={get:id=>pages.get(id),titleFor:page=>page.name,isVisiblePage:()=>true,sortNeighbours:rows=>rows,
+    captureSemanticGateRead:()=>({isCurrent:()=>true}),explainRelationship:()=>null,
+    viewScopeCoverage:()=>({coverage:'local',prepared:true,complete:true,pending:false}),
+    neighbours:(page,role)=>{const position=chain.indexOf(page.path),target=chain[position+1];
+      return role==='child'&&target?[{page:pages.get(target),role,relationType:1,typeDefinition:'Child',linkDirection:1}]:[];}};
+  const settings={...M.migrateAndMergeSettings({}),maxItemCount:100,canvasViewSettings:{mindmap:{version:1,values:{maximumDepth:20}}}};
+  const prepare=(policy,state=policy.defaultState)=>M.prepareViewScene(policy,M.plexViewRead(source,()=>true,100,chain[0],22),source,chain[0],state,settings,()=>true);
+  /** Only fixture geometry policy is replaced; every edge refers to the real supplied canonical child. */
+  const policy=(depth,maximumDepth)=>({...definition,id:'test.depth',navigation:'rooted',
+    hierarchy:{maximumScopes:1,primary:'expand',reduce:()=>null,...(maximumDepth===undefined?{}:{maximumDepth})},
+    project(input){
+      const occurrences=chain.slice(0,depth+1).map((id,index)=>{const node=input.read.node(id);
+        const relation=index?input.read.relations(chain[index-1],'child',1).items[0]:undefined;
+        assert(node&&(!index||relation?.node.id===id));
+        return {id:'n-'+index,nodeId:node.id,representation:'thought',...(relation?{role:'child',relation}:{}),
+          ports:{top:'parent',bottom:'child'},branch:{...(index?{parent:'n-'+(index-1)}:{}),depth:index,side:1,expanded:index<depth,canExpand:index<depth,reference:false,status:'ready'}};});
+      const edges=occurrences.slice(1).map((row,index)=>({id:'e-'+index,kind:'semantic',source:occurrences[index].id,target:row.id,
+        sourceNode:occurrences[index].nodeId,targetNode:row.nodeId,relation:row.relation,sourcePort:'bottom',targetPort:'top'}));
+      return {attention:input.attention,layoutRoot:input.layoutRoot,entry:'n-0',root:'n-0',frame:'n-0',occurrences,edges,truncated:false,coverage:'cached'};
+    }});
+  return {chain,prepare,policy};
+}
+
+/** Declaring twenty admits twenty, while legacy eight and explicit smaller bounds remain enforced. */
+test('shared hierarchy admission honors declared depth without weakening the legacy or terminal bound',()=>{
+  const f=depthSceneFixture();
+  assert.equal(f.prepare(f.policy(8)).failure,false);
+  assert.equal(f.prepare(f.policy(9)).failure,true);
+  const deep=f.prepare(f.policy(20,20));assert.equal(deep.failure,false);assert.equal(deep.projection.occurrences.length,21);assert.equal(deep.scene.edges.length,20);
+  assert.equal(f.prepare(f.policy(21,20)).failure,true);
+  assert.equal(f.prepare(f.policy(1,1)).failure,false);
+  assert.equal(f.prepare(f.policy(2,1)).failure,true);
+});
+
+/** Eight non-root scopes can expose a ninth-depth card; its limited continuation must not fail the view. */
+test('production Mind Map admits depth nine while retaining its eight-scope expansion budget',()=>{
+  const f=depthSceneFixture(),state={version:1,scope:f.chain[0],initialGenerations:1,collapsed:[],sides:{},
+    expanded:f.chain.slice(1,9).map((_,index)=>JSON.stringify(f.chain.slice(0,index+2)))};
+  const prepared=f.prepare(M.mindMapViewDefinition,state);
+  assert.equal(prepared.failure,false,'A bounded ninth-depth card must not invalidate the entire scene');
+  assert.equal(M.mindMapViewDefinition.hierarchy.maximumDepth,20);assert.equal(M.mindMapViewDefinition.hierarchy.maximumScopes,8);
+  assert.equal(prepared.projection.preparation.parents.length,8);assert.equal(prepared.projection.occurrences.length,10);
+  assert.equal(Math.max(...prepared.projection.occurrences.map(row=>row.branch.depth)),9);
+  const limited=f.prepare(M.mindMapViewDefinition,{...state,expanded:[...state.expanded,JSON.stringify(f.chain.slice(0,10))]});
+  assert.equal(limited.failure,false);assert.equal(limited.projection.truncated,true);assert.equal(limited.projection.preparation.parents.length,8);
+  assert.equal(limited.projection.occurrences.length,10);assert.equal(limited.projection.occurrences.at(-1).branch.status,'limited');
 });
 
 test('badge budgets are explicit bounded capabilities and preserve the ordinary default',()=>{

@@ -174,7 +174,10 @@ export interface PlexViewDefinition {
   /** Explicit selector entry may start at this canvas's current attention; workspace restoration still retains its saved root. */
   readonly navigationEntry?: "attention";
   /** Optional bounded branch-frontier policy, independent of attention-following definitions and native editor creation. */
-  readonly hierarchy?: Readonly<{maximumScopes: number; primary: "activate" | "activate-editor" | "expand"; relations?: "child-and-peer";
+  readonly hierarchy?: Readonly<{maximumScopes: number;
+    /** Admitted occurrence depth from 1 through 20; omission preserves 8. This never enlarges the source-scope budget. */
+    maximumDepth?: number;
+    primary: "activate" | "activate-editor" | "expand"; relations?: "child-and-peer";
     /** Return a small replacement view state, or null when the requested displayed branch is unavailable. */
     reduce: (state: unknown, projection: PlexProjection, action: PlexBranchAction) => unknown}>;
   readonly configuration?: PlexViewConfigurationSchema;

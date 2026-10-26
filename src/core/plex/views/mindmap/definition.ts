@@ -10,7 +10,8 @@ import {reduceMindMap} from "./actions";
 export const mindMapViewDefinition: PlexViewDefinition = {
   id: "mindmap", version: 1, labelKey: "view.mindmap", icon: "network", navigation: "rooted", navigationEntry: "attention", editorHosting: "occurrence",
   capabilities: {sections: false, descendants: false, editor: true, compact: false}, defaultState: defaultMindMapState,
-  hierarchy: {maximumScopes: MIND_MAP_LIMITS.scopes, primary: "expand", relations: "child-and-peer", reduce: reduceMindMap},
+  hierarchy: {maximumScopes: MIND_MAP_LIMITS.scopes, maximumDepth: MIND_MAP_LIMITS.depth,
+    primary: "expand", relations: "child-and-peer", reduce: reduceMindMap},
   configuration: mindMapConfigurationSchema, restoreState: restoreMindMapState, project: projectMindMap,
   /** Layout consumes the same admitted type settings as projection and the actual occurrence/editor measurements. */
   layout(projection, measurements, _preferences, _editor, context) {

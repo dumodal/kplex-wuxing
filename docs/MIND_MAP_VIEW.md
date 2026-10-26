@@ -202,3 +202,7 @@ Refresh feedback ownership: saved/pending-result dialogs retain their existing l
 ## Mind Map limit update (2026-10-25)
 
 Mind Map's maximum depth defaults to 10 and accepts up to 20. Maximum displayed notes defaults to 500 and accepts up to 2,000. Native Settings and configuration validation share the same upper bounds. Existing saved values remain valid; these defaults apply when values are absent. Compass/Facets and the shared per-area node limit are unchanged. The maintainer explicitly requested this configuration-only change without additional retesting; existing range expectations are updated to the new contract.
+
+## Maintainer depth admission correction
+
+Mind Map declares its existing hard maximum of 20 through optional hierarchy.maximumDepth; its configured default remains 10. Shared scene admission, ancestor visibility/selection and cycle-reference reveal honor that declaration. Other definitions retain 8 when omitted. The separate eight non-root source-scope budget is unchanged and may stop expansion earlier; its terminal frontier remains visible. See [depth correction evidence](validation/facets-222-depth-correction.json).

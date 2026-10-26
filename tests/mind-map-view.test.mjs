@@ -33,6 +33,21 @@ test('cycle references reveal the nearest earlier occurrence on their own branch
  assert.equal(M.hierarchyReferenceAncestor(Array.from({length:2049},(_,i)=>({id:String(i),canonical:'N'})),'0'),null);
  const deep=[{id:'root',canonical:'N'}];for(let i=1;i<10;i++)deep.push({id:String(i),canonical:'X',parent:i===1?'root':String(i-1)});
  deep.push({id:'too-deep',canonical:'N',parent:'9',reference:true});assert.equal(M.hierarchyReferenceAncestor(deep,'too-deep'),null,'Reference walking keeps the existing depth bound');
+ assert.equal(M.hierarchyReferenceAncestor(deep,'too-deep',20),'root','An explicit declared depth reveals the genuine earlier ancestor');
+});
+
+/** Optional depth affects presentation ancestry only; invalid or exceeded bounds grant no visibility/reveal. */
+test('declared hierarchy depths retain complete paths while invalid caps remain closed',()=>{
+ const rows=[{id:'root',canonical:'N'}];for(let depth=1;depth<=21;depth++)rows.push({id:String(depth),canonical:'N'+depth,parent:depth===1?'root':String(depth-1)});
+ assert.deepEqual([...M.hierarchyPathClosure(rows,['20'],'root')],['root']);
+ assert.equal(M.hierarchyPathClosure(rows,['20'],'root',20).size,21);
+ assert.deepEqual([...M.hierarchyPathClosure(rows,['21'],'root',20)],['root']);
+ const reference=[...rows.slice(0,20),{id:'reference',canonical:'N',parent:'19',reference:true}];
+ assert.equal(M.hierarchyReferenceAncestor(reference,'reference',20),'root');
+ for(const maximum of [0,21,NaN,Infinity,1.5]){
+  assert.deepEqual([...M.hierarchyPathClosure(rows,['1'],'root',maximum)],['root']);
+  assert.equal(M.hierarchyReferenceAncestor(reference,'reference',maximum),null);
+ }
 });
 
 test('retained unshown branches cannot bias the visible root split under partial coverage',()=>{

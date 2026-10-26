@@ -75,6 +75,8 @@ Projection chooses stable occurrences and canonical relationships. Layout places
 
 Use `read.node`, bounded `relations`, optional cached `relation`/`scope` and pair `evidence`. Honor current/coverage/truncation. An unavailable scope is not an empty graph or a leaf. Corpus reads are unsupported.
 
+Hierarchies may declare `hierarchy.maximumDepth` from 1 through 20; existing definitions retain 8 when omitted. This bounds displayed occurrence admission and shared ancestor visibility/reference walks. It does not change `maximumScopes`, acquisition or the reader signature. Keep an exposed terminal card visible when another scope/work budget prevents expanding it. Mind Map declares 20 and retains its eight non-root source scopes.
+
 Request property capability only when needed. Available cached fields include a proven missing value; unavailable metadata cannot satisfy a negative condition. The optional field lifetime proof belongs to the current synchronous frame, not saved state.
 
 For advanced rules, use the exported shared parser/compiler and `GraphPredicateEngine.evaluateAvailable`; `evaluatePortablePredicateContexts` implements any-match over actual canonical contexts. Preserve active/suppressed evidence. Do not infer an edge or a center self-link merely because a category needs relationship data.

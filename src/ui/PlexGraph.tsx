@@ -2244,7 +2244,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       occurrenceKey(node) === boundEditorBinding?.occurrenceId || !globalFiltering || node.page.transient?.kind === "group"
       || matchesGraphPredicateNode(predicateEngine, predicate, node, predicateCenter) && matchesVisibleLensNode(predicateEngine, index, lenses, node, predicateCenter));
     return hierarchyPathClosure(scene.nodes.map(/** Reuse only the displayed, admitted parent identities. */ node => ({id: occurrenceKey(node), parent: node.branch?.parent})),
-      matched.map(/** Selection and Find retain occurrence identity. */ occurrenceKey), scene.entryOccurrence);
+      matched.map(/** Selection and Find retain occurrence identity. */ occurrenceKey), scene.entryOccurrence, viewDefinition.hierarchy.maximumDepth);
   }, [viewDefinition, scene.nodes, scene.entryOccurrence, boundEditorBinding?.id, globalFiltering, predicateEngine, predicate, predicateCenter, index, lenses, predicateRevision]);
   const filterMatchedNodePaths = useMemo(() => {
     if (hierarchyMatchedOccurrences) return new Set(scene.nodes.filter(node => hierarchyMatchedOccurrences.has(occurrenceKey(node))).map(node => node.page.path));
@@ -4500,7 +4500,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         if (node.page !== page || viewSession && (viewSession.definition !== viewDefinition || viewSession.getLifetime() !== viewLifetime
           || viewSession.layoutRoot(nodeId(activePath)) !== sceneScope)) return;
         const earlier = hierarchyReferenceAncestor(scene.nodes.map(row => ({id: occurrenceKey(row), canonical: row.page.path,
-          parent: row.branch?.parent, reference: row.branch?.reference})), occurrenceId);
+          parent: row.branch?.parent, reference: row.branch?.reference})), occurrenceId, viewDefinition.hierarchy.maximumDepth);
         selection.select(earlier ?? occurrenceId);
         new Notice(translate("mindmap.cycleReference"), 5000);
         return;

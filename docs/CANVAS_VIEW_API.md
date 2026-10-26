@@ -65,6 +65,8 @@ Omitted optional capabilities are unavailable.
 
 Mind Map's hierarchy does not imply the legacy `descendants` flag. Corpus reads/scoring, arbitrary graph scans, multiple editors and independent Facets occurrence bindings are unavailable. The section conformance fixture proves an optional boundary, not a shipped Mind Map section mode.
 
+An optional `hierarchy.maximumDepth` declares a finite occurrence-admission limit from 1 through 20. Omission preserves the existing limit of 8. Shared scene admission, ancestor-path visibility/selection and cycle-reference reveal use that same declared limit. Mind Map declares its existing hard maximum of 20; its configured default remains 10. This capability does not enlarge the independent source-scope budget (eight non-root frontiers for Mind Map), so another bounded-work limit can stop expansion earlier while retaining the visible frontier.
+
 ## Bounded reads and availability
 
 `PlexViewRead` exports current/coverage checks, admitted-node lookup, bounded direct `relations`, optional exact cached `relation`/`scope`, pair `evidence`, comparison and optional `properties`. Corpus reports unavailable; an empty list never proves a whole-vault negative.

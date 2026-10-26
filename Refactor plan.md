@@ -6454,3 +6454,8 @@ Implementation4fc8c40 passed all3208 real Node22.22.2 local and CI541 checks, sc
 ### PR #222 final native acceptance - 2026-10-26 07:02Z
 
 Runtime16b8e82 mainfec13b74/styles8d1191: all7 serial Windows lanes passed124 recorded cases (UX16/layouts15/pairs12/sharing8/Help8/features54/editor-lifecycle11), each restored9configs/117contents/live layout/window/digest. Real Save JSON completed with maintainer assistance in native OS dialog; canonical validator accepted9668bytes and unsaved draft name, installed preset unchanged. Draft cancelled, temporary download removed after hashing, outer restore07:02:20Z passed. Receipt/sanitized summary docs/validation/facets-222-ux-native-summary.json. No production input/write. OS clipboard remains guarded/unverified; Mac/mobile/minimumhost/known215 limits retained. CI542 retry passed3208 after first Chromium-startup failure. Final clean-head full verify:obsidian and CI are next; keep222 draft/open/unmerged. No new manual request beyond the documented platform limits.
+
+
+### PR222 bounded depth correction - 2026-10-26
+
+Optional hierarchy.maximumDepth1..20 preserves default8 and unchanged source-scope budgets. Mind Map declares20; host admission and existing visibility/reference walks compose same declaration. Focused45/core130/architecture/scanner/build pass. NativeUX19 passes depth9/frontier limit and all prior UX, restored9/117/digest. Exact seams posted before edits; no parser/index/scheduler/editor/rooted migration. Receipt facets-222-depth-correction.json; baseline clean a6 verify:obsidian3208/smoke restored remains separately attributed. CI543 alias failure retained; isolated3/3 and CI544 passed unchanged. Final full/new-head CI pending; no new scope, merge or release.

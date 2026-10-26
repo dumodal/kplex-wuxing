@@ -2,11 +2,12 @@
 import {CANVAS_VIEW_API_VERSION, type PlexViewDefinition} from "./contracts";
 import {validateViewConfigurationSchema} from "./configuration";
 import {boundedViewState} from "./state";
+import {validHierarchyDepth} from "./hierarchy";
 
 export class PlexViewRegistry {
   private readonly definitions = new Map<string, PlexViewDefinition>();
   readonly available: readonly PlexViewDefinition[];
-  /** Reject ambiguous IDs/versions before any native surface is constructed. */
+  /** Reject ambiguous IDs/versions and unsafe optional budgets before a native surface is constructed. */
   constructor(definitions: readonly PlexViewDefinition[], readonly fallbackId = "classic") {
     for (const definition of definitions) {
       if (!/^[a-z][a-z0-9.-]{0,79}$/.test(definition.id) || definition.version !== CANVAS_VIEW_API_VERSION || this.definitions.has(definition.id)) {
@@ -36,6 +37,7 @@ export class PlexViewRegistry {
       if (definition.navigationEntry !== undefined && (definition.navigationEntry !== "attention" || definition.navigation !== "rooted")) throw new Error("Unsupported rooted entry policy");
       if (definition.hierarchy && (definition.navigation !== "rooted" || !Number.isInteger(definition.hierarchy.maximumScopes)
         || definition.hierarchy.maximumScopes < 1 || definition.hierarchy.maximumScopes > 16
+        || definition.hierarchy.maximumDepth !== undefined && !validHierarchyDepth(definition.hierarchy.maximumDepth)
         || typeof definition.hierarchy.reduce !== "function"
         || definition.hierarchy.relations !== undefined && definition.hierarchy.relations !== "child-and-peer"
         || !["activate", "activate-editor", "expand"].includes(definition.hierarchy.primary)

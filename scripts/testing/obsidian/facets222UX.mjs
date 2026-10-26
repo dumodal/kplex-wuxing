@@ -90,4 +90,29 @@ export async function acceptFacets222UX(x){
   cases.push({id:'native-parent-column-outward-directions',columns});
  }
  await action('view.fit');await capture('mindmap-parent-columns',root(host).querySelector('.kplex-plex'));
+ // The root does not consume a non-root scope. Eight admitted branch scopes can therefore
+ // expose depth9; host admission must preserve that card without enlarging source demand.
+ await wait(250);const depthSettingStop=quiet();await p.updateCanvasViewSetting('mindmap','maximumDepth',20);await wait(160);
+ depthSettingStop('native-depth-configuration-zero-source-work');
+ const depthFiles=[];
+ for(let i=0;i<=10;i++){
+  const yaml=JSON.stringify(child)+': '+JSON.stringify(i<10?['[['+path('Depth '+(i+1))+']]']:[]);
+  const file=await app.vault.create(path('Depth '+i),'---\n'+yaml+'\n---\n# Disposable depth fixture\n');
+  files.push(file);depthFiles.push(file);p.index.insertCreatedFile(file);releases.push(p.index.acquireSemanticDemand(file.path));
+ }
+ await until(()=>depthFiles.every(file=>app.metadataCache.getFileCache(file))&&!p.index.hasActiveSemanticPreparation()
+  &&depthFiles.slice(0,-1).every((file,i)=>{const page=p.index.get(file.path);return page&&p.index.neighbours(page,'child').some(row=>row.page.path===depthFiles[i+1].path)}),'Canonical depth chain did not settle');
+ session.setRoot(path('Depth 0'));p.notifyNavigation(path('Depth 0'),host);await until(()=>card('Depth 1')&&center(host)===path('Depth 0'),'Depth root did not render');
+ for(let i=1;i<=8;i++){
+  await action('view.fit');await wait(80);await click(card('Depth '+i));
+  await until(()=>card('Depth '+(i+1))||root(host).querySelector('.kplex-view-error'),'Expanded depth frontier did not settle');
+  check(!root(host).querySelector('.kplex-view-error')&&card('Depth '+(i+1)),'Deep bounded branch invalidated the entire view at '+(i+1));
+ }
+ check(card('Depth 9')&&!card('Depth 10'),'Ninth-depth admission changed the bounded frontier');
+ cases.push({id:'native-mindmap-depth-nine-admission',configuredMaximumDepth:20});
+ await action('view.fit');await wait(80);await click(card('Depth 9'));await wait(200);
+ check(card('Depth 9')&&!card('Depth 10')&&!root(host).querySelector('.kplex-view-error')
+  &&center(host)===path('Depth 0')&&session.layoutRoot(path('Depth 0'))===path('Depth 0'),'Existing eight-scope limit broke the view or changed navigation');
+ cases.push({id:'native-mindmap-eight-scope-limit-retains-visible-frontier'});
+ await action('view.fit');await capture('mindmap-depth-frontier',root(host).querySelector('.kplex-plex'));
 }

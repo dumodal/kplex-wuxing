@@ -131,7 +131,8 @@ export function plexViewRead(source: SceneRead, current: () => boolean, maximum:
   };
 }
 
-/** Validate finite, independently keyed output before native rendering or shared relationship actions see it. */
+/** Validate finite, independently keyed output and declared hierarchy depth before shared rendering/actions.
+ * Hierarchies without an explicit depth capability retain their existing eight-level admission limit. */
 function validateProjection(projection: PlexProjection, maximum: number, definition: PlexViewDefinition): void {
   if (projection.occurrences.length > maximum || projection.edges.length > maximum * 8) throw new Error("View projection exceeds its bound");
   const ids = new Map(projection.occurrences.map(row => [row.id, row]));
@@ -150,7 +151,8 @@ function validateProjection(projection: PlexProjection, maximum: number, definit
     || projection.frame && !ids.has(projection.frame)) throw new Error("Invalid scene anchor");
   for (const occurrence of projection.occurrences) if (occurrence.branch) {
     const branch = occurrence.branch, parent = branch.parent ? ids.get(branch.parent) : null;
-    if (!definition.hierarchy || !Number.isInteger(branch.depth) || branch.depth < 0 || branch.depth > 8 || ![-1, 1].includes(branch.side)
+    if (!definition.hierarchy || !Number.isInteger(branch.depth) || branch.depth < 0
+      || branch.depth > (definition.hierarchy.maximumDepth ?? 8) || ![-1, 1].includes(branch.side)
       || !["ready", "loading", "partial", "unavailable", "limited"].includes(branch.status)
       || [branch.expanded, branch.canExpand, branch.reference].some(value => typeof value !== "boolean")
       || branch.parent && (!parent?.branch || parent.branch.depth + 1 !== branch.depth || parent.branch.depth > 0 && parent.branch.side !== branch.side)
@@ -257,7 +259,8 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
     if (definition.hierarchy) {
       // A matching descendant retains its genuine displayed path. No semantic shortcut is invented
       // across a removed parent, and the fixed root remains visible even for an empty match set.
-      const keep = hierarchyPathClosure(projection.occurrences.filter(row => nodes.has(row.id)).map(row => ({id: row.id, parent: row.branch?.parent})), matched, rootOccurrence);
+      const keep = hierarchyPathClosure(projection.occurrences.filter(row => nodes.has(row.id)).map(row => ({id: row.id, parent: row.branch?.parent})),
+        matched, rootOccurrence, definition.hierarchy.maximumDepth);
       for (const id of nodes.keys()) if (!keep.has(id)) {nodes.delete(id); pages.delete(id);}
       for (let position = measurements.length - 1; position >= 0; position--) if (!keep.has(measurements[position].id)) measurements.splice(position, 1);
     }
