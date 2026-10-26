@@ -69,3 +69,37 @@ test('newer attention wins over a slow prior editor-button request',async()=>{
  const f=fixture(false),result=f.action.execute({});f.deps.editorAttention.current='C.md';f.gate.resolve();assert.equal((await result).status,'cancelled');
  assert(!f.events.some(event=>event.startsWith('navigate:')||event==='enabled:false'));assert.equal(f.deps.editorSwitch.current,null);
 });
+
+/** Cached presentation may precede a metadata facade replacement; native identity stays exact. */
+function admissionFixture(){
+ const file={path:'B.md',extension:'md'},page={path:'B.md',file},node={occurrenceId:'B',page:{...page}};
+ const deps={viewDefinition:{capabilities:{editor:true}},viewSession:{},occurrenceEditorPolicy:false,
+  graphActionPage:()=>page,scene:{nodes:[node],zoneViewports:{phase:{}}},occurrenceKey:node=>node.occurrenceId,
+  supportsCentralEditorFile:page=>page.file.extension==='md',plugin:{app:{vault:{getFileByPath:()=>file}}},index:{isVisiblePage:()=>true},
+  actionNodeRef:page=>({path:page.path}),nodeMatchesCurrentFilter:()=>true,areaForNode:()=> 'phase',zoneDisplayLayouts:{phase:{localPositions:new Map([['B',{}]])}}};
+ const context={target:{kind:'node',occurrenceId:'B',node:{path:'B.md'}}};
+ return{file,page,node,deps,context,read:()=>production('editorExpansion',deps)(context)};
+}
+test('editor admission reacquires a newer metadata facade for the exact displayed native file',()=>{
+ const f=admissionFixture(),admitted=f.read();assert(admitted);assert.equal(admitted.page,f.page);assert.equal(admitted.occurrenceId,'B');
+ assert.notEqual(admitted,f.node);assert.notEqual(f.node.page,f.page,'Presentation snapshot is not mutated');
+});
+test('metadata facade admission still refuses a replaced file, renamed occurrence or retired canonical target',()=>{
+ for(const kind of ['file','path','physical-rename','canonical','native']){const f=admissionFixture();
+  if(kind==='file')f.node.page={path:'B.md',file:{path:'B.md',extension:'md'}};
+  if(kind==='path')f.node.page={path:'Old.md',file:f.file};
+  if(kind==='physical-rename')f.file.path='Renamed.md';
+  if(kind==='canonical')f.deps.graphActionPage=()=>null;
+  if(kind==='native')f.deps.plugin.app.vault.getFileByPath=()=>({path:'B.md',extension:'md'});
+  assert.equal(f.read(),null,kind);
+ }
+});
+test('metadata facade admission retains current visibility, filter and exact area-occurrence checks',()=>{
+ for(const kind of ['visible','filter','area','occurrence']){const f=admissionFixture();
+  if(kind==='visible')f.deps.index.isVisiblePage=()=>false;
+  if(kind==='filter')f.deps.nodeMatchesCurrentFilter=()=>false;
+  if(kind==='area')f.deps.zoneDisplayLayouts.phase.localPositions.clear();
+  if(kind==='occurrence')f.context.target.occurrenceId='another-copy';
+  assert.equal(f.read(),null,kind);
+ }
+});

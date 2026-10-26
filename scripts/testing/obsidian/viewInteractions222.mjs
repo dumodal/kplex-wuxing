@@ -6,6 +6,8 @@ export async function acceptViewInteractions222(x){
  const surface=()=>[...p.actionSurfaceHosts].find(([,entry])=>entry.leaf===host)?.[0];
  const action=(id,args)=>p.actionManager.dispatch({id,source:'internal',surfaceId:surface(),...(args?{args}:{})});
  const selected=()=>p.actionManager.readSnapshot(surface())?.selected;
+ const editorReady=()=>root(host).querySelector('.kplex-central-editor-content .cm-content')&&!root(host).querySelector('.kplex-central-editor-status');
+ const accessible=button=>button.getAttribute('aria-label')??(button.getAttribute('aria-labelledby')??'').split(/\s+/).map(id=>doc.getElementById(id)?.textContent??'').join(' ');
  const card=name=>[...root(host).querySelectorAll('.kplex-thought:not(.is-kplex-section)')].find(el=>el.dataset.kplexPath===path(name));
  const click=async element=>{check(element?.isConnected,'Native interaction target absent');element.scrollIntoView({block:'nearest'});
   const r=element.getBoundingClientRect(),x=Math.round(r.x+r.width/2),y=Math.round(r.y+r.height/2),hit=doc.elementFromPoint(x,y);
@@ -16,6 +18,7 @@ export async function acceptViewInteractions222(x){
  const destination=async name=>{const node={identity:path(name),kind:'file',path:path(name)};
   const result=await p.actionManager.dispatch({id:'node.activate',source:'internal',surfaceId:surface(),target:{kind:'explicit',node},args:{intent:'destination'}});
   check(result.status==='completed','Existing destination admission refused '+name);await until(()=>center(host)===path(name),'Destination did not center');};
+ const dispatchOwner=p.actionManager.dispatch;p.actionManager.dispatch=async function(request){const result=await dispatchOwner.call(this,request);if(request.id==='editor.expand')c.progress={...c.progress,lastEditorAction:{status:result.status,reason:result.reasonKey,view:session.definition.id,target:request.target?.node?.path,occurrence:request.target?.occurrenceId}};return result};restores.push(()=>p.actionManager.dispatch=dispatchOwner);
  check(!doc.querySelector('.modal')&&!app.setting.isOpen,'User-owned modal must remain untouched');
  const child=p.settings.hierarchy.children[0],concept=app.vault.getFileByPath(path('Concept'));
  const leaf=await app.vault.create(path('Input Leaf'),'---\nphase: metal\n---\n# Input Leaf\n\nOwned input fixture.\n');files.push(leaf);p.index.insertCreatedFile(leaf);releases.push(p.index.acquireSemanticDemand(leaf.path));
@@ -55,9 +58,9 @@ export async function acceptViewInteractions222(x){
  await destination('Memory');await until(()=>card('Concept')?.querySelector('.is-branch-disclosure'),'Editor branch absent');
  if(!card('Input Leaf')){await action('view.fit');await wait(120);await click(card('Concept').querySelector('.is-branch-disclosure'));await until(()=>card('Input Leaf'),'Editor child absent');}
  await action('view.fit');await wait(120);await click(card('Concept').querySelector('.kplex-thought-corner-action'));
- await until(()=>session.editors.bindings.length===1&&root(host).querySelector('.kplex-central-editor-content .cm-content'),'Actual native editor did not open');
+ await until(()=>session.editors.bindings.length===1&&editorReady(),'Actual native editor did not open');
  const content=root(host).querySelector('.kplex-central-editor-content .cm-content');content.focus();
- await until(()=>workspace.activeLeaf?.view.file?.path===concept.path,'Native editor document focus absent');
+ await until(()=>workspace.activeLeaf?.view.file?.path===concept.path&&content.contains(doc.activeElement),'Native editor document focus absent');
  const editorLeaf=workspace.activeLeaf,editor=editorLeaf.view.editor,binding=session.editors.bindings[0];
  editor.setCursor(editor.lastLine(),editor.getLine(editor.lastLine()).length);await native.webContents.insertText('Kplex-222-input-editor-marker');
  await until(()=>editor.getValue().includes('Kplex-222-input-editor-marker'),'Native typed content absent');
@@ -79,16 +82,16 @@ export async function acceptViewInteractions222(x){
  }
  await destination('Memory');await selectView('classic');await action('selection.center');await action('graph.focus');await key('Enter',['alt']);
  await until(()=>root(host).querySelector('.is-kplex-section'),'Modified Enter did not delegate supported Compass sections');
- await key('Enter',['shift']);await until(()=>!root(host).querySelector('.is-kplex-section'),'Modified Enter did not fold Compass sections');
+ await key('Enter',['alt']);await until(()=>!root(host).querySelector('.is-kplex-section'),'Modified Enter did not fold Compass sections');
  cases.push({id:'native-modified-enter-reuses-central-markdown-section-owner'});
  await action('graph.focus');await key('Enter');check(!doc.querySelector('.modal'),'Center Enter renamed Compass');
  cases.push({id:'native-current-compass-center-enter-no-rename'});
  // Switch through the same native save/close owner; a failed save must retain recovery.
  await destination('Memory');await selectView('mindmap');await action('view.fit');await wait(120);
  await click(card('Concept').querySelector('.kplex-thought-corner-action'));
- await until(()=>session.editors.bindings.length===1&&root(host).querySelector('.cm-content'),'Switch source editor absent');
+ await until(()=>session.editors.bindings.length===1&&editorReady(),'Switch source editor absent');
  let liveContent=root(host).querySelector('.kplex-central-editor-content .cm-content');liveContent.focus();
- await until(()=>workspace.activeLeaf?.view.file?.path===concept.path,'Switch source document focus absent');
+ await until(()=>workspace.activeLeaf?.view.file?.path===concept.path&&liveContent.contains(doc.activeElement),'Switch source document focus absent');
  const originalLeaf=workspace.activeLeaf,originalEditor=originalLeaf.view.editor,originalBinding=session.editors.bindings[0];
  originalEditor.setCursor(originalEditor.lastLine(),originalEditor.getLine(originalEditor.lastLine()).length);await native.webContents.insertText('Kplex-222-switch-save-marker');
  await until(()=>originalEditor.getValue().includes('Kplex-222-switch-save-marker'),'Switch source typed content absent');
@@ -99,7 +102,7 @@ export async function acceptViewInteractions222(x){
  check(session.editors.bindings[0].id===originalBinding.id&&originalEditor.getValue()===originalValue&&JSON.stringify(originalEditor.getCursor())===originalCursor,'Failed save replaced/lost the native document');
  releaseSave();cases.push({id:'native-editor-switch-save-failure-retains-binding-content-and-caret'});
  await click(card('Goal').querySelector('.kplex-thought-corner-action'));
- await until(()=>session.editors.bindings.length===1&&session.editors.bindings[0].target.nodeId===path('Goal')&&root(host).querySelector('.cm-content'),'Editor button did not switch to Goal');
+ await until(()=>session.editors.bindings.length===1&&session.editors.bindings[0].target.nodeId===path('Goal')&&editorReady(),'Editor button did not switch to Goal');
  check(session.editors.bindings[0].id!==originalBinding.id&&!liveContent.isConnected,'Switch retained a second native editor');
  check((await app.vault.read(concept)).includes('Kplex-222-switch-save-marker'),'Switch did not save original content');
  check(center(host)===path('Memory')&&session.layoutRoot(path('Memory'))===path('Memory'),'Occurrence editor switch changed root/attention');
@@ -110,7 +113,7 @@ export async function acceptViewInteractions222(x){
  await until(()=>p.index.neighbours(p.index.get(path('Memory')),'parent').some(row=>row.page.path===parent.path)&&!p.index.hasActiveSemanticPreparation(),'Parent incidence absent');
  session.setAreaHeight('parentHeight',140);await until(()=>card('Input Parent')?.querySelector('.kplex-thought-corner-action'),'Parent note absent');await action('view.fit');await wait(150);
  await click(card('Input Parent').querySelector('.kplex-thought-corner-action'));
- await until(()=>session.editors.bindings[0]?.target.nodeId===parent.path&&root(host).querySelector('.cm-content'),'Parent native editor absent');
+ await until(()=>session.editors.bindings[0]?.target.nodeId===parent.path&&editorReady(),'Parent native editor absent');
  const assertToolbar=label=>{const overlay=root(host).querySelector('.kplex-central-editor-overlay'),toolbar=overlay?.querySelector('.kplex-central-editor-toolbar'),r=overlay?.getBoundingClientRect(),t=toolbar?.getBoundingClientRect();
   check(overlay?.classList.contains('is-area-clipped')&&t.top>=r.top&&t.bottom<=r.bottom,'Parent toolbar is outside editor body: '+label);
   for(const button of toolbar.querySelectorAll('button')){const b=button.getBoundingClientRect(),hit=doc.elementFromPoint(b.x+b.width/2,b.y+b.height/2);check(hit&&button.contains(hit),'Parent toolbar button is clipped/unreachable: '+label+'/'+button.getAttribute('aria-label'));}
@@ -118,7 +121,7 @@ export async function acceptViewInteractions222(x){
  await action('view.fit');await wait(200);assertToolbar('initial140');
  for(const height of [220,140]){session.setAreaHeight('parentHeight',height);await wait(200);assertToolbar('resize'+height);}
  const ownedBounds=root(host).querySelector('.kplex-plex').getBoundingClientRect();require('node:fs').writeFileSync(c.screenshotPrefix+'-parent-editor-controls.png',(await native.webContents.capturePage({x:Math.ceil(ownedBounds.x),y:Math.ceil(ownedBounds.y),width:Math.floor(ownedBounds.width),height:Math.floor(ownedBounds.height)})).toPNG());
- await click([...assertToolbar('before-close').querySelectorAll('button')].find(button=>button.getAttribute('aria-label')===p.translator('app.useNormalCentralNode')));
+ await click([...assertToolbar('before-close').querySelectorAll('button')].find(button=>accessible(button)===p.translator('app.useNormalCentralNode')));
  await until(()=>!session.editors.bindings.length&&!root(host).querySelector('.kplex-central-editor-overlay'),'Visible parent toolbar could not close editor');
  cases.push({id:'native-parent-editor-toolbar-reachable-at140-and220-area-height-and-real-close'});
  for(const id of ['classic','wuxing']){
@@ -126,14 +129,14 @@ export async function acceptViewInteractions222(x){
   const notes=[...root(host).querySelectorAll('.kplex-thought:not(.is-kplex-section)')].filter(el=>el.dataset.kplexPath?.startsWith(path('Memory').slice(0,-'Memory.md'.length)));
   check(notes.length>=5&&notes.every(el=>el.querySelector('.kplex-thought-corner-action')),'Eligible note editor icons missing in '+id);
   await click(card('Concept').querySelector('.kplex-thought-corner-action'));
-  await until(()=>center(host)===concept.path&&root(host).querySelector('.kplex-central-editor-content .cm-content'),'Noncentral note editor button did not center/open in '+id);
-  const firstContent=root(host).querySelector('.kplex-central-editor-content .cm-content');firstContent.focus();await until(()=>workspace.activeLeaf?.view.file?.path===concept.path,'Attention native document identity absent');
+  await until(()=>{c.progress={...c.progress,attentionOpen:{view:id,center:center(host),overlay:!!root(host).querySelector('.kplex-central-editor-overlay'),status:root(host).querySelector('.kplex-central-editor-status')?.textContent,content:!!root(host).querySelector('.cm-content'),key:card('Concept')?.dataset.kplexKeyboardId}};return center(host)===concept.path&&editorReady()},'Noncentral note editor button did not center/open in '+id);
+  const firstContent=root(host).querySelector('.kplex-central-editor-content .cm-content');firstContent.focus();await until(()=>workspace.activeLeaf?.view.file?.path===concept.path&&firstContent.contains(doc.activeElement),'Attention native document identity absent');
   const firstEditor=workspace.activeLeaf.view.editor;firstEditor.setCursor(firstEditor.lastLine(),firstEditor.getLine(firstEditor.lastLine()).length);await native.webContents.insertText('Kplex-222-attention-switch-'+id);
   await until(()=>firstEditor.getValue().includes('Kplex-222-attention-switch-'+id),'Attention editor typed content absent');await action('view.fit');await wait(150);
   await click(card('Input Leaf').querySelector('.kplex-thought-corner-action'));
-  await until(()=>center(host)===leaf.path&&!firstContent.isConnected&&root(host).querySelector('.kplex-central-editor-content .cm-content'),'Attention editor did not switch document in '+id);
+  await until(()=>center(host)===leaf.path&&!firstContent.isConnected&&editorReady(),'Attention editor did not switch document in '+id);
   check(!session.editors.bindings.length,'Attention view adopted independent occurrence bindings');check((await app.vault.read(concept)).includes('Kplex-222-attention-switch-'+id),'Attention switch lost original content');
-  const close=[...root(host).querySelectorAll('.kplex-central-editor-toolbar button')].find(button=>button.getAttribute('aria-label')===p.translator('app.useNormalCentralNode'));await click(close);
+  const close=[...root(host).querySelectorAll('.kplex-central-editor-toolbar button')].find(button=>accessible(button)===p.translator('app.useNormalCentralNode'));await click(close);
   await until(()=>!root(host).querySelector('.kplex-central-editor-overlay'),'Attention editor cleanup failed in '+id);
   cases.push({id:'native-all-note-editor-icons-and-save-close-switch-via-attention-owner',view:id});
  }

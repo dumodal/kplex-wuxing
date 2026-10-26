@@ -4130,12 +4130,14 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     if (!viewDefinition.capabilities.editor || !viewSession || context.target.kind !== "node" || !context.target.occurrenceId) return null;
     const target = context.target, page = graphActionPage(context);
     const node = scene.nodes.find(item => occurrenceKey(item) === target.occurrenceId);
-    if (!node || node.page !== page || !page || !(occurrenceEditorPolicy ? supportsBoundEditor(page) : supportsCentralEditorFile(page) && !page.transient
+    if (!node || !page || node.page.path !== page.path || node.page.file !== page.file || !(occurrenceEditorPolicy ? supportsBoundEditor(page) : supportsCentralEditorFile(page) && !page.transient
       && page.file && plugin.app.vault.getFileByPath(page.file.path) === page.file) || !index.isVisiblePage(page)
-      || actionNodeRef(page).path !== target.node.path || !nodeMatchesCurrentFilter(node)) return null;
+      || actionNodeRef(page).path !== target.node.path || page.file?.path !== target.node.path || !nodeMatchesCurrentFilter(node)) return null;
     const area = areaForNode(node);
     if (area && scene.zoneViewports[area] && !zoneDisplayLayouts[area]?.localPositions.has(occurrenceKey(node))) return null;
-    return node;
+    // A saved metadata publication can replace a page facade without replacing its native file.
+    // Reacquire current facts while retaining this exact displayed occurrence and incarnation.
+    return node.page === page ? node : {...node, page};
   };
   editorExpansionCurrent.current = editorExpansion;
   /** Close/resize retain the invocation incarnation instead of inheriting a later editor opened at that occurrence. */
