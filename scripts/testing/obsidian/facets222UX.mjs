@@ -87,6 +87,14 @@ export async function acceptFacets222UX(x){
  }
  columnStop('native-facets-area-columns-zero-source-work');cases.push({id:'native-facets-width-keyboard-one-and-multiple-columns'});
  await action('view.areas.toggle');
+ await choose(host,'classic');panel(host).querySelector('.kplex-filter-panel-header button').click();
+ const compass=()=>root(host).querySelector('.kplex-role-center:not(.is-kplex-section)'),compassSections=()=>compass()?.querySelector('.kplex-section-fold-handle');
+ await until(compassSections,'Compass central section toggle absent');await click(compassSections());
+ await until(()=>root(host).querySelector('.is-kplex-section'),'Compass explicit outline absent');
+ check(center(host)===path('Memory')&&root(host).querySelector('.kplex-section-tree-edge'),'Compass outline changed attention or bypassed shared tree');
+ await click(compassSections());await until(()=>!root(host).querySelector('.is-kplex-section'),'Compass outline did not close');
+ cases.push({id:'native-compass-central-sections-shared-source-tree-and-fold'});
+ await choose(host,'wuxing');panel(host).querySelector('.kplex-filter-panel-header button').click();
  // Real incremental note edits are outside zero-work presentation intervals.
  const child=p.settings.hierarchy.children[0],parents=[];
  for(let i=0;i<3;i++){
