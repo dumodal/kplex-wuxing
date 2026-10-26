@@ -69,6 +69,8 @@ For node scope, `style` contains only `node`, whose allowed keys are `background
 
 Expressions use the existing [predicate parser](../src/core/plex/predicateParser.ts) and [shared lens validation](../src/core/plex/lensValidation.ts). They need a namespace selector; arbitrary JavaScript, functions or literal-only predicates are unsupported. Edge roles are `parent`, `child`, `left`, `right`, `previous`, `next`, `sibling`; kinds `defined`, `inferred`; directions `from`, `to`, `both`. See the [authoring guide](FACETS_AUTHORING.md) for concrete examples and availability semantics.
 
+Arbitrary focused-note properties such as `this.phase` are available in Facets' opt-in availability-aware rules. Ordinary lenses retain the existing fixed `this` attributes (for example `this.name`); do not assume that a custom focused-note property works in a standalone lens. `note` still addresses candidate properties.
+
 ### Colors and palette
 
 A color is a valid hex/RGB(A)/`transparent` literal, `{ "kind":"theme", "variable":"--color-blue" }`, or `{ "kind":"palette", "id":"accent" }`. No arbitrary CSS expression or extra reference keys. Theme names use the existing bounded custom-property grammar. Palette IDs use the shared alphanumeric-first grammar, at most 64 characters; pair names are nonblank and at most 100 characters. Pairs have exactly `id`, `name`, `light`, `dark`; only referenced pairs may be supplied, with no duplicate IDs. Referenced IDs may instead resolve to explicitly previewed installed palette definitions.
