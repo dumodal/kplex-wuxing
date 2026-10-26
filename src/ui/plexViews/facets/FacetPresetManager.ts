@@ -1,6 +1,6 @@
 /** Searchable native preset library. This composes existing manager/modal mechanics; view
  * intent remains in each canvas and every durable operation returns to the shared writer. */
-import type {App} from "obsidian";
+import {getLanguage, type App} from "obsidian";
 import {StyleEditorModal} from "../../StyleEditorModal";
 import {StyleManagerList} from "../../StyleManagerList";
 import type {CanvasViewManagerContext} from "../managerContracts";
@@ -12,6 +12,7 @@ import {canvasViewText} from "../labels";
 import type {FacetPreset} from "../../../core/plex/views/facets/contracts";
 import {FacetPresetEditor} from "./FacetPresetEditor";
 import {isFacetPreset} from "../../../core/plex/views/facets/validation";
+import {effectiveFacetHelp} from "./help";
 
 export class FacetPresetManager extends StyleEditorModal {
   private list: StyleManagerList | null = null;
@@ -27,7 +28,7 @@ export class FacetPresetManager extends StyleEditorModal {
     this.titleEl.setText(t("facets.manage"));this.modalEl.addClass("kplex-style-manager-modal");
     this.contentEl.createEl("p", {text: t("facets.managerHelp")});
     this.list = new StyleManagerList(this.contentEl, t, {placeholder: t("facets.search"), aria: t("facets.search")}, query => {this.query = query;this.render();});
-    this.list.action(t("facets.create"), "plus", () => this.edit(null, {...structuredClone(FACET_TEMPLATES.ace), name: t("facets.newPreset")}));
+    this.list.action(t("facets.create"), "plus", () => this.edit(null, {...structuredClone(FACET_TEMPLATES.arc), name: t("facets.newPreset")}));
     this.release = this.options.subscribe(() => this.render());this.render();
     const preset = this.initialId && facetLibrary(this.options.configuration())?.presets[this.initialId];
     if (this.initialId && isFacetPreset(preset)) this.edit(this.initialId, preset);
@@ -72,7 +73,8 @@ export class FacetPresetManager extends StyleEditorModal {
     const key = id ?? `preset-${this.modalEl.ownerDocument.defaultView?.crypto.randomUUID() ?? ""}`;
     if (key === "preset-") return;
     const child = new FacetPresetEditor(this.app, this.options, key, preset, id !== null,
-      draft => this.edit(null, {...structuredClone(draft), name: this.translate("facets.copyName", {name: canvasViewText(facetPresetLabel(draft), this.translate)})}),
+      draft => this.edit(null, {...structuredClone(draft), name: this.translate("facets.copyName", {name: canvasViewText(facetPresetLabel(draft), this.translate)}),
+        helpMarkdown: draft.helpMarkdown ?? effectiveFacetHelp(key, draft, this.translate), helpSourceLocale: (draft.helpSourceLocale ?? getLanguage()) || "en"}),
       () => {this.children.delete(child);this.render();});
     this.children.add(child);child.open();
   }

@@ -146,6 +146,75 @@
         "contentDigest": "7bdaf015f88c6ee1945410755a5aaccf7e04408fe597e729cafca24c5bc332ba",
         "completedAt": "2026-10-25T22:08:10.158Z"
       }
+    },
+    {
+      "name": "P3a curated presets and native Markdown Help",
+      "status": "passed",
+      "startedAt": "2026-10-25T23:57:05.704Z",
+      "completedAt": "2026-10-25T23:57:11.796Z",
+      "node": "v22.22.2",
+      "obsidian": "1.14.5 (installer 1.14.0)",
+      "artifacts": {
+        "main.js": "557d105d8c969adbd3cd82432aad2992fcd974a23d961429d9aa434618798a49",
+        "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
+        "styles.css": "23b87b2fd01d79cf3a4679e181422d1f54d70a3137556191dc1bfa39a3961d21"
+      },
+      "driver": {
+        "transport": "beb7677649f8ae6ae390c0df25b4a025a48777b5fbfc5e36c25f7fe252b8a0d3",
+        "scenario": "04a548beab6f0716a26c3d5d8c73de4ab0c3be0eff4a26ae4d1860f941c46112",
+        "definitions": "e091afadde07605cc2fd1f3f8c7174dbf7ef08ef80819fa39e2b13eb31e01548"
+      },
+      "cases": [
+        {
+          "id": "requested-local-cache-proof",
+          "current": true,
+          "coverage": "cached",
+          "globalSemanticPending": true
+        },
+        {
+          "id": "production-registry-five-phases-canonical-links",
+          "regions": 7,
+          "semanticConnectors": 7
+        },
+        {
+          "id": "native-info-cog-order-real-markdown-headings-code"
+        },
+        {
+          "id": "native-unsaved-preview-safe-links-plain-fences-no-activation"
+        },
+        {
+          "id": "native-info-edit-preview-cancel-zero-source-work",
+          "work": {
+            "reads": 0,
+            "parses": 0,
+            "acquisitions": 0,
+            "rebuilds": 0
+          }
+        },
+        {
+          "id": "native-help-save-existing-queued-preset-writer"
+        },
+        {
+          "id": "native-help-save-reopen-escape-zero-source-work",
+          "work": {
+            "reads": 0,
+            "parses": 0,
+            "acquisitions": 0,
+            "rebuilds": 0
+          }
+        },
+        {
+          "id": "native-help-saved-source-and-escape-cleanup"
+        }
+      ],
+      "cleanup": "passed",
+      "restoration": {
+        "restored": true,
+        "configurationFiles": 9,
+        "contentFiles": 117,
+        "contentDigest": "7bdaf015f88c6ee1945410755a5aaccf7e04408fe597e729cafca24c5bc332ba",
+        "completedAt": "2026-10-25T23:57:17.285Z"
+      }
     }
   ],
   "retainedFailures": [
@@ -160,6 +229,11 @@
       "status": "failed",
       "completedCases": 43,
       "reason": "Existing foreground preparation refused the unadmitted fixture. Final full-feature setup must use normal startup admission; do not weaken Wander readiness or deadlines."
+    },
+    {
+      "sample": "P3a native Help1-4",
+      "status": "fixture corrections before full sample5 pass",
+      "reason": "Initial default Help source has no list; retained authored-preview list/code/link assertions. Settings owns a separate document; derive event window from controls. Ensure an already open panel stays open. All four samples restored the same baseline."
     }
   ]
 }

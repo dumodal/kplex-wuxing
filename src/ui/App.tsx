@@ -20,6 +20,8 @@
  */
 import { subscribeAppearanceSources } from "../adapters/obsidian/colorChanges";
 import {CanvasViewContributionController} from "./plexViews/CanvasViewContributionController";
+import {MarkdownHelpModal} from "./MarkdownHelpModal";
+import {canvasViewText} from "./plexViews/labels";
 import type {AppearanceOwner} from "../core/plex/appearanceThemes";
 import { ColorSourceModal } from "./ColorSourceModal";
 import type { LensColorRequest, LensColorDialog } from "./PlexFilter";
@@ -246,6 +248,13 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
       beforePresentationChange: () => graphActionPorts.current?.preparePresentationChange?.(),
       update: (id, address, edit, expected) => plugin.updateCanvasViewConfiguration(id, address, edit, expected),
       openSettings: (id, target) => plugin.openCanvasViewSettings(id, target),
+      openHelp: /** Native modal ownership stays with this App; target content never follows current global focus. */ (id, target, help, current) => {
+        if (!current()) return false;
+        const modal = new MarkdownHelpModal(plugin.app, canvasViewText(help.name, plugin.translator), canvasViewText(help.markdown, plugin.translator), current,
+          /** Opening the relevant existing editor preserves captured view/preset identity. */ () => {if (current()) plugin.openCanvasViewSettings(id, target);},
+          /** Native close retires exactly this dialog from the invoking canvas inventory. */ () => actionDialogs.current.delete(modal));
+        actionDialogs.current.add(modal);modal.open();return true;
+      },
       failed: error => {console.error("K-Plex canvas contribution was not completed", error); new Notice(plugin.translator("view.settingsSaveFailed"));},
     }), [documentSession, plugin]);
   useEffect(/** Retire all captured view callbacks before this native App generation disappears. */ () => () => viewContributions.dispose(), [viewContributions]);

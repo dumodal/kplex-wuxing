@@ -10,6 +10,8 @@ export async function plexViewModules(entries = []) {
     builder.onResolve({filter:/^obsidian$/},()=>({path:'host',namespace:'finite'}));
     builder.onLoad({filter:/.*/,namespace:'finite'},()=>({contents:`
       export class App {} export class ButtonComponent {} export class Modal {} export class SuggestModal extends Modal {}
+      export class Component {load(){} unload(){}}
+      export const MarkdownRenderer={render:()=>{throw Error('Native Markdown rendering is unavailable in the portable graph fixture')}};
       export class ColorComponent {} export class Notice {} export class Setting {} export class AbstractInputSuggest {}
       export class ExtraButtonComponent {} export class Scope {} export class SearchComponent {} export class PluginSettingTab {}
       export class TFile {} export class TFolder {} export const normalizePath=p=>p;

@@ -26,6 +26,8 @@ export type FacetPreset = Readonly<{version: 1; name: string; nameKey?: string; 
   /** Stable defaults are separate from the existing per-canvas area dimension maps. */
   areaSizes?: Readonly<{categories?: Readonly<Record<string, FacetAreaSize>>; diagnostics?: Readonly<Record<string, FacetAreaSize>>}>;
   flow?: FacetFlowStyle; flowOverrides?: readonly FacetFlowOverride[];
+  /** Literal user-authored source overrides localized defaults and travels with portable data. */
+  helpMarkdown?: string; helpSourceLocale?: string;
   conflictingColor: ColorValue; unassignedColor: ColorValue}>;
 /** Explicit deletion replacements also cover closed/restored canvases without editing their
  * opaque saved intent. They never reclassify or rewrite a note. Unknown future entries stay inert. */

@@ -1,5 +1,7 @@
 /** Finite native-control boundary for real Chromium editor tests; installed types/native lanes remain authoritative. */
+import {nativeMarkdownControls} from './nativeMarkdownControls.mjs';
 export const nativeColorControls = `
+${nativeMarkdownControls}
 export const setIcon=()=>{}; export const setTooltip=()=>{}; export class SearchComponent{} export class ButtonComponent{}
 export const Platform={}; export const getIconIds=()=>[]; export class App{} export class Scope{} export class ExtraButtonComponent{}
 export class FileView{} export class TextFileView extends FileView{} export class WorkspaceLeaf{} export class WorkspaceSplit{}

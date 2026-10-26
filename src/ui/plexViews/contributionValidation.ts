@@ -2,7 +2,8 @@
 import {boundedViewState} from "../../core/plex/views/state";
 import {validCanvasViewText, validPlexViewStateAction} from "../../core/plex/views/presentation";
 import {validViewConfigurationAddress} from "../../core/plex/views/configurationPaths";
-import type {CanvasViewCommand, CanvasViewMenuItem, CanvasViewChoice, CanvasViewLayoutControl} from "./contributionContracts";
+import type {CanvasViewCommand, CanvasViewMenuItem, CanvasViewChoice, CanvasViewLayoutControl, CanvasViewHelp} from "./contributionContracts";
+import {validMarkdownHelp} from "../../core/contracts/markdownHelp";
 
 /** Check runtime arrays without widening already typed descriptor elements to any. */
 export function contributionArray(value: unknown): boolean {return Array.isArray(value);}
@@ -19,6 +20,10 @@ export function copyCanvasViewCommand(command: CanvasViewCommand): CanvasViewCom
     if (target === undefined) return {kind};
     if (contributionId(target)) return {kind, target};
     throw new Error("Invalid canvas settings target");
+  }
+  if (kind === "help") {
+    const target: unknown = Reflect.get(value, "target");
+    if (contributionId(target)) return {kind, target};throw new Error("Invalid canvas help target");
   }
   if (kind === "state") {
     const action: unknown = Reflect.get(value, "action");
@@ -62,9 +67,16 @@ export function validateCanvasViewChoices(choices: readonly CanvasViewChoice[]):
       || typeof choice.selected !== "string" || choice.selected.length > 80 || !contributionArray(choice.options) || choice.options.length > 32) throw new Error("Invalid canvas view choice");
     ids.add(choice.id);
     if (choice.settings && copyCanvasViewCommand(choice.settings).kind !== "settings") throw new Error("Invalid choice settings navigation");
+    if (choice.help && copyCanvasViewCommand(choice.help).kind !== "help") throw new Error("Invalid choice help navigation");
     const options: CanvasViewChoice["options"] = choice.options;
     validateCanvasViewMenus(options.map(option => ({...option, kind: "action"})));
   }
+}
+
+/** Native rendering admits long inert source separately from short presentation labels. */
+export function validCanvasViewHelp(value: CanvasViewHelp): boolean {
+  if (!value || !validCanvasViewText(value.name) || !value.markdown || typeof value.markdown !== "object") return false;
+  return "literal" in value.markdown ? validMarkdownHelp(value.markdown.literal) : validCanvasViewText(value.markdown);
 }
 /** Layout controls can address only registered fields, with finite slider bounds and readable labels. */
 export function validateCanvasViewLayoutControl(control: CanvasViewLayoutControl, fields: Readonly<Record<string, unknown>>): void {

@@ -3925,6 +3925,11 @@ button.kplex-sidecar-unfold-plex:focus-visible,
 .kplex-facet-anchor-preview.is-anchor-bottom .kplex-facet-anchor-focus { grid-area: 3 / 2; }
 .kplex-facet-anchor-preview.is-anchor-left .kplex-facet-anchor-focus { grid-area: 2 / 1; align-self: center; }
 .kplex-facet-anchor-preview.is-anchor-right .kplex-facet-anchor-focus { grid-area: 2 / 3; align-self: center; }
+.kplex-markdown-help-modal { width: min(760px, 94vw); }
+.kplex-markdown-help-content { overflow-wrap: break-word; }
+.kplex-markdown-help-content pre { overflow-x: auto; }
+.kplex-facet-help-settings textarea { width: 100%; min-height: 180px; }
+.kplex-preset-help-preview { padding: 12px; }
 
 .kplex-view-region.is-water rect { fill: var(--color-blue); fill-opacity: 0.06; }
 .kplex-view-region.is-wood rect { fill: var(--color-green); fill-opacity: 0.06; }

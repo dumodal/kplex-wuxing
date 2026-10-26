@@ -6,6 +6,7 @@ import type {FacetPreset, FacetPresetReplacement} from "./contracts";
 import {FACET_TEMPLATES} from "./templates";
 import {isFacetDiagnosticStatus, isFacetLayout} from "./presentation";
 import {validFacetFlow, facetFlowId} from "./flow";
+import {validMarkdownHelp} from "../../../contracts/markdownHelp";
 export const FACET_LIMITS = {presets: 16, entries: 32, categories: 7, aliases: 512, label: 80, expression: 2048} as const;
 
 /** Stable keys do not depend on translated labels or mutable note fields. */
@@ -39,6 +40,8 @@ export function isFacetPreset(value: unknown): value is FacetPreset {
   if (value.layout !== undefined && !isFacetLayout(value.layout)
     || value.focusAnchor !== undefined && (typeof value.focusAnchor !== "string" || !["top", "bottom", "left", "right"].includes(value.focusAnchor))
     || value.reverse !== undefined && typeof value.reverse !== "boolean") return false;
+  if (value.helpMarkdown !== undefined && !validMarkdownHelp(value.helpMarkdown)
+    || value.helpSourceLocale !== undefined && (typeof value.helpSourceLocale !== "string" || !/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/.test(value.helpSourceLocale))) return false;
   if (value.flow !== undefined && !validFacetFlow(value.flow)) return false;
   if (value.flowOverrides !== undefined) {
     if (!Array.isArray(value.flowOverrides) || value.flowOverrides.length > 21) return false;

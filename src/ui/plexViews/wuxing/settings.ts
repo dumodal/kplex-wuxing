@@ -6,6 +6,7 @@ import {facetState, orderedFacetPresets, resolveFacetPreset} from "../../../core
 import {facetPresetLabel, facetHasWuXingPhases} from "../../../core/plex/views/facets/labels";
 import {FacetPresetManager} from "../facets/FacetPresetManager";
 import {facetDiagnostics, facetLayout, FACET_LAYOUTS} from "../../../core/plex/views/facets/presentation";
+import {facetHelpText} from "../facets/help";
 
 /** Both entry points dispatch the same state reducer, preserving independent canvas intent. */
 function presetChoice(context: CanvasViewContributionContext): CanvasViewChoice | null {
@@ -17,7 +18,7 @@ function presetChoice(context: CanvasViewContributionContext): CanvasViewChoice 
   if (!options.some(option => option.id === state.preset)) options.unshift({id: state.preset,
     label: {key: "facets.presetUnavailable"}, enabled: false, command: {kind: "state", action: {id: "preset.select", args: state.preset}}});
   return {id: "preset", label: {key: "facets.preset"}, selected: selected.status === "replaced" ? selected.id : state.preset, options,
-    ...(selected.status === "ready" || selected.status === "replaced" ? {settings: {kind: "settings" as const, target: selected.id}} : {})};
+    ...(selected.status === "ready" || selected.status === "replaced" ? {settings: {kind: "settings" as const, target: selected.id}, help: {kind: "help" as const, target: selected.id}} : {})};
 }
 
 /** Layout is a captured per-canvas override. Preset defaults remain explicit native saves. */
@@ -34,6 +35,13 @@ function layoutChoice(context: CanvasViewContributionContext): CanvasViewChoice 
 
 export const wuXingSettingsContribution: CanvasViewSettingsContribution = {
   id: "wuxing",
+  /** The command can explain only the exact selected preset admitted by its opening context. */
+  help: (context, target) => {
+    const library = facetLibrary(context.configuration), state = facetState(context.state);if (!library || !state) return null;
+    const selected = resolveFacetPreset(library, state.preset);
+    return target === selected.id && (selected.status === "ready" || selected.status === "replaced")
+      ? {name: facetPresetLabel(selected.preset), markdown: facetHelpText(selected.id, selected.preset)} : null;
+  },
   manager: (app, context, target) => new FacetPresetManager(app, context, target),
   items: ({translate, manage}) => [{name: translate("facets.about"), desc: translate("facets.aboutHelp")},
     ...(manage ? [{name: translate("facets.manage"), desc: translate("facets.managerHelp"), action: manage}] : [])],

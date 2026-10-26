@@ -10,13 +10,20 @@ The view and preset dropdowns share a row when space allows. Select the cog besi
 
 | Preset | Default property | Categories | Preview |
 | --- | --- | --- | --- |
-| ACE | `ace` | Add, Connect, Express | [Obsidian screenshot](images/facets/ace.png) |
+| ARC | `arc` | Add, Relate, Communicate | Horizontal workflow |
 | PARA | `para` | Projects, Areas, Resources, Archives | [Obsidian screenshot](images/facets/para.png) |
 | Wu Xing | `phase` | Water, Wood, Fire, Earth, Metal | [Obsidian screenshot](images/facets/wuxing.png) |
 | GTD | `horizon` | Actions, Projects, Areas of focus, Goals, Vision, Purpose and principles | [Obsidian screenshot](images/facets/gtd.png) |
 | eACCESS | `access` | Encounters, Atlas, Calendar, Cards, Extras, Sources, Spaces | [Obsidian screenshot](images/facets/eaccess.png) |
+| Sensemaking | `approach` and `mode` rules | Synthesizer, Producer, Creative, Inner guide | Four quadrants |
+| Publishing | `state` | Seed, Research, Draft, Review, Published | Vertical workflow |
+| Map roles | `map-role` | Hub, Supporting map, Concept, Reference | Concentric bands |
 
 These are editable examples inside one Facets view. You can create/duplicate presets with three to seven stable categories, rename/reorder them, choose colors, matching aliases and explicit assignment values, and adjust layout defaults. Deleting a preset asks for an explicit replacement so saved canvases remain recoverable. Restore defaults changes the local draft until Save. Cancel keeps the accepted definition.
+
+ARC replaces the earlier uncustomized ACE example. Explicit saved ACE definitions retain their original name, property and categories. Sensemaking combines two explicit properties: `approach: top-down` or `bottom-up`, and `mode: reflection` or `expression`. Missing metadata stays unknown; these rules do not infer intent from prose. Map roles are personal classifications, with no importance score or vault-wide ranking.
+
+Select the Info button immediately after the preset cog to read that preset's Help. Built-in Help follows the application language until you save a literal override. **Edit → Help** offers Markdown source and a native preview; Save uses the existing preset writer, Cancel discards the draft, and Reset restores the localized default. A deliberately blank override stays blank. Help supports headings, lists, code examples and HTTPS links. Code fences are displayed as plain examples; HTML, embeds and executable Markdown are not enabled.
 
 ## Choose a layout
 
@@ -34,7 +41,7 @@ In **Workflow guides**, configure decorative arrows for vertical and horizontal 
 
 Guides route outside category regions on the side away from the focused editor. Captions use the shared measured text treatment and are bounded to 80 characters; long visible copy stays clipped to its measured background. They never create relationships or receive graph editing actions. Concentric/quadrant layouts use their category geometry without workflow rails; circular Wu Xing retains its distinct generating and regulating cycles.
 
-The supplied [sample vault](../tests/fixtures/facets-vault/README.md) includes all five presets plus a custom four-category **State** example (`seed`, `research`, `draft`, `published`; [screenshot](images/facets/state.png)). It contains Markdown/configuration only, with no executable plugin. Use a separate disposable copy with the matching reviewed build; do not overwrite an existing vault's settings.
+The supplied [sample vault](../tests/fixtures/facets-vault/README.md) currently documents the earlier five-preset baseline plus a custom four-category **State** example (`seed`, `research`, `draft`, `published`; [screenshot](images/facets/state.png)). Its ARC and expanded-preset refresh is pending in #222. It contains Markdown/configuration only, with no executable plugin. Use a separate disposable copy with the matching reviewed build; do not overwrite an existing vault's settings.
 
 ![Wu Xing preset in Obsidian, with the current note centered and separate category and diagnostic regions](images/facets/wuxing.png)
 
@@ -97,6 +104,6 @@ Section expansion remains hidden in production Facets and Mind Map. Compass reta
 
 ## Attribution and validation
 
-PARA terminology is informed by [Forte Labs](https://fortelabs.com/blog/para/). GTD horizons are informed by [Getting Things Done](https://gettingthingsdone.com/2011/01/the-6-horizons-of-focus/). The supplied ACE wording and seven-category eACCESS arrangement are the maintainer's requested K-Plex adaptations, with [Linking Your Thinking](https://www.linkingyourthinking.com/) as related background; they are not claims of an official workflow definition.
+PARA terminology is informed by [Forte Labs](https://fortelabs.com/blog/para/). GTD horizons are informed by [Getting Things Done](https://gettingthingsdone.com/2011/01/the-6-horizons-of-focus/). ARC and the seven-category eACCESS arrangement are editable K-Plex adaptations, with [Linking Your Thinking](https://www.linkingyourthinking.com/) as related background; they are not claims of an official workflow definition.
 
-See the [current validation record](validation/facets-220-2026-10-25.md) for exact source/test receipts and remaining Windows, Mac, physical-mobile and baseline limitations. PR #220 remains open and unmerged.
+See the [#220 validation record](validation/facets-220-2026-10-25.md) and [#222 native checkpoint receipts](validation/facets-222-native-summary.json) for actual results and remaining Windows, Mac, physical-mobile and baseline limitations. PR #220 is merged; #222 remains draft and unmerged while expanded implementation and validation continue.

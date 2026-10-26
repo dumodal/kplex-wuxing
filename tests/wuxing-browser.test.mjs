@@ -7,6 +7,40 @@ import {plexViewBrowserModules} from './support/plexViewBrowser.mjs';
 import {canvasSceneFixture} from './support/canvasSceneFixture.mjs';
 const output=await plexViewBrowserModules();
 
+test('shared Info stays beside the cog and captures the opening canvas preset after focus moves',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ const requests=[],a=await mount(M.wuXingViewDefinition,{openHelp:(id,target,help,current)=>{requests.push({id,target,help,current});return true}}),b=await mount(M.wuXingViewDefinition);
+ await a.contributions.capture({kind:'state',action:{id:'preset.select',args:'para'}}).run();a.render();await wait();
+ const sourceBefore=JSON.stringify(settings),stateBefore=JSON.stringify(a.session.getState()),otherBefore=JSON.stringify(b.session.getState()),before={...work};
+ const surface=document.createElement('div');document.body.append(surface);const root=M.createRoot(surface);M.flushSync(()=>root.render(M.createElement(M.CanvasViewChoices,{controller:a.contributions,translate:plugin.translator})));
+ const row=surface.querySelector('[data-kplex-view-choice="preset"]'),buttons=[...row.querySelectorAll('button')];check(buttons.length===2&&buttons[1].querySelector('.kplex-accessible-name').textContent==='About PARA','Info is immediately after the existing preset settings cog');check(buttons.every(button=>!button.hasAttribute('title')),'Accessible shared tooltips do not add duplicate native titles');
+ b.container.tabIndex=0;b.container.focus();buttons[1].click();await wait();
+ check(requests.length===1&&requests[0].id==='wuxing'&&requests[0].target==='para'&&requests[0].help.markdown.key==='facets.help.para'&&requests[0].current(),'Info uses the exact captured owning preset');
+ check(JSON.stringify(settings)===sourceBefore&&JSON.stringify(a.session.getState())===stateBefore&&JSON.stringify(b.session.getState())===otherBefore,'Opening Help does not save or activate a preset');
+ const stale=a.contributions.choices()[0].help;await a.contributions.capture({kind:'state',action:{id:'preset.select',args:'arc'}}).run();a.render();await wait();
+ check(!requests[0].current()&&(await stale.run()).status==='unavailable'&&requests.length===1,'Superseded Info and pending render tokens cannot borrow the next preset');
+ check(work.body===before.body&&work.scans===before.scans&&work.acquisitions===before.acquisitions,'Opening and retiring Help reads no sources');
+ M.flushSync(()=>root.unmount());surface.remove();a.close();b.close();plugin.actionManager.dispose();check(events.size===0,'Help/choice/canvas subscriptions retire');style.remove();return true;
+ })()`),true)}finally{await host.cleanup()}
+});
+
+test('native Markdown help stages output and retires late Component work without a second renderer',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{
+ const M=sourceModules,check=(value,message)=>{if(!value)throw Error(message)},container=document.createElement('div'),app={fixture:'native-app'};document.body.append(container);
+ let finish,cleanups=0,called=0,captured;
+ window.testNativeMarkdownRender=async(nativeApp,source,element,path,component)=>{called++;captured={nativeApp,source,element,path,component};component.register(()=>cleanups++);element.createEl('h1',{text:'Controlled native completion'});await new Promise(resolve=>finish=resolve)};
+ const helper=new M.NativeMarkdownHelp(app,container),pending=helper.render('# Help\\n\\n~~~dataviewjs\\nshouldNeverExecute()\\n~~~');
+ check(captured.nativeApp===app&&captured.path===''&&captured.component.loaded&&!captured.source.includes('dataviewjs'),'Uses the real five-argument native API and an owned loaded Component with neutralized code fence');
+ check(!captured.element.isConnected&&!container.textContent,'Native completion stays detached while pending');helper.dispose();finish();check((await pending)===false&&cleanups===1&&!captured.component.loaded&&!container.textContent,'Close immediately retires native work and late output cannot reattach');helper.dispose();check(cleanups===1,'Cleanup is idempotent');
+ const next=new M.NativeMarkdownHelp(app,container);let current=true;const stale=next.render('# New help',()=>current);current=false;finish();check((await stale)===false&&!container.textContent,'Changed target suppresses pending native completion');
+ const prior=called;let refused=false;try{await next.render('![remote](https://example.com/image.png)')}catch{refused=true}check(refused&&called===prior,'Media source is rejected before invoking native rendering');
+ window.testNativeMarkdownRender=async(_app,_source,element,_path,component)=>{component.register(()=>cleanups++);element.createEl('iframe')};refused=false;try{await next.render('# Plain help')}catch{refused=true}check(refused&&!container.textContent,'Unexpected active native extension output is refused before attachment');
+ next.dispose();container.remove();delete window.testNativeMarkdownRender;return true;
+ })()`),true)}finally{await host.cleanup()}
+});
+
 test('production measured flow captions and arrow policies remain decorative across reversed linear layouts',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
@@ -156,19 +190,19 @@ test('advanced Facets rules use current/candidate cached metadata in the product
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
  fieldCaches.get('A.md').frontmatter.phase='wood';fieldCaches.get('B.md').frontmatter.phase='metal';fieldCaches.get('C.md').frontmatter.phase='water';
- const preset=structuredClone(M.FACET_TEMPLATES.ace);preset.diagnostics={combined:false};preset.source='rules';preset.categories.add.rule='note.phase == this.phase';preset.categories.connect.rule='note.phase == "metal"';preset.categories.express.rule='edge.role == "child" and note.phase == "water"';
- settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['ace']},{kind:'set',value:preset});
- const a=await mount(M.wuXingViewDefinition);M.flushSync(()=>a.session.updateState({version:1,preset:'ace'}));a.render();await wait();
+ const preset=structuredClone(M.FACET_TEMPLATES.arc);preset.diagnostics={combined:false};preset.source='rules';preset.categories.add.rule='note.phase == this.phase';preset.categories.relate.rule='note.phase == "metal"';preset.categories.communicate.rule='edge.role == "child" and note.phase == "water"';
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['arc']},{kind:'set',value:preset});
+ const a=await mount(M.wuXingViewDefinition);M.flushSync(()=>a.session.updateState({version:1,preset:'arc'}));a.render();await wait();
  const node=id=>[...a.container.querySelectorAll('[data-kplex-keyboard-id]')].find(row=>row.dataset.kplexPath===id);
- const area=id=>a.container.querySelector('.'+CSS.escape('kplex-zone-'+JSON.stringify(['facets','ace','category',id])));
+ const area=id=>a.container.querySelector('.'+CSS.escape('kplex-zone-'+JSON.stringify(['facets','arc','category',id])));
  check(node('A.md').querySelector('.kplex-node-badge').textContent==='Add','The owning canvas focus uses this.phase');
- check(area('connect')?.contains(node('B.md'))&&area('express')?.contains(node('C.md')),'Candidates use stored fields and canonical relationship contexts');
+ check(area('relate')?.contains(node('B.md'))&&area('communicate')?.contains(node('C.md')),'Candidates use stored fields and canonical relationship contexts');
  const focus=node('A.md'),camera=a.container.querySelector('.kplex-camera').style.transform,before={body:work.body,scans:work.scans,acquisitions:work.acquisitions};
- settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings,{field:'presets',path:['ace','regionWidth']},{kind:'set',value:400});a.props.settings={...settings};a.props.paintSettings=a.props.settings;a.render();await wait();
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings,{field:'presets',path:['arc','regionWidth']},{kind:'set',value:400});a.props.settings={...settings};a.props.paintSettings=a.props.settings;a.render();await wait();
  check(node('A.md')===focus&&a.container.querySelector('.kplex-camera').style.transform===camera,'Rule/layout settings do not retarget attention or camera');
  check(work.body===before.body&&work.scans===before.scans&&work.acquisitions===before.acquisitions,'Rule/layout presentation does no body parsing, scanning or acquisition');
  fieldCaches.delete('C.md');for(const ref of [...events])if(ref?.name==='changed')ref.callback(pages.get('C.md').file);await wait();
- const unresolved=a.container.querySelector('.'+CSS.escape('kplex-zone-'+JSON.stringify(['facets','ace','status','unresolved'])));check(unresolved?.contains(node('C.md')),'Missing metadata stays reachable and unresolved');
+ const unresolved=a.container.querySelector('.'+CSS.escape('kplex-zone-'+JSON.stringify(['facets','arc','status','unresolved'])));check(unresolved?.contains(node('C.md')),'Missing metadata stays reachable and unresolved');
  check(rows(pages.get('A.md'),'child').map(row=>row.page.path).join(',')==='B.md,C.md','Rules preserve canonical relationships');
  a.close();plugin.actionManager.dispose();check(events.size===0,'Rule presentation retires the original subscriptions');style.remove();return true;
  })()`),true)}finally{await host.cleanup()}
@@ -213,8 +247,8 @@ test('Facets production presets share captured controls, measured badges and liv
  beforePresentationChange:()=>a.ports.current.preparePresentationChange(),update:()=>{throw Error('Unexpected type write')},openSettings:()=>true,failed:error=>{throw error}});
  const node=()=>[...a.container.querySelectorAll('[data-kplex-keyboard-id]')].find(row=>row.dataset.kplexPath==='A.md'),original=node(),bounds=()=>({top:original.style.top,left:original.style.left});
  const position=bounds(),camera=a.container.querySelector('.kplex-camera').style.transform;
- for(const [preset,count] of [['ace',3],['para',4],['wuxing',5],['gtd',6],['eaccess',7]]){
-   const choice=controller.choices()[0];check(choice.options.length===5,'All templates exposed by shared choices');
+ for(const [preset,count] of [['arc',3],['para',4],['wuxing',5],['gtd',6],['eaccess',7],['sensemaking',4],['publishing',5],['map-roles',4]]){
+   const choice=controller.choices()[0];check(choice.options.length===8,'All curated templates exposed by shared choices');
    check((await choice.options.find(option=>option.id===preset).command.run()).status==='completed','Captured preset action accepted');a.render();await wait();
    const categories=[...a.container.querySelectorAll('[data-kplex-decoration]')].filter(row=>JSON.parse(row.dataset.kplexDecoration)[2]==='category');
    check(categories.length===count,'Exactly the selected preset categories render');check(node()===original,'Preset changes retain attention DOM identity');

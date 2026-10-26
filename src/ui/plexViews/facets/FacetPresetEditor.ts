@@ -20,6 +20,7 @@ import {renderFacetLayoutSettings} from "./layoutSettings";
 import {renderAreaSizeSettings} from "./areaSizeSettings";
 import {FACET_DIAGNOSTIC_ORDER} from "../../../core/plex/views/facets/presentation";
 import {renderFacetFlowSettings} from "./flowSettings";
+import {renderPresetHelpSettings} from "./helpSettings";
 
 export class FacetPresetEditor extends StyleEditorModal {
   private draft: FacetPreset;
@@ -33,6 +34,7 @@ export class FacetPresetEditor extends StyleEditorModal {
   private release: (() => void) | null = null;
   private removal: FacetPresetRemoval | null = null;
   private readonly ruleRoots: Root[] = [];
+  private releaseHelp: (() => void) | null = null;
   /** Opening captures only this entry; sibling drafts and canvases remain independent. */
   constructor(app: App, private readonly options: CanvasViewManagerContext, private readonly id: string, preset: FacetPreset,
     private readonly existing: boolean, private readonly duplicate: (preset: FacetPreset) => void, private readonly closed: () => void) {
@@ -62,12 +64,18 @@ export class FacetPresetEditor extends StyleEditorModal {
   private render(): void {
     const body = this.body;if (!body) return;
     const flowOpen = body.querySelector<HTMLDetailsElement>(".kplex-facet-flow-settings")?.open ?? false;
+    const helpOpen = body.querySelector<HTMLDetailsElement>(".kplex-facet-help-settings")?.open ?? false;
+    this.releaseHelp?.();this.releaseHelp = null;
     for (const root of this.ruleRoots.splice(0)) root.unmount();
     this.colors?.dispose();body.empty();const t = this.translate;
     this.colors = new StyleColorControls(this.app, this.options.colors, () => this.canEdit() && this.owner());
     new Setting(body).setName(t("facets.name")).addText(input => input.setValue(canvasViewText(facetPresetLabel(this.draft), t)).onChange(name => {
       this.draft = {...this.draft, name};this.validate();
     }));
+    this.releaseHelp = renderPresetHelpSettings(this.app, body, this.id, /** Keep help edits with the current detached sibling fields. */ () => this.draft,
+      /** Preview/reset never publishes a setting; Save retains the existing writer. */ (preset, structural) => {
+        if (!this.canEdit() || !this.owner()) return;this.draft = preset;if (structural) this.render();else this.validate();
+      }, /** Retire native preview work with its original draft owner. */ () => this.canEdit() && this.owner(), t, helpOpen);
     new Setting(body).setName(t("wuxing.source")).addDropdown(input => input.addOptions({property: t("wuxing.property"), type: t("wuxing.noteType"), tag: t("wuxing.tags"), rules: t("facets.rules")})
       .setValue(this.draft.source).onChange(source => {if (source === "property" || source === "type" || source === "tag" || source === "rules") this.draft = {...this.draft, source};this.render();}));
     new Setting(body).setName(t("wuxing.field")).setDesc(t("wuxing.fieldHelp")).addText(input => input.setValue(this.draft.field).onChange(field => {this.draft = {...this.draft, field};this.validate();}));
@@ -182,6 +190,7 @@ export class FacetPresetEditor extends StyleEditorModal {
   }
   /** Retire children/color samplers/listeners before clearing the native form. */
   onClose(): void {
+    this.releaseHelp?.();this.releaseHelp = null;
     for (const root of this.ruleRoots.splice(0)) root.unmount();
     super.onClose();this.removal?.retire();this.removal = null;this.release?.();this.release = null;this.colors?.dispose();this.colors = null;
     this.body = null;this.saveButton = null;this.contentEl.empty();this.closed();

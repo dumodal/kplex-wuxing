@@ -38,7 +38,10 @@ export function facetState(value: unknown): FacetCanvasState | null {
 }
 /** Resolve one finite explicit replacement chain. Missing/future/cyclic entries never execute. */
 export function resolveFacetPreset(library: FacetPresetLibrary, requestedId = "wuxing"): FacetPresetSelection {
-  let id = requestedId; const seen = new Set<string>();
+  // Unreleased ACE had no shipped compatibility contract. Preserve every explicit saved ACE
+  // entry; only absent inherited ACE intent follows its replacement ARC template.
+  let id = requestedId === "ace" && library.presets.ace === undefined && isFacetPreset(library.presets.arc) ? "arc" : requestedId;
+  const seen = new Set<string>();
   for (let count = 0; count < 16 && !seen.has(id); count++) {
     seen.add(id);const value = library.presets[id];
     if (isFacetPreset(value)) return {requestedId, id, preset: value, status: id === requestedId ? "ready" : "replaced"};
