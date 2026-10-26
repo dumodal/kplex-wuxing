@@ -57,13 +57,13 @@ Omitted optional capabilities are unavailable.
 | --- | --- | --- | --- |
 | Navigation | Attention-following | Rooted; explicit destinations reroot | Attention-following |
 | Native editor | Existing attention-following | Accepted capacity-one occurrence host | Existing attention-following |
-| Sections | Existing production owner | Disabled | Disabled for every preset |
+| Sections | Central attention note | Pinned root note | Disabled for every preset |
 | Descendant presentation | Existing Compass expansion | Bounded hierarchy capability | Disabled |
 | Cached-property classification / badges | Not declared | Not declared | Enabled |
 | Compact point rendering | Disabled | Disabled | Disabled |
 | Areas | Existing quadrants | Rooted measured areas/parents | Measured category/diagnostic regions |
 
-Mind Map's hierarchy does not imply the legacy `descendants` flag. Corpus reads/scoring, arbitrary graph scans, multiple editors and independent Facets occurrence bindings are unavailable. The section conformance fixture proves an optional boundary, not a shipped Mind Map section mode.
+Mind Map's hierarchy does not imply the legacy `descendants` flag. Corpus reads/scoring, arbitrary graph scans, multiple editors and independent Facets occurrence bindings are unavailable. Compass and Mind Map both use the shared optional section boundary; the conformance fixture remains outside production registration.
 
 An optional `hierarchy.maximumDepth` declares a finite occurrence-admission limit from 1 through 20. Omission preserves the existing limit of 8. Shared scene admission, ancestor-path visibility/selection and cycle-reference reveal use that same declared limit. Mind Map declares its existing hard maximum of 20; its configured default remains 10. This capability does not enlarge the independent source-scope budget (eight non-root frontiers for Mind Map), so another bounded-work limit can stop expansion earlier while retaining the visible frontier.
 
@@ -132,6 +132,8 @@ Only an explicitly expanded single document supplies `PlexSectionRead`. `createP
 `appendPlexSections` composes validated source-owned rows into a central-root projection within the existing total scene bound. It preserves canonical edges and attaches physical sources only where `plexSectionAnchor` supplies evidence. A hierarchy retains validated headings as structural presentation rather than pretending they are canonical graph branches. Mind Map reserves their measured central width before placing branches. Explicit rerooting retires the old outline; expanding the new root requires another explicit action. Ordinary attention changes retain the pinned outline without another body read.
 
 The host measures section rows with the shared heading-size policy used by Compass, reserving the heading marker, padding and readable minimum width before a plugin receives its measurements. A view must pack those full measured rectangles. The configured maximum width and character budget remain authoritative; short headings must not be clipped by regular note-pill dimensions. Sizing and reflow do not reread the source document.
+
+Saved resolved relationships may be readable before detailed evidence hydration. The shared section owner retains these existing canonical rows and uses the explicitly read central document's physical occurrences for read-only placement immediately. Unplaced, preamble and known frontmatter occurrences retain the note header. Loaded indexed provenance takes precedence; promotion retires the preview path. File identity, path, stats and native metadata identity fence temporary placements. Preview placement never becomes indexed/editable evidence or grants write authority, and layout/presentation does not acquire sources, parse bodies or wait for whole-vault hydration. Views consume the same validated physical anchors rather than implementing their own hydration fallback.
 
 A view can emit `PlexOccurrence.section` referring to a source-owned `PlexSectionRef {documentId, revision, sectionId}`. The shared adapter binds its transient source row and measures/renders the ordinary ThoughtNode. Such rows cannot bind editors or become semantic note endpoints. `sourceSection` on a canonical edge is an optional physical attachment only, validated against current target/role provenance. Outgoing root-source attachment retains the view's declared physical port; target/reverse attachment is unsupported.
 

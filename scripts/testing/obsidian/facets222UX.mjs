@@ -202,7 +202,14 @@ export async function acceptFacets222UX(x){
   await until(()=>previewTarget('Outward 0')&&previewTarget('Outward 1'),'Compass dropped section targets while evidence was withheld');
   cases.push({id:'native-compass-outline-retains-saved-targets-before-evidence',controlledEvidenceHold:true});
   await choose(host,'mindmap');panel(host).querySelector('.kplex-filter-panel-header button').click();await until(sectionControl,'Preview Mind Map central toggle absent');
-  if(!headings().length)await click(sectionControl());await until(()=>headings().some(el=>el.querySelector('.kplex-thought-text')?.textContent==='Summary'),'Preview outline absent');
+  if(!headings().length)await click(sectionControl());await until(()=>headings().length,'Preview outline absent');
+  // A previous explicit heading fold is preserved across supported views. Expand its actual
+  // source ancestor before checking nested physical links; do not assume a fresh fold state.
+  for(let n=0;n<6&&!headings().some(el=>el.querySelector('.kplex-thought-text')?.textContent==='Summary');n++){
+   const folded=headings().map(el=>el.querySelector('.kplex-section-fold-handle[aria-expanded="false"]')).find(Boolean);
+   check(folded,'Preview source ancestor cannot be expanded');await action('view.fit');await click(folded);
+  }
+  await until(()=>headings().some(el=>el.querySelector('.kplex-thought-text')?.textContent==='Summary'),'Preview nested outline absent');
   await action('view.fit');await wait(100);
   for(const [name,label]of [['Outward 0','Summary'],['Outward 1','Links']]){
    const id=JSON.stringify([memoryFile.path,path(name)]),edge=[...root(host).querySelectorAll('[data-kplex-edge-id]')].find(el=>el.dataset.kplexEdgeId===id);
