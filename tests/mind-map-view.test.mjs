@@ -92,7 +92,7 @@ test('measured parent columns occupy a bounded area above root and reserve the h
  for(const id of parents)f.nodes.set(id,{id,kind:'markdown',label:id});const read=f.input.read.relations;
  f.input.read.relations=(id,role,max)=>id==='R'&&role==='parent'?{items:parents.slice(0,max).map(id=>({node:f.nodes.get(id),role:'parent',relationType:1,direction:1})),coverage:'local',truncated:false}:read(id,role,max);
  const p=f.project(),measurements=p.occurrences.map(row=>({id:row.id,width:row.nodeId==='Parent0'?440:180,height:40}));
- const layout=(columns,density=1,heights={})=>M.layoutMindMap(p,measurements,{...M.mindMapConfiguration(),parentColumns:columns,horizontalDensity:density},heights);
+ const layout=(columns,density=1,heights={})=>{f.input.configuration={status:'available',values:{parentColumns:columns}};return M.layoutMindMap(f.project(),measurements,{...M.mindMapConfiguration(),parentColumns:columns,horizontalDensity:density},heights)};
  const one=layout(1),three=layout(3),area=three.areas.find(row=>row.id==='parent'),root=three.positions.get('root');
  assert.equal(root.x,0);assert.equal(root.y,0);assert(area.bounds.y+area.bounds.height< -root.height/2);assert.equal(area.heightPreference.key,'parentHeight');assert.equal(area.dropRole,'parent');
  assert(area.viewport.contentHeight>=area.viewport.height);assert(p.occurrences.filter(row=>parents.includes(row.nodeId)).every(row=>row.areaId==='parent'));
@@ -168,4 +168,24 @@ test('measured subtree bands preserve the root and prevent overlaps before/after
   for(let i=0;i<rows.length;i++)for(let j=i+1;j<rows.length;j++){const a=rows[i],b=rows[j];assert(Math.abs(a.x-b.x)>=(a.width+b.width)/2||Math.abs(a.y-b.y)>=(a.height+b.height)/2,'Measured rectangles overlap')}
  }
  assert.throws(()=>M.layoutMindMap({entry:'R',occurrences:[{id:'R',branch:{side:1}},{id:'X',branch:{parent:'X',side:1}}]},[{id:'R',width:1,height:1},{id:'X',width:1,height:1}],M.mindMapConfiguration()),/ancestry/);
+});
+
+/** Parent column directions must agree with real branch ports and survive visibility pruning. */
+test('parent forests expand outward by column with matching ports and disjoint measured tiles',()=>{
+ const f=graphInput({R:['Child'],P0:['Q0'],P1:['Q1'],P2:['Q2'],Q0:['Grandchild']});const parents=['P0','P1','P2'],read=f.input.read.relations;
+ f.input.read.relations=(id,role,max)=>id==='R'&&role==='parent'?{items:parents.slice(0,max).map(id=>({node:f.nodes.get(id),role:'parent',relationType:1,direction:1})),coverage:'local',truncated:false}:read(id,role,max);
+ for(const columns of [1,2,3]){
+  f.input.configuration={status:'available',values:{parentColumns:columns,initialGenerations:3}};const p=f.project(),sizes=p.occurrences.map(row=>({id:row.id,width:row.nodeId==='P0'?360:180,height:40}));
+  const verify=projection=>{
+   const layout=M.layoutMindMap(projection,sizes,{...M.mindMapConfiguration(),parentColumns:columns}),rects=[...layout.positions.values()];
+   for(const row of projection.occurrences.filter(row=>parents.includes(row.nodeId))){
+    const side=columns>1&&parents.indexOf(row.nodeId)%columns===0?-1:1,child=projection.occurrences.find(child=>child.branch.parent===row.id),a=layout.positions.get(row.id),b=layout.positions.get(child.id);
+    assert.equal(row.branch.side,side);assert.equal(Math.sign(b.x-a.x),side);assert.equal(row.ports[side===1?'left':'right'],'parent');assert.equal(row.peerPort.side,side===1?'right':'left');
+    assert.equal(projection.edges.find(edge=>edge.target===child.id).targetPort,side===1?'left':'right');
+   }
+   for(let i=0;i<rects.length;i++)for(let j=i+1;j<rects.length;j++){const a=rects[i],b=rects[j];assert(Math.abs(a.x-b.x)>=(a.width+b.width)/2||Math.abs(a.y-b.y)>=(a.height+b.height)/2,'Outward subtree tiles overlap');}
+  };
+  verify(p);const removed=new Set([p.occurrences.find(row=>row.nodeId==='P0').id]);for(const row of p.occurrences)if(removed.has(row.branch.parent))removed.add(row.id);
+  verify({...p,occurrences:p.occurrences.filter(row=>!removed.has(row.id)),edges:p.edges.filter(edge=>!removed.has(edge.source)&&!removed.has(edge.target))});
+ }
 });

@@ -580,6 +580,8 @@ for (const file of [
   "src/core/plex/sharing/authoring.ts",
   "src/ui/sharing/contracts.ts",
   "src/ui/sharing/PortablePackageModal.ts",
+  "src/ui/sharing/portableTransfer.ts",
+  "src/ui/plexViews/facets/facetSharing.ts",
   "src/core/plex/sharing/validation.ts",
   "src/core/plex/sharing/transfer.ts",
   "src/lens/GraphLensSimple.ts",

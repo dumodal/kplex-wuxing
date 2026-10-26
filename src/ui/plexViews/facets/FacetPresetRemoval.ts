@@ -1,7 +1,7 @@
 /** Explicit deletion replacement covers closed/restored canvases without rewriting their state.
  * One atomic redirect replaces this entry; no other preset or workspace record is removed. */
 import {Setting, type App, type ButtonComponent} from "obsidian";
-import {StyleEditorModal} from "../../StyleEditorModal";
+import {StyleEditorModal, labelIconButton} from "../../StyleEditorModal";
 import type {CanvasViewManagerContext} from "../managerContracts";
 import type {ViewConfigurationExpected} from "../../../core/plex/views/configuration";
 import {facetLibrary} from "../../../core/plex/views/facets/configuration";
@@ -26,8 +26,9 @@ export class FacetPresetRemoval extends StyleEditorModal {
     new Setting(this.contentEl).setName(t("facets.replacement")).addDropdown(input => input.addOption("", t("facets.chooseReplacement"))
       .addOptions(Object.fromEntries(choices.map(({id, preset}) => [id, canvasViewText(facetPresetLabel(preset), t)])))
       .setValue("").onChange(value => {this.replacement = value;this.save?.setDisabled(!value || !this.owner());}));
-    new Setting(this.contentEl).addButton(button => button.setButtonText(t("common.cancel")).onClick(() => this.close()))
-      .addButton(button => {this.save = button;button.setButtonText(t("common.delete")).setDestructive().setDisabled(true).onClick(() => {
+    const actions = new Setting(this.contentEl);actions.settingEl.addClass("kplex-modal-action-row");
+    actions.addButton(/** Explicit dismissal preserves the installed preset. */ button => {labelIconButton(button.buttonEl, t("common.cancel"), "x");button.onClick(() => this.close());})
+      .addButton(/** Delete is available only after choosing a valid replacement. */ button => {this.save = button;labelIconButton(button.buttonEl, t("common.delete"), "trash-2");button.setDestructive().setDisabled(true).onClick(() => {
         if (!this.canEdit() || !this.owner()) return;
         this.runOperation(async current => {
           const currentLibrary = facetLibrary(this.options.configuration());if (!currentLibrary) throw new Error("Preset configuration is unavailable");

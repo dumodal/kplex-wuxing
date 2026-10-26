@@ -2,6 +2,10 @@
 
 Prepared by Zsolt's Codex Agent, 2026-10-25. **Revised implementation independently verified; maintainer product review remains open.** Latest [shared relink-feedback follow-up](validation/relink-feedback-219-2026-10-25.md) passes clean ef59f1c full3,021 and native3, including the actual parent→child Save roundtrip; Small retains its corrected test build. Clean eac6dc0 passes 3,021 TAP checks, real build/native smoke; runtime CI497 passes at `9e77bf3` and final CI is not awaited; corrected runtime `88c3f32` passes 27 native functional cases. [Current correction evidence](validation/native-occurrence-drag-219-2026-10-25.md) preserves all failures and exact scopes. Capacity one; combined Wu Xing integration, FileManager/fresh-popout Sidecar and physical-device limits remain explicit. No merge/release/additional production deployment is authorized.
 
+## Maintainer interaction update (2026-10-26)
+
+Keyboard Enter on a selected Mind Map occurrence folds or unfolds through the same guarded action as a branch click. Cycle references reveal the earlier occurrence and explain the cycle. Explicit destination activation remains separate. Parent-area columns expand outward: the left column goes left for two or three columns; the middle/right columns and the single-column arrangement go right. Their physical gates and measured subtree spacing follow the same direction, including filtered forests. Current validation is tracked in [the #222 UX record](validation/facets-222-ux-2026-10-26.md).
+
 ## Baseline and start gate
 
 Planning branch: `2026-10-24-canvas-mindmap`, created from `main@659697a686f341497725dfb31e94a8bc2bcf2b25`. Reviewed foundation: [#215 at 030d0f0](https://github.com/zsviczian/kplex/pull/215). Depends on [Canvas settings #218](https://github.com/zsviczian/kplex/pull/218).

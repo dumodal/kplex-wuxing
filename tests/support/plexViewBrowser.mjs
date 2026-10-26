@@ -38,6 +38,7 @@ return await build({stdin:{resolveDir:process.cwd(),contents:`
   export {builtInCanvasViewSettings} from './src/ui/plexViews/settingsContributions';
   export {CanvasViewContributionController} from './src/ui/plexViews/CanvasViewContributionController';
   export {CanvasViewChoices} from './src/ui/plexViews/CanvasViewChoices';
+  export {PlexViewSelector} from './src/ui/plexViews/PlexViewSelector';
   export {NativeMarkdownHelp} from './src/ui/NativeMarkdownHelp';
   export {Component as TestMarkdownComponent} from 'obsidian';
   export {CanvasPropertyAssignmentActions} from './src/ui/CanvasPropertyAssignmentActions';

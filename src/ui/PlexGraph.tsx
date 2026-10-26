@@ -4196,6 +4196,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         if (context.target.kind === "node" && context.target.occurrenceId) navigationOccurrence.current = {identity: page.path, id: context.target.occurrenceId};
         return onActivate(page, "destination") === false ? {status: "unavailable", reasonKey: "actions.target-unavailable"} : {status: "completed"};
       }
+      if (context.request.source === "local-hotkey" && viewDefinition.hierarchy?.primary === "expand"
+        && context.target.kind === "node" && context.target.occurrenceId) {
+        const target = context.target, occurrence = scene.nodes.find(row => occurrenceKey(row) === target.occurrenceId && row.page === page);
+        if (!occurrence) return {status: "unavailable", reasonKey: "actions.target-unavailable"};
+        if (occurrence.branch?.reference) {activateOccurrence(page, context.target.occurrenceId, true);return {status: "completed"};}
+        return occurrence.branch?.canExpand || occurrence.branch?.expanded ? branchAction("toggle").execute(context) : {status: "completed"};
+      }
       if (!viewDefinition.hierarchy && context.request.source === "local-hotkey" && page.path === activePath && page.file) return renameFrom(context);
       // A saved/search target is an explicit map destination. A displayed occurrence is inspection
       // inside the retained map; its attention must not retarget an expanded native editor.

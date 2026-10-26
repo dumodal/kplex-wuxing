@@ -110,8 +110,13 @@ export function projectMindMap(input: PlexViewInput): PlexProjection | null {
       sourceNode: work.lineage[work.lineage.length - 2], targetNode: canonical, relation: work.relation,
       sourcePort: work.relation.role === "child" ? "bottom" : work.relation.role === "parent" ? "top" : work.side === 1 ? "right" : "left",
       targetPort: work.parent === "root" && work.relation.role === "parent" ? "bottom" : work.side === 1 ? "left" : "right"});
+    let parentColumn = 0;
     for (const child of children) {
-      const side = work.depth ? work.side : child.relation.role === "parent" ? 1 : child.relation.role !== "child" ? -1
+      // The measured parent grid fills row-major. Only its first column points outward left;
+      // the one-column case and middle/right columns point right. Descendants inherit ports.
+      const parentSide = child.relation.role === "parent" && configuration.parentColumns > 1
+        && parentColumn++ % configuration.parentColumns === 0 ? -1 : 1;
+      const side = work.depth ? work.side : child.relation.role === "parent" ? parentSide : child.relation.role !== "child" ? -1
         : configuration.arrangement === "left" ? -1 : configuration.arrangement === "right" ? 1 : state.sides[child.id];
       const areaId = work.depth ? work.areaId : child.relation.role === "parent" ? "parent" : child.relation.role === "child" ? side === -1 ? "child-left" : "child-right" : "left";
       queue.push({...child, parent: work.id, depth: work.depth + 1, side, areaId});

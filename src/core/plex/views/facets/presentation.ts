@@ -17,9 +17,10 @@ export function isFacetLayout(value: unknown): value is FacetLayout {
   return FACET_LAYOUTS.some(/** Compare only declared identity values. */ layout => layout === value);
 }
 
-/** Non-four-category presets visibly fall back to circular while retaining their saved intent. */
-export function facetLayout(preset: FacetPreset, presetId: string, state?: FacetCanvasState | null): Readonly<{requested: FacetLayout; effective: FacetLayout; fallback: boolean}> {
-  const requested = state?.layouts?.[presetId] ?? preset.layout ?? "circular", fallback = requested === "quadrants" && preset.order.length !== 4;
+/** The saved preset owns layout. Legacy canvas overrides remain inert; incompatible quadrants
+ * visibly falls back without rewriting the preset or any canvas's other preferences. */
+export function facetLayout(preset: FacetPreset, _presetId: string, _state?: FacetCanvasState | null): Readonly<{requested: FacetLayout; effective: FacetLayout; fallback: boolean}> {
+  const requested = preset.layout ?? "circular", fallback = requested === "quadrants" && preset.order.length !== 4;
   return {requested, effective: fallback ? "circular" : requested, fallback};
 }
 

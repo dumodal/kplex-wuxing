@@ -14,9 +14,7 @@ import {FacetPresetEditor} from "./FacetPresetEditor";
 import {isFacetPreset} from "../../../core/plex/views/facets/validation";
 import {effectiveFacetHelp} from "./help";
 import {PortablePackageModal} from "../../sharing/PortablePackageModal";
-import {exportFacetPackage} from "../../../core/plex/sharing/transfer";
-import {FACETS_AUTHORING_CONTEXT} from "../../../core/plex/sharing/authoring";
-import {facetCategoryLabel} from "../../../core/plex/views/facets/labels";
+import {facetPortablePackage} from "./facetSharing";
 
 export class FacetPresetManager extends StyleEditorModal {
   private list: StyleManagerList | null = null;
@@ -82,12 +80,8 @@ export class FacetPresetManager extends StyleEditorModal {
     const sharing = this.options.sharing;if (!sharing || !this.canEdit()) return;
     const context = {...sharing, current: () => this.canEdit() && sharing.current()};
     const child = new PortablePackageModal(this.app, {kind: "facets", mode, context,
-      build: id && preset ? (selected, privateContent) => {
-        const state = sharing.read();return exportFacetPackage(id, preset, {name: canvasViewText(facetPresetLabel(preset), this.translate),
-          labels: Object.fromEntries(preset.order.map(key => [key, canvasViewText(facetCategoryLabel(preset.categories[key], key), this.translate)])),
-          helpMarkdown: effectiveFacetHelp(id, preset, this.translate), locale: (preset.helpSourceLocale ?? getLanguage()) || "en"},
-        state.palette, state.lenses, selected, FACETS_AUTHORING_CONTEXT, privateContent);
-      } : undefined, closed: () => this.children.delete(child)});
+      build: id && preset ? (selected, privateContent) => facetPortablePackage(id, preset, sharing, this.translate, selected, privateContent)
+        : undefined, closed: () => this.children.delete(child)});
     this.children.add(child);child.open();
   }
   /** Duplicates get new stable identity only in the draft, with no implicit preset activation. */

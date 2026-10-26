@@ -69,17 +69,21 @@ test('production measured flow captions and arrow policies remain decorative acr
  })()`),true)}finally{await host.cleanup()}
 });
 
-test('captured shared layout dropdown preserves two canvases and paints true concentric holes',async()=>{
+test('preset-owned layouts share definitions without a lens-dialog selector and paint true concentric holes',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
  fieldCaches.get('A.md').frontmatter.phase='wood';fieldCaches.get('B.md').frontmatter.phase='metal';
- const a=await mount(M.wuXingViewDefinition),b=await mount(M.wuXingViewDefinition),beforeB=JSON.stringify(b.session.getState()),stored=JSON.stringify(settings),before={...work};
+ const a=await mount(M.wuXingViewDefinition),b=await mount(M.wuXingViewDefinition),beforeB=JSON.stringify(b.session.getState()),before={...work};
  const focused=a.container.querySelector('[data-kplex-path="A.md"]'),camera=a.container.querySelector('.kplex-camera').style.transform;
- const surface=document.createElement('div');document.body.append(surface);const choices=M.createRoot(surface);M.flushSync(()=>choices.render(M.createElement(M.CanvasViewChoices,{controller:a.contributions,translate:plugin.translator})));
- const select=()=>surface.querySelector('select[aria-label="Layout"]');check(select().options.length===5&&select().querySelector('option[value="quadrants"]').disabled,'Shared dropdown declares every layout and guards incompatible quadrants');
+ const surface=document.createElement('div');surface.className='kplex-view-controls';surface.style.width='500px';document.body.append(surface);const choices=M.createRoot(surface);M.flushSync(()=>choices.render([M.createElement(M.PlexViewSelector,{key:'view',session:a.session,translate:plugin.translator,contributions:a.contributions}),M.createElement(M.CanvasViewChoices,{key:'choices',controller:a.contributions,translate:plugin.translator})]));
+ check(!surface.querySelector('[data-kplex-view-choice="layout"]')&&surface.querySelectorAll('select').length===2,'Lens dialog contains only the preset choice, cog and Info');
+ for(const width of [500,300]){surface.style.width=width+'px';const group=surface.querySelector('[data-kplex-view-choice="preset"]'),controls=[group.querySelector('select'),...group.querySelectorAll('button')].map(el=>el.getBoundingClientRect());
+ check(controls.length===3&&controls.every(rect=>Math.abs(rect.bottom-controls[0].bottom)<2)&&controls[2].width<50,'Preset/select/cog/Info stay on one compact line at '+width);if(width===300)check(group.getBoundingClientRect().top>surface.querySelector('.kplex-view-selector').getBoundingClientRect().top,'Narrow preset group wraps together');}
+ a.session.updateState({...a.session.state,layouts:{wuxing:'horizontal'}});a.render();await wait();
  for(const layout of ['concentric','vertical','horizontal','circular']){
-  b.container.tabIndex=0;b.container.focus();const input=select();input.value=layout;input.dispatchEvent(new Event('change',{bubbles:true}));await wait();a.render();await wait();
-  check(a.session.state.layouts.wuxing===layout&&select().value===layout,'The captured dropdown targets its opening canvas after focus moves');
+  b.container.tabIndex=0;b.container.focus();const command=a.contributions.capture({kind:'configuration',address:{field:'presets',path:['wuxing']},edit:{kind:'set',value:{...M.FACET_TEMPLATES.wuxing,layout}}});
+  check((await command.run()).status==='completed','Existing preset writer accepts the layout');a.props.settings={...settings};a.props.paintSettings=a.props.settings;b.props.settings={...settings};b.props.paintSettings=b.props.settings;a.render();b.render();await wait();
+  check(a.contributions.context().configuration.values.presets.wuxing.layout===layout,'Saved preset owns the layout');
   check(a.container.querySelector('[data-kplex-path="A.md"]')===focused&&a.container.querySelector('.kplex-camera').style.transform===camera,'Layout changes preserve native focus occurrence and manual camera');
   check(a.container.querySelectorAll('[data-kplex-decoration]').length===6,'All categories and combined diagnostics stay visible');
   if(layout==='concentric'){
@@ -87,7 +91,8 @@ test('captured shared layout dropdown preserves two canvases and paints true con
    check(paths.every(path=>path.getAttribute('fill-rule')==='evenodd'&&!path.isPointInFill(new DOMPoint(0,0))),'Every painted inner hole excludes the focused note');
    check(a.container.querySelectorAll('[data-kplex-path="B.md"]').length===1,'A categorized note retains one canonical occurrence');
   }
-  check(JSON.stringify(b.session.getState())===beforeB&&JSON.stringify(settings)===stored,'Layout selection leaves the other canvas and shared defaults unchanged');
+  check(JSON.stringify(b.session.getState())===beforeB,'Shared preset edit preserves the other canvas session');
+  check(b.container.querySelectorAll('.kplex-view-region > path').length===(layout==='concentric'?5:0),'Both canvases resolve the saved preset layout');
  }
  check(work.body===before.body&&work.scans===before.scans&&work.acquisitions===before.acquisitions,'Layout changes do not acquire, parse or scan sources');
  M.flushSync(()=>choices.unmount());surface.remove();a.close();b.close();plugin.actionManager.dispose();check(events.size===0,'Dropdown and view lifetimes retire');style.remove();return true;

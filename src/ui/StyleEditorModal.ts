@@ -3,7 +3,7 @@
  * disk-before-publication owner, duplicate/Cancel exclusion and truthful saved-refresh-pending result.
  * Each content component owns its controls; explicit external retirement fences late UI callbacks.
  */
-import {Modal, Notice, getIcon} from "obsidian";
+import {Modal, Notice, getIcon, setTooltip} from "obsidian";
 import {createObsidianTranslator} from "../adapters/obsidian/localization";
 
 /** Storage succeeded; display refresh failure must never be presented as a destructive unsaved retry. */
@@ -15,6 +15,13 @@ export function appendIcon(button: HTMLElement, name: string): void {
   if (!icon) return;
   icon.classList.add("kplex-lucide");
   button.prepend(icon);
+}
+
+/** Compact native action with a visible Lucide glyph, styled tooltip and accessible name.
+ * Retain literal text for the existing save/Cancel lifecycle guards; CSS hides it visually. */
+export function labelIconButton(button: HTMLElement, label: string, icon: string): void {
+  button.setText(label);button.addClass("kplex-icon-action");button.setAttribute("aria-label", label);
+  setTooltip(button, label);appendIcon(button, icon);
 }
 
 /** Pending-state native shell; subclasses supply detached feature drafts and durable operations. */
@@ -76,7 +83,10 @@ export abstract class StyleEditorModal extends Modal {
     let hasDismiss = false;
     for (const control of Array.from(this.contentEl.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLButtonElement>("input, select, button"))) {
       const dismiss = control.tagName === "BUTTON" && (control.textContent === cancel || control.textContent === discard);
-      control.disabled = !dismiss; if (dismiss) {control.setText(discard); hasDismiss = true;}
+      control.disabled = !dismiss; if (dismiss) {
+        if (control.classList.contains("kplex-icon-action")) labelIconButton(control, discard, "x");else control.setText(discard);
+        hasDismiss = true;
+      }
     }
     if (!hasDismiss) this.contentEl.createEl("button", {text: discard, attr: {type: "button"}}).addEventListener("click", /** Managers without a Cancel footer still provide explicit dismissal. */ () => this.close());
   }
@@ -133,8 +143,8 @@ export abstract class StyleEditorModal extends Modal {
           // Saved operations cannot run again. Only dismissal is available after a native close failure.
           if (control.tagName === "BUTTON" && control.textContent === this.translate("common.cancel")) {
             control.disabled = false;
-            control.setText(this.translate("styles.operation.close"));
-            appendIcon(control, "x");
+            if (control.classList.contains("kplex-icon-action")) labelIconButton(control, this.translate("styles.operation.close"), "x");
+            else {control.setText(this.translate("styles.operation.close"));appendIcon(control, "x");}
           }
         }
       }

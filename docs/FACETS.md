@@ -6,7 +6,7 @@ Open **Views and lenses → Canvas view → Facets**. Choose a preset in the sam
 
 ## Choose a preset
 
-The view and preset dropdowns share a row when space allows. Select the cog beside the view to open its settings page. Select the cog beside the preset to edit that preset directly. Opening settings keeps the canvas selection; Cancel discards the preset draft.
+The view and preset dropdowns share a row when space allows. Select the cog beside the view to open its settings page. Select the cog beside the preset to edit that preset directly. The preset selector, cog and Info remain together when the row wraps. Opening settings keeps the canvas selection; Cancel discards the preset draft. The larger editor uses one compact icon-action row with accessible tooltips. **Reset preset to defaults** changes only the draft and shows feedback; Save applies it and Cancel discards it. **Copy JSON** and **Save JSON file** export the current draft without saving it.
 
 | Preset | Default property | Categories | Preview |
 | --- | --- | --- | --- |
@@ -27,11 +27,11 @@ Select the Info button immediately after the preset cog to read that preset's He
 
 ## Choose a layout
 
-The **Layout** dropdown beside **Preset** applies to the canvas that opened the panel. Choose circular, concentric rectangles, vertical stack, horizontal spread or four-category quadrants. Other canvases keep their own choice. Quadrants is unavailable for other category counts; a saved incompatible choice visibly falls back to circular while preserving every category.
+Open the preset cog, then choose **Layout** in the preset editor. Choose circular, concentric rectangles, vertical stack, horizontal spread or four-category quadrants. Layout belongs to the preset: saving it updates canvases using that preset. Canvases keep their independent selected presets, attention, editor and camera intent. Legacy per-canvas layout overrides no longer take precedence. Quadrants is unavailable for other category counts; a saved incompatible choice visibly falls back to circular while preserving every category.
 
 Native Obsidian examples with the same attention editor retained: [circular](images/facets/layout-circular-editor.png), [concentric bands](images/facets/layout-concentric-editor.png), [vertical](images/facets/layout-vertical-editor.png), [horizontal](images/facets/layout-horizontal-editor.png), [quadrants](images/facets/layout-quadrants-editor.png). These full-fit screenshots show the entire arrangement; zoom in to inspect individual cards or edit at a comfortable size.
 
-The preset editor sets the shared default layout, category order and reversal. Linear layouts also offer top, bottom, left or right placement of the focused note, with a schematic preview. The note and its native editor appear once. These controls change placement without changing classification or recorded relationships.
+The preset editor sets layout, category order and reversal. Linear layouts also offer top, bottom, left or right placement of the focused note, with a schematic preview. The note and its native editor appear once. These controls change placement without changing classification or recorded relationships.
 
 Resize a category or diagnostic area using its side and top/bottom handles. Keyboard arrows adjust the selected handle; Home/End choose its limits. Width uses Shift for one-unit steps. Wider areas automatically use more columns when measured cards fit. In the preset editor, optional exact width/height values set individual area defaults; blank inherits the preset default, and canvas handle adjustments take precedence.
 

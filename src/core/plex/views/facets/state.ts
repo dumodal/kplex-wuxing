@@ -65,11 +65,6 @@ export function reduceFacetState(state: unknown, action: PlexViewStateAction, co
   if (action.id === "preset.select" && facetId(action.args) && isFacetPreset(library.presets[action.args]))
     return {status: "updated", state: {...(record(state) ? state : {}), version: 1, preset: action.args}};
   const selected = resolveFacetPreset(library, current.preset);
-  if (action.id === "layout.select" && isFacetLayout(action.args) && (selected.status === "ready" || selected.status === "replaced")
-    && (action.args !== "quadrants" || selected.preset.order.length === 4)) {
-    const layouts = {...current.layouts, [selected.id]: action.args};if (Object.keys(layouts).length > 16) return {status: "unavailable"};
-    return {status: "updated", state: {...(record(state) ? state : {}), version: 1, preset: current.preset, layouts}};
-  }
   if (action.id === "diagnostics.combine" && typeof action.args === "boolean" && (selected.status === "ready" || selected.status === "replaced")) {
     const combined = {...current.combinedDiagnostics, [selected.id]: action.args};
     if (Object.keys(combined).length > 16) return {status: "unavailable"};

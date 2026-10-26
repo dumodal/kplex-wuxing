@@ -2376,6 +2376,7 @@ button.kplex-sidecar-unfold-plex,
 .kplex-view-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
 .kplex-view-controls > .kplex-view-selector,
 .kplex-view-controls > .kplex-view-choice { flex: 1 1 150px; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px; align-items: end; }
+.kplex-view-controls > .kplex-view-choice { flex-basis: 240px; min-width: min(100%, 220px); grid-template-columns: minmax(0, 1fr) auto auto; }
 .kplex-view-controls label { min-width: 0; display: grid; gap: 6px; }
 .kplex-view-controls select { width: 100%; min-width: 0; }
 .kplex-view-controls .kplex-lens-help { flex-basis: 100%; grid-column: 1 / -1; }
@@ -3858,6 +3859,15 @@ button.kplex-sidecar-unfold-plex:focus-visible,
 .kplex-style-editor-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .kplex-style-editor-actions { flex: 0 0 auto; background: var(--modal-background, var(--background-primary)); }
 .kplex-style-editor-actions .setting-item { border-top: var(--border-width) solid var(--background-modifier-border); padding-bottom: 0; }
+.kplex-modal-action-row .setting-item-info { display: none; }
+.kplex-modal-action-row .setting-item-control { flex: 1; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.modal button.kplex-icon-action { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 36px; min-width: 36px; height: 36px; padding: 8px; font-size: 0; }
+.modal button.kplex-icon-action .kplex-lucide { width: 18px; height: 18px; flex: 0 0 18px; }
+.modal.kplex-facet-preset-editor { width: min(1120px, 94vw); max-width: 94vw; height: min(900px, 90vh); }
+.modal.kplex-facet-preset-editor .modal-content { flex: 1 1 auto; }
+.kplex-facet-preset-editor .setting-item-control { min-width: 0; }
+.kplex-facet-preset-editor .setting-item-control > input[type="text"] { width: min(420px, 100%); }
+.kplex-facet-preset-editor .setting-item-control select { max-width: 100%; }
 
 /* Native theme controls wrap on narrow Settings pages without a separate toolbar. */
 .kplex-theme-setting .setting-item-control { flex-wrap: wrap; gap: var(--size-4-2); }
@@ -3985,6 +3995,8 @@ button.kplex-sidecar-unfold-plex:focus-visible,
 }
 .kplex-node-badge > span { overflow: hidden; text-overflow: ellipsis; }
 
-.kplex-portable-package-modal { width: min(860px, 94vw); }
-.kplex-package-source { width: 100%; min-height: 200px; font-family: var(--font-monospace); resize: vertical; }
+.modal.kplex-portable-package-modal { width: min(1100px, 94vw); max-width: 94vw; }
+.kplex-package-intro { display: flex; align-items: flex-start; gap: 12px; }
+.kplex-package-intro p { flex: 1; margin-top: 0; }
+.kplex-package-source { width: 100%; min-height: 140px; height: clamp(140px, 24vh, 260px); max-height: 45vh; font-family: var(--font-monospace); resize: vertical; }
 .kplex-package-json { white-space: pre-wrap; overflow-wrap: anywhere; }

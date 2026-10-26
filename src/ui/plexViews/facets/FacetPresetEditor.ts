@@ -1,7 +1,7 @@
 /** Detached native preset draft. Categories retain stable IDs through rename/reorder; source
  * values, assignment and colors are explicit. Save commits one atomic entry through the host. */
 import {Setting, type App, type ButtonComponent} from "obsidian";
-import {StyleEditorModal} from "../../StyleEditorModal";
+import {StyleEditorModal, labelIconButton} from "../../StyleEditorModal";
 import {StyleColorControls} from "../../StyleColorControls";
 import type {CanvasViewManagerContext} from "../managerContracts";
 import type {FacetPreset, FacetCategory} from "../../../core/plex/views/facets/contracts";
@@ -21,6 +21,9 @@ import {renderAreaSizeSettings} from "./areaSizeSettings";
 import {FACET_DIAGNOSTIC_ORDER} from "../../../core/plex/views/facets/presentation";
 import {renderFacetFlowSettings} from "./flowSettings";
 import {renderPresetHelpSettings} from "./helpSettings";
+import type {ClipboardSession} from "../../../application/ClipboardSession";
+import {copyPortableText, downloadPortableJson} from "../../sharing/portableTransfer";
+import {facetPortablePackage} from "./facetSharing";
 
 export class FacetPresetEditor extends StyleEditorModal {
   private draft: FacetPreset;
@@ -35,6 +38,7 @@ export class FacetPresetEditor extends StyleEditorModal {
   private removal: FacetPresetRemoval | null = null;
   private readonly ruleRoots: Root[] = [];
   private releaseHelp: (() => void) | null = null;
+  private clipboard: ClipboardSession | null = null;
   /** Opening captures only this entry; sibling drafts and canvases remain independent. */
   constructor(app: App, private readonly options: CanvasViewManagerContext, private readonly id: string, preset: FacetPreset,
     private readonly existing: boolean, private readonly duplicate: (preset: FacetPreset) => void, private readonly closed: () => void) {
@@ -44,20 +48,35 @@ export class FacetPresetEditor extends StyleEditorModal {
   /** One shared native scrolling body; colors retain the same parent-draft and modal lifecycle. */
   onOpen(): void {
     this.beginEditor(this.options.colors.sourceScope, this.options.colors.bindEditor);const t = this.translate;
+    this.modalEl.addClass("kplex-facet-preset-editor");
     this.titleEl.setText(t(this.existing ? "facets.edit" : "facets.create"));
     const {body, actions} = this.scrollableContent();this.body = body;
     this.validation = actions.createDiv({cls: "setting-item-description", attr: {role: "status", "aria-live": "polite"}});
-    new Setting(actions).addButton(button => button.setButtonText(t("common.cancel")).onClick(() => this.close()))
-      .addButton(button => {this.saveButton = button;button.setButtonText(t("common.save")).setCta().onClick(() => this.submit());});
-    new Setting(actions).addButton(button => button.setButtonText(t("facets.duplicate")).onClick(() => {if (this.canEdit()) this.duplicate(this.draft);}));
-    if (FACET_TEMPLATES[this.id]) new Setting(actions).addButton(button => button.setButtonText(t("facets.restore")).onClick(() => {
-      if (this.canEdit()) {this.draft = structuredClone(FACET_TEMPLATES[this.id]);this.render();}
-    }));
-    if (this.existing) new Setting(actions).addButton(button => button.setButtonText(t("common.delete")).setDestructive().onClick(() => {
+    const row = new Setting(actions);row.settingEl.addClass("kplex-modal-action-row");
+    if (this.options.sharing) for (const action of ["copy", "download"] as const) row.addButton(/** Export the visible unsaved draft without committing it. */ button => {
+      labelIconButton(button.buttonEl, t(action === "copy" ? "sharing.copyJson" : "sharing.download"), action === "copy" ? "copy" : "download");
+      button.onClick(/** Shared canonical export and transfer owners handle the requested gesture. */ () => this.exportDraft(action));
+    });
+    row.addButton(/** A duplicate opens a separately owned, unsaved preset. */ button => {
+      labelIconButton(button.buttonEl, t("facets.duplicate"), "copy-plus");button.onClick(() => {if (this.canEdit()) this.duplicate(this.draft);});
+    });
+    if (FACET_TEMPLATES[this.id]) row.addButton(/** Reset is visible and remains reversible until Save. */ button => {
+      labelIconButton(button.buttonEl, t("facets.restore"), "rotate-ccw");button.onClick(() => {
+        if (this.canEdit()) {this.draft = structuredClone(FACET_TEMPLATES[this.id]);this.render();this.validation?.setText(t("facets.resetStatus"));}
+      });
+    });
+    if (this.existing) row.addButton(/** Delete retains the existing explicit replacement dialog. */ button => {
+      labelIconButton(button.buttonEl, t("common.delete"), "trash-2");button.setDestructive().onClick(() => {
       if (!this.canEdit() || !this.owner()) return;
       this.removal = new FacetPresetRemoval(this.app, this.options, this.id, this.expected, this.owner,
         deleted => {this.removal = null;if (deleted) this.close();else this.validate();});this.removal.open();
-    }));
+      });
+    });
+    row.addButton(/** Native Cancel and Escape retain pending-save exclusion. */ button => {
+      labelIconButton(button.buttonEl, t("common.cancel"), "x");button.onClick(() => this.close());
+    }).addButton(/** Save remains the same validated atomic preset operation. */ button => {
+      this.saveButton = button;labelIconButton(button.buttonEl, t("common.save"), "save");button.setCta().onClick(() => this.submit());
+    });
     this.release = this.options.subscribe(() => this.validate());this.render();
   }
   /** Rebuild only after explicit structure changes; ordinary typing never replaces/focuses input. */
@@ -181,6 +200,19 @@ export class FacetPresetEditor extends StyleEditorModal {
     if (this.expected.present && JSON.stringify(this.expected.value) === JSON.stringify(value)) {this.close();return;}
     this.runOperation(current => this.options.save(this.address, {kind: "set", value}, this.expected, () => current() && this.owner()));
   }
+  /** Copy/save exact validated draft JSON using the existing privacy/clipboard/download owners.
+   * Dependencies remain opt-in in the manager's reviewed export; no preset or note is saved here. */
+  private exportDraft(action: "copy" | "download"): void {
+    const sharing = this.options.sharing;
+    if (!sharing || !this.canEdit() || !this.owner() || !sharing.current() || !this.validDraft()) return;
+    try {
+      const text = JSON.stringify(facetPortablePackage(this.id, this.draft, sharing, this.translate), null, 2);
+      if (action === "download") {downloadPortableJson(text, this.contentEl);return;}
+      this.clipboard?.dispose();this.clipboard = copyPortableText(text, this.contentEl, /** Feedback follows native fulfillment, never a click alone. */ state => {
+        if (this.canEdit()) this.validation?.setText(state === "copied" ? this.translate("footprints.copied") : state === "failed" ? this.translate("footprints.copyFailed") : "");
+      });
+    } catch (error) {console.error("K-Plex preset export refused", error);this.validation?.setText(this.translate("sharing.privacy"));}
+  }
   /** A storage rejection retains the exact draft and rechecks current ownership. */
   protected onOperationRejected(): void {this.validate();}
   /** Authored rules must compile through the shared grammar before the existing queue sees them. */
@@ -190,6 +222,7 @@ export class FacetPresetEditor extends StyleEditorModal {
   }
   /** Retire children/color samplers/listeners before clearing the native form. */
   onClose(): void {
+    this.clipboard?.dispose();this.clipboard = null;
     this.releaseHelp?.();this.releaseHelp = null;
     for (const root of this.ruleRoots.splice(0)) root.unmount();
     super.onClose();this.removal?.retire();this.removal = null;this.release?.();this.release = null;this.colors?.dispose();this.colors = null;

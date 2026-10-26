@@ -114,3 +114,35 @@ test('existing lens manager routes source-scoped sharing, preserves unsaved draf
  flushSync(()=>root.unmount());check(retired===2&&!document.querySelector('.kplex-filter-panel'),'Unmount retires sharing child/panel');
  `),true);
 });
+
+/** Direct draft transfer keeps the same validator, truthful clipboard and temporary URL cleanup. */
+test('preset editor has one accessible action row and exports unsaved JSON without saving',async()=>{
+ assert.equal(await scenario(`
+ const m=manager();[...m.contentEl.querySelectorAll('.kplex-style-manager-row')].find(row=>row.textContent.startsWith('ARC')).click();const editor=last();
+ check(editor.modalEl.classList.contains('kplex-facet-preset-editor'),'Preset editor opts into responsive large sizing');
+ const footer=editor.contentEl.querySelector('.kplex-style-editor-actions');check(footer.querySelectorAll('.setting-item').length===1,'All footer actions share one row');
+ check([...footer.querySelectorAll('button')].every(button=>button.classList.contains('kplex-icon-action')&&button.getAttribute('aria-label')&&!button.hasAttribute('title')),'Icon actions have accessible names without native title tooltips');
+ input(field(editor,t('facets.name')),'Unsaved workflow');input(field(editor,t('facets.layout')),'vertical');
+ let finish;Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:value=>new Promise(resolve=>{window.draftJson=value;finish=resolve})}});
+ button(editor,t('sharing.copyJson')).click();check(!editor.contentEl.textContent.includes(t('footprints.copied')),'Pending copy is not success');finish();await waitFor(()=>editor.contentEl.textContent.includes(t('footprints.copied')));
+ const value=JSON.parse(window.draftJson);check(M.validatePortablePackage(value).status==='valid'&&value.preset.name==='Unsaved workflow'&&value.preset.layout==='vertical','Copy exports the exact valid unsaved draft');
+ let blob,revoked=0,clicked=0;const create=URL.createObjectURL,revoke=URL.revokeObjectURL;URL.createObjectURL=value=>{blob=value;return 'blob:owned-draft'};URL.revokeObjectURL=value=>{check(value==='blob:owned-draft','Exact URL released');revoked++};
+ const click=event=>{if(event.target.tagName==='A'&&event.target.download==='kplex-preset.json'){event.preventDefault();clicked++}};document.addEventListener('click',click);
+ try{button(editor,t('sharing.download')).click();check(await blob.text()===window.draftJson&&clicked===1&&revoked===1&&!editor.contentEl.querySelector('a[download]'),'Save file uses exact JSON and cleans its link/URL');}finally{URL.createObjectURL=create;URL.revokeObjectURL=revoke;document.removeEventListener('click',click)}
+ button(editor,t('facets.restore')).click();check(editor.contentEl.textContent.includes(t('facets.resetStatus'))&&field(editor,t('facets.layout')).value==='horizontal','Reset explains the unsaved change and restores the preset layout');
+ check(p.writes.length===0,'Copy, file export and Reset never persist settings');button(editor,t('common.cancel')).click();check(p.writes.length===0,'Cancel discards the reset and unsaved edits');m.close();
+ `),true);
+});
+
+/** Read-only native help explains import without becoming a settings editor or granting write authority. */
+test('empty import explains paste/file and offers read-only format Help with a compact footer',async()=>{
+ assert.equal(await scenario(`
+ const {manager:m,modal}=openImport();const source=modal.contentEl.querySelector('textarea');check(source.placeholder===t('sharing.pasteHint')&&modal.contentEl.querySelector('input[type=file]'),'Both input paths are explained and available');
+ check(modal.contentEl.querySelectorAll('.kplex-style-editor-actions .setting-item').length===1&&button(modal,t('sharing.apply')).disabled,'One action row and no unreviewed import');
+ window.testNativeMarkdownRender=async(app,source,element)=>{window.formatSource=source;element.createEl('h2',{text:'Controlled native format Help'})};
+ modal.contentEl.querySelector('.kplex-package-intro button').click();const help=last();await waitFor(()=>help.contentEl.querySelector('h2'));
+ check(window.formatSource===t('sharing.formatGuide')&&window.formatSource.includes('kplex-preset'),'Native renderer receives the localized format guide');
+ check(!button(help,t('view.editHelp')),'Read-only format guide has no misleading Edit preset action');help.close();check(modal.modalEl.isConnected&&!source.value&&p.writes.length===0,'Closing Help preserves the import and writes nothing');
+ check(window.testMarkdownComponents.every(component=>!component.loaded),'Guide components unloaded');modal.close();m.close();delete window.testNativeMarkdownRender;
+ `),true);
+});

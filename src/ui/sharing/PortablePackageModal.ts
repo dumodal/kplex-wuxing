@@ -1,8 +1,10 @@
 /** Shared native data-only transfer surface. Validation/planning are portable; native modal, clipboard and existing queued save owners retain effects. */
 import {Setting, type App, type ButtonComponent} from "obsidian";
-import {StyleEditorModal} from "../StyleEditorModal";
-import {ClipboardSession} from "../../application/ClipboardSession";
+import {StyleEditorModal, labelIconButton} from "../StyleEditorModal";
+import type {ClipboardSession} from "../../application/ClipboardSession";
 import {NativeMarkdownHelp} from "../NativeMarkdownHelp";
+import {MarkdownHelpModal} from "../MarkdownHelpModal";
+import {copyPortableText, downloadPortableJson} from "./portableTransfer";
 import {validatePortablePackage} from "../../core/plex/sharing/validation";
 import {preparePortableImport, PortableSharingCapacityError, type PreparedImport, type ImportChoices} from "../../core/plex/sharing/transfer";
 import {PORTABLE_PACKAGE_LIMITS, type PortablePackage} from "../../core/plex/sharing/contracts";
@@ -23,23 +25,30 @@ export class PortablePackageModal extends StyleEditorModal {
   private incoming: PortablePackage | null = null;
   private choices: ImportChoices = {targetId: "", replace: false, lensIds: [], replacePalette: []};
   private helpGeneration = 0;
+  private formatHelp: MarkdownHelpModal | null = null;
   /** A source-scoped context captures the opening theme/session; no plugin or vault is exposed. */
   constructor(app: App, private readonly options: PortablePackageModalOptions) {super(app);}
   /** Every entry is explicit; no default export includes an active/private lens or device state. */
   onOpen(): void {
     const {context, mode, kind} = this.options, t = this.translate;
-    this.beginEditor(context.sourceScope, context.bindEditor);this.titleEl.setText(t("sharing.title"));
+    this.beginEditor(context.sourceScope, context.bindEditor);this.titleEl.setText(t(mode === "import" ? kind === "facets" ? "sharing.importPreset" : "sharing.importLens"
+      : mode === "export" ? kind === "facets" ? "sharing.exportPreset" : "sharing.exportLens" : "sharing.copyPrompt"));
     this.modalEl.addClass("kplex-portable-package-modal");const {body, actions} = this.scrollableContent();
-    body.createEl("p", {text: t(mode === "import" ? "sharing.importHelp" : "sharing.exportHelp")});
+    const intro = body.createDiv({cls: "kplex-package-intro"});intro.createEl("p", {text: t(mode === "import" ? "sharing.importHelp" : "sharing.exportHelp")});
+    const info = intro.createEl("button", {attr: {type: "button"}});labelIconButton(info, t("sharing.formatHelp"), "info");
+    info.addEventListener("click", /** Read-only native guidance explains paste/file, review and format without touching settings. */ () => this.openFormatHelp());
     this.status = body.createDiv({attr: {role: "status", "aria-live": "polite"}});
-    const source = body.createEl("textarea", {cls: "kplex-package-source", attr: {rows: "14", spellcheck: "false", "aria-label": t("sharing.source")}});
+    const source = body.createEl("textarea", {cls: "kplex-package-source", attr: {rows: "8", spellcheck: "false", "aria-label": t("sharing.source"),
+      ...(mode === "import" ? {placeholder: t("sharing.pasteHint")} : {})}});
     source.maxLength = PORTABLE_PACKAGE_LIMITS.characters;
-    new Setting(actions).addButton(button => button.setButtonText(t("common.cancel")).onClick(() => this.close()));
+    const row = new Setting(actions);row.settingEl.addClass("kplex-modal-action-row");
+    /** All mode-specific actions share one footer; native pending-operation guards still own dismissal. */
+    const cancel = (): void => {row.addButton(button => {labelIconButton(button.buttonEl, t("common.cancel"), "x");button.onClick(() => this.close());});};
     if (mode === "prompt") {
       source.readOnly = true;source.value = kind === "facets" ? FACETS_AUTHORING_CONTEXT : LENS_AUTHORING_CONTEXT;
-      this.copyAction(actions, source, "sharing.copyPrompt");return;
+      this.copyAction(row, source, "sharing.copyPrompt");cancel();return;
     }
-    if (mode === "export") {this.renderExport(body, actions, source);return;}
+    if (mode === "export") {this.renderExport(body, row, source);cancel();return;}
     const fileRow = new Setting(body).setName(t("sharing.file"));
     const file = fileRow.controlEl.createEl("input", {attr: {type: "file", accept: ".json,application/json", "aria-label": t("sharing.file")}});
     file.addEventListener("change", /** Reading a user-chosen bounded JSON file never touches a Vault API or settings. */ () => {
@@ -52,25 +61,24 @@ export class PortablePackageModal extends StyleEditorModal {
     });
     this.preview = body.createDiv({cls: "kplex-package-preview"});
     source.addEventListener("input", /** Typing invalidates the exact reviewed plan immediately, without parsing on each key. */ () => {this.helpGeneration++;this.clearPreview();});
-    new Setting(actions).addButton(button => button.setButtonText(t("sharing.preview")).onClick(() => {if (this.canEdit()) this.readIncoming(source.value);}))
-      .addButton(button => {this.applyButton = button;button.setButtonText(t("sharing.apply")).setCta().setDisabled(true).onClick(() => {
+    row.addButton(/** Preview validates the source without publishing an import. */ button => {labelIconButton(button.buttonEl, t("sharing.preview"), "scan-eye");button.onClick(() => {if (this.canEdit()) this.readIncoming(source.value);});})
+      .addButton(/** Import remains unavailable until its exact current preview is admitted. */ button => {this.applyButton = button;labelIconButton(button.buttonEl, t("sharing.apply"), "import");button.setCta().setDisabled(true).onClick(() => {
         const plan = this.plan;if (!plan || !this.canEdit() || !context.current()) return;
         this.runOperation(current => context.save(plan, () => current() && context.current()));
-      });});
+      });});cancel();
     this.focusAfterAttachment(source);
   }
   /** Clipboard writes use the shared gesture-safe owner and report success only after fulfillment. */
-  private copyAction(parent: HTMLElement, source: HTMLTextAreaElement, label: "sharing.copyJson" | "sharing.copyPrompt"): void {
-    new Setting(parent).addButton(button => button.setButtonText(this.translate(label)).onClick(() => {
-      if (!this.canEdit() || !source.value || this.clipboard?.state === "copying") return;this.clipboard?.dispose();const owner = source.ownerDocument.defaultView;
-      this.clipboard = new ClipboardSession(source.value, owner?.navigator.clipboard?.writeText ? value => owner.navigator.clipboard.writeText(value) : null);
-      this.clipboard.listen(/** Native feedback never claims an unfulfilled clipboard operation. */ state => {
+  private copyAction(row: Setting, source: HTMLTextAreaElement, label: "sharing.copyJson" | "sharing.copyPrompt"): void {
+    row.addButton(/** Copy remains an explicit gesture with truthful shared completion feedback. */ button => {labelIconButton(button.buttonEl, this.translate(label), "copy");button.onClick(() => {
+      if (!this.canEdit() || !source.value || this.clipboard?.state === "copying") return;this.clipboard?.dispose();
+      this.clipboard = copyPortableText(source.value, source, /** Native feedback never claims an unfulfilled clipboard operation. */ state => {
         if (this.canEdit()) this.status?.setText(state === "copied" ? this.translate("footprints.copied") : state === "failed" ? this.translate("footprints.copyFailed") : "");
-      });this.clipboard.copy();
-    }));
+      });
+    });});
   }
   /** Dependency and privacy choices rebuild an immutable export; the visible source and copied bytes are identical. */
-  private renderExport(body: HTMLElement, actions: HTMLElement, source: HTMLTextAreaElement): void {
+  private renderExport(body: HTMLElement, actions: Setting, source: HTMLTextAreaElement): void {
     let selected: string[] = [], allowPrivate = false;source.readOnly = true;
     const render = (): void => {
       if (!this.canEdit()) return;
@@ -84,13 +92,10 @@ export class PortablePackageModal extends StyleEditorModal {
     }
     new Setting(body).setName(this.translate("sharing.allowPrivate")).setDesc(this.translate("sharing.privacy")).addToggle(toggle => toggle.setValue(false).onChange(value => {allowPrivate = value;render();}));
     this.copyAction(actions, source, "sharing.copyJson");
-    new Setting(actions).addButton(button => button.setButtonText(this.translate("sharing.download")).onClick(() => {
+    actions.addButton(/** Download uses the same exact visible JSON as Copy. */ button => {labelIconButton(button.buttonEl, this.translate("sharing.download"), "download");button.onClick(() => {
       if (!this.canEdit() || !source.value) return;
-      const owner = source.ownerDocument.defaultView;if (!owner) return;
-      const blob = new owner.Blob([source.value], {type: "application/json"}), url = owner.URL.createObjectURL(blob);
-      const link = this.contentEl.createEl("a", {attr: {href: url, download: "kplex-preset.json"}});
-      try {link.click();} finally {link.remove();owner.URL.revokeObjectURL(url);}
-    }));render();
+      downloadPortableJson(source.value, this.contentEl);
+    });});render();
   }
   /** Retire a prior native Help component and every exact-plan control on source changes. */
   private clearPreview(): void {this.plan = null;this.incoming = null;this.applyButton?.setDisabled(true);this.help?.dispose();this.help = null;this.preview?.empty();this.status?.setText("");}
@@ -123,7 +128,8 @@ export class PortablePackageModal extends StyleEditorModal {
         this.choices = {...this.choices, replacePalette: value === "replace" ? [...this.choices.replacePalette, pair.id] : this.choices.replacePalette.filter(id => id !== pair.id)};this.review();
       }));
     }
-    this.preview.createEl("pre", {cls: "kplex-package-json", text: JSON.stringify(pkg, null, 2)});
+    const payload = this.preview.createEl("details");payload.createEl("summary", {text: this.translate("sharing.source")});
+    payload.createEl("pre", {cls: "kplex-package-json", text: JSON.stringify(pkg, null, 2)});
     if (pkg.kind === "facets") {
       const helpHost = this.preview.createDiv();new Setting(this.preview).addButton(button => button.setButtonText(this.translate("sharing.previewHelp")).onClick(() => {
         if (!this.canEdit()) return;this.help?.dispose();this.help = new NativeMarkdownHelp(this.app, helpHost);
@@ -141,6 +147,14 @@ export class PortablePackageModal extends StyleEditorModal {
   }
   /** Failed writes retain source and require a fresh preview before another attempt. */
   protected onOperationRejected(): void {this.plan = null;this.applyButton?.setDisabled(true);this.status?.setText(this.translate("sharing.changed"));}
+  /** One native read-only Markdown page explains the existing validator and review workflow. */
+  private openFormatHelp(): void {
+    if (!this.canEdit() || !this.options.context.current()) return;
+    this.formatHelp?.retire();
+    const child = new MarkdownHelpModal(this.app, this.translate("sharing.formatHelp"), this.translate("sharing.formatGuide"),
+      () => this.canEdit() && this.options.context.current(), null, () => {if (this.formatHelp === child) this.formatHelp = null;});
+    this.formatHelp = child;child.open();
+  }
   /** Component, clipboard, late file reads and exact plan are retired on every native dismissal/migration. */
-  onClose(): void {super.onClose();this.helpGeneration++;this.clipboard?.dispose();this.clipboard = null;this.help?.dispose();this.help = null;this.plan = null;this.contentEl.empty();this.options.closed();}
+  onClose(): void {super.onClose();this.formatHelp?.retire();this.formatHelp = null;this.helpGeneration++;this.clipboard?.dispose();this.clipboard = null;this.help?.dispose();this.help = null;this.plan = null;this.contentEl.empty();this.options.closed();}
 }

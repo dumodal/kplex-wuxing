@@ -96,12 +96,14 @@ test('all five measured layouts retain one attention editor, category identities
  assert(result.areas.filter(area=>JSON.parse(area.id)[2]==='category').every(area=>!M.areaContains(area.bounds,{x:0,y:0})));
 });
 
-test('layout overrides restore independently, guard quadrants and preserve individual size precedence',()=>{
- const config=available({}),initial={version:1,preset:'wuxing'},choice=M.reduceFacetState(initial,{id:'layout.select',args:'concentric'},config);
- assert.equal(choice.status,'updated');assert.equal(M.facetLayout(M.FACET_TEMPLATES.wuxing,'wuxing',choice.state).effective,'concentric');
- assert.equal(M.facetLayout(M.FACET_TEMPLATES.wuxing,'wuxing',initial).effective,'circular');assert.deepEqual(M.facetState(JSON.parse(JSON.stringify(choice.state))),choice.state);
- assert.equal(M.reduceFacetState(initial,{id:'layout.select',args:'quadrants'},config).status,'unavailable');assert.equal(M.facetLayout({...M.FACET_TEMPLATES.wuxing,layout:'quadrants'},'wuxing').fallback,true);
- assert.equal(M.reduceFacetState({version:1,preset:'para'},{id:'layout.select',args:'quadrants'},config).status,'updated');
+test('preset layout is authoritative over inert legacy canvas intent and preserves individual size precedence',()=>{
+ const config=available({}),initial={version:1,preset:'wuxing',layouts:{wuxing:'concentric'}};
+ assert.deepEqual(M.facetState(JSON.parse(JSON.stringify(initial))),initial,'Legacy state remains readable without executing its layout');
+ assert.equal(M.reduceFacetState(initial,{id:'layout.select',args:'concentric'},config).status,'unavailable');
+ assert.equal(M.facetLayout(M.FACET_TEMPLATES.wuxing,'wuxing',initial).effective,'circular');
+ assert.equal(M.facetLayout({...M.FACET_TEMPLATES.wuxing,layout:'vertical'},'wuxing',initial).effective,'vertical');
+ assert.equal(M.facetLayout({...M.FACET_TEMPLATES.wuxing,layout:'quadrants'},'wuxing',initial).fallback,true);
+ assert.equal(M.facetLayout({...M.FACET_TEMPLATES.para,layout:'quadrants'},'para',initial).effective,'quadrants');
  const f=diagnosticScene(),p=f.project(),measured=f.measure(p),id=M.facetAreaId('wuxing','category','wood'),preset={...M.FACET_TEMPLATES.wuxing,areaSizes:{categories:{wood:{width:900,height:500}},diagnostics:{combined:{width:800,height:400}}}};
  const defaults=M.layoutFacets(p,measured,'wuxing',preset),override=M.layoutFacets(p,measured,'wuxing',preset,{[id]:300},true,{[id]:600});
  assert.equal(defaults.areas.find(area=>area.id===id).bounds.width,900);assert.equal(defaults.areas.find(area=>area.id===id).bounds.height,500);

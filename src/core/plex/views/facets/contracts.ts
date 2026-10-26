@@ -11,7 +11,8 @@ export type FacetFlowOverride = Readonly<{source: string; target: string} & Face
 export type FacetDiagnosticStatus = "unassigned" | "conflicting" | "checking" | "unresolved";
 export type FacetDiagnostics = Readonly<{combined?: boolean; side?: "top" | "right" | "bottom" | "left";
   orientation?: "horizontal" | "vertical"; showEmpty?: boolean; order?: readonly FacetDiagnosticStatus[]}>;
-/** Explicit choices override a preset default without changing any other canvas's configuration. */
+/** Canvas-local preset selection and diagnostics. Legacy layout choices are retained only for
+ * restoration compatibility; the preset's saved layout is authoritative in every canvas. */
 export type FacetCanvasState = Readonly<{version: 1; preset: string; combinedDiagnostics?: Readonly<Record<string, boolean>>;
   layouts?: Readonly<Record<string, FacetLayout>>}>;
 export type FacetCategory = Readonly<{label: string; labelKey?: string; color: ColorValue;

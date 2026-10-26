@@ -48,17 +48,26 @@ export function layoutMindMap(projection: PlexProjection, measurements: readonly
   /** A measured parent subtree is one grid tile, preserving its real ancestry and all editor dimensions. */
   const width = (id: string): number => sizes.get(id)!.width + ((children.get(id)?.length ?? 0)
     ? horizontalSpacing + Math.max(...children.get(id)!.map(child => width(child.id))) : 0);
-  const grid = measuredAreaGrid(above.map(row => ({id: row.id, width: width(row.id), height: extents.get(row.id)!})),
+  // Preserve outward physical gates when visibility removes a parent. Left branches retain
+  // the first column; the other columns share right branches. Empty packing cells are geometry
+  // only and never become occurrences, semantic targets, cards or focus candidates.
+  const leftParents = above.filter(row => row.branch!.side === -1), rightParents = above.filter(row => row.branch!.side === 1);
+  const columns = configuration.parentColumns, ordered: Array<typeof above[number] | undefined> = [];
+  while (leftParents.length || rightParents.length) for (let column = 0; column < columns; column++)
+    ordered.push(columns > 1 && column === 0 ? leftParents.shift() : rightParents.shift() ?? (columns === 1 ? leftParents.shift() : undefined));
+  const grid = measuredAreaGrid(ordered.map((row, index) => row ? {id: row.id, width: width(row.id), height: extents.get(row.id)!}
+    : {id: `empty-parent-cell-${index}`, width: 1, height: 1}),
     configuration.parentColumns, horizontalSpacing, verticalSpacing);
   const parentWidth = Math.max(rootSize.width, grid.width), height = Math.max(140, Math.min(800, areaHeights.parentHeight ?? 300));
   const parentBounds = {x: -parentWidth / 2, y: -rootSize.height / 2 - verticalSpacing - height, width: parentWidth, height};
   if (!Number.isFinite(height)) throw new Error("Invalid parent area height");
   for (const parent of above) {
     const tile = grid.positions.get(parent.id)!, size = sizes.get(parent.id)!;
-    const rect = {x: parentBounds.x + (parentWidth - grid.width) / 2 + tile.x - tile.width / 2 + size.width / 2,
+    const side = columns === 1 ? 1 : parent.branch!.side;
+    const rect = {x: parentBounds.x + (parentWidth - grid.width) / 2 + tile.x + side * (-tile.width / 2 + size.width / 2),
       y: parentBounds.y + tile.y,
       width: size.width, height: size.height};
-    positions.set(parent.id, rect); place(children.get(parent.id) ?? [], rect, 1);
+    positions.set(parent.id, rect); place(children.get(parent.id) ?? [], rect, side);
   }
   // The parent area's actual measured width, not child columns or node interior padding, sets the lateral baseline.
   const lateralRoot = {...positions.get(root)!, width: parentWidth};

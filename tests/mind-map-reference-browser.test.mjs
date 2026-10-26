@@ -31,3 +31,20 @@ test('cycle click reveals the genuine earlier occurrence and explains it without
  ui.session.select('classic');M.flushSync(()=>repeated.dispatchEvent(new MouseEvent('click',{bubbles:true})));
  check(window.testNotices.length===1,'Retired view cannot follow an old reference');input.remove();ui.close();return true})()`),true)}finally{await host.cleanup()}
 });
+
+/** Arrow selection and Enter share the real action owner; activation cannot navigate or rename a branch. */
+test('keyboard-selected Mind Map occurrence toggles with Enter without attention or root changes',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ const graph={'A.md':['B.md','C.md'],'B.md':['C.md']};index.neighbours=(page,role)=>role==='child'?(graph[page.path]??[]).map(path=>({page:pages.get(path),role,relationType:1,typeDefinition:'Related',linkDirection:1})):[];
+ const ui=await mount(M.builtInPlexViews.resolve('mindmap'));let activated=0;ui.props.onActivate=()=>{activated++};ui.render();
+ const implementations=Object.fromEntries(Object.keys(ui.ports.current.implementations).map(id=>[id,{availability:c=>ui.ports.current.implementations[id].availability(c),execute:c=>ui.ports.current.implementations[id].execute(c)}]));
+ const release=plugin.actionManager.registerSurface({id:ui.props.actionSurfaceId,generation:1,readSnapshot:()=>({mounted:true,visible:true,windowId:'main',center:M.actionNodeRef(pages.get('A.md')),selected:ui.ports.current.readSelected(),focusRegion:'graph',interactionRevision:0,viewRevision:ui.session.getSnapshot()}),implementations});
+ const key=async id=>{const outcome=await plugin.actionManager.dispatch({id,source:'local-hotkey',surfaceId:ui.props.actionSurfaceId});ui.render();await wait();return outcome};
+ const first=await key('selection.center'),second=await key('selection.section.right');await key('selection.move.down');await key('selection.move.up');check(ui.ports.current.readSelected()?.node.identity==='B.md','Arrow moves to the real displayed B occurrence '+JSON.stringify({first,second,selected:ui.ports.current.readSelected()}));
+ const before={root:ui.session.layoutRoot('A.md'),attention:ui.props.activePath};
+ check((await key('node.activate')).status==='completed','Enter expands selected branch');check([...ui.container.querySelectorAll('[data-kplex-path="C.md"]')].some(el=>el.dataset.kplexKeyboardId===JSON.stringify(['A.md','B.md','C.md'])),'Exact branch child becomes visible');
+ check((await key('node.activate')).status==='completed','Enter collapses selected branch');check(![...ui.container.querySelectorAll('[data-kplex-path="C.md"]')].some(el=>el.dataset.kplexKeyboardId===JSON.stringify(['A.md','B.md','C.md'])),'Exact branch child folds away');
+ check(ui.ports.current.readSelected()?.node.identity==='B.md','Exact parent selection retained');check(!activated&&ui.session.layoutRoot('A.md')===before.root&&ui.props.activePath===before.attention,'Enter does not navigate, reroot or rename');
+ check(work.body===0&&work.scans===0,'Branch action performs no body/index work');release();ui.close();plugin.actionManager.dispose();style.remove();return true})()`),true)}finally{await host.cleanup()}
+});
