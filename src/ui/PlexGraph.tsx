@@ -70,6 +70,7 @@ import {boundedViewColors} from "../core/plex/views/decorations";
 import {canvasViewText} from "./plexViews/labels";
 import {plexAreaDropMeaning} from "../core/plex/views/dropTargets";
 import {plexSectionDocument} from "../core/plex/views/sections";
+import {focusEmbeddedMarkdown} from "../adapters/obsidian/embeddedMarkdownFocus";
 import {areaContains, areaShapePath, transformAreaShape} from "../core/contracts/areaGeometry";
 import type {CanvasViewContributionController} from "./plexViews/CanvasViewContributionController";
 import type {CanvasViewLayoutControl} from "./plexViews/contributionContracts";
@@ -1272,6 +1273,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const displayResizeLayout = useRef(false);
   const measuredViewport = useRef({ width: 0, height: 0 });
   const suppressAutoFitUntil = useRef(0);
+  /** Reflow the current source outline without changing camera, editor document or native command ownership. */
   const updateSectionFolds = (updater: (current: Set<string>) => Set<string>): void => {
     if (viewDefinition.capabilities.sections !== true || !sectionExpansion) return;
     // Folding is an outline operation, not navigation. Preserve the user's exact viewport while
@@ -1281,13 +1283,23 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     // reflow; suppress auto-fit briefly so the camera remains *exactly* where the user left it.
     suppressAutoFitUntil.current = Date.now() + 2500;
     setExpandedSectionIds(updater);
+    retainFocusedEditorOwner();
   };
+  /** Obsidian's ancestor leaf can claim command routing on a retained-focus control click.
+   * Reuse the actual live native focus owner only while its content still owns DOM focus;
+   * this neither selects a document nor brings a background editor into focus. */
+  const retainFocusedEditorOwner = (): void => {
+    const mount = viewport.current?.querySelector<HTMLElement>(".kplex-central-editor-leaf-host");
+    if (mount?.contains(mount.ownerDocument.activeElement)) focusEmbeddedMarkdown(mount);
+  };
+  /** Explicitly request or retire only the declared central source, preserving already-focused native input. */
   const toggleCentralSections = (): void => {
     if (viewDefinition.capabilities.sections !== true || sectionEditorAvailable) return;
     preserveCameraOnNextLayout.current = true;
     suppressAutoFitUntil.current = Date.now() + 2500;
     sectionRequestedDocument.current = sectionExpanded ? null : sectionDocument;
     setSectionExpanded(!sectionExpanded);
+    retainFocusedEditorOwner();
   };
   const sceneTransitionTimer = useRef<number | null>(null);
   const sceneTransitionTimerWindow = useRef<Window | null>(null);

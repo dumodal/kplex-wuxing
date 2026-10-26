@@ -87,4 +87,21 @@ export async function acceptWuXingPairs(x){
   check(session(companion).definition.id==='classic'&&center(companion)===path('Goal'),'Native key retargeted the other canvas');
   cases.push({id:'windows-native-view-select-keyboard',transport:c.osInput?'OS_CUA':'Electron',keys,changes});
  }finally{selected.ownerDocument.removeEventListener('keydown',observe,true);selected.removeEventListener('change',changed,true)}
+ /** Route explicit outline intent to its captured native canvas, independently of window focus. */
+ const outline=async leaf=>{const id=[...p.actionSurfaceHosts].find(([,entry])=>entry.leaf===leaf)?.[0];check(id,'Native outline surface absent');
+  const result=await p.actionManager.dispatch({id:'sections.toggle',source:'internal',surfaceId:id});check(result.status==='completed','Native outline action failed: '+JSON.stringify(result));};
+ const headingCount=leaf=>root(leaf).querySelectorAll('.is-kplex-section').length;
+ const otherBefore=snapshot(companion);await choose(host,'mindmap');panel(host).querySelector('.kplex-filter-panel-header button').click();
+ await outline(host);await until(()=>headingCount(host)>0,'Main-window root outline absent');
+ check(same(companion,otherBefore)&&!headingCount(companion),'Main root outline changed the Compass popout');
+ const mainBefore=snapshot(host),mainCount=headingCount(host);
+ await choose(companion,'mindmap');panel(companion).querySelector('.kplex-filter-panel-header button').click();
+ await outline(companion);await until(()=>headingCount(companion)>0,'Popout root outline absent');
+ check(same(host,mainBefore)&&headingCount(host)===mainCount,'Popout root outline changed the main canvas/session/camera/editor/Sidecar');
+ await outline(companion);await until(()=>!headingCount(companion),'Popout root outline did not fold');
+ check(headingCount(host)===mainCount&&same(host,mainBefore),'Folding one root outline changed the other');
+ const closedPopout=snapshot(companion);await choose(host,'wuxing');
+ await until(()=>!headingCount(host)&&!root(host).querySelector('.kplex-section-fold-handle'),'Facets did not retire unsupported section controls');
+ check(same(companion,closedPopout),'Main view switch changed the popout root/attention/camera/editor/Sidecar');
+ cases.push({id:'native-independent-main-popout-root-outlines-and-unsupported-facets',simultaneousRootOutlines:2,otherEditorsOrSidecarsRetargeted:false});
 }

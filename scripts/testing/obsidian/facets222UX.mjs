@@ -11,8 +11,11 @@ export async function acceptFacets222UX(x){
  const manager=()=>[...settingsDoc().querySelectorAll('.modal')].find(el=>el.querySelector('.kplex-style-manager-row'));
  const change=(input,value)=>{check(input,'Native field absent');input.value=value;input.dispatchEvent(new input.ownerDocument.defaultView.Event(input.tagName==='SELECT'?'change':'input',{bubbles:true}));};
  /** Trusted native pointer input targets the real current element, never a stale coordinate. */
- const click=async element=>{check(element?.isConnected,'Native click target absent');element.scrollIntoView({block:'nearest'});const r=element.getBoundingClientRect();
-  const owner=element.ownerDocument.defaultView.require('@electron/remote').getCurrentWindow();owner.restore();owner.show();owner.focus();owner.webContents.focus();await until(()=>element.ownerDocument.hasFocus(),'Invoking dialog focus absent');for(const type of ['mouseDown','mouseUp'])owner.webContents.sendInputEvent({type,x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2),button:'left',clickCount:1});await wait(120);};
+ const click=async element=>{check(element?.isConnected,'Native click target absent');element.scrollIntoView({block:'nearest'});
+  const owner=element.ownerDocument.defaultView.require('@electron/remote').getCurrentWindow();owner.restore();owner.show();owner.focus();owner.webContents.focus();await until(()=>element.ownerDocument.hasFocus(),'Invoking dialog focus absent');
+  const r=element.getBoundingClientRect(),x=Math.round(r.x+r.width/2),y=Math.round(r.y+r.height/2),hit=element.ownerDocument.elementFromPoint(x,y);
+  check(hit&&element.contains(hit),'Native pointer target is obscured/outside its viewport: '+element.className+' / '+hit?.className);
+  for(const type of ['mouseDown','mouseUp'])owner.webContents.sendInputEvent({type,x,y,button:'left',clickCount:1});await wait(120);};
  const key=async(keyCode,modifiers=[],owner=doc)=>{const contents=owner.defaultView.require('@electron/remote').getCurrentWindow().webContents;for(const type of ['keyDown','keyUp'])contents.sendInputEvent({type,keyCode,modifiers});await wait(160);};
  const action=async(id,args)=>{const surface=[...p.actionSurfaceHosts].find(([,entry])=>entry.leaf===host)?.[0];check(surface,'Native action surface absent');return p.actionManager.dispatch({id,source:'internal',surfaceId:surface,...(args?{args}:{})});};
  const selected=()=>{const surface=[...p.actionSurfaceHosts].find(([,entry])=>entry.leaf===host)?.[0];return p.actionManager.readSnapshot(surface)?.selected;};
@@ -45,6 +48,7 @@ export async function acceptFacets222UX(x){
  const sourceRow=help.querySelector('.kplex-facet-help-source'),info=sourceRow.querySelector('.setting-item-info').getBoundingClientRect(),area=sourceRow.querySelector('textarea').getBoundingClientRect();
  check(area.top>=info.bottom&&area.width>=sourceRow.getBoundingClientRect().width-4,'Help textarea does not fill a separate row below its description');
  cases.push({id:'native-preset-help-full-width-below-description',width:area.width,rowWidth:sourceRow.getBoundingClientRect().width});
+ await capture('preset-help-source',form);
  help.open=false;
  await capture('preset-editor',form);cases.push({id:'native-wide-preset-editor-single-icon-row',width:form.getBoundingClientRect().width,buttons:buttons.length});
  const before=JSON.stringify(p.readPortableSharingState().presets.wuxing),attention=center(host);
@@ -127,6 +131,7 @@ export async function acceptFacets222UX(x){
  await click(sectionControl());await until(()=>headings().length>=3,'Native central outline did not appear');
  check(root(host).querySelectorAll('.kplex-section-tree-edge').length===headings().length,'Native root outline bypassed the shared tree renderer');
  check(root(host).querySelector('.kplex-camera').style.transform===manualCamera,'Section expansion lost manual camera intent');
+ await capture('mindmap-root-sections',root(host).querySelector('.kplex-plex'));
  const allHeadings=headings().length,headingFold=headings().find(el=>el.querySelector('.kplex-section-fold-handle'))?.querySelector('.kplex-section-fold-handle');
  check(headingFold,'Native nested heading fold absent');await wait(300);const foldStop=quiet();await click(headingFold);
  await until(()=>headings().length<allHeadings,'Native heading fold did not work');foldStop('native-mindmap-heading-fold-zero-source-work');
@@ -139,15 +144,21 @@ export async function acceptFacets222UX(x){
  await action('view.fit');await wait(100);await click(card('Parent 1').querySelector('.kplex-thought-corner-action'));
  await until(()=>session.editors.bindings.length===1&&root(host).querySelector('.kplex-central-editor-content .cm-content'),'Native nonroot editor did not open');
  check(headings().length>0&&session.editors.bindings[0].target.nodeId===path('Parent 1'),'Root outline replaced or retargeted the other editor');
+ await action('view.fit');await wait(150);
  const content=root(host).querySelector('.kplex-central-editor-content .cm-content');content.focus();
  await until(()=>workspace.activeLeaf?.view.file?.path===path('Parent 1'),'Native editor focus did not select its own document');
- const leaf=workspace.activeLeaf,editor=leaf.view.editor,binding=session.editors.bindings[0];
- editor.setCursor(editor.lastLine(),editor.getLine(editor.lastLine()).length);await native.webContents.insertText('Kplex-222-root-outline-editor');
- await until(()=>editor.getValue().includes('Kplex-222-root-outline-editor'),'Native typed text did not reach the owned editor');
- const value=editor.getValue(),cursor=JSON.stringify(editor.getCursor()),node=headings()[0].querySelector('.kplex-section-fold-handle');
+ const leaf=workspace.activeLeaf,nativeEditor=leaf.view.editor,binding=session.editors.bindings[0];
+ nativeEditor.setCursor(nativeEditor.lastLine(),nativeEditor.getLine(nativeEditor.lastLine()).length);await native.webContents.insertText('Kplex-222-root-outline-editor');
+ await until(()=>nativeEditor.getValue().includes('Kplex-222-root-outline-editor'),'Native typed text did not reach the owned editor');
+ const value=nativeEditor.getValue(),cursor=JSON.stringify(nativeEditor.getCursor()),node=headings()[0].querySelector('.kplex-section-fold-handle');
  await click(node);await wait(150);
- check(workspace.activeLeaf===leaf&&leaf.view.editor===editor&&editor.getValue()===value&&JSON.stringify(editor.getCursor())===cursor
-  &&content.contains(doc.activeElement)&&session.editors.bindings[0].id===binding.id,'Heading folding disturbed editor document/content/caret/focus');
+ const editorFacts={leafSame:workspace.activeLeaf===leaf,editorSame:leaf.view.editor===nativeEditor,valueSame:nativeEditor.getValue()===value,
+  cursorSame:JSON.stringify(nativeEditor.getCursor())===cursor,focused:content.contains(doc.activeElement),bindingSame:session.editors.bindings[0]?.id===binding.id,
+  contentConnected:content.isConnected,activeElement:doc.activeElement?.className,beforeLength:value.length,afterLength:nativeEditor.getValue().length,
+  attentionSame:center(host)===path('Concept'),rootSame:session.layoutRoot(path('Concept'))===path('Memory'),
+  beforeCursor:cursor,afterCursor:JSON.stringify(nativeEditor.getCursor()),markerRetained:nativeEditor.getValue().includes('Kplex-222-root-outline-editor')};c.progress={...c.progress,rootOutlineEditor:editorFacts};
+ check(editorFacts.leafSame&&editorFacts.editorSame&&editorFacts.valueSame&&editorFacts.cursorSame&&editorFacts.focused&&editorFacts.bindingSame&&editorFacts.attentionSame&&editorFacts.rootSame,
+  'Heading folding disturbed editor document/content/caret/focus '+JSON.stringify(editorFacts));
  check((await action('editor.collapse',{bindingId:binding.id})).status==='completed','Existing native editor collapse/save failed');
  await until(()=>!session.editors.bindings.length&&!root(host).querySelector('.kplex-central-editor-content'),'Native editor cleanup incomplete');
  check((await app.vault.read(app.vault.getFileByPath(path('Parent 1')))).includes('Kplex-222-root-outline-editor'),'Native editor collapse lost content');
