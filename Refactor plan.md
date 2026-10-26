@@ -6459,3 +6459,8 @@ Runtime16b8e82 mainfec13b74/styles8d1191: all7 serial Windows lanes passed124 re
 ### PR222 bounded depth correction - 2026-10-26
 
 Optional hierarchy.maximumDepth1..20 preserves default8 and unchanged source-scope budgets. Mind Map declares20; host admission and existing visibility/reference walks compose same declaration. Focused45/core130/architecture/scanner/build pass. NativeUX19 passes depth9/frontier limit and all prior UX, restored9/117/digest. Exact seams posted before edits; no parser/index/scheduler/editor/rooted migration. Receipt facets-222-depth-correction.json; baseline clean a6 verify:obsidian3208/smoke restored remains separately attributed. CI543 alias failure retained; isolated3/3 and CI544 passed unchanged. Final full/new-head CI pending; no new scope, merge or release.
+
+
+### PR222 final local/native acceptance - 2026-10-26
+
+Clean c107681 full verify:obsidian PASS3212 (7/130/1622/319/357/777), real Node22.22.2/deps/scanner/build/native smoke. Main dbb6264f/styles8d1191 match all7 native lanes/127checks. Original45/50ms/20,015-owner guards unchanged. Outer restore 2026-10-26T08:37:46.361Z verified9configs/117contents/original layout/window/digest. No active test owner; production untouched. Receipts facets-222-ux-final-verification.json and ux-native-summary.json. Final evidence checkpoint docs-only; exact-head CI/readback remains before handoff. Earlier failed setup/fixture/CI attempts retained, no unrelated indexing fix. OSclipboard/Mac/physicalmobile/minimumhost/known215 limits documented. Keep222 draft/open/unmerged. Manual priorities remain separate clipboard/Mac/mobile coverage; no further available Windows check requested.

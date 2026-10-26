@@ -19,22 +19,20 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR #222: depth correction verified; final full verification next
+# PR222 implementation and local/native verification complete; final CI/readback pending
 
-Branch2026-10-25-facets-layouts-and-sharing. Published a6e08f5 includes final UX/native receipts; runtime16b8e82. All original requests implemented, native124 plus maintainer-assisted OS file export passed, Small restored. Keep222 draft/open/unmerged; no release or personal deployment. User authorizes restart if Obsidian freezes; production remains untouched.
+Branch2026-10-25-facets-layouts-and-sharing. Runtime c107681d97009ea1740bd5e0aeb5da38a0135c1a; accepted main7064644 included and remote unchanged. This final checkpoint changes evidence/docs only. All requested UX/Mind Map changes plus bounded depth correction implemented. Keep222 DRAFT/OPEN/UNMERGED, wait for maintainer. No release, force-push or personal-vault deployment.
 
-## Current focused correction
+## Actual results
 
-Earlier requested Mind Map depth20/default10 conflicted with host hard8 admission and shared visibility/reference walks. Added optional hierarchy.maximumDepth1..20, omitted default8; Mind Map declares existing20. Existing validHierarchyDepth owner in core/hierarchy validates registry/walk bounds. Forwarded declaration through prepareViewScene and PlexGraph visibility/reference paths. Eight non-root scopes, reader argument5/6, rooted/editor/relationship/camera owners unchanged. Exact overlap comments6410463207/6410780797 posted before edits.
+Clean c107681 npm run verify:obsidian PASSED on real Node22.22.2/deps:7architecture/130core/1622main/319browser/357sources/777source-browser =3212; scanner/real build/exact native installation smoke pass. Source/staged mainSHA256 dbb6264f76d3196775005f8af0cbcd9c003398c910f418f8f0fada0bc7f154d5, styles8d1191d97810d38680697800625b1219b9e834752e561e795c2690b0ed61cc0e. All7 final Windows lanes PASS127: UX19/layouts15/pairs12/sharing8/Help8/features54/editor-lifecycle11. Each restored. Full outer restoration PASSED 2026-10-26T08:37:46.361Z:9configs/117contents/live layout/window/digest7bdaf015f88c6ee1945410755a5aaccf7e04408fe597e729cafca24c5bc332ba. No active test controller. Production untouched. Native/core timing/scaling assertions unchanged.
 
-Focused45 pass; architecture/core130/scanner/real build Node22.22.2 pass. NativeUX13 passed19 including depth9 stays visible and eight-scope limit does not fail map; restored9configs/117contents/digest at2026-10-26T08:03:23.722Z. Receipt docs/validation/facets-222-depth-correction.json; current mainSHA256 dbb6264f76d3196775005f8af0cbcd9c003398c910f418f8f0fada0bc7f154d5. Tests cover default8 rejection, opt20 acceptance,21 rejection, deep path/reference, unchanged8scope budget. Initial fixture stat failure and admission-only pruning failures retained; diagnostic throw removed.
+Real assisted OS file export was completed on16b8e82; canonical validator accepted9668bytes with unsaved draft name, installed preset unchanged, draft Cancelled and temporary file removed. Transfer/validator source unchanged throughc107681; attribution retained. OSclipboard rich/custom guarded/unverified. Mac/mobile/minimumhost and known215 Sidecar/simultaneous editor/app-restart limits remain. Recovery restart is not app-restart acceptance.
 
-## Baseline and CI
+Receipts docs/validation/facets-222-ux-final-verification.json, facets-222-ux-native-summary.json, facets-222-depth-correction.json; detailed failures/chronology in facets-222-ux-2026-10-26.md. Prior clean a6 full3208 and CI544 preserved separately. CI543 unchanged eager-alias failure retained;3 isolated repeats and current local full pass without indexing/assertion changes. CI545 runtime c107 status still tracked through GitHub.
 
-Clean a6e08f5 full verify:obsidian passed3208/scanner/build/native installation smoke, outer restore07:33:10Z; receipt ux-pre-depth-verification.json. CI544 a6 SUCCESS, job121441927101. CI543 at16b8 failed unchanged eager alias test; three isolated repeats passed. No indexing/assertion/timing change. CI542 retry passed3208 after startup-timeout failure.
+## Final actions
 
-## Next
+Commit/push this docs-only checkpoint, verify exact remote, then await its CI conclusion and inspect completed logs. Update PR with exact final head/CI result, verify draft/open/unmerged, clean checkout and current main. Do not rerun passed local/native checks for these docs. If CI fails, inspect actual failure; preserve guards and failed attempts. No further feature scope. Return concise completed checklist/results/limits and exact final head.
 
-Commit/push this depth checkpoint immediately. Then remaining native layouts/pairs/sharing/Help/features/editor-lifecycle serially with fresh backups/restores, all on this new artifact. Actual assisted file export remains truthfully attributed to16b8; export code unchanged. Run TEMP/kplex-222-ux-final-verify.ps1 on clean new head (real npm run verify:obsidian Node22.22.2) with output TEMP/kplex-222-depth-final-full-log.txt; locator TEMP/kplex-222-ux-final-verification-current.json captures new backup/report/head. Preserve prior baseline e2d3e489. Final full result/CI/main/remote readback then final evidence checkpoint. Keep222 draft/open/unmerged. No further scope additions.
-
-Current no active native controller; UX13 restored. Explicit Small C:/Obsidian/kplex-test-small/.obsidian, CLI Obsidian.com. Node TEMP/kplex-node-v22.22.2/node-v22.22.2-win-x64. Realdeps. Native host1.14.5/Electron43.3.0/rendererNode24.18.1. OSclipboard rich/custom guarded/unverified; Mac/mobile/minimumhost and known215 limits retained. Meaningful push/chat checkpoints, ETA45-75min (final full/CI). Standing prefix raw-preserved; Refactor plan.md appendbytesonly.
+Private full backup TEMP/kplex-222-ux-final-verify-11ea33da and report TEMP/kplex-222-ux-final-full-11ea33da retained, restoration passed. Earlier sample10 recovery backup17b76e1b also restored. Full log TEMP/kplex-222-depth-final-full-log.txt. Prepared final native summary copied into repo. User authorizes Obsidian restart on freeze; no restart needed now. No native/exec test process remains after completed session2730. Standing prefix preserved byte-for-byte; Refactor plan.md appendbytesonly. ETA finalCI approximately30-40min.

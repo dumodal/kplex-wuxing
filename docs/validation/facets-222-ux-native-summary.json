@@ -1,19 +1,18 @@
 {
   "status": "passed",
-  "runtimeCommit": "16b8e82a99316551ba3035913151be3275a393bd",
-  "sourceChange": "Standalone Help title only after4fc implementation; all lanes refreshed on final main fec13b74.",
-  "totalReportedChecks": 124,
+  "runtimeCommit": "c107681d97009ea1740bd5e0aeb5da38a0135c1a",
+  "totalReportedChecks": 127,
   "lanes": [
     {
       "lane": "ux",
-      "sample": 12,
+      "sample": 13,
       "status": "passed",
       "node": "v22.22.2",
       "obsidian": "1.14.5 (installer 1.14.0)",
-      "startedAt": "2026-10-26T06:42:08.853Z",
-      "completedAt": "2026-10-26T06:42:19.099Z",
+      "startedAt": "2026-10-26T08:03:05.534Z",
+      "completedAt": "2026-10-26T08:03:18.171Z",
       "artifacts": {
-        "main.js": "fec13b74980caebc0f1c3d7bbabe13b7b986865983cc516207e8adf2f4cd5b56",
+        "main.js": "dbb6264f76d3196775005f8af0cbcd9c003398c910f418f8f0fada0bc7f154d5",
         "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
         "styles.css": "8d1191d97810d38680697800625b1219b9e834752e561e795c2690b0ed61cc0e"
       },
@@ -118,17 +117,33 @@
         {
           "id": "native-parent-column-outward-directions",
           "columns": 3
+        },
+        {
+          "id": "native-depth-configuration-zero-source-work",
+          "work": {
+            "reads": 0,
+            "parses": 0,
+            "acquisitions": 0,
+            "rebuilds": 0
+          }
+        },
+        {
+          "id": "native-mindmap-depth-nine-admission",
+          "configuredMaximumDepth": 20
+        },
+        {
+          "id": "native-mindmap-eight-scope-limit-retains-visible-frontier"
         }
       ],
       "cleanup": {
         "allPassed": true,
-        "actions": 68,
+        "actions": 96,
         "outerRestoration": {
           "restored": true,
           "configurationFiles": 9,
           "contentFiles": 117,
           "contentDigest": "7bdaf015f88c6ee1945410755a5aaccf7e04408fe597e729cafca24c5bc332ba",
-          "completedAt": "2026-10-26T06:42:24.656Z"
+          "completedAt": "2026-10-26T08:03:23.722Z"
         }
       },
       "limits": [
@@ -139,14 +154,14 @@
     },
     {
       "lane": "layouts",
-      "sample": 3,
+      "sample": 4,
       "status": "passed",
       "node": "v22.22.2",
       "obsidian": "1.14.5 (installer 1.14.0)",
-      "startedAt": "2026-10-26T06:45:51.533Z",
-      "completedAt": "2026-10-26T06:46:00.613Z",
+      "startedAt": "2026-10-26T08:07:29.935Z",
+      "completedAt": "2026-10-26T08:07:40.079Z",
       "artifacts": {
-        "main.js": "fec13b74980caebc0f1c3d7bbabe13b7b986865983cc516207e8adf2f4cd5b56",
+        "main.js": "dbb6264f76d3196775005f8af0cbcd9c003398c910f418f8f0fada0bc7f154d5",
         "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
         "styles.css": "8d1191d97810d38680697800625b1219b9e834752e561e795c2690b0ed61cc0e"
       },
@@ -229,7 +244,7 @@
           "configurationFiles": 9,
           "contentFiles": 117,
           "contentDigest": "7bdaf015f88c6ee1945410755a5aaccf7e04408fe597e729cafca24c5bc332ba",
-          "completedAt": "2026-10-26T06:46:06.042Z"
+          "completedAt": "2026-10-26T08:07:45.624Z"
         }
       },
       "limits": [
@@ -240,14 +255,14 @@
     },
     {
       "lane": "pairs",
-      "sample": 3,
+      "sample": 4,
       "status": "passed",
       "node": "v22.22.2",
       "obsidian": "1.14.5 (installer 1.14.0)",
-      "startedAt": "2026-10-26T06:46:11.993Z",
-      "completedAt": "2026-10-26T06:46:18.923Z",
+      "startedAt": "2026-10-26T08:07:51.494Z",
+      "completedAt": "2026-10-26T08:07:58.428Z",
       "artifacts": {
-        "main.js": "fec13b74980caebc0f1c3d7bbabe13b7b986865983cc516207e8adf2f4cd5b56",
+        "main.js": "dbb6264f76d3196775005f8af0cbcd9c003398c910f418f8f0fada0bc7f154d5",
         "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
         "styles.css": "8d1191d97810d38680697800625b1219b9e834752e561e795c2690b0ed61cc0e"
       },
@@ -309,7 +324,7 @@
           "configurationFiles": 9,
           "contentFiles": 117,
           "contentDigest": "7bdaf015f88c6ee1945410755a5aaccf7e04408fe597e729cafca24c5bc332ba",
-          "completedAt": "2026-10-26T06:46:24.449Z"
+          "completedAt": "2026-10-26T08:08:03.994Z"
         }
       },
       "limits": [
@@ -320,14 +335,14 @@
     },
     {
       "lane": "sharing",
-      "sample": 2,
+      "sample": 3,
       "status": "passed",
       "node": "v22.22.2",
       "obsidian": "1.14.5 (installer 1.14.0)",
-      "startedAt": "2026-10-26T06:46:30.248Z",
-      "completedAt": "2026-10-26T06:46:33.911Z",
+      "startedAt": "2026-10-26T08:08:09.940Z",
+      "completedAt": "2026-10-26T08:08:13.617Z",
       "artifacts": {
-        "main.js": "fec13b74980caebc0f1c3d7bbabe13b7b986865983cc516207e8adf2f4cd5b56",
+        "main.js": "dbb6264f76d3196775005f8af0cbcd9c003398c910f418f8f0fada0bc7f154d5",
         "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
         "styles.css": "8d1191d97810d38680697800625b1219b9e834752e561e795c2690b0ed61cc0e"
       },
@@ -389,7 +404,7 @@
           "configurationFiles": 9,
           "contentFiles": 117,
           "contentDigest": "7bdaf015f88c6ee1945410755a5aaccf7e04408fe597e729cafca24c5bc332ba",
-          "completedAt": "2026-10-26T06:46:39.392Z"
+          "completedAt": "2026-10-26T08:08:19.119Z"
         }
       },
       "limits": [
@@ -400,14 +415,14 @@
     },
     {
       "lane": "help",
-      "sample": 2,
+      "sample": 3,
       "status": "passed",
       "node": "v22.22.2",
       "obsidian": "1.14.5 (installer 1.14.0)",
-      "startedAt": "2026-10-26T06:46:45.203Z",
-      "completedAt": "2026-10-26T06:46:50.215Z",
+      "startedAt": "2026-10-26T08:08:24.936Z",
+      "completedAt": "2026-10-26T08:08:29.838Z",
       "artifacts": {
-        "main.js": "fec13b74980caebc0f1c3d7bbabe13b7b986865983cc516207e8adf2f4cd5b56",
+        "main.js": "dbb6264f76d3196775005f8af0cbcd9c003398c910f418f8f0fada0bc7f154d5",
         "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
         "styles.css": "8d1191d97810d38680697800625b1219b9e834752e561e795c2690b0ed61cc0e"
       },
@@ -463,7 +478,7 @@
           "configurationFiles": 9,
           "contentFiles": 117,
           "contentDigest": "7bdaf015f88c6ee1945410755a5aaccf7e04408fe597e729cafca24c5bc332ba",
-          "completedAt": "2026-10-26T06:46:55.753Z"
+          "completedAt": "2026-10-26T08:08:35.330Z"
         }
       },
       "limits": [
@@ -474,14 +489,14 @@
     },
     {
       "lane": "features",
-      "sample": 2,
+      "sample": 3,
       "status": "passed",
       "node": "v22.22.2",
       "obsidian": "1.14.5 (installer 1.14.0)",
-      "startedAt": "2026-10-26T06:47:01.646Z",
-      "completedAt": "2026-10-26T06:47:27.159Z",
+      "startedAt": "2026-10-26T08:08:41.298Z",
+      "completedAt": "2026-10-26T08:09:06.650Z",
       "artifacts": {
-        "main.js": "fec13b74980caebc0f1c3d7bbabe13b7b986865983cc516207e8adf2f4cd5b56",
+        "main.js": "dbb6264f76d3196775005f8af0cbcd9c003398c910f418f8f0fada0bc7f154d5",
         "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
         "styles.css": "8d1191d97810d38680697800625b1219b9e834752e561e795c2690b0ed61cc0e"
       },
@@ -711,7 +726,7 @@
           "configurationFiles": 9,
           "contentFiles": 117,
           "contentDigest": "7bdaf015f88c6ee1945410755a5aaccf7e04408fe597e729cafca24c5bc332ba",
-          "completedAt": "2026-10-26T06:47:32.690Z"
+          "completedAt": "2026-10-26T08:09:12.141Z"
         }
       },
       "limits": [
@@ -722,14 +737,14 @@
     },
     {
       "lane": "editor-lifecycle",
-      "sample": 2,
+      "sample": 3,
       "status": "passed",
       "node": "v22.22.2",
       "obsidian": "1.14.5 (installer 1.14.0)",
-      "startedAt": "2026-10-26T06:44:24.126Z",
-      "completedAt": "2026-10-26T06:44:29.998Z",
+      "startedAt": "2026-10-26T08:09:18.126Z",
+      "completedAt": "2026-10-26T08:09:25.070Z",
       "artifacts": {
-        "main.js": "fec13b74980caebc0f1c3d7bbabe13b7b986865983cc516207e8adf2f4cd5b56",
+        "main.js": "dbb6264f76d3196775005f8af0cbcd9c003398c910f418f8f0fada0bc7f154d5",
         "manifest.json": "c28f61576adfe73800994c8fd47671fcd5880c21809cac63595cfbe3715c7a01",
         "styles.css": "8d1191d97810d38680697800625b1219b9e834752e561e795c2690b0ed61cc0e"
       },
@@ -788,7 +803,7 @@
           "configurationFiles": 9,
           "contentFiles": 117,
           "contentDigest": "7bdaf015f88c6ee1945410755a5aaccf7e04408fe597e729cafca24c5bc332ba",
-          "completedAt": "2026-10-26T06:44:35.451Z"
+          "completedAt": "2026-10-26T08:09:30.625Z"
         }
       },
       "limits": [
@@ -800,13 +815,6 @@
     }
   ],
   "completedNativeFileExport": true,
-  "osClipboard": "guarded/unverified",
-  "productionVault": "untouched",
-  "limits": [
-    "Native Electron trusted input is distinct from OS input, macOS and physical-mobile acceptance.",
-    "Known215 fresh-popout Sidecar creation/two simultaneous editor-Sidecar pairs/whole-app restart are not certified.",
-    "View recreation/restoration is not a whole-application restart."
-  ],
   "nativeFileExport": {
     "status": "passed",
     "runtimeCommit": "16b8e82a99316551ba3035913151be3275a393bd",
@@ -834,6 +842,23 @@
       "completedAt": "2026-10-26T07:02:20.372Z"
     },
     "testDownloadRemoved": true,
-    "draftDiscarded": true
-  }
+    "draftDiscarded": true,
+    "attribution": "Assisted OS file check on16b8e82; transfer and canonical validator files unchanged throughc107681.",
+    "sourceUnchangedVerified": true,
+    "files": [
+      "src/ui/sharing/portableTransfer.ts",
+      "src/ui/plexViews/facets/FacetPresetEditor.ts",
+      "src/ui/plexViews/facets/facetSharing.ts",
+      "src/core/plex/sharing/transfer.ts",
+      "src/core/plex/sharing/validation.ts"
+    ]
+  },
+  "previousNativeReceipt": "https://github.com/zsviczian/kplex/blob/a6e08f5879f0b3372fdd14a6a078f7d8eb7378ef/docs/validation/facets-222-ux-native-summary.json",
+  "osClipboard": "guarded/unverified",
+  "productionVault": "untouched",
+  "limits": [
+    "Native Electron trusted input is distinct from OS input, macOS and physical-mobile acceptance.",
+    "Known215 fresh-popout Sidecar creation/two simultaneous editor-Sidecar pairs/whole-app restart are not certified.",
+    "View recreation/restoration is not a whole-application restart."
+  ]
 }
