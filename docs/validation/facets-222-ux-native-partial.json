@@ -1,5 +1,5 @@
 {
-  "scope": "Partial native UX evidence; initial full native run failed. Host recovery and delayed sample10 restoration now passed; refreshed acceptance remains pending.",
+  "scope": "Historical failed/partial native samples. Host recovered and resources restored; final124 native checks and maintainer-completed file export now passed in the separate summary.",
   "revision": "4fc8c40bb1ef6e31dc5606f009780122aa0075fa",
   "artifacts": {
     "main.js": "f3dfe5b2b28f452aa1891dcd722f7ca89e244fe22787a01a582ababfc955b2dd",
@@ -69,5 +69,6 @@
   "limitations": [
     "Browser tests cover actual transfer logic with mocked clipboard and controlled native Markdown, not OS clipboard/native syntax acceptance.",
     "No main-process download hook retained in committed test code."
-  ]
+  ],
+  "supersededBy": "facets-222-ux-native-summary.json"
 }

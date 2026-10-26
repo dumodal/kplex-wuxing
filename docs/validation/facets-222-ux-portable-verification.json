@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "status": "portable_passed_native_pending",
+  "status": "passed_for_4fc8c40_before_final_title_polish",
   "runtimeCommit": "4fc8c40bb1ef6e31dc5606f009780122aa0075fa",
   "publishedCheckpoint": "ca6e70302884972fd70161e890dddae88164c1c9",
   "requiredNode": "22.22.2",
@@ -126,8 +126,8 @@
     "privateLogSha256": "926c1aa8c2b3725bd3a0dabd1fe235c5a1475eb042b98eb8e5abb1cb1a7da13a",
     "nativeSmokeRun": false
   },
-  "nativeAcceptance": "partial_only",
-  "latestSmallRestoration": "passed2026-10-26T06:36:43.822Z",
+  "nativeAcceptance": "Final16b8e82 native124checks and maintainer-completed file export passed; see ux-native-summary.json",
+  "latestSmallRestoration": "passed2026-10-26T07:02:20.372Z",
   "limits": [
     "CI and portable browser verification do not establish Windows native interaction acceptance.",
     "The previous f4d64a1 native receipts are historical."
@@ -143,6 +143,13 @@
       "mainPassed": 1617,
       "mainFailed": 1
     },
-    "retry": "requested; no source/assertion/deadline changes"
+    "retry": {
+      "conclusion": "success",
+      "node": "22.22.2",
+      "totalTests": 3208,
+      "scanner": "passed",
+      "productionBuild": "passed",
+      "job": 121429939739
+    }
   }
 }
