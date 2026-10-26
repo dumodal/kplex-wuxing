@@ -141,6 +141,7 @@ test('empty import explains paste/file and offers read-only format Help with a c
  check(modal.contentEl.querySelectorAll('.kplex-style-editor-actions .setting-item').length===1&&button(modal,t('sharing.apply')).disabled,'One action row and no unreviewed import');
  window.testNativeMarkdownRender=async(app,source,element)=>{window.formatSource=source;element.createEl('h2',{text:'Controlled native format Help'})};
  modal.contentEl.querySelector('.kplex-package-intro button').click();const help=last();await waitFor(()=>help.contentEl.querySelector('h2'));
+ check(help.titleEl.textContent===t('sharing.formatHelp'),'Standalone guidance retains its complete localized title');
  check(window.formatSource===t('sharing.formatGuide')&&window.formatSource.includes('kplex-preset'),'Native renderer receives the localized format guide');
  check(!button(help,t('view.editHelp')),'Read-only format guide has no misleading Edit preset action');help.close();check(modal.modalEl.isConnected&&!source.value&&p.writes.length===0,'Closing Help preserves the import and writes nothing');
  check(window.testMarkdownComponents.every(component=>!component.loaded),'Guide components unloaded');modal.close();m.close();delete window.testNativeMarkdownRender;

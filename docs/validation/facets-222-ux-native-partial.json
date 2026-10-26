@@ -1,5 +1,5 @@
 {
-  "scope": "Partial native UX evidence only; full native run failed and latest outer restoration remains pending host recovery.",
+  "scope": "Partial native UX evidence; initial full native run failed. Host recovery and delayed sample10 restoration now passed; refreshed acceptance remains pending.",
   "revision": "4fc8c40bb1ef6e31dc5606f009780122aa0075fa",
   "artifacts": {
     "main.js": "f3dfe5b2b28f452aa1891dcd722f7ca89e244fe22787a01a582ababfc955b2dd",
@@ -47,8 +47,23 @@
   ],
   "restoration": {
     "samples1Through9": "passed after each run: 9 configuration/117 content files/original digest",
-    "sample10": "pending: intact private backup, unresponsive Small host; user recovery requested",
-    "baselineContentDigest": "7bdaf015f88c6ee1945410755a5aaccf7e04408fe597e729cafca24c5bc332ba"
+    "sample10": {
+      "restored": true,
+      "configurationFiles": 9,
+      "contentFiles": 117,
+      "contentDigest": "7bdaf015f88c6ee1945410755a5aaccf7e04408fe597e729cafca24c5bc332ba",
+      "completedAt": "2026-10-26T06:27:37.468Z"
+    },
+    "baselineContentDigest": "7bdaf015f88c6ee1945410755a5aaccf7e04408fe597e729cafca24c5bc332ba",
+    "recovery": {
+      "oldApplicationProcessRetired": true,
+      "nativeControllerAbsent": true,
+      "testOwnedFilesRemoved": 8,
+      "emptyOwnedFolderRemoved": true,
+      "firstFolderDelete": "Without force flag failed EISDIR after8files removed; existing force=true completed empty owned folder removal.",
+      "productionVaultInput": false,
+      "productionVaultWrites": false
+    }
   },
   "productionVault": "untouched",
   "limitations": [

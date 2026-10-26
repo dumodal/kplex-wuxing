@@ -10,9 +10,10 @@ export class MarkdownHelpModal extends StyleEditorModal {
   /** Source/name and Edit belong to one captured target, not the active leaf at click time. */
   constructor(app: App, private readonly name: string, private readonly markdown: string, private readonly current: () => boolean,
     private readonly edit: (() => void) | null, private readonly closed: () => void) {super(app);}
-  /** Render native headings/lists/code/links into the existing scrollable modal shell. */
+  /** Render native headings/lists/code/links; standalone guidance already supplies its full title. */
   onOpen(): void {
-    this.beginEditor();this.modalEl.addClass("kplex-markdown-help-modal");this.titleEl.setText(this.translate("view.helpFor", {name: this.name}));
+    this.beginEditor();this.modalEl.addClass("kplex-markdown-help-modal");
+    this.titleEl.setText(this.edit ? this.translate("view.helpFor", {name: this.name}) : this.name);
     const {body, actions} = this.scrollableContent();
     const row = new Setting(actions);
     row.addButton(/** Native close/Escape shares the same immediate render retirement. */ button => button.setButtonText(this.translate("styles.operation.close")).onClick(/** Explicit dismissal has no settings effect. */ () => this.close()));

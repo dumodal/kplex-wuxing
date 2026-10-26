@@ -61,6 +61,7 @@ export async function acceptFacets222UX(x){
  const body=incoming.querySelector('.kplex-style-editor-body');check(body.scrollHeight<=body.clientHeight+2,'Empty import scrolls unnecessarily on a large screen');
  await capture('import-empty',incoming);const guideStop=quiet();await click(incoming.querySelector('.kplex-package-intro button'));
  await until(()=>settingsDoc().querySelector('.kplex-markdown-help-modal h2'),'Native format guide did not render');const guide=settingsDoc().querySelector('.kplex-markdown-help-modal');
+ check(guide.querySelector('.modal-title')?.textContent===t('sharing.formatHelp'),'Standalone format guidance title was wrapped as a preset name');
  check(guide.querySelector('a[href="https://github.com/zsviczian/kplex/blob/main/docs/PORTABLE_PRESETS.md"]')&&!button(guide,t('view.editHelp')),'Format guide lacks reference or falsely offers preset editing');
  await capture('format-help',guide);await close(guide);guideStop('native-import-format-help-zero-source-work');
  await close(incoming);await close(manager());restoreSettingsBounds();if(app.setting.isOpen)app.setting.close();await wait(250);
