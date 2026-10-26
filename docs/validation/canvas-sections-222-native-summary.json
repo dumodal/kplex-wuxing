@@ -502,8 +502,8 @@
     }
   ],
   "remaining": [
-    "Final clean verify:obsidian pending",
-    "Exact final published-head CI pending",
-    "Mac/physical mobile/minimum-host unrun; OS clipboard not retested"
-  ]
+    "Mac/physical mobile/minimum-host unrun; OS clipboard not retested",
+    "Known215 baseline limitations remain separately attributed"
+  ],
+  "finalVerification": "canvas-sections-222-final-verification.json"
 }
