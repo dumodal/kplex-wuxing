@@ -838,7 +838,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     const owner = plugin.captureAppearanceOwner(), sourceScope = rootRef.current ?? request.sourceScope, lens = request.lens;
     const current = (): boolean => sourceScope.isConnected && plugin.isAppearanceOwnerCurrent(owner);
     const dialog = new PortablePackageModal(plugin.app, {kind: "lens", mode: request.mode,
-      context: {sourceScope, current, read: () => plugin.readPortableSharingState(), bindEditor: editor => plugin.bindAppearanceEditor(editor, owner),
+      context: {sourceScope, current, read: () => plugin.readPortableSharingState(), preview: plan => {if (!current()) throw new Error("Retired sharing preview");plugin.previewPortableSharing(plan);}, bindEditor: editor => plugin.bindAppearanceEditor(editor, owner),
         save: (plan, alive) => plugin.importPortableSharing(plan, () => current() && alive(), owner)},
       build: lens ? (_selected, allowPrivate) => exportLensPackage(lens, plugin.settings.colorPreferences.palette, LENS_AUTHORING_CONTEXT, allowPrivate) : undefined,
       closed: () => actionDialogs.current.delete(dialog)});

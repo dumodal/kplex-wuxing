@@ -63,7 +63,7 @@ Quadrants requires four categories; other counts visibly fall back to circular. 
 
 ### Lens object
 
-Required fields: `id`, `name` (1–100), `scope` (`node`, `edge`, `evidence`), `mode` (`include`, `exclude`, `style`), `expression` (1–2,048). Optional `style`. `enabled` is deliberately unsupported; every import starts disabled, including explicit replacement of an enabled lens.
+Required fields: `id`, `name` (0–100; blank keeps the shared untitled display fallback), `scope` (`node`, `edge`, `evidence`), `mode` (`include`, `exclude`, `style`), `expression` (1–2,048). Optional `style`. `enabled` is deliberately unsupported; every import starts disabled, including explicit replacement of an enabled lens.
 
 For node scope, `style` contains only `node`, whose allowed keys are `backgroundColor`, `textColor`, `borderColor`, `fillStyle`, `strokeWidth`, `strokeStyle`. For edge/evidence scope, `style` contains only `edge`, whose allowed keys are `strokeColor`, `textColor`, `strokeWidth`, `strokeStyle`, `showLabel`. Width must be 0.5–8; fill is `solid`, `hachure` or `cross-hatch`; stroke is `solid`, `dashed` or `dotted`; showLabel is boolean. Invalid style values are refused, not sanitized or clamped during import.
 

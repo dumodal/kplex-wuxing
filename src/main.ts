@@ -50,7 +50,7 @@ import { graphTagValue } from "./adapters/obsidian/tagMembership";
 import { StructuralNodeDropActions } from "./ui/StructuralNodeDropActions";
 import { mergeGraphLensDefinitions } from "./lens/GraphLens";
 import {facetLibrary} from "./core/plex/views/facets/configuration";
-import {applyPortableImport, type PreparedImport, type SharingState} from "./core/plex/sharing/transfer";
+import {applyPortableImport, PortableSharingCapacityError, type PreparedImport, type SharingState} from "./core/plex/sharing/transfer";
 import { appearanceColorReferences } from "./core/contracts/appearance";
 import { requireNamedColor } from "./core/plex/colorEditing";
 import * as appearanceThemes from "./core/plex/appearanceThemes";
@@ -4145,6 +4145,25 @@ export default class KplexPlugin extends Plugin {
     return {presets: library?.presets ?? {}, lenses: source.graphLenses, palette: source.colorPreferences.palette};
   }
 
+  /** Preview and Save reuse actual installed-library capacity/palette admission, never an approximate parallel schema. */
+  previewPortableSharing(plan: PreparedImport, source = this.settings): ReturnType<typeof applyPortableImport> {
+    if (source.graphLensesColorFuture !== undefined || source.colorPreferencesFuture !== undefined || source.appearanceThemesFuture !== undefined) throw new Error("Newer sharing dependencies are read-only");
+    const applied = applyPortableImport(plan, this.readPortableSharingState(source));
+    const preferences = {...source.colorPreferences, palette: applied.palette};
+    if (migrateColorPreferences(preferences).future !== undefined) throw new PortableSharingCapacityError();
+    const known = new Set(appearanceColorReferences({graphLenses: source.graphLenses}).map(value => JSON.stringify(value)));
+    for (const value of appearanceColorReferences({graphLenses: applied.lenses})) if (!known.has(JSON.stringify(value))) requireNamedColor(value, preferences);
+    if (applied.preset) {
+      const registry = this.viewSettingsRegistry ?? builtInCanvasViewSettings, definition = registry.definition("wuxing");
+      if (!definition) throw new Error("Facets configuration is unavailable");
+      let next: Record<string, unknown>;
+      try {next = editViewConfigurationAt(definition, source.canvasViewSettings, {field: "presets", path: [plan.choices.targetId]}, {kind: "set", value: applied.preset});}
+      catch {throw new PortableSharingCapacityError();}
+      registry.validatePaletteReferences(definition, source.canvasViewSettings, next, applied.palette);
+    }
+    return applied;
+  }
+
   /** Import one reviewed plan through the existing atomic appearance/view writer. No view selection or lens activation is granted. */
   async importPortableSharing(plan: PreparedImport, current: () => boolean, owner = this.captureAppearanceOwner()): Promise<StyleCommitResult> {
     const submitted = JSON.parse(JSON.stringify(plan)) as PreparedImport;
@@ -4157,7 +4176,7 @@ export default class KplexPlugin extends Plugin {
     return this.updateStyleSettings(draft => {
       if (!current() || !incoming() || this.unloading) throw new Error(this.translator("settingsSync.conflict"));
       if (this.settings.graphLensesColorFuture !== undefined || this.settings.colorPreferencesFuture !== undefined) throw new Error("Newer sharing dependencies are read-only");
-      const applied = applyPortableImport(submitted, this.readPortableSharingState(this.settingsForWrite()));
+      const applied = this.previewPortableSharing(submitted, this.settingsForWrite());
       draft.graphLenses = applied.lenses;draft.colorPreferences = {...draft.colorPreferences, palette: applied.palette};
     }, owner, submitted.package.kind === "facets" ? {canvasViewEdit: {id: "wuxing", address, value: submitted.package.preset, expected,
       current: () => current() && incoming()}} : {});

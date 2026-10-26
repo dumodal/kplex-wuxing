@@ -4,7 +4,7 @@ import {StyleEditorModal} from "../StyleEditorModal";
 import {ClipboardSession} from "../../application/ClipboardSession";
 import {NativeMarkdownHelp} from "../NativeMarkdownHelp";
 import {validatePortablePackage} from "../../core/plex/sharing/validation";
-import {preparePortableImport, type PreparedImport, type ImportChoices} from "../../core/plex/sharing/transfer";
+import {preparePortableImport, PortableSharingCapacityError, type PreparedImport, type ImportChoices} from "../../core/plex/sharing/transfer";
 import {PORTABLE_PACKAGE_LIMITS, type PortablePackage} from "../../core/plex/sharing/contracts";
 import {FACETS_AUTHORING_CONTEXT, LENS_AUTHORING_CONTEXT} from "../../core/plex/sharing/authoring";
 import type {PortableSharingContext} from "./contracts";
@@ -115,10 +115,14 @@ export class PortablePackageModal extends StyleEditorModal {
       toggle.setValue(false).onChange(/** Dependency lenses require explicit selection and arrive disabled. */ value => {
         this.choices = {...this.choices, lensIds: value ? [...this.choices.lensIds, lens.id] : this.choices.lensIds.filter(id => id !== lens.id)};this.review();
       }));
-    for (const pair of pkg.palette ?? []) new Setting(this.preview).setName(`${pair.name} (${pair.id})`).setDesc(`${pair.light} / ${pair.dark}`).addDropdown(dropdown =>
+    for (const pair of pkg.palette ?? []) {
+      const existing = installed.palette.find(item => item.id === pair.id);
+      new Setting(this.preview).setName(`${this.translate("sharing.palette")}: ${pair.name} (${pair.id})`)
+        .setDesc(`${this.translate("sharing.replacePalette")}: ${pair.light} / ${pair.dark}${existing ? `\n${this.translate("sharing.keepPalette")}: ${existing.light} / ${existing.dark}` : ""}`).addDropdown(dropdown =>
       dropdown.addOption("keep", this.translate("sharing.keepPalette")).addOption("replace", this.translate("sharing.replacePalette")).setValue("keep").onChange(value => {
         this.choices = {...this.choices, replacePalette: value === "replace" ? [...this.choices.replacePalette, pair.id] : this.choices.replacePalette.filter(id => id !== pair.id)};this.review();
       }));
+    }
     this.preview.createEl("pre", {cls: "kplex-package-json", text: JSON.stringify(pkg, null, 2)});
     if (pkg.kind === "facets") {
       const helpHost = this.preview.createDiv();new Setting(this.preview).addButton(button => button.setButtonText(this.translate("sharing.previewHelp")).onClick(() => {
@@ -131,8 +135,9 @@ export class PortablePackageModal extends StyleEditorModal {
   /** Only a successfully reviewed, current plan enables Import. Save repeats all checks inside the queue. */
   private review(): void {
     this.plan = null;this.applyButton?.setDisabled(true);if (!this.incoming || !this.options.context.current()) return;
-    try {this.plan = preparePortableImport(this.incoming, this.choices, this.options.context.read());this.status?.setText("");this.applyButton?.setDisabled(false);}
-    catch (error) {console.error("K-Plex portable preview refused", error);this.status?.setText(this.translate("sharing.collision"));}
+    try {const plan = preparePortableImport(this.incoming, this.choices, this.options.context.read());this.options.context.preview?.(plan);
+      this.plan = plan;this.status?.setText("");this.applyButton?.setDisabled(false);}
+    catch (error) {console.error("K-Plex portable preview refused", error);this.status?.setText(this.translate(error instanceof PortableSharingCapacityError ? "sharing.capacity" : "sharing.collision"));}
   }
   /** Failed writes retain source and require a fresh preview before another attempt. */
   protected onOperationRejected(): void {this.plan = null;this.applyButton?.setDisabled(true);this.status?.setText(this.translate("sharing.changed"));}

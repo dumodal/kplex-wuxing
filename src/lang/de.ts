@@ -1646,6 +1646,7 @@ const germanTranslations = {
   "sharing.download": "JSON herunterladen",
   "sharing.file": "JSON-Datei öffnen",
   "sharing.previewHelp": "Voreinstellungshilfe anzeigen",
+  "sharing.capacity": "Dieses Paket überschreitet die Einstellungsgrenzen. Ersetzen Sie einen Eintrag oder kürzen Sie Hilfe, Regeln, Aliasse oder zusätzliche Farben.",
 } as const satisfies LocaleTranslationMap;
 
 export const germanCatalog = buildLocaleCatalog(germanTranslations);

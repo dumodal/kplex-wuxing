@@ -1650,6 +1650,7 @@ const frenchTranslations = {
   "sharing.download": "Télécharger le JSON",
   "sharing.file": "Ouvrir un fichier JSON",
   "sharing.previewHelp": "Afficher l’aide du préréglage",
+  "sharing.capacity": "Ce paquet dépasse les limites des réglages installés. Remplacez une entrée ou réduisez l’aide, les règles, les alias ou les couleurs ajoutées.",
 } as const satisfies LocaleTranslationMap;
 
 export const frenchCatalog = buildLocaleCatalog(frenchTranslations);

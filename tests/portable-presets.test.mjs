@@ -54,11 +54,13 @@ test('canonical admission refuses future, oversized, deeply nested, prototype, e
  let called=0;const accessor={...base};Object.defineProperty(accessor,'run',{enumerable:true,get(){called++;return 'bad'}});
  assert.equal(M.validatePortablePackage(accessor).status,'invalid');assert.equal(called,0,'Admission never executes a getter');
  const hiddenHook={...base};Object.defineProperty(hiddenHook,'toJSON',{value(){called++;return base}});assert.equal(M.validatePortablePackage(hiddenHook).status,'invalid');assert.equal(called,0);
+ const hooked=[];Object.setPrototypeOf(hooked,{toJSON(){called++;return []}});assert.equal(M.validatePortablePackage({...base,palette:hooked}).status,'invalid');assert.equal(called,0,'Inherited array serialization hooks are never executed');
  const future=JSON.stringify({...base,version:99});M.validatePortablePackage(future);assert(future.includes('"version":99'),'Refusal never rewrites original source');
 });
 
 test('standalone lenses use shared grammar/styles and export no enabled flag or unrelated lenses',()=>{
  const pkg=M.exportLensPackage(lens,[],M.LENS_AUTHORING_CONTEXT);assert.equal(pkg.lens.enabled,undefined);assert.equal(M.validatePortablePackage(pkg).status,'valid');
+ assert.equal(M.exportLensPackage({...lens,name:''},[],M.LENS_AUTHORING_CONTEXT).lens.name,'','Existing untitled lens definitions round-trip without inventing a name');
  for(const change of [{expression:'true'},{expression:'edge.role == "made-up"'},{expression:'fetch("https://bad")'},{expression:'node.unsupported == "bad"'},
   {enabled:true},{style:{node:{strokeWidth:9}}},{style:{edge:{strokeColor:'#fff'}}},{style:{node:{backgroundColor:'var(--unsafe)'}}}])
   assert.equal(M.validatePortablePackage({...pkg,lens:{...pkg.lens,...change}}).status,'invalid',JSON.stringify(change));

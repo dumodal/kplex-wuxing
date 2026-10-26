@@ -7,9 +7,14 @@ export async function acceptFacets222Sharing(x){
  const modal=owner=>[...owner.querySelectorAll('.kplex-portable-package-modal')].at(-1);
  const event=(element,name)=>new element.ownerDocument.defaultView.Event(name,{bubbles:true});
  const fill=(element,value)=>{element.value=value;element.dispatchEvent(event(element,'input'))};
- const close=async element=>{element.querySelector('.modal-close-button')?.click();await until(()=>!element.isConnected,'Owned native dialog did not close')};
+ const close=async element=>{
+  const cancel=button(element,p.translator('common.cancel'));c.progress={...c.progress,closeAttempt:{cancel:!!cancel,nativeClose:!!element.querySelector('.modal-close-button')}};
+  if(cancel)cancel.click();else{const contents=element.ownerDocument.defaultView.require('@electron/remote').getCurrentWindow().webContents;for(const type of ['keyDown','keyUp'])contents.sendInputEvent({type,keyCode:'Escape'});}
+  await until(()=>!element.isConnected,'Owned native dialog did not close');
+ };
  check(!doc.querySelector('.modal')&&!app.setting.isOpen,'A user-owned modal/settings must not be touched');
- restores.push(async()=>{for(const owner of new Set([settingsDocument(),doc]))for(let i=0;i<8&&owner.querySelector('.modal');i++)await close([...owner.querySelectorAll('.modal')].at(-1));if(app.setting.isOpen)app.setting.close()});
+ const ownedDialogs=owner=>[...owner.querySelectorAll('.kplex-portable-package-modal,.kplex-style-manager-modal')];
+ restores.push(async()=>{for(const owner of new Set([settingsDocument(),doc]))for(let i=0;i<8&&ownedDialogs(owner).length;i++)await close(ownedDialogs(owner).at(-1));if(app.setting.isOpen)app.setting.close()});
  const attention=center(host),state=JSON.stringify(host.view.documentSession.plexView.getState()),camera=root(host).querySelector('.kplex-camera').style.transform;
  const stop=quiet();await reveal(host);if(!panel(host))root(host).querySelector('.kplex-filter-trigger').click();await until(()=>panel(host),'Views/lenses absent');
  panel(host).querySelector('[data-kplex-view-choice="preset"] button').click();
@@ -37,7 +42,7 @@ export async function acceptFacets222Sharing(x){
  check(center(host)===attention&&JSON.stringify(host.view.documentSession.plexView.getState())===state&&root(host).querySelector('.kplex-camera').style.transform===camera,'Preset import changed attention/camera/session');
  importStop('native-preset-import-preview-help-save-zero-source-work');cases.push({id:'native-preset-json-help-preview-atomic-save-no-activation'});
  // Every native Settings document is derived from the actual controls. Close only owned dialogs.
- for(let i=0;i<6&&settingsDoc.querySelector('.modal');i++)await close([...settingsDoc.querySelectorAll('.modal')].at(-1));if(app.setting.isOpen)app.setting.close();
+ for(let i=0;i<6&&ownedDialogs(settingsDoc).length;i++)await close(ownedDialogs(settingsDoc).at(-1));if(app.setting.isOpen)app.setting.close();
  await reveal(host);if(!panel(host))root(host).querySelector('.kplex-filter-trigger').click();await until(()=>panel(host),'Owning filter absent');
  const lensStop=quiet(),before=JSON.stringify(p.settings.canvasViewSettings),enabledBefore=p.settings.graphLenses.filter(lens=>lens.enabled).map(lens=>lens.id);
  button(panel(host),p.translator('sharing.importLens')).click();await until(()=>modal(doc),'Native lens import absent');transfer=modal(doc);

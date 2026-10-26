@@ -2380,7 +2380,7 @@ button.kplex-sidecar-unfold-plex,
 .kplex-view-controls select { width: 100%; min-width: 0; }
 .kplex-view-controls .kplex-lens-help { flex-basis: 100%; grid-column: 1 / -1; }
 .kplex-filter-section-heading { color: var(--text-normal); font-size: 11px; font-weight: 700; letter-spacing: .025em; }
-.kplex-lens-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.kplex-lens-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 .kplex-lens-heading .kplex-icon-button { justify-self: auto; }
 .kplex-lens-empty,
 .kplex-lens-help { color: var(--text-muted); font-size: 10px; line-height: 1.35; }
@@ -2447,7 +2447,7 @@ button.kplex-sidecar-unfold-plex,
    open, keep those tooltips one layer above it instead of letting the panel cover them. */
 body.kplex-filter-panel-open .tooltip { z-index: 100300; }
 .kplex-filter-portal button { justify-self: auto; }
-.kplex-lens-heading-actions { display: flex; align-items: center; gap: 6px; }
+.kplex-lens-heading-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; max-width: 100%; }
 .kplex-lens-disable-all {
   min-height: 26px;
   padding: 0 8px;

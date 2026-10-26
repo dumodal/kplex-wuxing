@@ -63,6 +63,15 @@ test('native import preview shows exact payload, collision choices and safe Help
  `),true);
 });
 
+test('native preview uses actual installed capacity before enabling Import, with localized recovery and no write',async()=>{
+ assert.equal(await scenario(`
+ const huge=pkg();huge.preset.categories=Object.fromEntries(Object.entries(huge.preset.categories).map(([id,category])=>[id,{...category,values:Array.from({length:60},(_,index)=>'alias-'+index+'x'.repeat(80))}]));
+ check(JSON.stringify(huge.preset).length>16384&&M.validatePortablePackage(huge).status==='valid','Package exceeds installed16K but parses within portable limit');const before=JSON.stringify(disk),{modal}=openImport();fill(modal,huge);button(modal,t('sharing.preview')).click();input(modal.contentEl.querySelector('input[type=text]'),'oversized-native');
+ check(button(modal,t('sharing.apply')).disabled&&modal.contentEl.textContent.includes(t('sharing.capacity')),'Actual stored-library cap disables Import with recovery copy');
+ check(JSON.stringify(disk)===before&&p.writes.length===0,'Capacity preview never writes');modal.close();
+ `),true);
+});
+
 test('native Import commits one reviewed plan, source/choice edits invalidate it, and failed saves require fresh preview',async()=>{
  assert.equal(await scenario(`
  let {modal}=openImport();fill(modal,pkg());button(modal,t('sharing.preview')).click();input(modal.contentEl.querySelector('input[type=text]'),'native-one');

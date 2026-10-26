@@ -24,6 +24,7 @@ function bounded(value: unknown, depth = 0, budget = {nodes: limits.nodes as num
   if (value === null || typeof value === "boolean") return true;
   if (typeof value === "string") return text(value, limits.characters, true);
   if (typeof value === "number") return Number.isFinite(value);
+  if (Array.isArray(value) && Object.getPrototypeOf(value) !== Array.prototype) return false;
   if (!Array.isArray(value) && (!record(value) || Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null)) return false;
   if (Object.getOwnPropertySymbols(value).length) return false;
   const descriptors = Object.getOwnPropertyDescriptors(value), keys = Object.keys(descriptors).filter(key => !Array.isArray(value) || key !== "length");
@@ -55,7 +56,7 @@ function lensStyle(value: unknown, scope: string): boolean {
 }
 /** One lens validator is shared by standalone packages and explicitly selected Facets dependencies. */
 export function validSharedLens(value: unknown): value is SharedLens {
-  return record(value) && fields(value, ["id", "name", "scope", "mode", "expression", "style"]) && facetId(value.id) && text(value.name, 100)
+  return record(value) && fields(value, ["id", "name", "scope", "mode", "expression", "style"]) && facetId(value.id) && text(value.name, 100, true)
     && ["node", "edge", "evidence"].includes(String(value.scope)) && ["include", "exclude", "style"].includes(String(value.mode))
     && text(value.expression, limits.expression) && !validateGraphLensExpression(value.expression) && supportedLensSelectors(value.expression)
     && (value.style === undefined || lensStyle(value.style, String(value.scope)));

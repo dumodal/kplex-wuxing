@@ -32,7 +32,7 @@ test('native preset rules reject invalid/unsupported plans and save current/cand
  const M=sourceModules,check=(value,message)=>{if(!value)throw Error(message)},p=await createAppearanceHost({});p.viewSettingsRegistry=M.builtInCanvasViewSettings;p.manifest={id:'k-plex'};
  let disk=structuredClone(p.writes.at(-1));p.writes=[];p.loadData=async()=>structuredClone(disk);p.saveData=async value=>{disk=structuredClone(value);p.writes.push(structuredClone(value))};p.initializeSettingsReconciliation(structuredClone(disk));
  const app={workspace:{on:()=>({}),offref:()=>{}}},tab=new M.KplexSettingTab(app,p),t=M.createTranslator('en');tab.openCanvasViewManager('wuxing');const manager=M.TestModal.instances.at(-1);
- [...manager.contentEl.querySelectorAll('.kplex-style-manager-row')].find(row=>row.textContent.startsWith('ACE')).click();const editor=M.TestModal.instances.at(-1);
+ [...manager.contentEl.querySelectorAll('.kplex-style-manager-row')].find(row=>row.textContent.startsWith('ARC')).click();const editor=M.TestModal.instances.at(-1);
  const source=[...editor.contentEl.querySelectorAll('select')].find(row=>[...row.options].some(option=>option.value==='rules'));source.value='rules';source.dispatchEvent(new Event('change',{bubbles:true}));
  await new Promise(resolve=>setTimeout(resolve,30));
  const save=[...editor.contentEl.querySelectorAll('button')].find(row=>row.textContent===t('common.save'));check(save.disabled,'Empty category rules cannot save');
@@ -41,7 +41,7 @@ test('native preset rules reject invalid/unsupported plans and save current/cand
  setCode(builders[0],'this.phase == "wood" and note.phase == "metal"');setCode(builders[1],'edge.role == "child"');setCode(builders[2],'not node.typo.exists()');
  check(save.disabled&&p.writes.length===0,'Unsupported selectors do not become negative category matches or writes');
  setCode(builders[2],'node.name == "Other"');check(!save.disabled,'Valid shared grammar can save');save.click();await waitFor(()=>!editor.modalEl.isConnected);
- const preset=M.facetLibrary(M.readViewConfiguration(M.builtInPlexViews.resolve('wuxing'),p.settings.canvasViewSettings)).presets.ace;
+ const preset=M.facetLibrary(M.readViewConfiguration(M.builtInPlexViews.resolve('wuxing'),p.settings.canvasViewSettings)).presets.arc;
  check(preset.source==='rules'&&preset.categories.add.rule==='this.phase == "wood" and note.phase == "metal"','Exact source and stable category IDs preserved');
  check(p.writes.length===1,'One original queued entry write');manager.close();tab.hide();check(window.migrationListeners===0,'Native owners/root listeners retired');return true;
  })()`),true);

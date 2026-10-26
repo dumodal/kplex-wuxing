@@ -1642,6 +1642,7 @@ const traditionalChineseTranslations = {
   "sharing.download": "下載 JSON",
   "sharing.file": "開啟 JSON 檔案",
   "sharing.previewHelp": "預覽預設說明",
+  "sharing.capacity": "此套件超過現有設定上限。請取代項目，或縮減說明、規則、別名或新增顏色。",
 } as const satisfies LocaleTranslationMap;
 
 export const traditionalChineseCatalog = buildLocaleCatalog(traditionalChineseTranslations);

@@ -605,7 +605,7 @@ export function PlexFilter({
               <span className="kplex-lens-meta">{translate(lens.enabled ? "filter.on" : "filter.off")} · {modeLabel(lens.mode, translate)} · {scopeLabel(lens.scope, translate)}</span>
             </button>
             {expressionErrorMessage && <span className="kplex-lens-error-dot" aria-label={expressionErrorMessage} data-kplex-control-tooltip>!</span>}
-            {onShareLens && <button className="kplex-icon-button" disabled={draftStale} aria-label={translate("sharing.exportLens")} onClick={event => shareLens(event.currentTarget, "export", lens)}><ObsidianIcon name="download" size={13} /></button>}
+            {onShareLens && !expressionError && <button className="kplex-icon-button" disabled={draftStale} aria-label={translate("sharing.exportLens")} onClick={event => shareLens(event.currentTarget, "export", lens)}><ObsidianIcon name="download" size={13} /></button>}
             <button className="kplex-icon-button" disabled={draftStale} aria-label={translate("filter.editLens", { name: displayName })} onClick={() => editLens(lens)}><ObsidianIcon name="pencil" size={13} /></button>
             <button className="kplex-icon-button" aria-label={translate("filter.deleteLens", { name: displayName })} onClick={() => submitLenses(lenses.filter((item) => item.id !== lens.id))}><ObsidianIcon name="trash-2" size={13} /></button>
           </div>;

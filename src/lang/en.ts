@@ -5608,6 +5608,7 @@ export const englishCatalog = {
   "sharing.download": {"message":"Download JSON","context":"Portable package native management; data-only preview and explicit transfer.","params":[]},
   "sharing.file": {"message":"Open JSON file","context":"Portable package native management; data-only preview and explicit transfer.","params":[]},
   "sharing.previewHelp": {"message":"Preview preset Help","context":"Portable package native management; data-only preview and explicit transfer.","params":[]},
+  "sharing.capacity": {"message":"This package exceeds the installed settings limits. Replace an entry or reduce Help, rules, aliases or added colors.","context":"Actual installed-library capacity failure before import; no partial save.","params":[]},
 } as const;
 
 export type EnglishCatalog = typeof englishCatalog;

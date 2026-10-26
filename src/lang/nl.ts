@@ -1646,6 +1646,7 @@ const dutchTranslations = {
   "sharing.download": "JSON downloaden",
   "sharing.file": "JSON-bestand openen",
   "sharing.previewHelp": "Help van voorinstelling bekijken",
+  "sharing.capacity": "Dit pakket overschrijdt de instellingslimieten. Vervang een item of beperk Help, regels, aliassen of toegevoegde kleuren.",
 } as const satisfies LocaleTranslationMap;
 
 export const dutchCatalog = buildLocaleCatalog(dutchTranslations);

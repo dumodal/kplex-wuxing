@@ -77,7 +77,7 @@ async function scenario(app,c){
   host.view.centerPresentation.update({embedCentralNode:false,centralNodeMarkdownMode:'source'});p.notifyNavigation(path('Memory'),host);await until(()=>center(host)===path('Memory')&&root(host)?.querySelector('.kplex-filter-trigger'),'Attention did not render');
   await until(localReady,'Requested local cached proof/active work did not settle');
   cases.push({id:'requested-local-cache-proof',current:true,coverage:'cached',globalSemanticPending:p.index.hasPendingSemanticPreparation()});await choose(host,'wuxing');
-  const expectedRegions=c.lane==='features'||c.lane==='areas'?8:7;
+  const expectedRegions=['features','areas','layouts'].includes(c.lane)?8:7;
   await until(()=>root(host).querySelectorAll('.kplex-view-region').length===expectedRegions&&!root(host).querySelector('.kplex-view-error'),'Facets production scene absent');panel(host).querySelector('.kplex-filter-panel-header button').click();
   check(root(host).querySelectorAll('.kplex-view-guide').length===10,'Generating/regulating decorative cycles absent');
   const conflict=[...root(host).querySelectorAll('[data-kplex-decoration]')].find(element=>element.dataset.kplexDecoration===JSON.stringify(['facets','wuxing','status','conflicting']));check(conflict?.textContent.includes('1'),'Conflicting list missing');

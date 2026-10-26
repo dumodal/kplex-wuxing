@@ -10,7 +10,7 @@ import ts from "typescript";
 /** Preserve original method bodies, including queue/await fences, while callers supply explicit host facts. */
 export function styleSettingsHostSource(root) {
   const source = ts.createSourceFile("main.ts", readFileSync(new URL("src/main.ts", root), "utf8"), ts.ScriptTarget.Latest, true);
-  const names = new Set(["updateStyleSettings", "saveSettings", "enqueueSettingsWrite", "settingsSnapshotForPersistence", "persistSettingsSnapshot", "setGraphLenses", "readPortableSharingState", "importPortableSharing",
+  const names = new Set(["updateStyleSettings", "saveSettings", "enqueueSettingsWrite", "settingsSnapshotForPersistence", "persistSettingsSnapshot", "setGraphLenses", "readPortableSharingState", "previewPortableSharing", "importPortableSharing",
     "captureAppearanceOwner", "isAppearanceOwnerCurrent", "subscribeAppearanceThemes", "bindAppearanceEditor", "appearanceThemeNames", "updateAppearanceThemes", "showAppearanceMigrationNotification",
     "createAppearanceTheme", "resetAppearanceThemeColors", "importLegacyAppearance", "settingsForWrite", "writeSettingsSnapshot", "updateOntologyField", "updateOntologyConfiguration", "editOntologyConfiguration", "assignFieldToOntology", "ontologyFieldsForRole", "ontologyRoleForField", "inverseOntologyField", "inverseRelationshipRole", "defaultOntologyField", "refreshSavedSettings",
     "initializeSettingsReconciliation", "onExternalSettingsChange", "queueExternalSettingsAdoption", "reportExternalSettingsFailure", "installExternalSettings", "updateActionPreferences", "receivedSettingsOwner", "receivedSettingsRevision", "updateCanvasViewSetting", "readCanvasViewConfiguration", "updateCanvasViewConfiguration", "resetCanvasViewConfiguration", "migrateCanvasViewConfiguration", "commitCanvasViewConfiguration"]);
@@ -34,7 +34,7 @@ export function styleSettingsHostSource(root) {
     import {builtInCanvasViewSettings} from './src/ui/plexViews/settingsContributions';
     import {editViewConfigurationAt,migrateViewConfiguration,readViewConfiguration,readViewConfigurationAt,resetViewConfiguration,viewConfigurationOwnerDomains,viewConfigurationUpdateDomain} from './src/core/plex/views/configuration';
     import {facetLibrary} from './src/core/plex/views/facets/configuration';
-    import {applyPortableImport} from './src/core/plex/sharing/transfer';
+    import {applyPortableImport,PortableSharingCapacityError} from './src/core/plex/sharing/transfer';
     import {configurationJson} from './src/core/plex/views/configurationValues';
     import {ontologyConfiguration,assignOntologyField,applyOntologyEdit,ontologyEndpointState,editOntologyEntries,ONTOLOGY_GROUPS} from './src/core/contracts/ontologyConfiguration';
     export * from './src/core/contracts/ontologyConfiguration';

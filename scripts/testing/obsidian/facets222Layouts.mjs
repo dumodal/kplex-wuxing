@@ -1,23 +1,29 @@
 /** Exact-build native layout/band/diagnostic controls. The existing controller owns files, input transport and unconditional restoration. */
 export async function acceptFacets222Layouts(x){
- const {app,p,c,host,native,cases,path,root,center,check,wait,until,choose,panel,quiet,reveal}=x,session=host.view.documentSession.plexView,doc=root(host).ownerDocument;
+ const {app,p,c,host,native,workspace,cases,path,root,center,check,wait,until,choose,panel,quiet,reveal}=x,session=host.view.documentSession.plexView,doc=root(host).ownerDocument;
  const surface=()=>[...p.actionSurfaceHosts].find(([,registration])=>registration.leaf===host)?.[0];
  const action=async(id,args)=>{const result=await p.actionManager.dispatch({id,source:'internal',surfaceId:surface(),...(args?{args}:{})});check(result.status==='completed',id+': '+JSON.stringify(result));return result};
- const choice=async(key,value)=>{await choose(host,'wuxing');const select=panel(host).querySelector('[data-kplex-view-choice="'+key+'"] select');check(select,'Captured '+key+' choice absent');select.value=value;select.dispatchEvent(new doc.defaultView.Event('change',{bubbles:true}));await wait(120);panel(host).querySelector('.kplex-filter-panel-header button').click();};
+ const choice=async(key,value)=>{await choose(host,'wuxing');const select=panel(host).querySelector('[data-kplex-view-choice="'+key+'"] select');check(select,'Captured '+key+' choice absent');select.focus();select.value=value;select.dispatchEvent(new doc.defaultView.Event('change',{bubbles:true}));await wait(120);panel(host).querySelector('.kplex-filter-panel-header button').click();};
  const decoration=id=>[...root(host).querySelectorAll('[data-kplex-decoration]')].find(element=>element.dataset.kplexDecoration===id);
  const box=element=>{const rect=element.getBBox();return {x:rect.x,y:rect.y,width:rect.width,height:rect.height}};
  const snapshot=()=>({attention:center(host),camera:root(host).querySelector('.kplex-camera').style.transform,state:JSON.stringify(session.getState())});
  const fit=async()=>{await action('view.fit');await wait(160)};
  const capture=async name=>{await reveal(host);await fit();const rect=root(host).querySelector('.kplex-plex').getBoundingClientRect(),image=await native.webContents.capturePage({x:Math.max(0,Math.ceil(rect.x)),y:Math.max(0,Math.ceil(rect.y)),width:Math.floor(rect.width),height:Math.floor(rect.height)});require('node:fs').writeFileSync(c.screenshotPrefix+'-222-'+name+'.png',image.toPNG());};
  const canonical=JSON.stringify(p.index.neighbours(p.index.get(path('Memory')),'child').map(row=>row.page.path).sort()),attention=center(host);
- await action('view.center-editor.toggle');await until(()=>root(host).querySelector('.kplex-central-editor-content .cm-content')?.textContent.includes('Disposable Wu Xing native fixture.'),'Attention native editor document absent');
- const editor=root(host).querySelector('.kplex-central-editor-content'),editorText=editor.textContent;await wait(250);
+ await action('view.center-editor.toggle');await until(()=>root(host).querySelector('.kplex-central-editor-content .cm-content'),'Attention native editor absent');
+ root(host).querySelector('.kplex-central-editor-content .cm-content').focus();await until(()=>workspace.activeLeaf?.view.editor&&root(host).querySelector('.kplex-central-editor-leaf-host')?.contains(workspace.activeLeaf.view.containerEl),'Native embedded editor focus absent');
+ const editor=root(host).querySelector('.kplex-central-editor-content'),editorLeaf=workspace.activeLeaf,nativeEditor=editorLeaf.view.editor;
+ await until(()=>!editor.querySelector('.kplex-central-editor-status')&&nativeEditor.getValue().includes('Disposable Wu Xing native fixture.'),'Native editor document did not load');const editorValue=nativeEditor.getValue();await wait(250);
+ // Enter the invoking canvas's native focus context before measuring presentation-only work.
+ // Obsidian's embedded-document blur/activation can perform its own cachedRead; it is not a
+ // layout operation and must neither be hidden in counters nor mislabeled as a zero-work pass.
+ await reveal(host);const trigger=root(host).querySelector('.kplex-filter-trigger');trigger.focus();await until(()=>doc.activeElement===trigger&&workspace.activeLeaf===host,'Invoking canvas control did not acquire native focus');await wait(750);
  const stop=quiet();await choice('preset','para');
  const endpointIds=()=>[...root(host).querySelectorAll('[data-kplex-edge-id]')].map(element=>element.dataset.kplexEdgeId).sort();let endpoints;
  for(const mode of ['circular','concentric','vertical','horizontal','quadrants']){
   await choice('layout',mode);await until(()=>session.state.layouts?.para===mode,'Captured canvas layout did not save');
   check(!root(host).querySelector('.kplex-view-error')&&root(host).querySelectorAll('.kplex-view-region').length===5,'Four categories plus combined Diagnostics lost: '+mode);
-  check(root(host).querySelector('.kplex-central-editor-content')===editor&&editor.textContent===editorText&&center(host)===attention,'Layout retargeted/remounted attention editor: '+mode);
+  check(root(host).querySelector('.kplex-central-editor-content')===editor&&editorLeaf.view.editor===nativeEditor&&nativeEditor.getValue()===editorValue&&editorLeaf.view.file.path===attention&&center(host)===attention,'Layout retargeted/remounted attention editor: '+mode);
   if(endpoints)check(JSON.stringify(endpointIds())===JSON.stringify(endpoints),'Layout changed canonical displayed endpoints');else endpoints=endpointIds();
   if(mode==='concentric'){
    const paths=[...root(host).querySelectorAll('.kplex-view-region > path')];check(paths.length===4,'Real rounded category bands absent');
@@ -39,7 +45,7 @@ export async function acceptFacets222Layouts(x){
  checkBox.click();await until(()=>session.state.combinedDiagnostics?.wuxing===false&&root(host).querySelectorAll('.kplex-view-region').length===8,'Separate diagnostics did not restore');
  check(JSON.stringify(session.getAreaWidths())===separateWidths&&JSON.stringify(session.getAreaHeights())===separateHeights,'Combined mode overwrote separate dimensions');combineStop('native-combine-split-diagnostic-chips-zero-source-work');
  cases.push({id:'native-shared-combine-toggle-three-status-chips-and-separate-size-restoration'});layoutToggle.click();
- await choice('preset','para');await choice('layout','concentric');await fit();await action('view.areas.toggle');
+ await choice('preset','para');await choice('layout','concentric');await fit();await action('view.areas.toggle');await until(()=>root(host).querySelector('.is-area-settings-mode'),'Native band area controls did not mount');await wait(160);
  const id=JSON.stringify(['facets','para','category','projects']),frame=()=>root(host).querySelector('.'+doc.defaultView.CSS.escape('kplex-area-'+id));
  const resizeStop=quiet();for(const [axis,delta]of [['width',12],['height',-12]]){
   const handle=frame()?.querySelector(axis==='width'?'.is-width-handle':'.is-height-handle');check(handle,'Band resize handle absent');const rect=handle.getBoundingClientRect(),from={x:Math.round(rect.x+rect.width/2),y:Math.round(rect.y+rect.height/2)},to={x:from.x+(axis==='width'?delta:0),y:from.y+(axis==='height'?delta:0)},before=Number(handle.getAttribute('aria-valuenow'));
@@ -56,6 +62,6 @@ export async function acceptFacets222Layouts(x){
  await c.htmlDrag({contents:native.webContents,from,to,input,wait,until});const dialog=()=>[...doc.querySelectorAll('.modal')].find(element=>element.querySelector('.modal-title')?.textContent===p.translator('assignment.title'));
  await until(dialog,'Inner band drop did not open native assignment preview');check(dialog().textContent.includes('projects'),'Outer band intercepted inner category assignment');[...dialog().querySelectorAll('button')].find(button=>button.textContent===p.translator('common.cancel')).click();await until(()=>!dialog(),'Band drop preview Cancel failed');
  check(await app.vault.read(app.vault.getFileByPath(path('Memory')))===bodyBefore&&JSON.stringify(p.index.neighbours(p.index.get(path('Memory')),'child').map(row=>row.page.path).sort())===canonical,'Cancelled band drop altered source relationships');cases.push({id:'native-inner-band-shared-drop-target-excludes-outer-band-cancel-no-write'});
- await choice('preset','wuxing');await choice('layout','circular');check(root(host).querySelector('.kplex-central-editor-content')===editor&&editor.textContent===editorText,'Final layout lost native document content/identity');await action('view.center-editor.toggle');
+ await choice('preset','wuxing');await choice('layout','circular');check(root(host).querySelector('.kplex-central-editor-content')===editor&&editorLeaf.view.editor===nativeEditor&&nativeEditor.getValue()===editorValue,'Final layout lost native document content/identity');await action('view.center-editor.toggle');
  c.progress={...c.progress,layouts:{modes:5,editorIdentityPreserved:true,canonicalRelationshipsPreserved:true}};
 }

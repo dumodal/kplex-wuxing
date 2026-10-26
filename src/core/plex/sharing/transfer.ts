@@ -10,6 +10,11 @@ export type SharingState = Readonly<{presets: Readonly<Record<string, unknown>>;
 export type ImportChoices = Readonly<{targetId: string; replace: boolean; lensIds: readonly string[]; replacePalette: readonly string[]}>;
 export type ImportExpectation = Readonly<{preset: unknown; lensTargets: Readonly<Record<string, unknown>>; paletteTargets: Readonly<Record<string, unknown>>}>;
 export type PreparedImport = Readonly<{package: PortablePackage; choices: ImportChoices; expected: ImportExpectation}>;
+/** Native preview can explain actual installed-capacity refusal without parsing English error messages. */
+export class PortableSharingCapacityError extends Error {
+  /** Machine identity only; native consumers own localized recovery copy. */
+  constructor() {super("Portable package exceeds installed settings capacity");this.name = "PortableSharingCapacityError";}
+}
 
 /** Stable structural comparisons ignore harmless object-key order without altering authored arrays/text. */
 export function sharingEqual(left: unknown, right: unknown): boolean {

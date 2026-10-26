@@ -1642,6 +1642,7 @@ const japaneseTranslations = {
   "sharing.download": "JSONをダウンロード",
   "sharing.file": "JSONファイルを開く",
   "sharing.previewHelp": "プリセットのヘルプを表示",
+  "sharing.capacity": "このパッケージは設定の上限を超えます。既存項目を置換するか、ヘルプ・ルール・別名・追加色を減らしてください。",
 } as const satisfies LocaleTranslationMap;
 
 export const japaneseCatalog = buildLocaleCatalog(japaneseTranslations);

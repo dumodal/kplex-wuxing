@@ -1650,6 +1650,7 @@ const spanishTranslations = {
   "sharing.download": "Descargar JSON",
   "sharing.file": "Abrir archivo JSON",
   "sharing.previewHelp": "Ver ayuda del preajuste",
+  "sharing.capacity": "Este paquete supera los límites de los ajustes instalados. Reemplaza una entrada o reduce la ayuda, las reglas, los alias o los colores añadidos.",
 } as const satisfies LocaleTranslationMap;
 
 export const spanishCatalog = buildLocaleCatalog(spanishTranslations);

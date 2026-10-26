@@ -1654,6 +1654,7 @@ const russianTranslations = {
   "sharing.download": "Скачать JSON",
   "sharing.file": "Открыть JSON-файл",
   "sharing.previewHelp": "Открыть справку пресета",
+  "sharing.capacity": "Пакет превышает лимиты настроек. Замените запись или сократите справку, правила, псевдонимы либо добавляемые цвета.",
 } as const satisfies LocaleTranslationMap;
 
 export const russianCatalog = buildLocaleCatalog(russianTranslations);
