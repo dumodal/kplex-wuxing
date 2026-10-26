@@ -571,6 +571,7 @@ for (const file of [
   "src/index/ForegroundWorkScheduler.ts",
   "src/index/HostMetadataPreview.ts",
   "src/index/SectionExpansion.ts",
+  "src/index/SectionPreview.ts",
   "src/index/style.ts",
   "src/lens/GraphPredicate.ts",
   "src/lens/GraphPredicateParser.ts",
