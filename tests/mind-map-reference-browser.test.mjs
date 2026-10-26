@@ -33,6 +33,23 @@ test('Facets area width reflows measured cards into columns and back without sem
  check(ui.props.activePath==='A.md','Resize preserves attention');ui.close();return true})()`),true)}finally{await host.cleanup()}
 });
 
+test('Mind Map branch disclosure clicks are isolated from body activation and file opening',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ const ui=await mount(M.builtInPlexViews.resolve('mindmap'));let activated=0,opened=0;ui.props.onActivate=()=>{activated++};ui.props.onOpen=()=>{opened++};ui.render();
+ const implementations=Object.fromEntries(Object.keys(ui.ports.current.implementations).map(id=>[id,{availability:c=>ui.ports.current.implementations[id].availability(c),execute:c=>ui.ports.current.implementations[id].execute(c)}]));
+ const release=plugin.actionManager.registerSurface({id:ui.props.actionSurfaceId,generation:1,readSnapshot:()=>({mounted:true,visible:true,windowId:'main',center:M.actionNodeRef(pages.get('A.md')),selected:ui.ports.current.readSelected(),focusRegion:'graph',interactionRevision:0,viewRevision:ui.session.getSnapshot()}),implementations});
+ const control=()=>ui.container.querySelector('[data-kplex-keyboard-id="root"] .is-branch-disclosure');
+ check(control()?.ariaLabel===plugin.translator('mindmap.collapseBranch'),'Branch disclosure is distinct from the Markdown section plus/minus: '+control()?.outerHTML);
+ const before={root:ui.session.layoutRoot('A.md'),attention:ui.props.activePath};
+ control().dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true}));control().click();await wait();ui.render();await wait();
+ check(!ui.container.querySelector('[data-kplex-path="B.md"]')&&control().getAttribute('aria-expanded')==='false','Disclosure folds once');
+ control().click();await wait();ui.render();await wait();check(ui.container.querySelector('[data-kplex-path="B.md"]')&&control().getAttribute('aria-expanded')==='true','Disclosure unfolds once');
+ control().dispatchEvent(new MouseEvent('dblclick',{bubbles:true,cancelable:true}));await wait();
+ check(!activated&&!opened&&ui.props.activePath===before.attention&&ui.session.layoutRoot('A.md')===before.root,'Disclosure never activates/opens/reroots the body');
+ check(work.body===0&&work.scans===0,'No Markdown body or inventory work');release();ui.close();return true})()`),true)}finally{await host.cleanup()}
+});
+
 test('cycle click reveals the genuine earlier occurrence and explains it without attention/root/editor/source changes',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}

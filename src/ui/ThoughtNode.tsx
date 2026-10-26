@@ -97,6 +97,8 @@ export function ThoughtNode({
   };
   translate: Translator;
   sectionFold?: {
+    /** Hierarchy disclosure has a distinct chevron; Markdown sections retain their plus/minus. */
+    kind?: "branch";
     hasChildren: boolean;
     expanded: boolean;
     hiddenDescendantCount: number;
@@ -246,14 +248,15 @@ export function ThoughtNode({
     ><ObsidianIcon name={cornerAction.icon} size={10} /></button>}
     {sectionFold?.hasChildren && <button
       type="button"
-      className={`kplex-section-fold-handle${sectionFold.expanded ? " is-expanded" : " is-folded"}`}
+      className={`kplex-section-fold-handle${sectionFold.kind === "branch" ? " is-branch-disclosure" : ""}${sectionFold.expanded ? " is-expanded" : " is-folded"}`}
       aria-expanded={sectionFold.expanded}
       aria-label={sectionFold.expanded
         ? (sectionFold.expandedTitle ?? translate("node.foldSectionChildren"))
         : `${sectionFold.foldedTitle ?? translate("node.unfoldSectionChildren")}${sectionFold.hiddenDescendantCount ? ` · ${translate("node.hiddenCount", { count: sectionFold.hiddenDescendantCount })}` : ""}`}
       onPointerDown={(e: ReactPointerEvent<HTMLButtonElement>) => { e.preventDefault(); e.stopPropagation(); }}
       onClick={(e: MouseEvent<HTMLButtonElement>) => { e.preventDefault(); e.stopPropagation(); sectionFold.onToggle(); }}
-    />}
+      onDoubleClick={/** A disclosure cannot also open or activate the note body. */ (e: MouseEvent<HTMLButtonElement>) => { e.preventDefault(); e.stopPropagation(); }}
+    >{sectionFold.kind === "branch" && <ObsidianIcon name={sectionFold.expanded ? "chevron-down" : "chevron-right"} size={12} />}</button>}
     {branchStatus && <span className="kplex-thought-branch-status" aria-label={branchStatusHint}
       data-kplex-control-tooltip={branchStatusHint ? true : undefined}>{branchStatus}</span>}
     {group && <span className="kplex-group-count" aria-hidden="true">{group.groupMembers?.length}</span>}

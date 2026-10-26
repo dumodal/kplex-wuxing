@@ -19,12 +19,10 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR222: gate counts, branch metadata and responsive Facets follow-up
+# PR222 follow-up: implementation checkpoint; native/full verification pending
 
-Starting SHA 5c35fcb1264c999cc0b5eb1a261a816432919e46 on 2026-10-25-facets-layouts-and-sharing; accepted main7064644 included. Previous exact-head verification remains attributed to that revision. Keep PR222 draft/open/unmerged.
+Starting5c35fcb; accepted main7064644 included. Branch2026-10-25-facets-layouts-and-sharing. Keep PR222 draft/open/unmerged. User authorizes coherent commits/pushes and disposable Windows validation. Production is read-only except explicitly permitted main.js/styles.css; no production deployment/file/settings/workspace change made. No production observation payload belongs in GitHub records.
 
-Current scope: hydrate merged Mind Map peer counts through the existing canonical count owner; distinguish missing branch metadata from known children; clarify branch versus Markdown-section disclosure; full-width preset Help source; verify dynamic Facets columns through shared resize/layout. No new parser, scheduler, writer or renderer.
+Implemented: canonical shared-owner Mind Map merged peer totals with coverage/unavailable flags; known cached children yield incomplete metadata rather than unavailable; eight-catalog coverage/cycle explanations and accessible hints; full-width native preset Help source below description. Existing shared measured columns pass a live area-width regression. Branch chevron distinguishes hierarchy from Markdown section plus/minus and isolates click/double-click from note activation/opening. Mind Map sections:false retained; larger section capability question remains pending.
 
-Production authorization remains read-only except explicitly authorized test artifacts. No production files, settings, workspace or deployment changed. Small remains the sole write-test destination.
-
-Implementation in progress; no new verification pass claimed. Next: focused counts/coverage/browser tests, native Small checks and restoration, real full verification, commit/push checkpoints and exact-head CI.
+Actual checks: focused38+36 and latest23 pass on Node22.22.2/real deps; production build/scanner pass on current runtime. Native UX lane now asserts full-width Help, keyboard Home/End columns, canonical gate totals and real chevron; next run exact build in Small, restore resources, then relevant independent pairs/editor checks and full verify:obsidian/exact-head CI. Existing source budgets, readers, camera/editor lifecycles and no-extra-work guards unchanged. Prior5c35fcb evidence remains attributed separately.

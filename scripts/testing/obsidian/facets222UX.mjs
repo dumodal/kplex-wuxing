@@ -95,6 +95,7 @@ export async function acceptFacets222UX(x){
  await until(()=>parents.every((_,i)=>card('Parent '+i)),'Native parent occurrences absent');
  await until(()=>!p.index.hasActiveSemanticPreparation(),'Native Mind Map metadata did not settle');
  const rootCard=root(host).querySelector('[data-kplex-keyboard-id="root"]'),gates=p.index.gateStats(p.index.get(path('Memory')));
+ check(rootCard.querySelector('.is-branch-disclosure svg'),'Native branch disclosure lacks its distinct chevron');
  const expected={top:gates.top.visibleCount,bottom:gates.bottom.visibleCount,left:gates.left.visibleCount+gates.right.visibleCount};
  for(const [side,value]of Object.entries(expected))check(rootCard.querySelector('.gate-wrap-'+side+' .kplex-gate-count')?.textContent===String(value),'Native Mind Map count differs from canonical owner: '+side);
  cases.push({id:'native-mindmap-canonical-gate-counts',expected});

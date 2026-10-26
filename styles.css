@@ -1889,6 +1889,19 @@ button.kplex-sidecar-unfold-plex,
   border-color: var(--interactive-accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--interactive-accent) 16%, transparent);
 }
+.kplex-section-fold-handle.is-branch-disclosure {
+  width: 16px;
+  height: 16px;
+  bottom: -9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: var(--text-normal);
+  background: var(--background-primary);
+}
+.kplex-section-fold-handle.is-branch-disclosure::before,
+.kplex-section-fold-handle.is-branch-disclosure::after { content: none; }
 .kplex-thought-branch-status {
   position: absolute;
   left: 24px;

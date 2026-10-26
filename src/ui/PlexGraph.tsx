@@ -4886,6 +4886,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       onNodePointerDown={(_, event) => startNodeDrag(baseNode, event)}
       onContextMenu={(_, event) => {if (!viewFailed) showNodeContextMenu(baseNode, event);}}
       sectionFold={baseNode.branch?.canExpand && viewDefinition.hierarchy ? {
+        kind: "branch",
         hasChildren: true, expanded: baseNode.branch.expanded, hiddenDescendantCount: 0,
         expandedTitle: translate("mindmap.collapseBranch"), foldedTitle: translate("mindmap.expandBranch"),
         onToggle: /** Separate branch disclosure dispatches the same guarded action as menus and keys. */ () => runNodeAction("branch.toggle", baseNode.page, occurrenceKey(baseNode)),
