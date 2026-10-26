@@ -51,7 +51,7 @@ function graphFixture() {
     scene:{nodes:[{role:'center',page:{path:'Center.md'},x:30,y:-20,width:200,height:100}],zoneViewports:{}},
     centralEditorMaximized:false,Platform:{isIosApp:false},IOS_MAX_ZOOM:2,MAX_ZOOM:5,ZONES:['child'],scrollZoneForRole:role=>role==='child'?'child':null,
     centeredViewportFit,sameFitCamera,sceneMotion:{cancelAll(){}},preserveCameraOnNextLayout:{current:false},displayResizeLayout:{current:false},
-    centralEditorAvailabilityRef:{current:false},centralEditorAvailable:false,centralEditorSize:null,centralEditorSizeKeyRef:{current:''},
+    centralEditorAvailabilityRef:{current:false},centralEditorAvailable:false,centralEditorNode:null,centralEditorSize:null,centralEditorSizeKeyRef:{current:''},
     previousNodeRects:{current:new Map([['prior',{}]])},pathChangedThisRender:true,navigationOrigin:'user',settings:{allowAutozoom:true,animationSpeed:0},incomingCenter:{current:null}};
   ctx.viewport={current:{clientWidth:800,clientHeight:600,clientLeft:0,clientTop:0,getBoundingClientRect:()=>({left:0,top:0}),ownerDocument:{defaultView:{getComputedStyle:()=>({transformOrigin:'100px 50px'})}},querySelectorAll:()=>[
     {classList:{contains:value=>value==='kplex-role-center'},dataset:{kplexPath:ctx.activePath},getBoundingClientRect:()=>({left:300,top:250,width:200,height:100})}]}};
@@ -255,11 +255,11 @@ test('the actual thought-corner control forwards modifier-bearing events while s
   /** Confirm the rendered graph connects the corner control to the tested opening owner. */
   const graphVisit=node=>{if(ts.isJsxAttribute(node)&&node.name.text==='cornerAction')corner=node.initializer.expression.whenTrue;ts.forEachChild(node,graphVisit);};graphVisit(source);assert(corner);
   const routing=ts.transpileModule(`const route=${corner.properties.find(p=>p.name.text==='onClick').initializer.getText(source)};`,{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
-  for(const occurrenceEditorPolicy of [false,true])for(const central of [false,true]){
+  for(const occurrenceEditorPolicy of [false,true])for(const central of [false,true])for(const classic of [undefined,{}]){
     let forwarded,request;const baseNode={page:{path:'B.md'},occurrenceId:'B1'};
-    const route=Function('occurrenceEditorPolicy','isEditorOccurrence','openCentralEditor','runNodeAction','baseNode','occurrenceKey',`${routing};return route;`)(occurrenceEditorPolicy,()=>central,event=>{forwarded=event},(...args)=>{request=args},baseNode,node=>node.occurrenceId);
+    const route=Function('occurrenceEditorPolicy','isEditorOccurrence','openCentralEditor','runNodeAction','baseNode','occurrenceKey','classic','sceneNodeKeys','editorTarget',`${routing};return route;`)(occurrenceEditorPolicy,()=>central,event=>{forwarded=event},(...args)=>{request=args},baseNode,node=>node.occurrenceId,classic,new Map([[baseNode,'classic-key']]),baseNode.page);
     const event={metaKey:true};route(event);
-    if(occurrenceEditorPolicy||!central){assert.deepEqual(request,['editor.expand',baseNode.page,'B1']);assert.equal(forwarded,undefined)}
+    if(occurrenceEditorPolicy||!central){assert.deepEqual(request,['editor.expand',baseNode.page,classic?'classic-key':'B1']);assert.equal(forwarded,undefined)}
     else{assert.equal(forwarded,event);assert.equal(request,undefined)}
   }
   let actual;const handler=Function('cornerAction',`${output};return handler;`)({onClick:event=>{actual=event;}});
@@ -305,4 +305,17 @@ test('drawing fit excludes edit/fullscreen/disabled/loading reads and never appl
   const f=drawingFixture();f.controller.resize();f.flush();f.flush();f.state.width=800;f.state.eligible=false;f.controller.resize();f.flush();f.flush();assert.equal(f.fits(),0);
   f.state.eligible=true;f.controller.resize();const retired=[...f.frames.values()][0];f.controller.reset();f.state.owner={};retired();f.flush();f.flush();assert.equal(f.fits(),0);
   f.controller.dispose();
+});
+
+
+test('Compass tint uses the actual center card while a different occurrence hosts the native editor',()=>{
+ for(const role of ['center','child']){const ctx=graphFixture();ctx.centralEditorAvailable=true;ctx.centralEditorNode={role};
+  ctx.centralEditorOverlayElement.current={getBoundingClientRect:()=>({left:70,top:80,width:580,height:340})};ctx.render();ctx.layout();
+  const actual=ctx.compassCenter.current;assert(actual);
+  const camera=ctx.camera.current;
+  assert(Math.abs(actual.left*camera.scale+camera.x-(role==='center'?70:300))<1e-8);
+  assert(Math.abs(actual.top*camera.scale+camera.y-(role==='center'?80:250))<1e-8);
+  assert(Math.abs(actual.width*camera.scale-(role==='center'?580:200))<1e-8);
+  assert.equal(actual.element===null,role==='center','Only a central editor replaces the center-card measurement owner');
+ }
 });

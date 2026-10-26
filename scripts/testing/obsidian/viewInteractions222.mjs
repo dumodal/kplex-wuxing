@@ -141,6 +141,17 @@ export async function acceptViewInteractions222(x){
   await until(()=>!root(host).querySelector('.kplex-central-editor-overlay'),'Attention editor cleanup failed in '+id);
   cases.push({id:id==='classic'?'native-compass-editor-opens-and-switches-in-area-without-centering':'native-all-note-editor-icons-and-save-close-switch-via-attention-owner',view:id});
  }
+ // Explicit Compass attention changes must save a bound editor; tint still follows the actual center.
+ await destination('Memory');await selectView('classic');await action('view.fit');await wait(120);await click(card('Concept').querySelector('.kplex-thought-corner-action'));await until(()=>session.editors.bindings.length&&editorReady(),'Compass navigation source editor absent');
+ await p.updateStyleSettings(draft=>{draft.colorPreferences.compass.enabled=true;});await wait(150);
+ const graph=root(host).querySelector('.kplex-plex'),svg=graph.querySelector('.kplex-compass-background'),polygons=[...svg.children].map(el=>(el.getAttribute('points')??'').split(' ').filter(Boolean).map(pair=>pair.split(',').map(Number)));
+ const apex=polygons[0].find(point=>polygons.every(poly=>poly.some(other=>Math.abs(point[0]-other[0])<1e-5&&Math.abs(point[1]-other[1])<1e-5)));
+ const rootBox=card('Memory').getBoundingClientRect(),graphBox=graph.getBoundingClientRect();check(apex&&Math.abs(apex[0]-(rootBox.x+rootBox.width/2-graphBox.x-graph.clientLeft))<1&&Math.abs(apex[1]-(rootBox.y+rootBox.height/2-graphBox.y-graph.clientTop))<1,'Compass tint followed the noncentral editor instead of the actual center');
+ let navigationContent=root(host).querySelector('.kplex-central-editor-content .cm-content');navigationContent.focus();await until(()=>workspace.activeLeaf?.view.file?.path===concept.path&&navigationContent.contains(doc.activeElement),'Compass navigation source focus absent');
+ const navigationEditor=workspace.activeLeaf.view.editor;navigationEditor.setCursor(navigationEditor.lastLine(),navigationEditor.getLine(navigationEditor.lastLine()).length);await native.webContents.insertText('Kplex-222-compass-navigation-save');await until(()=>navigationEditor.getValue().includes('Kplex-222-compass-navigation-save'),'Compass navigation typed marker absent');
+ await action('view.fit');await wait(120);await click(card('Goal'));await until(()=>center(host)===path('Goal')&&!session.editors.bindings.length&&!root(host).querySelector('.kplex-central-editor-overlay'),'Compass explicit navigation did not finish native save/close before centering');
+ check(!navigationContent.isConnected&&(await app.vault.read(concept)).includes('Kplex-222-compass-navigation-save'),'Compass explicit navigation lost its native buffer');
+ cases.push({id:'native-compass-tint-retains-center-and-explicit-navigation-saves-bound-occurrence'});
  // Actual central attention editor crosses to occurrence-hosted Mind Map only after native save.
  await destination('Memory');await selectView('classic');await action('view.fit');await wait(120);await click(card('Memory').querySelector('.kplex-thought-corner-action'));
  await until(editorReady,'Compass central editor absent');let sourceContent=root(host).querySelector('.kplex-central-editor-content .cm-content');sourceContent.focus();
