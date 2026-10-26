@@ -25,6 +25,6 @@ Starting SHA 5c35fcb1264c999cc0b5eb1a261a816432919e46 on 2026-10-25-facets-layou
 
 Current scope: hydrate merged Mind Map peer counts through the existing canonical count owner; distinguish missing branch metadata from known children; clarify branch versus Markdown-section disclosure; full-width preset Help source; verify dynamic Facets columns through shared resize/layout. No new parser, scheduler, writer or renderer.
 
-Production observation only: The Infinite Game has current canonical scope and cached counts3/3/1/1. Its current canvas is Facets. Read-only CLI inspected existing objects/DOM; no production files/settings/workspace changed and no deployment. Small remains the sole write-test destination.
+Production authorization remains read-only except explicitly authorized test artifacts. No production files, settings, workspace or deployment changed. Small remains the sole write-test destination.
 
 Implementation in progress; no new verification pass claimed. Next: focused counts/coverage/browser tests, native Small checks and restoration, real full verification, commit/push checkpoints and exact-head CI.
