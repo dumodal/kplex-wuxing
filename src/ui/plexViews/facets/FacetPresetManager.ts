@@ -1,17 +1,20 @@
 /** Searchable native preset library. This composes existing manager/modal mechanics; view
  * intent remains in each canvas and every durable operation returns to the shared writer. */
-import type {App} from "obsidian";
+import {getLanguage, type App} from "obsidian";
 import {StyleEditorModal} from "../../StyleEditorModal";
 import {StyleManagerList} from "../../StyleManagerList";
 import type {CanvasViewManagerContext} from "../managerContracts";
 import {facetLibrary} from "../../../core/plex/views/facets/configuration";
 import {orderedFacetPresets} from "../../../core/plex/views/facets/state";
 import {facetPresetLabel} from "../../../core/plex/views/facets/labels";
-import {FACET_TEMPLATES} from "../../../core/plex/views/facets/templates";
+import {FACET_STATE_EXAMPLE} from "../../../core/plex/views/facets/templates";
 import {canvasViewText} from "../labels";
 import type {FacetPreset} from "../../../core/plex/views/facets/contracts";
 import {FacetPresetEditor} from "./FacetPresetEditor";
 import {isFacetPreset} from "../../../core/plex/views/facets/validation";
+import {effectiveFacetHelp} from "./help";
+import {PortablePackageModal} from "../../sharing/PortablePackageModal";
+import {facetPortablePackage} from "./facetSharing";
 
 export class FacetPresetManager extends StyleEditorModal {
   private list: StyleManagerList | null = null;
@@ -27,7 +30,11 @@ export class FacetPresetManager extends StyleEditorModal {
     this.titleEl.setText(t("facets.manage"));this.modalEl.addClass("kplex-style-manager-modal");
     this.contentEl.createEl("p", {text: t("facets.managerHelp")});
     this.list = new StyleManagerList(this.contentEl, t, {placeholder: t("facets.search"), aria: t("facets.search")}, query => {this.query = query;this.render();});
-    this.list.action(t("facets.create"), "plus", () => this.edit(null, {...structuredClone(FACET_TEMPLATES.ace), name: t("facets.newPreset")}));
+    this.list.action(t("facets.create"), "plus", () => this.edit(null, {...structuredClone(FACET_STATE_EXAMPLE), name: t("facets.newPreset")}));
+    if (this.options.sharing) {
+      this.list.action(t("sharing.importPreset"), "import", () => this.share("import"));
+      this.list.action(t("sharing.copyPrompt"), "copy", () => this.share("prompt"));
+    }
     this.release = this.options.subscribe(() => this.render());this.render();
     const preset = this.initialId && facetLibrary(this.options.configuration())?.presets[this.initialId];
     if (this.initialId && isFacetPreset(preset)) this.edit(this.initialId, preset);
@@ -47,6 +54,8 @@ export class FacetPresetManager extends StyleEditorModal {
       const copy = row.createDiv({cls: "kplex-style-manager-copy"});copy.createSpan({cls: "kplex-style-manager-name", text: name});
       copy.createDiv({cls: "kplex-style-manager-summary", text: this.translate("facets.summary", {count: preset.order.length, field: preset.field})});
       const controls = this.list.list.createDiv({cls: "kplex-style-manager-controls"});
+      if (this.options.sharing) controls.createEl("button", {text: this.translate("sharing.exportPreset"), attr: {type: "button"}})
+        .addEventListener("click", () => this.share("export", id, preset));
       for (const [offset, label] of [[-1, "facets.moveUp"], [1, "facets.moveDown"]] as const) {
         const index = presets.findIndex(item => item.id === id), target = presets[index + offset];
         const button = controls.createEl("button", {text: this.translate(label), attr: {type: "button", "aria-label": `${name}: ${this.translate(label)}`}});
@@ -66,13 +75,23 @@ export class FacetPresetManager extends StyleEditorModal {
     this.list.more(windowed, () => this.render());
     if (!matches.length) this.list.list.createDiv({text: this.translate("styles.noMatches")});
   }
+  /** The shared transfer surface captures one preset, explicit dependencies and this manager's lifetime. */
+  private share(mode: "import" | "export" | "prompt", id?: string, preset?: FacetPreset): void {
+    const sharing = this.options.sharing;if (!sharing || !this.canEdit()) return;
+    const context = {...sharing, current: () => this.canEdit() && sharing.current()};
+    const child = new PortablePackageModal(this.app, {kind: "facets", mode, context,
+      build: id && preset ? (selected, privateContent) => facetPortablePackage(id, preset, sharing, this.translate, selected, privateContent)
+        : undefined, closed: () => this.children.delete(child)});
+    this.children.add(child);child.open();
+  }
   /** Duplicates get new stable identity only in the draft, with no implicit preset activation. */
   private edit(id: string | null, preset: FacetPreset): void {
     if (!this.canEdit()) return;
     const key = id ?? `preset-${this.modalEl.ownerDocument.defaultView?.crypto.randomUUID() ?? ""}`;
     if (key === "preset-") return;
     const child = new FacetPresetEditor(this.app, this.options, key, preset, id !== null,
-      draft => this.edit(null, {...structuredClone(draft), name: this.translate("facets.copyName", {name: canvasViewText(facetPresetLabel(draft), this.translate)})}),
+      draft => this.edit(null, {...structuredClone(draft), name: this.translate("facets.copyName", {name: canvasViewText(facetPresetLabel(draft), this.translate)}),
+        helpMarkdown: draft.helpMarkdown ?? effectiveFacetHelp(key, draft, this.translate), helpSourceLocale: (draft.helpSourceLocale ?? getLanguage()) || "en"}),
       () => {this.children.delete(child);this.render();});
     this.children.add(child);child.open();
   }

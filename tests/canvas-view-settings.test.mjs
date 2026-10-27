@@ -29,7 +29,15 @@ const create=async()=>{
 };
 const drain=async p=>{for(let i=0;i<8;i++){await p.settingsReconciliation.reading;await p.settingsWriteQueue;await new Promise(r=>setTimeout(r,0));if(!p.settingsReconciliation.reading&&!p.externalSettingsQueued)break}};
 const receive=async(p,value)=>{disk=copy(value);p.onExternalSettingsChange();await drain(p)};
-const flatten=(items,path=[])=>items.flatMap(item=>[...('control'in item?[{...item,path}]:[]),...flatten(item.items??[],item.type==='page'?[...path,item.name]:path)]);
+/** Inspect actual mounted numeric rows after their declarative-to-shared-control adaptation.
+ * Legacy writer assertions use the captured row key; bounds come from the real native input. */
+const flatten=(items,path=[])=>items.flatMap(item=>{
+ let row=item;
+ if(!item.control&&item.render?.name==='renderNumberSetting'){const el=document.body.createDiv(),setting=new M.Setting(el),release=item.render(setting),key=setting.settingEl.dataset.kplexSettingKey,input=setting.controlEl.querySelector('input[type=range]');
+  if(key&&input)row={...item,control:{type:'slider',key,min:Number(input.min),max:Number(input.max),step:Number(input.step),disabled:input.disabled}};
+  if(typeof release==='function')release();el.remove();}
+ return [...(row.control?[{...row,path}]:[]),...flatten(item.items??[],item.type==='page'?[...path,item.name]:path)];
+});
 `;
 const scenario=body=>colorEditorScenario(`(async()=>{${initialize}\n${body}\nreturn true})()`);
 

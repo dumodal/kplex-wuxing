@@ -150,7 +150,7 @@ export type NodeVisual = {
 export type PositionedNode = {
   /** Shared measured decoration, with no semantic gate/drop authority. */
   viewBadge?: Readonly<{label: string; description?: string; background?: import("./core/contracts/colorValue").ColorValue;
-    width: number; height: number; fontSize: number}>;
+    width: number; height: number; fontSize: number; presentation?: "category" | "status"}>;
   viewDescription?: string;
   /** Independent visual occurrence; canonical page identity remains the action/write target. */
   occurrenceId?: string;
@@ -158,10 +158,15 @@ export type PositionedNode = {
   representation?: "thought" | "point";
   physicalPorts?: Partial<Record<GateSide, GateRole>>;
   /** Presentation-only aggregate from the bounded view reader, independent of the port's default creation role. */
-  peerPort?: import("./core/plex/views/contracts").PlexOccurrence["peerPort"] & {shownCount?: number};
+  /** Display-only canonical count hydration; projection incidence never grants write authority. */
+  peerPort?: import("./core/plex/views/contracts").PlexOccurrence["peerPort"] & {
+    shownCount?: number; hasAny?: boolean; coverage?: GateStat["coverage"]; countUnavailable?: boolean;
+  };
   /** Canonical source of this occurrence's primary real relationship, independent of current attention. */
   semanticSourceId?: string;
   branch?: import("./core/plex/views/contracts").PlexBranch;
+  /** Shared touch disclosure clearance, independent of the note body and canonical gates. */
+  controlReserve?: Readonly<{right: number; bottom: number}>;
   page: GraphPage;
   role: Role | "center";
   relationType?: RelationType;

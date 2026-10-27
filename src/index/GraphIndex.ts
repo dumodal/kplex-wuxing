@@ -3648,6 +3648,14 @@ export class GraphIndex {
     return scope ? scope.evidence.from(sourcePath) : this.state.evidence.from(sourcePath);
   }
 
+  /** Reuse the already displayed saved incidence while private evidence hydration is pending.
+   * This read grants no source freshness, completeness or relationship-write authority. Section
+   * presentation may attach these existing rows to occurrences read from its one current file. */
+  getSectionPreviewNeighborhood(path: string): Neighborhood | null {
+    return this.previewSnapshotPublished && !this.fullSnapshotHydrated && this.state.pages.has(path)
+      ? this.getNeighborhood(path) : null;
+  }
+
   evidenceBetween(sourcePath: string, targetPath: string): RelationEvidence[] {
     return this.semanticEvidence(sourcePath, targetPath).evidence;
   }

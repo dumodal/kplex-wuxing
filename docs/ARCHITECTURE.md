@@ -68,7 +68,7 @@ guards and leaves the panel/draft mounted across compatible transitions. The exi
 registry supplies production options; disabled Compass remains visible when alone.
 Same-scope selection and new type configuration do not acquire or rebuild sources. Shared controlled condition rows serve lenses and native Facets rule drafts; availability-aware evaluation explicitly distinguishes current/candidate properties and unknown inputs without changing legacy boolean matching.
 
-Optional section snapshots adapt the existing explicit `SectionExpansion` owner for one source revision. Ordinary shared node measurement/tree/fold rendering and validated physical source anchors retain canonical note/occurrence/evidence identities. Native editors cannot be replaced by section rows. Production Facets/Mind Map keep sections disabled; the non-Classic conformance policy proves the reusable boundary without claiming a shipped Mind Map section mode.
+Optional section snapshots adapt the existing explicit `SectionExpansion` owner for one source revision. Ordinary shared node measurement/tree/fold rendering and validated physical source anchors retain canonical note/occurrence/evidence identities. `sectionSource` selects attention (Compass/compatibility) or the pinned layout root (Mind Map); unsupported Facets hides/refuses section controls. Central source editors exclude their own outline, while another bound editor retains its document and lifetime. Structural heading rows remain separate from canonical hierarchy branches. Non-Classic conformance and Mind Map integration have separate tests and exact-source native acceptance.
 
 ## Action dispatch boundary
 

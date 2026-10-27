@@ -9,7 +9,7 @@ test("literal controls preserve exact alpha, partial text/caret, IME, reset and 
   const changes=[],labels={rgb:'RGB',value:'Value',opacity:'Opacity',reset:'Reset',invalid:'Invalid',legacy:'Legacy'};
   const editor=new sourceModules.ColorLiteralEditor(scope,{label:'Fixed',initial:'rgba(12,34,56,0.123456789)',labels,onChange:(value,valid)=>changes.push({value,valid})});
   if(changes.length)throw Error('Opening notified');
-  const text=scope.querySelector('input[type=text]'),rgb=scope.querySelector('input[type=color]'),opacity=scope.querySelector('input[type=number]');
+  const text=scope.querySelector('input[type=text]'),rgb=scope.querySelector('input[type=color]'),opacity=scope.querySelector('input[type=range]');
   input(rgb,'#abcdef');if(sourceModules.parseLiteralColor(editor.getValue()).alpha!==0.123456789)throw Error('Alpha rounded');
   text.focus();input(text,'#12');text.setSelectionRange(2,2);editor.setDisabled(true);editor.setDisabled(false);
   if(text.value!=='#12'||text.selectionStart!==2||editor.isValid())throw Error('Partial draft lost');
@@ -104,8 +104,8 @@ test("paired editor preserves the other mode, exact alpha, partial drafts, expli
   const alpha=sourceModules.parseLiteralColor(light.querySelector('input[type=text]').value).alpha;if(alpha!==.12||sourceModules.parseLiteralColor(dialog.draft.light).alpha!==.123456789||writes)throw Error('Display/model alpha or open write');
   input(light.querySelector('input[type=text]'),'#12');const save=[...dialog.contentEl.querySelectorAll('button')].find(b=>b.textContent==='Save');if(!save.disabled)throw Error('Partial draft admitted');
   light.querySelector('button').click();if(light.querySelector('input[type=text]').value!=='rgba(1, 2, 3, 0.12)'||dialog.draft.light!==initial.light)throw Error('Variant reset failed');
-  input(dark.querySelector('input[type=number]'),'0');if(light.querySelector('input[type=text]').value!=='rgba(1, 2, 3, 0.12)'||dialog.draft.light!==initial.light)throw Error('Opacity edited opposite mode');
-  save.click();await waitFor(()=>writes===1&&dialog.modalEl.getAttribute('aria-busy')==='false');if(!dialog.modalEl.isConnected||dark.querySelector('input[type=number]').value!=='0')throw Error('Failure lost draft');
+  input(dark.querySelector('input[type=range]'),'0');if(light.querySelector('input[type=text]').value!=='rgba(1, 2, 3, 0.12)'||dialog.draft.light!==initial.light)throw Error('Opacity edited opposite mode');
+  save.click();await waitFor(()=>writes===1&&dialog.modalEl.getAttribute('aria-busy')==='false');if(!dialog.modalEl.isConnected||dark.querySelector('input[type=range]').value!=='0')throw Error('Failure lost draft');
   fail=false;save.click();await waitFor(()=>!dialog.modalEl.isConnected);if(writes!==2||sourceModules.parseLiteralColor(saved.dark).alpha!==0||saved.light!==initial.light)throw Error('Retry changed pair');
   const reset=new sourceModules.ColorPairModal({}, {title:'Reset',initial,sourceScope:scope,translate:t,preferences:()=>preferences,nodeStyle:()=>({}),linkStyle:()=>({}),background:()=>undefined,onSave:async()=>{throw Error('Unexpected write')}});reset.open();
   for(const el of reset.contentEl.querySelectorAll('input[type=color]'))input(el,'#ffffff');[...reset.contentEl.querySelectorAll('button')].find(b=>b.textContent==='Reset both variants').click();
@@ -422,7 +422,7 @@ test("alpha formatting stays readable without changing untouched literal intent 
   const editor=new sourceModules.ColorLiteralEditor(scope,{label:'Fixed',initial:'rgba(176,48,48,0.7190000000000001)',labels:{rgb:'RGB',value:'Value',opacity:'Opacity',reset:'Reset',invalid:'Invalid',legacy:'Legacy'},onChange:()=>{}});
   const text=scope.querySelector('input[type=text]');if(text.value!=='rgba(176, 48, 48, 0.72)'||editor.getValue()!=='rgba(176,48,48,0.7190000000000001)')throw Error('Display mutated saved intent');
   input(text,'rgba(1,2,3,.123456789)');if(text.value!=='rgba(1,2,3,.123456789)')throw Error('Active draft rewritten');
-  input(scope.querySelector('input[type=range]'),'71.9');if(text.value!=='rgba(1, 2, 3, 0.72)'||scope.querySelector('input[type=number]').value!=='71.9')throw Error('Generated text noisy');
+  input(scope.querySelector('input[type=range]'),'71.9');if(text.value!=='rgba(1, 2, 3, 0.72)'||scope.querySelector('input[type=range]').value!=='71.9')throw Error('Generated text noisy');
   editor.dispose();return true;
  })()`),true);
 });

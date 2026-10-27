@@ -14,15 +14,17 @@ export async function acceptFacetsFeatures(x){
  const areaStop=quiet();
  for(const [kind,name]of [['category','water'],['status','unassigned'],['status','conflicting'],['status','unresolved']]){
   const id=JSON.stringify(['facets','wuxing',kind,name]);
-  for(const delta of [12,-8]){
-   const frame=root(host).querySelector('.'+doc.defaultView.CSS.escape('kplex-area-'+id)),handle=frame?.querySelector('[role="separator"]');check(handle,'Native resizable area absent: '+name);
+  for(const axis of ['height','width'])for(const delta of [12,-8]){
+   const frame=root(host).querySelector('.'+doc.defaultView.CSS.escape('kplex-area-'+id)),handle=frame?.querySelector(axis==='width'?'.is-width-handle':'.is-height-handle');check(handle,'Native resizable area absent: '+name+' / '+axis);
    const box=handle.getBoundingClientRect(),x=Math.round(box.x+box.width/2),y=Math.round(box.y+box.height/2),before=Number(handle.getAttribute('aria-valuenow'));
-   native.webContents.sendInputEvent({type:'mouseMove',x,y});native.webContents.sendInputEvent({type:'mouseDown',x,y,button:'left',clickCount:1});native.webContents.sendInputEvent({type:'mouseMove',x,y:y+delta,button:'left'});await wait(100);native.webContents.sendInputEvent({type:'mouseUp',x,y:y+delta,button:'left',clickCount:1});await wait(100);
-   const after=session.getAreaHeights()[id];check(delta>0?after>before:after<before,'Native bottom-edge resize has wrong direction/no effect: '+name);cases.push({id:'native-area-resize-'+name,delta,before,after});
+   const to={x:x+(axis==='width'?delta:0),y:y+(axis==='height'?delta:0)};
+   native.webContents.sendInputEvent({type:'mouseMove',x,y});native.webContents.sendInputEvent({type:'mouseDown',x,y,button:'left',clickCount:1});native.webContents.sendInputEvent({type:'mouseMove',...to,button:'left'});await wait(100);native.webContents.sendInputEvent({type:'mouseUp',...to,button:'left',clickCount:1});await wait(100);
+   const after=(axis==='width'?session.getAreaWidths():session.getAreaHeights())[id];check(delta>0?after>before:after<before,'Native physical edge resize has wrong direction/no effect: '+name+' / '+axis);cases.push({id:'native-area-'+(axis==='width'?'width-':'')+'resize-'+name,delta,before,after});
   }
  }
  areaStop('native-area-resize-zero-source-work');await action('view.areas.toggle');
- await configure(['state'],c.stateExample);await until(localReady,'Custom preset configuration did not settle');
+ if(c.lane==='areas')return;
+ await configure(['state'],{...c.stateExample,diagnostics:{...c.stateExample.diagnostics,combined:false}});await until(localReady,'Custom preset configuration did not settle');
  const settingsBefore=JSON.stringify(p.settings.canvasViewSettings);
  for(const id of ['classic','mindmap','wuxing']){
   await choose(host,id);await wait(100);const settingsStop=quiet(),before=center(host),controls=panel(host).querySelector('.kplex-view-controls');
@@ -47,13 +49,13 @@ export async function acceptFacetsFeatures(x){
  }
  check(JSON.stringify(p.settings.canvasViewSettings)===settingsBefore,'Opening/cancelling settings cogs wrote configuration');
  const stop=quiet();
- for(const [id,count]of[['ace',3],['para',4],['wuxing',5],['gtd',6],['eaccess',7],['state',4]]){
+ for(const [id,count]of[['arc',3],['para',4],['wuxing',5],['gtd',6],['eaccess',7],['sensemaking',4],['publishing',5],['map-roles',4],['state',4]]){
   await preset(id);check(root(host).querySelectorAll('.kplex-view-region').length===count+2+(id==='wuxing'?1:0),'Preset category/status region count differs: '+id);
   check(root(host).querySelector('.kplex-node-badge')?.textContent.trim(),'Centered category badge absent: '+id);
   cases.push({id:'native-preset-'+id,categories:count});
  }
  stop('all-preset-switches-zero-source-work');
- await action('view.fullscreen.toggle');for(const id of ['ace','para','wuxing','gtd','eaccess','state']){await preset(id);await capture(id)}await action('view.fullscreen.toggle');
+ await action('view.fullscreen.toggle');for(const id of ['arc','para','wuxing','gtd','eaccess','sensemaking','publishing','map-roles','state']){await preset(id);await capture(id)}await action('view.fullscreen.toggle');
  await preset('wuxing');
  const cycle=['wood','fire','earth','metal','water'],roles=['facets.relativeSame','facets.relativeGenerate','facets.relativeRegulate','facets.relativeRegulated','facets.relativeGenerated'];
  const originalBody=await app.vault.read(app.vault.getFileByPath(path('Memory')));
@@ -111,10 +113,24 @@ export async function acceptFacetsFeatures(x){
  const correctedRule='note.phase == "water" or note.phase == "earth"';type(correctedRule);await until(()=>save()&&!save().disabled,'Corrected rule did not enable native Save');save().click();await until(()=>p.settings.canvasViewSettings.wuxing?.values.presets.state.categories.seed.rule===correctedRule,'Native edited rule did not publish durably');await p.settingsWriteQueue;app.setting.close();
  cases.push({id:'native-shared-rules-editor-focus-invalid-save-guard-and-correction'});
  await focus('Memory');
+ // Actual assignment/Undo above changes native source revisions. Cached positive incidence
+ // is enough for layout, but Wander correctly requires a prepared center. Establish that
+ // distinct fixture precondition through the existing foreground owner, outside zero-work scopes.
+ const beforeWanderScope=p.index.viewScopeCoverage(path('Memory'));
+ if(!beforeWanderScope.prepared){
+  // The local baseline producer deliberately refuses eager source-backed sessions. Reuse the
+  // same public, mode-aware visible-center watchdog that the real canvas owns after note edits.
+  await p.ensureIndexReady('view-open');const neighborhood=p.index.getNeighborhood(path('Memory'));
+  const presented=[neighborhood.parents.length,neighborhood.children.length,neighborhood.leftFriends.length,neighborhood.rightFriends.length,neighborhood.siblings.length];
+  const recovered=await p.index.recheckVisibleCenter(path('Memory'),presented,'local-ready',()=>center(host)===path('Memory')&&x.workspace.getLeafById(host.id)===host);
+  c.progress={...c.progress,wanderPreparation:{mode:p.index.isOnDemandMode()?'on-demand':'eager',recovered,before:beforeWanderScope,after:p.index.viewScopeCoverage(path('Memory')),sourceReady:p.index.isCenterRecoverySourceReady(),deferred:p.index.preparationDeferred,localForeground:p.index.usesLocalForeground(),sourceRevision:p.getIndexSourceRevision(),fullSourceRevision:p.index.fullSemanticSourceRevision,maintenanceCurrent:p.index.fullSemanticMaintenanceRevision===p.index.sourceAcquisition.getMaintenanceRevision(),policyCurrent:p.index.fullSemanticPolicyRevision===p.index.semanticPolicyRevision}};
+ }
+ await until(()=>p.index.viewScopeCoverage(path('Memory')).prepared&&!p.index.hasActiveSemanticPreparation(),'Wander fixture did not acquire prepared local coverage');
+ cases.push({id:'native-wander-prepared-fixture-after-real-note-edits',before:beforeWanderScope,after:p.index.viewScopeCoverage(path('Memory')),mode:p.index.isOnDemandMode()?'on-demand':'eager'});
  for(const id of ['classic','mindmap','wuxing']){
   await choose(host,id);panel(host).querySelector('.kplex-filter-panel-header button').click();await wait(150);
   const beforeWander=center(host);await action('view.wander.start');await until(()=>root(host).querySelector('.kplex-wander-controls'),'Shared Wander controls absent: '+id);
-  await until(()=>center(host)!==beforeWander,'Wander did not navigate through the current view: '+id);
+  await until(()=>{const scope=p.index.viewScopeCoverage(center(host));c.progress={...c.progress,wander:{view:id,hidden:doc.hidden,focused:doc.hasFocus(),nativeFocused:native.isFocused(),scope,graphClass:root(host).querySelector('.kplex-plex')?.className,reason:root(host).querySelector('.kplex-wander-controls [role="status"]')?.textContent,nodes:root(host).querySelectorAll('.kplex-thought[data-kplex-path]').length}};return center(host)!==beforeWander},'Wander did not navigate through the current view: '+id);
   await action('view.wander.stop');await until(()=>!root(host).querySelector('.kplex-wander-controls'),'Shared Wander did not stop: '+id);cases.push({id:'native-wander-start-navigate-stop-'+id});
   await focus('Memory');
  }

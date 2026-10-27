@@ -1,5 +1,8 @@
 ---
-ace: ["add","express"]
+approach: ["top-down", "bottom-up"]
+mode: "reflection"
+map-role: ["hub", "concept"]
+arc: ["add","communicate"]
 para: ["projects","archives"]
 phase: ["water","metal"]
 horizon: ["actions","purpose"]

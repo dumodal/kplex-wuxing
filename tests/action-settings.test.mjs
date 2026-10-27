@@ -327,7 +327,7 @@ test("actual declarative rows remain globally searchable while native group filt
       const migratedDocumentClears=s.input.value===''&&s.list.querySelectorAll('.kplex-action-filtered').length===0;
       const sourceRealmRetained=migratedSearch instanceof window.Element&&!(migratedSearch instanceof frame.contentWindow.Element);
       const publication=s.list.querySelector('[data-action-id="search.focus"] [data-kplex-action-control=publication]');publication.focus();const originalSave=s.plugin.updateActionPreferences;let finish;s.plugin.updateActionPreferences=async value=>{await new Promise(done=>finish=done);await originalSave.call(s.plugin,value)};publication.click();finish();for(let turn=0;s.controller.saving&&turn<20;turn++)await Promise.resolve();
-      const stableToggle=s.rows[1].controlEl.querySelector('input')===originalToggle&&s.rows[1].components.length===1&&s.rows[2].components.length===1;const migratedEquivalentFocus=targetDocument.activeElement===s.list.querySelector('[data-action-id="search.focus"] [data-kplex-action-control=publication]')&&targetDocument.activeElement!==publication;s.plugin.updateActionPreferences=originalSave;
+      const stableToggle=s.rows[1].controlEl.querySelector('input')===originalToggle&&s.rows[1].components.length===1&&!s.definition.items.some(item=>item.aliases?.includes('crossSectionAtBoundary'));const migratedEquivalentFocus=targetDocument.activeElement===s.list.querySelector('[data-action-id="search.focus"] [data-kplex-action-control=publication]')&&targetDocument.activeElement!==publication;s.plugin.updateActionPreferences=originalSave;
 
 
 

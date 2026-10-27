@@ -75,6 +75,8 @@ Projection chooses stable occurrences and canonical relationships. Layout places
 
 Use `read.node`, bounded `relations`, optional cached `relation`/`scope` and pair `evidence`. Honor current/coverage/truncation. An unavailable scope is not an empty graph or a leaf. Corpus reads are unsupported.
 
+Hierarchies may declare `hierarchy.maximumDepth` from 1 through 20; existing definitions retain 8 when omitted. This bounds displayed occurrence admission and shared ancestor visibility/reference walks. It does not change `maximumScopes`, acquisition or the reader signature. Keep an exposed terminal card visible when another scope/work budget prevents expanding it. Mind Map declares 20 and retains its eight non-root source scopes.
+
 Request property capability only when needed. Available cached fields include a proven missing value; unavailable metadata cannot satisfy a negative condition. The optional field lifetime proof belongs to the current synchronous frame, not saved state.
 
 For advanced rules, use the exported shared parser/compiler and `GraphPredicateEngine.evaluateAvailable`; `evaluatePortablePredicateContexts` implements any-match over actual canonical contexts. Preserve active/suppressed evidence. Do not infer an edge or a center self-link merely because a category needs relationship data.
@@ -124,7 +126,7 @@ Only the accepted capacity-one Mind Map occurrence host opts into `editorHosting
 
 ## Optional sections: reuse the source and renderer
 
-Production Facets/Mind Map keep sections disabled. Compass retains its production section behavior. A new opt-in must prove the complete boundary before enabling a production mode.
+Declare `capabilities.sections: true` and an optional `sectionSource` (`attention`, the compatibility default, or `layout-root` for rooted policies). Use `plexSectionDocument` to resolve the source and `appendPlexSections` for a central-root projection. The existing host owns explicit source loading, cancellation, folding, measurement, rendering and proven physical anchors. Compass follows attention; Mind Map's #222 integration follows only its pinned root, with native acceptance tracked separately. Facets deliberately keeps sections disabled and shows no section toggle. A new opt-in must prove source/geometry/folding/navigation/editor behavior before acceptance.
 
 The host adapts one explicitly expanded document using `createPlexSectionViewContext`. It exposes current source-owned row IDs, hierarchy/ranges/visibility and projected canonical provenance, with native file/stat lifetime proof. It does not scan headings again. Missing/oversized/retired source remains unavailable; body acquisition occurs only through the existing explicit source operation.
 
@@ -141,3 +143,8 @@ Use Node **22.22.2**, installed dependencies and the real production build/scann
 Review three risks first: stale captured canvas/configuration owners; wrong canonical/physical source identity; and editor/camera/Sidecar behavior across main/popout restoration. Assert bounded reads and zero source acquisition/body parsing/semantic rebuilds for presentation changes. Do not weaken existing scaling guards or hide known #215 baseline failures. Report missing Mac/physical-mobile/minimum-host coverage honestly.
 
 [Current receipts and limitations](validation/facets-220-2026-10-25.md) distinguish browser conformance from Windows acceptance. Keep PR #220 draft/open until expanded implementation and validation are complete; no merge or release is authorized.
+
+
+### Numeric configuration controls
+
+Declare numeric native preferences as bounded `slider` controls with `min`, `max` and `step`. The shared Settings adapter mounts their permanent value readout and preserves the captured queued writer. React view contributions reuse `CanvasViewLayoutControls`/`LayoutSlider`; native custom preset editors reuse `numberSlider`. Optional overrides use `styleNumberSlider`, with an effective inherited value and explicit reset, never a blank number field. No custom numeric text box or private range input is permitted. The repository-wide guard in `npm run check:architecture` enforces the shared owners.

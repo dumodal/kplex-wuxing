@@ -65,6 +65,15 @@ test('explicit physical ports retain canonical role counts and unavailable undec
   assert.equal(M.physicalGateStats({gateStats:stats}),stats,'Classic count presentation retains its original identity');
 });
 
+test('shared section dimensions preserve Compass density bounds and reserve readable headings in plugin views',()=>{
+ assert.deepEqual(M.sectionNodeSize({width:112,height:28}),{width:172,height:32});
+ for(const density of [0,0.5,1])for(const width of [112,172,260,320]){
+  const reserve=16+(2-16)*density,heightReserve=3*(1-density),size=M.sectionNodeSize({width,height:28},286,reserve,heightReserve);
+  assert.deepEqual(size,{width:Math.max(172,Math.min(286,width+reserve)),height:Math.max(32,28+heightReserve)},'Compass geometry remains identical');
+ }
+ assert.equal(M.sectionNodeSize({width:280,height:40},220).width,220,'Configured maximum remains authoritative');
+});
+
 
 test('unavailable projection never publishes an empty successful scene that could remove a live native editor',()=>{
  const f=fixture();assert.equal(f.prepare({...M.probeViewDefinition,project:()=>null}).failure,true);

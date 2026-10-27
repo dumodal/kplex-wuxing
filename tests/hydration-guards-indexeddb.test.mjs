@@ -9,7 +9,72 @@ import test from 'node:test';
 import { chromiumHarness } from './support/browserTypeScript.mjs';
 import { hydrationWorkBundle, contributorBrowserInitialize, initializeHydrationWork } from './support/hydrationWorkFixture.mjs';
 
-const bundle = await hydrationWorkBundle();
+const bundle = await hydrationWorkBundle({}, ['src/index/SectionExpansion.ts', 'src/ui/plexViews/sections.ts', 'src/core/plex/views/sections.ts']);
+
+for (const mode of ['eager', 'on-demand']) test(`${mode}: central sections reuse saved incidence before private evidence hydration`, async () => {
+  const browser = await chromiumHarness(bundle);
+  try {
+    assert(await browser.evaluate(contributorBrowserInitialize));assert(await browser.evaluate(initializeHydrationWork));
+    assert(await browser.evaluate(String.raw`(async()=>{
+      const M=sourceModules,q=await hydrationWorkFixture('sections-saved-${mode}',4,0,'${mode}'),i=q.index,f=q.f;
+      let release,enter;const gate=new Promise(resolve=>release=resolve),entered=new Promise(resolve=>enter=resolve);
+      const read=i.indexedDb.iterateSnapshotEvidence;
+      const deadline=(promise,label)=>{let timer;return Promise.race([promise,new Promise((_,reject)=>timer=setTimeout(()=>reject(Error(label)),3000))]).finally(()=>clearTimeout(timer));};
+      try {
+        Object.assign(q.settings,{showVirtualNodes:true,showAttachments:true,showFolderNodes:false,showTagNodes:false,showPageNodes:true,showURLNodes:true,
+          showInferredNodes:true,renderAlias:false,nodeSortOrder:'name-asc',renderSiblings:false});
+        const text='[[Ghost-0]]\n# First\n[[Ghost-1]]\n# Second\n[[Ghost-2]]\n[[Ghost-3]]',file=q.file;
+        file.stat.size=text.length;f.texts.set(file.path,text);
+        f.metadata.get(file.path).links=[...text.matchAll(/\[\[([^\]]+)\]\]/g)].map(match=>({link:match[1],position:{start:{line:text.slice(0,match.index).split('\n').length-1,col:0,offset:match.index},end:{offset:match.index+match[0].length}}}));
+        await f.cache.putBody(file.path,file.stat.mtime,M.parseBodyMetadata(text));
+        const fingerprints=new Map(),builder=new M.GraphBuilder(q.plugin,f.app,new Map(),i.metadataParser,f.cache,()=>true,fingerprints);
+        const saved=await builder.build({acquireSources:false});ok(saved,'Actual canonical seed');
+        ok(await f.cache.writeSnapshot({createdAt:Date.now(),urlAliasVersion:M.URL_ALIAS_FACET_VERSION,vaultSignature:M.computeVaultSignature(f.app),
+          settingsSignature:M.computeIndexSettingsSignature(q.settings),discoveredFields:[]},[...saved.pages.values()].map(page=>M.persistedPageFromGraphPage(page,fingerprints.get(page.path))),
+          [...saved.evidence.declarations()].map(item=>M.persistedDeclarationFromEvidence(item)),()=>true),'Actual saved snapshot');
+        i.indexedDb.iterateSnapshotEvidence=async function(...args){enter();await gate;return read.apply(this,args);};
+        ok((await deadline(i.restoreIndexedDbSnapshot([file.path]),'Saved preview')).restored,'Warm preview available');
+        if('${mode}'==='eager')await deadline(entered,'Private evidence hold');
+        const paths=n=>n.children.map(row=>row.page.transient?.actualPath??row.page.path).filter(path=>!path.startsWith('kplex-section:')).sort();
+        equal(paths(i.getNeighborhood(file.path)),q.targets,'Compass canonical incidence already visible');
+        equal(i.evidenceFrom(file.path),[],'Detailed evidence is genuinely absent');
+        equal(i.fullSnapshotHydrated,false,'Full hydration deliberately incomplete');
+        equal(i.isSemanticWriteReady(file.path,'Ghost-1'),false,'Preview grants no write authority');
+        const canonical=hydrationWorkValue(i),counters=i.sourceAcquisition.getCounters();f.reads.length=0;f.parses.length=0;f.work.reset();
+        const expanded=await M.buildCentralSectionExpansion(q.plugin,i,i.get(file.path));ok(expanded,'Explicit one-file outline');
+        const current=M.projectCentralSectionExpansion(q.plugin,i,expanded),view=()=>M.createPlexSectionViewContext(current,'saved-outline',new Set(),i,()=>true);
+        equal(paths(current.centerNeighborhood),['Ghost-0'],'Preamble retained on canonical note');
+        equal(paths(current.sections[0].neighborhood),['Ghost-1'],'First section link appears before hydration');
+        equal(paths(current.sections[1].neighborhood),['Ghost-2','Ghost-3'],'Second section links appear before hydration');
+        const context=view();ok(context,'Shared section context available');
+        equal(M.plexSectionAnchor(context.snapshot,'Ghost-1','child')?.sectionId,current.sections[0].id,'Mind Map connector immediately starts at its physical section');
+        equal(M.plexSectionAnchor(context.snapshot,'Ghost-0','child'),null,'Preamble stays at root');
+        equal([...current.explanations.values()].flatMap(row=>row.decisions).length,0,'No fabricated indexed/editable evidence');
+        equal(hydrationWorkValue(i),canonical,'No canonical edge/provenance mutation');equal(i.sourceAcquisition.getCounters(),counters,'No source acquisition');
+        equal(f.reads,[file.path],'Only explicit source body read');equal(f.parses.length,0,'No index parsing');
+        const work=f.work.snapshot();
+        for(let n=0;n<3;n++)M.projectCentralSectionExpansion(q.plugin,i,expanded);
+        equal(f.reads,[file.path],'Presentation never rereads Markdown');equal(f.work.snapshot(),work,'No index/store/inventory work');
+        file.stat.mtime++;const stale=M.projectCentralSectionExpansion(q.plugin,i,expanded);
+        equal(stale.previewPlacements,[],'Changed native source retires physical preview proof');
+        equal(paths(stale.centerNeighborhood),q.targets,'Changed native source still retains all readable canonical relationships at the header');file.stat.mtime--;
+        const cache=f.metadata.get(file.path);f.metadata.set(file.path,{...cache});
+        const replaced=M.projectCentralSectionExpansion(q.plugin,i,expanded);
+        equal(replaced.previewPlacements,[],'Same-stat metadata replacement retires physical preview proof');
+        equal(paths(replaced.centerNeighborhood),q.targets,'Metadata replacement cannot erase readable canonical relationships');f.metadata.set(file.path,cache);
+        release();
+        if('${mode}'==='eager'){
+          ok((await deadline(i.waitForSnapshotHydration(),'Full evidence promotion')).restored,'Real evidence eventually promotes');
+          const final=M.projectCentralSectionExpansion(q.plugin,i,expanded);
+          equal(final.previewPlacements,[],'Detailed evidence replaces the preview path');
+          equal(paths(final.centerNeighborhood),paths(current.centerNeighborhood),'Header remains stable');
+          for(let n=0;n<final.sections.length;n++)equal(paths(final.sections[n].neighborhood),paths(current.sections[n].neighborhood),'Same section targets after hydration');
+        }
+        return true;
+      }finally{release();i.indexedDb.iterateSnapshotEvidence=read;q.close();}
+    })()`));
+  }finally{await browser.cleanup();}
+});
 
 /** Run independent actual-IDB cases in one browser, with bounded waits that cannot hide a leaked task. */
 test('hydration guards retain policy/lifetime/physical fences while removing per-record signatures', async t => {

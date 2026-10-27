@@ -1,3 +1,4 @@
+import {classicEditorKey, classicEditorIdentity, retainClassicEditor} from "./occurrenceEditor";
 /** Classic-only host policy registration. The shared renderer asks for capabilities, not view-ID branches. */
 import type {PlexViewDefinition} from "../../../core/plex/views/contracts";
 import {classicViewDefinition, classicAreaDropRole, CLASSIC_AREAS, CLASSIC_HEIGHTS} from "../../../core/plex/views/classic/definition";
@@ -21,7 +22,7 @@ export function classicAreaTitle(zone: string, translate: Translator, arrangemen
 }
 
 const classicIntegration = {
-  dropRole: classicAreaDropRole,
+  dropRole: classicAreaDropRole, editorKey: classicEditorKey, editorIdentity: classicEditorIdentity, retainEditor: retainClassicEditor,
   Labels: ClassicAreaLabels, Controls: ClassicLayoutControls, tint: compassPolygons,
   repack: classicAreaLayout,
   heightControls: {

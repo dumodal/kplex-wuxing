@@ -23,7 +23,7 @@ A view does not receive App, a plugin/index instance, file-writing access or a p
 
 ## Definition and scene
 
-Required definition members: `id`, `version`, `labelKey`, `icon`, `capabilities`, `defaultState`, `restoreState`, `project`, `layout`. Optional members are declared in `contracts.ts`: `configuration`, `reduceState`, `navigation`, `navigationEntry`, `editorHosting`, `hierarchy`, `colorReferences`, `propertyAssignments`, `propertyDependencies`.
+Required definition members: `id`, `version`, `labelKey`, `icon`, `capabilities`, `defaultState`, `restoreState`, `project`, `layout`. Optional members are declared in `contracts.ts`: `configuration`, `reduceState`, `navigation`, `navigationEntry`, `editorHosting`, `hierarchy`, `colorReferences`, `propertyAssignments`, `propertyDependencies`, `badgeBudget`, `areaPreferenceBudget`.
 
 `project(PlexViewInput)` receives attention, optional layout root/retained hierarchy scopes/editor identities, its own configuration/state and `PlexViewRead`. It returns a `PlexProjection` or null. `layout` receives the admitted projection, actual `PlexMeasurement[]`, state/editor information and context containing area heights/configuration. Layout has no source reader or scheduling port.
 
@@ -39,6 +39,14 @@ Node position `x/y` is its **center** in world coordinates. Area/decoration boun
 
 The adapter validates identities, canonical endpoints, finite geometry, bounds and capabilities. Invalid/unavailable scenes fall back to the actual attention/editor host; stale graph payloads do not gain action authority. One scene admits at most 2,048 occurrences; areas/decorations are each capped at 64. Specialized definitions apply tighter bounds.
 
+`badgeBudget` optionally admits 1–2,048 badges within that unchanged occurrence cap; omitted definitions retain 16. `areaPreferenceBudget` optionally retains up to 192 workspace size keys per dimension across presets; omitted definitions retain 64. Facets opts into 192 for 16 presets with at most seven category, four separate diagnostic and one combined diagnostic identities. Width and height remain independent maps in the existing canvas session; no setting, graph or source read is implied.
+
+Areas may declare independent `heightPreference`/`resizeEdge` and `widthPreference`/`widthResizeEdge`. A dimension's optional `value` describes its editable thickness when the outer frame is larger. `measuredAreaColumns` and `measuredAreaGrid` use actual per-area node/badge envelopes and world-space dimensions; camera zoom does not change columns.
+
+`decorationLabels(state, configuration)` optionally declares at most 32 unique bounded labels (IDs up to 128 characters, literal copy up to 80). The host measures them with the shared font/label pipeline and supplies `context.decorationMeasurements` to pure layout. It neither reads notes nor mounts another renderer. A guide may declare forward/backward/both arrow direction, line/none stroke and a caption with measured bounds/font size. Legacy `directed` guides retain their end arrow. Captions are literal/keyed text, never HTML; guides remain input-transparent with no semantic endpoints or action authority. Manual fit includes visible guide points and caption extents, while retaining the existing framing occurrence and camera guards.
+
+An optional `shape: {kind: "rounded-band", inner, radius}` excludes one strictly enclosed rounded hole from the outer `bounds`. The shared `areaContains`/`areaShapePath` geometry owns physical hits, counts and painting. Regions, resize frames and drop highlights retain the same hole; generic paint components receive path data from the host, with no canvas-domain dependency. Omitted shapes keep the established inclusive rectangle. Scrolling content uses the area's independent viewport; the unused band has only the explicitly declared area meaning and never derives relationship authority from an outline.
+
 `CanvasViewText` is `{literal: string}` or `{key: string}`. Literal user/vault labels never become catalog keys. Catalog keys used here have no required parameters. A heading omitted inherits host presentation; null/empty literal hides it.
 
 ## Production capabilities
@@ -48,14 +56,26 @@ Omitted optional capabilities are unavailable.
 | Capability | Compass (`classic`) | Mind Map (`mindmap`) | Facets (`wuxing`) |
 | --- | --- | --- | --- |
 | Navigation | Attention-following | Rooted; explicit destinations reroot | Attention-following |
-| Native editor | Existing attention-following | Accepted capacity-one occurrence host | Existing attention-following |
-| Sections | Existing production owner | Disabled | Disabled for every preset |
+| Native editor | Legacy central editor plus in-place noncentral occurrences | Capacity-one occurrence host, save-before-switch | Existing attention-following, all-note buttons |
+| Sections | Central attention note | Pinned root note | Disabled for every preset |
 | Descendant presentation | Existing Compass expansion | Bounded hierarchy capability | Disabled |
 | Cached-property classification / badges | Not declared | Not declared | Enabled |
 | Compact point rendering | Disabled | Disabled | Disabled |
 | Areas | Existing quadrants | Rooted measured areas/parents | Measured category/diagnostic regions |
 
-Mind Map's hierarchy does not imply the legacy `descendants` flag. Corpus reads/scoring, arbitrary graph scans, multiple editors and independent Facets occurrence bindings are unavailable. The section conformance fixture proves an optional boundary, not a shipped Mind Map section mode.
+Mind Map's hierarchy does not imply the legacy `descendants` flag. Corpus reads/scoring, arbitrary graph scans, multiple editors and independent Facets occurrence bindings are unavailable. Compass and Mind Map both use the shared optional section boundary; the conformance fixture remains outside production registration.
+
+An optional `hierarchy.maximumDepth` declares a finite occurrence-admission limit from 1 through 20. Omission preserves the existing limit of 8. Shared scene admission, ancestor-path visibility/selection and cycle-reference reveal use that same declared limit. Mind Map declares its existing hard maximum of 20; its configured default remains 10. This capability does not enlarge the independent source-scope budget (eight non-root frontiers for Mind Map), so another bounded-work limit can stop expansion earlier while retaining the visible frontier.
+
+### Shared disclosure and navigation
+
+`PlexOccurrence.branch` already supplies the shared branch disclosure; `branch.toggle` uses the definition's pure hierarchy reducer and existing session/editor preflight. A view implements neither a private button nor a second fold owner. The same action can delegate to supported central Markdown sections or a selected heading through their existing owners. Unsupported notes have no fold control/action.
+
+Mind Map declares additive `hierarchy.primary: "center"`: a plain note activation uses the existing destination/root/navigation lifecycle. Existing `activate`, `activate-editor` and explicit legacy `expand` primary policies remain valid for other consumers. Plain Enter centers in every registered view; rename and native document opening remain separate actions. Alt/Option+Enter folds only in graph focus; Control/Command+Enter uses the existing new-tab destination action. Native editors/fields retain their own keys. Default generation3 migrates inherited defaults without overwriting explicit shortcut choices or previously accepted conflicts.
+
+Plain arrows cross an exhausted area boundary using the existing spatial selection/reveal owner. Explicit area-jump actions remain optional shortcuts; `crossSectionAtBoundary` is retained in serialized preferences but no longer stops plain-arrow traversal or appears in Settings.
+
+Optional `hierarchy.controls: "measured"` opts into larger shared touch targets. The host supplies `PlexMeasurement.controlReserve {right,bottom}` and paints a 16px symbol in a transparent 44px canvas-space button anchored on the same lower-right node corner as its small mouse control; the transparent remainder extends outward. Layout packs the same reserve for every hierarchy row, including terminal/cycle references without a button, so fold availability and status text do not change sibling spacing. It preserves the actual node/editor rectangle and semantic ports. Mind Map subtree/parent-area geometry, shared filtered repacking and Fit include this clearance. Existing consumers omit the capability and retain their prior geometry. Controls follow the normal canvas scale; physical phone/tablet input still needs device acceptance.
 
 ## Bounded reads and availability
 
@@ -93,15 +113,17 @@ Host updates rebase through the existing queue and incoming owner epochs. The op
 
 ## Captured UI contributions
 
-`CanvasViewSettingsContribution` composes native `items`, optional `manager`, `choices`, `menus` and `layoutControls`. `CanvasViewContributionContext` contains the captured view ID/state and own configuration. Commands are finite descriptors: `state`, `configuration` or `settings`.
+`CanvasViewSettingsContribution` composes native `items`, optional `manager`, `choices`, `menus`, `layoutControls` and `help(context, target)`. `CanvasViewContributionContext` contains the captured view ID/state and own configuration. Commands are finite descriptors: `state`, `configuration`, `settings` or `help`. Help choices carry a captured target; the controller rechecks definition/configuration/session/revision and the currently selected target before handing bounded Markdown to the optional native Help port. Existing consumers may omit it.
 
 `CanvasViewContributionController` captures the opening session/definition/configuration/lifetime and rechecks received owners. Moving focus to another canvas does not redirect the selector, controls or a pending action. Stale/retired/one-shot commands return unavailable, not a write to another canvas.
 
 The shared view selector exposes a settings cog. A choice may contribute an optional `settings: {kind: "settings", target?: string}` command; the bounded stable target is forwarded to the existing native manager factory as its optional third argument. Facets uses its selected preset ID to open the existing detached editor. Repeated clicks capture fresh commands for the same current choice; they never reuse a consumed command or follow global focus. These links reuse native Settings navigation and the existing queued writer, and opening/cancelling creates no configuration write.
 
-Menus allow 64 total items, 32 siblings and depth 3. Choices allow 8 groups with 32 options each. Live rails allow 16 validated sliders/checkboxes. Every rail addresses the same schema/queued writer as native Settings. Do not add view-ID dropdown options or a separate settings path.
+Menus allow 64 total items, 32 siblings and depth 3. Choices allow 8 groups with 32 options each. Live rails allow 16 validated sliders/checkboxes. Configuration rails address the same schema/queued writer as native Settings. An optional checkbox `state: {value, actionId}` instead dispatches its boolean through the captured contribution controller and existing session reducer; this is an explicit per-canvas preference such as Combine diagnostics. Its declared schema address still identifies the relevant preset/default. Do not add view-ID dropdown options or a separate settings path.
 
 Native manager factories receive App only on the host side and a narrow `CanvasViewManagerContext`: own configuration/address reads, captured ownership, guarded save, presentation subscription, existing color/modal context, bounded cached suggestions and close. Shared `StyleEditorModal`, `StyleManagerList`, `StyleColorControls`, `PredicateConditions` and `PredicateRuleEditor` preserve their existing focus/cleanup owners.
+
+The optional manager `sharing` context grants read-only finite preset/lens/palette data and a reviewed package commit through the existing settings queue. It exposes no plugin, vault, index, session selection or note writer. `PortablePackageModal` composes canonical package validation/import planning, shared ClipboardSession and NativeMarkdownHelp. `updateStyleSettings` can atomically include one registered-view leaf with palette/disabled-lens dependencies; it retains disk-before-publication, scoped expected values, theme/retirement fences and the existing palette-reference validation. Invalid/future packages and failed/stale writes are refused without partial publication. Details and schema: [Portable presets](PORTABLE_PRESETS.md).
 
 ## Targets, assignments and decorations
 
@@ -115,10 +137,49 @@ Optional definition `propertyAssignments` returns bounded `PlexPropertyAssignmen
 
 Only an explicitly expanded single document supplies `PlexSectionRead`. `createPlexSectionViewContext` adapts the existing `SectionExpansion` hierarchy, ranges, projected provenance and captured native source revision. Bounds: 256 rows, 4,096 provenance entries and 8,192 inspected projected relationships. Missing/retired/oversized source data stays unavailable. Ordinary layout/paint cannot invoke a body parser.
 
-A view can emit `PlexOccurrence.section` referring to a source-owned `PlexSectionRef {documentId, revision, sectionId}`. The shared adapter binds its transient source row and measures/renders the ordinary ThoughtNode. Such rows cannot bind editors or become semantic note endpoints. `sourceSection` on a canonical edge is an optional physical attachment only, validated against current target/role provenance. Initial support is outgoing root-source attachment on either physical side; target/reverse attachment is unsupported.
+`capabilities.sections` gates every section control/action. Optional `sectionSource: "attention" | "layout-root"` declares the central source; omission preserves attention. A layout-root source requires rooted navigation. `plexSectionDocument` resolves that document without acquisition. Compass explicitly uses attention; Mind Map uses its pinned root; Facets remains disabled. Only the central note gets the note-section toggle. Graph branch chevrons and heading plus/minus controls dispatch separate shared actions and stop body click/double-click propagation.
 
-`plexSectionAnchor` maps genuine declarations to the lowest common visible ancestor. Preamble/multiple roots/missing provenance use the aggregate root/header. `visiblePlexSection` resolves folds, while wrong document/revision/removed row references fail. Geometry/clipping may use `sourceSectionOccurrence`; canonical `sourceOccurrence`, note paths and relationship evidence stay intact. Shared tree drawing/fold actions are reused. Native editor presence declines section replacement without changing the editor document/save lifecycle.
+`appendPlexSections` composes validated source-owned rows into a central-root projection within the existing total scene bound. It preserves canonical edges and attaches physical sources only where `plexSectionAnchor` supplies evidence. A hierarchy retains validated headings as structural presentation rather than pretending they are canonical graph branches. Mind Map reserves their measured central width before placing branches. Explicit rerooting retires the old outline; expanding the new root requires another explicit action. Ordinary attention changes retain the pinned outline without another body read.
+
+The host measures section rows with the shared heading-size policy used by Compass, reserving the heading marker, padding and readable minimum width before a plugin receives its measurements. A view must pack those full measured rectangles. The configured maximum width and character budget remain authoritative; short headings must not be clipped by regular note-pill dimensions. Sizing and reflow do not reread the source document.
+
+Saved resolved relationships may be readable before detailed evidence hydration. The shared section owner retains these existing canonical rows and uses the explicitly read central document's physical occurrences for read-only placement immediately. Unplaced, preamble and known frontmatter occurrences retain the note header. Loaded indexed provenance takes precedence; promotion retires the preview path. File identity, path, stats and native metadata identity fence temporary placements. Preview placement never becomes indexed/editable evidence or grants write authority, and layout/presentation does not acquire sources, parse bodies or wait for whole-vault hydration. Views consume the same validated physical anchors rather than implementing their own hydration fallback.
+
+Retiring a physical occurrence proof must preserve the already readable canonical relationships at the note header. Stale source/metadata removes section attachment, not canonical incidence; subsequent current source/evidence publication may attach it again.
+
+A view can emit `PlexOccurrence.section` referring to a source-owned `PlexSectionRef {documentId, revision, sectionId}`. The shared adapter binds its transient source row and measures/renders the ordinary ThoughtNode. Such rows cannot bind editors or become semantic note endpoints. `sourceSection` on a canonical edge is an optional physical attachment only, validated against current target/role provenance. Outgoing root-source attachment retains the view's declared physical port; target/reverse attachment is unsupported.
+
+`plexSectionAnchor` maps genuine declarations to the lowest common visible ancestor. Preamble/multiple roots/missing provenance use the aggregate root/header. `visiblePlexSection` resolves folds, while wrong document/revision/removed row references fail. Geometry/clipping may use `sourceSectionOccurrence`; canonical `sourceOccurrence`, note paths and relationship evidence stay intact. Shared tree drawing/fold actions are reused. An editor on the central source excludes that outline; an editor on another occurrence keeps its identity, dimensions and lifecycle alongside the outline. Section rows cannot bind editors.
 
 ## Validation and limits
 
 See the [ordered validation record](validation/facets-220-2026-10-25.md) for exact commits, passing checks, earlier failures and pending final native/CI acceptance. Preserve the documented #215 baseline failures. Browser input is not physical mobile, macOS or minimum-host acceptance. No merge, release, remote loader or personal-vault deployment is part of this API delivery.
+
+### Shared editor-button switching
+
+Every eligible note in an editor-capable view receives the shared corner action. Attention hosts center the chosen note through accepted navigation and use their existing native editor; they do not adopt occurrence bindings. Occurrence hosts keep their root/attention policy. `editor.expand` serializes explicit switching through the existing native save/close transaction, then reacquires the captured displayed occurrence, exact native file and selected-view lifetime. Failed saves keep the original editor recoverable; stale/retired requests cannot open a replacement. Capacity remains one. Area-hosted editors keep their toolbar within the clipped visible area; native content retains its existing scroll/resize/zoom/lifecycle owner.
+
+### Captured editor transitions and Compass occurrences
+
+`PlexViewSession.requestSelection(id)` awaits the captured host?s optional `guardSelection` preflight, then rechecks the canvas/view lifetime and direct `canSelect` safeguards. The native host saves/closes through its existing editor transaction and releases its lease only after success. Failed saves retain the old editor/view. The selector stays attached to its opening canvas while focus moves elsewhere; lens drafts, filters and per-view state retain their owners. Synchronous `select` cannot bypass a live-editor guard.
+
+Compass declares occurrence capability while its registered Classic adapter preserves the existing central attention editor, maximization and native non-Markdown center representations. A noncentral Markdown editor instead uses the shared capacity-one binding. The adapter derives an exact bounded role/center/note occurrence key, measures the native rectangle through existing Classic geometry, and changes only physical connector occurrence endpoints. Canonical evidence/paths stay unchanged. Duplicate roles are distinct; ambiguous same-role section copies cannot acquire a binding. Filtering/grouping retain the live occurrence. Explicit attention navigation saves/closes that occurrence before moving; passive follow cannot remove it. Restoration reacquires native identity and current exact occurrence; no native buffer enters workspace state. Facets keeps its attention-following policy.
+
+### Overflow connector presentation
+
+Shared admitted endpoint membership is independent of scroll visibility. Real filters still remove edges; visible-row source demand and bounded cross-link discovery retain their current scope. Exact physical endpoints (including proven section anchors) route in scrolled coordinates. Shared SVG apertures clip stroke/markers/caption/hit geometry to the measured area, or the measured span for cross-area routes. A single-branch expansion minimally reveals its captured occurrence after measured reflow; manual scrolling or retired lifetime cancels pending settlement. It never changes editor identity, focus, selection or navigation.
+
+Multiple native editors remain a separate extension: current capacity and host lifetime are one. The Properties follower currently reads graph attention even when a different occurrence editor is focused; the required focused-editor/graph-center ownership seam is assessed in [the overflow/editor assessment](validation/mindmap-overflow-222-2026-10-26.md), not implemented by the clipping fix.
+
+### Fixed measured viewports
+
+`PlexArea.viewport.scrollable?: false` opts a region into the existing shared tools/content renderer without native list scrolling. Omission preserves scrollable viewports. A fixed region must declare `initialScrollTop:0` and `contentHeight <= height`; invalid declarations fail scene admission. Its layout owns the full measured content envelope. Native editor content remains independently scrollable. Shared pointer/touch/wheel routing treats the fixed region as canvas.
+
+`reflow.filterLayout?: "keep"` retains measured positions after filtering, including exact hierarchy ancestor closure; omission preserves existing filtered packing. Mind Map uses these optional capabilities for its bottom-aligned, automatically growing parent forest. The parent-height preference exposes its bounded editable minimum through `heightPreference.value`, while actual bounds can exceed that minimum. Compass/Facets and other existing scrolling consumers keep their defaults.
+
+
+### Shared node statuses and bounded-area connector paint
+
+`PlexNodeBadge.presentation` optionally selects `status`: shared compact text below and aligned to the node?s left edge, with the same `NodeStatus` component/typography as Mind Map cycle and preparation states. Omission or `category` preserves the colored chip above the node. Labels and explanations remain plain `CanvasViewText`; the owning node exposes the explanation accessibly. Statuses have no gates, actions or relationship authority. The shared measurement/bounds/inset path reserves bottom clearance and carries the presentation through synthetic grouping, reflow and fit. Facets uses statuses for uncertain center classifications and combined diagnostics, retaining colored assigned category chips.
+
+`PlexArea.viewport.edgeVisibility: "visible-endpoints"` opts into shared paint suppression when either physical attachment lies outside its own bounded scroll viewport. Stroke, markers, caption and hit path retire together; canonical edges, occurrence identities, evidence and filtering are unchanged. Exact section attachments use their physical occurrence. This explicit suppression remains available to custom views. The default shared scroll policy instead keeps connectors from visible counterpart cards to clamped boundary continuations for hidden attachments. A visible card still supplies context when its protruding gate is clipped. Two wholly hidden cards paint no route. Continuations have no note arrowheads or detached captions, and their small read-only marks are not gates/drop targets; canonical evidence and interaction targets stay unchanged. Same-area routes use the scroll aperture; cross-area curves connect the bounded paint anchors and use the canvas clip, avoiding truncated union-box loops. Fixed non-scrolling forests retain actual endpoints. Scrolling restores real gate attachments with the same admitted connector identities and no source work. Facets uses this shared default.

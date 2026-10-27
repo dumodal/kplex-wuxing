@@ -9,6 +9,31 @@ const M=await plexViewModules(['src/application/PlexViewSession.ts','src/applica
 const occurrenceIntent = (occurrenceId='B1',fileIdentity='native-B') => ({viewId:'test.bound',occurrenceId,
  target:{nodeId:'B.md',path:'B.md',fileIdentity},dimensions:{width:600,height:360},mode:'source'});
 
+test('only opted-in presets retain the bounded full size inventory across layout and mode switches',()=>{
+ const normal=new M.PlexViewSession(M.builtInPlexViews,()=>{}),facets=new M.PlexViewSession(M.builtInPlexViews,()=>{});facets.select('wuxing');
+ for(let i=0;i<192;i++){assert.equal(facets.setAreaWidth('area'+i,300+i),true);assert.equal(facets.setAreaHeight('area'+i,200+i),true);assert.equal(normal.setAreaWidth('area'+i,300),i<64);}
+ assert.equal(facets.setAreaWidth('overflow',300),false);assert.equal(facets.setAreaHeight('overflow',300),false);
+ const restored=new M.PlexViewSession(M.builtInPlexViews,()=>{});restored.restore(JSON.parse(JSON.stringify(facets.getState())));
+ assert.equal(Object.keys(restored.getAreaWidths()).length,192);assert.equal(Object.keys(restored.getAreaHeights()).length,192);
+ normal.dispose();facets.dispose();restored.dispose();
+});
+
+test('independent canvas width and height preferences restore without retargeting another view or canvas',()=>{
+ const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.probeViewDefinition]);let writes=0;
+ const a=new M.PlexViewSession(registry,()=>writes++),b=new M.PlexViewSession(registry,()=>{});
+ assert.equal(Object.hasOwn(a.getState(),'areaWidths'),false,'Old consumers do not gain an empty optional payload');
+ a.select('test.situated');b.select('test.situated');const current=a.capture();
+ assert.equal(a.setAreaHeight('grove',280),true);assert.equal(a.setAreaWidth('grove',720),true);
+ assert.equal(current(),true);assert.deepEqual(a.getAreaHeights(),{grove:280});assert.deepEqual(a.getAreaWidths(),{grove:720});assert.deepEqual(b.getAreaWidths(),{});
+ assert.equal(a.setAreaWidth('grove',720),false);
+ for(const key of ['constructor','prototype','__proto__'])assert.equal(a.setAreaWidth(key,300),false);
+ for(const value of [0,-1,Infinity,100001])assert.equal(a.setAreaWidth('bad',value),false);
+ const saved=JSON.parse(JSON.stringify(a.getState())),restored=new M.PlexViewSession(registry,()=>{});restored.restore(saved);
+ assert.deepEqual(restored.getAreaWidths(),{grove:720});assert.deepEqual(restored.getAreaHeights(),{grove:280});
+ a.select('classic');assert.deepEqual(a.getAreaWidths(),{});a.select('test.situated');assert.deepEqual(a.getAreaWidths(),{grove:720});
+ assert(writes>0);a.dispose();assert.equal(a.setAreaWidth('grove',900),false);b.dispose();restored.dispose();
+});
+
 test('explicit rooted view entry captures its owning canvas current attention instead of an older saved root',()=>{
  let attention='A.md',otherAttention='Other.md',writes=0;
  const a=new M.PlexViewSession(M.builtInPlexViews,()=>writes++,()=>attention),b=new M.PlexViewSession(M.builtInPlexViews,()=>{},()=>otherAttention);

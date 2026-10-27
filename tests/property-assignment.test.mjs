@@ -1,18 +1,20 @@
 /** Bounded explicit field transforms use the same portable policy for drop, accessible action
  * and guarded undo. Native mutation/convergence is tested at its separate existing host owner. */
+import {legacyWuXingPreset} from './support/facetPresetArchive.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {loadPortableModules} from './support/portableTypeScript.mjs';
 const {exports:M}=loadPortableModules(['src/core/plex/views/propertyAssignment.ts','src/core/plex/views/facets/assignment.ts',
  'src/core/plex/views/facets/templates.ts']);
 const configuration=presets=>({status:'available',values:{presets}});
-const targets=(preset=M.FACET_TEMPLATES.wuxing,state={version:1,preset:'wuxing'})=>M.facetPropertyAssignments(state,configuration({wuxing:preset}));
+const targets=(preset=legacyWuXingPreset(M.FACET_TEMPLATES.wuxing),state={version:1,preset:'wuxing'})=>M.facetPropertyAssignments(state,configuration({wuxing:preset}));
 const metal=()=>targets().find(row=>row.value==='metal'),clear=()=>targets().find(row=>row.value===undefined);
 const present=value=>({present:true,value});
 
-test('all five templates declare finite explicit category and safe-clear property targets',()=>{
+test('all eight templates grant targets only to explicit property presets, retaining safe clear',()=>{
  for(const [id,preset]of Object.entries(M.FACET_TEMPLATES)){
   const entries=M.facetPropertyAssignments({version:1,preset:id},configuration({}));
+  if(preset.source!=='property'){assert.deepEqual(entries,[],id+' rules/type/tag preset must not acquire property write authority');continue;}
   assert.equal(entries.length,preset.order.length+1);assert(entries.every(M.validPropertyAssignment));
   assert(entries.every(entry=>entry.field===preset.field));assert.equal(entries.at(-1).value,undefined);
   assert.equal(new Set(entries.map(entry=>entry.id)).size,entries.length);
@@ -20,13 +22,13 @@ test('all five templates declare finite explicit category and safe-clear propert
 });
 
 test('type/tag/computed/future/missing intent never borrows a fallback property-write capability',()=>{
- for(const source of ['type','tag','rules'])assert.deepEqual(targets({...M.FACET_TEMPLATES.wuxing,source}),[]);
+ for(const source of ['type','tag','rules'])assert.deepEqual(targets({...legacyWuXingPreset(M.FACET_TEMPLATES.wuxing),source}),[]);
  for(const state of [{version:9,preset:'wuxing'},{version:1,preset:'future'},'malformed'])assert.deepEqual(targets(undefined,state),[]);
  assert.deepEqual(M.facetPropertyAssignments(null,{status:'unavailable',reason:'unsupported'}),[]);
 });
 
 test('a canonical assignment must be recognized exclusively by its destination category',()=>{
- const preset=structuredClone(M.FACET_TEMPLATES.wuxing);preset.categories.water.assignment='not-recognized';
+ const preset=structuredClone(legacyWuXingPreset(M.FACET_TEMPLATES.wuxing));preset.categories.water.assignment='not-recognized';
  assert(!targets(preset).some(row=>row.value==='not-recognized'));
  preset.categories.water.assignment='water';preset.categories.metal.values.push('water');
  assert(!targets(preset).some(row=>row.value==='water'),'Conflicting canonical value grants no assignment authority');

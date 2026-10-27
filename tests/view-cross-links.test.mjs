@@ -43,3 +43,13 @@ test('parent-area filtering retains exact matching ancestry and repacks measured
  assert.deepEqual(layout.nodes.map(n=>n.occurrenceId),['B2','D']);assert(layout.localPositions.get('D').x>layout.localPositions.get('B2').x);assert.equal(layout.count,2);
  assert.equal(layout.localPositions.get('B1'),undefined);assert(layout.contentHeight>=160);
 });
+
+
+test('optional stable area filtering retains exact ancestors and bottom-aligned positions without creating overflow',()=>{
+ const f=fixture(),nodes=[{...f.B,branch:{parent:'root'}},{...f.C,branch:{parent:'B1'}},{...f.B2,branch:{parent:'root'}},{...f.D,branch:{parent:'B2'}}];
+ const panel={left:-300,top:-300,width:1400,height:500,contentTop:-300,contentHeight:500};
+ const layout=M.reflowArea(panel,nodes,'D',(node,value)=>node.page.path===value,{columns:2,columnGap:24,rowGap:16,filterLayout:'keep'});
+ assert.deepEqual(layout.nodes.map(n=>n.occurrenceId),['B2','D']);assert.equal(layout.count,2);assert.equal(layout.contentHeight,500);
+ for(const node of layout.nodes)assert.deepEqual(layout.localPositions.get(node.occurrenceId),{x:node.x-panel.left,y:node.y-panel.contentTop});
+ assert.equal(layout.localPositions.get('B1'),undefined,'Canonical duplicate does not replace the actual ancestor');
+});

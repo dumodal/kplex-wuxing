@@ -27,6 +27,8 @@ export interface GraphActionPorts {
   implementations: SurfaceActionImplementations;
   /** Inspect this exact admitted scene; empty/decorative-only views expose no area-edit command. */
   canEditAreas?: () => boolean;
+  /** Save/close the one native host before an explicit attention transition removes its occurrence. */
+  prepareEditorTransition?: () => Promise<boolean>;
   prepareNavigation?: (identity: string, origin: "user" | "wander" | "follow") => void;
   readWanderScene?: () => WanderScene;
   highlightWander?: (destination: WanderDestination) => boolean;

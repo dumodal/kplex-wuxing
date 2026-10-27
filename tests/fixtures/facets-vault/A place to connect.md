@@ -1,5 +1,8 @@
 ---
-ace: "express"
+approach: "top-down"
+mode: "expression"
+map-role: "supporting-map"
+arc: "communicate"
 para: "areas"
 phase: "water"
 horizon: "purpose"

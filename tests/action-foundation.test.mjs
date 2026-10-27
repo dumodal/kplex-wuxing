@@ -364,12 +364,33 @@ test("explicit saves opt into retained default overlaps while old loads migrate 
   const before=structuredClone(raw),legacy=api.sanitizeActionPreferences(raw,false,'windows');
   assert(legacy.skippedDefaults.includes('node.rename'));assert.deepEqual(legacy.preferences.localBindings['node.rename'],[]);
   const saved=api.sanitizeActionPreferences(raw,false,'windows',true);
-  assert.equal(saved.preferences.defaultBindingsVersion,1);assert.deepEqual(saved.skippedDefaults,[]);assert.equal(saved.preferences.localBindings['node.rename'],undefined);
+  assert.equal(saved.preferences.defaultBindingsVersion,3);assert.deepEqual(saved.skippedDefaults,[]);assert.equal(saved.preferences.localBindings['node.rename'],undefined);
   const reload=api.sanitizeActionPreferences(saved.preferences,false,'windows');
   assert.deepEqual(reload.preferences,saved.preferences);assert.deepEqual(reload.skippedDefaults,[]);
   assert.equal(api.compileActionBindings(reload.preferences,'windows').resolve(event('r',{code:'KeyR',altKey:true}),'graph').state,'ambiguous');
-  const future={...before,defaultBindingsVersion:2},futureBefore=structuredClone(future),unsupported=api.sanitizeActionPreferences(future,false,'windows');
-  assert.equal(unsupported.unsupportedVersion,2);assert.deepEqual(future,futureBefore);assert.deepEqual(raw,before);
+  const future={...before,defaultBindingsVersion:4},futureBefore=structuredClone(future),unsupported=api.sanitizeActionPreferences(future,false,'windows');
+  assert.equal(unsupported.unsupportedVersion,4);assert.deepEqual(future,futureBefore);assert.deepEqual(raw,before);
+});
+
+test('centering, new-tab opening and Alt Enter folding have graph-only defaults and v3 migration preserves explicit shortcuts',()=>{
+ for(const convention of ['windows','macos']){
+  const prefs=api.migrateActionPreferences(undefined,convention).preferences,c=api.compileActionBindings(prefs,convention);
+  assert.equal(c.match(event('Enter'),'graph'),'node.activate');
+  for(const [modifier,action] of [['altKey','branch.toggle'],[convention==='macos'?'metaKey':'ctrlKey','node.open.new-tab'],['shiftKey',null]]){
+   assert.equal(c.match(event('Enter',{[modifier]:true}),'graph'),action);
+   for(const context of ['embedded-editor','sidecar-editor','native-control','search'])assert.equal(c.match(event('Enter',{[modifier]:true}),context),null);
+  }
+  assert.deepEqual(c.conflicts,[]);
+ }
+ const raw={version:1,defaultBindingsVersion:1,localBindings:{'node.open':[{match:'key',value:'Enter',modifiers:['mod']}],
+  'pin.toggle':[{match:'code',value:'KeyR',modifiers:['alt']}]},publishedCommands:{}};
+ for(const defaultBindingsVersion of [1,2]){const saved={...raw,defaultBindingsVersion},before=structuredClone(saved),migrated=api.sanitizeActionPreferences(saved,false,'windows');assert.equal(migrated.preferences.defaultBindingsVersion,3);assert.deepEqual(migrated.skippedDefaults,['node.open.new-tab']);assert.deepEqual(saved,before);}
+ const before=structuredClone(raw),result=api.sanitizeActionPreferences(raw,false,'windows');
+ assert.equal(result.preferences.defaultBindingsVersion,3);assert.deepEqual(result.skippedDefaults,['node.open.new-tab']);
+ assert.deepEqual(result.preferences.localBindings['node.open'],raw.localBindings['node.open']);
+ assert.equal(result.preferences.localBindings['node.rename'],undefined,'Previously accepted default overlap is not silently migrated away');
+ assert.equal(api.compileActionBindings(result.preferences,'windows').match(event('Enter',{ctrlKey:true}),'graph'),'node.open');
+ assert.deepEqual(api.sanitizeActionPreferences(result.preferences).preferences,result.preferences);assert.deepEqual(raw,before);
 });
 
 test("partial public registration failure reports actual state and stable-ID retry without duplicate success", () => {
@@ -455,7 +476,7 @@ test("modified laptop defaults match Mac Option glyphs by physical position and 
   for (const region of ["embedded-editor", "sidecar-editor"]) assert.equal(compiled.match(event("¿", {code: "Slash", altKey: true, shiftKey: true}), region), null, "Editors keep their own help chords");
   assert.equal(compiled.match(event("g", {metaKey: true, shiftKey: true}), "embedded-editor"), "graph.focus");
   assert.equal(compiled.match(event("e", {metaKey: true, shiftKey: true}), "graph"), "editor.focus");
-  assert.equal(compiled.match(event("Enter", {metaKey: true}), "graph"), "node.open");
+  assert.equal(compiled.match(event("Enter", {metaKey: true}), "graph"), "node.open.new-tab");
   assert.equal(compiled.match(event("ArrowUp", {altKey: true}), "graph"), "selection.section.up");
   assert.equal(compiled.match(event("ArrowUp", {metaKey: true}), "graph"), "relationship.create-center.parent");
 });

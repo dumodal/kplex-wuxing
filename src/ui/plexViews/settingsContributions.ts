@@ -14,7 +14,7 @@ import {classicSettingsContribution} from "./classic/settings";
 import {mindMapSettingsContribution} from "./mindmap/settings";
 import {viewLabel} from "./labels";
 import {wuXingSettingsContribution} from "./wuxing/settings";
-import type {CanvasViewContributionContext, CanvasViewMenuItem, CanvasViewChoice, CanvasViewLayoutControl} from "./contributionContracts";
+import type {CanvasViewContributionContext, CanvasViewMenuItem, CanvasViewChoice, CanvasViewLayoutControl, CanvasViewHelp} from "./contributionContracts";
 import {validateCanvasViewLayoutControl, contributionArray} from "./contributionValidation";
 import {validViewConfigurationAddress} from "../../core/plex/views/configurationPaths";
 
@@ -32,6 +32,8 @@ export type CanvasViewSettingsContribution = Readonly<{
   layoutControls?: readonly CanvasViewLayoutControl[] | ((context: CanvasViewContributionContext) => readonly CanvasViewLayoutControl[]);
   menus?: (context: CanvasViewContributionContext) => readonly CanvasViewMenuItem[];
   choices?: (context: CanvasViewContributionContext) => readonly CanvasViewChoice[];
+  /** Read-only, bounded help for an exact captured target; no renderer or native owner crosses. */
+  help?: (context: CanvasViewContributionContext, target: string) => CanvasViewHelp | null;
 }>;
 
 /** Declarative keys contain only registered type/field identities, never saved payloads or runtime state. */

@@ -1,5 +1,6 @@
 /** Actual production canvas, native drag adapter, ActionManager, property modal and original
  * metadata convergence. FileManager/Vault are finite host facts; no feature owner is replaced. */
+import {legacyWuXingPreset} from './support/facetPresetArchive.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {chromiumHarness} from './support/browserTypeScript.mjs';
@@ -8,6 +9,7 @@ import {initializeColorDom} from './support/nativeColorControls.mjs';
 import {canvasSceneFixture} from './support/canvasSceneFixture.mjs';
 const output=await plexViewBrowserModules({nativeControls:true});
 const initialize=`${canvasSceneFixture}
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:(${legacyWuXingPreset.toString()})(M.FACET_TEMPLATES.wuxing)});
  const persisted=new Map(),bodies=new Map(),suffix='# Body: keep exact text and [[Source relationship]]',cancels=new Set(),relations=[];
  let nativeSaves=0;const propertyRequests=[];
  for(const [path,page]of pages){const frontmatter={phase:['water','private'],parents:['[[Original parent]]'],title:path};persisted.set(path,frontmatter);

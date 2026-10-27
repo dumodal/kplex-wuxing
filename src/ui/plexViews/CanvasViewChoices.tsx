@@ -31,5 +31,12 @@ export function CanvasViewChoices({controller, translate}: Readonly<{controller:
         if (!current?.settings) {setUnavailable(true);return;}
         void current.settings.run().then(outcome => {if (alive.current) setUnavailable(outcome.status !== "completed");});
       }}><ObsidianIcon name="settings" size={14} /></TooltipButton>}
+    {choice.help && <TooltipButton className="kplex-icon-button" disabled={!choice.enabled}
+      label={translate("view.helpFor", {name: canvasViewText(choice.options.find(option => option.id === choice.selected)?.label ?? choice.label, translate)})}
+      onClick={/** Repeated Info opens reacquire only this same captured choice; focus never redirects it. */ () => {
+        const current = controller.session.definition === definition ? controller.choices().find(row => row.id === choice.id && row.selected === choice.selected && row.enabled) : undefined;
+        if (!current?.help) {setUnavailable(true);return;}
+        void current.help.run().then(/** A closed panel cannot show feedback for its retired help command. */ outcome => {if (alive.current) setUnavailable(outcome.status !== "completed");});
+      }}><ObsidianIcon name="info" size={14} /></TooltipButton>}
   </div>)}{unavailable && <div role="status" className="kplex-lens-help">{translate("view.unavailable")}</div>}</>;
 }

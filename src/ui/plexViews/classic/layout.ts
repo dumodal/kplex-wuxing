@@ -1,9 +1,10 @@
+import {classicEditorKey, measureClassicEditor, bindClassicEditor, type ClassicEditorLayout} from "./occurrenceEditor";
 import { classicAreaForRole as scrollZoneForRole, horizontalDensity, spacingPolicy, layoutColumns, siblingScale, lateralAreaGap} from "../../../core/plex/views/classic/geometry";
 export {scrollZoneForRole, horizontalDensity, spacingPolicy, layoutColumns, siblingScale, lateralAreaGap};
 import {classicViewDefinition} from "../../../core/plex/views/classic/definition";
 import {nodeId} from "../../../core/graph/model";
 import type {PlexProjection} from "../../../core/plex/views/contracts";
-import {nodeSize, countsForLayout, nodeLabelFontSize} from "../measurement";
+import {nodeSize, sectionNodeSize, countsForLayout, nodeLabelFontSize} from "../measurement";
 /**
  * Classic host binding: arrange semantic neighborhoods into presentation zones.
  * Area resize bounds exist for empty groups independently of overflow viewports;
@@ -106,6 +107,8 @@ function makeNode(
   index: ClassicSceneRead,
   settings: KplexSettings,
   deferCounts = false,
+  editor?: ClassicEditorLayout,
+  center = "",
 ): PositionedNode {
   const resolved = resolveNodeStyle(n.page, n, role, settings);
   const scale = role === "sibling" ? siblingScale(settings) : 1;
@@ -120,7 +123,7 @@ function makeNode(
     // Sibling scaling keeps its width/proportions but cannot shrink the actual font's clip box.
     height: Math.max(baseSize.height * scale, Math.ceil(nodeLabelFontSize(style.fontSize ?? 18, false, settings.baseFontSize)
       * (settings.wrapNodeLabels ? 2.8 : 1.6) + 8 + 2 * Math.max(0, style.strokeWidth ?? 1))) };
-  return {
+  const node: PositionedNode = {
     page: n.page,
     role,
     relationType: n.relationType,
@@ -133,6 +136,7 @@ function makeNode(
     label,
     ...countsForLayout(n.page, index, deferCounts),
   };
+  measureClassicEditor(node, center, editor);return node;
 }
 
 export type ExpandedMiniLayout = Readonly<{
@@ -203,6 +207,8 @@ export function buildScene(
   showCrossLinks = true,
   centerSizeOverride?: CenterNodeSize,
   deferCounts = false,
+  editor?: ClassicEditorLayout,
+  bindEditor = true,
 ): PlexScene {
   const centerStyle = resolveNodeStyle(neighborhood.center, null, "center", settings);
   const centerLabel = index.titleFor(neighborhood.center);
@@ -221,12 +227,13 @@ export function buildScene(
     ...countsForLayout(neighborhood.center, index, deferCounts),
   };
 
-  const rows = (items: Neighbour[], role: Role): PositionedNode[] => items.map(row => makeNode(row, role, index, settings, deferCounts));
+  const rows = (items: Neighbour[], role: Role): PositionedNode[] => items.map(row => makeNode(row, role, index, settings, deferCounts, editor, neighborhood.center.path));
   const input = {center, parents: rows(neighborhood.parents, "parent"), children: rows(neighborhood.children, "child"),
     leftFriends: rows(neighborhood.leftFriends, "left"), rightFriends: rows(neighborhood.rightFriends, "right"), siblings: rows(neighborhood.siblings, "sibling")};
   // Measure bounded cached descendants before pure geometry. The portable policy never receives a host reader.
   const measured = new Map<PositionedNode, {reserve: number; width: number; mini: ReturnType<typeof miniLayoutForNode>; envelope: ReturnType<typeof miniLayoutForNode>}>();
   for (const node of [center, ...input.parents, ...input.children, ...input.leftFriends, ...input.rightFriends, ...input.siblings]) {
+    if (editor && classicEditorKey(node, neighborhood.center.path) === editor.binding.occurrenceId && node.page.file === editor.page.file) {measured.set(node, {reserve: 0, width: node.width, mini: null, envelope: null});continue;}
     measured.set(node, {reserve: node === center ? 0 : expandedChildReserve(node.page, index, settings, neighborhood.center.path),
       width: expandedNodeWidth(node, index, settings, neighborhood.center.path), mini: miniLayoutForNode(node, index, settings, neighborhood.center.path),
       envelope: miniLayoutForNode(node, index, withMiniColumnEnvelope(settings), neighborhood.center.path)});
@@ -275,7 +282,7 @@ export function buildScene(
   appendSiblingParentLinks(nodes, edges, index, settings, neighborhood.center.path);
   if (showCrossLinks) appendVisibleCrossLinks(nodes, edges, index, settings, neighborhood.center.path);
 
-  return { nodes, edges, zoneViewports, zoneAreas };
+  return bindEditor ? bindClassicEditor({nodes, edges, zoneViewports, zoneAreas}, neighborhood.center.path, editor) : {nodes, edges, zoneViewports, zoneAreas};
 }
 
 function appendSiblingParentLinks(
@@ -409,6 +416,7 @@ export function buildSectionExpandedScene(
   showCrossLinks = true,
   centerSizeOverride?: CenterNodeSize,
   deferCounts = false,
+  editor?: ClassicEditorLayout,
 ): PlexScene {
   const sectionPaths = new Set(expansion.sections.map((section) => section.page.path));
   const baseNeighborhood: Neighborhood = {
@@ -417,7 +425,7 @@ export function buildSectionExpandedScene(
   };
   // Add cross-links after section/runtime relationship nodes are appended, so the visibility rule
   // is truly based on the final scene rather than only on the unexpanded center neighbourhood.
-  const scene = buildScene(baseNeighborhood, index, settings, false, centerSizeOverride, deferCounts);
+  const scene = buildScene(baseNeighborhood, index, settings, false, centerSizeOverride, deferCounts, editor, false);
   const byId = new Map(expansion.sections.map((section) => [section.id, section] as const));
   const roots = expansion.sections.filter((section) => !section.parentId);
   const visible: Array<{ section: import("../../../index/SectionExpansion").ExpandedSection; depth: number }> = [];
@@ -513,9 +521,8 @@ export function buildSectionExpandedScene(
   const makeSectionNode = (section: import("../../../index/SectionExpansion").ExpandedSection, depth: number, relations: ReturnType<typeof collectForVisibleSection>): PositionedNode => {
     const pseudo: Neighbour = { page: section.page, role: "child", relationType: RelationType.DEFINED, typeDefinition: "section", linkDirection: null };
     const node = makeNode(pseudo, "child", index, settings, deferCounts);
-    const maxSectionWidth = Math.max(172, node.style.maxWidth ?? settings.baseNodeStyle.maxWidth ?? 286);
-    node.width = Math.max(172, Math.min(maxSectionWidth, node.width + (16 + (2 - 16) * horizontalDensityT)));
-    node.height = Math.max(32, node.height + 3 * (1 - verticalDensityT));
+    Object.assign(node, sectionNodeSize(node, node.style.maxWidth ?? settings.baseNodeStyle.maxWidth,
+      16 + (2 - 16) * horizontalDensityT, 3 * (1 - verticalDensityT)));
     // x is the card centre; rootLeft is the left edge of the first heading card.
     node.x = rootLeft + node.width / 2 + depth * depthIndent;
     node.gateStats = {
@@ -529,7 +536,7 @@ export function buildSectionExpandedScene(
 
   /** Place one bounded section-owned relation group with actual-width and non-touching rows. */
   const addRelationGroup = (sectionNode: PositionedNode, items: SourcedNeighbour[], role: Exclude<Role, "sibling">) => {
-    const nodes = items.map((item) => makeNode(item.relation, role, index, settings, deferCounts));
+    const nodes = items.map((item) => makeNode(item.relation, role, index, settings, deferCounts, editor, expansion.centerNeighborhood.center.path));
     const horizontal = role === "left" || role === "previous" || role === "right" || role === "next";
     const direction = role === "left" || role === "previous" || (settings.lateralArrangement === "left" && role === "right")
       ? -1 : role === "right" || role === "next" ? 1 : 0;
@@ -653,5 +660,5 @@ export function buildSectionExpandedScene(
 
   scene.sectionTreeEdges = sectionTreeEdges;
   if (showCrossLinks) appendVisibleCrossLinks(scene.nodes, scene.edges, index, settings, expansion.centerNeighborhood.center.path);
-  return scene;
+  return bindClassicEditor(scene, expansion.centerNeighborhood.center.path, editor);
 }

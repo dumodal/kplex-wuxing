@@ -1,4 +1,5 @@
 /** Actual shared grammar/engine and Facets rule projection, with finite cache-only ports. */
+import {archivedFacetPresets} from './support/facetPresetArchive.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {plexViewModules} from './support/plexViewFixture.mjs';
@@ -8,7 +9,7 @@ const compile=source=>M.compileGraphPredicate(M.parseGraphPredicateExpression(so
 const node=(id,name=id)=>({id,path:id+'.md',name,kind:'document',file:{extension:'md',path:id+'.md',name:id+'.md'},tags:[],aliases:[],noteType:null});
 const center=node('focus'),candidate=node('candidate'),context={node:{node:candidate},center};
 const available=value=>({status:'available',value});
-const preset=rules=>({...M.FACET_TEMPLATES.ace,source:'rules',categories:Object.fromEntries(M.FACET_TEMPLATES.ace.order.map((id,i)=>[id,{...M.FACET_TEMPLATES.ace.categories[id],rule:rules[i]}]))});
+const preset=rules=>({...archivedFacetPresets.arc,source:'rules',categories:Object.fromEntries(archivedFacetPresets.arc.order.map((id,i)=>[id,{...archivedFacetPresets.arc.categories[id],rule:rules[i]}]))});
 
 test('opt-in current/candidate properties share the actual field provider while legacy this semantics stay unchanged',()=>{
  const reads=[];const engine=new M.GraphPredicateEngine({getNoteProperty:()=>undefined,readNoteProperty:(node,key)=>{reads.push([node.id,key]);return available(node.id==='focus'?'wood':'metal')}});
@@ -58,7 +59,7 @@ function fixture(rules){
   relations:(id,role)=>{counters.relations++;return{items:id==='focus'?relations.filter(row=>row.role===role):[],coverage:'cached',truncated:false}},
   properties:{read:(id,key)=>{counters.properties++;return metadata==='available'?available(key==='phase'?phases[id]:undefined):{status:metadata}},availability:()=>{counters.availability++;return metadata}},
   evidence:()=>{counters.evidence++;return{coverage:'cached',value:{decisions}}}};
- const project=()=>M.projectFacets({attention:'focus',maximum:20,state:{version:1,preset:'ace'},configuration:{status:'available',values:{presets:{ace:definition}}},read});
+ const project=()=>M.projectFacets({attention:'focus',maximum:20,state:{version:1,preset:'arc'},configuration:{status:'available',values:{presets:{arc:definition}}},read});
  const membership=(projection,id)=>JSON.parse(projection.occurrences.find(row=>row.nodeId===id).groupingPartition).slice(2);
  return{definition,read,counters,relations,decisions,project,membership,setCurrent:value=>current=value,setMetadata:value=>metadata=value,setPending:value=>pending=value};
 }
@@ -73,10 +74,10 @@ test('all canonical contexts classify a unique note once; cross-category matches
 
 test('shared rule frame reads focus/candidate fields only once across categories and relationship contexts',()=>{
  const f=fixture(['note.phase == this.phase','note.phase == "metal"','note.phase == "water"']);
- const p=f.project();assert.deepEqual(f.membership(p,'focus'),['category','add']);assert.deepEqual(f.membership(p,'candidate'),['category','connect']);
+ const p=f.project();assert.deepEqual(f.membership(p,'focus'),['category','add']);assert.deepEqual(f.membership(p,'candidate'),['category','relate']);
  assert.equal(f.counters.properties,3,'Focus this.phase and candidate note.phase reuse the same native field read');assert.equal(f.counters.evidence,0);
  const plan=M.compileFacetRules(f.definition);assert.equal(M.compileFacetRules(structuredClone(f.definition)),plan,'Compiled syntax retained by preset rule revision');
- const deps=M.wuXingViewDefinition.propertyDependencies({version:1,preset:'ace'},{status:'available',values:{presets:{ace:f.definition}}});assert.deepEqual(deps,{fields:['phase'],evidence:false});
+ const deps=M.wuXingViewDefinition.propertyDependencies({version:1,preset:'arc'},{status:'available',values:{presets:{arc:f.definition}}});assert.deepEqual(deps,{fields:['phase'],evidence:false});
  f.setMetadata('unavailable');f.setPending(false);assert.deepEqual(f.membership(f.project(),'candidate'),['status','unresolved']);
  f.setPending(true);assert.deepEqual(f.membership(f.project(),'candidate'),['status','checking']);
  f.setCurrent(false);assert.equal(f.project(),null);

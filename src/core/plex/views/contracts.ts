@@ -8,13 +8,16 @@ import type {NotePropertyAvailability, NotePropertyRead} from "../noteProperties
 import type {ColorValue} from "../../contracts/colorValue";
 import type {PlexPropertyAssignment} from "./propertyAssignment";
 import type {PlexSectionRef, PlexSectionRead} from "./sections";
+import type {AreaBandShape} from "../../contracts/areaGeometry";
 
 /** Policy API compatibility, independent of configuration and session payload schema versions. */
 export const CANVAS_VIEW_API_VERSION = 1 as const;
 /** Literal user/extension copy never passes through the host catalog lookup. */
 export type CanvasViewText = Readonly<{literal: string} | {key: string}>;
 /** A measured presentation badge, with no gate/edge/drop or note mutation authority. */
-export type PlexNodeBadge = Readonly<{label: CanvasViewText; description?: CanvasViewText; background?: ColorValue}>;
+export type PlexNodeBadge = Readonly<{label: CanvasViewText; description?: CanvasViewText; background?: ColorValue;
+  /** Omission preserves the colored category chip. Status uses shared compact text below the card. */
+  presentation?: "category" | "status"}>;
 export type PlexViewStateAction = Readonly<{id: string; args?: unknown}>;
 export type PlexViewStateResult = Readonly<{status: "updated"; state: unknown}
   | {status: "unavailable"; reason?: CanvasViewText}>;
@@ -96,29 +99,53 @@ export type PlexProjection = Readonly<{
 }>;
 export type PlexMeasurement = Readonly<{
   id: OccurrenceId; width: number; height: number; expandedWidth: number; expandedReserve: number;
-  badge?: Readonly<{width: number; height: number}>;
+  /** Optional shared control footprint outside the thought body. Opt-in layouts reserve these
+   * extents for hit-testing without enlarging the label/editor rectangle or semantic ports. */
+  controlReserve?: Readonly<{right: number; bottom: number}>;
+  badge?: Readonly<{width: number; height: number; presentation?: "category" | "status"}>;
   /** Only this occurrence has a bound expanded editor; the legacy layout boolean does not describe it. */
   editor?: true;
   mini: {width: number; viewportHeight: number; topGap: number} | null;
   envelope: {width: number; viewportHeight: number; topGap: number} | null;
 }>;
+/** A bounded canvas-owned dimension. Optional value describes the editable dimension when
+ * an area's frame is larger than its usable band thickness or other measured content. */
+export type PlexAreaDimension = Readonly<{key: string; minimum: number; maximum: number; value?: number}>;
+/** Optional bounded text inputs use the shared measurement pipeline before pure layout. */
+export type PlexDecorationText = Readonly<{id: string; label: CanvasViewText}>;
+export type PlexDecorationTextSize = Readonly<{width: number; height: number; fontSize: number}>;
+/** Optional disjoint rounded band. Bounds describe its outer frame; the inner rounded hole
+ * excludes focus/inner categories from hits, highlights, counts and drop authority. */
+export type PlexAreaShape = AreaBandShape;
 export type PlexArea = Readonly<{
   id: AreaId; labelKey: string; bounds: ViewRect; resizeEdge?: "top" | "bottom";
+  shape?: PlexAreaShape;
   /** User labels are literal vault configuration, never translated as catalog keys. */
   label?: string;
-  heightPreference?: {key: string; minimum: number; maximum: number};
-  viewport?: ViewRect & {contentTop: number; contentHeight: number; initialScrollTop: number};
+  heightPreference?: PlexAreaDimension;
+  /** Horizontal resizing is independent of the existing top/bottom height capability. */
+  widthResizeEdge?: "left" | "right";
+  widthPreference?: PlexAreaDimension;
+  /** Non-scrolling regions keep shared tools and measured coordinates; their layout must contain all admitted content. */
+  viewport?: ViewRect & {contentTop: number; contentHeight: number; initialScrollTop: number; scrollable?: false;
+    /** Opt-in shared paint policy: hide routes whose physical attachment is outside this scroll surface. */
+    edgeVisibility?: "visible-endpoints"};
   /** Physical area action is explicit; arbitrary areas have no relationship-write meaning by default. */
   dropRole?: "parent" | "child" | "left" | "right";
   dropTarget?: PlexDropMeaning;
   /** Exact admitted canonical origin; omission means projection root/entry. Area placement is never relationship provenance. */
   dropOrigin?: OccurrenceId;
-  reflow?: Readonly<{columns: number; columnGap: number; rowGap: number; paddingTop?: number; paddingBottom?: number}>;
+  reflow?: Readonly<{columns: number; columnGap: number; rowGap: number; paddingTop?: number; paddingBottom?: number;
+    /** Recompute columns from surviving measured cards and this area's world width. */
+    autoColumns?: boolean;
+    /** Keep measured positions while retaining matching ancestors; omitted policies preserve filtered repacking. */
+    filterLayout?: "keep"}>;
 }>;
 /** Pure presentation marks have no semantic endpoints or interaction/write authority. */
 export type PlexDecoration = Readonly<{id: string} & (
-  {kind: "region"; bounds: ViewRect; labelKey: string; label?: string; description?: CanvasViewText; areaId?: AreaId; tint?: "water" | "wood" | "fire" | "earth" | "metal"; color?: ColorValue; count?: boolean}
-  | {kind: "guide"; points: readonly ViewPoint[]; directed?: boolean; variant?: "generating" | "regulating"}
+  {kind: "region"; bounds: ViewRect; shape?: PlexAreaShape; labelKey: string; label?: string; description?: CanvasViewText; areaId?: AreaId; tint?: "water" | "wood" | "fire" | "earth" | "metal"; color?: ColorValue; count?: boolean}
+  | {kind: "guide"; points: readonly ViewPoint[]; directed?: boolean; direction?: "forward" | "backward" | "both"; stroke?: "line" | "none";
+    caption?: Readonly<{label: CanvasViewText; bounds: ViewRect; fontSize: number}>; variant?: "generating" | "regulating"}
 )>;
 export type PlexViewLayout = Readonly<{
   positions: ReadonlyMap<OccurrenceId, ViewRect>; areas: readonly PlexArea[];
@@ -145,15 +172,27 @@ export interface PlexViewDefinition {
   readonly labelKey: string;
   readonly icon: string;
   readonly capabilities: Readonly<{sections?: boolean; descendants?: boolean; editor?: boolean; compact?: boolean; properties?: boolean; badges?: boolean}>;
+  /** Optional adornment admission within the unchanged 2048-occurrence scene cap; old views retain16. */
+  readonly badgeBudget?: number;
+  /** Optional retained size-key budget across presets; ordinary views keep64 per dimension. */
+  readonly areaPreferenceBudget?: number;
   readonly defaultState: unknown;
   /** Omit for the existing attention-following host. Occurrence hosting requires explicit shared bindings. */
   readonly editorHosting?: "occurrence";
+  /** Single central Markdown document. Requires sections capability; omission preserves the
+   * attention source. Rooted policies may explicitly follow their pinned layout root instead. */
+  readonly sectionSource?: "attention" | "layout-root";
   /** Omit for attention-scoped geometry and navigation compatibility. */
   readonly navigation?: "rooted";
   /** Explicit selector entry may start at this canvas's current attention; workspace restoration still retains its saved root. */
   readonly navigationEntry?: "attention";
   /** Optional bounded branch-frontier policy, independent of attention-following definitions and native editor creation. */
-  readonly hierarchy?: Readonly<{maximumScopes: number; primary: "activate" | "activate-editor" | "expand"; relations?: "child-and-peer";
+  readonly hierarchy?: Readonly<{maximumScopes: number;
+    /** Admitted occurrence depth from 1 through 20; omission preserves 8. This never enlarges the source-scope budget. */
+    maximumDepth?: number;
+    primary: "activate" | "activate-editor" | "expand" | "center"; relations?: "child-and-peer";
+    /** Opt into packing the optional shared disclosure hit-target measurement. */
+    controls?: "measured";
     /** Return a small replacement view state, or null when the requested displayed branch is unavailable. */
     reduce: (state: unknown, projection: PlexProjection, action: PlexBranchAction) => unknown}>;
   readonly configuration?: PlexViewConfigurationSchema;
@@ -166,6 +205,8 @@ export interface PlexViewDefinition {
   /** Optional dependency declaration enlarges only the existing finite read frame's budgets.
    * No data is read by declaring it; old consumers keep their previous budget and signature. */
   readonly propertyDependencies?: (state: unknown, configuration: PlexViewConfiguration) => PlexViewPropertyDependencies;
+  /** Bounded plain decoration labels are measured without a source reader or private renderer. */
+  readonly decorationLabels?: (state: unknown, configuration: PlexViewConfiguration) => readonly PlexDecorationText[];
   /** Optional pure presentation-state actions. The session still validates/persists bounded state
    * and protects native editors; this reducer receives no host or file mutation capability. */
   readonly reduceState?: (state: unknown, action: PlexViewStateAction, configuration: PlexViewConfiguration) => PlexViewStateResult;
@@ -175,5 +216,6 @@ export interface PlexViewDefinition {
   project(input: PlexViewInput): PlexProjection | null;
   /** Layout has no source reader, scheduling or subscription capability. */
   layout(projection: PlexProjection, measurements: readonly PlexMeasurement[], preferences: unknown, editor: boolean,
-    context?: Readonly<{areaHeights: Readonly<Record<string, number>>; configuration?: PlexViewConfiguration}>): PlexViewLayout;
+    context?: Readonly<{areaHeights: Readonly<Record<string, number>>; areaWidths?: Readonly<Record<string, number>>;
+      decorationMeasurements?: ReadonlyMap<string, PlexDecorationTextSize>; configuration?: PlexViewConfiguration}>): PlexViewLayout;
 }

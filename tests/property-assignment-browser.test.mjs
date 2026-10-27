@@ -23,7 +23,8 @@ const initialize=`
  const owner=new M.CanvasPropertyAssignmentActions(app,t,()=>protectedFields,(file,field,mutate,alive)=>M.writeRelationshipMetadata(app,file,new Set([M.normalizeFieldName(field)]),mutate,{
    own:cancel=>{cancels.add(cancel);return()=>cancels.delete(cancel)},pending:()=>{},savedPendingMessage:()=>t('note.savedMetadataPending'),current:alive}));
  const page={path:file.path,name:'Note',file,url:null,isFolder:false,isTag:false,neighbours:new Map()},scope=document.createElement('div');document.body.append(scope);
- const configuration={status:'available',values:{}},assignment=M.facetPropertyAssignments({version:1,preset:'wuxing'},configuration).find(target=>target.value==='metal');
+ const legacy={...M.FACET_TEMPLATES.wuxing,field:'phase',categories:Object.fromEntries(M.FACET_TEMPLATES.wuxing.order.map(id=>[id,{...M.FACET_TEMPLATES.wuxing.categories[id],values:[id],assignment:id}]))};
+ const configuration={status:'available',values:{presets:{wuxing:legacy}}},assignment=M.facetPropertyAssignments({version:1,preset:'wuxing'},configuration).find(target=>target.value==='metal');
  const request={scope,page,assignment,current:()=>current,unrelated:false};
  const last=()=>M.TestModal.instances.at(-1),button=(modal,label)=>[...modal.contentEl.querySelectorAll('button')].find(row=>row.textContent===label);
  const open=()=>{check(owner.open(request),'Shared action admitted');return last()};

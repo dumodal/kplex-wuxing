@@ -1,12 +1,12 @@
 /** Host-bound render payloads. Occurrence identity and physical areas stay separate from canonical write endpoints. */
-import type {PlexArea, PlexProjection, PlexDecoration} from "../../core/plex/views/contracts";
+import type {PlexArea, PlexProjection, PlexDecoration, PlexAreaShape} from "../../core/plex/views/contracts";
 import type {PositionedNode, PositionedEdge} from "../../types";
 import type {AdmittedOccurrenceEditor} from "./occurrenceEditors";
 import type {PlexPropertyAssignment} from "../../core/plex/views/propertyAssignment";
 
 export type SceneViewport = {key: string; left: number; top: number; width: number; height: number;
-  contentTop: number; contentHeight: number; initialScrollTop: number};
-export type SceneAreaBounds = {key: string; left: number; top: number; width: number; height: number; resizeEdge: "top" | "bottom"};
+  contentTop: number; contentHeight: number; initialScrollTop: number; scrollable?: false; edgeVisibility?: "visible-endpoints"};
+export type SceneAreaBounds = {key: string; left: number; top: number; width: number; height: number; resizeEdge: "top" | "bottom"; shape?: PlexAreaShape};
 export type HostPlexScene = {
   nodes: PositionedNode[]; edges: PositionedEdge[];
   zoneViewports: Partial<Record<string, SceneViewport>>; zoneAreas: Partial<Record<string, SceneAreaBounds>>;

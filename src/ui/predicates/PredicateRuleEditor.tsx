@@ -5,6 +5,7 @@ import type {Translator} from "../../lang";
 import {buildGraphLensSimpleExpression, defaultGraphLensSimpleModel, tryParseLosslessGraphLensSimpleExpression, type GraphLensSimpleCondition} from "../../lens/GraphLensSimple";
 import {tryParseGraphPredicateExpression} from "../../core/plex/predicateParser";
 import {PredicateConditions} from "./PredicateConditions";
+import {PredicateExpressionField} from "./PredicateExpressionField";
 import {fieldOptions, simpleValidation, localizeChoices, ROLE_CHOICE_SPECS, EDGE_KIND_SPECS, DIRECTION_SPECS, EVIDENCE_SOURCE_SPECS, BOOLEAN_SPECS} from "./conditionChoices";
 import {graphLensValidationMessage} from "./predicateMessages";
 import {ObsidianIcon} from "../ObsidianIcon";
@@ -42,7 +43,7 @@ export function PredicateRuleEditor({initial, onChange, translate, suggestions}:
     {mode === "simple" && simple ? <PredicateConditions model={simple} onChange={model => {setSimple(model);update(buildGraphLensSimpleExpression(model));}}
       scope="node" fields={options} translate={translate} propertyListId={`${id}-properties`} valueChoices={valueChoices}
       maximumConditions={32} datalistForField={field => field === "file.tags" ? `${id}-tags` : field === "file.folder" ? `${id}-folders` : field === "evidence.fieldName" ? `${id}-properties` : undefined} />
-      : <label>{translate("filter.expression")}<textarea rows={4} maxLength={2048} value={expression} onChange={event => update(event.currentTarget.value)} /></label>}
+      : <PredicateExpressionField label={translate("filter.expression")} maxLength={2048} value={expression} onChange={update} />}
     <datalist id={`${id}-properties`}>{suggestions?.properties.map(value => <option key={value} value={value} />)}</datalist>
     <datalist id={`${id}-tags`}>{suggestions?.tags.map(value => <option key={value} value={value} />)}</datalist>
     <datalist id={`${id}-folders`}>{suggestions?.folders.map(value => <option key={value} value={value} />)}</datalist>

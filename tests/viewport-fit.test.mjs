@@ -4,8 +4,8 @@ import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import ts from 'typescript';
 import {loadPortableModules} from './support/portableTypeScript.mjs';
-const {exports: {centeredViewportFit, sameFitCamera, EmbeddedDrawingFit, centerArrivalFrames, hasClickModifier}} = loadPortableModules([
-  'src/ui/components/viewportFit.ts', 'src/adapters/obsidian/EmbeddedDrawingFit.ts', 'src/ui/components/centerArrival.ts', 'src/ui/components/modifierClick.ts']);
+const {exports: {centeredViewportFit, sameFitCamera, EmbeddedDrawingFit, centerArrivalFrames, hasClickModifier, edgeViewportEndpoints, branchDisclosureReserve, edgeViewportClip, revealRowScrollTop, editorToolbarInsets}} = loadPortableModules([
+  'src/ui/components/viewportFit.ts', 'src/adapters/obsidian/EmbeddedDrawingFit.ts', 'src/ui/components/centerArrival.ts', 'src/ui/components/modifierClick.ts', 'src/ui/plexViews/areaVisibility.ts', 'src/ui/plexViews/branchDisclosure.ts']);
 const source=ts.createSourceFile('graph.tsx',readFileSync('src/ui/PlexGraph.tsx','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
 
 /** Run production callbacks with explicit finite composition dependencies, without a second policy. */
@@ -16,6 +16,8 @@ function callback(name, dependencies) {
     if(name!=='layout'&&ts.isVariableDeclaration(node)&&node.name.getText(source)===name&&ts.isArrowFunction(node.initializer))selected=node.initializer.getText(source);
     if(name==='layout'&&ts.isCallExpression(node)&&node.expression.getText(source)==='useLayoutEffect'
       &&node.arguments[0]?.getText(source).includes('const shouldRecenter'))selected=node.arguments[0].getText(source);
+    if(name==='branchReveal'&&ts.isCallExpression(node)&&node.expression.getText(source)==='useLayoutEffect'
+      &&node.arguments[0]?.getText(source).includes('const pending = pendingBranchReveal.current'))selected=node.arguments[0].getText(source);
     if(name==='sidecar'&&ts.isCallExpression(node)&&node.expression.getText(source)==='useEffect'
       &&node.arguments[0]?.getText(source).includes('previousSidecarOpen.current === sidecarOpen'))selected=node.arguments[0].getText(source);
     if(name==='reframeSidecarViewport'&&ts.isBinaryExpression(node)&&node.left.getText(source)==='reframeSidecarViewport.current')selected=node.right.getText(source);
@@ -51,7 +53,7 @@ function graphFixture() {
     scene:{nodes:[{role:'center',page:{path:'Center.md'},x:30,y:-20,width:200,height:100}],zoneViewports:{}},
     centralEditorMaximized:false,Platform:{isIosApp:false},IOS_MAX_ZOOM:2,MAX_ZOOM:5,ZONES:['child'],scrollZoneForRole:role=>role==='child'?'child':null,
     centeredViewportFit,sameFitCamera,sceneMotion:{cancelAll(){}},preserveCameraOnNextLayout:{current:false},displayResizeLayout:{current:false},
-    centralEditorAvailabilityRef:{current:false},centralEditorAvailable:false,centralEditorSize:null,centralEditorSizeKeyRef:{current:''},
+    centralEditorAvailabilityRef:{current:false},centralEditorAvailable:false,centralEditorNode:null,centralEditorSize:null,centralEditorSizeKeyRef:{current:''},
     previousNodeRects:{current:new Map([['prior',{}]])},pathChangedThisRender:true,navigationOrigin:'user',settings:{allowAutozoom:true,animationSpeed:0},incomingCenter:{current:null}};
   ctx.viewport={current:{clientWidth:800,clientHeight:600,clientLeft:0,clientTop:0,getBoundingClientRect:()=>({left:0,top:0}),ownerDocument:{defaultView:{getComputedStyle:()=>({transformOrigin:'100px 50px'})}},querySelectorAll:()=>[
     {classList:{contains:value=>value==='kplex-role-center'},dataset:{kplexPath:ctx.activePath},getBoundingClientRect:()=>({left:300,top:250,width:200,height:100})}]}};
@@ -255,11 +257,11 @@ test('the actual thought-corner control forwards modifier-bearing events while s
   /** Confirm the rendered graph connects the corner control to the tested opening owner. */
   const graphVisit=node=>{if(ts.isJsxAttribute(node)&&node.name.text==='cornerAction')corner=node.initializer.expression.whenTrue;ts.forEachChild(node,graphVisit);};graphVisit(source);assert(corner);
   const routing=ts.transpileModule(`const route=${corner.properties.find(p=>p.name.text==='onClick').initializer.getText(source)};`,{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
-  for(const occurrenceEditorPolicy of [false,true]){
+  for(const occurrenceEditorPolicy of [false,true])for(const central of [false,true])for(const classic of [undefined,{}]){
     let forwarded,request;const baseNode={page:{path:'B.md'},occurrenceId:'B1'};
-    const route=Function('occurrenceEditorPolicy','openCentralEditor','runNodeAction','baseNode','occurrenceKey',`${routing};return route;`)(occurrenceEditorPolicy,event=>{forwarded=event},(...args)=>{request=args},baseNode,node=>node.occurrenceId);
+    const route=Function('occurrenceEditorPolicy','isEditorOccurrence','openCentralEditor','runNodeAction','baseNode','occurrenceKey','classic','sceneNodeKeys','editorTarget',`${routing};return route;`)(occurrenceEditorPolicy,()=>central,event=>{forwarded=event},(...args)=>{request=args},baseNode,node=>node.occurrenceId,classic,new Map([[baseNode,'classic-key']]),baseNode.page);
     const event={metaKey:true};route(event);
-    if(occurrenceEditorPolicy){assert.deepEqual(request,['editor.expand',baseNode.page,'B1']);assert.equal(forwarded,undefined)}
+    if(occurrenceEditorPolicy||!central){assert.deepEqual(request,['editor.expand',baseNode.page,classic?'classic-key':'B1']);assert.equal(forwarded,undefined)}
     else{assert.equal(forwarded,event);assert.equal(request,undefined)}
   }
   let actual;const handler=Function('cornerAction',`${output};return handler;`)({onClick:event=>{actual=event;}});
@@ -305,4 +307,127 @@ test('drawing fit excludes edit/fullscreen/disabled/loading reads and never appl
   const f=drawingFixture();f.controller.resize();f.flush();f.flush();f.state.width=800;f.state.eligible=false;f.controller.resize();f.flush();f.flush();assert.equal(f.fits(),0);
   f.state.eligible=true;f.controller.resize();const retired=[...f.frames.values()][0];f.controller.reset();f.state.owner={};retired();f.flush();f.flush();assert.equal(f.fits(),0);
   f.controller.dispose();
+});
+
+
+test('Compass tint uses the actual center card while a different occurrence hosts the native editor',()=>{
+ for(const role of ['center','child']){const ctx=graphFixture();ctx.centralEditorAvailable=true;ctx.centralEditorNode={role};
+  ctx.centralEditorOverlayElement.current={getBoundingClientRect:()=>({left:70,top:80,width:580,height:340})};ctx.render();ctx.layout();
+  const actual=ctx.compassCenter.current;assert(actual);
+  const camera=ctx.camera.current;
+  assert(Math.abs(actual.left*camera.scale+camera.x-(role==='center'?70:300))<1e-8);
+  assert(Math.abs(actual.top*camera.scale+camera.y-(role==='center'?80:250))<1e-8);
+  assert(Math.abs(actual.width*camera.scale-(role==='center'?580:200))<1e-8);
+  assert.equal(actual.element===null,role==='center','Only a central editor replaces the center-card measurement owner');
+ }
+});
+
+
+test('area edge clipping follows physical occurrences independently of canonical endpoints and scroll visibility',()=>{
+ const area={key:'parent',left:-400,top:-700,width:900,height:160};
+ const a={x:20,y:-1200,width:150,height:40},b={x:250,y:-630,width:160,height:40},root={x:0,y:0,width:300,height:80};
+ const nodes=new Map([['a',a],['heading',a],['b',b],['root',root]]),viewport=node=>node===root?undefined:area;
+ const edge={sourcePath:'canonical-source',targetPath:'canonical-target',sourceOccurrence:'a',targetOccurrence:'b'};
+ assert.deepEqual(edgeViewportClip(edge,nodes,viewport),{left:-400,top:-700,width:900,height:160});
+ assert.deepEqual(edgeViewportClip({...edge,sourceOccurrence:'absent',sourceSectionOccurrence:'heading'},nodes,viewport),{left:-400,top:-700,width:900,height:160});
+ const crossing=edgeViewportClip({...edge,targetOccurrence:'root'},nodes,viewport);
+ assert(crossing.top===area.top&&crossing.top+crossing.height>=root.y+root.height/2,'Cross-area route includes bounded source aperture and actual external target');
+ assert.equal(edgeViewportClip(edge,nodes,()=>undefined),undefined);
+ assert.equal(edgeViewportClip({...edge,targetOccurrence:'missing'},nodes,viewport),undefined);
+ assert.equal(edge.sourcePath,'canonical-source');assert.equal(a.y,-1200,'Clipping never moves the physical source to a fabricated gate');
+});
+
+test('expansion reveal minimally scrolls measured rows and clamps large or edge rows to content bounds',()=>{
+ assert.equal(revealRowScrollTop(500,40,0,160,1000),360);
+ assert.equal(revealRowScrollTop(500,40,360,160,1000),360);
+ assert.equal(revealRowScrollTop(100,40,360,160,1000),80);
+ assert.equal(revealRowScrollTop(980,40,0,160,1000),840);
+ assert.equal(revealRowScrollTop(0,40,100,160,1000),0);
+ assert.equal(revealRowScrollTop(500,400,0,160,1000),300);
+});
+
+
+test('delayed fixed-area expansion reveal keeps exact identity and yields to user camera/root/view retirement',()=>{
+ for(const mode of ['current','manual','root','view','fold','before-commit']){
+  const node={page:{path:'B'},occurrenceId:'B1',height:40,branch:{expanded:mode!=='fold',status:'loading'}},camera={current:{x:4,y:5,scale:1}},old={};let revealed=0;
+  const pending={id:'B1',lifetime:1,scope:'R',previousScene:old,camera:{...camera.current}},ctx={pendingBranchReveal:{current:pending},viewLifetime:mode==='view'?2:1,sceneScope:mode==='root'?'other':'R',camera,sameFitCamera,
+   scene:mode==='before-commit'?old:{nodes:[node],zoneViewports:{parent:{scrollable:false}}},occurrenceKey:node=>node.occurrenceId,areaForNode:()=> 'parent',zoneScrollRefs:{current:{parent:{scrollTop:0,clientHeight:1000,scrollHeight:1000}}},zoneDisplayLayouts:{parent:{localPositions:new Map([['B1',{y:500}]])}},
+   revealRowScrollTop,setZoneScrollTop:()=>{},sceneNodeKeys:new Map([[node,'B1']]),revealFindHit:(path,id)=>{assert.equal(path,'B');assert.equal(id,'B1');revealed++;camera.current={...camera.current,y:15}}};
+  if(mode==='manual')camera.current.x++;
+  const run=callback('branchReveal',ctx);run();assert.equal(revealed,mode==='current'?1:0,mode);
+  if(mode==='current'){assert.deepEqual(pending.camera,camera.current,'Own minimal reveal does not cancel final loading settlement');camera.current.x++;run();assert.equal(revealed,1);assert.equal(ctx.pendingBranchReveal.current,null,'User movement retires delayed reveal');}
+  else if(mode==='before-commit')assert.equal(ctx.pendingBranchReveal.current,pending);else assert.equal(ctx.pendingBranchReveal.current,null,mode);
+ }
+});
+
+
+test('area-hosted editor toolbar intersects canvas and area without resizing or panning its native document',()=>{
+ const canvas={width:800,height:600},editor={left:-150,top:-200,width:500,height:500},area={left:-100,top:-300,width:1000,height:900};
+ assert.deepEqual(editorToolbarInsets(editor,canvas,area),{top:200,left:150,right:0});
+ assert.deepEqual(editorToolbarInsets({...editor,left:600,top:50},canvas,area),{top:0,left:0,right:300});
+ assert.deepEqual(editorToolbarInsets({left:100,top:100,width:500,height:400},canvas,{left:200,top:150,width:300,height:300}),{top:50,left:100,right:100});
+ assert.deepEqual(editor,{left:-150,top:-200,width:500,height:500});
+});
+
+
+test('visible-endpoint area policy suppresses hidden physical attachments without changing legacy routes',()=>{
+ const source={x:0,y:0,width:100,height:40},target={x:200,y:150,width:100,height:40},area={key:'diagnostics',left:120,top:100,width:200,height:100,edgeVisibility:'visible-endpoints'},nodes=new Map([['source',source],['target',target],['heading',target]]);
+ const edge={sourcePath:'source',targetPath:'target',sourceOccurrence:'source',targetOccurrence:'target',sourcePort:'right',targetPort:'top'},viewport=node=>node===target?area:undefined;
+ const frozen=JSON.stringify(edge);assert(edgeViewportClip(edge,nodes,viewport));
+ target.y=70;assert.equal(edgeViewportClip(edge,nodes,viewport),null,'Fully scrolled-out target has no stroke, marker, caption or hit path');
+ target.y=110;assert.equal(edgeViewportClip(edge,nodes,viewport),null,'Partly visible card with hidden top gate has no floating arrow');
+ target.y=120;assert(edgeViewportClip(edge,nodes,viewport),'An attachment exactly at the boundary is visible');
+ target.y=240;assert.equal(edgeViewportClip({...edge,sourceSectionOccurrence:'heading',targetOccurrence:'source'},nodes,viewport),null,'Exact physical section endpoint follows the same policy');
+ assert(edgeViewportClip(edge,nodes,node=>node===target?{...area,edgeVisibility:undefined}:undefined),'Existing through-area behavior remains the default');
+ assert.equal(JSON.stringify(edge),frozen,'Paint never changes canonical endpoint/evidence identity');
+});
+
+
+test('reload viewport settlement keeps attention-following Compass and off-origin Facets visible without navigation',()=>{
+ for(const view of ['compass','facets'])for(const allowAutozoom of [true,false])for(const owner of ['automatic','manual','bound-editor','central-editor','restored']){
+  const ctx=graphFixture();ctx.settings.allowAutozoom=allowAutozoom;ctx.scene.nodes[0].occurrenceId='focus';ctx.scene.frameOccurrence=view==='facets'?'focus':undefined;
+  ctx.scene.nodes[0].x=view==='facets'?370:30;ctx.scene.nodes[0].y=view==='facets'?-560:-20;ctx.occurrenceKey=node=>node.occurrenceId;
+  ctx.viewport.current.clientHeight=3245;ctx.camera.current.scale=1.4;ctx.render();ctx.layout();
+  const focus=ctx.scene.nodes[0];assert.equal(ctx.camera.current.y+focus.y*ctx.camera.current.scale,3245/2);
+  if(owner==='manual')ctx.applyCamera({...ctx.camera.current,y:1200});
+  if(owner==='restored')ctx.applyCamera({x:-200,y:1700,scale:1.2});
+  if(owner==='bound-editor')ctx.boundEditorBinding={id:'live-editor'};
+  if(owner==='central-editor'){ctx.centralEditorAvailable=true;ctx.centralEditorAvailabilityRef.current=true;}
+  const before={...ctx.camera.current};ctx.viewport.current.clientHeight=954;ctx.pathChangedThisRender=false;ctx.render();ctx.layout();
+  if(owner==='automatic'){assert(Math.abs(ctx.camera.current.y+focus.y*ctx.camera.current.scale-954/2)<1e-8,view+' default placement follows final CSS viewport');assert(Math.abs(ctx.camera.current.x+focus.x*ctx.camera.current.scale-400)<1e-8);if(!allowAutozoom)assert.equal(ctx.camera.current.scale,before.scale);}
+  else assert.deepEqual(ctx.camera.current,before,owner+' keeps its exact coordinates');
+ }
+});
+
+test('disabled autozoom placement ownership never recenters attention views for ordinary scene reflow',()=>{
+ const ctx=graphFixture();ctx.settings.allowAutozoom=false;ctx.pathChangedThisRender=false;ctx.render();ctx.layout();const before={...ctx.camera.current};
+ ctx.scene.nodes[0].y+=400;ctx.render();ctx.layout();assert.deepEqual(ctx.camera.current,before,'Only viewport settlement or explicit navigation may follow automatic translation');
+ ctx.preserveCameraOnNextLayout.current=true;ctx.viewport.current.clientHeight=400;ctx.render();ctx.layout();assert.deepEqual(ctx.camera.current,before,'Explicit display transition retains camera intent');
+});
+
+
+test('scroll-area continuation anchors keep visible counterparts connected without hidden-note markers or invented endpoints',()=>{
+ const area={key:'friends',left:100,top:100,width:200,height:200},outside=Object.freeze({x:500,y:200});
+ for(const [hidden,expected] of [[{x:200,y:-500},{x:200,y:100}],[{x:200,y:900},{x:200,y:300}],[{x:0,y:200},{x:100,y:200}],[{x:700,y:200},{x:300,y:200}]]){
+  const original=Object.freeze(hidden),result=edgeViewportEndpoints(outside,original,'left','right',undefined,area);
+  assert(result);assert.deepEqual(result.source,{point:outside,port:'left',continued:false});assert.deepEqual(result.target.point,expected);assert.equal(result.target.continued,true);assert.deepEqual(original,hidden,'Only paint changes');
+ }
+ const visible={x:200,y:150};assert.equal(edgeViewportEndpoints({x:200,y:0},{x:200,y:500},'bottom','top',area,area),null,'Two hidden endpoints have no visible counterpart');
+ assert.equal(edgeViewportEndpoints(outside,{x:200,y:500},'left','right',undefined,{...area,edgeVisibility:'visible-endpoints'}),null,'Explicit suppression remains an optional policy');
+ assert.equal(edgeViewportEndpoints(outside,{x:200,y:500},'left','right',undefined,{...area,scrollable:false}).target.continued,false,'Growing fixed forests retain their actual gates');
+ const internal=edgeViewportEndpoints(visible,{x:200,y:500},'bottom','top',area,area);assert(internal);assert.equal(internal.target.port,'top','Continuation tangent faces its visible counterpart');
+});
+
+test('hierarchy control clearance is uniform regardless of status, reference or fold availability',()=>{
+ const rows=[{canExpand:true,expanded:false,reference:false},{canExpand:false,expanded:false,reference:true},{canExpand:false,expanded:false,reference:false},{canExpand:true,expanded:true,reference:false}];
+ for(const branch of rows){assert.deepEqual(branchDisclosureReserve(branch,true),{right:48,bottom:48});assert.equal(branchDisclosureReserve(branch,false),undefined);}
+ assert.equal(branchDisclosureReserve(undefined,true),undefined);
+});
+
+
+test('partially visible card keeps routes when its protruding gate is clipped',()=>{
+ const area={key:'branch',left:0,top:0,width:200,height:100},source={x:50,y:90,width:80,height:20},target={x:50,y:400,width:80,height:20};
+ const result=edgeViewportEndpoints({x:50,y:105},{x:50,y:390},'bottom','top',area,area,{source,target});
+ assert(result&&result.source.continued&&result.target.continued,'The visible card retains a canonical route even when both gates need boundary paint');
+ assert.equal(edgeViewportEndpoints({x:50,y:205},{x:50,y:390},'bottom','top',area,area,{source:{...source,y:200},target}),null,'Fully hidden cards have no visible context');
 });

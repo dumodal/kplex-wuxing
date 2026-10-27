@@ -1,6 +1,8 @@
 # Facets and canvas-view API: implementation specification
 
-Implementation status: accepted-main integration, Facets presets, safe shared assignment/Undo, shared advanced rules and the optional section boundary are implemented. Developer/API/end-user guides, the five-preset/custom-State sample vault and authentic native screenshots are included. Native feature, editor, selector/settings, independent-canvas and source-occurrence/relink checks pass against runtime ced2825; final published-head verification/CI is recorded in the PR handoff. Accepted base: 26623c8393bddc0c3bcac39468078ec20ceccbc8. Prior validated head 016919893b13a99867a14336680debb29d1b6f54 remains historical. The requirements below supersede the earlier Wu Xing-only scope. Current contracts: CANVAS_VIEW_API.md and CANVAS_VIEW_DEVELOPER_GUIDE.md; ordered evidence: docs/validation/facets-220-2026-10-25.md. Production Mind Map sections remain an explicit optional follow-up.
+Current preset catalog: only Wu Xing and Local map roles are inherited built-ins. ARC, PARA, GTD horizons, eACCESS, Sensemaking and Publishing pipeline were exported at809510f and are available under presets/facets. Saved definitions remain intact. Latest Dumo main was verified as fa038f0af796a9a6f42e6f8eb91e44c13ba3e067: Wu Xing now defaults to status/emoji assignment, Wood-first clockwise placement and matching phase colors. English IDs remain explicit aliases, and variation-selector emoji aliases reuse the one classifier. Existing saved field/mapping/order values are not rewritten. Centered focus, canonical connectors and diagnostics remain Facets behavior; balance star, perspective and a separate language setting remain future opportunities. The prototype strictly rejects unknown extra list entries; Facets retains its existing known-alias matching rule. The earlier reference assessment and historical assignment follow below.
+
+Implementation status: accepted-main integration, Facets presets, safe shared assignment/Undo, shared advanced rules and the optional section boundary are implemented. Developer/API/end-user guides, the five-preset/custom-State sample vault and authentic native screenshots are included. Native feature, editor, selector/settings, independent-canvas and source-occurrence/relink checks pass against runtime ced2825; final published-head verification/CI is recorded in the PR handoff. Accepted base: 26623c8393bddc0c3bcac39468078ec20ceccbc8. Prior validated head 016919893b13a99867a14336680debb29d1b6f54 remains historical. The requirements below supersede the earlier Wu Xing-only scope. Current contracts: CANVAS_VIEW_API.md and CANVAS_VIEW_DEVELOPER_GUIDE.md; ordered evidence: docs/validation/facets-220-2026-10-25.md. The #222 central Mind Map section extension is implemented against this shared boundary; its final native/CI acceptance is tracked separately. Facets deliberately keeps sections disabled.
 
 ## Functional reference: Dumo's fixed Wu Xing prototype
 
@@ -301,7 +303,7 @@ Distinguish three different features:
 
 They must not share state or be confused in the interface.
 
-Current #219 Mind Map declares `sections: false`. A boolean change alone does not implement section-aware projection or connector routing.
+The accepted #219 baseline declared `sections: false`. The #222 extension explicitly selects the pinned root through `sectionSource: "layout-root"`, composes source-owned rows/provenance and reserves measured outline space. A boolean change alone does not implement section-aware projection or connector routing. Facets deliberately remains unsupported.
 
 Required now:
 
@@ -653,3 +655,14 @@ The maintainer's supplied drawings are the source for the requested ACE wording 
 
 
 Current area behavior: bottom-edge pointer direction follows the existing declared resizeEdge. All status regions share bounded per-canvas resizing with compact220 defaults and independent160-1200 overrides. The status column sits beyond the measured category envelope with extra spacing. Literal area labels are preserved in the shared accessible controls.
+
+## Responsive area contents and Help editing
+
+Area width uses the shared measured grid: cards automatically fill multiple columns when their measured widths, badge reserves, gaps and padding fit. Narrowing the area returns to fewer columns. No camera scale, classification, property read or semantic rebuild is needed to choose columns. Width remains per-canvas state, separate from saved preset defaults.
+
+The preset Help source occupies a full-width row below its description. It retains the existing detached draft, native preview, Save/Cancel and stale-owner guards.
+
+
+### Consistent node status presentation
+
+Combined Diagnostics and uncertain focused-note classifications use the shared below-card node status (the same component as Mind Map cycle/preparation labels), rather than colored category chips. Assigned focus categories retain their colored chip. The common node/view badge API declares the status presentation and measures its bottom clearance. Bounded Facets areas use shared boundary continuations: visible counterparts keep their canonical connectors when the other card scrolls out. Hidden attachments end at their own area boundary with a read-only mark, no note arrowhead or detached caption. Scrolling restores real attachments without changing evidence or indexing.

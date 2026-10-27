@@ -1367,6 +1367,8 @@ const centralEditorCapable = true, finding = false, hover = null, crossLinkPeek 
 const connectionStateFor = () => "normal", onCentralNodeEditorChange = () => {}, openCentralEditor = () => {}, centralEditorCanMaximize = true, gateKey = (path, gate) => path + ":" + gate;
 const persistentPageFor = (page) => page;
 const activePath = "Editor.md", centralEditorAvailable = true, sectionExpanded = false;
+// Match the production Classic section-source context used by the extracted renderer.
+const sectionDocument = activePath, sectionEditorAvailable = centralEditorAvailable;
 const page = (path, materialized = true) => ({ path, name: path, file: materialized ? { extension: "png", path } : null });
 const centerPage = page(activePath), attachmentPage = page("Before.png"), placeholderPage = page("After.png", false), sentinelPage = page("Other.png");
 const neighborhood = { center: centerPage }, miniPage = page("Descendant.png");
@@ -1626,6 +1628,7 @@ function externalAndPinnedDropBrowserEntry() {
     "relationshipDropRoles", "historyRelationshipTarget", "clearHistoryDragHover", "updateHistoryDragHover", "openHistoryRelationshipMenu",
     "beginNativeNodeDrag", "endNativeNodeDrag", "nativeDragRelationship", "navigationNode", "isDraggedNode", "dropOriginAt", "externalFileDropTarget", "propertyAssignmentAt", "dragExternalFileOver", "leaveExternalFile", "dropExternalFile", "semanticRoleForPosition", "nodeDropRole", "commitNodeAreaDrop", "relationshipDropArea", "up"]);
   return `
+import {areaContains} from ${JSON.stringify(join(root,'src/core/contracts/areaGeometry.ts'))};
 import {occurrenceKey,edgeOccurrence,edgePhysicalOccurrence,semanticSceneEdge} from ${JSON.stringify(join(root,'src/ui/plexViews/scene.ts'))};
 import {classicViewDefinition,classicAreaDropRole,classicPorts} from ${JSON.stringify(join(root,'src/core/plex/views/classic/definition.ts'))};
 import * as classicLayout from ${JSON.stringify(join(root,'src/ui/layout.ts'))};
@@ -1659,7 +1662,7 @@ try {
  const optimisticCommitToken={current:0};let optimistic=null,updating=false;
  const setOptimisticRelink=value=>{optimistic=value},setRelationshipUpdating=value=>{updating=value};
  const sceneNodeKeys=new Map();const centerNode={page:origin,role:"center"};const scene={nodes:[centerNode],zoneAreas:{parent:{left:300,top:60,width:110,height:100,resizeEdge:"top"},child:{left:450,top:60,width:110,height:100,resizeEdge:"bottom"},left:{left:300,top:230,width:110,height:100,resizeEdge:"top"},right:{left:450,top:230,width:110,height:100,resizeEdge:"top"}}};
- const ZONES=["parent","child","left","right","sibling"],AREA_RESIZE_EDGE_PX=10,AREA_HEIGHT_CONFIG={parent:{},child:{},left:{},right:{}};
+ const ZONES=["parent","child","left","right","sibling"],AREA_RESIZE_EDGE_PX=10,AREA_HEIGHT_CONFIG={parent:{},child:{},left:{},right:{}},AREA_WIDTH_CONFIG={};
  ${callbacks}
  const center=surface.appendChild(document.createElement("div"));center.className="kplex-thought kplex-role-center";center.dataset.kplexPath=origin.path;center.dataset.kplexKeyboardId=origin.path;center.style.cssText="position:absolute;left:60px;top:60px;width:100px;height:100px";
  const other=surface.appendChild(document.createElement("div"));other.className="kplex-thought";other.dataset.kplexPath="Other.md";other.style.cssText="position:absolute;left:320px;top:100px;width:40px;height:30px";
@@ -2528,7 +2531,7 @@ const index={titleFor:p=>p.name,neighbourCount:()=>0,gateStats:()=>({}),neighbou
 const renderRevision=0,sectionExpansion=null;
 const settings={compactView:false,ontologyPairingVersion:1,hierarchy:{hidden:[],parents:[],children:[],leftFriends:[],rightFriends:[],previous:[],next:[],exclusions:[]},baseNodeStyle:{fontSize:18},centralNodeStyle:{fontSize:30},baseLinkStyle:{},hierarchyLinkStyles:{ab:{showLabel:true,fontSize:12,strokeWidth:3}},noteTypeStyles:{},tagNodeStyles:{},tagStyleList:[],compactingFactor:2,horizontalCompactingFactor:2,graphDepth:1,baseFontSize:12.4,maxItemCount:100,parentColumns:2,childColumns:5,parentMaxHeight:300,childMaxHeight:400,friendMaxHeight:350,siblingMaxHeight:250,siblingRelativeSize:50,minLinkLength:18};
 const layoutNeighborhood={center:pages.get('Center'),parents:[],children:['A','B','C','D','E'].map(path=>({page:pages.get(path),role:'child',relationType:1})),leftFriends:[],rightFriends:[],siblings:[]};
-const layoutSectionExpansion=null,expandedSectionIds=new Set(),layoutRevision=0,globalFiltering=false,centralEditorSize=undefined,neighborhood=layoutNeighborhood,activePath='Center',hostLeaf={};let semanticRevision=0;
+const layoutSectionExpansion=null,expandedSectionIds=new Set(),layoutRevision=0,globalFiltering=false,centralEditorSize=undefined,boundEditorBinding=undefined,boundEditorPage=null,neighborhood=layoutNeighborhood,activePath='Center',hostLeaf={};let semanticRevision=0;
 const predicateCenter=neighborhood.center;
 const predicateEngine={},lenses={},paintLenses=lenses,paintSettings=settings,predicateRevision=0,graphLensEdgeStyle=()=>({}),connectDrag=null,nodeDrag=null,resizingArea=false,areaSettingsMode=false;
 const finding=true,findQuery='no search hit',matchesOntologyFind=()=>false;
@@ -2542,7 +2545,7 @@ function Graph(){
  ${uiDefinitions('src/ui/PlexGraph.tsx',['classicRead','scenePolicyKey','sceneGeometryKey','sceneGeometry','scene','clearHoverIntent','scheduleHoverIntent'])}
  const visibleNodePaths=useMemo(()=>new Set(scene.nodes.filter(node=>!hidden.includes(node.page.path)).map(node=>node.page.path)),[scene.nodes,hidden]);
  const renderedNodeMap=useMemo(()=>new Map(scene.nodes.map(node=>[node.page.path,node])),[scene.nodes]);
- const visibleOccurrenceIds=visibleNodePaths;
+ const visibleOccurrenceIds=visibleNodePaths,admittedEdgeOccurrences=visibleNodePaths;
  ${uiDefinitions('src/ui/PlexGraph.tsx',['connectionCaption','visibleEdgeProjection','visibleEdges','paintedEdges','interaction'])}
  ${effectCode}
  fixture={enter(path,gate,alt=false){scheduleHoverIntent(gate?{kind:'gate',path,gate}:{kind:'node',path},{pointerType:'mouse',isTrusted:true,altKey:alt})},key:alt=>hoverHighlight.current.modifier(alt,true),leave:()=>clearHoverIntent(true),setRequired,setShown,setHidden,scene,interaction};

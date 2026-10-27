@@ -6,19 +6,42 @@ Open **Views and lenses → Canvas view → Facets**. Choose a preset in the sam
 
 ## Choose a preset
 
-The view and preset dropdowns share a row when space allows. Select the cog beside the view to open its settings page. Select the cog beside the preset to edit that preset directly. Opening settings keeps the canvas selection; Cancel discards the preset draft.
+The view and preset dropdowns share a row when space allows. Select the cog beside the view to open its settings page. Select the cog beside the preset to edit that preset directly. The preset selector, cog and Info remain together when the row wraps. Opening settings keeps the canvas selection; Cancel discards the preset draft. The larger editor uses one compact icon-action row with accessible tooltips. **Reset preset to defaults** changes only the draft and shows feedback; Save applies it and Cancel discards it. **Copy JSON** and **Save JSON file** export the current draft without saving it.
 
 | Preset | Default property | Categories | Preview |
 | --- | --- | --- | --- |
-| ACE | `ace` | Add, Connect, Express | [Obsidian screenshot](images/facets/ace.png) |
-| PARA | `para` | Projects, Areas, Resources, Archives | [Obsidian screenshot](images/facets/para.png) |
-| Wu Xing | `phase` | Water, Wood, Fire, Earth, Metal | [Obsidian screenshot](images/facets/wuxing.png) |
-| GTD | `horizon` | Actions, Projects, Areas of focus, Goals, Vision, Purpose and principles | [Obsidian screenshot](images/facets/gtd.png) |
-| eACCESS | `access` | Encounters, Atlas, Calendar, Cards, Extras, Sources, Spaces | [Obsidian screenshot](images/facets/eaccess.png) |
+| Wu Xing | `status` | Wood, Fire, Earth, Metal, Water | Emoji-based Five Phases |
+| Local map roles | `map-role` | Hub, Supporting map, Concept, Reference | [Obsidian screenshot](images/facets/preset-map-roles.png) |
 
-These are editable examples inside one Facets view. You can create/duplicate presets with three to seven stable categories, rename/reorder them, choose colors, matching aliases and explicit assignment values, and adjust layout defaults. Deleting a preset asks for an explicit replacement so saved canvases remain recoverable. Restore defaults changes the local draft until Save. Cancel keeps the accepted definition.
+These are the only built-in presets. ARC, PARA, GTD horizons, eACCESS, Sensemaking and Publishing pipeline remain available as [importable JSON packages](../presets/facets/README.md). Saved user definitions are retained. If an older canvas selected an inherited preset that is no longer present, importing its original ID restores that definition without rewriting the canvas selection.
 
-The supplied [sample vault](../tests/fixtures/facets-vault/README.md) includes all five presets plus a custom four-category **State** example (`seed`, `research`, `draft`, `published`; [screenshot](images/facets/state.png)). It contains Markdown/configuration only, with no executable plugin. Use a separate disposable copy with the matching reviewed build; do not overwrite an existing vault's settings.
+Screenshots use separate diagnostic areas to show their individual states; new presets combine diagnostics by default. These are editable examples inside one Facets view. You can create/duplicate presets with three to seven stable categories, rename/reorder them, choose colors, matching aliases and explicit assignment values, and adjust layout defaults. Deleting a preset asks for an explicit replacement so saved canvases remain recoverable. Restore defaults changes the local draft until Save. Cancel keeps the accepted definition.
+
+The archived Sensemaking example combines `approach: top-down` or `bottom-up` with `mode: reflection` or `expression`. Missing metadata stays unknown; rules do not infer intent from prose. Local map roles are personal classifications, with no importance score or vault-wide ranking. Archived preview images illustrate optional imports, not additional built-in choices.
+
+Select the Info button immediately after the preset cog to read that preset's Help. Built-in Help follows the application language until you save a literal override. **Edit → Help** offers Markdown source and a native preview; Save uses the existing preset writer, Cancel discards the draft, and Reset restores the localized default. A deliberately blank override stays blank. Help supports headings, lists, code examples and HTTPS links. Code fences are displayed as plain examples; HTML, embeds and executable Markdown are not enabled.
+
+Current native interface examples: [wide preset editor](images/facets/ux-preset-editor.png), [wide selectors](images/facets/ux-selectors-1280.png), [narrow selectors](images/facets/ux-selectors-640.png). These are genuine Windows captures; [current acceptance limits](validation/facets-222-ux-2026-10-26.md) remain explicit.
+
+## Choose a layout
+
+Open the preset cog, then choose **Layout** in the preset editor. Choose circular, concentric rectangles, vertical stack, horizontal spread or four-category quadrants. Layout belongs to the preset: saving it updates canvases using that preset. Canvases keep their independent selected presets, attention, editor and camera intent. Legacy per-canvas layout overrides no longer take precedence. Quadrants is unavailable for other category counts; a saved incompatible choice visibly falls back to circular while preserving every category.
+
+Native Obsidian examples with the same attention editor retained: [circular](images/facets/layout-circular-editor.png), [concentric bands](images/facets/layout-concentric-editor.png), [vertical](images/facets/layout-vertical-editor.png), [horizontal](images/facets/layout-horizontal-editor.png), [quadrants](images/facets/layout-quadrants-editor.png). These full-fit screenshots show the entire arrangement; zoom in to inspect individual cards or edit at a comfortable size.
+
+The preset editor sets layout, category order and reversal. Linear layouts also offer top, bottom, left or right placement of the focused note, with a schematic preview. The note and its native editor appear once. These controls change placement without changing classification or recorded relationships.
+
+Resize a category or diagnostic area using its side and top/bottom handles. Keyboard arrows adjust the selected handle; Home/End choose its limits. Width uses Shift for one-unit steps. Wider areas automatically use more columns when measured cards fit. In the preset editor, optional exact width/height values set individual area defaults; blank inherits the preset default, and canvas handle adjustments take precedence.
+
+Concentric categories are distinct rounded rectangular bands with genuine inner holes. Width and height mean horizontal and vertical **band thickness**, rather than the full outer frame. Notes use a bounded scrollable top strip in each band. Resizing an inner band moves its enclosing bands; the outer band cannot intercept a drop inside an inner category.
+
+Diagnostics are combined by default, with each note's own status chip. **Configure Canvas Layout → Combine diagnostics** changes only this canvas. The preset editor sets the shared default, dock side, separate-area orientation, status order and empty-area visibility. Combined and separate modes retain independent sizes. Dropping into the combined Diagnostics area never means clearing a property; use the explicit category actions or a writable, separately labeled Unassigned area.
+
+In **Workflow guides**, configure decorative arrows for vertical and horizontal layouts. Choose forward, backward or both directions, an arrow, plain line or no line, and an optional caption at the start, middle or end of its outer rail. Enable individual adjacent-category overrides when needed; turning one off restores the preset defaults. A blank overridden caption intentionally suppresses the inherited caption. The logical category sequence stays the same when its geometry is reversed, so a forward workflow can point upward or leftward.
+
+Guides route outside category regions on the side away from the focused editor. Captions use the shared measured text treatment and are bounded to 80 characters; long visible copy stays clipped to its measured background. They never create relationships or receive graph editing actions. Concentric/quadrant layouts use their category geometry without workflow rails; circular Wu Xing retains its distinct generating and regulating cycles.
+
+The supplied [sample vault](../tests/fixtures/facets-vault/README.md) includes all eight built-in presets plus a custom four-category **State** example (`seed`, `research`, `draft`, `published`; [Obsidian screenshot](images/facets/preset-state.png)). Ready for review is recognized by Publishing and intentionally Unassigned in the custom State definition. The vault contains Markdown/configuration only, with no executable plugin. Use a separate disposable copy with the matching reviewed build; do not overwrite an existing vault's settings.
 
 ![Wu Xing preset in Obsidian, with the current note centered and separate category and diagnostic regions](images/facets/wuxing.png)
 
@@ -53,6 +76,8 @@ Lists retain unrelated values and order. Assigning an existing category is a no-
 
 Original term: Wu Xing (五行), pinyin **wǔ xíng**; here it is presented as Five Phases. A saved phase records your classification of the note. The optional relative labels explain that classification against the current note's phase.
 
+The default follows Dumo's `status` convention: 🟢 Wood, 🔴 Fire, 🟤 Earth, 🟡 Metal and 🔵 Water. For example, use `status: 🟢`, or a list containing the same phase. Plain English phase IDs remain accepted aliases. Wood starts at the top; Fire, Earth, Metal and Water follow clockwise with green, red, brown, yellow and blue colors. Existing saved presets keep their own property/mappings, including older `phase` configurations.
+
 The generating cycle is **Wood → Fire → Earth → Metal → Water → Wood**. Regulation skips one phase forward. Reordering the visible regions does not reorder this model.
 
 | Candidate phase | With Wood current | With Metal current |
@@ -81,6 +106,8 @@ Section expansion remains hidden in production Facets and Mind Map. Compass reta
 
 ## Attribution and validation
 
-PARA terminology is informed by [Forte Labs](https://fortelabs.com/blog/para/). GTD horizons are informed by [Getting Things Done](https://gettingthingsdone.com/2011/01/the-6-horizons-of-focus/). The supplied ACE wording and seven-category eACCESS arrangement are the maintainer's requested K-Plex adaptations, with [Linking Your Thinking](https://www.linkingyourthinking.com/) as related background; they are not claims of an official workflow definition.
+Preset and lens import/export use one versioned data-only format, native preview and the existing queued writer. Exports include effective Help and separate inert AI authoring context. Optional lens dependencies must be selected explicitly; imported lenses remain disabled. See [portable sharing](PORTABLE_PRESETS.md), [authoring instructions](FACETS_AUTHORING.md) and [validated example JSON](../tests/fixtures/portable-presets/README.md).
 
-See the [current validation record](validation/facets-220-2026-10-25.md) for exact source/test receipts and remaining Windows, Mac, physical-mobile and baseline limitations. PR #220 remains open and unmerged.
+PARA terminology is informed by [Forte Labs](https://fortelabs.com/blog/para/). GTD horizons are informed by [Getting Things Done](https://gettingthingsdone.com/2011/01/the-6-horizons-of-focus/). ARC and the seven-category eACCESS arrangement are editable K-Plex adaptations, with [Linking Your Thinking](https://www.linkingyourthinking.com/) as related background; they are not claims of an official workflow definition.
+
+See the [#220 validation record](validation/facets-220-2026-10-25.md) and [#222 native checkpoint receipts](validation/facets-222-native-summary.json) for actual results and remaining Windows, Mac, physical-mobile and baseline limitations. PR #220 is merged; #222 remains draft and unmerged while expanded implementation and validation continue.

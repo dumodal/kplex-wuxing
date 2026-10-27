@@ -1,6 +1,9 @@
 ---
+approach: "top-down"
+mode: "expression"
+map-role: "supporting-map"
 phase: "wood"
-ace: "connect"
+arc: "relate"
 para: "projects"
 horizon: "actions"
 access: "atlas"
@@ -16,11 +19,12 @@ children:
   - "[[Unassigned example]]"
   - "[[Conflicting example]]"
   - "[[Metal perspective]]"
+  - "[[Ready for review]]"
 ---
 
 # Start here
 
-Open this note in K-Plex, then select Facets in Views and lenses. Choose a preset in the same panel. Each preset classifies this same recorded neighborhood using one field.
+Open this note in K-Plex, then select Facets in Views and lenses. Choose a preset in the same panel. Each preset classifies this same recorded neighborhood using its configured property or explicit rules.
 
 Follow [[Metal perspective]] to compare the relative Wu Xing labels. Both notes keep their saved phases. The children property above is actual relationship evidence; cycle guides are explanatory only.
 

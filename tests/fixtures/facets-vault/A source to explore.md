@@ -1,5 +1,8 @@
 ---
-ace: "connect"
+approach: "top-down"
+mode: "reflection"
+map-role: "hub"
+arc: "relate"
 para: "areas"
 phase: "wood"
 horizon: "projects"

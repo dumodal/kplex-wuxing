@@ -664,3 +664,10 @@ Deleting a node is an immediate navigation-history operation even when the delet
 survives semantically as a ghost. Remove the deleted path from history before asynchronous relationship
 cleanup. If the deleted node is central, navigate newest-to-oldest through the remaining valid history;
 if none exists, navigate to `folder:/`. Do not wait for metadata/index reconciliation to move focus.
+
+
+## Numeric settings and configuration controls
+
+Every numeric preference must use a bounded slider with a permanently visible current value. A hover tooltip alone is insufficient. Do not use numeric text boxes, number inputs or private slider implementations for settings/configuration. Reuse `src/ui/numberSlider.ts` for native Obsidian Settings rows and `src/ui/components/LayoutSlider.tsx` for React surfaces; both share latest-value async delivery. Optional numeric overrides reuse `src/ui/styleNumberSlider.ts`, showing the effective inherited value and an explicit reset action instead of an empty field. Preserve limits, units, keyboard accessibility, draft Save/Cancel and existing queued writers. Never persist an inherited default merely by opening a dialog. Predicate expressions, property values and other literal text remain text; they are not numeric preference controls.
+
+The numeric-control source audit and negative fixtures run with `npm run check:architecture`. Extend their inventory for a new surface and keep all numeric settings on these shared components. Validate permanent readouts, inheritance/reset, bounds and final-value delivery when changing a numeric control.

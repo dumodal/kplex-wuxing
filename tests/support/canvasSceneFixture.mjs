@@ -4,7 +4,7 @@ export const canvasSceneFixture=`
 const M=sourceModules,check=(value,message)=>{if(!value)throw Error(message)},wait=()=>new Promise(resolve=>setTimeout(resolve,70));
 const style=document.createElement('style');style.textContent=${JSON.stringify(readFileSync('styles.css','utf8'))};document.head.append(style);
 const pages=new Map(['A.md','B.md','C.md'].map(path=>[path,{path,name:path,file:{path,name:path,extension:'md',basename:path,stat:{mtime:1,ctime:1,size:1}},url:null,isFolder:false,isTag:false,aliases:[],tags:[],styleTags:[],primaryStyleTag:null,noteType:null,maxLabelLength:30,neighbours:new Map()}]));
-const fieldCaches=new Map([...pages.keys()].map(path=>[path,{frontmatter:{phase:'water'}}]));
+const fieldCaches=new Map([...pages.keys()].map(path=>[path,{frontmatter:{phase:'water',status:'water'}}]));
 const work={acquisitions:0,releases:0,properties:0,body:0,scans:0,gateReads:0},events=new Set(),subscribe=fn=>{events.add(fn);return()=>events.delete(fn)};
 const nativeEvents={on:(name,callback)=>{const ref={name,callback};events.add(ref);return ref},offref:ref=>events.delete(ref)};
 let prepared=true,visible=true;
@@ -22,17 +22,19 @@ const plugin={settings,index,viewSettingsRegistry:M.builtInCanvasViewSettings,tr
  saveSettings:async()=>{},getTypographyDevice:()=> 'desktop',isKplexLeafVisible:()=>visible,subscribeKplexVisibility:subscribe,subscribeNodeFlair:subscribe,
  getHierarchyColorRevision:()=>0,isActionSurfaceCurrent:()=>true,getSavedSettingsPolicy:()=>null};
 plugin.actionManager=new M.ActionManager({readCommandContext:()=>({sharedCenter:null,focusRegion:'graph'}),validateNode:()=>true});
-const mount=async definition=>{
+const mount=async(definition,{openHelp}={})=>{
  const registered=[...M.builtInPlexViews.available,M.exampleViewDefinition];if(!registered.some(row=>row.id===definition.id))registered.push(definition);
  const registry=new M.PlexViewRegistry(registered),session=new M.PlexViewSession(registry,()=>{});session.select(definition.id);
  const container=document.createElement('div');container.className='kplex-app';container.style.cssText='width:1200px;height:900px;position:relative';document.body.append(container);
  const root=M.createRoot(container),ports={current:null},moves=[];
+ const contributions=new M.CanvasViewContributionController(session,plugin.viewSettingsRegistry,{settings:()=>settings.canvasViewSettings??{},mounted:()=>container.isConnected,
+  beforePresentationChange:()=>ports.current?.preparePresentationChange?.(),update:async(id,address,edit,expected)=>{settings.canvasViewSettings=M.editViewConfigurationAt(registry.resolve(id),settings.canvasViewSettings??{},address,edit,expected)},openSettings:()=>false,...(openHelp?{openHelp}:{}),failed:error=>{throw error}});
  const props={plugin,index,settings,paintSettings:settings,paintLenses:{lenses:[]},surface:'leaf',hostLeaf:{},predicate:null,lenses:{lenses:[]},filterLayoutMode:'keep',predicateRevision:0,
  showCrossLinks:true,activePath:'A.md',renderRevision:0,semanticRevision:0,findFocusRequest:0,areaSettingsMode:false,onAreaSettingsModeChange:()=>{},onApplyFindFilter:()=>{},appliedFindFilterQuery:null,onClearFindFilter:()=>{},
  onActivate:()=>{},onWanderActivate:page=>{moves.push(page.path);props.activePath=page.path;render()},onOpen:()=>{},onOpenInSidecar:async()=>{},onCentralNodeEditorChange:()=>{},onCentralNodeModeChange:()=>{},
- actionPorts:ports,actionSurfaceId:'wander-'+definition.id,displayState:{zen:false,fullscreen:false},fullscreenAvailable:false,sidecarOpen:false,viewDefinition:definition,viewSession:session,viewRevision:session.getSnapshot()};
+ actionPorts:ports,actionSurfaceId:'wander-'+definition.id,displayState:{zen:false,fullscreen:false},fullscreenAvailable:false,sidecarOpen:false,viewDefinition:definition,viewSession:session,viewContributions:contributions,viewRevision:session.getSnapshot()};
  const render=()=>{props.viewRevision=session.getSnapshot();M.flushSync(()=>root.render(M.createElement(M.PlexGraph,props)))};render();await wait();await wait();
- return{container,ports,session,props,moves,render,close:()=>{M.flushSync(()=>root.unmount());session.dispose();container.remove()}};
+ return{container,ports,session,contributions,props,moves,render,close:()=>{M.flushSync(()=>root.unmount());contributions.dispose();session.dispose();container.remove()}};
 };
 `;
 

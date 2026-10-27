@@ -50,6 +50,7 @@ import { standardColorSlots, adoptStandardThemeColors, withoutStyleColorOverride
 import { NOTE_TYPE_TAG_LINK_STYLE } from "./core/graph/presentation";
 import { noteTypeTagDefaultStyle } from "./index/style";
 import { styleNumberSlider } from "./ui/styleNumberSlider";
+import {numberSlider} from "./ui/numberSlider";
 import {COMPASS_DIRECTIONS, SEMANTIC_COLOR_DEFAULTS} from "./core/plex/colorPreferences";
 import { ColorSourceModal } from "./ui/ColorSourceModal";
 import {
@@ -2059,6 +2060,10 @@ export class KplexSettingTab extends PluginSettingTab {
     const registered = (): boolean => this.viewSettings.definition(id) === definition && plugin.isAppearanceOwnerCurrent(appearance);
     const dialog = factory(this.app, {
       colors: this.styleColorContext(appearance), configuration: () => plugin.readCanvasViewConfiguration(id),
+      sharing: {read: () => plugin.readPortableSharingState(), current: registered, sourceScope: this.colorSourceScope(),
+        preview: plan => {if (!registered()) throw new Error("Retired sharing preview");plugin.previewPortableSharing(plan);},
+        bindEditor: editor => plugin.bindAppearanceEditor(editor, appearance),
+        save: (plan, current) => plugin.importPortableSharing(plan, () => registered() && current(), appearance)},
       read: address => readViewConfigurationAt(definition, plugin.settings.canvasViewSettings, address),
       capture: address => {const incoming = plugin.receivedSettingsOwner(viewConfigurationUpdateDomain(definition, address));return () => registered() && incoming();},
       subscribe: changed => plugin.index?.subscribePresentation(changed) ?? (() => {}),
@@ -2734,6 +2739,7 @@ export class KplexSettingTab extends PluginSettingTab {
       const view = canvasViewControl(control.key), definition = view && this.viewSettings.definition(view.id);
       if (view) {
         const available = definition && readViewConfiguration(definition, this.kplexPlugin.settings.canvasViewSettings).status === "available";
+        if (control.type === "slider") return this.numberControl(item, control, !available);
         return {...item, ...(!available ? {desc: this.kplexPlugin.translator("view.settingsUnavailable")} : {}),
           control: {...control, key: this.receivedControlKey(control.key) as DeclarativeSettingKey, disabled: !available || control.disabled}};
       }
@@ -2745,15 +2751,16 @@ export class KplexSettingTab extends PluginSettingTab {
       };
       if (!/^(baseNodeStyle\.|centralNodeStyle\.|baseLinkStyle\.|backgroundColorHex$)/.test(control.key)
         || (control.type !== "slider" && control.type !== "toggle" && control.type !== "dropdown"))
-        return {...item, control: {...control, key: this.receivedControlKey(control.key) as DeclarativeSettingKey}};
+        return control.type === "slider" ? this.numberControl(item, control) : {...item, control: {...control, key: this.receivedControlKey(control.key) as DeclarativeSettingKey}};
       return {name: item.name, desc: item.desc, searchable: item.searchable, visible: item.visible, render: /** Recreate a scalar on activation; retired handlers cannot save into its replacement. */ (setting: Setting) => {
         let active = true, owner = this.kplexPlugin.captureAppearanceOwner(), generation = 0;
-        let mounted: {pending: number; refresh: () => void} | null = null;
+        let mounted: {pending: number; refresh: () => void; dispose: () => void} | null = null;
         /** The scalar has no unsubmitted draft: a switch replaces its native control with the new effective value. */
         const mount = (): void => {
+          mounted?.dispose();
           for (const input of Array.from(setting.controlEl.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input,select"))) input.disabled = true;
           setting.clear(); owner = this.kplexPlugin.captureAppearanceOwner();
-          const opening = owner, mount = ++generation, state = {pending: 0, refresh: (): void => {}}; mounted = state;
+          const opening = owner, mount = ++generation, state = {pending: 0, refresh: (): void => {}, dispose: (): void => {}}; mounted = state;
           const document = setting.settingEl.ownerDocument;
           /** An accepted write may outlive Settings. Never touch a retired/adopted window's native control. */
           const currentControl = (): boolean => active && mount === generation && setting.settingEl.isConnected
@@ -2769,11 +2776,11 @@ export class KplexSettingTab extends PluginSettingTab {
             finally {state.pending--; if (currentControl() && mounted === state && !state.pending) state.refresh();}
           };
           const value = this.getControlValue(control.key) ?? control.defaultValue;
-          if (control.type === "slider") setting.addSlider(/** Retain native bounds, tooltip and keyboard gestures. */ slider => {
-            slider.setLimits(control.min, control.max, control.step).setValue(Number(value)).setDynamicTooltip().setDisabled(disabled).onChange(change);
-            slider.sliderEl.setAttribute("aria-label", item.name);
+          if (control.type === "slider") {
+            const slider = numberSlider(setting, {label: item.name, value: Number(value), min: control.min, max: control.max, step: control.step, disabled, onChange: change});
+            state.dispose = () => slider.dispose();
             state.refresh = /** Same-activation edits update peers without replacing a live slider or emitting another change. */ () => {if (currentControl()) slider.setValue(Number(this.getControlValue(control.key) ?? control.defaultValue));};
-          });
+          }
           else if (control.type === "toggle") setting.addToggle(/** Initial seeding never submits a save. */ toggle => {
             toggle.setValue(Boolean(value)).setDisabled(disabled).onChange(change); toggle.toggleEl.setAttribute("aria-label", item.name);
             state.refresh = /** Restore the committed value after another surface or a failed immediate save. */ () => {if (currentControl()) toggle.setValue(Boolean(this.getControlValue(control.key) ?? control.defaultValue));};
@@ -2787,8 +2794,34 @@ export class KplexSettingTab extends PluginSettingTab {
         const release = this.subscribeThemeRow(setting, /** Activation or native adoption replaces this immediate scalar's handlers. */ migrated => {
           if (active && setting.settingEl.isConnected && (migrated || !this.kplexPlugin.isAppearanceOwnerCurrent(owner))) mount();
           else if (active && mounted && !mounted.pending) mounted.refresh();
-        }, /** A closed/migrated settings window cannot retain scalar handlers. */ () => {active = false;});
+        }, /** A closed/migrated settings window cannot retain scalar handlers. */ () => {active = false;mounted?.dispose();});
         return release;
+      }};
+  }
+
+  /** Adapt every declarative numeric preference to the shared visible-value native slider.
+   * Captured keys and the existing scalar writer retain view/settings reconciliation authority. */
+  private numberControl(item: SettingDefinition<DeclarativeSettingKey>, control: Extract<NonNullable<SettingDefinition<DeclarativeSettingKey>["control"]>, {type: "slider"}>, unavailable = false): SettingDefinition<DeclarativeSettingKey> {
+    const key = this.receivedControlKey(control.key) as DeclarativeSettingKey;
+    const plugin = this.kplexPlugin;
+    const readValue = (key: DeclarativeSettingKey) => this.getControlValue(key);
+    const writeValue = (key: DeclarativeSettingKey, value: number) => this.setControlValue(key, value);
+    return {name: item.name, desc: unavailable ? plugin.translator("view.settingsUnavailable") : item.desc,
+      searchable: item.searchable, visible: item.visible, render: function renderNumberSetting(setting) {
+        let active = true;const doc = setting.settingEl.ownerDocument;
+        const current = (): boolean => active && setting.settingEl.isConnected && setting.settingEl.ownerDocument === doc && !doc.defaultView?.closed;
+        setting.settingEl.dataset.kplexSettingKey = key;
+        const read = (): number => Number(readValue(key) ?? control.defaultValue ?? control.min);
+        const slider = numberSlider(setting, {label: item.name, value: read(), min: control.min, max: control.max, step: control.step,
+          disabled: unavailable || (typeof control.disabled === "function" ? control.disabled() : control.disabled),
+          onChange: async value => {
+            if (!current()) return;
+            try {await writeValue(key, value);}
+            catch (error) {console.error("K-Plex numeric setting was not saved", error);if (current()) new Notice(plugin.translator("view.settingsSaveFailed"));}
+            finally {if (current()) slider.setValue(read());}
+          }});
+        const release = plugin.index.subscribePresentation(() => {if (current()) slider.setValue(read());});
+        return () => {active = false;slider.dispose();release();};
       }};
   }
 
@@ -2824,6 +2857,7 @@ export class KplexSettingTab extends PluginSettingTab {
           desc: translate(field === "maxWidth" ? "typography.deviceWidthHelp" : "typography.deviceHelp"),
           render: /** Mount native controls without first-render writes, and update same-scope peers after live edits/reset. */ (setting: Setting) => {
             const key = this.receivedControlKey(`typography.${device}.${field}`);
+            let active = true, disposeControl = (): void => {}, resetControl = (): void => {};
             let refreshControl: () => void;
             if (field === "wrapNodeLabels") {
               setting.addToggle(/** Set the initial inherited value before installing the user-change callback. */ toggle => {
@@ -2832,16 +2866,16 @@ export class KplexSettingTab extends PluginSettingTab {
               });
             } else {
               const limits = TYPOGRAPHY_LIMITS[field];
-              setting.addSlider(/** Reuse canonical shared/device bounds and native slider affordances. */ slider => {
-                slider.setLimits(limits.min, limits.max, limits.step).setValue(Number(this.getControlValue(key))).setDynamicTooltip()
-                  .onChange(/** Persist this captured device rather than a mutable active settings scope. */ value => { void this.setControlValue(key, value); });
+              const slider = numberSlider(setting, {label: translate("typography.deviceField", {device: translate(`typography.${device}`), field: names[field]}), value: Number(this.getControlValue(key)), min: limits.min, max: limits.max, step: limits.step,
+                onChange: async value => {if (active) await this.setControlValue(key, value);}});
+                disposeControl = () => slider.dispose();
+                resetControl = () => slider.resetValue(Number(this.getControlValue(key)));
                 refreshControl = /** Keep mounted rows current when another surface changes this device. */ () => { slider.setValue(Number(this.getControlValue(key))); };
-              });
             }
             setting.addExtraButton(/** Delete only this supported override, preserving the other values/devices. */ button => {
               button.setIcon("rotate-ccw").setTooltip(translate("typography.resetField"))
                   .onClick(/** A retired native reset must not remove a newly received override. */ () => {
-                    if (this.receivedControlCurrent(key)) void this.kplexPlugin.resetTypographyOverride(device, field);
+                    if (active && this.receivedControlCurrent(key)) {void this.kplexPlugin.resetTypographyOverride(device, field);resetControl();}
                   });
             });
             /** Explain state independently of the displayed number, including equal-to-default customization. */
@@ -2851,7 +2885,8 @@ export class KplexSettingTab extends PluginSettingTab {
               refreshControl?.();
             };
             refresh();
-            return this.kplexPlugin.index.subscribePresentation(refresh);
+            const release = this.kplexPlugin.index.subscribePresentation(refresh);
+            return () => {active = false;disposeControl();release();};
           },
         })),
         { name: translate("typography.deviceReset", { device: translate(`typography.${device}`) }),

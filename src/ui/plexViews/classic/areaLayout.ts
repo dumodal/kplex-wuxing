@@ -40,14 +40,14 @@ export function classicAreaLayout(
     for (let start = 0; start < filtered.length; start += columns) {
       const row = filtered.slice(start, start + columns);
       const rowHeight = row.length ? Math.max(...row.map((node) => node.height)) : 0;
-      const widths = row.map((node) => expandedNodeWidth(node, index, settings, centerPath));
+      const widths = row.map((node) => node.occurrenceId ? node.width : expandedNodeWidth(node, index, settings, centerPath));
       const rowWidth = widths.reduce((sum, width) => sum + width, 0) + columnGap * Math.max(0, row.length - 1);
       let x = Math.max(8, (panel.width - rowWidth) / 2);
       row.forEach(/** Center each pill within its full descendant footprint. */ (node, column) => {
         localPositions.set(occurrenceKey(node), { x: x + widths[column] / 2, y: y + rowHeight / 2 });
         x += widths[column] + columnGap;
       });
-      const rowReserve = Math.max(0, ...row.map((node) => expandedChildReserve(node.page, index, settings, centerPath)));
+      const rowReserve = Math.max(0, ...row.map((node) => node.occurrenceId ? 0 : expandedChildReserve(node.page, index, settings, centerPath)));
       y += rowHeight + rowReserve + rowGap;
     }
     const contentHeight = Math.max(panel.height, Math.max(topPadding + bottomPadding, y - (filtered.length ? rowGap : 0) + bottomPadding));
@@ -59,7 +59,7 @@ export function classicAreaLayout(
   const occupiedHeight = filtered.reduce((sum, node, nodeIndex) => (
     sum
     + node.height
-    + expandedChildReserve(node.page, index, settings, centerPath, node.role === "sibling" ? siblingScale(settings) : 1)
+    + (node.occurrenceId ? 0 : expandedChildReserve(node.page, index, settings, centerPath, node.role === "sibling" ? siblingScale(settings) : 1))
     + (nodeIndex > 0 ? gap : 0)
   ), 0);
   const availableHeight = Math.max(0, panel.height - topPadding - bottomPadding);
@@ -73,7 +73,7 @@ export function classicAreaLayout(
   }
   for (const node of filtered) {
     localPositions.set(occurrenceKey(node), { x: node.x - panel.left, y: y + node.height / 2 });
-    y += node.height + expandedChildReserve(node.page, index, settings, centerPath, node.role === "sibling" ? siblingScale(settings) : 1) + gap;
+    y += node.height + (node.occurrenceId ? 0 : expandedChildReserve(node.page, index, settings, centerPath, node.role === "sibling" ? siblingScale(settings) : 1)) + gap;
   }
   const contentHeight = Math.max(panel.height, Math.max(topPadding + bottomPadding, y - (filtered.length ? gap : 0) + bottomPadding));
   return { nodes: filtered, localPositions, contentHeight, count: filtered.length, filtering };

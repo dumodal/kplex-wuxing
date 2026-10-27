@@ -37,7 +37,7 @@ await build({
     `}));
     builder.onResolve({ filter: /^obsidian$/ }, () => ({ path: "obsidian", namespace: "double" }));
     builder.onLoad({ filter: /.*/, namespace: "double" }, () => ({ contents: `
-      export class App {}
+      export class Component {load(){} unload(){}} export const MarkdownRenderer={render:()=>{throw Error("Native Markdown is outside this finite fixture")}}; export class App {}
       export class ExtraButtonComponent {} export class Scope {}
       export const Platform = {};
       /** Narrow form-shell double: production modal fields, listeners and save callbacks remain real. */
@@ -84,7 +84,7 @@ await build({
         setDesc(value) { this.descEl.setText(value); return this; }
         addSlider(create) {
           const input = this.controlEl.createEl("input", {attr: {type: "range"}});
-          const api = {sliderEl: input, setLimits(min, max, step) {Object.assign(input, {min, max, step}); return api;}, setInstant() {return api;}, setValue(value) {input.value = String(value); return api;}, onChange(run) {input.addEventListener("input", () => run(Number(input.value))); return api;}};
+          const api = {sliderEl: input, setLimits(min, max, step) {Object.assign(input, {min, max, step}); return api;}, setInstant() {return api;}, setDisabled(value) {input.disabled = value; return api;}, setValue(value) {input.value = String(value); return api;}, onChange(run) {input.addEventListener("input", () => run(Number(input.value))); return api;}};
           create(api); return this;
         }
         addExtraButton(create) {

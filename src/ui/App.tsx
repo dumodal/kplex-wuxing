@@ -20,9 +20,14 @@
  */
 import { subscribeAppearanceSources } from "../adapters/obsidian/colorChanges";
 import {CanvasViewContributionController} from "./plexViews/CanvasViewContributionController";
+import {MarkdownHelpModal} from "./MarkdownHelpModal";
+import {canvasViewText} from "./plexViews/labels";
 import type {AppearanceOwner} from "../core/plex/appearanceThemes";
 import { ColorSourceModal } from "./ColorSourceModal";
-import type { LensColorRequest, LensColorDialog } from "./PlexFilter";
+import type { LensColorRequest, LensColorDialog, LensSharingRequest } from "./PlexFilter";
+import {PortablePackageModal} from "./sharing/PortablePackageModal";
+import {exportLensPackage} from "../core/plex/sharing/transfer";
+import {LENS_AUTHORING_CONTEXT} from "../core/plex/sharing/authoring";
 import { appearanceWithoutColors } from "../core/contracts/appearance";
 import {
   useCallback,
@@ -239,6 +244,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
   const syncMenuButtonRef = useRef<HTMLButtonElement>(null);
   const sidecarMoveButtonRef = useRef<HTMLButtonElement>(null);
   const graphActionPorts = useRef<GraphActionPorts | null>(null);
+  const pendingEditorNavigation = useRef<{run: () => void} | null>(null);
   const viewContributions = useMemo(/** Own exactly this native canvas; focus never redirects a contributed request. */ () =>
     new CanvasViewContributionController(documentSession.plexView, plugin.viewSettingsRegistry, {
       settings: () => plugin.settings.canvasViewSettings,
@@ -246,6 +252,13 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
       beforePresentationChange: () => graphActionPorts.current?.preparePresentationChange?.(),
       update: (id, address, edit, expected) => plugin.updateCanvasViewConfiguration(id, address, edit, expected),
       openSettings: (id, target) => plugin.openCanvasViewSettings(id, target),
+      openHelp: /** Native modal ownership stays with this App; target content never follows current global focus. */ (id, target, help, current) => {
+        if (!current()) return false;
+        const modal = new MarkdownHelpModal(plugin.app, canvasViewText(help.name, plugin.translator), canvasViewText(help.markdown, plugin.translator), current,
+          /** Opening the relevant existing editor preserves captured view/preset identity. */ () => {if (current()) plugin.openCanvasViewSettings(id, target);},
+          /** Native close retires exactly this dialog from the invoking canvas inventory. */ () => actionDialogs.current.delete(modal));
+        actionDialogs.current.add(modal);modal.open();return true;
+      },
       failed: error => {console.error("K-Plex canvas contribution was not completed", error); new Notice(plugin.translator("view.settingsSaveFailed"));},
     }), [documentSession, plugin]);
   useEffect(/** Retire all captured view callbacks before this native App generation disappears. */ () => () => viewContributions.dispose(), [viewContributions]);
@@ -372,8 +385,18 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
    * exact same-file observation, while other linked destinations still receive genuine navigation.
    * Explicit search/history/pin/drop destinations may reroot; refuse an editor-removing root before changing attention or history.
    */
-  const activate = useCallback((target: GraphPage, record = true, syncDocuments = true, origin: "user" | "wander" | "follow" = "user", reroot = false) => {
+  const activate = useCallback((target: GraphPage, record = true, syncDocuments = true, origin: "user" | "wander" | "follow" = "user", reroot = false): boolean => {
     if (reroot && target.file && plugin.app.vault.getFileByPath(target.file.path) !== target.file) return false;
+    if (documentSession.plexView.editors.bindings.length && documentSession.plexView.definition.navigation !== "rooted" && target.path !== activePathRef.current) {
+      if (origin === "follow" || target.file && plugin.app.vault.getFileByPath(target.file.path) !== target.file) return false;
+      const prepare = graphActionPorts.current?.prepareEditorTransition;if (!prepare) return false;
+      const current = documentSession.plexView.capture(), reference = actionNodeRef(target);
+      const run = (): void => {const page = resolveActionPage(plugin.index, reference);if (current() && page) activate(page, record, syncDocuments, origin, reroot);};
+      if (pendingEditorNavigation.current) {pendingEditorNavigation.current.run = run;return true;}
+      const pending = {run};pendingEditorNavigation.current = pending;
+      void prepare().then(accepted => {if (pendingEditorNavigation.current !== pending) return;pendingEditorNavigation.current = null;if (accepted && current()) pending.run();}).catch(() => {if (pendingEditorNavigation.current === pending) pendingEditorNavigation.current = null;new Notice(translate("actions.editor-save-failed"));});
+      return true;
+    }
     if (reroot && documentSession.plexView.definition.navigation === "rooted" && !documentSession.plexView.setRoot(nodeId(target.path))) {
       new Notice(translate("actions.branch-editor-blocked")); return false;
     }
@@ -821,6 +844,17 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
   }, [plugin, hostLeaf]);
 
   const updateGraphLenses = useCallback((next: GraphLensDefinition[], baseline?: GraphLensDefinition[], owner?: AppearanceOwner) => plugin.setGraphLenses(next, baseline, owner), [plugin]);
+  /** Native sharing stays bound to this invoking canvas and appearance epoch, including when focus moves. */
+  const shareGraphLens = useCallback((request: LensSharingRequest): LensColorDialog => {
+    const owner = plugin.captureAppearanceOwner(), sourceScope = rootRef.current ?? request.sourceScope, lens = request.lens;
+    const current = (): boolean => sourceScope.isConnected && plugin.isAppearanceOwnerCurrent(owner);
+    const dialog = new PortablePackageModal(plugin.app, {kind: "lens", mode: request.mode,
+      context: {sourceScope, current, read: () => plugin.readPortableSharingState(), preview: plan => {if (!current()) throw new Error("Retired sharing preview");plugin.previewPortableSharing(plan);}, bindEditor: editor => plugin.bindAppearanceEditor(editor, owner),
+        save: (plan, alive) => plugin.importPortableSharing(plan, () => current() && alive(), owner)},
+      build: lens ? (_selected, allowPrivate) => exportLensPackage(lens, plugin.settings.colorPreferences.palette, LENS_AUTHORING_CONTEXT, allowPrivate) : undefined,
+      closed: () => actionDialogs.current.delete(dialog)});
+    actionDialogs.current.add(dialog);dialog.open();return {element: dialog.containerEl, retire: () => dialog.retire()};
+  }, [plugin]);
 
   const lensAppearance = useMemo(/** Only the lens control subscribes; inactive metadata cannot rebuild the parent scene. */ () => ({
     capture: /** Capture at editor/action opening, not when Save eventually runs. */ () => plugin.captureAppearanceOwner(),
@@ -1373,7 +1407,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
               setFindFilterOwner(null); setPlexFilter(next);
             }}
             lenses={plugin.settings.graphLenses} colorPalette={plugin.settings.colorPreferences.palette}
-            onLensesChange={updateGraphLenses} onEditColor={editLensColor} appearance={lensAppearance} lensesReadOnly={plugin.settings.graphLensesColorFuture !== undefined || plugin.settings.appearanceThemesFuture !== undefined}
+            onLensesChange={updateGraphLenses} onEditColor={editLensColor} onShareLens={shareGraphLens} appearance={lensAppearance} lensesReadOnly={plugin.settings.graphLensesColorFuture !== undefined || plugin.settings.appearanceThemesFuture !== undefined}
             layoutMode={filterLayoutMode}
             onLayoutModeChange={/** An explicit layout choice belongs to the filter panel. */ (mode) => {
               setFindFilterOwner(null); setFilterLayoutMode(mode);
