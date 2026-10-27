@@ -4388,14 +4388,17 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       if (!page) return;
       if (page.transient?.kind === "group") { unfoldGroup(page); return; }
       if (page.transient?.kind === "section") return plugin.openSection(page, hostLeaf);
-      if (context.request.source === "local-hotkey" || context.request.id === "node.activate" && context.request.args?.intent === "destination") {
+      // Saved History/pin/picker targets identify a canonical destination, rather than a
+      // displayed branch occurrence. Their root admission must not depend on branch-click policy.
+      const savedDestination = context.request.target?.kind === "explicit" && context.target.kind === "node" && !context.target.occurrenceId;
+      if (savedDestination || context.request.source === "local-hotkey" || context.request.id === "node.activate" && context.request.args?.intent === "destination") {
         if (viewDefinition.navigation === "rooted" && (!viewSession || viewSession.editors.bindings.length && page.path !== sceneScope))
           return {status: "unavailable", reasonKey: "actions.branch-editor-blocked"};
         if (context.target.kind === "node" && context.target.occurrenceId) navigationOccurrence.current = {identity: page.path, id: context.target.occurrenceId};
         return onActivate(page, "destination") === false ? {status: "unavailable", reasonKey: "actions.target-unavailable"} : {status: "completed"};
       }
-      // A saved/search target is an explicit map destination. A displayed occurrence is inspection
-      // inside the retained map; its attention must not retarget an expanded native editor.
+      // Preserve legacy branch activation policy for implicit targets. Displayed occurrences
+      // remain distinct from saved destinations and retain their native editor/attention guards.
       if (viewDefinition.hierarchy?.primary === "expand" && context.target.kind === "node" && !context.target.occurrenceId
         && !viewSession?.setRoot(nodeId(page.path))) return {status: "unavailable", reasonKey: "actions.branch-editor-blocked"};
       if (context.target.kind === "node" && context.target.occurrenceId) navigationOccurrence.current = { identity: page.path, id: context.target.occurrenceId };

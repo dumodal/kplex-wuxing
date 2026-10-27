@@ -16,6 +16,25 @@ const register=`
  const dispatch=async(ui,id)=>{const result=await plugin.actionManager.dispatch({id,source:'local-hotkey',surfaceId:ui.props.actionSurfaceId});ui.render();await wait();return result};
 `;
 
+for(const view of ['classic','mindmap','wuxing'])test(`${view}: saved History/pin/picker targets are explicit destinations independent of branch-click policy`,async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert(await host.evaluate(`(async()=>{${canvasSceneFixture}${register}
+ const first=await mount(M.builtInPlexViews.resolve('${view}'));first.props.actionSurfaceId+='-saved';const ui=attach(first);
+ const second=await mount(M.builtInPlexViews.resolve('${view}'));second.props.actionSurfaceId+='-other';const other=attach(second);
+ const otherRoot=other.session.layoutRoot('A.md'),otherCamera=other.container.querySelector('.kplex-camera').style.transform;
+ for(const [source,target]of [['toolbar','B.md'],['toolbar','C.md'],['local-menu','B.md']]){
+  const result=await plugin.actionManager.dispatch({id:'node.activate',source,surfaceId:ui.props.actionSurfaceId,target:{kind:'explicit',node:M.actionNodeRef(pages.get(target))}});ui.render();await wait();
+  check(result.status==='completed','Saved destination request accepted');check(ui.props.activePath===target,'Saved target becomes attention');
+  if('${view}'==='mindmap')check(ui.session.layoutRoot(target)===target,'History/pin/full-picker target becomes Mind Map root');
+ }
+ // Passive attention may differ from a rooted map. Explicitly choosing that same note must still reroot.
+ if('${view}'==='mindmap'){ui.props.activePath='C.md';ui.render();await wait();check(ui.session.layoutRoot('C.md')==='B.md','Passive attention retains root');
+  const result=await plugin.actionManager.dispatch({id:'node.activate',source:'toolbar',surfaceId:ui.props.actionSurfaceId,target:{kind:'explicit',node:M.actionNodeRef(pages.get('C.md'))}});ui.render();await wait();check(result.status==='completed'&&ui.session.layoutRoot('C.md')==='C.md','Same-attention saved target explicitly reroots');}
+ check(other.props.activePath==='A.md'&&other.session.layoutRoot('A.md')===otherRoot&&other.container.querySelector('.kplex-camera').style.transform===otherCamera,'Saved navigation stays on its captured canvas');
+ check(work.body===0&&work.scans===0,'Saved navigation performs no body reads or inventory scan');
+ releases.forEach(release=>release());ui.close();other.close();plugin.actionManager.dispose();style.remove();return true})()`));}finally{await host.cleanup()}
+});
+
 for(const view of ['classic','mindmap','wuxing'])test(`${view}: plain arrows leave the central area and Enter centers without renaming`,async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert(await host.evaluate(`(async()=>{${canvasSceneFixture}${register}
