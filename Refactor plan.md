@@ -6601,3 +6601,8 @@ Native3ba4d9b growth reached a source outside the canvas, so the lane was not ac
 ### 2026-10-27 ? Native editor toolbar remains reachable before Fit
 
 7a52950 native lane caught immediate parent toolbar clipping before Fit in a growing area. Restored05:00:08.762Z. Existing overlay synchronization now uses shared areaVisibility.editorToolbarInsets to intersect toolbar placement with area and actual canvas top/sides. No document resize, focus/navigation change or competing native controller.23viewport checks PASS (85distinct affected checks incl52policy+10browser). Rebuild/scanner and native rerun required. Full regression/CI deferred; parallel help changes separate.
+
+
+### 2026-10-27 ? Growing parents exact-build Windows accepted
+
+Runtime130facf9eeaf475f48eb1505d1faf423a00e752a unchanged.24native Windows PASS: bottom alignment140?800 minimum;28-descendant auto-growth/no scroll, expanded source reveal/plain wheel, immediate editor-toolbar hit targets before Fit, existing22keyboard/editor/save/view/popout guards.85distinct focused cases/types/scanner/actual build PASS. Maind49497c4c6836dd1d7d3ed7a0e2820d95335348a004813f96c3f9839f055b26d; styles02cbb4724e9ba017333be0ed3fcfc44b0aa532e472353667296598cdaeb2a682. Restored05:03:39.951Z,9configs/117content/original workspace/window/digest. Failed15/16attempts/restoration attributed in docs/validation/mindmap-growing-parents-222-2026-10-27.md and sanitized receipt. No additional narrow manual Windows check; full regression/CI deferred, physical mobile/Mac/minimum-host/known215limits retained. Keep222draft/open/unmerged; parallel help branch independently authorized.
