@@ -381,3 +381,26 @@ test('visible-endpoint area policy suppresses hidden physical attachments withou
  assert(edgeViewportClip(edge,nodes,node=>node===target?{...area,edgeVisibility:undefined}:undefined),'Existing through-area behavior remains the default');
  assert.equal(JSON.stringify(edge),frozen,'Paint never changes canonical endpoint/evidence identity');
 });
+
+
+test('reload viewport settlement keeps attention-following Compass and off-origin Facets visible without navigation',()=>{
+ for(const view of ['compass','facets'])for(const allowAutozoom of [true,false])for(const owner of ['automatic','manual','bound-editor','central-editor','restored']){
+  const ctx=graphFixture();ctx.settings.allowAutozoom=allowAutozoom;ctx.scene.nodes[0].occurrenceId='focus';ctx.scene.frameOccurrence=view==='facets'?'focus':undefined;
+  ctx.scene.nodes[0].x=view==='facets'?370:30;ctx.scene.nodes[0].y=view==='facets'?-560:-20;ctx.occurrenceKey=node=>node.occurrenceId;
+  ctx.viewport.current.clientHeight=3245;ctx.camera.current.scale=1.4;ctx.render();ctx.layout();
+  const focus=ctx.scene.nodes[0];assert.equal(ctx.camera.current.y+focus.y*ctx.camera.current.scale,3245/2);
+  if(owner==='manual')ctx.applyCamera({...ctx.camera.current,y:1200});
+  if(owner==='restored')ctx.applyCamera({x:-200,y:1700,scale:1.2});
+  if(owner==='bound-editor')ctx.boundEditorBinding={id:'live-editor'};
+  if(owner==='central-editor'){ctx.centralEditorAvailable=true;ctx.centralEditorAvailabilityRef.current=true;}
+  const before={...ctx.camera.current};ctx.viewport.current.clientHeight=954;ctx.pathChangedThisRender=false;ctx.render();ctx.layout();
+  if(owner==='automatic'){assert(Math.abs(ctx.camera.current.y+focus.y*ctx.camera.current.scale-954/2)<1e-8,view+' default placement follows final CSS viewport');assert(Math.abs(ctx.camera.current.x+focus.x*ctx.camera.current.scale-400)<1e-8);if(!allowAutozoom)assert.equal(ctx.camera.current.scale,before.scale);}
+  else assert.deepEqual(ctx.camera.current,before,owner+' keeps its exact coordinates');
+ }
+});
+
+test('disabled autozoom placement ownership never recenters attention views for ordinary scene reflow',()=>{
+ const ctx=graphFixture();ctx.settings.allowAutozoom=false;ctx.pathChangedThisRender=false;ctx.render();ctx.layout();const before={...ctx.camera.current};
+ ctx.scene.nodes[0].y+=400;ctx.render();ctx.layout();assert.deepEqual(ctx.camera.current,before,'Only viewport settlement or explicit navigation may follow automatic translation');
+ ctx.preserveCameraOnNextLayout.current=true;ctx.viewport.current.clientHeight=400;ctx.render();ctx.layout();assert.deepEqual(ctx.camera.current,before,'Explicit display transition retains camera intent');
+});

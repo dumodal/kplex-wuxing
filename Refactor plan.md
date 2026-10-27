@@ -6646,3 +6646,10 @@ Risk-based native follow-up: combined diagnostic below-card status parity in bot
 Final accessible-owner label preserved (5affected browser cases PASS), rebuilt/scanned. Exact final native10PASS12/12, all4Help status presentations and140canonical Child?12; resources restored2026-10-27T07:29:22.424Z,9config/117content/original workspace/window/digest. Existing103focused/130core/7architecture results retain implementationb74 attribution. Final hashes and failed-tooling attribution recorded in docs/validation/shared-node-status-222-2026-10-27.md. Exact build deployed/reloaded in Help0.3.0;4reviewed figures refreshed. User-owned live settings/workspace/shortcuts excluded. Both PRs open; no full regression/merge/release/production deployment.
 
 Risk-based remaining acceptance: physical touch/macOS/minimum-host; customized theme status readability. No additional automated campaign required for this checkpoint.
+
+
+### 2026-10-27 ? Empty canvas after reload: viewport settlement
+
+Observed Help19cards/0visible with obsolete y1622.5camera from3245px initial native/CSS viewport; final pane954px. Existing automatic camera owner now follows final viewport settlement for attention-following as well as rooted views, including autozoom-disabled translation. Manual/restored/editor/display ownership and ordinary reflow guards preserved.30targeted tests +1shared-renderer browser (six view/autozoom cases)PASS22.22.2; real build/types/scanner PASS. Two actual Help plugin reloads keep the same leaf/center/preset and bring the center on screen (y477), no navigation/note edits. Exact main/artifact/limits in docs/validation/reload-viewport-222-2026-10-27.md. Full regression deferred; PRs open/unmerged.
+
+Risk-based follow-up: other OS/minimum-host/physical mobile CSS settlement remains separate; no new native editor/Sidecar acceptance. Native Help reload already covers the reported workflow.

@@ -1783,11 +1783,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const editorSizeChanged = centralEditorSizeKeyRef.current !== editorSizeKey;
     const previousViewport = previousCameraViewport.current;
     const viewportChanged = Boolean(previousViewport && (previousViewport.width !== root.clientWidth || previousViewport.height !== root.clientHeight));
-    // Initial native/CSS layout may shrink after the first fit. A rooted map must remain visible
-    // while that fit still owns the camera; ordinary branch reflow and live editors never refit.
-    const followAutomaticFit = (!rooted || viewportChanged && !boundEditorBinding) && !preserveCamera && !displayResizeLayout.current && !centralEditorMaximized
+    // Initial native/CSS layout may shrink after reload's first placement in any view. Keep the
+    // framing occurrence visible while automatic placement still owns the camera; manual/restored
+    // cameras, live editors and ordinary scene reflow must retain their coordinates.
+    const followAutomaticFit = (!viewportChanged || !boundEditorBinding && !centralEditorAvailable)
+      && (!rooted || viewportChanged && !boundEditorBinding) && !preserveCamera && !displayResizeLayout.current && !centralEditorMaximized
       && automaticFit.current?.path === sceneScope && sameFitCamera(automaticFit.current.camera, camera.current);
-    const shouldRecenter = !preserveCamera && (!cameraIntentPlaced.current || pathChangedThisRender || rooted && viewportChanged && followAutomaticFit || !rooted && editorModeChanged
+    const shouldRecenter = !preserveCamera && (!cameraIntentPlaced.current || pathChangedThisRender || viewportChanged && followAutomaticFit || !rooted && editorModeChanged
       || (settings.allowAutozoom && editorSizeChanged && followAutomaticFit));
     if (shouldRecenter || (settings.allowAutozoom && followAutomaticFit)) {
       if (settings.allowAutozoom) fit();
@@ -1797,7 +1799,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         if (el) {
           const center = framingOccurrence() ?? {x: 0, y: 0};
           applyCamera(/** Navigation owns translation only when autozoom is disabled. */ current => ({...current,
-            x: el.clientWidth / 2 - center.x * current.scale, y: el.clientHeight / 2 - center.y * current.scale}), rooted);
+            x: el.clientWidth / 2 - center.x * current.scale, y: el.clientHeight / 2 - center.y * current.scale}), true);
         }
       }
     }

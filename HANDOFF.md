@@ -19,10 +19,10 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Shared status / Facets overflow fix complete
+# Reload empty-canvas camera fix complete
 
-Implementationb74d7a9 plus accessible-owner follow-up: one shared NodeStatus for MindMap/Facets, optional validated badge.presentation=status, measured bottom clearance; optional viewport.edgeVisibility=visible-endpoints hides orphan painted routes while keeping canonical graph/legacy-through-area defaults. No competing owner.
+Help before:19cards/0visible, camera y1622.5against final954px pane. Existing automatic viewport settlement generalized to attention-following views; autozoom-disabled navigation records automatic placement, without following ordinary scene reflow. Manual/restored cameras/live editors/display transitions retain coordinates. No new index/timer/state owner.
 
-103focused/130core/7architecture PASS22.22.2; real build/types/touched scanner PASS. Final accessible-owner5browser PASS, rebuilt/scanner PASS. Final Windows native10PASS12/12/140canonical Child?12, restored2026-10-27T07:29:22.424Z (9config/117content/original workspace/window/digest). Native9previous PASS not reused as final artifact proof. Maine68113be36b6c32647b7ea855ae0615e57674c83cc4379272d8fb232f8989385; stylesd8984f7094c5a1638a69f38a4ba246df33c460f6775268d3faf25c68378fff83.
+30targeted viewport/editor tests +1real-browser test (six view/autozoom cases)PASS22.22.2, build/types/touched scanner PASS. Actual Help two reloads PASS2026-10-27T07:46:47.332Z, same leaf/center/preset,19cards/original center visible withy477, no navigation/note edits. Exact deployed main8b2ff4729a036fb8f0d9e7039169f410e53c50ad4e67db6cbbaedb32f0685de9; styles unchangedd8984f7094c5a1638a69f38a4ba246df33c460f6775268d3faf25c68378fff83.
 
-Final build deployed/reloaded in verified kplex-help,0.3.0 enabled;4authentic Facets figures refreshed. User-owned settings/workspace/shortcuts preserved, only requested bundles/images committed. Full regression deferred; PR222/Help4stay draft/open/unmerged. No production deployment/tag/release. Evidence docs/validation/shared-node-status-222-2026-10-27.md and native JSON.
+Evidence docs/validation/reload-viewport-222-2026-10-27.md and native JSON. User-owned Help settings/workspace/shortcuts excluded; source and Help branches pushed separately. Both PR222/Help4remain draft/open/unmerged, full regression deferred, no release/production deployment.

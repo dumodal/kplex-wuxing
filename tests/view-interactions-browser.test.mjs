@@ -134,3 +134,20 @@ test('Mind Map parents align to the bottom, grow without native scrolling and re
  check(box.scrollHeight<=box.clientHeight+1&&work.body===0&&work.scans===0,'Filtering and growth do not create scrolling, body reads or inventory');
  releases.forEach(release=>release());ui.close();plugin.actionManager.dispose();style.remove();return true})()`));}finally{await host.cleanup()}
 });
+
+
+test('plugin reload CSS settlement centers the original note across views without navigation or source work',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture.replace('height:900px','height:3245px')}
+ for(const id of ['classic','wuxing','mindmap'])for(const autozoom of [false,true]){
+  settings.allowAutozoom=autozoom;const ui=await mount(M.builtInPlexViews.resolve(id)),scope=()=>ui.container.querySelector('.kplex-plex');
+  const center=ui.container.querySelector('[data-kplex-path="A.md"]'),before={...work};
+  ui.container.style.height='500px';await wait();await wait();await wait();
+  const v=scope().getBoundingClientRect(),r=center.getBoundingClientRect();
+  check(Math.abs((r.top+r.bottom)/2-(v.top+v.bottom)/2)<2,id+' keeps original center inside final reload viewport without another navigation');
+  check(ui.props.activePath==='A.md'&&ui.moves.length===0&&ui.container.contains(center),'CSS settlement preserves note and DOM identity');
+  check(work.body===before.body&&work.scans===before.scans&&work.acquisitions===before.acquisitions,'CSS settlement does no source work');
+  await ui.ports.current.implementations['view.zoom-in'].execute({});await wait();const manual=ui.container.querySelector('.kplex-camera').style.transform;
+  ui.container.style.height='650px';await wait();await wait();check(ui.container.querySelector('.kplex-camera').style.transform===manual,id+' preserves a manually owned camera');ui.close();
+ }style.remove();return true;})()`),true)}finally{await host.cleanup()}
+});
