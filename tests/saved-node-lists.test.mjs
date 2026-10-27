@@ -37,6 +37,9 @@ window.mount=()=>{if(!root){host=document.body.appendChild(document.createElemen
 window.repaint=()=>{settings.noteTypeStyles.Guide.backgroundColor='#336699';delete settings.noteTypeStyles.Guide.prefix;window.mount()};
 window.expected=()=>nodePaint(resolveNodeStyle(pages[2],null,'child',settings),nodePaintFallbacks({page:pages[2],role:'child'}));
 window.project=()=>pages.slice(0,8).map(p=>nodeListPresentation(p,p.name,settings));
+window.checkOwnerDocument=()=>{const frame=document.body.appendChild(document.createElement('iframe')),doc=frame.contentDocument,counts={add:0,remove:0};
+const add=doc.addEventListener.bind(doc),remove=doc.removeEventListener.bind(doc);doc.addEventListener=(type,...args)=>{if(['pointermove','pointerup','pointercancel'].includes(type))counts.add++;return add(type,...args)};doc.removeEventListener=(type,...args)=>{if(['pointermove','pointerup','pointercancel'].includes(type))counts.remove++;return remove(type,...args)};
+const root=createRoot(doc.body.appendChild(doc.createElement('div')));flushSync(()=>root.render(<HorizontalDragScroll className='kplex-history-list'><button>Other document</button></HorizontalDragScroll>));flushSync(()=>root.unmount());frame.remove();return counts};
 `},bundle:true,write:false,format:'iife',globalName:'sourceModules',platform:'browser'});
 
 /** Load actual plugin CSS; native theme fallbacks receive finite test tokens. */
@@ -70,5 +73,19 @@ test('touch retains native scrolling; mouse cancellation and unmount retire the 
   const value=await b.evaluate(`(()=>{const el=document.querySelector('.kplex-history-list');const event=(type,extra)=>new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:5,pointerType:'touch',isPrimary:true,button:0,buttons:1,clientX:100,clientY:20,...extra});const down=event('pointerdown'),move=event('pointermove',{clientX:40});el.dispatchEvent(down);document.dispatchEvent(move);return{left:el.scrollLeft,prevented:move.defaultPrevented}})()`);assert.deepEqual(value,{left:0,prevented:false});
   const p=await point(b);await mouse(b,'mousePressed',p.x,p.y,1);await mouse(b,'mouseMoved',p.x-30,p.y,1);await b.evaluate(`window.dispatchEvent(new Event('blur'))`);assert.equal(await b.evaluate(`document.querySelector('.is-mouse-scrolling')===null`),true);const stopped=await b.evaluate(`document.querySelector('.kplex-history-list').scrollLeft`);await mouse(b,'mouseMoved',p.x-80,p.y,1);assert.equal(await b.evaluate(`document.querySelector('.kplex-history-list').scrollLeft`),stopped);await mouse(b,'mouseReleased',p.x-80,p.y);
   await b.evaluate(`window.retired=document.querySelector('.kplex-history-list');unmount();document.dispatchEvent(new PointerEvent('pointermove',{pointerId:1,pointerType:'mouse',buttons:1,clientX:-100}));`);assert.equal(await b.evaluate(`retired.classList.contains('is-mouse-scrolling')`),false);
+ }finally{await b.cleanup()}
+});
+
+test('a secondary document owns and releases its own pointer listeners',async()=>{
+ const b=await browser();try{const counts=await b.evaluate('checkOwnerDocument()');assert.equal(counts.add,3);assert.equal(counts.remove,3)}finally{await b.cleanup()}
+});
+
+test('a new touch press is not swallowed after a cancelled mouse drag',async()=>{
+ const b=await browser();try{
+  await b.evaluate(`document.querySelector('.kplex-history-list').addEventListener('pointerdown',e=>window.testPointer=e.pointerId,{once:true})`);
+  const p=await point(b);await mouse(b,'mousePressed',p.x,p.y,1);await mouse(b,'mouseMoved',p.x-30,p.y,1);
+  await b.evaluate(`(()=>{const list=document.querySelector('.kplex-history-list'),button=list.querySelector('button');list.dispatchEvent(new PointerEvent('pointercancel',{bubbles:true,pointerId:testPointer,pointerType:'mouse'}));button.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:22,pointerType:'touch',isPrimary:true}));button.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,detail:1}));})()`);
+  assert.equal(await b.evaluate('clicks.length'),1);assert.equal(await b.evaluate(`document.querySelector('.is-mouse-scrolling')===null`),true);
+  await mouse(b,'mouseReleased',p.x-30,p.y);
  }finally{await b.cleanup()}
 });

@@ -20,8 +20,9 @@ export function HorizontalDragScroll({className, children}: {className: string; 
     };
     /** Plain primary mouse input may scroll; touch/pen and modified clicks retain native actions. */
     const down = (event: PointerEvent): void => {
+      suppressClick = false;
       if (event.pointerType !== "mouse" || event.button !== 0 || !event.isPrimary) return;
-      suppressClick = false;finish();
+      finish();
       if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || element.scrollWidth <= element.clientWidth) return;
       gesture = {id: event.pointerId, x: event.clientX, y: event.clientY, left: element.scrollLeft, dragging: false};
     };
