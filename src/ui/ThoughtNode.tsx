@@ -220,7 +220,7 @@ export function ThoughtNode({
   >
     <span id={accessibleNameId} className="kplex-accessible-name">{group ? node.label : translate("node.accessibleLabel", { label: node.label, path: node.page.path })}
       {node.viewBadge ? ` ${node.viewBadge.label}. ${node.viewBadge.description ?? node.viewDescription ?? ""}` : node.viewDescription ? ` ${node.viewDescription}` : ""}
-      {branchStatusHint ? ` ${branchStatusHint}` : ""}</span>
+      {branchStatus ? ` ${branchStatus}. ${branchStatusHint ?? ""}` : ""}</span>
     {node.viewBadge && <MeasuredNodeBadge badge={node.viewBadge} colorRevision={badgeColorRevision} />}
     {content ? <div
       className="kplex-thought-embedded-content"

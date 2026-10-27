@@ -19,8 +19,10 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# 0.3.0 preparation / Help deployment
+# Shared status / Facets overflow fix complete
 
-Maintainer requested0.3.0, latest Help plugin files and release pin replacing0.2.0. Existing prepare-release owner updated all5metadata files; Node22.22.2 actual build/types and release metadata/dist checks PASS. All3built plugin files copied to Help and hash-equal. Verified exact Help vault path; CLI reload and plugin inspection confirm0.3.0 enabled. Release note renamed/versioned and pin/setup links updated. Prior native12remains5cb0069, no new native/full-regression claim.
+Implementationb74d7a9 plus accessible-owner follow-up: one shared NodeStatus for MindMap/Facets, optional validated badge.presentation=status, measured bottom clearance; optional viewport.edgeVisibility=visible-endpoints hides orphan painted routes while keeping canonical graph/legacy-through-area defaults. No competing owner.
 
-See docs/validation/release-030-help-deployment-2026-10-27.md. Help pre-existing settings/workspace/shortcut files preserved and excluded; only requested pin staged from data.json. Both PR222 and Help4remain draft/open/unmerged; no tag/release/production deployment.
+103focused/130core/7architecture PASS22.22.2; real build/types/touched scanner PASS. Final accessible-owner5browser PASS, rebuilt/scanner PASS. Final Windows native10PASS12/12/140canonical Child?12, restored2026-10-27T07:29:22.424Z (9config/117content/original workspace/window/digest). Native9previous PASS not reused as final artifact proof. Maine68113be36b6c32647b7ea855ae0615e57674c83cc4379272d8fb232f8989385; stylesd8984f7094c5a1638a69f38a4ba246df33c460f6775268d3faf25c68378fff83.
+
+Final build deployed/reloaded in verified kplex-help,0.3.0 enabled;4authentic Facets figures refreshed. User-owned settings/workspace/shortcuts preserved, only requested bundles/images committed. Full regression deferred; PR222/Help4stay draft/open/unmerged. No production deployment/tag/release. Evidence docs/validation/shared-node-status-222-2026-10-27.md and native JSON.

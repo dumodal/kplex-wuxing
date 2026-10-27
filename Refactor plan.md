@@ -6639,3 +6639,10 @@ Risk-based review: reopen release pin in the Help canvas; confirm installation r
 Reused one portable NodeStatus component for Mind Map cycle/preparation labels and Facets diagnostics. Optional PlexNodeBadge.presentation=status extends the existing validated badge/measurement/grouping/reflow/fit API; assigned category chips retain the existing colors. Optional area viewport.edgeVisibility=visible-endpoints uses the shared physical-endpoint paint aperture to suppress orphan stroke/markers/captions/hit paths in scrolled Facets regions. Other views retain through-area clipping by omission. No semantic/index/editor/settings owner changes. Focused103checks, core/architecture, actual build/types and touched-source scanner pass22.22.2; exact-build Small native/Help deployment follows. Full regression remains deferred; both PRs open.
 
 Risk-based native follow-up: combined diagnostic below-card status parity in both themes, top/middle/bottom scroll connector restoration, root/attention/editor/camera independence. Windows Small/Help verification follows; Mac/minimum-host/physical touch remain separate.
+
+
+### 2026-10-27 ? Shared status final Windows/Help handoff
+
+Final accessible-owner label preserved (5affected browser cases PASS), rebuilt/scanned. Exact final native10PASS12/12, all4Help status presentations and140canonical Child?12; resources restored2026-10-27T07:29:22.424Z,9config/117content/original workspace/window/digest. Existing103focused/130core/7architecture results retain implementationb74 attribution. Final hashes and failed-tooling attribution recorded in docs/validation/shared-node-status-222-2026-10-27.md. Exact build deployed/reloaded in Help0.3.0;4reviewed figures refreshed. User-owned live settings/workspace/shortcuts excluded. Both PRs open; no full regression/merge/release/production deployment.
+
+Risk-based remaining acceptance: physical touch/macOS/minimum-host; customized theme status readability. No additional automated campaign required for this checkpoint.
