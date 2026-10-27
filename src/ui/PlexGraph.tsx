@@ -751,9 +751,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     neighbours: (page: GraphPage, role: Role) => index.neighbours(page, role), neighbourCount: (page: GraphPage) => index.neighbourCount(page),
     gateStats: (page: GraphPage) => index.gateStats(page), visibleRelationshipsWithin: (source: GraphPage, paths: ReadonlySet<string>) => index.visibleRelationshipsWithin(source, paths)}), [index]);
   const viewLifetime = viewSession?.getLifetime() ?? 0;
-  const occurrenceEditorCapable = viewDefinition.editorHosting === "occurrence";
+  const occurrenceEditorCapable = viewDefinition.editorHosting !== undefined;
   const boundEditorBinding = occurrenceEditorCapable ? viewSession?.editors.bindings[0] : undefined;
-  const occurrenceEditorPolicy = occurrenceEditorCapable && (!classic || Boolean(boundEditorBinding));
+  const occurrenceEditorPolicy = occurrenceEditorCapable && ((!classic && viewDefinition.editorHosting !== "attention-and-occurrence") || Boolean(boundEditorBinding));
   const pendingEditorIntent = useMemo(() => viewSession?.readEditorIntent() ?? null, [viewSession, viewRevision, viewDefinition]);
   const boundEditorClose = useRef<{id: string; close: () => Promise<void>} | null>(null);
   const editorViewLease = useRef<(() => void) | null>(null);
@@ -1098,7 +1098,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const buildZoneDisplayLayout = (zone: string, panel: ZoneViewport, nodes: PositionedNode[], filter: string,
     preferences: KplexSettings, _read: GraphIndex, centerPath: string): ZoneDisplayLayout => classic
       ? classic.repack(zone, panel, nodes, filter, preferences, classicRead, centerPath, (node, value) => isEditorOccurrence(node) || matchesZoneFilter(node, value))
-      : reflowArea(panel, nodes, filter, matchesZoneFilter, scene.areas?.find(area => area.id === zone)?.reflow);
+      : reflowArea(panel, nodes, filter, (node, value) => isEditorOccurrence(node) || matchesZoneFilter(node, value), scene.areas?.find(area => area.id === zone)?.reflow);
   const areaForNode = (node: PositionedNode): string | null => node.areaId ?? (classic ? scrollZoneForRole(node.role, settings.lateralArrangement) : null);
   const hasEditableAreas = ZONES.some(zone => Boolean(AREA_HEIGHT_CONFIG[zone] || AREA_WIDTH_CONFIG[zone]));
   useEffect(/** A compatible view change cannot leave inert area editing enabled in a decorative-only or empty scene. */ () => {
@@ -2489,6 +2489,23 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
 
     finishFlair(pending.path, null);
   }, [pendingNodeFlair, scene.nodes, scene.zoneViewports, zoneDisplayLayouts]);
+
+  const revealedEditor = useRef<string | null>(null);
+  useLayoutEffect(/** Opening/resizing reveals this exact native document once within its grown area;
+   * ordinary scroll/layout/selection changes never pull it back or steal editor focus. */ () => {
+    if (!boundEditorBinding) {revealedEditor.current = null;return;}
+    const key = `${boundEditorBinding.id}:${boundEditorBinding.dimensions.width}:${boundEditorBinding.dimensions.height}`;
+    if (revealedEditor.current === key) return;
+    const node = admittedBoundNode;
+    if (!node) return;
+    const zone = areaForNode(node), panel = zone ? scene.zoneViewports[zone] : undefined;
+    if (!zone || !panel || panel.scrollable === false) {revealedEditor.current = key;return;}
+    const scroll = zoneScrollRefs.current[zone], local = zoneDisplayLayouts[zone]?.localPositions.get(occurrenceKey(node));
+    if (!scroll || !local) return;
+    const top = revealRowScrollTop(local.y, node.height + 32, scroll.scrollTop, scroll.clientHeight, scroll.scrollHeight);
+    revealedEditor.current = key;
+    if (top !== scroll.scrollTop) {scroll.scrollTop = top;setZoneScrollTop(current => ({...current, [zone]: top}));}
+  }, [boundEditorBinding, admittedBoundNode, scene.zoneViewports, zoneDisplayLayouts]);
 
   const pendingBranchReveal = useRef<{id: string; lifetime: number; scope: string; previousScene: HostPlexScene; camera: {x: number; y: number; scale: number}; scrollTop?: number} | null>(null);
   useLayoutEffect(/** An accepted single-branch expansion reveals its exact row after measured reflow, without changing selection or editor focus; fixed areas reuse minimal canvas reveal. */ () => {
@@ -4247,7 +4264,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       const initial = editorExpansion(context), file = initial?.page.file;
       if (!initial || !file || !viewSession || editorSwitch.current) return {status: "unavailable", reasonKey: "actions.target-unavailable"};
       const reference = actionNodeRef(initial.page), current = viewSession.capture(), attention = activePath;
-      const openOccurrence = occurrenceEditorCapable && (!classic || initial.role !== "center");
+      const openOccurrence = occurrenceEditorCapable && (!classic || initial.role !== "center")
+        && (viewDefinition.editorHosting !== "attention-and-occurrence" || initial.page.path !== activePath);
       const targetOccurrence = classic?.editorKey(initial, activePath) ?? occurrenceKey(initial);
       const token = {};editorSwitch.current = token;setEditorSwitching(true);
       try {
@@ -4370,14 +4388,17 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       if (!page) return;
       if (page.transient?.kind === "group") { unfoldGroup(page); return; }
       if (page.transient?.kind === "section") return plugin.openSection(page, hostLeaf);
-      if (context.request.source === "local-hotkey" || context.request.id === "node.activate" && context.request.args?.intent === "destination") {
+      // Saved History/pin/picker targets identify a canonical destination, rather than a
+      // displayed branch occurrence. Their root admission must not depend on branch-click policy.
+      const savedDestination = context.request.target?.kind === "explicit" && context.target.kind === "node" && !context.target.occurrenceId;
+      if (savedDestination || context.request.source === "local-hotkey" || context.request.id === "node.activate" && context.request.args?.intent === "destination") {
         if (viewDefinition.navigation === "rooted" && (!viewSession || viewSession.editors.bindings.length && page.path !== sceneScope))
           return {status: "unavailable", reasonKey: "actions.branch-editor-blocked"};
         if (context.target.kind === "node" && context.target.occurrenceId) navigationOccurrence.current = {identity: page.path, id: context.target.occurrenceId};
         return onActivate(page, "destination") === false ? {status: "unavailable", reasonKey: "actions.target-unavailable"} : {status: "completed"};
       }
-      // A saved/search target is an explicit map destination. A displayed occurrence is inspection
-      // inside the retained map; its attention must not retarget an expanded native editor.
+      // Preserve legacy branch activation policy for implicit targets. Displayed occurrences
+      // remain distinct from saved destinations and retain their native editor/attention guards.
       if (viewDefinition.hierarchy?.primary === "expand" && context.target.kind === "node" && !context.target.occurrenceId
         && !viewSession?.setRoot(nodeId(page.path))) return {status: "unavailable", reasonKey: "actions.branch-editor-blocked"};
       if (context.target.kind === "node" && context.target.occurrenceId) navigationOccurrence.current = { identity: page.path, id: context.target.occurrenceId };
@@ -5026,7 +5047,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       : styledDisplayNode;
     const hasCentralEditor = isEditorOccurrence(baseNode) && centralEditorPage !== null;
     const editorTarget = persistentPageFor(baseNode.page);
-    const canOpenCentralEditor = classic && baseNode.role !== "center" ? Boolean(editorTarget && supportsBoundEditor(editorTarget) && !hasCentralEditor && classicEditorCounts?.get(classic.editorKey(baseNode, activePath) ?? "") === 1) : occurrenceEditorPolicy ? supportsBoundEditor(baseNode.page) && !hasCentralEditor
+    const canOpenCentralEditor = classic && baseNode.role !== "center" ? Boolean(editorTarget && supportsBoundEditor(editorTarget) && !hasCentralEditor && classicEditorCounts?.get(classic.editorKey(baseNode, activePath) ?? "") === 1) : occurrenceEditorPolicy || viewDefinition.editorHosting === "attention-and-occurrence" && baseNode.page.path !== activePath ? supportsBoundEditor(baseNode.page) && !hasCentralEditor
       : viewDefinition.capabilities.editor && !baseNode.page.transient && !hasCentralEditor
         && (supportsCentralEditorFile(baseNode.page) || isEditorOccurrence(baseNode) && Boolean(baseNode.page.url && urlEmbed(baseNode.page.url)));
 

@@ -1,5 +1,5 @@
 /** Facets retains the persisted wuxing identity. Shared host owners retain measurement,
- * native attention-following editing, cached facts and all effects. */
+ * native central/occurrence editing, cached facts and all effects. */
 import type {PlexViewDefinition} from "../contracts";
 import {facetsConfigurationSchema, facetLibrary} from "../facets/configuration";
 import {projectFacets} from "../facets/projection";
@@ -10,7 +10,7 @@ import {compileFacetRules} from "../facets/rules";
 import {facetFlowLabels} from "../facets/flow";
 
 export const wuXingViewDefinition: PlexViewDefinition = {
-  id: "wuxing", version: 1, labelKey: "view.wuxing", icon: "orbit",
+  id: "wuxing", version: 1, labelKey: "view.wuxing", icon: "orbit", editorHosting: "attention-and-occurrence",
   capabilities: {sections: false, descendants: false, editor: true, compact: false, properties: true, badges: true},
   badgeBudget: 2048,
   areaPreferenceBudget: 192,
