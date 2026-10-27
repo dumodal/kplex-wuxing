@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {plexViewModules,classicFixture,viewPage} from './support/plexViewFixture.mjs';
 const M=await plexViewModules(['src/ui/plexViews/prepareScene.ts','src/ui/plexViews/classic/occurrenceEditor.ts',
- 'src/core/plex/views/wuxing/definition.ts','src/core/plex/views/facets/layout.ts','src/core/plex/views/facets/templates.ts','src/adapters/obsidian/actionNode.ts']);
+ 'src/core/plex/views/wuxing/definition.ts','src/core/plex/views/facets/layout.ts','src/core/plex/views/facets/templates.ts','src/adapters/obsidian/actionNode.ts',
+ 'src/ui/plexViews/areaVisibility.ts','src/application/PlexViewSession.ts','src/core/plex/views/registry.ts']);
 
 for(const role of ['parent','child','left','right','sibling'])test(`Compass ${role} area grows in both axes around an exact large editor and restores on close`,()=>{
  const f=classicFixture(M),settings={...f.settings,parentMaxHeight:140,childMaxHeight:160,friendMaxHeight:140,siblingMaxHeight:120},before=JSON.stringify(settings);
@@ -12,6 +13,10 @@ for(const role of ['parent','child','left','right','sibling'])test(`Compass ${ro
  const opened=M.buildScene(f.neighborhood,f.index,settings,false,undefined,true,{binding,page:target.page}),area=opened.zoneAreas[role],viewport=opened.zoneViewports[role];
  assert(area.width>=968);assert(area.height>=772);if(viewport){assert(viewport.width>=968);assert(viewport.height>=732)}
  const editor=opened.nodes.find(node=>node.occurrenceId===binding.occurrenceId);assert.equal(editor.width,920);assert.equal(editor.height,700);
+ assert(editor.x-editor.width/2>=area.left);assert(editor.x+editor.width/2<=area.left+area.width);
+ if(viewport){const local=editor.y-viewport.contentTop,scroll=M.revealRowScrollTop(local,editor.height+32,0,viewport.height,viewport.contentHeight),displayY=viewport.top+local-scroll;
+  assert(displayY-editor.height/2>=viewport.top);assert(displayY+editor.height/2<=viewport.top+viewport.height);
+ }else{assert(editor.y-editor.height/2>=area.top);assert(editor.y+editor.height/2<=area.top+area.height)}
  assert.deepEqual(opened.nodes.find(node=>node.role==='center'),normal.nodes.find(node=>node.role==='center'));
  assert.equal(JSON.stringify(settings),before);assert.deepEqual(M.buildScene(f.neighborhood,f.index,settings,false,undefined,true),normal);
 });
@@ -45,4 +50,12 @@ for(const layout of ['circular','horizontal','vertical','quadrants','concentric'
 test('Facets central automatic editor still uses the existing attention dimensions and hybrid mode is registered',()=>{
  const f=facets(),opened=f.prepare([],{width:660,height:410});assert.equal(opened.failure,false);
  assert.equal(M.wuXingViewDefinition.editorHosting,'attention-and-occurrence');const focus=opened.scene.nodes.find(node=>node.page.path==='Focus');assert.equal(focus.width,660);assert.equal(focus.height,410);
+});
+
+test('Facets saves occurrence intent without native authority and restores it through the same hybrid host policy',()=>{
+ const registry=new M.PlexViewRegistry([{...M.wuXingViewDefinition,id:'classic',editorHosting:undefined},M.wuXingViewDefinition]),session=new M.PlexViewSession(registry,()=>{});
+ session.select('wuxing');const opened=session.editors.open({viewId:'wuxing',occurrenceId:'exact-phase-note',target:{nodeId:'Neighbor',path:'Neighbor',fileIdentity:'native-instance'},dimensions:{width:920,height:700},mode:'source'});
+ assert.equal(opened.status,'opened');const saved=JSON.parse(JSON.stringify(session.getState()));assert(!JSON.stringify(saved).includes('native-instance'));
+ const restored=new M.PlexViewSession(registry,()=>{});restored.restore(saved);assert.equal(restored.definition.id,'wuxing');assert.equal(restored.editors.bindings.length,0);
+ const intent=restored.readEditorIntent();assert.equal(intent.occurrenceId,'exact-phase-note');assert.deepEqual(intent.dimensions,{width:920,height:700});session.dispose();restored.dispose();
 });

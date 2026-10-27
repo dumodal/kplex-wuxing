@@ -5044,7 +5044,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       : styledDisplayNode;
     const hasCentralEditor = isEditorOccurrence(baseNode) && centralEditorPage !== null;
     const editorTarget = persistentPageFor(baseNode.page);
-    const canOpenCentralEditor = classic && baseNode.role !== "center" ? Boolean(editorTarget && supportsBoundEditor(editorTarget) && !hasCentralEditor && classicEditorCounts?.get(classic.editorKey(baseNode, activePath) ?? "") === 1) : occurrenceEditorPolicy ? supportsBoundEditor(baseNode.page) && !hasCentralEditor
+    const canOpenCentralEditor = classic && baseNode.role !== "center" ? Boolean(editorTarget && supportsBoundEditor(editorTarget) && !hasCentralEditor && classicEditorCounts?.get(classic.editorKey(baseNode, activePath) ?? "") === 1) : occurrenceEditorPolicy || viewDefinition.editorHosting === "attention-and-occurrence" && baseNode.page.path !== activePath ? supportsBoundEditor(baseNode.page) && !hasCentralEditor
       : viewDefinition.capabilities.editor && !baseNode.page.transient && !hasCentralEditor
         && (supportsCentralEditorFile(baseNode.page) || isEditorOccurrence(baseNode) && Boolean(baseNode.page.url && urlEmbed(baseNode.page.url)));
 

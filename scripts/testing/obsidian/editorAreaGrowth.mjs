@@ -42,7 +42,10 @@ async function scenario(app,c){
    const binding=session.editors.bindings[0],content=root().querySelector('.kplex-central-editor-content .cm-content');content.focus();
    await until(()=>workspace.activeLeaf?.view.file?.path===path('Neighbor')&&workspace.activeLeaf.view.editor?.getValue().includes('Owned editor area fixture.'),'Native document not loaded');
    const leaf=workspace.activeLeaf,editor=leaf.view.editor;check(host.view.documentSession.centerPath===beforeCenter&&binding.target.path===path('Neighbor'),'Editor opening recentered or retargeted the note');
-   check(card()===beforeCard&&card().closest('.kplex-zone-panel')?.className===beforeArea,'Editor replaced its occurrence or containing area');
+   check(card().dataset.kplexPath===path('Neighbor')&&card().closest('.kplex-zone-panel')?.className===beforeArea,'Editor changed its canonical note or containing area');
+   // Compass deliberately upgrades the ordinary path key to its role/center occurrence key.
+   // Other views already have stable occurrence keys before opening the native document.
+   if(view!=='classic')check(card()===beforeCard,'Editor replaced an existing occurrence-keyed card');
    const marker='Editor-area-'+view+'-'+Date.now();editor.replaceRange('\n'+marker+'\n',editor.getCursor());const cursor=JSON.stringify(editor.getCursor());
    const resized=await act('editor.resize',{bindingId:binding.id,width:920,height:700});check(resized.status==='completed','Shared editor resize refused');
    await until(()=>{const overlay=root().querySelector('.kplex-central-editor-overlay'),scale=Number(overlay?.style.getPropertyValue('--kplex-editor-camera-scale'))||1,rect=card().getBoundingClientRect();return session.editors.bindings[0]?.dimensions.width===920&&Math.abs(rect.width/scale-920)<1&&Math.abs(rect.height/scale-700)<1},'Editor dimensions did not publish');
