@@ -15,7 +15,7 @@ function presetChoice(context: CanvasViewContributionContext): CanvasViewChoice 
   const selected = resolveFacetPreset(library, state.preset);
   const options: CanvasViewChoice["options"][number][] = orderedFacetPresets(library).map(({id, preset}) => ({id,
     label: facetPresetLabel(preset), command: {kind: "state", action: {id: "preset.select", args: id}}}));
-  if (!options.some(option => option.id === state.preset)) options.unshift({id: state.preset,
+  if (selected.status !== "replaced" && !options.some(option => option.id === state.preset)) options.unshift({id: state.preset,
     label: {key: "facets.presetUnavailable"}, enabled: false, command: {kind: "state", action: {id: "preset.select", args: state.preset}}});
   return {id: "preset", label: {key: "facets.preset"}, selected: selected.status === "replaced" ? selected.id : state.preset, options,
     ...(selected.status === "ready" || selected.status === "replaced" ? {settings: {kind: "settings" as const, target: selected.id}, help: {kind: "help" as const, target: selected.id}} : {})};

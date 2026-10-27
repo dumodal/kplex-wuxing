@@ -163,6 +163,9 @@ test('deletion requires explicit replacement, Cancel retains the editor and rest
  button(confirmation,t('common.delete')).click();await waitFor(()=>!confirmation.modalEl.isConnected);await drain();
  equal(disk.canvasViewSettings.wuxing.values.presets.arc,{version:1,replacement:'para'},'One atomic explicit replacement');
  const resolution=M.resolveFacetPreset(M.facetLibrary(p.readCanvasViewConfiguration('wuxing')),'arc');check(resolution.id==='para'&&resolution.status==='replaced','Closed/restored ARC intent follows explicit redirect');
+ const contribution=p.viewSettingsRegistry.contribution(p.viewSettingsRegistry.definition('wuxing')),configuration=p.readCanvasViewConfiguration('wuxing');
+ const choice=contribution.choices({configuration,state:{version:1,preset:'arc'}})[0];check(choice.selected==='para'&&!choice.options.some(option=>option.id==='arc'),'Valid retired preset resolves without an unavailable dropdown placeholder');
+ const missing=contribution.choices({configuration,state:{version:1,preset:'missing'}})[0];check(missing.options[0].id==='missing'&&missing.options[0].enabled===false,'Genuinely missing requested presets retain their explicit unavailable recovery entry');
  close(m);check(window.migrationListeners===0,'Deletion lifetimes released');
  `),true);
 });

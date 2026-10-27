@@ -1,7 +1,7 @@
 /** Stage only three built artifacts in the explicitly authorized disposable Small. This is a
  * hash-checked native-test handoff, never a build/verification receipt or personal-vault installer. */
 import assert from 'node:assert/strict';
-import {copyFileSync,readFileSync,existsSync} from 'node:fs';
+import {copyFileSync,readFileSync,existsSync,writeFileSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {validateTarget} from './runner.mjs';
@@ -34,6 +34,13 @@ cli('plugin:disable','id=k-plex');
 const retired=cli('eval','code=JSON.stringify({loaded:!!app.plugins.plugins["k-plex"],enabled:app.plugins.enabledPlugins.has("k-plex")})');
 assert(retired.includes('"loaded":false')&&retired.includes('"enabled":false'),'Native plugin must be fully retired before replacing artifacts');
 for(const name of names){copyFileSync(join(source,name),join(target.pluginDir,name));assert.equal(hash(join(target.pluginDir,name)),hashes[name])}
+// A public Help snapshot uses its own accepted ontology/appearance. Only this explicit
+// disposable lane stages those settings while the native plugin is fully retired.
+if(process.env.KPLEX_WUXING_NATIVE_LANE==='help-vault'){
+ const help=JSON.parse(readFileSync(process.env.KPLEX_HELP_DEMO_PAYLOAD,'utf8'));
+ assert(help.repository==='zsviczian/kplex-help'&&/^[a-f0-9]{40}$/.test(help.commit)&&help.settings&&typeof help.settings==='object','Frozen public Help settings required');
+ writeFileSync(join(target.pluginDir,'data.json'),JSON.stringify(help.settings,null,2)+'\n');
+}
 cli('plugin:enable','id=k-plex');
 await enabledState([...new Set([...originalEnabled,'k-plex'])]);
 // Enablement-file completion does not establish completion of native settings/lifecycle setup.
