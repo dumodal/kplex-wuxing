@@ -45,3 +45,13 @@ Updated figures cover the view overview, Compass/Mind Map, Facets introduction/a
 The growing-parent85focused/native24 PASS remains attributed to runtime130facf/main d49497c4c6836dd1d7d3ed7a0e2820d95335348a004813f96c3f9839f055b26d and restoration05:03:39.951Z. Its modules remain unchanged by the preset-choice fix. It is not represented as a rerun on this new artifact. See [growing-parent validation](mindmap-growing-parents-222-2026-10-27.md). Known215 editor/Sidecar pair limits, multiple editors/focused-editor Properties follow-ups and whole-app restart acceptance remain separate.
 
 [Sanitized native receipt](help-canvas-facets-222-native-summary.json).
+
+## Final Help delivery
+
+[Help195b2a2](https://github.com/zsviczian/kplex-help/commit/195b2a235cc53e5716e5de5ba2b4d6d50f1a10b7) is pushed and remote-verified on2026-10-27-canvas-facets-help; [PR4](https://github.com/zsviczian/kplex-help/pull/4) is draft/open/unmerged. Source PR222 remains draft/open/unmerged.
+
+FinalNode22.22.2 audit:140Markdown pages, zero YAML/link/image/Use-case/encoding errors and zero pages over12semantic children, including image embeds, inverse parents and inferred body links. Explicit Related classification keeps the existing Help Home logo from becoming a13th child. All17new screenshot embeds have Related roles. All140classification metadata maps and the complete settings JSON remain equal to frozen native4aa; subsequent metadata changes are Related illustration roles only.
+
+Only authorized canvasViewSettings changes occur in Help plugins/k-plex/data.json; unrelated settings/lenses and all bundled main.js/styles.css/manifest/workspace/hotkeys stay unchanged. Eleven new PNGs added, original assets preserved. Published0.2.3/0.2.4prose equality passes. The new release-note page has no guessed version/date and no unreleased/draft disclaimer, per maintainer direction. Final Help diff check passes. Four sources/four layouts remain the demonstrated selectable set.
+
+Scope completed; acceptance retains the separately documented Windows/device/full-regression limits. No merge, release or additional deployment.

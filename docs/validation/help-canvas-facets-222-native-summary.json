@@ -182,5 +182,29 @@
     "Preset editor captured via the registered Settings owner; the separate Edit help handoff is not certified by this lane.",
     "Final Help screenshot embeds/captions/Related roles are audited separately from this frozen metadata/config snapshot.",
     "Full regression/CI deferred by maintainer instruction; previous parent native24 belongs to runtime130facf, not this artifact."
-  ]
+  ],
+  "finalHelpDelivery": {
+    "commit": "195b2a235cc53e5716e5de5ba2b4d6d50f1a10b7",
+    "branch": "2026-10-27-canvas-facets-help",
+    "pullRequest": "https://github.com/zsviczian/kplex-help/pull/4",
+    "state": "open",
+    "draft": true,
+    "remoteVerified": true,
+    "classificationFieldsUnchangedAcross": 140,
+    "settingsUnchangedFromNativeSnapshot": true,
+    "newScreenshotAssets": 11,
+    "screenshotEmbeds": 17,
+    "allEmbedsHaveRelatedRoles": true,
+    "finalAudit": {
+      "node": "22.22.2",
+      "pages": 140,
+      "yamlLinkImageUseCaseErrors": 0,
+      "semanticChildOverLimit": 0,
+      "encodingErrors": 0,
+      "includesImageEmbeds": true
+    },
+    "originalAssetsUnchanged": true,
+    "bundledPluginFilesUnchanged": true,
+    "workspaceAndHotkeysUnchanged": true
+  }
 }

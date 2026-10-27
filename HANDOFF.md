@@ -19,10 +19,10 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Help delivery checkpoint
+# Completed Help delivery; PR222 remains open
 
-Source runtime5cb0069: preset redirect fix + focused browser1/scanner/types/build PASS on Node22.22.2. Help native8 PASS12/12 against public Help4aa47f3, all4 sources/layouts and140canonical Child?12;11 authentic screenshots reviewed. Cleanup and outer restoration PASS2026-10-27T05:54:31.015Z (9config/117content/original workspace/window/digest). Production untouched.
+Help branch2026-10-27-canvas-facets-help pushed and remote-verified at195b2a235cc53e5716e5de5ba2b4d6d50f1a10b7; Help PR4 draft/open/unmerged. Four curated classification/layout demonstrations,140-page metadata refresh, canvas/Compass terminology, balanced recent-feature/release overview and11authentic desktop images. All17image embeds have Related roles; final140-page YAML/link/image/Use-case/encoding/semantic-child audit PASS22.22.2 including image embeds?12. Metadata classification and complete settings remain frozen-native4aa-equivalent; original assets, Help binaries/workspace/hotkeys and unrelated settings untouched. Published0.2.3/0.2.4prose preserved. No next-release draft disclaimer.
 
-Help agent finalizing new screenshot embeds/captions/Related-asset roles and independent audit/push on2026-10-27-canvas-facets-help/PR4. Frozen classification/config remains4aa. Source report: docs/validation/help-canvas-facets-222-2026-10-27.md and sanitized native JSON.
+Runtime5cb0069: valid-preset-redirect selector fix, focused browser1/scanner/types/real build PASS22.22.2. Help native8 PASS12/12 against exact4aa, four sources/layouts and140canonical Child?12; allSmallresources restored2026-10-27T05:54:31.015Z (9config/117content/original workspace/window/digest). See docs/validation/help-canvas-facets-222-2026-10-27.md and sanitized JSON for hashes/failed-attempt attribution/capture limits. Source receipt checkpointb2cc4d7; this final change only updates documentation/receipt metadata.
 
-Earlier parent85focused/native24 remains runtime130facf, restored05:03:39.951Z; no false new-artifact attribution. Full regression/CI deferred. Both PR222 and Help PR4 remain draft/open/unmerged. No release, merge, production deployment, bundled Help binary/workspace change or additional vault creation. Finish final Help audit/remote verification/PR handoff; source checkpoint only test-driver/receipts now.
+Earlier growing-parent85focused/native24 remains runtime130facf, restored05:03:39.951Z. Full regression/CI deferred by maintainer. PR222 and Help PR4 remain draft/open/unmerged for review; no release/merge/production deployment. Mac/minimum-host/physical-device/whole-app restart and known215two-editor/Sidecar limits remain separate; multiple native editors/focused-editor Properties follow-ups are assessed, not implemented.
