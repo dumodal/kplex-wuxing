@@ -35,3 +35,9 @@ Final restoration **2026-10-27T18:25:28.492Z**: 9 configuration resources, 117 o
 Main SHA256 `302f5f015ba423ae8a0142ab6cb971a42d323845a740db3ae4556782c8af2de5`; unchanged styles `f205d6e8b16494817de3abe8a07f15cfd1b96dec83fac6a772f5092d739d9857`; manifest 0.3.0 `49596950b87caaf2fddaf0f58e826287c67d0e0998d3b69905c2ec298fd8b350`. [Native, source-hash, baseline and restoration receipt](editor-area-growth-native-summary.json).
 
 PR #226 stays draft/open/unmerged; no release. Later platform checks should cover native resize/reflow in a macOS popout and physical touch area scrolling while an editor is open. Minimum-host and known #215 limitations remain separate. No additional user manual check is required for the Windows workflows automated here.
+
+## Published Help deployment
+
+Implementation [dd2048c](https://github.com/zsviczian/kplex/commit/dd2048c3931636153b9debcb6a42ef927f893361) and [Help 4417ff8](https://github.com/zsviczian/kplex-help/commit/4417ff834e82af540cee1a27eacd86786c138d5f) are pushed and remote-verified. Help contains the exact tested main.js; styles and manifest already match and are unchanged. Its existing editor guide now explains in-place Facets editors and temporary area growth. The 142-page YAML/link/asset/encoding/semantic-child audit passes.
+
+Help-only reload completed at **2026-10-27T18:28:29.992Z**, retaining the same native leaf, center, Facets/help-workbench, 37 cards and camera. No modal draft was open. No runtime note edits or navigation occurred; the authorized Help prose edit is separate. User-owned data.json/workspace.json remain excluded. The first preflight returned non-JSON and stopped before artifact copying; explicit path and native-state preflights then passed and deployment completed normally. This deployment check is separate from the three-view dirty-save interaction acceptance in disposable Small.
