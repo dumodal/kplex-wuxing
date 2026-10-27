@@ -117,13 +117,15 @@ test('combined diagnostics uses shared measured status chips and a captured canv
  check(badge('B.md').textContent==='Conflicting'&&badge('C.md').textContent==='Cannot classify'&&badge(extra[0]).textContent==='Unassigned','Shared chips retain each diagnostic result');
  check(!frame(a,combined).dataset.kplexAssignment,'Combined dock grants no property-clearing target');
  const status=badge('B.md'),statusNode=status.closest('.kplex-thought');
- check(status.getBoundingClientRect().top>=statusNode.getBoundingClientRect().bottom&&getComputedStyle(status).fontSize==='10px','Diagnostic status uses the same below-card typography as hierarchy references');
+ check(status.getBoundingClientRect().top>=statusNode.getBoundingClientRect().bottom&&getComputedStyle(status).fontSize==='10px'&&getComputedStyle(status).left==='0px','Diagnostic status uses the same below-card typography as hierarchy references');
  const scroll=a.container.querySelector('.'+CSS.escape('kplex-zone-'+combined)+' .kplex-zone-scroll');
  const edgeIds=()=>[...a.container.querySelectorAll('.kplex-edge-hit')].map(el=>el.dataset.kplexEdgeId);
  const canonicalRows=()=>JSON.stringify([...pages].map(([path,page])=>[path,index.neighbours(page,'child').map(row=>[row.page.path,row.role,row.relationType,row.typeDefinition])]));
- const canonical=canonicalRows(),topEdges=edgeIds();check(topEdges.length>0&&topEdges.length<26,'Only connectors with visible area endpoints paint at the top');
+ const continuationIds=()=>[...a.container.querySelectorAll('[data-kplex-edge-continuation]')].map(el=>el.closest('.kplex-edge').querySelector('.kplex-edge-hit').dataset.kplexEdgeId);
+ const canonical=canonicalRows(),topEdges=edgeIds(),topContinuations=continuationIds();check(topEdges.length===26&&topContinuations.length>0,'Every visible counterpart retains its connector, using boundary continuations for hidden cards');
+ for(const mark of a.container.querySelectorAll('[data-kplex-edge-continuation]')){const group=mark.closest('.kplex-edge');check(!group.querySelector('.kplex-edge-visible').getAttribute('marker-end')&&!group.querySelector('text'),'Continuation has no hidden-note arrowhead or detached caption');check(mark.getAttribute('pointer-events')==='none'&&!mark.dataset.kplexKeyboardId,'Continuation is not a gate or action target');}
  scroll.scrollTop=scroll.scrollHeight-scroll.clientHeight;scroll.dispatchEvent(new Event('scroll'));await wait();
- const bottomEdges=edgeIds();check(bottomEdges.length>0&&bottomEdges.some(id=>!topEdges.includes(id))&&topEdges.some(id=>!bottomEdges.includes(id)),'Scrolling removes hidden endpoint routes and restores newly visible routes');
+ const bottomEdges=edgeIds();check(JSON.stringify(bottomEdges)===JSON.stringify(topEdges)&&JSON.stringify(continuationIds())!==JSON.stringify(topContinuations),'Scrolling restores actual gates and moves continuation markers without dropping canonical routes');
  check(canonicalRows()===canonical,'Scroll paint never changes canonical graph state');
  scroll.scrollTop=0;scroll.dispatchEvent(new Event('scroll'));await wait();
  check(JSON.stringify(edgeIds())===JSON.stringify(topEdges),'Returning to the top restores exact connector identities');

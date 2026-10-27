@@ -275,7 +275,7 @@ test('non-scrolling viewports and stable filters are optional validated view cap
 
 test('node status is an optional validated measured presentation shared by all view plugins',()=>{
  const node={x:100,y:200,width:160,height:44},status={width:200,height:12,presentation:'status'};
- assert.deepEqual(M.nodeBadgeBounds(node,status),{x:44,y:226,width:132,height:12});
+ assert.deepEqual(M.nodeBadgeBounds(node,status),{x:20,y:226,width:160,height:12});
  assert.deepEqual(M.nodeBadgeInsets(node,status),{bottom:16});
  assert.equal(M.validPlexNodeBadge({label:{literal:'Unassigned'},presentation:'status'}),true);
  for(const presentation of ['banner','',false,null])assert.equal(M.validPlexNodeBadge({label:{literal:'Status'},presentation}),false);

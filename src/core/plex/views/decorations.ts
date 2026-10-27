@@ -28,7 +28,7 @@ export function nodeBadgeBounds(node: ViewRect, measured: Readonly<{width: numbe
   if (![node.x, node.y, node.width, node.height, measured.width, measured.height].every(Number.isFinite)
     || node.width <= 0 || node.height <= 0 || measured.width <= 0 || measured.height <= 0) throw new Error("Invalid node badge geometry");
   return measured.presentation === "status"
-    ? {x: node.x - node.width / 2 + 24, y: node.y + node.height / 2 + 4, width: Math.min(measured.width, Math.max(1, node.width - 28)), height: measured.height}
+    ? {x: node.x - node.width / 2, y: node.y + node.height / 2 + 4, width: Math.min(measured.width, node.width), height: measured.height}
     : {x: node.x - node.width / 2, y: node.y - node.height / 2 - measured.height - 12, width: measured.width, height: measured.height};
 }
 

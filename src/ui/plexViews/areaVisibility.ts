@@ -1,6 +1,41 @@
 /** Shared presentation-only clipping and reveal geometry over already admitted measured rows. */
-import type {PositionedEdge, PositionedNode} from "../../types";
+import type {GateSide, PositionedEdge, PositionedNode} from "../../types";
 import {edgePhysicalOccurrence, type SceneViewport} from "./scene";
+
+/** One paint-only attachment; a continued endpoint is never a node, gate or relationship target. */
+export type ViewportEdgeEndpoint = Readonly<{point: Readonly<{x: number; y: number}>; port: GateSide; continued: boolean}>;
+
+/** Retain routes from a visible counterpart to an occluded scroll-area endpoint. The hidden
+ * attachment clamps to its own aperture with a tangent toward the counterpart, avoiding curves
+ * that end in empty space. Two hidden attachments have no visible context and paint nothing.
+ * Existing explicit visible-endpoints policy may still suppress a route. Canonical endpoints,
+ * directions and evidence never change; the caller only changes paint and hides clipped markers. */
+export function edgeViewportEndpoints(a: Readonly<{x: number; y: number}>, b: Readonly<{x: number; y: number}>,
+  sourcePort: GateSide, targetPort: GateSide, sourceArea?: SceneViewport, targetArea?: SceneViewport,
+  cards?: Readonly<{source: Pick<PositionedNode, "x" | "y" | "width" | "height">; target: Pick<PositionedNode, "x" | "y" | "width" | "height">}>): Readonly<{source: ViewportEdgeEndpoint; target: ViewportEdgeEndpoint}> | null {
+  /** Clip only scrollable apertures; fixed forests own complete measured geometry. */
+  const endpoint = (point: Readonly<{x: number; y: number}>, port: GateSide, area?: SceneViewport): ViewportEdgeEndpoint => {
+    if (!area || area.scrollable === false) return {point, port, continued: false};
+    const x = Math.max(area.left, Math.min(area.left + area.width, point.x));
+    const y = Math.max(area.top, Math.min(area.top + area.height, point.y));
+    return {point: {x, y}, port, continued: x !== point.x || y !== point.y};
+  };
+  const source = endpoint(a, sourcePort, sourceArea), target = endpoint(b, targetPort, targetArea);
+  /** A card touching the aperture still supplies visible context when its protruding gate is clipped. */
+  const visible = (end: ViewportEdgeEndpoint, area?: SceneViewport, card?: Pick<PositionedNode, "x" | "y" | "width" | "height">): boolean =>
+    !end.continued || Boolean(area && card && card.x + card.width / 2 > area.left && card.x - card.width / 2 < area.left + area.width
+      && card.y + card.height / 2 > area.top && card.y - card.height / 2 < area.top + area.height);
+  if (!visible(source, sourceArea, cards?.source) && !visible(target, targetArea, cards?.target) || source.continued && sourceArea?.edgeVisibility === "visible-endpoints"
+    || target.continued && targetArea?.edgeVisibility === "visible-endpoints") return null;
+  /** The continuation faces the visible counterpart, rather than inheriting a hidden gate's tangent. */
+  const toward = (end: ViewportEdgeEndpoint, other: ViewportEdgeEndpoint): ViewportEdgeEndpoint => {
+    if (!end.continued) return end;
+    const dx = other.point.x - end.point.x, dy = other.point.y - end.point.y;
+    const port = Math.abs(dx) >= Math.abs(dy) ? dx < 0 ? "left" : "right" : dy < 0 ? "top" : "bottom";
+    return {...end, port};
+  };
+  return {source: toward(source, target), target: toward(target, source)};
+}
 
 /** Keep routes between exact physical endpoints, clipping area-local overflow without changing canonical evidence.
  * Cross-area routes retain the span between both visible areas (or an unbounded endpoint's measured card).

@@ -104,11 +104,15 @@ test('optional bounded hierarchy viewport retains connectors, clips paint and re
  check(before>=children.length,'All admitted canonical routes exist before clipping');
  scroll.scrollTop=0;scroll.dispatchEvent(new Event('scroll',{bubbles:true}));await wait();ui.render();await wait();
  check(card('B.md').getBoundingClientRect().top>scroll.getBoundingClientRect().bottom,'Expanded parent is genuinely outside the area aperture');
- check(count()===before,'Offscreen source must not erase its visible connector segments');
+ /** Each actually visible child must retain its exact canonical route to the hidden source. */
+ const visibleRoutes=()=>{const v=scroll.getBoundingClientRect(),visible=[...scroll.querySelectorAll('.kplex-thought')].filter(el=>{const r=el.getBoundingClientRect();return r.right>v.left&&r.left<v.right&&r.bottom>v.top&&r.top<v.bottom});
+ check(visible.length>0,'At least one counterpart is physically visible');for(const el of visible){const id=el.dataset.kplexKeyboardId,path=[...ui.container.querySelectorAll('.kplex-edge-hit')].find(path=>path.dataset.kplexEdgeId===id);check(path,'Visible counterpart must keep its exact connector '+id);}return visible;};
+ const visibleRows=visibleRoutes();check(count()>0&&count()<before,'Only routes with both counterparts hidden retire; visible children remain connected');
  const clipped=[...ui.container.querySelectorAll('.kplex-edge-hit')].filter(path=>path.closest('svg')!==ui.container.querySelector('.kplex-links'));
- check(clipped.length>=children.length,'Bounded routes must clip visible stroke and actual hit paths together');
+ check(clipped.length>=visibleRows.length,'Every visible child route uses the shared area aperture');
+ check(clipped.some(path=>path.closest('.kplex-edge').querySelector('[data-kplex-edge-continuation="source"]')),'Hidden source has a read-only boundary continuation instead of disappearing');
  for(const path of clipped){const svg=path.closest('svg');check(svg.getAttribute('overflow')==='hidden'&&Number(svg.getAttribute('height'))>0,'Measured SVG aperture');}
- scroll.scrollTop=scroll.scrollHeight;scroll.dispatchEvent(new Event('scroll',{bubbles:true}));await wait();ui.render();await wait();check(count()===before,'Opposite scroll retains routes');
+ scroll.scrollTop=scroll.scrollHeight;scroll.dispatchEvent(new Event('scroll',{bubbles:true}));await wait();ui.render();await wait();visibleRoutes();check(count()>0,'Opposite scroll retains routes for visible counterparts');
  check(ui.props.activePath===attention&&ui.session.layoutRoot(attention)===root&&work.body===0&&work.scans===0,'Overflow remains presentation-only without navigation, body parsing or inventory');
  releases.forEach(release=>release());ui.close();plugin.actionManager.dispose();style.remove();return true})()`));}finally{await host.cleanup()}
 });
@@ -150,4 +154,21 @@ test('plugin reload CSS settlement centers the original note across views withou
   await ui.ports.current.implementations['view.zoom-in'].execute({});await wait();const manual=ui.container.querySelector('.kplex-camera').style.transform;
   ui.container.style.height='650px';await wait();await wait();check(ui.container.querySelector('.kplex-camera').style.transform===manual,id+' preserves a manually owned camera');ui.close();
  }style.remove();return true;})()`),true)}finally{await host.cleanup()}
+});
+
+
+test('cycle references and expandable siblings share row spacing and card-edge status alignment',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{await host.command('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1});
+ assert(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ for(const path of ['D.md','E.md']){const base=pages.get('C.md');pages.set(path,{...base,path,name:path,file:{...base.file,path,name:path}});fieldCaches.set(path,{frontmatter:{phase:'water'}})}
+ index.neighbours=(page,role)=>(role!=='child'?[]:page.path==='A.md'?['B.md']:page.path==='B.md'?['A.md','C.md','D.md']:page.path==='C.md'||page.path==='D.md'?['E.md']:[]).map(path=>({page:pages.get(path),role,relationType:1,typeDefinition:'Related',linkDirection:1}));
+ index.getNeighborhood=path=>({center:pages.get(path),parents:[],children:index.neighbours(pages.get(path),'child'),leftFriends:[],rightFriends:[],siblings:[]});
+ settings.canvasViewSettings={mindmap:{version:1,values:{initialGenerations:2,arrangement:'right'}}};
+ const ui=await mount(M.builtInPlexViews.resolve('mindmap')),all=[...ui.container.querySelectorAll('.kplex-thought')],reference=all.find(n=>n.dataset.kplexPath==='A.md'&&!n.classList.contains('kplex-role-center'));
+ const c=all.find(n=>n.dataset.kplexPath==='C.md'),d=all.find(n=>n.dataset.kplexPath==='D.md');check(reference&&c&&d,'Cycle and regular sibling fixture');
+ const r=reference.getBoundingClientRect(),cr=c.getBoundingClientRect(),dr=d.getBoundingClientRect();check(Math.abs((cr.top-r.top)-(dr.top-cr.top))<1,'Reference status/button absence cannot compress the sibling gap');
+ const status=reference.querySelector('.kplex-node-status');check(status&&getComputedStyle(status).left==='0px'&&Math.abs(status.getBoundingClientRect().left-r.left)<=3,'Shared status begins at the card edge');
+ check(!reference.querySelector('.is-branch-disclosure')&&c.querySelector('.is-branch-disclosure'),'Uniform spacing does not invent a fold button on a reference');
+ check(work.body===0&&work.scans===0,'Status/spacing needs no source work');ui.close();style.remove();return true;})()`));}finally{await host.cleanup()}
 });

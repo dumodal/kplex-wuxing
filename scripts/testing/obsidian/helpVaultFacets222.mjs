@@ -52,10 +52,23 @@ export async function acceptHelpVaultFacets222(x) {
     select.value=demo.preset;select.dispatchEvent(new doc.defaultView.Event('change',{bubbles:true}));await until(()=>session.state?.preset===demo.preset&&!root(host).querySelector('.kplex-view-error'),'Help preset did not render');panel(host).querySelector('.kplex-filter-panel-header button').click();
     await until(()=>Object.entries(demo.membership).every(([source,expected])=>{const note=byPath.get(source),el=note&&card(note);if(!el)return false;if(source===demo.center)return expected.status!=='assigned'||Boolean(el.querySelector('.kplex-node-badge'));const area=[...el.closest('.kplex-zone-panel')?.classList??[]].find(name=>name.startsWith('kplex-zone-')&&name!=='kplex-zone-panel');const definition=payload.canvasViewSettings.wuxing.values.presets[demo.preset];return area?.slice('kplex-zone-'.length)===JSON.stringify(expected.status==='assigned'?['facets',demo.preset,'category',expected.category]:definition.diagnostics.combined?['facets',demo.preset,'diagnostics']:['facets',demo.preset,'status',expected.status]);}),'Actual native classification differs from production classifier for '+demo.preset,30000);
     const statuses=[...root(host).querySelectorAll('.kplex-node-status')];
-    check(statuses.length>0&&statuses.every(el=>el.getBoundingClientRect().top>=el.closest('.kplex-thought').getBoundingClientRect().bottom-1&&getComputedStyle(el).fontSize==='10px'&&!el.closest('.kplex-node-badge')),'Diagnostics did not use shared below-card node statuses');
+    check(statuses.length>0&&statuses.every(el=>el.getBoundingClientRect().top>=el.closest('.kplex-thought').getBoundingClientRect().bottom-1&&getComputedStyle(el).fontSize==='10px'&&getComputedStyle(el).left==='0px'&&!el.closest('.kplex-node-badge')),'Diagnostics did not use shared card-edge node statuses');
     const surface=[...p.actionSurfaceHosts].find(([,entry])=>entry.leaf===host)?.[0];await p.actionManager.dispatch({id:'view.fit',source:'internal',surfaceId:surface});await screenshot(demo.preset);
     cases.push({id:'native-help-facets-classification-and-canvas',preset:demo.preset,source:demo.source,layout:demo.layout,classified:Object.keys(demo.membership).length});
     if(demo.preset==='help-workshop'){
+      const scroll=[...root(host).querySelectorAll('.kplex-zone-scroll')].find(el=>el.scrollHeight>el.clientHeight+5);check(scroll,'Public diagnostic overflow fixture absent');
+      /** Snapshot direct route identities; optional cross-link discovery has its own lifetime. */
+      const routeIds=()=>[...root(host).querySelectorAll('.kplex-edge:not(.is-cross-link) .kplex-edge-hit')].map(el=>el.dataset.kplexEdgeId).sort();
+      /** Read only this current canonical neighborhood, never scan or acquire source work. */
+      const canonical=()=>JSON.stringify(['parent','child','left','right','previous','next'].map(role=>p.index.neighbours(p.index.get(target.path),role).map(row=>[row.page.path,row.role,row.relationType,row.typeDefinition,row.linkDirection])));
+      const topRoutes=routeIds(),beforeCanonical=canonical(),beforeScroll=scroll.scrollTop;
+      scroll.scrollTop=scroll.scrollHeight-scroll.clientHeight;scroll.dispatchEvent(new doc.defaultView.Event('scroll',{bubbles:true}));await wait(200);
+      const marks=[...root(host).querySelectorAll('[data-kplex-edge-continuation]')];check(marks.length>0,'Hidden counterparts lost their boundary continuations');
+      check(JSON.stringify(routeIds())===JSON.stringify(topRoutes)&&canonical()===beforeCanonical,'Native scrolling changed canonical direct routes');
+      check(marks.every(mark=>mark.getAttribute('pointer-events')==='none'&&!mark.closest('.kplex-edge').querySelector('.kplex-edge-visible').getAttribute(mark.dataset.kplexEdgeContinuation==='source'?'marker-start':'marker-end')),'Continuation gained hidden-note arrow or edit target');
+      scroll.scrollTop=beforeScroll;scroll.dispatchEvent(new doc.defaultView.Event('scroll',{bubbles:true}));await wait(150);
+      check(JSON.stringify(routeIds())===JSON.stringify(topRoutes),'Returning native scroll lost a direct route');
+      cases.push({id:'native-help-scroll-continuations-keep-visible-counterpart-routes',routes:topRoutes.length,continuations:marks.length});
       root(host).querySelector('.kplex-filter-trigger').click();await until(()=>panel(host),'Preset Help panel absent');panel(host).querySelector('[data-kplex-view-choice="preset"]').querySelectorAll('button')[1].click();
       await until(()=>doc.querySelector('.kplex-markdown-help-modal h1'),'Real preset Help absent');await captureModal('preset-help');
       await closeModals();if(panel(host))panel(host).querySelector('.kplex-filter-panel-header button').click();cases.push({id:'native-help-preset-markdown-captured'});

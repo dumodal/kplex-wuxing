@@ -121,7 +121,7 @@ test('combined diagnostics defaults preserve distinct statuses, personal phases 
  assert.equal(diagnostics.find(row=>row.nodeId==='unsupported').badge.description.key,'facets.reason.unsupported');
  assert.deepEqual(combined.edges,separate.edges);assert.equal(JSON.stringify([...f.values]),before);
  const layout=M.layoutFacets(combined,f.measure(combined),'wuxing',M.FACET_TEMPLATES.wuxing),area=layout.areas.find(area=>area.id===id);
- assert.equal(layout.areas.length,6);assert.equal(area.viewport.edgeVisibility,'visible-endpoints');assert.equal(area.dropTarget,undefined);assert(M.facetPresetAssignments('wuxing',M.FACET_TEMPLATES.wuxing).some(target=>target.id===M.facetAreaId('wuxing','status','unassigned')));
+ assert.equal(layout.areas.length,6);assert.equal(area.viewport.edgeVisibility,undefined,'Shared continuation behavior is the default');assert.equal(area.dropTarget,undefined);assert(M.facetPresetAssignments('wuxing',M.FACET_TEMPLATES.wuxing).some(target=>target.id===M.facetAreaId('wuxing','status','unassigned')));
  assert.equal(layout.positions.size,combined.occurrences.length);assert.equal(combined.occurrences.find(row=>row.id===combined.entry).areaId,undefined);
 });
 

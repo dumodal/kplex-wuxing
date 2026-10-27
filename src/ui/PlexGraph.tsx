@@ -26,7 +26,7 @@
  * leases after scene admission and share exact ancestor filtering and catalog-backed branch actions.
  * Their first current local preparation may fit once; manual/restored cameras and live editors win.
  */
-import {edgeViewportClip, revealRowScrollTop, editorToolbarInsets} from "./plexViews/areaVisibility";
+import {edgeViewportClip, edgeViewportEndpoints, revealRowScrollTop, editorToolbarInsets} from "./plexViews/areaVisibility";
 import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
 import {hasDirectionalCaption,directionalRelationCaption} from "../core/plex/directionalRelationCaption";
 import { connectionActionAllowed, tagMembershipPair } from "./structuralConnectionActions";
@@ -95,7 +95,7 @@ import {plexViewContributionFor} from "./plexViews/contributions";
 import {reflowArea} from "./plexViews/reflowArea";
 import {prepareViewScene, plexViewRead, attentionFallbackScene} from "./plexViews/prepareScene";
 import {resolveOccurrenceEditorPage} from "./plexViews/occurrenceEditors";
-import {occurrenceKey, edgeOccurrence, edgePhysicalOccurrence, semanticSceneEdge, semanticEdgeForTarget, type HostPlexScene} from "./plexViews/scene";
+import {occurrenceKey, edgeOccurrence, edgePhysicalOccurrence, semanticSceneEdge, semanticEdgeForTarget, type HostPlexScene, type SceneViewport} from "./plexViews/scene";
 import {createPlexSectionViewContext} from "./plexViews/sections";
 import {viewLabel} from "./plexViews/labels";
 import {ViewDecorations, viewDecorationCounts} from "./plexViews/ViewDecorations";
@@ -580,12 +580,12 @@ function filterNeighborhoodForLenses(
   };
 }
 
-/** Paint one admitted canonical connector through the shared endpoint/area aperture. A null
- * aperture hides stroke, markers, caption and hit target together without changing graph state. */
+/** Paint canonical connectors through shared scroll continuations. Hidden gates lose their
+ * note arrowheads/captions; read-only boundary marks never become node or edit targets. */
 function Edge({
   edge,
   nodes,
-  clip,
+  viewportForNode,
   inverseArrowDirection,
   connectorStyle,
   labelBackground,
@@ -600,7 +600,7 @@ function Edge({
 }: {
   edge: PositionedEdge;
   nodes: Map<string, PositionedNode>;
-  clip?: {left: number; top: number; width: number; height: number} | null;
+  viewportForNode: (node: PositionedNode) => SceneViewport | undefined;
   inverseArrowDirection: boolean;
   connectorStyle: "bezier" | "straight";
   labelBackground: string;
@@ -615,21 +615,28 @@ function Edge({
 }) {
   const source = nodes.get(edgePhysicalOccurrence(edge, "source"));
   const target = nodes.get(edgePhysicalOccurrence(edge, "target"));
-  if (!source || !target || clip === null) return null;
+  if (!source || !target) return null;
 
   const gates = gatesForEdge(edge);
   const a = gatePoint(source, gates.source);
   const b = gatePoint(target, gates.target);
-  const geometry = edgeGeometry(a, b, gates.source, gates.target, connectorStyle);
+  const sourceArea = viewportForNode(source), targetArea = viewportForNode(target);
+  const endpoints = edgeViewportEndpoints(a, b, gates.source, gates.target, sourceArea, targetArea, {source, target});
+  if (!endpoints) return null;
+  // Internal routes stay inside their own area. Cross-area routes connect bounded continuation
+  // anchors freely; the canvas clips them, without cutting a curve at an unrelated union box.
+  const clip = sourceArea && sourceArea === targetArea ? edgeViewportClip(edge, nodes, viewportForNode) : undefined;
+  if (clip === null) return null;
+  const geometry = edgeGeometry(endpoints.source.point, endpoints.target.point, endpoints.source.port, endpoints.target.port, connectorStyle);
   const style = edge.style;
   const dash = style.strokeStyle === "dashed" ? "7 7" : style.strokeStyle === "dotted" ? "2 6" : undefined;
   const reverse = edge.direction === (inverseArrowDirection ? LinkDirection.TO : LinkDirection.FROM);
-  const markerStart = markerFor(reverse ? style.endArrowHead : style.startArrowHead);
-  const markerEnd = markerFor(reverse ? style.startArrowHead : style.endArrowHead);
+  const markerStart = endpoints.source.continued ? undefined : markerFor(reverse ? style.endArrowHead : style.startArrowHead);
+  const markerEnd = endpoints.target.continued ? undefined : markerFor(reverse ? style.startArrowHead : style.endArrowHead);
   const baseWidth = style.strokeWidth ?? DEFAULT_RENDERED_LINK_WIDTH;
   const strokeWidth = highlighted ? Math.max(baseWidth + 1.7, 2.8) : baseWidth;
   const stroke = alphaHexToCss(style.strokeColor, NATIVE_LINK_STROKE);
-  const label = style.showLabel ? relationLabel(edge.caption ?? edge.typeDefinition) : null;
+  const label = style.showLabel && !endpoints.source.continued && !endpoints.target.continued ? relationLabel(edge.caption ?? edge.typeDefinition) : null;
 
   const resolvedCrossLinkOpacity = edge.isCrossLink && !highlighted ? crossLinkOpacity : undefined;
 
@@ -659,6 +666,10 @@ function Edge({
       onPointerLeave={onLeave}
       onContextMenu={onContextMenu}
     />
+    {(["source", "target"] as const).map(/** Read-only continuation marks never become a gate/drop/action target. */ end => endpoints[end].continued ? <circle key={end}
+      data-kplex-edge-continuation={end} className="kplex-edge-continuation" aria-hidden="true" pointerEvents="none"
+      cx={endpoints[end].point.x} cy={endpoints[end].point.y} r={3.5} fill={labelBackground} stroke={stroke}
+      strokeWidth={1.5} vectorEffect="non-scaling-stroke" opacity={resolvedCrossLinkOpacity} /> : null)}
     <EdgeLabel label={label} midpoint={geometry.midpoint} style={style} background={labelBackground} opacity={resolvedCrossLinkOpacity} />
   </g>;
   return clip ? <svg x={clip.left} y={clip.top} width={clip.width} height={clip.height}
@@ -5568,7 +5579,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
           key={edge.id}
           edge={edge}
           nodes={renderedNodeMap}
-          clip={edgeViewportClip(edge, renderedNodeMap, node => {const zone = areaForNode(node);return zone ? scene.zoneViewports[zone] : undefined;})}
+          viewportForNode={node => {const zone = areaForNode(node);return zone ? scene.zoneViewports[zone] : undefined;}}
           inverseArrowDirection={settings.inverseArrowDirection}
           connectorStyle={settings.connectorStyle}
           labelBackground={NATIVE_LINK_LABEL_FILL}

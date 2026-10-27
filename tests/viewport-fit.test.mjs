@@ -4,8 +4,8 @@ import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import ts from 'typescript';
 import {loadPortableModules} from './support/portableTypeScript.mjs';
-const {exports: {centeredViewportFit, sameFitCamera, EmbeddedDrawingFit, centerArrivalFrames, hasClickModifier, edgeViewportClip, revealRowScrollTop, editorToolbarInsets}} = loadPortableModules([
-  'src/ui/components/viewportFit.ts', 'src/adapters/obsidian/EmbeddedDrawingFit.ts', 'src/ui/components/centerArrival.ts', 'src/ui/components/modifierClick.ts', 'src/ui/plexViews/areaVisibility.ts']);
+const {exports: {centeredViewportFit, sameFitCamera, EmbeddedDrawingFit, centerArrivalFrames, hasClickModifier, edgeViewportEndpoints, branchDisclosureReserve, edgeViewportClip, revealRowScrollTop, editorToolbarInsets}} = loadPortableModules([
+  'src/ui/components/viewportFit.ts', 'src/adapters/obsidian/EmbeddedDrawingFit.ts', 'src/ui/components/centerArrival.ts', 'src/ui/components/modifierClick.ts', 'src/ui/plexViews/areaVisibility.ts', 'src/ui/plexViews/branchDisclosure.ts']);
 const source=ts.createSourceFile('graph.tsx',readFileSync('src/ui/PlexGraph.tsx','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
 
 /** Run production callbacks with explicit finite composition dependencies, without a second policy. */
@@ -403,4 +403,31 @@ test('disabled autozoom placement ownership never recenters attention views for 
  const ctx=graphFixture();ctx.settings.allowAutozoom=false;ctx.pathChangedThisRender=false;ctx.render();ctx.layout();const before={...ctx.camera.current};
  ctx.scene.nodes[0].y+=400;ctx.render();ctx.layout();assert.deepEqual(ctx.camera.current,before,'Only viewport settlement or explicit navigation may follow automatic translation');
  ctx.preserveCameraOnNextLayout.current=true;ctx.viewport.current.clientHeight=400;ctx.render();ctx.layout();assert.deepEqual(ctx.camera.current,before,'Explicit display transition retains camera intent');
+});
+
+
+test('scroll-area continuation anchors keep visible counterparts connected without hidden-note markers or invented endpoints',()=>{
+ const area={key:'friends',left:100,top:100,width:200,height:200},outside=Object.freeze({x:500,y:200});
+ for(const [hidden,expected] of [[{x:200,y:-500},{x:200,y:100}],[{x:200,y:900},{x:200,y:300}],[{x:0,y:200},{x:100,y:200}],[{x:700,y:200},{x:300,y:200}]]){
+  const original=Object.freeze(hidden),result=edgeViewportEndpoints(outside,original,'left','right',undefined,area);
+  assert(result);assert.deepEqual(result.source,{point:outside,port:'left',continued:false});assert.deepEqual(result.target.point,expected);assert.equal(result.target.continued,true);assert.deepEqual(original,hidden,'Only paint changes');
+ }
+ const visible={x:200,y:150};assert.equal(edgeViewportEndpoints({x:200,y:0},{x:200,y:500},'bottom','top',area,area),null,'Two hidden endpoints have no visible counterpart');
+ assert.equal(edgeViewportEndpoints(outside,{x:200,y:500},'left','right',undefined,{...area,edgeVisibility:'visible-endpoints'}),null,'Explicit suppression remains an optional policy');
+ assert.equal(edgeViewportEndpoints(outside,{x:200,y:500},'left','right',undefined,{...area,scrollable:false}).target.continued,false,'Growing fixed forests retain their actual gates');
+ const internal=edgeViewportEndpoints(visible,{x:200,y:500},'bottom','top',area,area);assert(internal);assert.equal(internal.target.port,'top','Continuation tangent faces its visible counterpart');
+});
+
+test('hierarchy control clearance is uniform regardless of status, reference or fold availability',()=>{
+ const rows=[{canExpand:true,expanded:false,reference:false},{canExpand:false,expanded:false,reference:true},{canExpand:false,expanded:false,reference:false},{canExpand:true,expanded:true,reference:false}];
+ for(const branch of rows){assert.deepEqual(branchDisclosureReserve(branch,true),{right:48,bottom:48});assert.equal(branchDisclosureReserve(branch,false),undefined);}
+ assert.equal(branchDisclosureReserve(undefined,true),undefined);
+});
+
+
+test('partially visible card keeps routes when its protruding gate is clipped',()=>{
+ const area={key:'branch',left:0,top:0,width:200,height:100},source={x:50,y:90,width:80,height:20},target={x:50,y:400,width:80,height:20};
+ const result=edgeViewportEndpoints({x:50,y:105},{x:50,y:390},'bottom','top',area,area,{source,target});
+ assert(result&&result.source.continued&&result.target.continued,'The visible card retains a canonical route even when both gates need boundary paint');
+ assert.equal(edgeViewportEndpoints({x:50,y:205},{x:50,y:390},'bottom','top',area,area,{source:{...source,y:200},target}),null,'Fully hidden cards have no visible context');
 });
