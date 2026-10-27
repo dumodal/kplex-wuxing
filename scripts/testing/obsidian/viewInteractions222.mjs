@@ -188,35 +188,33 @@ export async function acceptViewInteractions222(x){
  check(popout.view.containerEl.ownerDocument.hasFocus(),'Main transition stole popout focus');panel(host).querySelector('.kplex-filter-panel-header button').click();popout.detach();await reveal(host);
  cases.push({id:'native-main-selector-save-close-transition-keeps-popout-view-attention-camera-focus'});
  restores.push(()=>{check(!session.editors.bindings.length,'Owned editor survived acceptance');});
- // Large parent disclosure retains canonical SVG routes when its source leaves the area aperture.
+
+ // The minimum-height control adds space above sparse parents; measured forests grow without inner scrolling.
  await destination('Memory');await selectView('mindmap');
+ const parentDisclosure=()=>card('Input Parent').querySelector('.is-branch-disclosure');
+ if(parentDisclosure()?.getAttribute('aria-expanded')==='true'){await action('view.fit');await wait(150);await click(parentDisclosure());}
+ session.setAreaHeight('parentHeight',140);await wait(200);
+ const parentPanel=()=>root(host).querySelector('.kplex-zone-parent'),parentLocalTop=()=>parseFloat(card('Input Parent').style.top),sparseTop=parentLocalTop(),smallHeight=parseFloat(parentPanel().style.height);
+ session.setAreaHeight('parentHeight',800);await wait(200);
+ check(parseFloat(parentPanel().style.height)===800&&Math.abs(parentLocalTop()-sparseTop-(800-smallHeight))<1,'Sparse parent cards did not stay bottom-aligned while the minimum height increased');
+ check(parentPanel().querySelector('.kplex-zone-fixed')&&!parentPanel().querySelector('.kplex-zone-scroll'),'Mind Map parent area retained a native scroller');
+ await action('view.fit');await wait(180);
+ let ownedGraphBounds=root(host).querySelector('.kplex-plex').getBoundingClientRect();require('node:fs').writeFileSync(c.screenshotPrefix+'-bottom-aligned-parent.png',(await native.webContents.capturePage({x:Math.ceil(ownedGraphBounds.x),y:Math.ceil(ownedGraphBounds.y),width:Math.floor(ownedGraphBounds.width),height:Math.floor(ownedGraphBounds.height)})).toPNG());
+ cases.push({id:'native-parent-minimum-height-adds-space-above-bottom-aligned-cards',minimum:800});
  const overflowFiles=[];
  for(let i=0;i<28;i++){const file=await app.vault.create(path('Overflow '+i),'---\nphase: wood\n---\n# Overflow '+i+'\n');files.push(file);overflowFiles.push(file);p.index.insertCreatedFile(file);releases.push(p.index.acquireSemanticDemand(file.path));}
  await app.vault.process(parent,body=>body.replace(JSON.stringify(['[['+path('Memory')+']]']),JSON.stringify([path('Memory'),...overflowFiles.map(file=>file.path)].map(path=>'[['+path+']]'))));
- await until(()=>p.index.neighbours(p.index.get(parent.path),'child').length>=29&&!p.index.hasActiveSemanticPreparation(),'Owned overflow parent incidence did not settle');
- session.setAreaHeight('parentHeight',140);await until(()=>card('Input Parent')?.querySelector('.is-branch-disclosure'),'Overflow parent disclosure absent');
- await action('view.fit');await wait(150);const disclosure=card('Input Parent').querySelector('.is-branch-disclosure');
- if(disclosure.getAttribute('aria-expanded')!=='true')await click(disclosure);
- await until(()=>card('Overflow 27'),'Overflow descendants absent');await wait(200);
- const overflowScroll=root(host).querySelector('.kplex-zone-parent .kplex-zone-scroll'),overflowRect=overflowScroll.getBoundingClientRect(),parentRect=card('Input Parent').getBoundingClientRect();
- check(overflowScroll.scrollHeight>overflowScroll.clientHeight&&parentRect.top>=overflowRect.top-1&&parentRect.bottom<=overflowRect.bottom+1,'Expansion failed to minimally reveal its own parent');
- const overflowCount=()=>root(host).querySelectorAll('.kplex-edge-hit').length,routeCount=overflowCount();check(routeCount>=28,'Admitted overflow connectors absent before scrolling');
- overflowScroll.scrollTop=0;overflowScroll.dispatchEvent(new doc.defaultView.Event('scroll',{bubbles:true}));await wait(200);
- check(card('Input Parent').getBoundingClientRect().top>overflowScroll.getBoundingClientRect().bottom,'Expanded parent did not leave the aperture');
- check(overflowCount()===routeCount,'Offscreen source removed canonical connector paths');
- const overflowRoutes=[...root(host).querySelectorAll('.kplex-edge-hit')].filter(path=>path.closest('svg')!==root(host).querySelector('.kplex-links'));
- let visibleRoute=false,clippedRoute=false;
- for(const route of overflowRoutes){const svg=route.closest('svg');check(svg.getAttribute('overflow')==='hidden','Bounded connector lacks shared SVG clipping');
-  const length=route.getTotalLength(),matrix=route.getScreenCTM(),clip=svg.getBoundingClientRect();
-  for(const fraction of [0,.15,.35,.5,.65,.85,1]){const point=route.getPointAtLength(length*fraction),screen=new doc.defaultView.DOMPoint(point.x,point.y).matrixTransform(matrix);
-   const inside=screen.x>=clip.left&&screen.x<=clip.right&&screen.y>=clip.top&&screen.y<=clip.bottom;
-   if(screen.x<0||screen.y<0||screen.x>=doc.defaultView.innerWidth||screen.y>=doc.defaultView.innerHeight)continue;
-   const hit=doc.elementsFromPoint(screen.x,screen.y).includes(route);if(inside&&hit)visibleRoute=true;if(!inside&&!hit)clippedRoute=true;
-  }
- }
- check(visibleRoute&&clippedRoute,'Actual connector hit geometry must retain visible segments and clip overflow');
- overflowScroll.scrollTop=overflowScroll.scrollHeight;overflowScroll.dispatchEvent(new doc.defaultView.Event('scroll',{bubbles:true}));await wait(150);
- check(overflowCount()===routeCount&&center(host)===path('Memory')&&session.layoutRoot(path('Memory'))===path('Memory'),'Scroll removed routes or changed root/attention');
- cases.push({id:'native-parent-overflow-connectors-retained-clipped-and-expansion-row-revealed',descendants:28});
-
+ await until(()=>p.index.neighbours(p.index.get(parent.path),'child').length>=29&&!p.index.hasActiveSemanticPreparation(),'Owned growing parent incidence did not settle');
+ session.setAreaHeight('parentHeight',140);await until(()=>parentDisclosure(),'Growing parent disclosure absent');
+ await action('view.fit');await wait(150);if(parentDisclosure().getAttribute('aria-expanded')!=='true')await click(parentDisclosure());
+ await until(()=>card('Overflow 27'),'Growing descendants absent');await wait(200);
+ const fixed=parentPanel().querySelector('.kplex-zone-fixed');check(fixed&&parseFloat(parentPanel().style.height)>800&&!root(host).querySelector('.kplex-zone-scroll'),'Expanded parent forest did not grow beyond the minimum height ceiling');
+ fixed.scrollTop=1000;check(fixed.scrollTop===0&&fixed.scrollHeight<=fixed.clientHeight+1,'Growing parent region acquired inner scrolling');
+ const routeCount=root(host).querySelectorAll('.kplex-edge-hit').length;check(routeCount>=28,'Growing forest lost canonical connector routes');
+ const oldCamera=root(host).querySelector('.kplex-camera').style.transform,graphBounds=root(host).querySelector('.kplex-plex').getBoundingClientRect(),noteBounds=card('Input Parent').getBoundingClientRect();
+ const wheelX=Math.round(noteBounds.x+noteBounds.width/2),wheelY=Math.round(noteBounds.y+noteBounds.height/2);check(wheelY>graphBounds.top&&wheelY<graphBounds.bottom,'Wheel fixture parent outside canvas');
+ native.webContents.sendInputEvent({type:'mouseWheel',x:wheelX,y:wheelY,deltaY:-40,deltaX:0,canScroll:true});
+ await until(()=>root(host).querySelector('.kplex-camera').style.transform!==oldCamera,'Plain wheel was trapped by the non-scrolling parent region');
+ check(fixed.scrollTop===0&&center(host)===path('Memory')&&session.layoutRoot(path('Memory'))===path('Memory'),'Growth or wheel changed scroll/root/attention');
+ cases.push({id:'native-parent-forest-grows-without-inner-scroll-and-wheel-reaches-canvas',descendants:28});
 }

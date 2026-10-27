@@ -845,6 +845,12 @@ button.kplex-sidecar-unfold-plex,
 }
 /* An overflowing focused field must remain interactive above adjacent areas' node clips. */
 .kplex-zone-panel:focus-within { z-index: 17; }
+.kplex-zone-fixed {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: visible;
+}
 .kplex-zone-scroll {
   position: absolute;
   inset: 0;

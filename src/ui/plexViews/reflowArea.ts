@@ -11,10 +11,12 @@ export function reflowArea(panel: SceneViewport, nodes: PositionedNode[], filter
   const filtering = filter.trim().length > 0;
   let rows = filtering ? nodes.filter(node => matches(node, filter)) : nodes;
   const localPositions = new Map<string, {x: number; y: number}>();
-  if (!filtering || !policy) {
+  /** Reuse the view's measured world coordinates for unfiltered or explicitly stable filtered regions. */
+  const keepPositions = (): SceneAreaLayout => {
     for (const node of rows) localPositions.set(occurrenceKey(node), {x: node.x - panel.left, y: node.y - panel.contentTop});
     return {nodes: rows, localPositions, contentHeight: panel.contentHeight, count: rows.length, filtering};
-  }
+  };
+  if (!filtering || !policy) return keepPositions();
   if (nodes.length && nodes.every(node => node.branch && node.occurrenceId)) {
     const all = new Map(nodes.map(node => [occurrenceKey(node), node])), retained = new Set(rows.map(occurrenceKey));
     // A matching descendant retains its actual area-local ancestors; no canonical copy can substitute for that path.
@@ -24,6 +26,7 @@ export function reflowArea(panel: SceneViewport, nodes: PositionedNode[], filter
       while (parent && all.has(parent) && !visited.has(parent)) {visited.add(parent);retained.add(parent);parent = all.get(parent)!.branch?.parent;}
     }
     rows = nodes.filter(node => retained.has(occurrenceKey(node)));
+    if (policy.filterLayout === "keep") return keepPositions();
     const groups = new Map<string, PositionedNode[]>();
     for (const node of rows) {
       let root = node;
@@ -44,6 +47,7 @@ export function reflowArea(panel: SceneViewport, nodes: PositionedNode[], filter
     }
     return {nodes: rows, localPositions, contentHeight: Math.max(panel.height, grid.height), count: rows.length, filtering};
   }
+  if (policy.filterLayout === "keep") return keepPositions();
   if (policy.autoColumns) {
     const cells = rows.map(/** Repacking uses the same shared badge envelope as the original layout. */ node => ({id: occurrenceKey(node), width: node.width, height: node.height, insets: nodeBadgeInsets(node, node.viewBadge)}));
     const columns = measuredAreaColumns(cells, panel.width, policy.columnGap), grid = measuredAreaGrid(cells, columns, policy.columnGap, policy.rowGap, 24, policy.paddingTop ?? 42, policy.paddingBottom ?? 16);

@@ -261,3 +261,13 @@ test('invalid selection never invokes native preflight and newer selection reque
  assert.equal(await f.session.requestSelection('unknown'),false);assert.equal(pending.length,0);
  const first=f.session.requestSelection('org.example.other'),last=f.session.requestSelection('org.example.other');pending[0](true);assert.equal(await first,false);pending[1](true);assert.equal(await last,true);
 });
+
+
+test('non-scrolling viewports and stable filters are optional validated view capabilities',()=>{
+ const f=depthSceneFixture(),base=M.mindMapViewDefinition;
+ const policy=(viewport,reflow)=>({...base,layout(...args){const result=base.layout(...args);return {...result,areas:result.areas.map(area=>area.id!=='parent'?area:{...area,viewport:{...area.viewport,...viewport},reflow:{...area.reflow,...reflow}})}}});
+ assert.equal(f.prepare(policy({},{})).failure,false);
+ for(const viewport of [{scrollable:true},{scrollable:'no'},{scrollable:false,initialScrollTop:1},{scrollable:false,contentHeight:100000}])assert.equal(f.prepare(policy(viewport,{})).failure,true,'Invalid fixed viewport declines scene admission');
+ assert.equal(f.prepare(policy({}, {filterLayout:'repack'})).failure,true);
+ assert.equal(f.prepare(policy({scrollable:undefined}, {filterLayout:undefined})).failure,false,'Legacy scroll and packing defaults remain accepted');
+});

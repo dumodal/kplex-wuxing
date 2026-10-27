@@ -1,4 +1,4 @@
-/** Pure measured subtree and parent-area geometry. Parent forests occupy measured grid cells above the root; their width reserves lateral branch space. Supplied occurrence ancestry/sides remain stable; the shared host owns area filtering/scrolling/resizing and all native editor/camera effects. */
+/** Pure measured subtree and parent-area geometry. Parent forests occupy measured grid cells above the root; their width reserves lateral branch space. Supplied occurrence ancestry/sides remain stable; the shared host owns area filtering/resizing and all native editor/camera effects. */
 import type {PlexProjection, PlexMeasurement, PlexViewLayout, ViewRect} from "../contracts";
 import type {MindMapConfiguration} from "./configuration";
 import {MIND_MAP_LIMITS} from "./configuration";
@@ -67,14 +67,15 @@ export function layoutMindMap(projection: PlexProjection, measurements: readonly
     const size = sizes.get(row.id);if (!size) throw new Error("Missing measured section");return size;
   });
   const parentWidth = Math.max(rootSize.width + reserve(root, "right") * 2, grid.width, ...sectionSizes.map(/** Reserve the central outline envelope before placing any lateral branches. */ size => size.width)),
-    height = Math.max(140, Math.min(800, areaHeights.parentHeight ?? 300));
+    minimumHeight = Math.max(140, Math.min(800, areaHeights.parentHeight ?? 300)),
+    height = Math.max(minimumHeight, grid.height);
   const parentBounds = {x: -parentWidth / 2, y: -rootSize.height / 2 - verticalSpacing - height, width: parentWidth, height};
   if (!Number.isFinite(height)) throw new Error("Invalid parent area height");
   for (const parent of above) {
     const tile = grid.positions.get(parent.id)!, size = sizes.get(parent.id)!;
     const side = columns === 1 ? 1 : parent.branch!.side;
     const rect = {x: parentBounds.x + (parentWidth - grid.width) / 2 + tile.x + side * (-tile.width / 2 + size.width / 2) - (side === -1 ? reserve(parent.id, "right") : 0),
-      y: parentBounds.y + tile.y - reserve(parent.id, "bottom") / 2,
+      y: parentBounds.y + height - grid.height + tile.y - reserve(parent.id, "bottom") / 2,
       width: size.width, height: size.height};
     positions.set(parent.id, rect); place(children.get(parent.id) ?? [], rect, side, parent.id);
   }
@@ -91,9 +92,9 @@ export function layoutMindMap(projection: PlexProjection, measurements: readonly
     sectionY += size.height + Math.min(24, verticalSpacing);
   }
   const areas: PlexViewLayout["areas"][number][] = [{id: "parent", labelKey: "graph.zoneParents", bounds: {...parentBounds, height}, resizeEdge: "top",
-    heightPreference: {key: "parentHeight", minimum: 140, maximum: 800}, dropRole: "parent",
-    viewport: {...parentBounds, height, contentTop: parentBounds.y, contentHeight: Math.max(height, grid.height), initialScrollTop: 0},
-    reflow: {columns: configuration.parentColumns, columnGap: horizontalSpacing, rowGap: verticalSpacing}}];
+    heightPreference: {key: "parentHeight", minimum: 140, maximum: 800, value: minimumHeight}, dropRole: "parent",
+    viewport: {...parentBounds, height, contentTop: parentBounds.y, contentHeight: height, initialScrollTop: 0, scrollable: false},
+    reflow: {columns: configuration.parentColumns, columnGap: horizontalSpacing, rowGap: verticalSpacing, filterLayout: "keep"}}];
   const padding = Math.min(8, verticalSpacing / 4, horizontalSpacing / 4);
   for (const [id, dropRole] of [["child-left", "child"], ["child-right", "child"], ["left", "left"]] as const) {
     const rects = branches.filter(row => row.areaId === id).map(row => {

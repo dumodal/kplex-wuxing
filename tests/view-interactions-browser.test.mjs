@@ -85,14 +85,15 @@ for(const view of ['classic','mindmap','wuxing'])test(`${view}: every eligible n
 });
 
 
-test('Mind Map parent overflow retains admitted connectors, clips their paint and reveals only the expanded row',async()=>{
+test('optional bounded hierarchy viewport retains connectors, clips paint and reveals the expanded row',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert(await host.evaluate(`(async()=>{${canvasSceneFixture}${register}
  settings.animationSpeed=0;
  const children=Array.from({length:28},(_,i)=>'Overflow '+i+'.md');
  for(const path of children)pages.set(path,{...pages.get('C.md'),path,name:path,file:{...pages.get('C.md').file,path}});
  index.neighbours=(page,role)=>(page.path==='A.md'&&role==='parent'?['B.md']:page.path==='B.md'&&role==='child'?['A.md',...children]:[]).map(path=>({page:pages.get(path),role,relationType:1,linkDirection:1}));
- const ui=attach(await mount(M.builtInPlexViews.resolve('mindmap')));
+ const base=M.builtInPlexViews.resolve('mindmap'),definition={...base,id:'test.bounded-hierarchy',layout(...args){const layout=base.layout(...args);return {...layout,areas:layout.areas.map(area=>area.id!=='parent'?area:{...area,bounds:{...area.bounds,y:area.bounds.y+area.bounds.height-140,height:140},viewport:{...area.viewport,y:area.viewport.y+area.viewport.height-140,height:140,scrollable:undefined}})}}};
+ const ui=attach(await mount(definition));
  const card=path=>[...ui.container.querySelectorAll('.kplex-thought')].find(el=>el.dataset.kplexPath===path);
  const panel=()=>ui.container.querySelector('.kplex-zone-parent .kplex-zone-scroll');
  card('B.md').querySelector('.is-branch-disclosure').click();await wait();ui.render();await wait();ui.render();await wait();
@@ -109,5 +110,26 @@ test('Mind Map parent overflow retains admitted connectors, clips their paint an
  for(const path of clipped){const svg=path.closest('svg');check(svg.getAttribute('overflow')==='hidden'&&Number(svg.getAttribute('height'))>0,'Measured SVG aperture');}
  scroll.scrollTop=scroll.scrollHeight;scroll.dispatchEvent(new Event('scroll',{bubbles:true}));await wait();ui.render();await wait();check(count()===before,'Opposite scroll retains routes');
  check(ui.props.activePath===attention&&ui.session.layoutRoot(attention)===root&&work.body===0&&work.scans===0,'Overflow remains presentation-only without navigation, body parsing or inventory');
+ releases.forEach(release=>release());ui.close();plugin.actionManager.dispose();style.remove();return true})()`));}finally{await host.cleanup()}
+});
+
+
+test('Mind Map parents align to the bottom, grow without native scrolling and retain shared filtering and wheel navigation',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert(await host.evaluate(`(async()=>{${canvasSceneFixture}${register}
+ settings.animationSpeed=0;const children=Array.from({length:28},(_,i)=>'Growing '+i+'.md');for(const path of children)pages.set(path,{...pages.get('C.md'),path,name:path,file:{...pages.get('C.md').file,path}});
+ index.neighbours=(page,role)=>(page.path==='A.md'&&role==='parent'?['B.md']:page.path==='B.md'&&role==='child'?['A.md',...children]:[]).map(path=>({page:pages.get(path),role,relationType:1,linkDirection:1}));
+ const ui=attach(await mount(M.builtInPlexViews.resolve('mindmap'))),panel=()=>ui.container.querySelector('.kplex-zone-parent'),card=path=>[...ui.container.querySelectorAll('.kplex-thought')].find(el=>el.dataset.kplexPath===path);
+ ui.session.setAreaHeight('parentHeight',140);ui.render();await wait();const smallHeight=parseFloat(panel().style.height),bodyTop=parseFloat(card('B.md').style.top),rootTop=parseFloat(card('A.md').style.top);
+ ui.session.setAreaHeight('parentHeight',800);ui.render();await wait();const p=panel(),fixed=p.querySelector('.kplex-zone-fixed');
+ check(parseFloat(p.style.height)===800&&parseFloat(card('B.md').style.top)-bodyTop===800-smallHeight,'Added empty space is above bottom-aligned content');
+ check(parseFloat(card('A.md').style.top)===rootTop&&!p.querySelector('.kplex-zone-scroll')&&fixed.scrollHeight<=fixed.clientHeight+1,'Mind Map declares no internal scroller');
+ const camera=ui.container.querySelector('.kplex-camera'),before=camera.style.transform;card('B.md').dispatchEvent(new WheelEvent('wheel',{bubbles:true,cancelable:true,clientX:500,clientY:300,deltaY:-30}));await wait();check(camera.style.transform!==before,'Plain wheel on fixed parent area reaches shared canvas zoom');
+ ui.session.setAreaHeight('parentHeight',140);ui.render();card('B.md').querySelector('.is-branch-disclosure').click();await wait();ui.render();await wait();ui.render();
+ check(card(children[27])&&parseFloat(panel().style.height)>800,'Expanded forest grows beyond the minimum height control ceiling');
+ const box=panel().querySelector('.kplex-zone-fixed');check(box.scrollHeight<=box.clientHeight+1&&!ui.container.querySelector('.kplex-zone-scroll'),'Expanded Mind Map has no scrollable areas');box.scrollTop=1000;check(box.scrollTop===0,'Fixed region cannot acquire hidden scroll offset');
+ const toggle=panel().querySelector('.kplex-zone-filter-button');toggle.click();await wait();const field=panel().querySelector('input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(field,'Growing 27');field.dispatchEvent(new Event('input',{bubbles:true}));await wait();ui.render();await wait();
+ check(card('B.md')&&card(children[27])&&!card(children[0]),'Shared filter preserves exact matching ancestor path');
+ check(box.scrollHeight<=box.clientHeight+1&&work.body===0&&work.scans===0,'Filtering and growth do not create scrolling, body reads or inventory');
  releases.forEach(release=>release());ui.close();plugin.actionManager.dispose();style.remove();return true})()`));}finally{await host.cleanup()}
 });

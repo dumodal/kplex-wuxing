@@ -5194,7 +5194,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       </div>
       <div
         ref={(element: HTMLDivElement | null) => { zoneScrollRefs.current[zone] = element ?? undefined; }}
-        className="kplex-zone-scroll"
+        className={panel.scrollable === false ? "kplex-zone-fixed" : "kplex-zone-scroll"}
         onScroll={(event: { currentTarget: HTMLDivElement }) => {
           const scrollTop = event.currentTarget.scrollTop;
           if (pendingBranchReveal.current && pendingBranchReveal.current.scrollTop !== scrollTop) pendingBranchReveal.current = null;

@@ -124,7 +124,8 @@ export type PlexArea = Readonly<{
   /** Horizontal resizing is independent of the existing top/bottom height capability. */
   widthResizeEdge?: "left" | "right";
   widthPreference?: PlexAreaDimension;
-  viewport?: ViewRect & {contentTop: number; contentHeight: number; initialScrollTop: number};
+  /** Non-scrolling regions keep shared tools and measured coordinates; their layout must contain all admitted content. */
+  viewport?: ViewRect & {contentTop: number; contentHeight: number; initialScrollTop: number; scrollable?: false};
   /** Physical area action is explicit; arbitrary areas have no relationship-write meaning by default. */
   dropRole?: "parent" | "child" | "left" | "right";
   dropTarget?: PlexDropMeaning;
@@ -132,7 +133,9 @@ export type PlexArea = Readonly<{
   dropOrigin?: OccurrenceId;
   reflow?: Readonly<{columns: number; columnGap: number; rowGap: number; paddingTop?: number; paddingBottom?: number;
     /** Recompute columns from surviving measured cards and this area's world width. */
-    autoColumns?: boolean}>;
+    autoColumns?: boolean;
+    /** Keep measured positions while retaining matching ancestors; omitted policies preserve filtered repacking. */
+    filterLayout?: "keep"}>;
 }>;
 /** Pure presentation marks have no semantic endpoints or interaction/write authority. */
 export type PlexDecoration = Readonly<{id: string} & (

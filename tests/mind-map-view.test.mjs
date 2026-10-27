@@ -120,7 +120,7 @@ test('expanded descendants keep child edges on bottom and every peer edge on the
  assert(p.preparation.parents.length<=8);assert(p.occurrences.length<=256);
 });
 
-test('measured parent columns occupy a bounded area above root and reserve the horizontal branch baseline',()=>{
+test('measured parent columns grow above a fixed root and reserve the horizontal branch baseline',()=>{
  const f=graphInput({R:['Child']});const parents=Array.from({length:7},(_,i)=>'Parent'+i);
  for(const id of parents)f.nodes.set(id,{id,kind:'markdown',label:id});const read=f.input.read.relations;
  f.input.read.relations=(id,role,max)=>id==='R'&&role==='parent'?{items:parents.slice(0,max).map(id=>({node:f.nodes.get(id),role:'parent',relationType:1,direction:1})),coverage:'local',truncated:false}:read(id,role,max);
@@ -132,7 +132,7 @@ test('measured parent columns occupy a bounded area above root and reserve the h
  const parentRects=parents.map(id=>three.positions.get(p.occurrences.find(row=>row.nodeId===id).id));assert.equal(new Set(parentRects.slice(0,3).map(row=>row.y)).size,1);assert.equal(new Set(parentRects.slice(0,3).map(row=>row.x)).size,3);
  const child=p.occurrences.find(row=>row.nodeId==='Child').id;assert(three.positions.get(child).x>one.positions.get(child).x,'Wider measured parent area moves the horizontal baseline outward');
  const sparse=layout(3,0.1);assert(sparse.positions.get(child).x>three.positions.get(child).x);assert.equal(sparse.positions.get('root').width,root.width,'Density never changes node interior size');
- const resized=layout(3,1,{parentHeight:140});assert.equal(resized.areas[0].bounds.height,140);assert(resized.areas[0].viewport.contentHeight>140);assert.deepEqual(resized.positions.get('root'),root);assert.equal(resized.positions.get(child).x,three.positions.get(child).x,'Height does not change horizontal anchors');
+ const resized=layout(3,1,{parentHeight:140});assert(resized.areas[0].bounds.height>=140);assert.equal(resized.areas[0].viewport.contentHeight,resized.areas[0].bounds.height);assert.equal(resized.areas[0].heightPreference.value,140);assert.equal(resized.areas[0].viewport.scrollable,false);assert.deepEqual(resized.positions.get('root'),root);assert.equal(resized.positions.get(child).x,three.positions.get(child).x,'Height does not change horizontal anchors');
  for(const id of [0,4,1.5])assert.equal(M.mindMapConfiguration({status:'available',values:{parentColumns:id}}),null);
 });
 
@@ -210,7 +210,7 @@ test('parent forests expand outward by column with matching ports and disjoint m
  for(const columns of [1,2,3])for(const touch of [false,true]){
   f.input.configuration={status:'available',values:{parentColumns:columns,initialGenerations:3}};const p=f.project(),sizes=p.occurrences.map(row=>({id:row.id,width:row.nodeId==='P0'?360:180,height:40,...(touch&&(row.branch.canExpand||row.branch.expanded)?{controlReserve:{right:48,bottom:48}}:{})}));
   const verify=projection=>{
-   // Give the complete forest visible room; the default300px parent viewport clips/scrolls overflow.
+   // A minimum height leaves room; measured forests also grow beyond it without clipping.
    const layout=M.layoutMindMap(projection,sizes,{...M.mindMapConfiguration(),parentColumns:columns},{parentHeight:800}),rects=[...layout.positions].map(([id,r])=>{const reserve=sizes.find(size=>size.id===id)?.controlReserve;return {id,left:r.x-r.width/2,right:r.x+r.width/2+(reserve?.right??0),top:r.y-r.height/2,bottom:r.y+r.height/2+(reserve?.bottom??0)}});
    for(const row of projection.occurrences.filter(row=>parents.includes(row.nodeId))){
     const side=columns>1&&parents.indexOf(row.nodeId)%columns===0?-1:1,child=projection.occurrences.find(child=>child.branch.parent===row.id),a=layout.positions.get(row.id),b=layout.positions.get(child.id);
@@ -222,4 +222,27 @@ test('parent forests expand outward by column with matching ports and disjoint m
   verify(p);const removed=new Set([p.occurrences.find(row=>row.nodeId==='P0').id]);for(const row of p.occurrences)if(removed.has(row.branch.parent))removed.add(row.id);
   verify({...p,occurrences:p.occurrences.filter(row=>!removed.has(row.id)),edges:p.edges.filter(edge=>!removed.has(edge.source)&&!removed.has(edge.target))});
  }
+});
+
+
+test('parent minimum height grows upward while bottom-aligned rows and root-relative branches stay fixed',()=>{
+ const f=graphInput({R:['Child']});const parents=['P0','P1','P2'];for(const id of parents)f.nodes.set(id,{id,kind:'markdown',label:id});
+ const read=f.input.read.relations;f.input.read.relations=(id,role,max)=>id==='R'&&role==='parent'?{items:parents.map(id=>({node:f.nodes.get(id),role:'parent',relationType:1,direction:1})),coverage:'local',truncated:false}:read(id,role,max);
+ const p=f.project(),sizes=p.occurrences.map(row=>({id:row.id,width:180,height:40})),configuration={...M.mindMapConfiguration(),parentColumns:2};
+ const compact=M.layoutMindMap(p,sizes,configuration,{parentHeight:140}),tall=M.layoutMindMap(p,sizes,configuration,{parentHeight:800});
+ assert.deepEqual([...tall.positions],[...compact.positions],'Empty minimum-height space belongs above parents; no root/card/branch moves');
+ const a=compact.areas[0],b=tall.areas[0];assert.equal(b.bounds.height,800);assert.equal(a.bounds.y+a.bounds.height,b.bounds.y+b.bounds.height);assert(b.bounds.y<a.bounds.y);
+ assert.equal(b.viewport.contentHeight,b.viewport.height);assert.equal(b.viewport.initialScrollTop,0);assert.equal(b.viewport.scrollable,false);assert.equal(b.heightPreference.value,800);
+ const bottom=Math.max(...p.occurrences.filter(row=>row.areaId==='parent').map(row=>{const r=tall.positions.get(row.id);return r.y+r.height/2}));
+ assert.equal(b.bounds.y+b.bounds.height-bottom,16,'Measured bottom padding remains next to root');
+});
+
+test('expanded parent forests and large native editor measurements grow past the preference ceiling without scrolling',()=>{
+ const children=Array.from({length:26},(_,i)=>'D'+i),f=graphInput({P:children},{input:{maximum:64,configuration:{status:'available',values:{initialGenerations:3}}}});f.nodes.set('P',{id:'P',kind:'markdown',label:'P'});
+ const read=f.input.read.relations;f.input.read.relations=(id,role,max)=>id==='R'&&role==='parent'?{items:[{node:f.nodes.get('P'),role:'parent',relationType:1,direction:1}],coverage:'local',truncated:false}:read(id,role,max);
+ const p=f.project(),parent=p.occurrences.find(row=>row.nodeId==='P');assert.equal(p.occurrences.length,28);assert(parent.branch.expanded);
+ const sizes=p.occurrences.map(row=>({id:row.id,width:row.id===parent.id?660:180,height:row.id===parent.id?1100:50,controlReserve:{right:32,bottom:32}}));
+ const layout=M.layoutMindMap(p,sizes,M.mindMapConfiguration(),{parentHeight:140}),area=layout.areas[0];assert(area.bounds.height>1100);assert.equal(area.heightPreference.value,140);assert.equal(area.viewport.contentHeight,area.viewport.height);assert.equal(area.viewport.scrollable,false);
+ for(const row of p.occurrences.filter(row=>row.areaId==='parent')){const r=layout.positions.get(row.id);assert(r.y-r.height/2>=area.bounds.y);assert(r.y+r.height/2+32<=area.bounds.y+area.bounds.height);}
+ assert.equal(layout.positions.get(parent.id).height,1100,'Native editor dimensions unchanged');assert.equal(layout.positions.get('root').y,0);
 });
