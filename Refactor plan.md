@@ -6667,3 +6667,10 @@ Risk-based native checks: top/bottom scroll, original gate restoration, card-edg
 ### 2026-10-27 ? Continuation final Windows/Help handoff
 
 Runtime968c9b0 exact native11PASS13/13:10direct canonical route IDs/2boundary continuations retained through scroll; shared status left0px,4classifications and140canonical Child?12. Resources restored2026-10-27T09:03:37.005Z,9config/117content/original workspace/window/digest. Additional actual Compass browser verifies30center/friend routes and mark coordinates; total133distinct focused cases (109policy/layout/API +24browser in aggregate). Real build/types/scanner PASS22.22.2. Exact artifacts deployed/reloaded in Help preserving root/folds and47settled cards, no navigation/note edits. Native data/hash/tooling attribution in docs/validation/scroll-continuations-222-2026-10-27.md. Both PRs open, full regression/device/OS acceptance separate, no merge/release/production touch.
+
+
+### 2026-10-27 ? Latest slider delivery and shared predicate Code field
+
+Starting c18efc89. Shared LayoutSlider retains immediate newest thumb draft and only one pending async value, reusing the existing guarded queued writer. All registered views inherit the same delivery, axes independent and sync controls unchanged. Shared PredicateExpressionField replaces lens/category textarea duplication; full-width themed monospace field below label, source-specific settings hidden without deleting drafts. No parser/index/settings/editor owner introduced.48focused +3shared-renderer browser cases PASS22.22.2; actual build/types/full official scanner/architecture7 PASS. Native Windows visual check/Help deployment follow.
+
+Risk-based checks: native category Code width/readability and Cancel; density burst ends at last value without replay; captured stale view callbacks do not write. Physical touch/macOS/minimum-host remain separate, full regression deferred.

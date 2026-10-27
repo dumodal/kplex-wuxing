@@ -81,6 +81,15 @@ export async function acceptHelpVaultFacets222(x) {
   cases.push({id:'native-help-canonical-child-budget',checked:refs.size,maximum:12});
   check(p.settingsTab.openCanvasViewManager('wuxing','help-workshop'),'Registered preset manager refused editor');await until(()=>doc.querySelector('.kplex-facet-preset-editor'),'Registered native preset editor absent');await captureModal('preset-editor');await closeModals();cases.push({id:'native-help-preset-editor-captured-through-registered-settings-owner-without-save'});
   // Capture actual native sharing/review surfaces without copying, downloading or importing.
+  check(p.settingsTab.openCanvasViewManager('wuxing','help-workbench'),'Registered rule preset editor refused');
+  await until(()=>doc.querySelector('.kplex-facet-preset-editor'),'Native rule preset editor absent');
+  const ruleModal=doc.querySelector('.kplex-facet-preset-editor'),codeButton=[...ruleModal.querySelectorAll('.kplex-predicate-rule-editor button')].find(button=>button.textContent.trim()===p.translator('filter.code'));
+  check(codeButton,'Shared rule Code mode absent');codeButton.click();
+  await until(()=>ruleModal.querySelector('.kplex-predicate-expression-field textarea'),'Shared native expression field absent');
+  const expression=ruleModal.querySelector('.kplex-predicate-expression-field textarea'),field=expression.closest('.kplex-predicate-expression-field'),box=expression.getBoundingClientRect(),label=field.querySelector('label > span').getBoundingClientRect();
+  check(Math.abs(box.width-field.getBoundingClientRect().width)<2&&box.top>=label.bottom&&box.height>=60&&getComputedStyle(expression).fontFamily.includes('mono'),'Native category Code editor is not full-width below its label');
+  expression.scrollIntoView({block:'center'});await captureModal('rule-code-editor');await closeModals();
+  cases.push({id:'native-help-category-code-shares-full-width-monospace-expression-field-without-save',width:box.width,height:box.height});
   check(p.settingsTab.openCanvasViewManager('wuxing'),'Native preset manager refused');await until(()=>doc.querySelector('.kplex-style-manager-modal'),'Preset manager absent');
   const manager=doc.querySelector('.kplex-style-manager-modal'),exportButton=[...manager.querySelectorAll('button')].find(button=>button.textContent===p.translator('sharing.exportPreset'));check(exportButton,'Native export action absent');exportButton.click();
   await until(()=>doc.querySelector('.kplex-portable-package-modal textarea')?.value,'Native export JSON absent');const exported=doc.querySelector('.kplex-portable-package-modal textarea').value;check(JSON.parse(exported),'Export is not JSON');await captureModal('sharing-export');

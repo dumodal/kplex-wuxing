@@ -9,10 +9,11 @@ import {LayoutSlider} from "../components/LayoutSlider";
 import {LayoutCheckbox} from "../components/LayoutCheckbox";
 import {ObsidianIcon} from "../ObsidianIcon";
 
-/** Empty/unavailable groups render nothing. Values always come from committed configuration. */
+/** Empty/unavailable groups render nothing. Committed configuration owns layout; the shared
+ * slider may hold its newest input as a local thumb draft while an async save finishes. */
 export function CanvasViewLayoutControls({controls, configuration, translate, onChange, readValue}: Readonly<{
   controls: readonly CanvasViewLayoutControl[]; configuration: PlexViewConfiguration; translate: Translator;
-  onChange: (control: CanvasViewLayoutControl, value: number | boolean) => void;
+  onChange: (control: CanvasViewLayoutControl, value: number | boolean) => void | Promise<void>;
   readValue?: (control: CanvasViewLayoutControl) => ViewConfigurationExpected;
 }>) {
   if (configuration.status !== "available" || !controls.length) return null;
@@ -23,9 +24,9 @@ export function CanvasViewLayoutControls({controls, configuration, translate, on
     const label = control.label ? canvasViewText(control.label, translate) : control.labelKey ? translate(control.labelKey) : "";
     const hint = control.hint ? canvasViewText(control.hint, translate) : control.hintKey ? translate(control.hintKey) : undefined;
     return control.kind === "checkbox" ? <LayoutCheckbox key={key} label={label} hint={hint} checked={value === true}
-      controlId={key} onChange={checked => onChange(control, checked)} />
+      controlId={key} onChange={checked => {void onChange(control, checked);}} />
       : <LayoutSlider key={key} label={label} caption={control.caption ? canvasViewText(control.caption, translate) : control.captionKey ? translate(control.captionKey) : label}
-        hint={hint} icon={<ObsidianIcon name={control.icon} size={11} />} value={Number(value)} displayValue={Number(value).toFixed(2)}
+        hint={hint} icon={<ObsidianIcon name={control.icon} size={11} />} value={Number(value)} displayValue={number => number.toFixed(2)}
         min={control.min} max={control.max} step={control.step} onChange={number => onChange(control, number)} />;
   })}</div>;
 }

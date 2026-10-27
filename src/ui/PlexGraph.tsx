@@ -5328,9 +5328,11 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const contributedLayoutControls = plugin.viewSettingsRegistry.layoutControls(viewDefinition, viewContributions?.context() ?? undefined);
   const configuredLayout = readViewConfiguration(viewDefinition, settings.canvasViewSettings ?? {});
   /** Live view-specific rails reuse the same queued Settings writer; they never change selection or acquire graph sources. */
-  const changeViewLayoutValue = (control: CanvasViewLayoutControl, value: number | boolean): void => {
+  const changeViewLayoutValue = (control: CanvasViewLayoutControl, value: number | boolean): void | Promise<void> => {
     if (!contributedLayoutControls.includes(control) || viewSession?.definition !== viewDefinition || viewSession.getSnapshot() !== viewRevision) return;
-    const current = viewSession.capture();
+    const captured = viewSession.capture(), revision = viewRevision;
+    /** Unsent work cannot borrow another view, root/state revision or disposed native surface. */
+    const current = (): boolean => captured() && viewSession.getSnapshot() === revision;
     sceneMotion.cancelAll(); preserveCameraOnNextLayout.current = true;
     if (control.kind === "checkbox" && control.state) {
       if (typeof value !== "boolean" || !viewContributions) return;
@@ -5339,9 +5341,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       });
       return;
     }
-    void plugin.updateCanvasViewConfiguration(viewDefinition.id, {field: control.field, path: control.path}, {kind: "set", value}).catch(/** The queued writer retains committed values on failure; report it without inventing an optimistic setting. */ error => {
+    return plugin.updateCanvasViewConfiguration(viewDefinition.id, {field: control.field, path: control.path}, {kind: "set", value}, undefined, current).catch(/** The queued writer retains committed values on failure; report it without inventing an optimistic setting. */ error => {
+      if (!current()) return;
       console.error("K-Plex view layout setting was not saved", error);
-      if (current()) new Notice(translate("view.settingsSaveFailed"));
+      new Notice(translate("view.settingsSaveFailed"));
     }).finally(/** Restore the committed scalar after rejection without remounting or stealing the native slider's focus. */ () => {
       if (current()) setLayoutRevision(revision => revision + 1);
     });
@@ -5706,7 +5709,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         simplifiedHint={`${translate("layout.simplifiedHelp")} ${translate("layout.arrangementScope", {
           device: translate(`typography.${typographyDevice}`), surface: translate(lateralArrangementSurface(surface) === "leaf" ? "layout.mainTab" : "layout.sidepanel"),
         })}`} />}
-      <CanvasViewLayoutControls controls={contributedLayoutControls} configuration={configuredLayout} translate={translate} onChange={changeViewLayoutValue}
+      <CanvasViewLayoutControls key={`${viewDefinition.id}:${viewLifetime}`} controls={contributedLayoutControls} configuration={configuredLayout} translate={translate} onChange={changeViewLayoutValue}
         readValue={control => readViewConfigurationAt(viewDefinition, settings.canvasViewSettings ?? {}, control)} />
       <div className="kplex-typography-group">
       <div className="kplex-typography-scope">

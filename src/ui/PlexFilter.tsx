@@ -3,6 +3,7 @@
  * choices and validation. FloatingLayer owns portaling, dismissal and header drag in the owning document.
  * Portalled controls opt into the shell's shared delayed hover hints without browser title duplicates.
  */
+import {PredicateExpressionField} from "./predicates/PredicateExpressionField";
 import type {AppearanceOwner} from "../core/plex/appearanceThemes";
 import type {SemanticColorPair} from "../core/plex/colorPreferences";
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
@@ -631,8 +632,8 @@ export function PlexFilter({
         </div>
 
         {draft.editorMode === "simple" && draft.simple ? <PredicateConditions model={draft.simple} onChange={updateSimple} scope={draft.scope} fields={localizedFieldOptions[draft.scope]} translate={translate} propertyListId={propertyListId} valueChoices={valueChoices} datalistForField={datalistForField} /> : <>
-          <label>{translate("filter.expression")}<textarea rows={4} value={draft.expression} placeholder={translate("filter.expressionPlaceholder")} onChange={(event) => { setDraft({ ...draft, expression: event.currentTarget.value, simple: null }); setDraftError(null); }} /></label>
-          <div className="kplex-lens-help">{translate("filter.advancedHelp")}</div>
+          <PredicateExpressionField label={translate("filter.expression")} value={draft.expression} placeholder={translate("filter.expressionPlaceholder")}
+            onChange={expression => {setDraft({...draft, expression, simple: null});setDraftError(null);}} hint={translate("filter.advancedHelp")} />
         </>}
         {draft.mode === "style" && <div className="kplex-lens-style-editor">
           <div className="kplex-lens-style-heading">{translate("filter.appearance")}</div>

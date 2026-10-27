@@ -1,5 +1,6 @@
 /** Real registered native manager and original plugin queue/reconciliation prototypes.
  * Finite Obsidian controls surround actual preset/color/settings behavior. No alternate writer. */
+import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {colorEditorScenario} from './support/colorEditorBrowser.mjs';
@@ -234,5 +235,19 @@ test('registered preset palette uses are protected and new missing references re
  tab.openColorPalette();const palette=last(),row=palette.contentEl.querySelector('[data-kplex-color-id="color-preset"]');
  check(button({contentEl:row},t('common.delete')).disabled&&row.textContent.includes(t('facets.paletteProtected')),'Existing palette manager protects the other settings owner');
  close(palette);check(!M.builtInCanvasViewSettings.paletteUsage({'future.view':{version:2,values:{}}}).available,'Unknown view metadata excludes unsafe deletion');
+ `),true);
+});
+
+
+test('category Code editor shares full-width expression styling and shows only relevant fields',async()=>{
+ assert.equal(await scenario(`
+ const css=document.createElement('style');css.textContent=${JSON.stringify(readFileSync('styles.css','utf8'))};document.head.append(css);document.body.style.setProperty('--font-ui-smaller','12px');document.body.style.setProperty('--font-monospace','monospace');
+ const m=manager(),e=edit(m,'ARC'),unchanged=JSON.stringify(disk),field=fields(e,t('wuxing.field'))[0].value,values=fields(e,t('wuxing.values'))[0].value;
+ input(fields(e,t('wuxing.source'))[0],'rules','change');await waitFor(()=>e.contentEl.querySelector('.kplex-predicate-rule-editor'));
+ check(fields(e,t('wuxing.field')).length===0&&fields(e,t('wuxing.values')).length===0&&fields(e,t('facets.assignment')).length===0,'Rules hide property-only settings without discarding their draft');
+ const rule=e.contentEl.querySelector('.kplex-predicate-rule-editor');[...rule.querySelectorAll('button')].find(b=>b.textContent.trim()===t('filter.code')).click();await waitFor(()=>rule.querySelector('.kplex-predicate-expression-field textarea'));
+ const textarea=rule.querySelector('textarea'),label=textarea.parentElement.querySelector('span');for(const width of [960,620,360]){e.modalEl.style.width=width+'px';const r=textarea.getBoundingClientRect(),parent=rule.getBoundingClientRect(),name=label.getBoundingClientRect();check(Math.abs(r.width-parent.width)<2&&r.top>=name.bottom,'Expression uses the complete available width below its label');check(r.height>=60&&getComputedStyle(textarea).fontFamily.includes('monospace'),'Readable code height and shared monospace style');}
+ const expression='note.learningMode == "read" and note.sessionSize == "short"';textarea.focus();Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(textarea,expression);textarea.dispatchEvent(new Event('input',{bubbles:true}));await new Promise(r=>setTimeout(r,40));check(rule.querySelector('textarea')===textarea&&document.activeElement===textarea&&textarea.value===expression,'Typing retains the mounted code editor and focus');
+ input(fields(e,t('wuxing.source'))[0],'property','change');check(fields(e,t('wuxing.field'))[0].value===field&&fields(e,t('wuxing.values'))[0].value===values,'Source switching preserves hidden sibling values');close(e);check(JSON.stringify(disk)===unchanged,'Layout/source preview did not save a draft');close(m);css.remove();
  `),true);
 });

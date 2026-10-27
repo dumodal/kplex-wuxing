@@ -97,7 +97,7 @@ export class FacetPresetEditor extends StyleEditorModal {
       }, /** Retire native preview work with its original draft owner. */ () => this.canEdit() && this.owner(), t, helpOpen);
     new Setting(body).setName(t("wuxing.source")).addDropdown(input => input.addOptions({property: t("wuxing.property"), type: t("wuxing.noteType"), tag: t("wuxing.tags"), rules: t("facets.rules")})
       .setValue(this.draft.source).onChange(source => {if (source === "property" || source === "type" || source === "tag" || source === "rules") this.draft = {...this.draft, source};this.render();}));
-    new Setting(body).setName(t("wuxing.field")).setDesc(t("wuxing.fieldHelp")).addText(input => input.setValue(this.draft.field).onChange(field => {this.draft = {...this.draft, field};this.validate();}));
+    if (this.draft.source === "property") new Setting(body).setName(t("wuxing.field")).setDesc(t("wuxing.fieldHelp")).addText(input => input.setValue(this.draft.field).onChange(field => {this.draft = {...this.draft, field};this.validate();}));
     renderFacetLayoutSettings(body, /** Keep sibling settings current through structural rerenders. */ () => this.draft, /** Only this detached preset's structure changes. */ preset => {
       if (!this.canEdit()) return;this.draft = preset;this.render();
     }, t);
@@ -148,8 +148,8 @@ export class FacetPresetEditor extends StyleEditorModal {
     const t = this.translate, category = this.draft.categories[id], section = body.createDiv();
     section.createEl("h3", {text: canvasViewText(facetCategoryLabel(category, id), t)});
     new Setting(section).setName(t("wuxing.label")).addText(input => input.setValue(canvasViewText(facetCategoryLabel(category, id), t)).onChange(label => this.changeCategory(id, {label})));
-    new Setting(section).setName(t("wuxing.values")).setDesc(t("facets.valuesHelp")).addTextArea(input => input.setValue(category.values.join("\n")).onChange(value => this.changeCategory(id, {values: value.split(/\r?\n/).map(part => part.trim()).filter(Boolean)})));
-    new Setting(section).setName(t("facets.assignment")).setDesc(t("facets.assignmentHelp")).addText(input => input.setValue(category.assignment ?? "").onChange(assignment => {
+    if (this.draft.source !== "rules") new Setting(section).setName(t("wuxing.values")).setDesc(t("facets.valuesHelp")).addTextArea(input => input.setValue(category.values.join("\n")).onChange(value => this.changeCategory(id, {values: value.split(/\r?\n/).map(part => part.trim()).filter(Boolean)})));
+    if (this.draft.source === "property") new Setting(section).setName(t("facets.assignment")).setDesc(t("facets.assignmentHelp")).addText(input => input.setValue(category.assignment ?? "").onChange(assignment => {
       const {assignment: _previous, ...rest} = this.draft.categories[id];
       this.draft = {...this.draft, categories: {...this.draft.categories, [id]: {...rest, ...(assignment.trim() ? {assignment: assignment.trim()} : {})}}};this.validate();
     }));
