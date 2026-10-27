@@ -6674,3 +6674,10 @@ Runtime968c9b0 exact native11PASS13/13:10direct canonical route IDs/2boundary co
 Starting c18efc89. Shared LayoutSlider retains immediate newest thumb draft and only one pending async value, reusing the existing guarded queued writer. All registered views inherit the same delivery, axes independent and sync controls unchanged. Shared PredicateExpressionField replaces lens/category textarea duplication; full-width themed monospace field below label, source-specific settings hidden without deleting drafts. No parser/index/settings/editor owner introduced.48focused +3shared-renderer browser cases PASS22.22.2; actual build/types/full official scanner/architecture7 PASS. Native Windows visual check/Help deployment follow.
 
 Risk-based checks: native category Code width/readability and Cancel; density burst ends at last value without replay; captured stale view callbacks do not write. Physical touch/macOS/minimum-host remain separate, full regression deferred.
+
+
+### 2026-10-27 ? Latest slider and rule editor Windows/Help delivery
+
+Implementation982969f same runtime artifact: Windows native13PASS14/14, full-width registered rule Code field below label, screenshot visually reviewed;4classifications/140canonical Child?12/status/continuations pass. Native12 queried React before mount; wait corrected only. Final restoration2026-10-27T10:12:43.246Z,9config/117content/original workspace/window/digest. Exact Help0.3artifacts deployed/reloaded preserving current leaf/center/Facets preset/camera, no note edits/navigation/draft loss.48focused+3renderer browser+7architecture, actual build/types/full scanner PASS22.22.2.
+
+Risk-based follow-up: user theme readability and physical touch/macOS/minimum-host remain separate. Windows category modal and browser burst checks cover requested scope; no full regression/merge/release. Receipts docs/validation/sliders-predicate-editor-222-2026-10-27.md.

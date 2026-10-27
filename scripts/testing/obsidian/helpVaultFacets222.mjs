@@ -83,6 +83,7 @@ export async function acceptHelpVaultFacets222(x) {
   // Capture actual native sharing/review surfaces without copying, downloading or importing.
   check(p.settingsTab.openCanvasViewManager('wuxing','help-workbench'),'Registered rule preset editor refused');
   await until(()=>doc.querySelector('.kplex-facet-preset-editor'),'Native rule preset editor absent');
+  await until(()=>doc.querySelector('.kplex-facet-preset-editor .kplex-predicate-rule-editor button'),'Native rule editor has not mounted');
   const ruleModal=doc.querySelector('.kplex-facet-preset-editor'),codeButton=[...ruleModal.querySelectorAll('.kplex-predicate-rule-editor button')].find(button=>button.textContent.trim()===p.translator('filter.code'));
   check(codeButton,'Shared rule Code mode absent');codeButton.click();
   await until(()=>ruleModal.querySelector('.kplex-predicate-expression-field textarea'),'Shared native expression field absent');
