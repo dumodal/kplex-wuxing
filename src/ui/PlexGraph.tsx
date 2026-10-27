@@ -580,6 +580,8 @@ function filterNeighborhoodForLenses(
   };
 }
 
+/** Paint one admitted canonical connector through the shared endpoint/area aperture. A null
+ * aperture hides stroke, markers, caption and hit target together without changing graph state. */
 function Edge({
   edge,
   nodes,
@@ -598,7 +600,7 @@ function Edge({
 }: {
   edge: PositionedEdge;
   nodes: Map<string, PositionedNode>;
-  clip?: {left: number; top: number; width: number; height: number};
+  clip?: {left: number; top: number; width: number; height: number} | null;
   inverseArrowDirection: boolean;
   connectorStyle: "bezier" | "straight";
   labelBackground: string;
@@ -613,7 +615,7 @@ function Edge({
 }) {
   const source = nodes.get(edgePhysicalOccurrence(edge, "source"));
   const target = nodes.get(edgePhysicalOccurrence(edge, "target"));
-  if (!source || !target) return null;
+  if (!source || !target || clip === null) return null;
 
   const gates = gatesForEdge(edge);
   const a = gatePoint(source, gates.source);

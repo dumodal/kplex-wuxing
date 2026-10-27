@@ -18,21 +18,25 @@ export function boundedViewColors(value: readonly ColorValue[]): readonly ColorV
 /** Badges expose plain accessible copy and supported colors, never native HTML or actions. */
 export function validPlexNodeBadge(badge: PlexNodeBadge): boolean {
   if (!badge || !validCanvasViewText(badge.label) || badge.description !== undefined && !validCanvasViewText(badge.description)
-    || "literal" in badge.label && badge.label.literal.length > 80) return false;
+    || "literal" in badge.label && badge.label.literal.length > 80
+    || badge.presentation !== undefined && badge.presentation !== "category" && badge.presentation !== "status") return false;
   try {if (badge.background !== undefined) boundedViewColors([badge.background]); return true;} catch {return false;}
 }
-/** Keep a measured badge immediately above the node's top-left edge, outside all cardinal
- * gates. This rectangle participates in fitting and follows expanded native editor dimensions. */
-export function nodeBadgeBounds(node: ViewRect, measured: Readonly<{width: number; height: number}>): ViewRect {
+/** Category chips sit above the card; compact status text sits below, offset from the gates.
+ * Both measured rectangles participate in fitting and follow native editor dimensions. */
+export function nodeBadgeBounds(node: ViewRect, measured: Readonly<{width: number; height: number; presentation?: "category" | "status"}>): ViewRect {
   if (![node.x, node.y, node.width, node.height, measured.width, measured.height].every(Number.isFinite)
     || node.width <= 0 || node.height <= 0 || measured.width <= 0 || measured.height <= 0) throw new Error("Invalid node badge geometry");
-  return {x: node.x - node.width / 2, y: node.y - node.height / 2 - measured.height - 12, width: measured.width, height: measured.height};
+  return measured.presentation === "status"
+    ? {x: node.x - node.width / 2 + 24, y: node.y + node.height / 2 + 4, width: Math.min(measured.width, Math.max(1, node.width - 28)), height: measured.height}
+    : {x: node.x - node.width / 2, y: node.y - node.height / 2 - measured.height - 12, width: measured.width, height: measured.height};
 }
 
-/** Reserve the same top/right overhang that the shared attached badge actually paints.
+/** Reserve the same top/right category or bottom status overhang that the shared node paints.
  * Packing receives geometry only; it never enlarges the native node or editor rectangle. */
-export function nodeBadgeInsets(node: Readonly<{width: number; height: number}>, badge?: Readonly<{width: number; height: number}>): MeasuredAreaInsets | undefined {
+export function nodeBadgeInsets(node: Readonly<{width: number; height: number}>, badge?: Readonly<{width: number; height: number; presentation?: "category" | "status"}>): MeasuredAreaInsets | undefined {
   if (!badge) return undefined;
   const bounds = nodeBadgeBounds({x: 0, y: 0, width: node.width, height: node.height}, badge);
-  return {top: -node.height / 2 - bounds.y, right: Math.max(0, bounds.x + bounds.width - node.width / 2)};
+  return badge.presentation === "status" ? {bottom: 4 + bounds.height}
+    : {top: -node.height / 2 - bounds.y, right: Math.max(0, bounds.x + bounds.width - node.width / 2)};
 }

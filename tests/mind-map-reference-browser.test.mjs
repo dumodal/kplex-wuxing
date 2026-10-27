@@ -15,7 +15,7 @@ test('Mind Map hydrates canonical gate counts and cached branch status independe
  const ui=await mount(M.builtInPlexViews.resolve('mindmap')),root=()=>ui.container.querySelector('[data-kplex-keyboard-id="root"]');
  const count=side=>root().querySelector('.gate-wrap-'+side+' .kplex-gate-count')?.textContent;
  check(count('top')==='7'&&count('bottom')==='16'&&count('left')==='2','Exact canonical totals replace truncated incidence: '+root().textContent);
- const status=root().querySelector('.kplex-thought-branch-status');check(status.textContent===plugin.translator('mindmap.partial')&&status.ariaLabel===plugin.translator('mindmap.partialHint'),'Known cached children have explanatory incomplete metadata status');
+ const status=root().querySelector('.kplex-node-status');check(status.textContent===plugin.translator('mindmap.partial')&&status.ariaLabel===plugin.translator('mindmap.partialHint'),'Known cached children have explanatory incomplete metadata status');
  check(ui.container.querySelector('[data-kplex-path="B.md"]'),'Cached children remain visible');
  check(work.body===0&&work.scans===0,'Count rendering never parses or scans');ui.close();return true})()`),true)}finally{await host.cleanup()}
 });

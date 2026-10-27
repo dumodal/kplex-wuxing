@@ -64,7 +64,8 @@ export function sectionNodeSize(size: {width: number; height: number}, configure
 
 /** Small non-wrapping node adornment uses the same label/font measurement pipeline. Full copy
  * stays accessible while the visible badge clips to its finite measured width. */
-export function nodeBadgeSize(label: string, settings: KplexSettings): {width: number; height: number; fontSize: number} {
+export function nodeBadgeSize(label: string, settings: KplexSettings, presentation?: "category" | "status"): {width: number; height: number; fontSize: number} {
+  if (presentation === "status") return {width: Math.max(1, nodeSize(label, 10, settings, false, 80, 336, 0).width - 36), height: 12, fontSize: 10};
   const measured = nodeSize(label, 18, settings, false, 80, 336, 0), fontSize = nodeLabelFontSize(18, false, settings.baseFontSize);
   return {width: Math.max(56, Math.min(300, measured.width - 36)), height: Math.ceil(fontSize * 1.6 + 8), fontSize};
 }

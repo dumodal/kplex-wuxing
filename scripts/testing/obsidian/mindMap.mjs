@@ -142,7 +142,7 @@ async function scenario(app,c){
    await until(()=>nodes(host).length===11,'Diamond/cycle hierarchy and root parent absent');
    const copies=nodes(host).filter(node=>node.dataset.kplexPath===path('B')),references=nodes(host).filter(node=>node.dataset.kplexPath===path('R')&&node.dataset.kplexKeyboardId!=='root');
    check(copies.length===2&&copies[0].dataset.kplexKeyboardId!==copies[1].dataset.kplexKeyboardId&&references.length===3,'Canonical duplicates/cycles lost occurrence identity');
-   check(references.every(node=>node.querySelector('.kplex-thought-branch-status')?.textContent===p.translator('mindmap.reference')&&!node.querySelector('.kplex-section-fold-handle')),'Cycles did not terminate as references');
+   check(references.every(node=>node.querySelector('.kplex-node-status')?.textContent===p.translator('mindmap.reference')&&!node.querySelector('.kplex-section-fold-handle')),'Cycles did not terminate as references');
    cases.push({id:'production-diamond-and-terminal-cycle-references'});
    const find=root(host).querySelector('.kplex-find');find.querySelector('button').click();await until(()=>find.querySelector('input'),'Find input absent');const input=find.querySelector('input');Object.getOwnPropertyDescriptor(input.ownerDocument.defaultView.HTMLInputElement.prototype,'value').set.call(input,'B');input.dispatchEvent(new input.ownerDocument.defaultView.Event('input',{bubbles:true}));
    await until(()=>p.actionManager.readSnapshot(surface(host))?.selected?.node.identity===path('B'),'Find did not select B');

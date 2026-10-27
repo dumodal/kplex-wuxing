@@ -19,6 +19,7 @@ import {physicalGateStats} from "./plexViews/measurement";
 import { useId, type CSSProperties, type DragEvent as ReactDragEvent, type MouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import type { GateSide, NodeVisual, PositionedNode } from "../types";
 import {MeasuredNodeBadge} from "./plexViews/MeasuredNodeBadge";
+import {NodeStatus} from "./features/NodeStatus";
 import { nodePaint, nodePaintFallbacks } from "../index/style";
 import type { KplexSettings } from "../settings";
 import { effectiveLabelLimit, nodeLabelFontSize, gateDiameter } from "./layout";
@@ -259,8 +260,7 @@ export function ThoughtNode({
     ><ObsidianIcon name={cornerAction.icon} size={10} /></button>}
     {disclosure(sectionFold)}
     {disclosure(branchFold, true)}
-    {branchStatus && <span className="kplex-thought-branch-status" aria-label={branchStatusHint}
-      data-kplex-control-tooltip={branchStatusHint ? true : undefined}>{branchStatus}</span>}
+    {branchStatus && node.viewBadge?.presentation !== "status" && <NodeStatus label={branchStatus} description={branchStatusHint} />}
     {group && <span className="kplex-group-count" aria-hidden="true">{group.groupMembers?.length}</span>}
     {!group && GATES.filter(gate => !node.physicalPorts || Boolean(node.physicalPorts[gate])).map((gate) => {
       // Structural nodes have no lateral relationship vocabulary, even before other counts close.

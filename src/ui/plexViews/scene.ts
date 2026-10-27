@@ -5,7 +5,7 @@ import type {AdmittedOccurrenceEditor} from "./occurrenceEditors";
 import type {PlexPropertyAssignment} from "../../core/plex/views/propertyAssignment";
 
 export type SceneViewport = {key: string; left: number; top: number; width: number; height: number;
-  contentTop: number; contentHeight: number; initialScrollTop: number; scrollable?: false};
+  contentTop: number; contentHeight: number; initialScrollTop: number; scrollable?: false; edgeVisibility?: "visible-endpoints"};
 export type SceneAreaBounds = {key: string; left: number; top: number; width: number; height: number; resizeEdge: "top" | "bottom"; shape?: PlexAreaShape};
 export type HostPlexScene = {
   nodes: PositionedNode[]; edges: PositionedEdge[];

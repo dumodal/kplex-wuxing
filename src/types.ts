@@ -150,7 +150,7 @@ export type NodeVisual = {
 export type PositionedNode = {
   /** Shared measured decoration, with no semantic gate/drop authority. */
   viewBadge?: Readonly<{label: string; description?: string; background?: import("./core/contracts/colorValue").ColorValue;
-    width: number; height: number; fontSize: number}>;
+    width: number; height: number; fontSize: number; presentation?: "category" | "status"}>;
   viewDescription?: string;
   /** Independent visual occurrence; canonical page identity remains the action/write target. */
   occurrenceId?: string;

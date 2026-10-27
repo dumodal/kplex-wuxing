@@ -267,7 +267,18 @@ test('non-scrolling viewports and stable filters are optional validated view cap
  const f=depthSceneFixture(),base=M.mindMapViewDefinition;
  const policy=(viewport,reflow)=>({...base,layout(...args){const result=base.layout(...args);return {...result,areas:result.areas.map(area=>area.id!=='parent'?area:{...area,viewport:{...area.viewport,...viewport},reflow:{...area.reflow,...reflow}})}}});
  assert.equal(f.prepare(policy({},{})).failure,false);
- for(const viewport of [{scrollable:true},{scrollable:'no'},{scrollable:false,initialScrollTop:1},{scrollable:false,contentHeight:100000}])assert.equal(f.prepare(policy(viewport,{})).failure,true,'Invalid fixed viewport declines scene admission');
+ for(const viewport of [{edgeVisibility:'all'},{scrollable:true},{scrollable:'no'},{scrollable:false,initialScrollTop:1},{scrollable:false,contentHeight:100000}])assert.equal(f.prepare(policy(viewport,{})).failure,true,'Invalid fixed viewport declines scene admission');
  assert.equal(f.prepare(policy({}, {filterLayout:'repack'})).failure,true);
  assert.equal(f.prepare(policy({scrollable:undefined}, {filterLayout:undefined})).failure,false,'Legacy scroll and packing defaults remain accepted');
+});
+
+
+test('node status is an optional validated measured presentation shared by all view plugins',()=>{
+ const node={x:100,y:200,width:160,height:44},status={width:200,height:12,presentation:'status'};
+ assert.deepEqual(M.nodeBadgeBounds(node,status),{x:44,y:226,width:132,height:12});
+ assert.deepEqual(M.nodeBadgeInsets(node,status),{bottom:16});
+ assert.equal(M.validPlexNodeBadge({label:{literal:'Unassigned'},presentation:'status'}),true);
+ for(const presentation of ['banner','',false,null])assert.equal(M.validPlexNodeBadge({label:{literal:'Status'},presentation}),false);
+ const grid=M.measuredAreaGrid([{id:'a',width:160,height:44,insets:M.nodeBadgeInsets(node,status)},{id:'b',width:160,height:44,insets:M.nodeBadgeInsets(node,status)}],1,18,18);
+ assert(grid.positions.get('b').y-grid.positions.get('a').y>=44+16+18,'Status clearance participates in shared packing');
 });

@@ -24,7 +24,7 @@ function pack(id: string, bounds: ViewRect, projection: PlexProjection, measured
   return {id, bounds, labelKey: "key" in label ? label.key : "", ...("literal" in label ? {label: label.literal} : {}),
     ...(editable ? {resizeEdge: "bottom", heightPreference: {key: id, minimum: 160, maximum: Math.max(1200, bounds.height)},
       widthResizeEdge: "right", widthPreference: {key: id, minimum: 200, maximum: Math.max(2400, bounds.width), value: bounds.width}} : {}),
-    viewport: {x: content.x, y: top, width: content.width, height: content.height - header, contentTop: top,
+    viewport: {edgeVisibility: "visible-endpoints", x: content.x, y: top, width: content.width, height: content.height - header, contentTop: top,
       contentHeight: Math.max(content.height - header, grid.height), initialScrollTop: 0},
     reflow: {columns, columnGap: 18, rowGap: 18, paddingTop: 18, paddingBottom: 18, autoColumns: true}};
 }

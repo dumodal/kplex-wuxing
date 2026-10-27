@@ -5,14 +5,15 @@ import type {PositionedNode} from "../../types";
 import {ColorSampleReader} from "../../adapters/obsidian/colorSample";
 import {colorValueCss} from "../../adapters/obsidian/colorPresentation";
 import {colorContrastRatio, compositeColor} from "../../core/plex/colorContrast";
+import {NodeStatus} from "../features/NodeStatus";
 
-/** Paint beneath no gate/control: top-left attachment follows the node's real transform and
- * expanded editor size. Accessible copy is included in the owning ThoughtNode's name. */
+/** Category chips follow the measured top-left attachment; status delegates to the same
+ * below-card component as hierarchy references. Accessible copy belongs to the owning node. */
 export function MeasuredNodeBadge({badge, colorRevision}: Readonly<{badge: NonNullable<PositionedNode["viewBadge"]>; colorRevision: number}>) {
   const element = useRef<HTMLSpanElement>(null), [foreground, setForeground] = useState<string | undefined>();
   const background = colorValueCss(badge.background, "var(--background-secondary)");
   useLayoutEffect(/** Sample only this bounded decoration after the shared color scope changes, never on pointer/camera movement. */ () => {
-    const node = element.current, owner = node?.ownerDocument.defaultView;if (!node || !owner) return;
+    const node = element.current, owner = node?.ownerDocument.defaultView;if (!node || !owner || badge.presentation === "status") return;
     const reader = new ColorSampleReader(node.ownerDocument);
     try {
       const base = reader.read(node, "var(--background-primary)"), surface = node.closest<HTMLElement>(".kplex-plex");
@@ -23,7 +24,8 @@ export function MeasuredNodeBadge({badge, colorRevision}: Readonly<{badge: NonNu
       const dark = displayed && colorContrastRatio(black, displayed), light = displayed && colorContrastRatio(white, displayed);
       setForeground(typeof dark === "number" && typeof light === "number" ? dark >= light ? "#000000" : "#ffffff" : undefined);
     } finally {reader.dispose();}
-  }, [background, colorRevision]);
+  }, [background, colorRevision, badge.presentation]);
+  if (badge.presentation === "status") return <NodeStatus label={badge.label} description={badge.description} />;
   return <span ref={element} className="kplex-node-badge" aria-hidden="true" style={{left: 0, top: -badge.height - 12,
     width: badge.width, height: badge.height, fontSize: badge.fontSize, background, color: foreground}}><span>{badge.label}</span></span>;
 }

@@ -30,17 +30,17 @@ function measuredViewBadge(badge: PlexNodeBadge | undefined, settings: KplexSett
   if (!badge) return undefined;
   const label = translate ? canvasViewText(badge.label, translate) : "literal" in badge.label ? badge.label.literal : badge.label.key;
   const description = badge.description && (translate ? canvasViewText(badge.description, translate) : "literal" in badge.description ? badge.description.literal : badge.description.key);
-  return {label, ...(description ? {description} : {}), background: badge.background, ...nodeBadgeSize(label, settings)};
+  return {label, ...(description ? {description} : {}), background: badge.background, ...(badge.presentation ? {presentation: badge.presentation} : {}), ...nodeBadgeSize(label, settings, badge.presentation)};
 }
 
 /** A group may retain only a common declared chip. Different reasons remain with individual
  * members after expansion; a representative cannot assert its reason for every grouped note. */
 function sharedGroupBadge(members: readonly PlexOccurrence[]): PlexNodeBadge | undefined {
   const first = members[0]?.badge;if (!first) return undefined;
-  const identity = JSON.stringify([first.label, first.background]), description = JSON.stringify(first.description);
-  if (!members.every(/** Label/color identity is presentation data, never relationship evidence. */ member => member.badge && JSON.stringify([member.badge.label, member.badge.background]) === identity)) return undefined;
+  const identity = JSON.stringify([first.label, first.background, first.presentation]), description = JSON.stringify(first.description);
+  if (!members.every(/** Label/color identity is presentation data, never relationship evidence. */ member => member.badge && JSON.stringify([member.badge.label, member.badge.background, member.badge.presentation]) === identity)) return undefined;
   const sameReason = members.every(/** Only equal explanations can describe the entire collapsed row. */ member => JSON.stringify(member.badge?.description) === description);
-  return {label: first.label, background: first.background, ...(sameReason && first.description ? {description: first.description} : {})};
+  return {label: first.label, background: first.background, ...(first.presentation ? {presentation: first.presentation} : {}), ...(sameReason && first.description ? {description: first.description} : {})};
 }
 
 type SceneRead = Pick<GraphIndex, "get" | "neighbours" | "sortNeighbours" | "titleFor" | "captureSemanticGateRead" | "isVisiblePage" | "explainRelationship">
@@ -259,7 +259,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
       if (matching || occurrence.id === legacyEditor || boundEditor) matched.add(occurrence.id);
       if (!matching && occurrence.id !== legacyEditor && !boundEditor && !definition.hierarchy) continue;
       nodes.set(occurrence.id, node); measurements.push({id: occurrence.id, ...size, expandedWidth: size.width, expandedReserve: 0,
-        ...(viewBadge ? {badge: {width: viewBadge.width, height: viewBadge.height}} : {}),
+        ...(viewBadge ? {badge: {width: viewBadge.width, height: viewBadge.height, ...(viewBadge.presentation ? {presentation: viewBadge.presentation} : {})}} : {}),
         ...(controlReserve ? {controlReserve} : {}),
         ...(boundEditor ? {editor: true as const} : {}), mini: null, envelope: null});
     }
@@ -317,7 +317,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
             x: 0, y: 0, ...size, label: row.page.name, style, physicalPorts: {}, ...deferredNodeCounts()};
           for (const member of ids) {aliases.set(member, id);grouped.delete(member);nodes.delete(member);}
           grouped.set(id, occurrence); nodes.set(id, node); pages.set(id, row.page);
-          measurements.push({id, ...size, expandedWidth: size.width, expandedReserve: 0, ...(viewBadge ? {badge: {width: viewBadge.width, height: viewBadge.height}} : {}), mini: null, envelope: null});
+          measurements.push({id, ...size, expandedWidth: size.width, expandedReserve: 0, ...(viewBadge ? {badge: {width: viewBadge.width, height: viewBadge.height, ...(viewBadge.presentation ? {presentation: viewBadge.presentation} : {})}} : {}), mini: null, envelope: null});
         }
       }
       const activeMeasurements = new Set(nodes.keys());
@@ -406,9 +406,10 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
       if (area.dropOrigin !== undefined && (typeof area.dropOrigin !== "string" || !nodes.has(area.dropOrigin)
         || !filtered.occurrences.some(row => row.id === area.dropOrigin && row.nodeId))) throw new Error("Invalid area drop origin");
       if (area.viewport) {
-        const {scrollable, ...geometry} = area.viewport;
+        const {scrollable, edgeVisibility, ...geometry} = area.viewport;
         if (!Object.values(geometry).every(Number.isFinite) || area.viewport.width <= 0 || area.viewport.height <= 0
           || area.viewport.contentHeight < 0 || area.viewport.initialScrollTop < 0 || scrollable !== undefined && scrollable !== false
+          || edgeVisibility !== undefined && edgeVisibility !== "visible-endpoints"
           || scrollable === false && (area.viewport.contentHeight > area.viewport.height || area.viewport.initialScrollTop !== 0)) throw new Error("Invalid area viewport");
       }
       for (const preference of [area.heightPreference, area.widthPreference]) if (preference && (!preference.key || preference.key.length > 128

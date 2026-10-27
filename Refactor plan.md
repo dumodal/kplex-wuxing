@@ -6632,3 +6632,10 @@ Risk-based review: test customized-vault missing-preset recovery and review demo
 Maintainer superseded prior preserve-binaries boundary: prepare0.3.0, deploy current Help artifacts, replace0.2.0release pin. Existing release owner updates5metadata records; real Node22.22.2 build/types and release/dist checks PASS. Help3built artifacts hash-equal; verified exact Help vault path, CLI plugin reload/inspection confirms0.3.0 enabled. Versioned release note/links/pin and140pageaudit pass; user-owned config/workspace/shortcuts preserved. No feature changes/full regression, tag/release or merge. Prior native receipts retain earlier artifact attribution. See docs/validation/release-030-help-deployment-2026-10-27.md.
 
 Risk-based review: reopen release pin in the Help canvas; confirm installation reports0.3.0. Other OS/device/full final acceptance remains separate; no production vault touched.
+
+
+### 2026-10-27 ? Shared canvas node status and bounded connector paint
+
+Reused one portable NodeStatus component for Mind Map cycle/preparation labels and Facets diagnostics. Optional PlexNodeBadge.presentation=status extends the existing validated badge/measurement/grouping/reflow/fit API; assigned category chips retain the existing colors. Optional area viewport.edgeVisibility=visible-endpoints uses the shared physical-endpoint paint aperture to suppress orphan stroke/markers/captions/hit paths in scrolled Facets regions. Other views retain through-area clipping by omission. No semantic/index/editor/settings owner changes. Focused103checks, core/architecture, actual build/types and touched-source scanner pass22.22.2; exact-build Small native/Help deployment follows. Full regression remains deferred; both PRs open.
+
+Risk-based native follow-up: combined diagnostic below-card status parity in both themes, top/middle/bottom scroll connector restoration, root/attention/editor/camera independence. Windows Small/Help verification follows; Mac/minimum-host/physical touch remain separate.

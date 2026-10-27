@@ -15,7 +15,9 @@ export const CANVAS_VIEW_API_VERSION = 1 as const;
 /** Literal user/extension copy never passes through the host catalog lookup. */
 export type CanvasViewText = Readonly<{literal: string} | {key: string}>;
 /** A measured presentation badge, with no gate/edge/drop or note mutation authority. */
-export type PlexNodeBadge = Readonly<{label: CanvasViewText; description?: CanvasViewText; background?: ColorValue}>;
+export type PlexNodeBadge = Readonly<{label: CanvasViewText; description?: CanvasViewText; background?: ColorValue;
+  /** Omission preserves the colored category chip. Status uses shared compact text below the card. */
+  presentation?: "category" | "status"}>;
 export type PlexViewStateAction = Readonly<{id: string; args?: unknown}>;
 export type PlexViewStateResult = Readonly<{status: "updated"; state: unknown}
   | {status: "unavailable"; reason?: CanvasViewText}>;
@@ -100,7 +102,7 @@ export type PlexMeasurement = Readonly<{
   /** Optional shared control footprint outside the thought body. Opt-in layouts reserve these
    * extents for hit-testing without enlarging the label/editor rectangle or semantic ports. */
   controlReserve?: Readonly<{right: number; bottom: number}>;
-  badge?: Readonly<{width: number; height: number}>;
+  badge?: Readonly<{width: number; height: number; presentation?: "category" | "status"}>;
   /** Only this occurrence has a bound expanded editor; the legacy layout boolean does not describe it. */
   editor?: true;
   mini: {width: number; viewportHeight: number; topGap: number} | null;
@@ -125,7 +127,9 @@ export type PlexArea = Readonly<{
   widthResizeEdge?: "left" | "right";
   widthPreference?: PlexAreaDimension;
   /** Non-scrolling regions keep shared tools and measured coordinates; their layout must contain all admitted content. */
-  viewport?: ViewRect & {contentTop: number; contentHeight: number; initialScrollTop: number; scrollable?: false};
+  viewport?: ViewRect & {contentTop: number; contentHeight: number; initialScrollTop: number; scrollable?: false;
+    /** Opt-in shared paint policy: hide routes whose physical attachment is outside this scroll surface. */
+    edgeVisibility?: "visible-endpoints"};
   /** Physical area action is explicit; arbitrary areas have no relationship-write meaning by default. */
   dropRole?: "parent" | "child" | "left" | "right";
   dropTarget?: PlexDropMeaning;

@@ -659,3 +659,8 @@ Current area behavior: bottom-edge pointer direction follows the existing declar
 Area width uses the shared measured grid: cards automatically fill multiple columns when their measured widths, badge reserves, gaps and padding fit. Narrowing the area returns to fewer columns. No camera scale, classification, property read or semantic rebuild is needed to choose columns. Width remains per-canvas state, separate from saved preset defaults.
 
 The preset Help source occupies a full-width row below its description. It retains the existing detached draft, native preview, Save/Cancel and stale-owner guards.
+
+
+### Consistent node status presentation
+
+Combined Diagnostics and uncertain focused-note classifications use the shared below-card node status (the same component as Mind Map cycle/preparation labels), rather than colored category chips. Assigned focus categories retain their colored chip. The common node/view badge API declares the status presentation and measures its bottom clearance. Bounded Facets areas opt into shared visible-endpoint connector paint: scrolled-out physical gates have no detached stroke, arrow, caption or hit target; scrolling back restores canonical routes without changing evidence or indexing.

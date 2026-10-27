@@ -368,3 +368,16 @@ test('area-hosted editor toolbar intersects canvas and area without resizing or 
  assert.deepEqual(editorToolbarInsets({left:100,top:100,width:500,height:400},canvas,{left:200,top:150,width:300,height:300}),{top:50,left:100,right:100});
  assert.deepEqual(editor,{left:-150,top:-200,width:500,height:500});
 });
+
+
+test('visible-endpoint area policy suppresses hidden physical attachments without changing legacy routes',()=>{
+ const source={x:0,y:0,width:100,height:40},target={x:200,y:150,width:100,height:40},area={key:'diagnostics',left:120,top:100,width:200,height:100,edgeVisibility:'visible-endpoints'},nodes=new Map([['source',source],['target',target],['heading',target]]);
+ const edge={sourcePath:'source',targetPath:'target',sourceOccurrence:'source',targetOccurrence:'target',sourcePort:'right',targetPort:'top'},viewport=node=>node===target?area:undefined;
+ const frozen=JSON.stringify(edge);assert(edgeViewportClip(edge,nodes,viewport));
+ target.y=70;assert.equal(edgeViewportClip(edge,nodes,viewport),null,'Fully scrolled-out target has no stroke, marker, caption or hit path');
+ target.y=110;assert.equal(edgeViewportClip(edge,nodes,viewport),null,'Partly visible card with hidden top gate has no floating arrow');
+ target.y=120;assert(edgeViewportClip(edge,nodes,viewport),'An attachment exactly at the boundary is visible');
+ target.y=240;assert.equal(edgeViewportClip({...edge,sourceSectionOccurrence:'heading',targetOccurrence:'source'},nodes,viewport),null,'Exact physical section endpoint follows the same policy');
+ assert(edgeViewportClip(edge,nodes,node=>node===target?{...area,edgeVisibility:undefined}:undefined),'Existing through-area behavior remains the default');
+ assert.equal(JSON.stringify(edge),frozen,'Paint never changes canonical endpoint/evidence identity');
+});

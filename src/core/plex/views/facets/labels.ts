@@ -29,11 +29,11 @@ export function facetCategoryLabel(category: FacetCategory, id: string): CanvasV
 export function facetMembershipDescription(membership: FacetMembership): CanvasViewText {
   return {key: membership.status === "unresolved" ? `facets.reason.${membership.reason}` : `facets.reason.${membership.status}`};
 }
-/** Focus classification and combined diagnostic chips share exact labels, reasons and colors. */
+/** Assigned focus categories retain colored chips; uncertain focus/diagnostic values use the
+ * shared compact node status, with the same exact classification reason and no write authority. */
 export function facetMembershipBadge(membership: FacetMembership, preset: FacetPreset): PlexNodeBadge {
   const label = membership.status === "assigned" ? facetCategoryLabel(preset.categories[membership.category], membership.category)
     : {key: membership.status === "unresolved" ? "facets.cannotClassify" : `facets.${membership.status}`};
-  return {label, description: facetMembershipDescription(membership), background: membership.status === "assigned" ? preset.categories[membership.category].color
-    : membership.status === "conflicting" ? preset.conflictingColor : membership.status === "unassigned" ? preset.unassignedColor
-      : {kind: "theme", variable: "--background-secondary"}};
+  return {label, description: facetMembershipDescription(membership), ...(membership.status === "assigned"
+    ? {background: preset.categories[membership.category].color} : {presentation: "status" as const})};
 }

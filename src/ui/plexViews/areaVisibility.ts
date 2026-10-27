@@ -4,12 +4,22 @@ import {edgePhysicalOccurrence, type SceneViewport} from "./scene";
 
 /** Keep routes between exact physical endpoints, clipping area-local overflow without changing canonical evidence.
  * Cross-area routes retain the span between both visible areas (or an unbounded endpoint's measured card).
- * The SVG viewport clips stroke, arrowheads, caption and hit path together. */
+ * The SVG viewport clips stroke, arrowheads, caption and hit path together. Optional visible-endpoint
+ * policy suppresses the whole painted route when a scrolled physical gate is hidden; null never
+ * removes the admitted canonical relationship. Omission preserves through-area routes. */
 export function edgeViewportClip(edge: PositionedEdge, nodes: ReadonlyMap<string, PositionedNode>,
-  viewport: (node: PositionedNode) => SceneViewport | undefined): {left: number; top: number; width: number; height: number} | undefined {
+  viewport: (node: PositionedNode) => SceneViewport | undefined): {left: number; top: number; width: number; height: number} | null | undefined {
   const source = nodes.get(edgePhysicalOccurrence(edge, "source")), target = nodes.get(edgePhysicalOccurrence(edge, "target"));
   if (!source || !target) return undefined;
   const a = viewport(source), b = viewport(target);
+  /** Match the real physical attachment, including section endpoints, after native scrolling. */
+  const hidden = (node: PositionedNode, area: SceneViewport | undefined, port: PositionedEdge["sourcePort"]): boolean => {
+    if (area?.edgeVisibility !== "visible-endpoints") return false;
+    const x = node.x + (port === "left" ? -node.width / 2 : port === "right" ? node.width / 2 : 0);
+    const y = node.y + (port === "top" ? -node.height / 2 : port === "bottom" ? node.height / 2 : 0);
+    return x < area.left || x > area.left + area.width || y < area.top || y > area.top + area.height;
+  };
+  if (hidden(source, a, edge.sourcePort) || hidden(target, b, edge.targetPort)) return null;
   if (!a && !b) return undefined;
   /** Outside cards retain their gate/marker clearance; bounded rows share the actual area rectangle. */
   const bounds = (node: PositionedNode, area?: SceneViewport) => area ?? {

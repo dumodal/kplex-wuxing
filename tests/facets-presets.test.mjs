@@ -114,14 +114,14 @@ test('preset layout is authoritative over inert legacy canvas intent and preserv
 test('combined diagnostics defaults preserve distinct statuses, personal phases and exact canonical relations',()=>{
  const f=diagnosticScene(),before=JSON.stringify([...f.values]),combined=f.project(),separate=f.project({version:1,preset:'wuxing',combinedDiagnostics:{wuxing:false}});
  const diagnostics=combined.occurrences.filter(row=>row.nodeId!=='focus'&&row.nodeId!=='assigned'),id=M.facetCombinedAreaId('wuxing');
- assert.equal(diagnostics.length,5);assert(diagnostics.every(row=>row.areaId===id&&row.badge));assert.equal(new Set(diagnostics.map(row=>row.id)).size,5);
+ assert.equal(diagnostics.length,5);assert(diagnostics.every(row=>row.areaId===id&&row.badge?.presentation==='status')); assert.equal(new Set(diagnostics.map(row=>row.id)).size,5);
  assert.deepEqual(new Set(diagnostics.map(row=>JSON.parse(row.groupingPartition)[3])),new Set(['unassigned','conflicting','checking','unresolved']));
  assert.equal(diagnostics.find(row=>row.nodeId==='checking').badge.label.key,'facets.checking');
  assert.equal(diagnostics.find(row=>row.nodeId==='unresolved').badge.description.key,'facets.reason.metadata');
  assert.equal(diagnostics.find(row=>row.nodeId==='unsupported').badge.description.key,'facets.reason.unsupported');
  assert.deepEqual(combined.edges,separate.edges);assert.equal(JSON.stringify([...f.values]),before);
  const layout=M.layoutFacets(combined,f.measure(combined),'wuxing',M.FACET_TEMPLATES.wuxing),area=layout.areas.find(area=>area.id===id);
- assert.equal(layout.areas.length,6);assert.equal(area.dropTarget,undefined);assert(M.facetPresetAssignments('wuxing',M.FACET_TEMPLATES.wuxing).some(target=>target.id===M.facetAreaId('wuxing','status','unassigned')));
+ assert.equal(layout.areas.length,6);assert.equal(area.viewport.edgeVisibility,'visible-endpoints');assert.equal(area.dropTarget,undefined);assert(M.facetPresetAssignments('wuxing',M.FACET_TEMPLATES.wuxing).some(target=>target.id===M.facetAreaId('wuxing','status','unassigned')));
  assert.equal(layout.positions.size,combined.occurrences.length);assert.equal(combined.occurrences.find(row=>row.id===combined.entry).areaId,undefined);
 });
 
