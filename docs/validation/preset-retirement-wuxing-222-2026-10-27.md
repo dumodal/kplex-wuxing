@@ -25,3 +25,9 @@ Disposable Small restoration completed at **2026-10-27T12:50:01.480Z**: 9 config
 Runtime main SHA256: `5a32c460a951df1f7d517fd939de0d0fcd425455f3962b10623658988afef1e0`. Styles: `f8731d83ca2d163a3c706d731dd419442e83d7bdbbbdc1415855737bc0925a33`. Manifest 0.3.0: `49596950b87caaf2fddaf0f58e826287c67d0e0998d3b69905c2ec298fd8b350`. [Sanitized native receipt](preset-retirement-wuxing-222-native-summary.json).
 
 Later acceptance should cover a fresh Wu Xing status-property workflow and an existing saved phase-property workflow on macOS, minimum-host and physical mobile. Full regression remains a separate final gate. PR #222 and Help #4 stay draft, open and unmerged; no release is performed.
+
+## Published Help deployment
+
+Implementation [8cd3f60](https://github.com/zsviczian/kplex/commit/8cd3f60bea6921918ba35e7c137eb406fbb8608f) is pushed and remote-verified. [Help 294b662](https://github.com/zsviczian/kplex-help/commit/294b662270712e27c192f53cd9afc176f51c5e6b) publishes the same tested main.js and updates three existing guides. Styles and manifest already match and are unchanged. Byte-for-byte artifact hashes were verified before a Help-only plugin reload, completed at 2026-10-27T12:57:15.238Z.
+
+The reload preserved the current leaf, K-Plex Help center, Facets view, help-workbench preset and camera. The original root was visible without navigation. The initial card count is a hydration transient, not a complete-count claim. No modal/draft was open. No runtime note edits were performed; the three authorized documentation edits are separate. User-owned data.json and workspace.json remain excluded from Git. The public Help configuration still intentionally contains its four custom demonstrations; retirement changes the inherited product library, not those saved examples.
