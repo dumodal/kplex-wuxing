@@ -172,3 +172,17 @@ test('cycle references and expandable siblings share row spacing and card-edge s
  check(!reference.querySelector('.is-branch-disclosure')&&c.querySelector('.is-branch-disclosure'),'Uniform spacing does not invent a fold button on a reference');
  check(work.body===0&&work.scans===0,'Status/spacing needs no source work');ui.close();style.remove();return true;})()`));}finally{await host.cleanup()}
 });
+
+
+test('Compass keeps visible center links to offscreen friends at their scroll boundary',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ const friends=Array.from({length:30},(_,i)=>'Friend '+i+'.md');for(const path of friends){const base=pages.get('B.md');pages.set(path,{...base,path,name:path,file:{...base.file,path}})}
+ index.neighbours=(page,role)=>(page.path==='A.md'&&role==='left'?friends:[]).map(path=>({page:pages.get(path),role,relationType:1,typeDefinition:'Related',linkDirection:1}));
+ index.getNeighborhood=path=>({center:pages.get(path),parents:[],children:[],leftFriends:index.neighbours(pages.get(path),'left'),rightFriends:[],siblings:[]});
+ settings.friendMaxHeight=160;const ui=await mount(M.builtInPlexViews.resolve('classic')),scroll=[...ui.container.querySelectorAll('.kplex-zone-scroll')].find(el=>el.scrollHeight>el.clientHeight+5);check(scroll,'Bounded Compass friends fixture');
+ const ids=()=>[...ui.container.querySelectorAll('.kplex-edge-hit')].map(el=>el.dataset.kplexEdgeId).sort(),before=ids();check(before.length===friends.length,'All actual center relationships remain painted');
+ for(const position of [0,scroll.scrollHeight,0]){scroll.scrollTop=position;scroll.dispatchEvent(new Event('scroll'));await wait();check(JSON.stringify(ids())===JSON.stringify(before),'Scrolling cannot remove the visible center?s links');
+ const aperture=scroll.getBoundingClientRect(),marks=[...ui.container.querySelectorAll('[data-kplex-edge-continuation]')];check(marks.length>0,'Hidden friends retain boundary marks');for(const mark of marks){const r=mark.getBoundingClientRect(),x=(r.left+r.right)/2,y=(r.top+r.bottom)/2;check(x>=aperture.left-2&&x<=aperture.right+2&&y>=aperture.top-2&&y<=aperture.bottom+2,'No continuation floats outside its own area');check(Math.min(Math.abs(y-aperture.top),Math.abs(y-aperture.bottom),Math.abs(x-aperture.left),Math.abs(x-aperture.right))<2,'Continuation ends at an actual area boundary');}}
+ check(ui.props.activePath==='A.md'&&work.body===0&&work.scans===0,'Compass routing is presentation-only');ui.close();style.remove();return true;})()`));}finally{await host.cleanup()}
+});

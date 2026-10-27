@@ -19,10 +19,10 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Reload empty-canvas camera fix complete
+# Scroll continuation / row spacing update complete
 
-Help before:19cards/0visible, camera y1622.5against final954px pane. Existing automatic viewport settlement generalized to attention-following views; autozoom-disabled navigation records automatic placement, without following ordinary scene reflow. Manual/restored cameras/live editors/display transitions retain coordinates. No new index/timer/state owner.
+Runtime968c9b0: shared Edge keeps visible counterparts connected to clipped scroll-boundary anchors, no hidden-note arrow/caption/new gate/drop authority; both wholly hidden cards retire only paint. Visible body/protruding gate handled. Same-area aperture/cross-area canvas clip, fixed forests unchanged. Explicit visible-endpoints remains opt-in. All hierarchy rows share48px control clearance; NodeStatus and measured status bounds left-align at card edge.
 
-30targeted viewport/editor tests +1real-browser test (six view/autozoom cases)PASS22.22.2, build/types/touched scanner PASS. Actual Help two reloads PASS2026-10-27T07:46:47.332Z, same leaf/center/preset,19cards/original center visible withy477, no navigation/note edits. Exact deployed main8b2ff4729a036fb8f0d9e7039169f410e53c50ad4e67db6cbbaedb32f0685de9; styles unchangedd8984f7094c5a1638a69f38a4ba246df33c460f6775268d3faf25c68378fff83.
+133distinct targeted cases PASS22.22.2 (109policy/API/layout/camera +24browser in aggregate), build/types/touched scanner PASS. Exact native11PASS13/13 incl10canonical route IDs/2continuations,140Child?12; restored2026-10-27T09:03:37.005Z,9config/117content/original workspace/window/digest. Exact mainfebd8d5a2ad5fce278f65c8684050855a278b228dfebc4aac89b8eadd8fcdb9a, styles44887d1951cdc3b418d3dc695d5236707211af457c58689a797653cfbcdf24e0.
 
-Evidence docs/validation/reload-viewport-222-2026-10-27.md and native JSON. User-owned Help settings/workspace/shortcuts excluded; source and Help branches pushed separately. Both PR222/Help4remain draft/open/unmerged, full regression deferred, no release/production deployment.
+Help deployed/reloaded, same leaf/center/view/root/folds, statusleft0px; after ordinary startup32?47cards settled. No note edits/navigation. User-owned settings/workspace/shortcuts excluded. Evidence docs/validation/scroll-continuations-222-2026-10-27.md +native JSON. Full regression deferred; both PR222/Help4open/draft/unmerged. No release/production deployment.

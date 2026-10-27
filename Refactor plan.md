@@ -6662,3 +6662,8 @@ Starting9db9924. Reused shared Edge/area geometry to retain connectors from visi
 109focused policy/layout/API/camera and23affected real-browser cases pass in aggregate on22.22.2; actual build/types and touched-source scanner PASS. Tests preserve exact visible-child route IDs to hidden parents, node/camera/session/canonical/no-source guards, read-only markers and status/control spacing. Prior assertions counting links with both cards hidden were replaced by explicit visible-counterpart identity checks for the requested behavior; no missing visible route assertion weakened. Final native scroll/status case and Help deployment follow.
 
 Risk-based native checks: top/bottom scroll, original gate restoration, card-edge status alignment, and current Help MindMap root/camera preservation. Mac/minimum-host/physical touch remain separate; full regression deferred.
+
+
+### 2026-10-27 ? Continuation final Windows/Help handoff
+
+Runtime968c9b0 exact native11PASS13/13:10direct canonical route IDs/2boundary continuations retained through scroll; shared status left0px,4classifications and140canonical Child?12. Resources restored2026-10-27T09:03:37.005Z,9config/117content/original workspace/window/digest. Additional actual Compass browser verifies30center/friend routes and mark coordinates; total133distinct focused cases (109policy/layout/API +24browser in aggregate). Real build/types/scanner PASS22.22.2. Exact artifacts deployed/reloaded in Help preserving root/folds and47settled cards, no navigation/note edits. Native data/hash/tooling attribution in docs/validation/scroll-continuations-222-2026-10-27.md. Both PRs open, full regression/device/OS acceptance separate, no merge/release/production touch.
