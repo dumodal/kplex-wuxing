@@ -6693,3 +6693,10 @@ Risk-based checks: native dimension keyboard/readout/inherit/reset and Cancel; a
 ### 2026-10-27 - Shared numeric readout native refinement
 
 Follow-up to2c7d025: native Obsidian adds its own slider-value span; shared row CSS suppresses the duplicate while preserving formatted output/aria-valuetext. Two additional actual lens width Save/Cancel cases pass,188distinct focused checks total;15affected UI/typography rerun pass, actual final build/types/full scanner/architecture9 pass. Native Settings uses a separate owning document, now used for its8control readout assertions; canvas captures remain in their actual window. Native14-17 fixture/owning-window capture corrections retain assertions and unconditional restoration. Native18final/Help handoff follow.
+
+
+### 2026-10-27 - Numeric settings Windows and Help final handoff
+
+Runtime81d5aee exact-build native19PASS16/16: trusted arrow/readout/inherit/reset/Cancel plus8Mind Map Settings outputs in its own document. Native screenshot reviewed, duplicate host readout hidden only within shared native rows. Native14-18driver bounds/owning-document/capture/activation ordering corrected without changing final artifact/assertions; all resources restored each attempt. Final restoration2026-10-27T11:17:42.130Z,9config/117content/original workspace/window/digest.188distinct affected tests pass (186initial+2lens cases), final15UIsubset pass; actual build/types/full scanner/architecture9PASS22.22.2. Exact Help0.3runtime deployed/reloaded; current leaf/center/preset/camera retained, no note edits/navigation/draft loss. User Help settings/workspace excluded.
+
+Risk-based later acceptance: physical touch slider precision, minimum-host readout presentation and macOS Settings lifetime. Full regression/CI deferred, both PRs draft/open/unmerged. Receipts docs/validation/numeric-settings-222-2026-10-27.md.
