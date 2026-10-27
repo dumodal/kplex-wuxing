@@ -194,7 +194,7 @@ function mountTypographyRow(definition) {
   const state = { value: undefined, change: undefined, reset: undefined, description: "" };
   const control = { sliderEl: {setAttribute() {},disabled: false}, setInstant() {return this;}, setDisabled(value) {this.sliderEl.disabled=value;return this;}, setValue(value) { state.value = value; return this; }, setLimits() { return this; }, setDynamicTooltip() { return this; }, onChange(callback) { state.change = callback; return this; } };
   const button = { setIcon() { return this; }, setTooltip() { return this; }, onClick(callback) { state.reset = callback; return this; } };
-  const setting = {controlEl: {createEl() {return {setText(text) {state.readout=text;}};},append() {}}, setDesc(text) { state.description = text; }, addSlider(callback) { callback(control); }, addToggle(callback) { callback(control); }, addExtraButton(callback) { callback(button); } };
+  const setting = {settingEl: {addClass() {}},controlEl: {createEl() {return {setText(text) {state.readout=text;}};},append() {}}, setDesc(text) { state.description = text; }, addSlider(callback) { callback(control); }, addToggle(callback) { callback(control); }, addExtraButton(callback) { callback(button); } };
   state.release = definition.render(setting); return state;
 }
 

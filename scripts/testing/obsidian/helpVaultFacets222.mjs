@@ -91,15 +91,22 @@ export async function acceptHelpVaultFacets222(x) {
   check(widthInput.getAttribute('aria-valuetext')===widthOutput.textContent&&widthOutput.textContent!==oldOutput,'Native size readout did not follow the slider');
   const inheritedWidth=payload.canvasViewSettings.wuxing.values.presets['help-workshop'].regionWidth;
   widthReset.click();await until(()=>Number(widthInput.value)===inheritedWidth&&widthOutput.textContent.includes(p.translator('colors.inherit')),'Native reset did not restore inherited size');
+  widthInput.blur();await wait(160);
   await captureModal('numeric-area-sliders');await closeModals();check(JSON.stringify(p.settings.canvasViewSettings)===savedPreset,'Cancelled numeric preset draft saved settings');
   cases.push({id:'native-help-preset-area-sliders-value-keyboard-inherit-reset-cancel',range:[Number(widthInput.min),Number(widthInput.max)],opening:oldOutput,inheritedWidth});
   cases.push({id:'native-help-preset-editor-captured-through-registered-settings-owner-without-save'});
-  app.setting.open();app.setting.openTabById('k-plex');await wait(160);
+  app.setting.open();app.setting.openTabById('k-plex');p.settingsTab.update();await wait(160);
   check(p.settingsTab.openSettingsPage(p.translator('settings.ui.plex.behavior')),'Native Canvas behavior settings page absent');await wait(120);
   check(p.settingsTab.openSettingsPage(p.translator('view.mindmap')),'Native Mind Map settings page absent');await wait(120);
-  const nativeSliders=[...doc.querySelectorAll('[data-kplex-setting-key]')].filter(el=>el.getClientRects().length>0);
+  const settingsDoc=p.settingsTab.containerEl.ownerDocument;
+  c.progress={...c.progress,numericSettingsMount:{sameDocument:settingsDoc===doc,tabConnected:p.settingsTab.containerEl.isConnected,readouts:settingsDoc.querySelectorAll('.kplex-number-value').length,inputs:[...settingsDoc.querySelectorAll('.setting-item input[type=range]')].map(input=>({name:input.getAttribute('aria-label'),row:input.closest('.setting-item')?.querySelector('.setting-item-name')?.textContent,key:input.closest('.setting-item')?.dataset.kplexSettingKey,output:input.closest('.setting-item')?.querySelector('output')?.textContent}))}};
+  await until(()=>[...settingsDoc.querySelectorAll('[data-kplex-setting-key]')].filter(el=>el.dataset.kplexSettingKey.includes('canvasView:mindmap:')).length===8,'Native current Settings rows did not mount');
+  const nativeSliders=[...settingsDoc.querySelectorAll('[data-kplex-setting-key]')].filter(el=>el.dataset.kplexSettingKey.includes('canvasView:mindmap:')&&el.getClientRects().length>0);
+  c.progress={...c.progress,numericControls:{count:nativeSliders.length,values:nativeSliders.map(el=>({key:el.dataset.kplexSettingKey,output:el.querySelector('output')?.textContent,aria:el.querySelector('input')?.getAttribute('aria-valuetext')})),widthHtml:widthRow.innerHTML}};
   check(nativeSliders.length===8&&nativeSliders.every(el=>{const input=el.querySelector('input[type=range]'),output=el.querySelector('output');return input&&output?.textContent&&input.getAttribute('aria-valuetext')===output.textContent}),'Every native Mind Map numeric setting needs its shared permanent readout');
-  await captureModal('numeric-mindmap-settings');await closeModals();cases.push({id:'native-help-mindmap-settings-common-sliders-permanent-values',controls:nativeSliders.length});
+  // Settings may render in its own document; captureModal belongs only to the canvas window.
+  if(settingsDoc===doc)await captureModal('numeric-mindmap-settings');
+  await closeModals();cases.push({id:'native-help-mindmap-settings-common-sliders-permanent-values',controls:nativeSliders.length,owningSettingsDocument:settingsDoc!==doc});
   // Capture actual native sharing/review surfaces without copying, downloading or importing.
   check(p.settingsTab.openCanvasViewManager('wuxing','help-workbench'),'Registered rule preset editor refused');
   await until(()=>doc.querySelector('.kplex-facet-preset-editor'),'Native rule preset editor absent');

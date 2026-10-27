@@ -4103,4 +4103,5 @@ button.kplex-sidecar-unfold-plex:focus-visible,
 
 /* Shared native numeric settings keep their value visible without a hover-only tooltip. */
 .kplex-number-value { min-width: 3em; text-align: end; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.kplex-number-setting .slider-value { display: none; }
 .kplex-literal-opacity .setting-item { padding: 0; border: 0; }

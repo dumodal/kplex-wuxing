@@ -6688,3 +6688,8 @@ Risk-based follow-up: user theme readability and physical touch/macOS/minimum-ho
 Starting5d4d3a3. All native numeric preferences now share numberSlider with permanent values; existing styleNumberSlider retains optional inheritance/reset and serves Facets area dimensions. Preset scalar dimensions and color opacity use the same owner; lens widths use existing React LayoutSlider. Both share latest-value delivery and explicit reset discards unsent positions. Existing schemas/limits/defaults/captured queued writers unchanged. Standing AGENTS/contributor/API contract and AST guard cover182UI/settings sources, rejecting number fields/numeric text conversions/private sliders.186focused tests + real build/types/full scanner/architecture9 PASS22.22.2. Native14/Help deployment follow.
 
 Risk-based checks: native dimension keyboard/readout/inherit/reset and Cancel; all Mind Map Settings readouts; actual user theme readability. Physical touch/macOS/minimum-host separate. Full regression/CI deferred.
+
+
+### 2026-10-27 - Shared numeric readout native refinement
+
+Follow-up to2c7d025: native Obsidian adds its own slider-value span; shared row CSS suppresses the duplicate while preserving formatted output/aria-valuetext. Two additional actual lens width Save/Cancel cases pass,188distinct focused checks total;15affected UI/typography rerun pass, actual final build/types/full scanner/architecture9 pass. Native Settings uses a separate owning document, now used for its8control readout assertions; canvas captures remain in their actual window. Native14-17 fixture/owning-window capture corrections retain assertions and unconditional restoration. Native18final/Help handoff follow.

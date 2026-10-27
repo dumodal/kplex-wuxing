@@ -8,6 +8,7 @@ export function numberSlider(row: Setting, options: Readonly<{
   label: string; value: number; min: number; max: number; step: number; disabled?: boolean;
   format?: (value: number) => string; onChange: (value: number) => void | Promise<void>;
 }>) {
+  row.settingEl.addClass("kplex-number-setting");
   let slider: SliderComponent, committed = options.value, draft: number | null = null, alive = true;
   const output = row.controlEl.createEl("output", {cls: "kplex-number-value", attr: {"aria-live": "off"}});
   /** Reading the display never normalizes or writes its owner's saved scalar. */
