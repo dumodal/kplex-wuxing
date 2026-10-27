@@ -16,6 +16,38 @@ const register=`
  const dispatch=async(ui,id)=>{const result=await plugin.actionManager.dispatch({id,source:'local-hotkey',surfaceId:ui.props.actionSurfaceId});ui.render();await wait();return result};
 `;
 
+// Obsidian's shipped app.css applies this tablet rule. Insert it after plugin CSS to
+// exercise specificity as well as coarse-pointer sizing; Chromium is not iOS validation.
+for(const coarse of [false,true])test(`shared node controls resist tablet button padding (${coarse?'coarse':'fine'} pointer)`,async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{
+  await host.command('Emulation.setTouchEmulationEnabled',{enabled:coarse,maxTouchPoints:1});
+  assert(await host.evaluate(`(async()=>{${canvasSceneFixture}
+   document.body.classList.add('is-mobile','is-tablet');
+   const tablet=document.createElement('style');tablet.textContent='.is-tablet button:not(.clickable-icon){padding:4px 20px}';document.head.append(tablet);
+   check(matchMedia('(pointer:coarse)').matches===${coarse},'Requested pointer lane is active');
+   for(const view of ['classic','mindmap','wuxing']){
+    const ui=await mount(M.builtInPlexViews.resolve(view));
+    const buttons=[...ui.container.querySelectorAll('.kplex-thought-corner-action')];check(buttons.length>0,'Actual editor controls rendered');
+    for(const button of buttons){const box=button.getBoundingClientRect(),css=getComputedStyle(button);
+     check(box.width===16&&box.height===16,view+' editor control stays 16px square: '+box.width+'x'+box.height);
+     check(css.paddingLeft==='0px'&&css.paddingRight==='0px'&&css.appearance==='none','Shared control removes host padding and native appearance');}
+    if(view!=='wuxing'){
+     const section=ui.container.querySelector('.kplex-section-fold-handle:not(.is-branch-disclosure)');check(section,'Supported central section control rendered');
+     const box=section.getBoundingClientRect(),size=${coarse}?14:10;
+     check(box.width===size&&box.height===size,'Section control stays square: '+box.width+'x'+box.height);
+    }
+    if(view==='mindmap'){
+     const branch=ui.container.querySelector('.has-expanded-hit-target'),box=branch.getBoundingClientRect(),symbol=branch.querySelector('.kplex-branch-disclosure-symbol').getBoundingClientRect();
+     check(box.width===44&&box.height===44&&symbol.width===16&&symbol.height===16,'Branch preserves 44px touch area and 16px visible symbol');
+    }
+    ui.close();
+   }
+   check(work.body===0&&work.scans===0,'Control presentation performs no Markdown reads or inventory');
+   plugin.actionManager.dispose();style.remove();tablet.remove();document.body.classList.remove('is-mobile','is-tablet');return true})()`));
+ }finally{await host.cleanup()}
+});
+
 for(const view of ['classic','mindmap','wuxing'])test(`${view}: saved History/pin/picker targets are explicit destinations independent of branch-click policy`,async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert(await host.evaluate(`(async()=>{${canvasSceneFixture}${register}

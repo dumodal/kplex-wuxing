@@ -32,7 +32,7 @@ export function bindClassicEditor(scene: HostPlexScene, center: string, editor?:
   candidates[0].occurrenceId = editor.binding.occurrenceId;
   const endpoint = (path: string, role?: string): PositionedNode | undefined => {
     const rows = scene.nodes.filter(node => node.page.path === path);
-    return rows.find(node => role && node.role === role) ?? rows.at(-1);
+    return rows.find(node => role && node.role === role) ?? rows[rows.length - 1];
   };
   for (const edge of scene.edges) {
     const source = endpoint(edge.sourcePath, edge.sourcePath === center ? "center" : undefined);
