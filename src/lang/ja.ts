@@ -1576,7 +1576,7 @@ const japaneseTranslations = {
   "facets.anchorPreview": "注目ノートとカテゴリの配置プレビュー",
   "facets.focus": "注目ノート",
   "facets.bandSizeHelp": "同心レイアウトでは、幅と高さは帯の横方向と縦方向の厚さです。ノートは各帯の上部でスクロールします。",
-  "facets.areaSizeHelp": "任意の既定値：{minimum}–{maximum}。空欄で継承します。キャンバスでのサイズ変更はこの値を上書きします。",
+  "facets.areaSizeHelp": "任意の既定値：{minimum}–{maximum}。リセットするとプリセットのサイズを継承します。キャンバスでのサイズ変更はこの値を上書きします。",
   "facets.flow": "ワークフローガイド",
   "facets.flowHelp": "縦・横レイアウトの装飾ガイドです。方向はカテゴリの順序に従います。矢印はノート間の関係を作成・証明しません。",
   "facets.flowDirection": "フローの方向",

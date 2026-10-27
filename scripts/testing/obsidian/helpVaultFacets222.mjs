@@ -79,7 +79,27 @@ export async function acceptHelpVaultFacets222(x) {
   for(const [source,file]of refs){const page=p.index.get(file.path),children=p.index.neighbours(page,'child');if(children.length>12)tooMany.push({source,children:children.map(row=>row.page.path.startsWith(file.parent.path+'/')?row.page.path.slice(file.parent.path.length+1):row.page.path)});}
   c.progress={...c.progress,helpCanonicalChildren:{checked:refs.size,tooMany}};check(!tooMany.length,'Native Help child count exceeds12: '+JSON.stringify(tooMany));
   cases.push({id:'native-help-canonical-child-budget',checked:refs.size,maximum:12});
-  check(p.settingsTab.openCanvasViewManager('wuxing','help-workshop'),'Registered preset manager refused editor');await until(()=>doc.querySelector('.kplex-facet-preset-editor'),'Registered native preset editor absent');await captureModal('preset-editor');await closeModals();cases.push({id:'native-help-preset-editor-captured-through-registered-settings-owner-without-save'});
+  check(p.settingsTab.openCanvasViewManager('wuxing','help-workshop'),'Registered preset manager refused editor');await until(()=>doc.querySelector('.kplex-facet-preset-editor'),'Registered native preset editor absent');await captureModal('preset-editor');
+  const sizeModal=doc.querySelector('.kplex-facet-preset-editor'),firstCategory=sizeModal.querySelector('h3')?.parentElement;
+  const widthRow=[...firstCategory.querySelectorAll('.setting-item')].find(row=>row.querySelector('.setting-item-name')?.textContent===p.translator('wuxing.width'));
+  const widthInput=widthRow?.querySelector('input[type=range]'),widthOutput=widthRow?.querySelector('output'),widthReset=widthRow?.querySelector('.extra-setting-button');
+  check(widthInput&&widthOutput&&widthReset&&!sizeModal.querySelector('input[type=number]'),'Native optional sizes must use common sliders and readouts');
+  const oldWidth=Number(widthInput.value),oldOutput=widthOutput.textContent,savedPreset=JSON.stringify(p.settings.canvasViewSettings);
+  widthInput.scrollIntoView({block:'center'});widthInput.focus();
+  for(const type of ['keyDown','keyUp'])native.webContents.sendInputEvent({type,keyCode:'Right'});
+  await until(()=>Number(widthInput.value)>oldWidth,'Trusted native size slider key did not advance');
+  check(widthInput.getAttribute('aria-valuetext')===widthOutput.textContent&&widthOutput.textContent!==oldOutput,'Native size readout did not follow the slider');
+  const inheritedWidth=payload.canvasViewSettings.wuxing.values.presets['help-workshop'].regionWidth;
+  widthReset.click();await until(()=>Number(widthInput.value)===inheritedWidth&&widthOutput.textContent.includes(p.translator('colors.inherit')),'Native reset did not restore inherited size');
+  await captureModal('numeric-area-sliders');await closeModals();check(JSON.stringify(p.settings.canvasViewSettings)===savedPreset,'Cancelled numeric preset draft saved settings');
+  cases.push({id:'native-help-preset-area-sliders-value-keyboard-inherit-reset-cancel',range:[Number(widthInput.min),Number(widthInput.max)],opening:oldOutput,inheritedWidth});
+  cases.push({id:'native-help-preset-editor-captured-through-registered-settings-owner-without-save'});
+  app.setting.open();app.setting.openTabById('k-plex');await wait(160);
+  check(p.settingsTab.openSettingsPage(p.translator('settings.ui.plex.behavior')),'Native Canvas behavior settings page absent');await wait(120);
+  check(p.settingsTab.openSettingsPage(p.translator('view.mindmap')),'Native Mind Map settings page absent');await wait(120);
+  const nativeSliders=[...doc.querySelectorAll('[data-kplex-setting-key]')].filter(el=>el.getClientRects().length>0);
+  check(nativeSliders.length===8&&nativeSliders.every(el=>{const input=el.querySelector('input[type=range]'),output=el.querySelector('output');return input&&output?.textContent&&input.getAttribute('aria-valuetext')===output.textContent}),'Every native Mind Map numeric setting needs its shared permanent readout');
+  await captureModal('numeric-mindmap-settings');await closeModals();cases.push({id:'native-help-mindmap-settings-common-sliders-permanent-values',controls:nativeSliders.length});
   // Capture actual native sharing/review surfaces without copying, downloading or importing.
   check(p.settingsTab.openCanvasViewManager('wuxing','help-workbench'),'Registered rule preset editor refused');
   await until(()=>doc.querySelector('.kplex-facet-preset-editor'),'Native rule preset editor absent');

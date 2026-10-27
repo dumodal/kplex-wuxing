@@ -1584,7 +1584,7 @@ const frenchTranslations = {
   "facets.anchorPreview": "Aperçu de la note ciblée et des catégories",
   "facets.focus": "Note ciblée",
   "facets.bandSizeHelp": "En disposition concentrique, la largeur et la hauteur définissent l’épaisseur horizontale et verticale des bandes. Les notes défilent dans leur partie supérieure.",
-  "facets.areaSizeHelp": "Valeur facultative : {minimum}–{maximum}. Laissez vide pour hériter. Le redimensionnement du canevas remplace cette valeur.",
+  "facets.areaSizeHelp": "Valeur facultative : {minimum}–{maximum}. Réinitialisez pour hériter de la taille du préréglage. Le redimensionnement du canevas remplace cette valeur.",
   "facets.flow": "Guides de flux",
   "facets.flowHelp": "Guides décoratifs des dispositions verticales et horizontales. La direction suit l’ordre des catégories. Ces flèches ne créent ni ne prouvent de relations entre notes.",
   "facets.flowDirection": "Direction du flux",

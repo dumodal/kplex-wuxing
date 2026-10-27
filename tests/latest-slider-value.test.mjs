@@ -25,3 +25,11 @@ test('failure is reported once, does not retry a value, and does not strand a ne
  q.submit(1,v=>{calls.push(v);return new Promise((r,j)=>reject=j)});q.submit(4,v=>{calls.push(v);return new Promise(r=>release=r)});reject(error);await tick();assert.deepEqual(calls,[1,4]);assert.deepEqual(errors,[error]);assert.equal(drafts.at(-1),4);release();await tick();assert.equal(drafts.at(-1),null);
  q.submit(8,()=>{throw error});assert.equal(errors.length,2);assert.equal(drafts.at(-1),null);
 });
+
+test('an explicit reset discards unsent gesture values while an accepted callback finishes',async()=>{
+ let release;const calls=[],drafts=[],q=new LatestSliderValue(value=>drafts.push(value),assert.fail);
+ const apply=value=>{calls.push(value);return new Promise(resolve=>release=resolve)};
+ q.submit(1,apply);q.submit(3,apply);q.cancelPending();assert.equal(drafts.at(-1),null);
+ release();await tick();assert.deepEqual(calls,[1]);assert.equal(drafts.at(-1),null);
+ q.submit(2,apply);assert.deepEqual(calls,[1,2]);release();await tick();
+});

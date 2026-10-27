@@ -19,6 +19,6 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR222 latest slider / shared rule editor final handoff
+# PR222 numeric settings checkpoint
 
-Implementation982969f pushed/remote verified, startingc18efc89. Shared latest-value slider and common lens/category Code field complete; no new parser/index/settings/editor owner. Node22.22.2 real build/types/full scanner/architecture7 PASS;48focused+3shared-renderer browser cases PASS. Windows native13 PASS14/14; native12 queried React before mount, corrected wait only. Final Small restoration2026-10-27T10:12:43.246Z,9config/117content/original workspace/window/digest. Native screenshot reviewed. Exact Help0.3.0 artifacts deployed/reloaded preserving current leaf/center/Facets/help-workbench/camera; no navigation/note edits/user draft loss. User-owned Help settings/workspace excluded. Full receipts docs/validation/sliders-predicate-editor-222-2026-10-27.md. Keep source222/Help4draft/open/unmerged; full regression/CI deferred; device/OS/minimum-host/known215limits separate. No production deployment.
+Main validator, starting5d4d3a3. Full UI/settings numeric audit complete; shared native numberSlider, existing React LayoutSlider, optional styleNumberSlider reused. Standing AGENTS/contributor/API rule plus source guard covers182UI/settings files.186focused checks and actual build/types/full scanner/architecture9 PASS22.22.2. Native14 running on exact artifact with original Small restoration owner. Next: visual review, Help-only exact artifact deployment if no open draft, final receipts/push/PR. No new parser/index/settings/editor owner; no bounds/default changes. Keep source222/Help4draft/open/unmerged; full regression deferred.

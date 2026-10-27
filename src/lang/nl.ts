@@ -1580,7 +1580,7 @@ const dutchTranslations = {
   "facets.anchorPreview": "Voorbeeld van de gefocuste notitie en categorieën",
   "facets.focus": "Gefocuste notitie",
   "facets.bandSizeHelp": "Bij concentrische indelingen bepalen breedte en hoogte de horizontale en verticale banddikte. Notities scrollen in de bovenste strook van elke band.",
-  "facets.areaSizeHelp": "Optionele standaard: {minimum}–{maximum}. Laat leeg om over te nemen. Formaatgrepen op het canvas overschrijven deze waarde.",
+  "facets.areaSizeHelp": "Optionele standaard: {minimum}–{maximum}. Herstel om de grootte van de voorinstelling over te nemen. Formaatgrepen op het canvas overschrijven deze waarde.",
   "facets.flow": "Workflowhulplijnen",
   "facets.flowHelp": "Decoratieve hulplijnen in verticale en horizontale indelingen. De richting volgt de categorievolgorde. Deze pijlen maken of bewijzen geen notitierelaties.",
   "facets.flowDirection": "Stroomrichting",

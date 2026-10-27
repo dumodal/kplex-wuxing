@@ -4,6 +4,7 @@
  * Portalled controls opt into the shell's shared delayed hover hints without browser title duplicates.
  */
 import {PredicateExpressionField} from "./predicates/PredicateExpressionField";
+import {LayoutSlider} from "./components/LayoutSlider";
 import type {AppearanceOwner} from "../core/plex/appearanceThemes";
 import type {SemanticColorPair} from "../core/plex/colorPreferences";
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
@@ -642,13 +643,15 @@ export function PlexFilter({
             <label>{translate("filter.border")} <button type="button" disabled={!onEditColor} onClick={event => editColor(event.currentTarget, translate("filter.border"), {kind: "node", field: "borderColor"}, draft.style?.node?.borderColor)}>{colorIdentityText(draft.style?.node?.borderColor, colorPalette) || translate("colors.inherit")}</button></label>
             <label>{translate("filter.text")} <button type="button" disabled={!onEditColor} onClick={event => editColor(event.currentTarget, translate("filter.text"), {kind: "node", field: "textColor"}, draft.style?.node?.textColor)}>{colorIdentityText(draft.style?.node?.textColor, colorPalette) || translate("colors.inherit")}</button></label>
             <label>{translate("filter.borderStyle")} <select value={draft.style?.node?.strokeStyle ?? "solid"} onChange={(event) => updateStyle({ node: { ...(draft.style?.node ?? {}), strokeStyle: event.currentTarget.value as "solid" | "dashed" | "dotted" } })}><option value="solid">{translate("filter.solid")}</option><option value="dashed">{translate("filter.dashed")}</option><option value="dotted">{translate("filter.dotted")}</option></select></label>
-            <label>{translate("filter.borderWidth")} <input type="number" min="0.5" max="8" step="0.5" value={draft.style?.node?.strokeWidth ?? 2} onChange={(event) => updateStyle({ node: { ...(draft.style?.node ?? {}), strokeWidth: Number(event.currentTarget.value) || 1 } })} /></label>
+            <LayoutSlider label={translate("filter.borderWidth")} caption={translate("filter.borderWidth")} icon={null} min={0.5} max={8} step={0.5} value={draft.style?.node?.strokeWidth ?? 2} displayValue={String}
+              onChange={strokeWidth => updateStyle({node: {...(draft.style?.node ?? {}), strokeWidth}})} />
             <label>{translate("filter.fillStyle")} <select value={draft.style?.node?.fillStyle ?? "solid"} onChange={(event) => updateStyle({ node: { ...(draft.style?.node ?? {}), fillStyle: event.currentTarget.value as "solid" | "hachure" | "cross-hatch" } })}><option value="solid">{translate("filter.solid")}</option><option value="hachure">{translate("filter.hachure")}</option><option value="cross-hatch">{translate("filter.crossHatch")}</option></select></label>
           </div> : <div className="kplex-lens-style-grid">
             <label>{translate("filter.line")} <button type="button" disabled={!onEditColor} onClick={event => editColor(event.currentTarget, translate("filter.line"), {kind: "link", field: "strokeColor"}, draft.style?.edge?.strokeColor)}>{colorIdentityText(draft.style?.edge?.strokeColor, colorPalette) || translate("colors.inherit")}</button></label>
             <label>{translate("filter.label")} <button type="button" disabled={!onEditColor} onClick={event => editColor(event.currentTarget, translate("filter.label"), {kind: "link", field: "textColor"}, draft.style?.edge?.textColor)}>{colorIdentityText(draft.style?.edge?.textColor, colorPalette) || translate("colors.inherit")}</button></label>
             <label>{translate("filter.lineStyle")} <select value={draft.style?.edge?.strokeStyle ?? "solid"} onChange={(event) => updateStyle({ edge: { ...(draft.style?.edge ?? {}), strokeStyle: event.currentTarget.value as "solid" | "dashed" | "dotted" } })}><option value="solid">{translate("filter.solid")}</option><option value="dashed">{translate("filter.dashed")}</option><option value="dotted">{translate("filter.dotted")}</option></select></label>
-            <label>{translate("filter.lineWidth")} <input type="number" min="0.5" max="8" step="0.5" value={draft.style?.edge?.strokeWidth ?? 2} onChange={(event) => updateStyle({ edge: { ...(draft.style?.edge ?? {}), strokeWidth: Number(event.currentTarget.value) || 1 } })} /></label>
+            <LayoutSlider label={translate("filter.lineWidth")} caption={translate("filter.lineWidth")} icon={null} min={0.5} max={8} step={0.5} value={draft.style?.edge?.strokeWidth ?? 2} displayValue={String}
+              onChange={strokeWidth => updateStyle({edge: {...(draft.style?.edge ?? {}), strokeWidth}})} />
             <label className="kplex-lens-style-check"><input type="checkbox" checked={draft.style?.edge?.showLabel === true} onChange={(event) => updateStyle({ edge: { ...(draft.style?.edge ?? {}), showLabel: event.currentTarget.checked } })} /> {translate("filter.showRelationshipLabel")}</label>
           </div>}
           <div className="kplex-lens-help">{translate("filter.styleHelp")}</div>

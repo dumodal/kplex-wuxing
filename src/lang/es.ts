@@ -1584,7 +1584,7 @@ const spanishTranslations = {
   "facets.anchorPreview": "Vista previa de la nota enfocada y las categorías",
   "facets.focus": "Nota enfocada",
   "facets.bandSizeHelp": "En disposiciones concéntricas, la anchura y la altura definen el grosor horizontal y vertical de cada banda. Las notas se desplazan en su franja superior.",
-  "facets.areaSizeHelp": "Valor opcional: {minimum}–{maximum}. Déjalo vacío para heredar. Los controles del lienzo anulan este valor.",
+  "facets.areaSizeHelp": "Valor opcional: {minimum}–{maximum}. Restablece para heredar el tamaño del preajuste. Los controles del lienzo anulan este valor.",
   "facets.flow": "Guías de flujo",
   "facets.flowHelp": "Guías decorativas en disposiciones verticales y horizontales. La dirección sigue el orden de categorías. Estas flechas no crean ni demuestran relaciones entre notas.",
   "facets.flowDirection": "Dirección del flujo",

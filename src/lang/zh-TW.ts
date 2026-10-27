@@ -1576,7 +1576,7 @@ const traditionalChineseTranslations = {
   "facets.anchorPreview": "焦點筆記與分類配置預覽",
   "facets.focus": "焦點筆記",
   "facets.bandSizeHelp": "同心配置中的寬度與高度表示區帶的水平與垂直厚度。筆記在各區帶頂端捲動。",
-  "facets.areaSizeHelp": "選填預設值：{minimum}–{maximum}。留空以繼承。畫布上的調整大小控制會覆寫此值。",
+  "facets.areaSizeHelp": "選填預設值：{minimum}–{maximum}。重設以繼承預設集大小。畫布上的調整大小控制會覆寫此值。",
   "facets.flow": "工作流程導引",
   "facets.flowHelp": "垂直與水平配置的裝飾導引。方向依分類順序決定。這些箭頭不會建立或證明筆記關係。",
   "facets.flowDirection": "流程方向",

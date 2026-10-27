@@ -1580,7 +1580,7 @@ const germanTranslations = {
   "facets.anchorPreview": "Vorschau der fokussierten Notiz und Kategorien",
   "facets.focus": "Fokussierte Notiz",
   "facets.bandSizeHelp": "Bei konzentrischen Anordnungen bestimmen Breite und Höhe die horizontale und vertikale Bandstärke. Notizen scrollen im oberen Streifen jedes Bands.",
-  "facets.areaSizeHelp": "Optionaler Standard: {minimum}–{maximum}. Leer lassen zum Vererben. Größenänderungen auf der Zeichenfläche überschreiben diesen Standard.",
+  "facets.areaSizeHelp": "Optionaler Standard: {minimum}–{maximum}. Mit Zurücksetzen die Größe der Vorlage übernehmen. Größenänderungen auf der Zeichenfläche überschreiben diesen Standard.",
   "facets.flow": "Ablaufhilfen",
   "facets.flowHelp": "Dekorative Hilfslinien in vertikalen und horizontalen Anordnungen. Die Richtung folgt der Kategorienreihenfolge. Diese Pfeile erzeugen oder belegen keine Notizbeziehungen.",
   "facets.flowDirection": "Ablaufrichtung",

@@ -523,6 +523,8 @@ for (const file of [
   "src/ui/features/ontologyPresentation.ts",
   "src/ui/StyleColorControls.ts",
   "src/ui/styleNumberSlider.ts",
+  "src/ui/numberSlider.ts",
+  "src/ui/components/latestSliderValue.ts",
   "src/ui/StyleSwatchScope.ts",
   "src/adapters/obsidian/colorChanges.ts",
   "src/ui/ColorLiteralEditor.ts",

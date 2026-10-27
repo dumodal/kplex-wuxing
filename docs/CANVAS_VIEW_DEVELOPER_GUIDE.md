@@ -143,3 +143,8 @@ Use Node **22.22.2**, installed dependencies and the real production build/scann
 Review three risks first: stale captured canvas/configuration owners; wrong canonical/physical source identity; and editor/camera/Sidecar behavior across main/popout restoration. Assert bounded reads and zero source acquisition/body parsing/semantic rebuilds for presentation changes. Do not weaken existing scaling guards or hide known #215 baseline failures. Report missing Mac/physical-mobile/minimum-host coverage honestly.
 
 [Current receipts and limitations](validation/facets-220-2026-10-25.md) distinguish browser conformance from Windows acceptance. Keep PR #220 draft/open until expanded implementation and validation are complete; no merge or release is authorized.
+
+
+### Numeric configuration controls
+
+Declare numeric native preferences as bounded `slider` controls with `min`, `max` and `step`. The shared Settings adapter mounts their permanent value readout and preserves the captured queued writer. React view contributions reuse `CanvasViewLayoutControls`/`LayoutSlider`; native custom preset editors reuse `numberSlider`. Optional overrides use `styleNumberSlider`, with an effective inherited value and explicit reset, never a blank number field. No custom numeric text box or private range input is permitted. The repository-wide guard in `npm run check:architecture` enforces the shared owners.

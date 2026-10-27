@@ -44,4 +44,7 @@ export class LatestSliderValue {
   /** Detach UI updates, retaining the last explicit intent when a rail closes. Callback owners
    * must reject retired canvas/view targets before submitting persistence; no new input is accepted. */
   dispose(): void {this.closed = true;}
+
+  /** An explicit reset supersedes unsent gesture values; an already accepted save still settles. */
+  cancelPending(): void {this.pending = null;if (!this.closed) this.draft(null);}
 }

@@ -5541,7 +5541,7 @@ export const englishCatalog = {
   "facets.anchorPreview": {message:"Focused note and category layout preview",context:"Accessible native layout schematic.",params:[]},
   "facets.focus": {message:"Focused note",context:"Native layout schematic.",params:[]},
   "facets.bandSizeHelp": {message:"In concentric layouts, width and height set horizontal and vertical band thickness. Notes scroll in each band's top strip.",context:"Honest dimensions for shared concentric area controls.",params:[]},
-  "facets.areaSizeHelp": {message:"Optional default: {minimum}–{maximum}. Leave blank to inherit. Canvas resize handles override this default.",context:"Exact optional per-area preset size.",params:["minimum","maximum"],referenceParams:[]},
+  "facets.areaSizeHelp": {message:"Optional default: {minimum}–{maximum}. Use reset to inherit the preset size. Canvas resize handles override this default.",context:"Exact optional per-area preset size.",params:["minimum","maximum"],referenceParams:[]},
   "facets.flow": {message:"Workflow guides",context:"Detached preset decorative flow controls.",params:[]},
   "facets.flowHelp": {message:"Decorative guides in vertical and horizontal layouts. Direction follows category order. These arrows never create or prove note relationships.",context:"Read-only workflow interpretation.",params:[]},
   "facets.flowDirection": {message:"Flow direction",context:"Relative to displayed category sequence.",params:[]},

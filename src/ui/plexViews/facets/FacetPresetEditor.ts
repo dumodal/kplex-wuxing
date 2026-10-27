@@ -24,6 +24,7 @@ import {renderPresetHelpSettings} from "./helpSettings";
 import type {ClipboardSession} from "../../../application/ClipboardSession";
 import {copyPortableText, downloadPortableJson} from "../../sharing/portableTransfer";
 import {facetPortablePackage} from "./facetSharing";
+import {numberSlider} from "../../numberSlider";
 
 export class FacetPresetEditor extends StyleEditorModal {
   private draft: FacetPreset;
@@ -105,8 +106,8 @@ export class FacetPresetEditor extends StyleEditorModal {
       .setValue(this.draft.start).onChange(start => {this.draft = {...this.draft, start};this.render();}));
     for (const [field, label, minimum, maximum, step] of [["spacing", "wuxing.spacing", 24, 200, 8],
       ["regionWidth", "wuxing.width", 200, 640, 20], ["regionHeight", "wuxing.height", 160, 600, 20]] as const)
-      new Setting(body).setName(t(label)).addSlider(input => input.setLimits(minimum, maximum, step).setValue(this.draft[field]).setDynamicTooltip()
-        .onChange(value => {this.draft = {...this.draft, [field]: value};this.validate();}));
+      numberSlider(new Setting(body).setName(t(label)), {label: t(label), value: this.draft[field], min: minimum, max: maximum, step,
+        onChange: value => {if (this.canEdit() && this.owner()) {this.draft = {...this.draft, [field]: value};this.validate();}}});
     for (const [field, label] of [["guides", "wuxing.guides"], ["tints", "wuxing.tints"]] as const)
       new Setting(body).setName(t(label)).addToggle(input => input.setValue(this.draft[field]).onChange(value => {this.draft = {...this.draft, [field]: value};this.validate();}));
     renderFacetFlowSettings(body, /** Read current sibling layout/preset edits. */ () => this.draft,

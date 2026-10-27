@@ -6681,3 +6681,10 @@ Risk-based checks: native category Code width/readability and Cancel; density bu
 Implementation982969f same runtime artifact: Windows native13PASS14/14, full-width registered rule Code field below label, screenshot visually reviewed;4classifications/140canonical Child?12/status/continuations pass. Native12 queried React before mount; wait corrected only. Final restoration2026-10-27T10:12:43.246Z,9config/117content/original workspace/window/digest. Exact Help0.3artifacts deployed/reloaded preserving current leaf/center/Facets preset/camera, no note edits/navigation/draft loss.48focused+3renderer browser+7architecture, actual build/types/full scanner PASS22.22.2.
 
 Risk-based follow-up: user theme readability and physical touch/macOS/minimum-host remain separate. Windows category modal and browser burst checks cover requested scope; no full regression/merge/release. Receipts docs/validation/sliders-predicate-editor-222-2026-10-27.md.
+
+
+### 2026-10-27 - Repository-wide numeric Settings controls
+
+Starting5d4d3a3. All native numeric preferences now share numberSlider with permanent values; existing styleNumberSlider retains optional inheritance/reset and serves Facets area dimensions. Preset scalar dimensions and color opacity use the same owner; lens widths use existing React LayoutSlider. Both share latest-value delivery and explicit reset discards unsent positions. Existing schemas/limits/defaults/captured queued writers unchanged. Standing AGENTS/contributor/API contract and AST guard cover182UI/settings sources, rejecting number fields/numeric text conversions/private sliders.186focused tests + real build/types/full scanner/architecture9 PASS22.22.2. Native14/Help deployment follow.
+
+Risk-based checks: native dimension keyboard/readout/inherit/reset and Cancel; all Mind Map Settings readouts; actual user theme readability. Physical touch/macOS/minimum-host separate. Full regression/CI deferred.
