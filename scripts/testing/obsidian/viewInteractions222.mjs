@@ -118,6 +118,7 @@ export async function acceptViewInteractions222(x){
   check(overlay?.classList.contains('is-area-clipped')&&t.top>=r.top&&t.bottom<=r.bottom,'Parent toolbar is outside editor body: '+label);
   for(const button of toolbar.querySelectorAll('button')){const b=button.getBoundingClientRect(),hit=doc.elementFromPoint(b.x+b.width/2,b.y+b.height/2);check(hit&&button.contains(hit),'Parent toolbar button is clipped/unreachable: '+label+'/'+button.getAttribute('aria-label'));}
   return toolbar;};
+ assertToolbar('before-fit-after-opening');
  await action('view.fit');await wait(200);assertToolbar('initial140');
  for(const height of [220,140]){session.setAreaHeight('parentHeight',height);await wait(200);assertToolbar('resize'+height);}
  const ownedBounds=root(host).querySelector('.kplex-plex').getBoundingClientRect();require('node:fs').writeFileSync(c.screenshotPrefix+'-parent-editor-controls.png',(await native.webContents.capturePage({x:Math.ceil(ownedBounds.x),y:Math.ceil(ownedBounds.y),width:Math.floor(ownedBounds.width),height:Math.floor(ownedBounds.height)})).toPNG());

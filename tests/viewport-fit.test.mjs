@@ -16,6 +16,8 @@ function callback(name, dependencies) {
     if(name!=='layout'&&ts.isVariableDeclaration(node)&&node.name.getText(source)===name&&ts.isArrowFunction(node.initializer))selected=node.initializer.getText(source);
     if(name==='layout'&&ts.isCallExpression(node)&&node.expression.getText(source)==='useLayoutEffect'
       &&node.arguments[0]?.getText(source).includes('const shouldRecenter'))selected=node.arguments[0].getText(source);
+    if(name==='branchReveal'&&ts.isCallExpression(node)&&node.expression.getText(source)==='useLayoutEffect'
+      &&node.arguments[0]?.getText(source).includes('const pending = pendingBranchReveal.current'))selected=node.arguments[0].getText(source);
     if(name==='sidecar'&&ts.isCallExpression(node)&&node.expression.getText(source)==='useEffect'
       &&node.arguments[0]?.getText(source).includes('previousSidecarOpen.current === sidecarOpen'))selected=node.arguments[0].getText(source);
     if(name==='reframeSidecarViewport'&&ts.isBinaryExpression(node)&&node.left.getText(source)==='reframeSidecarViewport.current')selected=node.right.getText(source);
@@ -342,4 +344,18 @@ test('expansion reveal minimally scrolls measured rows and clamps large or edge 
  assert.equal(revealRowScrollTop(980,40,0,160,1000),840);
  assert.equal(revealRowScrollTop(0,40,100,160,1000),0);
  assert.equal(revealRowScrollTop(500,400,0,160,1000),300);
+});
+
+
+test('delayed fixed-area expansion reveal keeps exact identity and yields to user camera/root/view retirement',()=>{
+ for(const mode of ['current','manual','root','view','fold','before-commit']){
+  const node={page:{path:'B'},occurrenceId:'B1',height:40,branch:{expanded:mode!=='fold',status:'loading'}},camera={current:{x:4,y:5,scale:1}},old={};let revealed=0;
+  const pending={id:'B1',lifetime:1,scope:'R',previousScene:old,camera:{...camera.current}},ctx={pendingBranchReveal:{current:pending},viewLifetime:mode==='view'?2:1,sceneScope:mode==='root'?'other':'R',camera,sameFitCamera,
+   scene:mode==='before-commit'?old:{nodes:[node],zoneViewports:{parent:{scrollable:false}}},occurrenceKey:node=>node.occurrenceId,areaForNode:()=> 'parent',zoneScrollRefs:{current:{parent:{scrollTop:0,clientHeight:1000,scrollHeight:1000}}},zoneDisplayLayouts:{parent:{localPositions:new Map([['B1',{y:500}]])}},
+   revealRowScrollTop,setZoneScrollTop:()=>{},sceneNodeKeys:new Map([[node,'B1']]),revealFindHit:(path,id)=>{assert.equal(path,'B');assert.equal(id,'B1');revealed++;camera.current={...camera.current,y:15}}};
+  if(mode==='manual')camera.current.x++;
+  const run=callback('branchReveal',ctx);run();assert.equal(revealed,mode==='current'?1:0,mode);
+  if(mode==='current'){assert.deepEqual(pending.camera,camera.current,'Own minimal reveal does not cancel final loading settlement');camera.current.x++;run();assert.equal(revealed,1);assert.equal(ctx.pendingBranchReveal.current,null,'User movement retires delayed reveal');}
+  else if(mode==='before-commit')assert.equal(ctx.pendingBranchReveal.current,pending);else assert.equal(ctx.pendingBranchReveal.current,null,mode);
+ }
 });

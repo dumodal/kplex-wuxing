@@ -2472,19 +2472,24 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     finishFlair(pending.path, null);
   }, [pendingNodeFlair, scene.nodes, scene.zoneViewports, zoneDisplayLayouts]);
 
-  const pendingBranchReveal = useRef<{id: string; lifetime: number; scope: string; previousScene: HostPlexScene; scrollTop?: number} | null>(null);
-  useLayoutEffect(/** An accepted single-branch expansion reveals its exact row after measured reflow, without changing selection, camera or editor focus. */ () => {
+  const pendingBranchReveal = useRef<{id: string; lifetime: number; scope: string; previousScene: HostPlexScene; camera: {x: number; y: number; scale: number}; scrollTop?: number} | null>(null);
+  useLayoutEffect(/** An accepted single-branch expansion reveals its exact row after measured reflow, without changing selection or editor focus; fixed areas reuse minimal canvas reveal. */ () => {
     const pending = pendingBranchReveal.current;
     if (!pending) return;
-    if (pending.lifetime !== viewLifetime || pending.scope !== sceneScope) { pendingBranchReveal.current = null; return; }
+    if (pending.lifetime !== viewLifetime || pending.scope !== sceneScope || !sameFitCamera(pending.camera, camera.current)) { pendingBranchReveal.current = null; return; }
     if (scene === pending.previousScene) return;
     const node = scene.nodes.find(row => occurrenceKey(row) === pending.id), zone = node ? areaForNode(node) : null;
+    if (!node?.branch?.expanded) { pendingBranchReveal.current = null; return; }
     const panel = zone ? scene.zoneViewports[zone] : undefined, scroll = zone ? zoneScrollRefs.current[zone] : undefined;
     const local = zone ? zoneDisplayLayouts[zone]?.localPositions.get(pending.id) : undefined;
     if (node?.branch?.expanded && zone && panel && scroll && local) {
       const top = revealRowScrollTop(local.y, node.height, scroll.scrollTop, scroll.clientHeight, scroll.scrollHeight);
       pending.scrollTop = top;
       if (top !== scroll.scrollTop) { scroll.scrollTop = top; setZoneScrollTop(current => ({...current, [zone]: top})); }
+    }
+    if (node?.branch?.expanded && panel?.scrollable === false) {
+      revealFindHit(node.page.path, sceneNodeKeys.get(node));
+      pending.camera = {...camera.current};
     }
     if (node?.branch?.status !== "loading") pendingBranchReveal.current = null;
   }, [scene, zoneDisplayLayouts, viewLifetime, sceneScope]);
@@ -4304,7 +4309,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       if (accepted && kind === "toggle" && context.target.kind === "node") {
         const id = context.target.occurrenceId;
         const node = scene.nodes.find(row => occurrenceKey(row) === id);
-        if (node?.branch && !node.branch.expanded) pendingBranchReveal.current = {id: occurrenceKey(node), lifetime: viewLifetime, scope: sceneScope, previousScene: scene};
+        if (node?.branch && !node.branch.expanded) pendingBranchReveal.current = {id: occurrenceKey(node), lifetime: viewLifetime, scope: sceneScope, previousScene: scene, camera: {...camera.current}};
         else pendingBranchReveal.current = null;
       }
       return accepted ? {status: "completed"} : {status: "unavailable", reasonKey: "actions.branch-editor-blocked"};
