@@ -19,3 +19,9 @@ Earlier native setup/capture corrections are not product passes: sample 22 accid
 Main SHA256: `f797c965f47afcf9eda0b2af12c1094335e026be7448429e740ea5aa7a731f65`. Styles: `f205d6e8b16494817de3abe8a07f15cfd1b96dec83fac6a772f5092d739d9857`. Manifest remains 0.3.0, SHA256 `49596950b87caaf2fddaf0f58e826287c67d0e0998d3b69905c2ec298fd8b350`.
 
 Keep enhancement PR #225 and Help #4 open and unmerged. No release or production-vault deployment. Later platform acceptance should check real mouse grabbing in a macOS popout and physical touch scrolling after mouse cancellation on a hybrid device. Browser secondary-document coverage is not a native popout migration claim.
+
+## Help deployment
+
+Implementation [9b38d81](https://github.com/zsviczian/kplex/commit/9b38d81bbcca8eeb6dc5e6d18d2cac052c48b1f7) is pushed and remote-verified. [Help 366b263](https://github.com/zsviczian/kplex-help/commit/366b2631217696bc0666a8cdd02f18cd3010b07c) contains the exact final main.js/styles.css and a short explanation in the existing Past nodes and pins guide. Manifest already matches 0.3.0.
+
+Help-only plugin reload completed at 2026-10-27T15:27:29.003Z after verifying no open modal draft. Current leaf, center, Facets/help-workbench, 37 cards and camera x/scale were retained. Native pane height settled from 954.23 to 952.57px; the shared automatic camera settled y from 477 to 476.5px. No navigation or runtime note edits occurred. User-owned data.json/workspace.json remain excluded. This is deployment/reload evidence; the 3-case interaction acceptance belongs to disposable Small.
