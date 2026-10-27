@@ -4,7 +4,7 @@ import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import ts from 'typescript';
 import {loadPortableModules} from './support/portableTypeScript.mjs';
-const {exports: {centeredViewportFit, sameFitCamera, EmbeddedDrawingFit, centerArrivalFrames, hasClickModifier, edgeViewportClip, revealRowScrollTop}} = loadPortableModules([
+const {exports: {centeredViewportFit, sameFitCamera, EmbeddedDrawingFit, centerArrivalFrames, hasClickModifier, edgeViewportClip, revealRowScrollTop, editorToolbarInsets}} = loadPortableModules([
   'src/ui/components/viewportFit.ts', 'src/adapters/obsidian/EmbeddedDrawingFit.ts', 'src/ui/components/centerArrival.ts', 'src/ui/components/modifierClick.ts', 'src/ui/plexViews/areaVisibility.ts']);
 const source=ts.createSourceFile('graph.tsx',readFileSync('src/ui/PlexGraph.tsx','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
 
@@ -358,4 +358,13 @@ test('delayed fixed-area expansion reveal keeps exact identity and yields to use
   if(mode==='current'){assert.deepEqual(pending.camera,camera.current,'Own minimal reveal does not cancel final loading settlement');camera.current.x++;run();assert.equal(revealed,1);assert.equal(ctx.pendingBranchReveal.current,null,'User movement retires delayed reveal');}
   else if(mode==='before-commit')assert.equal(ctx.pendingBranchReveal.current,pending);else assert.equal(ctx.pendingBranchReveal.current,null,mode);
  }
+});
+
+
+test('area-hosted editor toolbar intersects canvas and area without resizing or panning its native document',()=>{
+ const canvas={width:800,height:600},editor={left:-150,top:-200,width:500,height:500},area={left:-100,top:-300,width:1000,height:900};
+ assert.deepEqual(editorToolbarInsets(editor,canvas,area),{top:200,left:150,right:0});
+ assert.deepEqual(editorToolbarInsets({...editor,left:600,top:50},canvas,area),{top:0,left:0,right:300});
+ assert.deepEqual(editorToolbarInsets({left:100,top:100,width:500,height:400},canvas,{left:200,top:150,width:300,height:300}),{top:50,left:100,right:100});
+ assert.deepEqual(editor,{left:-150,top:-200,width:500,height:500});
 });

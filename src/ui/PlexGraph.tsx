@@ -26,7 +26,7 @@
  * leases after scene admission and share exact ancestor filtering and catalog-backed branch actions.
  * Their first current local preparation may fit once; manual/restored cameras and live editors win.
  */
-import {edgeViewportClip, revealRowScrollTop} from "./plexViews/areaVisibility";
+import {edgeViewportClip, revealRowScrollTop, editorToolbarInsets} from "./plexViews/areaVisibility";
 import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
 import {hasDirectionalCaption,directionalRelationCaption} from "../core/plex/directionalRelationCaption";
 import { connectionActionAllowed, tagMembershipPair } from "./structuralConnectionActions";
@@ -1570,9 +1570,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     if (clip) {
       const left = node.x - node.width / 2, top = node.y - node.height / 2;
       overlay.style.clipPath = `inset(${Math.max(0, clip.top - top) * current.scale}px ${Math.max(0, left + node.width - clip.left - clip.width) * current.scale}px ${Math.max(0, top + node.height - clip.top - clip.height) * current.scale}px ${Math.max(0, clip.left - left) * current.scale}px)`;
-      overlay.style.setProperty("--kplex-editor-area-top", `${Math.max(0, clip.top - top) * current.scale}px`);
-      overlay.style.setProperty("--kplex-editor-area-right", `${Math.max(0, left + node.width - clip.left - clip.width) * current.scale}px`);
-      overlay.style.setProperty("--kplex-editor-area-left", `${Math.max(0, clip.left - left) * current.scale}px`);
+      const toolbar = editorToolbarInsets({left: current.x + left * current.scale, top: current.y + top * current.scale, width, height},
+        {width: viewport.current?.clientWidth ?? width, height: viewport.current?.clientHeight ?? height},
+        {left: current.x + clip.left * current.scale, top: current.y + clip.top * current.scale, width: clip.width * current.scale, height: clip.height * current.scale});
+      overlay.style.setProperty("--kplex-editor-area-top", `${toolbar.top}px`);
+      overlay.style.setProperty("--kplex-editor-area-right", `${toolbar.right}px`);
+      overlay.style.setProperty("--kplex-editor-area-left", `${toolbar.left}px`);
     } else {
       overlay.style.removeProperty("clip-path");
       for (const side of ["top", "right", "left"]) overlay.style.removeProperty(`--kplex-editor-area-${side}`);

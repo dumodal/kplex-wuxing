@@ -27,3 +27,10 @@ export function revealRowScrollTop(center: number, height: number, scrollTop: nu
   const next = top < scrollTop || height > viewportHeight ? top : bottom > scrollTop + viewportHeight ? bottom - viewportHeight : scrollTop;
   return Math.max(0, Math.min(Math.max(0, contentHeight - viewportHeight), next));
 }
+
+/** Keep an area-hosted editor's toolbar in the visible canvas intersection while its native body retains full dimensions. */
+export function editorToolbarInsets(editor: {left: number; top: number; width: number; height: number},
+  canvas: {width: number; height: number}, area: {left: number; top: number; width: number; height: number}): {top: number; left: number; right: number} {
+  return {top: Math.max(0, -editor.top, area.top - editor.top), left: Math.max(0, -editor.left, area.left - editor.left),
+    right: Math.max(0, editor.left + editor.width - canvas.width, editor.left + editor.width - area.left - area.width)};
+}

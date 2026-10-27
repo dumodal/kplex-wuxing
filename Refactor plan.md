@@ -6596,3 +6596,8 @@ Starta475f37. Bottom-aligned measured parent grid, area grows upward past its pe
 ### 2026-10-27 ? Growing parent minimal reveal follow-up
 
 Native3ba4d9b growth reached a source outside the canvas, so the lane was not accepted; all test resources restored04:52:17.178Z. Fixed region expansion now reuses existing exact Find/reveal for minimal canvas panning. Delayed reveal retains expected camera and cancels on user movement/root/view/fold retirement. No new controller or document retargeting.52policy+10browser+22viewport distinct focused cases PASS (84); added before-Fit native toolbar check. First new folded/loading cancellation assertion led to explicit stale-intent retirement. Final build/scanner and native rerun follow this checkpoint. Full regression/CI deferred. Keep222open; parallel help branch work separately authorized by maintainer.
+
+
+### 2026-10-27 ? Native editor toolbar remains reachable before Fit
+
+7a52950 native lane caught immediate parent toolbar clipping before Fit in a growing area. Restored05:00:08.762Z. Existing overlay synchronization now uses shared areaVisibility.editorToolbarInsets to intersect toolbar placement with area and actual canvas top/sides. No document resize, focus/navigation change or competing native controller.23viewport checks PASS (85distinct affected checks incl52policy+10browser). Rebuild/scanner and native rerun required. Full regression/CI deferred; parallel help changes separate.
