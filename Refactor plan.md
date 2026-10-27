@@ -6625,3 +6625,10 @@ Risk-based manual follow-up: check genuinely unavailable preset recovery versus 
 Help final195b2a235cc53e5716e5de5ba2b4d6d50f1a10b7 pushed/remote-verified; PR4 draft/open. Four reusable demonstrations,11actual desktop figures/17Related embeds; final140-page strict audit includes image embeds?12, plus YAML/links/Use-case/encoding/diff checks PASS22.22.2. Entire settings and all classification fields equal the native4aa snapshot; only Related illustration roles added (Home logo no longer crowds Child). Original images, binaries/workspace/hotkeys and unrelated settings preserved. Source PR222 remains open/draft. This checkpoint only finalizes documentation/receipt metadata; runtime5cb0069/native12 and earlier130facf/parent85/native24 keep exact attribution. Full regression/device/OS acceptance remains deferred/separate, no merge/release.
 
 Risk-based review: test customized-vault missing-preset recovery and review demonstrations with the eventual release build/theme; physical touch/macOS/minimum-host remain separate from the captured Windows desktop.
+
+
+### 2026-10-27 ? 0.3.0 preparation and authorized Help deployment
+
+Maintainer superseded prior preserve-binaries boundary: prepare0.3.0, deploy current Help artifacts, replace0.2.0release pin. Existing release owner updates5metadata records; real Node22.22.2 build/types and release/dist checks PASS. Help3built artifacts hash-equal; verified exact Help vault path, CLI plugin reload/inspection confirms0.3.0 enabled. Versioned release note/links/pin and140pageaudit pass; user-owned config/workspace/shortcuts preserved. No feature changes/full regression, tag/release or merge. Prior native receipts retain earlier artifact attribution. See docs/validation/release-030-help-deployment-2026-10-27.md.
+
+Risk-based review: reopen release pin in the Help canvas; confirm installation reports0.3.0. Other OS/device/full final acceptance remains separate; no production vault touched.
