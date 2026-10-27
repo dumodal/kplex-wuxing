@@ -1,4 +1,5 @@
 /** Actual production Wu Xing/shared canvas mounts in Chromium. Native editor behavior is covered separately in the exact-build Windows lane. */
+import {archivedFacetPresets} from './support/facetPresetArchive.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
@@ -10,6 +11,7 @@ const output=await plexViewBrowserModules();
 test('shared Info stays beside the cog and captures the opening canvas preset after focus moves',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['para']},{kind:'set',value:${JSON.stringify(archivedFacetPresets.para)}});
  const requests=[],a=await mount(M.wuXingViewDefinition,{openHelp:(id,target,help,current)=>{requests.push({id,target,help,current});return true}}),b=await mount(M.wuXingViewDefinition);
  await a.contributions.capture({kind:'state',action:{id:'preset.select',args:'para'}}).run();a.render();await wait();
  const sourceBefore=JSON.stringify(settings),stateBefore=JSON.stringify(a.session.getState()),otherBefore=JSON.stringify(b.session.getState()),before={...work};
@@ -18,7 +20,7 @@ test('shared Info stays beside the cog and captures the opening canvas preset af
  b.container.tabIndex=0;b.container.focus();buttons[1].click();await wait();
  check(requests.length===1&&requests[0].id==='wuxing'&&requests[0].target==='para'&&requests[0].help.markdown.key==='facets.help.para'&&requests[0].current(),'Info uses the exact captured owning preset');
  check(JSON.stringify(settings)===sourceBefore&&JSON.stringify(a.session.getState())===stateBefore&&JSON.stringify(b.session.getState())===otherBefore,'Opening Help does not save or activate a preset');
- const stale=a.contributions.choices()[0].help;await a.contributions.capture({kind:'state',action:{id:'preset.select',args:'arc'}}).run();a.render();await wait();
+ const stale=a.contributions.choices()[0].help;await a.contributions.capture({kind:'state',action:{id:'preset.select',args:'wuxing'}}).run();a.render();await wait();
  check(!requests[0].current()&&(await stale.run()).status==='unavailable'&&requests.length===1,'Superseded Info and pending render tokens cannot borrow the next preset');
  check(work.body===before.body&&work.scans===before.scans&&work.acquisitions===before.acquisitions,'Opening and retiring Help reads no sources');
  M.flushSync(()=>root.unmount());surface.remove();a.close();b.close();plugin.actionManager.dispose();check(events.size===0,'Help/choice/canvas subscriptions retire');style.remove();return true;
@@ -51,7 +53,7 @@ test('production measured flow captions and arrow policies remain decorative acr
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
  document.body.style.setProperty('--text-faint','#888888');document.body.style.setProperty('--text-muted','#999999');
- fieldCaches.get('A.md').frontmatter.phase='wood';fieldCaches.get('B.md').frontmatter.phase='metal';const ui=await mount(M.wuXingViewDefinition),before={...work};
+ fieldCaches.get('A.md').frontmatter.status='wood';fieldCaches.get('B.md').frontmatter.status='metal';const ui=await mount(M.wuXingViewDefinition),before={...work};
  const focus=ui.container.querySelector('[data-kplex-path="A.md"]'),camera=ui.container.querySelector('.kplex-camera').style.transform,relations=JSON.stringify(rows(pages.get('A.md'),'child').map(row=>[row.page.path,row.role,row.typeDefinition]));
  for(const layout of ['horizontal','vertical'])for(const reverse of [false,true])for(const style of ['arrow','line','none']){
   const preset={...structuredClone(M.FACET_TEMPLATES.wuxing),layout,reverse,flow:{direction:'both',style,caption:'Review <script>never executes</script>',captionPosition:'end'}};
@@ -72,7 +74,7 @@ test('production measured flow captions and arrow policies remain decorative acr
 test('preset-owned layouts share definitions without a lens-dialog selector and paint true concentric holes',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
- fieldCaches.get('A.md').frontmatter.phase='wood';fieldCaches.get('B.md').frontmatter.phase='metal';
+ fieldCaches.get('A.md').frontmatter.status='wood';fieldCaches.get('B.md').frontmatter.status='metal';
  const a=await mount(M.wuXingViewDefinition),b=await mount(M.wuXingViewDefinition),beforeB=JSON.stringify(b.session.getState()),before={...work};
  const focused=a.container.querySelector('[data-kplex-path="A.md"]'),camera=a.container.querySelector('.kplex-camera').style.transform;
  const surface=document.createElement('div');surface.className='kplex-view-controls';surface.style.width='500px';document.body.append(surface);const choices=M.createRoot(surface);M.flushSync(()=>choices.render([M.createElement(M.PlexViewSelector,{key:'view',session:a.session,translate:plugin.translator,contributions:a.contributions}),M.createElement(M.CanvasViewChoices,{key:'choices',controller:a.contributions,translate:plugin.translator})]));
@@ -106,7 +108,7 @@ test('combined diagnostics uses shared measured status chips and a captured canv
  for(const path of extra){const base=pages.get('B.md');pages.set(path,{...base,path,name:path,file:{...base.file,path,name:path}});fieldCaches.set(path,{frontmatter:{}})}
  const related=['B.md','C.md',...extra];index.neighbours=(page,role)=>page.path==='A.md'&&role==='child'?related.map(path=>({page:pages.get(path),role,relationType:1,typeDefinition:'Related',linkDirection:1})):[];
  index.getNeighborhood=path=>({center:pages.get(path),parents:[],children:index.neighbours(pages.get(path),'child'),leftFriends:[],rightFriends:[],siblings:[]});
- fieldCaches.get('A.md').frontmatter.phase='wood';fieldCaches.get('B.md').frontmatter.phase=['wood','metal'];fieldCaches.delete('C.md');
+ fieldCaches.get('A.md').frontmatter.status='wood';fieldCaches.get('B.md').frontmatter.status=['wood','metal'];fieldCaches.delete('C.md');
  const a=await mount(M.wuXingViewDefinition),b=await mount(M.wuXingViewDefinition);a.props.areaSettingsMode=true;b.props.areaSettingsMode=true;a.render();b.render();await wait();
  const before={...work},stored=JSON.stringify(settings),bState=JSON.stringify(b.session.getState());
  const combined=JSON.stringify(['facets','wuxing','diagnostics']),unassigned=JSON.stringify(['facets','wuxing','status','unassigned']);
@@ -151,7 +153,7 @@ test('shared width side handle and keyboard edits resize only the owning Facets 
  try{
   await host.command('Emulation.setDeviceMetricsOverride',{width:1500,height:1050,deviceScaleFactor:1,mobile:false});
   await host.evaluate(`(async()=>{${canvasSceneFixture}
-   fieldCaches.get('B.md').frontmatter.phase='wood';fieldCaches.get('C.md').frontmatter.phase='wood';
+   fieldCaches.get('B.md').frontmatter.status='wood';fieldCaches.get('C.md').frontmatter.status='wood';
    const ui=await mount(M.wuXingViewDefinition);ui.props.areaSettingsMode=true;ui.render();
    await ui.ports.current.implementations['view.fit'].execute({});await wait();await wait();
    window.widthFacets={ui,work,before:{...work},style,settings,settingsBefore:JSON.stringify(settings)};return true;
@@ -181,7 +183,7 @@ test('shared bottom-edge pointer resize grows and shrinks Facets category and st
  try{
   await host.command('Emulation.setDeviceMetricsOverride',{width:1500,height:1050,deviceScaleFactor:1,mobile:false});
   await host.evaluate(`(async()=>{${canvasSceneFixture}
-   fieldCaches.get('A.md').frontmatter.phase='wood';fieldCaches.get('B.md').frontmatter.phase=['water','metal'];fieldCaches.delete('C.md');
+   fieldCaches.get('A.md').frontmatter.status='wood';fieldCaches.get('B.md').frontmatter.status=['water','metal'];fieldCaches.delete('C.md');
    settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing','categories','wood','label']},{kind:'set',value:'My wood'});
    settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings, {field:'presets',path:['wuxing','diagnostics']},{kind:'set',value:{combined:false}});
    const ui=await mount(M.wuXingViewDefinition);ui.props.areaSettingsMode=true;ui.render();
@@ -213,13 +215,13 @@ test('shared bottom-edge pointer resize grows and shrinks Facets category and st
 test('advanced Facets rules use current/candidate cached metadata in the production shared renderer without source work',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
- fieldCaches.get('A.md').frontmatter.phase='wood';fieldCaches.get('B.md').frontmatter.phase='metal';fieldCaches.get('C.md').frontmatter.phase='water';
- const preset=structuredClone(M.FACET_TEMPLATES.arc);preset.diagnostics={combined:false};preset.source='rules';preset.categories.add.rule='note.phase == this.phase';preset.categories.relate.rule='note.phase == "metal"';preset.categories.communicate.rule='edge.role == "child" and note.phase == "water"';
+ fieldCaches.get('A.md').frontmatter.status='wood';fieldCaches.get('B.md').frontmatter.status='metal';fieldCaches.get('C.md').frontmatter.status='water';
+ const preset=structuredClone(${JSON.stringify(archivedFacetPresets.arc)});preset.diagnostics={combined:false};preset.source='rules';preset.categories.add.rule='note.status == this.status';preset.categories.relate.rule='note.status == "metal"';preset.categories.communicate.rule='edge.role == "child" and note.status == "water"';
  settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['arc']},{kind:'set',value:preset});
  const a=await mount(M.wuXingViewDefinition);M.flushSync(()=>a.session.updateState({version:1,preset:'arc'}));a.render();await wait();
  const node=id=>[...a.container.querySelectorAll('[data-kplex-keyboard-id]')].find(row=>row.dataset.kplexPath===id);
  const area=id=>a.container.querySelector('.'+CSS.escape('kplex-zone-'+JSON.stringify(['facets','arc','category',id])));
- check(node('A.md').querySelector('.kplex-node-badge').textContent==='Add','The owning canvas focus uses this.phase');
+ check(node('A.md').querySelector('.kplex-node-badge').textContent==='Add','The owning canvas focus uses this.status');
  check(area('relate')?.contains(node('B.md'))&&area('communicate')?.contains(node('C.md')),'Candidates use stored fields and canonical relationship contexts');
  const focus=node('A.md'),camera=a.container.querySelector('.kplex-camera').style.transform,before={body:work.body,scans:work.scans,acquisitions:work.acquisitions};
  settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings,{field:'presets',path:['arc','regionWidth']},{kind:'set',value:400});a.props.settings={...settings};a.props.paintSettings=a.props.settings;a.render();await wait();
@@ -235,7 +237,7 @@ test('advanced Facets rules use current/candidate cached metadata in the product
 test('relative Wu Xing presentation follows focus and unavailable metadata without new work or semantic edges',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
- fieldCaches.get('A.md').frontmatter.phase='wood';fieldCaches.get('B.md').frontmatter.phase='metal';
+ fieldCaches.get('A.md').frontmatter.status='wood';fieldCaches.get('B.md').frontmatter.status='metal';
  const original=JSON.stringify([...fieldCaches]),a=await mount(M.wuXingViewDefinition),b=await mount(M.wuXingViewDefinition);
  const region=(surface,id)=>surface.container.querySelector('[data-kplex-decoration='+CSS.escape(JSON.stringify(['facets','wuxing','category',id]))+']');
  const label=(surface,id)=>region(surface,id).querySelector('.kplex-view-region-description')?.textContent;
@@ -249,7 +251,7 @@ test('relative Wu Xing presentation follows focus and unavailable metadata witho
  const markers=[a,b].map(surface=>surface.container.querySelector('marker').id);check(markers[0]!==markers[1],'Per-canvas marker identities');
  const focused=a.container.querySelector('[data-kplex-path="B.md"]'),camera=a.container.querySelector('.kplex-camera').style.transform;
  for(const phase of [undefined,['wood','metal']]){
-  fieldCaches.get('B.md').frontmatter.phase=phase;for(const ref of [...events])if(ref?.name==='changed')ref.callback(pages.get('B.md').file);await wait();
+  fieldCaches.get('B.md').frontmatter.status=phase;for(const ref of [...events])if(ref?.name==='changed')ref.callback(pages.get('B.md').file);await wait();
   check(['wood','fire','earth','metal','water'].every(id=>label(a,id)==='Reference phase unavailable'),'No model default for missing/conflicting focus');
   check(a.container.querySelector('[data-kplex-path="B.md"]')===focused&&a.container.querySelector('.kplex-camera').style.transform===camera,'Reclassification retains occurrence/camera');
  }
@@ -257,7 +259,7 @@ test('relative Wu Xing presentation follows focus and unavailable metadata witho
  check(label(a,'wood')==='Reference phase unavailable','Incomplete metadata is not Wood');
  check(rows(pages.get('B.md'),'parent')[0].page.path==='A.md'&&rows(pages.get('B.md'),'parent')[0].role==='parent','Canonical relationship remains recorded parent');
  check(work.body===0&&work.scans===0,'Presentation never parses or scans');
- check(JSON.parse(original).find(([path])=>path==='A.md')[1].frontmatter.phase===fieldCaches.get('A.md').frontmatter.phase,'Focus never writes phases');
+ check(JSON.parse(original).find(([path])=>path==='A.md')[1].frontmatter.status===fieldCaches.get('A.md').frontmatter.status,'Focus never writes phases');
  a.close();b.close();plugin.actionManager.dispose();check(events.size===0,'Shared lifecycle cleanup');style.remove();return true;
  })()`),true)}finally{await host.cleanup()}
 });
@@ -266,13 +268,14 @@ test('Facets production presets share captured controls, measured badges and liv
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
  document.body.className='theme-dark';document.body.style.cssText='--background-primary:#181818;--background-secondary:#282828;--text-normal:#eeeeee;--text-muted:#999999;--color-blue:#1144bb;--color-green:#33aa66;--color-red:#cc2233;--color-orange:#dd8833;--color-purple:#aa55ee;--color-cyan:#22bbcc;--color-yellow:#dddd22';
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets'},{kind:'set',value:${JSON.stringify(archivedFacetPresets)}});
  const a=await mount(M.wuXingViewDefinition),b=await mount(M.wuXingViewDefinition),beforeB=JSON.stringify(b.session.getState());
  const controller=new M.CanvasViewContributionController(a.session,M.builtInCanvasViewSettings,{settings:()=>settings.canvasViewSettings,mounted:()=>a.container.isConnected,
  beforePresentationChange:()=>a.ports.current.preparePresentationChange(),update:()=>{throw Error('Unexpected type write')},openSettings:()=>true,failed:error=>{throw error}});
  const node=()=>[...a.container.querySelectorAll('[data-kplex-keyboard-id]')].find(row=>row.dataset.kplexPath==='A.md'),original=node(),bounds=()=>({top:original.style.top,left:original.style.left});
  const position=bounds(),camera=a.container.querySelector('.kplex-camera').style.transform;
  for(const [preset,count] of [['arc',3],['para',4],['wuxing',5],['gtd',6],['eaccess',7],['sensemaking',4],['publishing',5],['map-roles',4]]){
-   const choice=controller.choices()[0];check(choice.options.length===8,'All curated templates exposed by shared choices');
+   const choice=controller.choices()[0];check(choice.options.length===8,'Two built-ins and six saved archive fixtures exposed by shared choices');
    check((await choice.options.find(option=>option.id===preset).command.run()).status==='completed','Captured preset action accepted');a.render();await wait();
    const categories=[...a.container.querySelectorAll('[data-kplex-decoration]')].filter(row=>JSON.parse(row.dataset.kplexDecoration)[2]==='category');
    check(categories.length===count,'Exactly the selected preset categories render');check(node()===original,'Preset changes retain attention DOM identity');
@@ -306,7 +309,7 @@ test('production Wu Xing decorates real local notes, refreshes cached fields, re
  const style=document.createElement('style');style.textContent=${JSON.stringify(readFileSync('styles.css','utf8'))};document.head.append(style);
  const mount=document.createElement('div');mount.className='kplex-app';mount.style.cssText='width:1200px;height:900px;position:relative';document.body.append(mount);
  const pages=new Map(['Focus.md','Concept.md','Concept2.md','Conflict.md','Unknown.md','Missing.md'].map(path=>[path,{path,name:path,file:{path,name:path,extension:'md',basename:path,stat:{mtime:1,ctime:1,size:1}},url:null,isFolder:false,isTag:false,aliases:[],tags:[],styleTags:[],primaryStyleTag:null,noteType:null,maxLabelLength:30,neighbours:new Map()}]));
- const fields=new Map([['Focus.md',{phase:'water'}],['Concept.md',{phase:'wood'}],['Concept2.md',{phase:'wood'}],['Conflict.md',{phase:['fire','earth']}],['Unknown.md',{}]]);
+ const fields=new Map([['Focus.md',{status:'water'}],['Concept.md',{status:'wood'}],['Concept2.md',{status:'wood'}],['Conflict.md',{status:['fire','earth']}],['Unknown.md',{}]]);
  const caches=new Map([...fields].map(([id,frontmatter])=>[id,{frontmatter}])),work={semantic:0,releases:0,presentation:0,reads:0,parses:0,publishes:0,settingsWrites:0},events=new Set();
  const subscribe=fn=>{events.add(fn);return()=>events.delete(fn)},nativeEvents={on:(name,callback)=>{const ref={name,callback};events.add(ref);return ref},offref:ref=>events.delete(ref)};
  const settings=M.migrateAndMergeSettings({animationSpeed:0,graphDepth:1,allowAutozoom:false,embedCentralNode:false,showFolderNodes:false,showTagNodes:false});
@@ -351,7 +354,7 @@ test('production Wu Xing decorates real local notes, refreshes cached fields, re
  }
  await act('view.fit');await wait();camera=mount.querySelector('.kplex-camera').style.transform;const afterDropNavigation=activations.length,phaseBounds=region('water').querySelector(':scope > rect').getBoundingClientRect();drop(phaseBounds.x+24,phaseBounds.y+20);await wait();
  check(activations.length===afterDropNavigation&&relationshipWrites.length===0,'A classification phase cannot navigate, assign status or write a relationship');manager.draggable=null;
- fields.get('Focus.md').phase='fire';for(const ref of [...events])if(ref?.name==='changed')ref.callback(pages.get('Focus.md').file);await wait();
+ fields.get('Focus.md').status='fire';for(const ref of [...events])if(ref?.name==='changed')ref.callback(pages.get('Focus.md').file);await wait();
  check(getNode('Focus.md')===attention,'Cached reclassification retained occurrence DOM identity');check(attention.style.top===beforeTop&&attention.querySelector('.kplex-node-badge').textContent==='Fire','Cached property event updated the centered badge without moving attention');check(mount.querySelector('.kplex-camera').style.transform===camera,'Property event preserved manual camera');
  check(region('fire').textContent.includes('0 shown locally'),'Attention is not duplicated in category counts');
  const before={...work},state=JSON.stringify(session.getState());

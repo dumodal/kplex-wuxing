@@ -65,7 +65,8 @@ async function scenario(app,c){
   const phase={Memory:'water',Concept:'wood',Concept2:'wood',Goal:'fire',Review:'earth',Method:'metal',Conflict:['water','wood'],Unmapped:null};
   if(['features','areas','layouts'].includes(c.lane))phase.Unsupported={unrecognized:true};
   for(const [name,value]of Object.entries(phase)){
-   const index=Object.keys(phase).indexOf(name),frontmatter={phase:value,[p.settings.noteTypeField]:'Example',tags:['wuxing-fixture']};
+   const emoji={wood:'🟢',fire:'🔴',earth:'🟤',metal:'🟡',water:'🔵'};
+   const index=Object.keys(phase).indexOf(name),frontmatter={phase:value,status:Array.isArray(value)?value.map(phase=>emoji[phase]??phase):emoji[value]??value,[p.settings.noteTypeField]:'Example',tags:['wuxing-fixture']};
    for(const [field,values]of Object.entries({arc:['add','relate','communicate'],para:['projects','areas','resources','archives'],horizon:['actions','projects','areas','goals','vision','purpose'],access:['encounters','atlas','calendar','cards','extras','sources','spaces'],state:['seed','research','draft','review','published'],'map-role':['hub','supporting-map','concept','reference']}))if(value!==null)frontmatter[field]=name==='Conflict'?values.slice(0,2):values[index%values.length];
    if(value!==null){frontmatter.approach=name==='Conflict'?['top-down','bottom-up']:index%4<2?'top-down':'bottom-up';frontmatter.mode=index%2?'expression':'reflection';}
    if(name==='Memory')frontmatter[child]=Object.keys(phase).filter(key=>key!=='Memory').map(key=>'[['+path(key)+']]');

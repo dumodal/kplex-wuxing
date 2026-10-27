@@ -77,4 +77,4 @@ A color is a valid hex/RGB(A)/`transparent` literal, `{ "kind":"theme", "variabl
 
 ## Validation and delivery
 
-Focused checks cover all eight defaults, Help/locale/presentation round-trips, future/unknown/prototype input, grammar/style/color failures, privacy refusal and explicit consent, palette collisions, disabled dependencies, two independent imports, stale previews, failed storage and native controls. Final Windows/CI evidence is tracked in the #222 validation record. Do not interpret a portable/browser test as OS clipboard, Mac, physical mobile or minimum-host acceptance.
+Focused checks cover both built-ins and all six archived portable presets, Help/locale/presentation round-trips, future/unknown/prototype input, grammar/style/color failures, privacy refusal and explicit consent, palette collisions, disabled dependencies, two independent imports, stale previews, failed storage and native controls. Final Windows/CI evidence is tracked in the #222 validation record. Do not interpret a portable/browser test as OS clipboard, Mac, physical mobile or minimum-host acceptance.

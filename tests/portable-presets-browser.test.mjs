@@ -1,17 +1,19 @@
 /** Actual native controls and production queue/reconciliation prototypes in Chromium. Native Markdown syntax and OS clipboard acceptance remain separate host lanes. */
+import {archivedFacetPresets} from './support/facetPresetArchive.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {colorEditorScenario} from './support/colorEditorBrowser.mjs';
 const initialize=`
+ const ARCHIVE=${JSON.stringify(archivedFacetPresets)};
  const M=sourceModules,t=M.createTranslator('en'),copy=value=>structuredClone(value),check=(value,message)=>{if(!value)throw Error(message)};
- const p=await createAppearanceHost({});p.viewSettingsRegistry=M.builtInCanvasViewSettings;p.manifest={id:'k-plex'};
+ const p=await createAppearanceHost({canvasViewSettings:{wuxing:{version:2,values:{presets:{arc:ARCHIVE.arc}}}}});p.viewSettingsRegistry=M.builtInCanvasViewSettings;p.manifest={id:'k-plex'};
  let disk=copy(p.writes.at(-1));p.writes=[];p.loadData=async()=>copy(disk);p.saveData=async value=>{disk=copy(value);p.writes.push(copy(value))};p.initializeSettingsReconciliation(copy(disk));
  const app={workspace:{on:()=>({}),offref:()=>{}}},tab=new M.KplexSettingTab(app,p),last=()=>M.TestModal.instances.at(-1);
  const button=(modal,label)=>[...modal.contentEl.querySelectorAll('button')].find(row=>row.textContent===label);
  const field=(modal,name)=>[...modal.contentEl.querySelectorAll('input,select')].find(input=>input.closest('.setting-item')?.querySelector('.setting-item-name')?.textContent===name);
  const input=(element,value)=>{element.value=value;element.dispatchEvent(new Event(element.tagName==='SELECT'?'change':'input',{bubbles:true}))};
  const toggle=(element,value)=>{element.checked=value;element.dispatchEvent(new Event('change',{bubbles:true}))};
- const pkg=(id='arc')=>M.exportFacetPackage(id,M.FACET_TEMPLATES[id],{name:id,labels:Object.fromEntries(M.FACET_TEMPLATES[id].order.map(key=>[key,key])),helpMarkdown:M.effectiveFacetHelp(id,M.FACET_TEMPLATES[id],t),locale:'en'},[],[],[],M.FACETS_AUTHORING_CONTEXT);
+ const pkg=(id='arc')=>M.exportFacetPackage(id,(ARCHIVE[id]??M.FACET_TEMPLATES[id]),{name:id,labels:Object.fromEntries((ARCHIVE[id]??M.FACET_TEMPLATES[id]).order.map(key=>[key,key])),helpMarkdown:M.effectiveFacetHelp(id,(ARCHIVE[id]??M.FACET_TEMPLATES[id]),t),locale:'en'},[],[],[],M.FACETS_AUTHORING_CONTEXT);
  const plan=(value,id,state=p.readPortableSharingState())=>M.preparePortableImport(value,{targetId:id,replace:false,lensIds:[],replacePalette:[]},state);
  const manager=()=>{tab.openCanvasViewManager('wuxing');return last()};
  const openImport=()=>{const m=manager();button(m,t('sharing.importPreset')).click();return {manager:m,modal:last()}};
@@ -44,7 +46,7 @@ test('atomic storage failure, retired source and stale preview publish none of p
  check(failed&&JSON.stringify(p.settings)===before&&JSON.stringify(disk)===beforeDisk,'Failed save publishes nothing');
  p.saveData=async data=>{disk=copy(data);p.writes.push(copy(data))};failed=false;try{await p.importPortableSharing(prepared,()=>false)}catch{failed=true}
  check(failed&&p.writes.length===0,'Retired source never writes');
- await p.updateCanvasViewConfiguration('wuxing',{field:'presets',path:['will-fail']},{kind:'set',value:M.FACET_TEMPLATES.para});
+ await p.updateCanvasViewConfiguration('wuxing',{field:'presets',path:['will-fail']},{kind:'set',value:ARCHIVE.para});
  const latest=JSON.stringify(disk);failed=false;try{await p.importPortableSharing(prepared,()=>true)}catch{failed=true}
  check(failed&&JSON.stringify(disk)===latest,'Stale preview never overwrites a target');
  `),true);
@@ -118,7 +120,7 @@ test('existing lens manager routes source-scoped sharing, preserves unsaved draf
 /** Direct draft transfer keeps the same validator, truthful clipboard and temporary URL cleanup. */
 test('preset editor has one accessible action row and exports unsaved JSON without saving',async()=>{
  assert.equal(await scenario(`
- const m=manager();[...m.contentEl.querySelectorAll('.kplex-style-manager-row')].find(row=>row.textContent.startsWith('ARC')).click();const editor=last();
+ const m=manager();[...m.contentEl.querySelectorAll('.kplex-style-manager-row')].find(row=>row.textContent.startsWith('Wu Xing')).click();const editor=last();
  check(editor.modalEl.classList.contains('kplex-facet-preset-editor'),'Preset editor opts into responsive large sizing');
  const footer=editor.contentEl.querySelector('.kplex-style-editor-actions');check(footer.querySelectorAll('.setting-item').length===1,'All footer actions share one row');
  check([...footer.querySelectorAll('button')].every(button=>button.classList.contains('kplex-icon-action')&&button.getAttribute('aria-label')&&!button.hasAttribute('title')),'Icon actions have accessible names without native title tooltips');
@@ -129,7 +131,7 @@ test('preset editor has one accessible action row and exports unsaved JSON witho
  let blob,revoked=0,clicked=0;const create=URL.createObjectURL,revoke=URL.revokeObjectURL;URL.createObjectURL=value=>{blob=value;return 'blob:owned-draft'};URL.revokeObjectURL=value=>{check(value==='blob:owned-draft','Exact URL released');revoked++};
  const click=event=>{if(event.target.tagName==='A'&&event.target.download==='kplex-preset.json'){event.preventDefault();clicked++}};document.addEventListener('click',click);
  try{button(editor,t('sharing.download')).click();check(await blob.text()===window.draftJson&&clicked===1&&revoked===1&&!editor.contentEl.querySelector('a[download]'),'Save file uses exact JSON and cleans its link/URL');}finally{URL.createObjectURL=create;URL.revokeObjectURL=revoke;document.removeEventListener('click',click)}
- button(editor,t('facets.restore')).click();check(editor.contentEl.textContent.includes(t('facets.resetStatus'))&&field(editor,t('facets.layout')).value==='horizontal','Reset explains the unsaved change and restores the preset layout');
+ button(editor,t('facets.restore')).click();check(editor.contentEl.textContent.includes(t('facets.resetStatus'))&&field(editor,t('facets.layout')).value==='circular','Reset explains the unsaved change and restores the preset layout');
  check(p.writes.length===0,'Copy, file export and Reset never persist settings');button(editor,t('common.cancel')).click();check(p.writes.length===0,'Cancel discards the reset and unsaved edits');m.close();
  `),true);
 });

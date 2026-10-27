@@ -90,7 +90,7 @@ export function packagePrivacy(value: unknown): readonly string[] {
   if (!bounded(value)) return [];
   const paths: string[] = [];
   const visit = (item: unknown, path: string): void => {
-    if (typeof item === "string" && (/(?:\b(?:file|node|this|edge|evidence)\.(?:path|folder|name|sourcePath|targetPath|source|target)\b|\[\[[^\]]+\]\]|[A-Za-z]:[\\/]|(?:^|[\s"'])[~/][\w.-]+\/)/.test(item))) paths.push(path);
+    if (typeof item === "string" && (/(?:\b(?:file|node|this|edge|evidence)\.(?:path|folder|name|sourcePath|targetPath|source|target)\b|\[\[[^\]]+\]\]|\b[A-Za-z]:[\\/]|(?:^|[\s"'])[~/][\w.-]+\/)/.test(item))) paths.push(path);
     else if (item && typeof item === "object") for (const [key, child] of Object.entries(item)) visit(child, `${path}.${key}`);
   };
   visit(value, "$ ".trim());return paths;

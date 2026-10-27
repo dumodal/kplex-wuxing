@@ -1,4 +1,5 @@
 /** Actual shared grammar/engine and Facets rule projection, with finite cache-only ports. */
+import {archivedFacetPresets} from './support/facetPresetArchive.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {plexViewModules} from './support/plexViewFixture.mjs';
@@ -8,7 +9,7 @@ const compile=source=>M.compileGraphPredicate(M.parseGraphPredicateExpression(so
 const node=(id,name=id)=>({id,path:id+'.md',name,kind:'document',file:{extension:'md',path:id+'.md',name:id+'.md'},tags:[],aliases:[],noteType:null});
 const center=node('focus'),candidate=node('candidate'),context={node:{node:candidate},center};
 const available=value=>({status:'available',value});
-const preset=rules=>({...M.FACET_TEMPLATES.arc,source:'rules',categories:Object.fromEntries(M.FACET_TEMPLATES.arc.order.map((id,i)=>[id,{...M.FACET_TEMPLATES.arc.categories[id],rule:rules[i]}]))});
+const preset=rules=>({...archivedFacetPresets.arc,source:'rules',categories:Object.fromEntries(archivedFacetPresets.arc.order.map((id,i)=>[id,{...archivedFacetPresets.arc.categories[id],rule:rules[i]}]))});
 
 test('opt-in current/candidate properties share the actual field provider while legacy this semantics stay unchanged',()=>{
  const reads=[];const engine=new M.GraphPredicateEngine({getNoteProperty:()=>undefined,readNoteProperty:(node,key)=>{reads.push([node.id,key]);return available(node.id==='focus'?'wood':'metal')}});

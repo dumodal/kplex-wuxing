@@ -4,7 +4,7 @@ export const canvasSceneFixture=`
 const M=sourceModules,check=(value,message)=>{if(!value)throw Error(message)},wait=()=>new Promise(resolve=>setTimeout(resolve,70));
 const style=document.createElement('style');style.textContent=${JSON.stringify(readFileSync('styles.css','utf8'))};document.head.append(style);
 const pages=new Map(['A.md','B.md','C.md'].map(path=>[path,{path,name:path,file:{path,name:path,extension:'md',basename:path,stat:{mtime:1,ctime:1,size:1}},url:null,isFolder:false,isTag:false,aliases:[],tags:[],styleTags:[],primaryStyleTag:null,noteType:null,maxLabelLength:30,neighbours:new Map()}]));
-const fieldCaches=new Map([...pages.keys()].map(path=>[path,{frontmatter:{phase:'water'}}]));
+const fieldCaches=new Map([...pages.keys()].map(path=>[path,{frontmatter:{phase:'water',status:'water'}}]));
 const work={acquisitions:0,releases:0,properties:0,body:0,scans:0,gateReads:0},events=new Set(),subscribe=fn=>{events.add(fn);return()=>events.delete(fn)};
 const nativeEvents={on:(name,callback)=>{const ref={name,callback};events.add(ref);return ref},offref:ref=>events.delete(ref)};
 let prepared=true,visible=true;

@@ -1,4 +1,5 @@
 /** Canonical real-module package admission, privacy and atomic import planning. No host/Vault effects are supplied. */
+import {archivedFacetPresets} from './support/facetPresetArchive.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFileSync} from 'node:fs';
@@ -9,11 +10,17 @@ const M=await plexViewModules(['src/core/plex/sharing/validation.ts','src/core/p
  'src/core/plex/lensValidation.ts','src/lang/index.ts','src/ui/plexViews/facets/help.ts']);
 const copy=value=>structuredClone(value),t=M.createTranslator('en');
 const lens={id:'draft-lens',name:'Drafts',enabled:true,scope:'node',mode:'style',expression:'note.state == "draft"',style:{node:{borderColor:{kind:'theme',variable:'--color-blue'},strokeWidth:2}}};
-const state=()=>({presets:{...M.FACET_TEMPLATES},lenses:[copy(lens)],palette:[]});
-const make=(id='arc',preset=M.FACET_TEMPLATES[id],selected=[],lenses=[lens],palette=[],privateContent=false)=>M.exportFacetPackage(id,preset,
+const state=()=>({presets:{...archivedFacetPresets,...M.FACET_TEMPLATES},lenses:[copy(lens)],palette:[]});
+const make=(id='arc',preset=archivedFacetPresets[id]??M.FACET_TEMPLATES[id],selected=[],lenses=[lens],palette=[],privateContent=false)=>M.exportFacetPackage(id,preset,
  {name:preset.name||id,labels:Object.fromEntries(preset.order.map(key=>[key,preset.categories[key].label||key])),helpMarkdown:M.effectiveFacetHelp(id,preset,t),locale:'en'},
  palette,lenses,selected,M.FACETS_AUTHORING_CONTEXT,privateContent);
 const choices=(targetId='new-preset',extra={})=>({targetId,replace:false,lensIds:[],replacePalette:[],...extra});
+
+test('public HTTPS references are not Windows paths, while actual drive paths and private selectors stay flagged',()=>{
+ assert.deepEqual(M.packagePrivacy({helpMarkdown:'[Reference](https://github.com/dumodal/kplex-wuxing)'}),[]);
+ for(const value of ['C:/Notes/Private.md','C:\\Notes\\Private.md','file.path.contains("Private/")','[[Private note]]'])assert(M.packagePrivacy({value}).length>0,value);
+ assert.deepEqual(M.validatePortablePackage(make('wuxing')).privacy,[]);
+});
 
 test('published data-only examples use the exact canonical validator and survive round-trips',()=>{
  for(const name of ['publishing','draft-lens']){
@@ -22,14 +29,14 @@ test('published data-only examples use the exact canonical validator and survive
  }
 });
 
-test('all eight curated presets round-trip actual source/help/layout/diagnostics/guides without translation keys or activation',()=>{
+test('both built-in presets round-trip actual source/help/layout/diagnostics/guides without translation keys or activation',()=>{
  for(const id of M.FACET_TEMPLATE_ORDER){
   const pkg=make(id),result=M.validatePortablePackage(JSON.stringify(pkg));assert.equal(result.status,'valid',id);assert.deepEqual(result.value,pkg);
   assert.equal(pkg.preset.nameKey,undefined);assert.equal(pkg.preset.helpMarkdown,M.effectiveFacetHelp(id,M.FACET_TEMPLATES[id],t));assert.equal(pkg.preset.helpSourceLocale,'en');
   for(const category of Object.values(pkg.preset.categories))assert.equal(category.labelKey,undefined);
   assert.equal(pkg.lenses,undefined);assert.equal(pkg.palette,undefined);assert(pkg.aiContext.includes('helpMarkdown')&&pkg.aiContext.includes('https://github.com/zsviczian/kplex/'));
  }
- const original=make('arc',{...M.FACET_TEMPLATES.arc,helpMarkdown:'',helpSourceLocale:'ja',layout:'vertical',focusAnchor:'right',reverse:true,
+ const original=make('arc',{...archivedFacetPresets.arc,helpMarkdown:'',helpSourceLocale:'ja',layout:'vertical',focusAnchor:'right',reverse:true,
   diagnostics:{combined:false,side:'left',orientation:'horizontal',order:['unresolved','checking','conflicting','unassigned'],showEmpty:false},
   areaSizes:{categories:{add:{width:600,height:350}},diagnostics:{combined:{width:800,height:220}}},flow:{direction:'both',style:'line',caption:'Review',captionPosition:'end'},
   flowOverrides:[{source:'add',target:'relate',caption:'',style:'none'}]});
@@ -71,13 +78,13 @@ test('default exports refuse private paths/selectors without explicit consent an
  const privateLens={...lens,expression:'file.path.contains("Private/")'};assert.throws(()=>M.exportLensPackage(privateLens,[],M.LENS_AUTHORING_CONTEXT),/approval/);
  const approved=M.exportLensPackage(privateLens,[],M.LENS_AUTHORING_CONTEXT,true);assert.equal(approved.lens.expression,privateLens.expression);
  assert(M.validatePortablePackage(approved).privacy.length>0);
- assert.throws(()=>make('arc',M.FACET_TEMPLATES.arc,['missing']),/Unknown/);
- assert.equal(make('arc',M.FACET_TEMPLATES.arc,[],[lens,privateLens]).lenses,undefined,'No active/private lenses silently accompany a preset');
+ assert.throws(()=>make('arc',archivedFacetPresets.arc,['missing']),/Unknown/);
+ assert.equal(make('arc',archivedFacetPresets.arc,[],[lens,privateLens]).lenses,undefined,'No active/private lenses silently accompany a preset');
 });
 
 test('only referenced palette pairs travel; imported colors have explicit keep/replace collision semantics',()=>{
  const pair={id:'accent',name:'Accent',light:'#fff',dark:'#000'},extra={id:'private-color',name:'Other',light:'#123',dark:'#abc'};
- const preset={...M.FACET_TEMPLATES.arc,unassignedColor:{kind:'palette',id:'accent'}};
+ const preset={...archivedFacetPresets.arc,unassignedColor:{kind:'palette',id:'accent'}};
  const pkg=make('arc',preset,[],[lens],[pair,extra]);assert.deepEqual(pkg.palette,[pair]);
  assert.throws(()=>make('arc',preset),/Missing/);
  assert.equal(M.validatePortablePackage({...pkg,palette:[pair,extra]}).status,'invalid','Unreferenced palette content is refused');
@@ -88,12 +95,12 @@ test('only referenced palette pairs travel; imported colors have explicit keep/r
 });
 
 test('preview plans preserve unrelated changes, reject stale targets and import only chosen disabled lenses',()=>{
- const dependency={...lens,id:'dependency'},pkg=make('arc',M.FACET_TEMPLATES.arc,['dependency'],[dependency]),installed=state();
+ const dependency={...lens,id:'dependency'},pkg=make('arc',archivedFacetPresets.arc,['dependency'],[dependency]),installed=state();
  const plan=M.preparePortableImport(pkg,choices('new-preset',{lensIds:['dependency']}),installed);
- const updated={...installed,presets:{...installed.presets,other:copy(M.FACET_TEMPLATES.para)},lenses:[...installed.lenses,{...lens,id:'other-lens'}]};
+ const updated={...installed,presets:{...installed.presets,other:copy(archivedFacetPresets.para)},lenses:[...installed.lenses,{...lens,id:'other-lens'}]};
  const applied=M.applyPortableImport(plan,updated);assert.equal(applied.lenses.length,3);assert.equal(applied.lenses.find(item=>item.id==='dependency').enabled,false);
  assert.equal(applied.lenses.find(item=>item.id===lens.id).enabled,true);assert.equal(installed.presets['new-preset'],undefined);
- assert.throws(()=>M.applyPortableImport(plan,{...updated,presets:{...updated.presets,'new-preset':M.FACET_TEMPLATES.gtd}}),/stale/);
+ assert.throws(()=>M.applyPortableImport(plan,{...updated,presets:{...updated.presets,'new-preset':archivedFacetPresets.gtd}}),/stale/);
  assert.throws(()=>M.preparePortableImport(pkg,choices('arc'),installed),/explicitly/);
  assert.throws(()=>M.preparePortableImport(pkg,choices('missing',{replace:true}),installed),/explicitly/);
  const none=M.applyPortableImport(M.preparePortableImport(pkg,choices(),installed),installed);assert.equal(none.lenses.length,1);

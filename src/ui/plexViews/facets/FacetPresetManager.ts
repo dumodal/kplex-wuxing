@@ -7,7 +7,7 @@ import type {CanvasViewManagerContext} from "../managerContracts";
 import {facetLibrary} from "../../../core/plex/views/facets/configuration";
 import {orderedFacetPresets} from "../../../core/plex/views/facets/state";
 import {facetPresetLabel} from "../../../core/plex/views/facets/labels";
-import {FACET_TEMPLATES} from "../../../core/plex/views/facets/templates";
+import {FACET_STATE_EXAMPLE} from "../../../core/plex/views/facets/templates";
 import {canvasViewText} from "../labels";
 import type {FacetPreset} from "../../../core/plex/views/facets/contracts";
 import {FacetPresetEditor} from "./FacetPresetEditor";
@@ -30,7 +30,7 @@ export class FacetPresetManager extends StyleEditorModal {
     this.titleEl.setText(t("facets.manage"));this.modalEl.addClass("kplex-style-manager-modal");
     this.contentEl.createEl("p", {text: t("facets.managerHelp")});
     this.list = new StyleManagerList(this.contentEl, t, {placeholder: t("facets.search"), aria: t("facets.search")}, query => {this.query = query;this.render();});
-    this.list.action(t("facets.create"), "plus", () => this.edit(null, {...structuredClone(FACET_TEMPLATES.arc), name: t("facets.newPreset")}));
+    this.list.action(t("facets.create"), "plus", () => this.edit(null, {...structuredClone(FACET_STATE_EXAMPLE), name: t("facets.newPreset")}));
     if (this.options.sharing) {
       this.list.action(t("sharing.importPreset"), "import", () => this.share("import"));
       this.list.action(t("sharing.copyPrompt"), "copy", () => this.share("prompt"));

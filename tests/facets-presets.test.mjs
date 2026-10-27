@@ -1,5 +1,6 @@
 /** Bounded shared preset values, legacy migration, independent intent and truthful cached-field
  * classification. Production registration/rendering/native acceptance follow in checkpointC. */
+import {archivedFacetPresets} from './support/facetPresetArchive.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {plexViewModules} from './support/plexViewFixture.mjs';
@@ -17,7 +18,7 @@ const node={id:'A',kind:'document',file:{extension:'md'},noteType:'water',tags:[
 test('all eight locales provide substantial distinct safe help with the actual preset facts',()=>{
  const before=JSON.stringify(available({}));
  for(const locale of ['en','de','es','fr','ja','nl','ru','zh-tw']){
-  const translate=M.createTranslator(locale),texts=M.FACET_TEMPLATE_ORDER.map(id=>translate('facets.help.'+id));assert.equal(new Set(texts).size,8);
+  const translate=M.createTranslator(locale),texts=M.FACET_TEMPLATE_ORDER.map(id=>translate('facets.help.'+id));assert.equal(new Set(texts).size,2);
   for(const [index,id]of M.FACET_TEMPLATE_ORDER.entries()){
    const text=texts[index];assert(text.length>=400&&text.length<=4096,locale+' '+id+' substantial bounded help');assert.equal(M.validMarkdownHelp(text),true,locale+' '+id);
    assert(text.startsWith('# ')&&text.includes('## ')&&text.includes('```yaml\n'),'Native headings and actual YAML examples');
@@ -31,7 +32,7 @@ test('help source safety preserves ordinary Markdown and neutralizes executable 
  const source='# Help\n\n- **Purpose**\n\n```dataviewjs\nwindow.shouldNeverRun = true\n```\n\n[Guide](https://github.com/zsviczian/kplex)\n\n\x60= note.phase\x60';
  assert.equal(M.validMarkdownHelp(source),true);const inert=M.inertMarkdownHelpSource(source);assert(!inert.includes('```dataviewjs'));assert(inert.includes('window.shouldNeverRun = true'));assert(inert.includes('\x60\u200b='));assert.equal(source.includes('```dataviewjs'),true,'Stored source stays literal');
  for(const text of ['<script>bad</script>','![image](https://example.com/image.png)','![[private.md]]','[bad](javascript:bad)','[bad](file:///private)','[bad](https://user:secret@example.com)','[x]: data:bad','x'.repeat(4097),'bad'+String.fromCharCode(1)])assert.equal(M.validMarkdownHelp(text),false,text.slice(0,40));
- const preset={...M.FACET_TEMPLATES.arc,helpMarkdown:'',helpSourceLocale:'ja'};assert.equal(M.isFacetPreset(preset),true);
+ const preset={...archivedFacetPresets.arc,helpMarkdown:'',helpSourceLocale:'ja'};assert.equal(M.isFacetPreset(preset),true);
  assert.equal(M.isFacetPreset({...preset,helpMarkdown:'<iframe src="bad">'}),false);assert.equal(M.isFacetPreset({...preset,helpSourceLocale:'private/path'}),false);
 });
 
@@ -70,7 +71,7 @@ test('measured workflow guides preserve logical direction through both axes, rev
 });
 
 test('flow pair overrides retain identities and blank-caption inheritance without executable data',()=>{
- const preset={...M.FACET_TEMPLATES.arc,layout:'horizontal',guides:true,flow:{caption:'Default',direction:'both'},flowOverrides:[{source:'add',target:'relate',caption:'',style:'line'}]};
+ const preset={...archivedFacetPresets.arc,layout:'horizontal',guides:true,flow:{caption:'Default',direction:'both'},flowOverrides:[{source:'add',target:'relate',caption:'',style:'line'}]};
  assert.equal(M.isFacetPreset(preset),true);assert.equal(M.facetFlowStyle(preset,'relate','add').caption,'');assert.equal(M.facetFlowStyle(preset,'relate','add').direction,'both');
  assert.equal(M.facetFlowLabels(preset,'arc').length,1);assert.equal(M.facetFlowId('add','relate'),M.facetFlowId('relate','add'));
  for(const change of [{flow:{caption:'x'.repeat(81)}},{flow:{direction:'execute'}},{flow:{script:'bad'}},{flowOverrides:[{source:'add',target:'missing'}]}, {flowOverrides:[{source:'add',target:'relate'},{source:'relate',target:'add'}]}])assert.equal(M.isFacetPreset({...preset,...change}),false);
@@ -91,7 +92,7 @@ test('all five measured layouts retain one attention editor, category identities
    for(const band of bands)for(const other of bands)if(band!==other){const strip={x:other.viewport.x+other.viewport.width/2,y:other.viewport.y+10};assert.equal(M.areaContains(band.bounds,strip,band.shape),false,'Outer bands do not intercept an inner content strip');}
   }
  }
- const para=M.FACET_TEMPLATES.para,occurrences=[{id:'focus'},...para.order.map(id=>({id,areaId:M.facetAreaId('para','category',id)}))],p={entry:'focus',occurrences};
+ const para=archivedFacetPresets.para,occurrences=[{id:'focus'},...para.order.map(id=>({id,areaId:M.facetAreaId('para','category',id)}))],p={entry:'focus',occurrences};
  const result=M.layoutFacets(p,occurrences.map(row=>({id:row.id,width:900,height:500})),'para',{...para,layout:'quadrants'});
  assert(result.areas.filter(area=>JSON.parse(area.id)[2]==='category').every(area=>!M.areaContains(area.bounds,{x:0,y:0})));
 });
@@ -103,7 +104,7 @@ test('preset layout is authoritative over inert legacy canvas intent and preserv
  assert.equal(M.facetLayout(M.FACET_TEMPLATES.wuxing,'wuxing',initial).effective,'circular');
  assert.equal(M.facetLayout({...M.FACET_TEMPLATES.wuxing,layout:'vertical'},'wuxing',initial).effective,'vertical');
  assert.equal(M.facetLayout({...M.FACET_TEMPLATES.wuxing,layout:'quadrants'},'wuxing',initial).fallback,true);
- assert.equal(M.facetLayout({...M.FACET_TEMPLATES.para,layout:'quadrants'},'para',initial).effective,'quadrants');
+ assert.equal(M.facetLayout({...archivedFacetPresets.para,layout:'quadrants'},'para',initial).effective,'quadrants');
  const f=diagnosticScene(),p=f.project(),measured=f.measure(p),id=M.facetAreaId('wuxing','category','wood'),preset={...M.FACET_TEMPLATES.wuxing,areaSizes:{categories:{wood:{width:900,height:500}},diagnostics:{combined:{width:800,height:400}}}};
  const defaults=M.layoutFacets(p,measured,'wuxing',preset),override=M.layoutFacets(p,measured,'wuxing',preset,{[id]:300},true,{[id]:600});
  assert.equal(defaults.areas.find(area=>area.id===id).bounds.width,900);assert.equal(defaults.areas.find(area=>area.id===id).bounds.height,500);
@@ -168,10 +169,10 @@ test('individual Facets widths drive one, two and three measured columns without
  }
 });
 
-test('eight local curated templates retain3–7 categories, explicit rules and existing settings bounds',()=>{
+test('two built-in templates retain3–7 categories, explicit rules and existing settings bounds',()=>{
  M.validateViewConfigurationSchema(M.facetsConfigurationSchema);
- assert.deepEqual(M.FACET_TEMPLATE_ORDER,['arc','para','wuxing','gtd','eaccess','sensemaking','publishing','map-roles']);
- assert.deepEqual(M.FACET_TEMPLATE_ORDER.map(id=>M.FACET_TEMPLATES[id].order.length),[3,4,5,6,7,4,5,4]);
+ assert.deepEqual(M.FACET_TEMPLATE_ORDER,['wuxing','map-roles']);
+ assert.deepEqual(M.FACET_TEMPLATE_ORDER.map(id=>M.FACET_TEMPLATES[id].order.length),[5,4]);
  for(const [id,preset]of Object.entries(M.FACET_TEMPLATES)){
   assert.equal(M.isFacetPreset(preset),true,id);assert.equal(preset.guides,['arc','wuxing','publishing'].includes(id));
   assert.deepEqual(Object.keys(preset.categories),preset.order);if(preset.source!=='rules')assert.equal(preset.categories[preset.order[0]].assignment,preset.categories[preset.order[0]].values[0]);
@@ -183,8 +184,8 @@ test('eight local curated templates retain3–7 categories, explicit rules and e
 });
 
 test('absent inherited ACE intent follows ARC while explicit customized ACE data stays intact',()=>{
- const empty=library({}),fallback=M.resolveFacetPreset(empty,'ace');assert.equal(empty.presets.ace,undefined);assert.equal(fallback.id,'arc');assert.equal(fallback.status,'replaced');
- const custom={...M.FACET_TEMPLATES.arc,name:'My saved ACE',field:'old-field',order:['add','connect','express'],start:'connect',categories:{add:{label:'Ideas',values:['inbox'],color:'#ffffff'},connect:{label:'Connections',values:['linked'],color:'#aaaaaa'},express:{label:'Results',values:['shared'],color:'#333333'}}};
+ const empty=library({wuxing:{version:2,values:{presets:{arc:archivedFacetPresets.arc}}}}),fallback=M.resolveFacetPreset(empty,'ace');assert.equal(empty.presets.ace,undefined);assert.equal(fallback.id,'arc');assert.equal(fallback.status,'replaced');
+ const custom={...archivedFacetPresets.arc,name:'My saved ACE',field:'old-field',order:['add','connect','express'],start:'connect',categories:{add:{label:'Ideas',values:['inbox'],color:'#ffffff'},connect:{label:'Connections',values:['linked'],color:'#aaaaaa'},express:{label:'Results',values:['shared'],color:'#333333'}}};
  const stored=M.editViewConfigurationAt(definition,{}, {field:'presets',path:['ace']},{kind:'set',value:custom}),before=JSON.stringify(stored),selected=M.resolveFacetPreset(library(stored),'ace');
  assert.equal(selected.id,'ace');assert.equal(selected.status,'ready');assert.deepEqual(selected.preset,custom);assert.equal(JSON.stringify(stored),before);
 });
@@ -201,7 +202,7 @@ test('Wu Xing migration retains mappings, exact case, source, labels/order/start
  assert.equal(migrated.settings.wuxing.wrapper,'keep');assert.deepEqual(migrated.settings.wuxing.values.unknownFuture,{retain:true});assert.deepEqual(migrated.settings.other,raw.other);
  assert.equal('waterValues'in migrated.settings.wuxing.values,false,'Explicit known-field retirement prevents duplicate legacy storage');
  assert.deepEqual(raw,before);assert.equal(M.migrateViewConfiguration(definition,migrated.settings).status,'unchanged');
- assert.equal(Object.keys(library(migrated.settings).presets).length,8,'Unchanged templates inherit without duplicate materialization');
+ assert.equal(Object.keys(library(migrated.settings).presets).length,2,'Unchanged templates inherit without duplicate materialization');
 });
 
 test('legacy type/tag sources and maximum alias text retain their interpretation without body parsing',()=>{
@@ -226,10 +227,10 @@ test('failed/future migrations preserve original payload and refuse a destructiv
 });
 
 test('preset selection is canvas state and preserves unknown compatible fields without changing configuration',()=>{
- const configuration=available({}),a={version:1,preset:'wuxing',opaque:'keep'},b={version:1,preset:'para'};
+ const configuration=available({wuxing:{version:2,values:{presets:{arc:archivedFacetPresets.arc,para:archivedFacetPresets.para}}}}),a={version:1,preset:'wuxing',opaque:'keep'},b={version:1,preset:'para'};
  const changed=M.reduceFacetState(a,{id:'preset.select',args:'arc'},configuration);
  assert.deepEqual(changed,{status:'updated',state:{version:1,preset:'arc',opaque:'keep'}});assert.equal(b.preset,'para');assert.equal(a.preset,'wuxing');
- assert.deepEqual(M.restoreFacetState(null),{version:1,preset:'wuxing'});assert.deepEqual(configuration,available({}));
+ assert.deepEqual(M.restoreFacetState(null),{version:1,preset:'wuxing'});assert.deepEqual(configuration,available({wuxing:{version:2,values:{presets:{arc:archivedFacetPresets.arc,para:archivedFacetPresets.para}}}}));
  const future={version:7,preset:'future',opaque:{retain:true}};assert.equal(M.restoreFacetState(future),future);
  assert.equal(M.reduceFacetState(future,{id:'preset.select',args:'para'},configuration).status,'unavailable');assert.equal(M.facetState(future),null);
 });
@@ -239,32 +240,32 @@ test('unknown/future preset IDs safely render fallback while retaining their req
  const before=structuredClone(stored),lib=library(stored);
  assert.equal(M.resolveFacetPreset(lib,'newer').status,'future');assert.equal(M.resolveFacetPreset(lib,'newer').requestedId,'newer');
  assert.equal(M.resolveFacetPreset(lib,'missing').status,'missing');assert.equal(M.resolveFacetPreset(lib,'missing').id,'wuxing');
- const edited=M.editViewConfigurationAt(definition,stored,{field:'presets',path:['para']},{kind:'set',value:{...M.FACET_TEMPLATES.para,name:'My PARA'}});
+ const edited=M.editViewConfigurationAt(definition,stored,{field:'presets',path:['para']},{kind:'set',value:{...archivedFacetPresets.para,name:'My PARA'}});
  assert.deepEqual(edited.wuxing.values.presets.newer,stored.wuxing.values.presets.newer);assert.deepEqual(stored,before);
 });
 
 test('rename/reorder/scoped updates retain stable categories and other presets',()=>{
- let stored=M.editViewConfigurationAt(definition,{}, {field:'presets',path:['para']},{kind:'set',value:{...M.FACET_TEMPLATES.para,name:'My projects'}});
+ let stored=M.editViewConfigurationAt(definition,{}, {field:'presets',path:['para']},{kind:'set',value:{...archivedFacetPresets.para,name:'My projects'}});
  stored=M.editViewConfigurationAt(definition,stored,{field:'presets',path:['para','categories','projects','label']},{kind:'set',value:'Work'});
  stored=M.editViewConfigurationAt(definition,stored,{field:'presets',path:['para','order']},{kind:'set',value:['archives','resources','areas','projects']});
- assert.equal(library(stored).presets.para.categories.projects.label,'Work');assert.equal(library(stored).presets.wuxing.categories.water.values[0],'water');
+ assert.equal(library(stored).presets.para.categories.projects.label,'Work');assert.equal(library(stored).presets.wuxing.categories.water.values[0],'\u{1f535}');
  assert.equal(M.resolveFacetPreset(library(stored),'para').id,'para');assert.equal(stored.wuxing.values.presets.para.categories.projects.assignment,'projects');
 });
 
 test('explicit replacement is required for deletion and covers restored closed-canvas intent without a rewrite',()=>{
  const lib=library({});for(const replacement of [undefined,'wuxing','missing'])assert.throws(()=>M.replaceFacetPreset(lib,'wuxing',replacement));
- const replacement=M.replaceFacetPreset(lib,'wuxing','para'),stored=M.editViewConfigurationAt(definition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:replacement});
+ const replacement=M.replaceFacetPreset(lib,'wuxing','map-roles'),stored=M.editViewConfigurationAt(definition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:replacement});
  const state={version:1,preset:'wuxing'},selection=M.resolveFacetPreset(library(stored),state.preset);
- assert.equal(selection.status,'replaced');assert.equal(selection.id,'para');assert.deepEqual(state,{version:1,preset:'wuxing'});
+ assert.equal(selection.status,'replaced');assert.equal(selection.id,'map-roles');assert.deepEqual(state,{version:1,preset:'wuxing'});
  const cyclic={presets:{a:{version:1,replacement:'b'},b:{version:1,replacement:'a'}},order:['a','b']};
  assert.equal(M.resolveFacetPreset(cyclic,'a').status,'missing');
 });
 
 test('preset/category/JSON limits reject rather than truncate or erase configuration',()=>{
  const custom=count=>Object.fromEntries(Array.from({length:count},(_,i)=>['custom'+i,{...M.FACET_STATE_EXAMPLE,name:'State'+i}]));
- assert.equal(M.validFacetLibrary(custom(8)),true);assert.equal(M.validFacetLibrary(custom(9)),false);
- for(const preset of [{...M.FACET_TEMPLATES.arc,order:['add','relate']},{...M.FACET_TEMPLATES.arc,order:['add','relate','relate']},
-  {...M.FACET_TEMPLATES.arc,spacing:Infinity},{...M.FACET_TEMPLATES.arc,start:'missing'}])assert.equal(M.isFacetPreset(preset),false);
+ assert.equal(M.validFacetLibrary(custom(14)),true);assert.equal(M.validFacetLibrary(custom(15)),false);
+ for(const preset of [{...archivedFacetPresets.arc,order:['add','relate']},{...archivedFacetPresets.arc,order:['add','relate','relate']},
+  {...archivedFacetPresets.arc,spacing:Infinity},{...archivedFacetPresets.arc,start:'missing'}])assert.equal(M.isFacetPreset(preset),false);
  const raw={wuxing:{version:2,values:{presets:{future:{version:3,opaque:'x'.repeat(17000)}}}}},before=structuredClone(raw);
  assert.equal(available(raw).status,'unavailable');assert.deepEqual(raw,before);assert.throws(()=>M.editViewConfiguration(definition,raw,'presets',{}));
 });
@@ -274,7 +275,7 @@ test('primitive/list aliases remain trimmed/exact and conflicts deduplicate with
  assert.deepEqual(M.classifyFacetValues(' water ',preset),{status:'assigned',category:'water'});
  assert.deepEqual(M.classifyFacetValues('Water',preset),{status:'unassigned'});
  assert.deepEqual(M.classifyFacetValues(['water','water'],preset),{status:'assigned',category:'water'});
- assert.deepEqual(M.classifyFacetValues(['water','metal'],preset),{status:'conflicting',categories:['water','metal']});
+ assert.deepEqual(M.classifyFacetValues(['water','metal'],preset),{status:'conflicting',categories:['metal','water']});
  assert.deepEqual(M.classifyFacetValues(undefined,preset),{status:'unassigned'});
  for(const raw of [{phase:'water'},['water',{}],Array(257).fill('water'),'w'.repeat(4097)])assert.deepEqual(M.classifyFacetValues(raw,preset),{status:'unresolved',reason:'unsupported'});
 });
@@ -282,7 +283,7 @@ test('primitive/list aliases remain trimmed/exact and conflicts deduplicate with
 test('one explicit source uses bounded cached fields and distinguishes checking, cannot classify and known missing',()=>{
  let reads=0,fields=[],pending=false,status='available',raw='water';
  const read={properties:{read:(_id,field)=>{reads++;fields.push(field);return status==='available'?{status,value:raw}:{status}},availability:()=>status},scope:()=>({pending})};
- assert.deepEqual(M.classifyFacetNode(node,read,M.FACET_TEMPLATES.wuxing),{status:'assigned',category:'water'});assert.deepEqual(fields,['phase']);
+ assert.deepEqual(M.classifyFacetNode(node,read,M.FACET_TEMPLATES.wuxing),{status:'assigned',category:'water'});assert.deepEqual(fields,['status']);
  raw=undefined;assert.deepEqual(M.classifyFacetNode(node,read,M.FACET_TEMPLATES.wuxing),{status:'unassigned'});
  status='unavailable';assert.deepEqual(M.classifyFacetNode(node,read,M.FACET_TEMPLATES.wuxing),{status:'unresolved',reason:'metadata'});
  pending=true;assert.deepEqual(M.classifyFacetNode(node,read,M.FACET_TEMPLATES.wuxing),{status:'checking'});
@@ -296,7 +297,7 @@ test('one explicit source uses bounded cached fields and distinguishes checking,
 /** Direct admitted canonical facts with no acquisition, body, write, or corpus capability. */
 function scene(presetId='wuxing',count=8){
  // These existing geometry/status assertions characterize the retained separate-area mode.
- const preset={...M.FACET_TEMPLATES[presetId],diagnostics:{combined:false}},nodes=new Map(Array.from({length:count+1},(_,i)=>['N'+i,{...node,id:'N'+i}]));
+ const preset={...({...archivedFacetPresets,...M.FACET_TEMPLATES})[presetId],diagnostics:{combined:false}},nodes=new Map(Array.from({length:count+1},(_,i)=>['N'+i,{...node,id:'N'+i}]));
  const work={fields:[],relations:0};const read={coverage:'cached',isCurrent:()=>true,node:id=>nodes.get(id)??null,compare:(a,b)=>a.id.localeCompare(b.id),
   relations:(id,role)=>{work.relations++;return{items:id==='N0'&&role==='child'?[...nodes.values()].slice(1).map(node=>({node,role,relationType:1,direction:1})):[],coverage:'cached',truncated:false}},
   properties:{read:(id,field)=>{work.fields.push([id,field]);return{status:'available',value:id==='N0'?preset.categories[preset.order[0]].values[0]:preset.categories[preset.order[Number(id.slice(1))%preset.order.length]].values[0]}},availability:()=> 'available'},
@@ -311,7 +312,7 @@ function scene(presetId='wuxing',count=8){
 test('Facets centers attention once, classifies unique direct neighbors once and retains canonical connectors',()=>{
  const f=scene('wuxing',12),p=f.projection;assert.equal(p.occurrences.filter(row=>row.nodeId==='N0').length,1);
  assert.equal(p.occurrences.find(row=>row.id===p.entry).areaId,undefined);assert(p.occurrences.find(row=>row.id===p.entry).badge);
- assert.equal(f.work.fields.length,13);assert(f.work.fields.every(([,field])=>field==='phase'));assert.equal(f.work.relations,6);
+ assert.equal(f.work.fields.length,13);assert(f.work.fields.every(([,field])=>field==='status'));assert.equal(f.work.relations,6);
  for(const edge of p.edges){assert.equal(edge.kind,'semantic');assert.equal(edge.sourceNode,'N0');assert.equal(p.occurrences.find(row=>row.id===edge.target).nodeId,edge.targetNode);assert.equal(edge.relation.node.id,edge.targetNode)}
  assert.equal(f.layout().positions.get(p.entry).x,0);assert.equal(f.layout().positions.get(p.entry).y,0);
 });

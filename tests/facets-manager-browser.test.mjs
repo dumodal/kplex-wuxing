@@ -1,14 +1,16 @@
 /** Real registered native manager and original plugin queue/reconciliation prototypes.
  * Finite Obsidian controls surround actual preset/color/settings behavior. No alternate writer. */
+import {archivedFacetPresets} from './support/facetPresetArchive.mjs';
 import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {colorEditorScenario} from './support/colorEditorBrowser.mjs';
 
 const initialize=`
+ const ARCHIVE=${JSON.stringify(archivedFacetPresets)};
  const M=sourceModules,check=(value,message)=>{if(!value)throw Error(message)},copy=value=>structuredClone(value);
  const equal=(a,b,message)=>check(JSON.stringify(a)===JSON.stringify(b),message+' '+JSON.stringify([a,b]));
- const p=await createAppearanceHost({});p.viewSettingsRegistry=M.builtInCanvasViewSettings;p.manifest={id:'k-plex'};
+ const p=await createAppearanceHost({canvasViewSettings:{wuxing:{version:2,values:{presets:{arc:ARCHIVE.arc,para:ARCHIVE.para}}}}});p.viewSettingsRegistry=M.builtInCanvasViewSettings;p.manifest={id:'k-plex'};
  let disk=copy(p.writes.at(-1));p.writes=[];p.loadData=async()=>copy(disk);p.saveData=async value=>{disk=copy(value);p.writes.push(copy(value))};
  p.initializeSettingsReconciliation(copy(disk));
  const app={workspace:{on:()=>({}),offref:()=>{}}},tab=new M.KplexSettingTab(app,p),t=M.createTranslator('en');
@@ -50,7 +52,7 @@ test('native workflow defaults and stable pair overrides compose without editing
  input(fields(editor,t('facets.flowCaption'))[1],'');select('facets.flowDirection','backward',1);
  equal(p.writes,[],'Workflow remains inert detached configuration');await save(editor);await drain();
  const preset=disk.canvasViewSettings.wuxing.values.presets.arc;equal(preset.flow,{direction:'both',style:'line',caption:'Default workflow'},'Sequential default fields compose');equal(preset.flowOverrides,[{source:'add',target:'relate',caption:'',direction:'backward'}],'Pair stores explicit fields only, including an intentional blank caption');
- equal(preset.categories,M.FACET_TEMPLATES.arc.categories,'Guide editing never changes recognizers or assignment values');close(m);
+ equal(preset.categories,ARCHIVE.arc.categories,'Guide editing never changes recognizers or assignment values');close(m);
  `),true);
 });
 
@@ -98,7 +100,7 @@ test('Wu Xing model controls use the original preset draft and queued writer, wi
  equal(p.writes,[],'Model controls remain local until Save');await save(editor);await drain();
  const preset=M.facetLibrary(M.readViewConfiguration(M.builtInPlexViews.resolve('wuxing'),p.settings.canvasViewSettings)).presets.wuxing;
  check(preset.relativeLabels===false&&preset.interpretation==='wuxing','Same entry writer persists optional model presentation');
- check(preset.categories.wood.assignment==='wood','Model control does not change assignment values');close(m);
+ check(preset.categories.wood.assignment==='\u{1f7e2}','Model control does not change assignment values');close(m);
  `),true);
 });
 
@@ -106,7 +108,7 @@ test('registered Settings opens searchable presets without saving defaults or ch
  assert.equal(await scenario(`
  const a=new M.PlexViewSession(M.builtInPlexViews,()=>{}),b=new M.PlexViewSession(M.builtInPlexViews,()=>{});a.select('wuxing');b.select('wuxing');
  const before=[copy(a.getState()),copy(b.getState())],m=manager();
- check(m.contentEl.querySelectorAll('.kplex-style-manager-row').length===8,'Eight bounded curated templates');
+ check(m.contentEl.querySelectorAll('.kplex-style-manager-row').length===4,'Two built-ins and two explicitly saved archive fixtures');
  input(m.contentEl.querySelector('input[type=search]'),'para');check(m.contentEl.querySelectorAll('.kplex-style-manager-row').length===1,'Shared searchable manager');
  equal(p.writes,[],'Opening/filtering never saves');equal([a.getState(),b.getState()],before,'Manager never chooses canvas state');
  const pages=M.builtInCanvasViewSettings.pages({translate:t,areaTint:()=>({name:'Tint'}),openManager:()=>{}});
@@ -117,17 +119,17 @@ test('registered Settings opens searchable presets without saving defaults or ch
 
 test('preset editing saves one sparse stable entry with category labels, aliases, canonical assignment and order',async()=>{
  assert.equal(await scenario(`
- const m=manager(),e=edit(m,'ARC'),initial=copy(M.FACET_TEMPLATES.arc);
+ const m=manager(),e=edit(m,'ARC'),initial=copy(ARCHIVE.arc);
  input(fields(e,t('facets.name'))[0],'My ARC');input(fields(e,t('wuxing.label'))[0],'Ideas');
  input(fields(e,t('wuxing.spacing'))[0],88);input(fields(e,t('wuxing.width'))[0],440);
  input(fields(e,t('wuxing.values'))[0],['inbox','Idea','idea'].join(String.fromCharCode(10)));input(fields(e,t('facets.assignment'))[0],'inbox');
  const first=e.contentEl.querySelector('h3').parentElement;[...first.querySelectorAll('button')].find(row=>row.textContent===t('facets.moveDown')).click();
- await save(e);equal(Object.keys(disk.canvasViewSettings.wuxing.values.presets),['arc'],'Only addressed inherited entry materialized');
+ await save(e);equal(Object.keys(disk.canvasViewSettings.wuxing.values.presets).sort(),['arc','para'],'Only addressed saved entry changes; sibling retained');
  const preset=disk.canvasViewSettings.wuxing.values.presets.arc;equal(preset.order,['relate','add','communicate'],'Category stable IDs reordered');
  equal(preset.categories.add.values,['inbox','Idea','idea'],'Exact aliases retain case');equal(preset.categories.add.assignment,'inbox','Explicit canonical value');
  equal(preset.categories.add.label,'Ideas','Rename does not change category ID');equal(preset.categories.relate,initial.categories.relate,'Other category unchanged');
  equal([preset.spacing,preset.regionWidth],[88,440],'Native preset layout defaults share the same saved fields as canvas rails');
- check(p.writes.length===1,'One durable entry operation');check(M.facetLibrary(p.readCanvasViewConfiguration('wuxing')).presets.para.nameKey==='facets.presetPara','Untouched templates still inherit');
+ check(p.writes.length===1,'One durable entry operation');equal(M.facetLibrary(p.readCanvasViewConfiguration('wuxing')).presets.para,ARCHIVE.para,'Untouched saved archive entry remains unchanged');
  close(m);check(window.migrationListeners===0,'Nested native editors released');
  `),true);
 });
@@ -137,8 +139,8 @@ test('manager preset reordering retains unknown order intent and persists throug
  await p.updateCanvasViewConfiguration('wuxing',{field:'presetOrder'},{kind:'set',value:['future-meta','arc','para','wuxing','gtd','eaccess']});p.writes=[];
  const m=manager(),row=[...m.contentEl.querySelectorAll('.kplex-style-manager-row')].find(row=>row.textContent.startsWith('ARC'));
  [...row.nextElementSibling.querySelectorAll('button')].find(button=>button.textContent===t('facets.moveDown')).click();await waitFor(()=>!m.modalEl.isConnected);
- equal(disk.canvasViewSettings.wuxing.values.presetOrder,['future-meta','para','arc','wuxing','gtd','eaccess','sensemaking','publishing','map-roles'],'Unknown ordering ID retained while adjacent known presets move and new inherited entries remain ordered');
- check(!disk.canvasViewSettings.wuxing.values.presets,'Ordering does not materialize presets');check(p.writes.length===1,'One queued order write');
+ equal(disk.canvasViewSettings.wuxing.values.presetOrder,['future-meta','para','arc','wuxing','gtd','eaccess','map-roles'],'Unknown ordering ID retained while adjacent known presets move and new inherited entries remain ordered');
+ equal(disk.canvasViewSettings.wuxing.values.presets,{arc:ARCHIVE.arc,para:ARCHIVE.para},'Ordering retains the exact saved preset map');check(p.writes.length===1,'One queued order write');
  `),true);
 });
 
@@ -148,9 +150,9 @@ test('create and duplicate preserve stable originals, category count bounds and 
  for(let i=0;i<4;i++)button(e,t('facets.addCategory')).click();check(e.contentEl.querySelectorAll('h3').length===7,'Seven categories admitted');
  check(button(e,t('facets.addCategory')).disabled,'Eighth category unavailable');close(e);equal(p.writes,[],'Cancel discards new identity and category draft');
  e=edit(m,'PARA');button(e,t('facets.duplicate')).click();const duplicate=last();input(fields(duplicate,t('facets.name'))[0],'Project state');await save(duplicate);
- const entries=disk.canvasViewSettings.wuxing.values.presets,ids=Object.keys(entries);check(ids.length===1&&ids[0].startsWith('preset-'),'Duplicate gets one independent stable ID');
- equal(entries[ids[0]].order,M.FACET_TEMPLATES.para.order,'Duplicate retains category IDs within independent preset');
- check(M.facetLibrary(p.readCanvasViewConfiguration('wuxing')).presets.para.nameKey==='facets.presetPara','Original template unmodified');
+ const entries=disk.canvasViewSettings.wuxing.values.presets,ids=Object.keys(entries).filter(id=>id.startsWith('preset-'));check(Object.keys(entries).length===3&&ids.length===1,'Duplicate gets one independent stable ID');
+ equal(entries[ids[0]].order,ARCHIVE.para.order,'Duplicate retains category IDs within independent preset');
+ equal(M.facetLibrary(p.readCanvasViewConfiguration('wuxing')).presets.para,ARCHIVE.para,'Original saved entry unmodified');
  close(e);close(m);check(window.migrationListeners===0,'Duplicate and original child lifetimes released');
  `),true);
 });
@@ -187,18 +189,18 @@ test('native retirement before queue acceptance cannot publish the captured pres
  assert.equal(await scenario(`
  const m=manager(),e=edit(m,'ARC');input(fields(e,t('facets.name'))[0],'Retired write');
  let release;p.settingsWriteQueue=new Promise(resolve=>release=resolve);button(e,t('common.save')).click();
- e.retire();release();await drain();equal(p.writes,[],'Retired queued operation never saves');check(!disk.canvasViewSettings.wuxing,'No namespace was created');close(m);
+ e.retire();release();await drain();equal(p.writes,[],'Retired queued operation never saves');equal(disk.canvasViewSettings.wuxing.values.presets.arc,ARCHIVE.arc,'Retired operation preserves the saved archive entry');close(m);
  `),true);
 });
 
 test('unchanged Save and canceled template restoration do not write, while explicit restore retains sibling presets',async()=>{
  assert.equal(await scenario(`
- const m=manager();await save(edit(m,'ARC'));equal(p.writes,[],'Unchanged Save has no settings or presentation work');
- await p.updateCanvasViewConfiguration('wuxing',{field:'presets',path:['arc','name']},{kind:'set',value:'Custom ARC'});
+ const m=manager();await save(edit(m,'Wu Xing'));equal(p.writes,[],'Unchanged Save has no settings or presentation work');
+ await p.updateCanvasViewConfiguration('wuxing',{field:'presets',path:['wuxing','name']},{kind:'set',value:'Custom Wu Xing'});
  await p.updateCanvasViewConfiguration('wuxing',{field:'presets',path:['para','name']},{kind:'set',value:'My PARA'});p.writes=[];
- let e=edit(m,'Custom ARC');button(e,t('facets.restore')).click();close(e);equal(p.writes,[],'Restore is a detached draft until explicit Save');
- e=edit(m,'Custom ARC');button(e,t('facets.restore')).click();await save(e);
- equal(disk.canvasViewSettings.wuxing.values.presets.arc,M.FACET_TEMPLATES.arc,'Explicit restore matches the ordinary template');
+ let e=edit(m,'Custom Wu Xing');button(e,t('facets.restore')).click();close(e);equal(p.writes,[],'Restore is a detached draft until explicit Save');
+ e=edit(m,'Custom Wu Xing');button(e,t('facets.restore')).click();await save(e);
+ equal(disk.canvasViewSettings.wuxing.values.presets.wuxing,M.FACET_TEMPLATES.wuxing,'Explicit restore matches the ordinary template');
  check(disk.canvasViewSettings.wuxing.values.presets.para.name==='My PARA','Sibling preset retained');close(m);
  `),true);
 });
@@ -219,7 +221,7 @@ test('failed durable save preserves the exact native draft and allows cancellati
  p.saveData=async()=>{attempts++;throw Error('Expected native disk failure')};button(e,t('common.save')).click();
  await waitFor(()=>attempts===1&&e.modalEl.getAttribute('aria-busy')==='false');
  check(e.modalEl.isConnected&&fields(e,t('facets.name'))[0].value==='Keep this failed draft','Exact rejected draft stays open');
- check(e.contentEl.textContent.includes(t('styles.operation.notSaved')),'Truthful actionable save failure');check(!disk.canvasViewSettings.wuxing,'Failed write publishes no namespace');
+ check(e.contentEl.textContent.includes(t('styles.operation.notSaved')),'Truthful actionable save failure');equal(disk.canvasViewSettings.wuxing.values.presets.arc,ARCHIVE.arc,'Failed write preserves accepted archive entry');
  close(e);close(m);check(window.migrationListeners===0,'Failed draft remains cleanly disposable');
  `),true);
 });

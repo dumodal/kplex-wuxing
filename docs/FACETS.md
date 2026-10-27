@@ -10,18 +10,14 @@ The view and preset dropdowns share a row when space allows. Select the cog besi
 
 | Preset | Default property | Categories | Preview |
 | --- | --- | --- | --- |
-| ARC | `arc` | Add, Relate, Communicate | [Obsidian screenshot](images/facets/preset-arc.png) |
-| PARA | `para` | Projects, Areas, Resources, Archives | [Obsidian screenshot](images/facets/preset-para.png) |
-| Wu Xing | `phase` | Water, Wood, Fire, Earth, Metal | [Obsidian screenshot](images/facets/preset-wuxing.png) |
-| GTD | `horizon` | Actions, Projects, Areas of focus, Goals, Vision, Purpose and principles | [Obsidian screenshot](images/facets/preset-gtd.png) |
-| eACCESS | `access` | Encounters, Atlas, Calendar, Cards, Extras, Sources, Spaces | [Obsidian screenshot](images/facets/preset-eaccess.png) |
-| Sensemaking | `approach` and `mode` rules | Synthesizer, Producer, Creative, Inner guide | [Obsidian screenshot](images/facets/preset-sensemaking.png) |
-| Publishing | `state` | Seed, Research, Draft, Review, Published | [Obsidian screenshot](images/facets/preset-publishing.png) |
-| Map roles | `map-role` | Hub, Supporting map, Concept, Reference | [Obsidian screenshot](images/facets/preset-map-roles.png) |
+| Wu Xing | `status` | Wood, Fire, Earth, Metal, Water | Emoji-based Five Phases |
+| Local map roles | `map-role` | Hub, Supporting map, Concept, Reference | [Obsidian screenshot](images/facets/preset-map-roles.png) |
+
+These are the only built-in presets. ARC, PARA, GTD horizons, eACCESS, Sensemaking and Publishing pipeline remain available as [importable JSON packages](../presets/facets/README.md). Saved user definitions are retained. If an older canvas selected an inherited preset that is no longer present, importing its original ID restores that definition without rewriting the canvas selection.
 
 Screenshots use separate diagnostic areas to show their individual states; new presets combine diagnostics by default. These are editable examples inside one Facets view. You can create/duplicate presets with three to seven stable categories, rename/reorder them, choose colors, matching aliases and explicit assignment values, and adjust layout defaults. Deleting a preset asks for an explicit replacement so saved canvases remain recoverable. Restore defaults changes the local draft until Save. Cancel keeps the accepted definition.
 
-ARC replaces the earlier uncustomized ACE example. Explicit saved ACE definitions retain their original name, property and categories. Sensemaking combines two explicit properties: `approach: top-down` or `bottom-up`, and `mode: reflection` or `expression`. Missing metadata stays unknown; these rules do not infer intent from prose. Map roles are personal classifications, with no importance score or vault-wide ranking.
+The archived Sensemaking example combines `approach: top-down` or `bottom-up` with `mode: reflection` or `expression`. Missing metadata stays unknown; rules do not infer intent from prose. Local map roles are personal classifications, with no importance score or vault-wide ranking. Archived preview images illustrate optional imports, not additional built-in choices.
 
 Select the Info button immediately after the preset cog to read that preset's Help. Built-in Help follows the application language until you save a literal override. **Edit → Help** offers Markdown source and a native preview; Save uses the existing preset writer, Cancel discards the draft, and Reset restores the localized default. A deliberately blank override stays blank. Help supports headings, lists, code examples and HTTPS links. Code fences are displayed as plain examples; HTML, embeds and executable Markdown are not enabled.
 
@@ -79,6 +75,8 @@ Lists retain unrelated values and order. Assigning an existing category is a no-
 ## Read Wu Xing relative to the current note
 
 Original term: Wu Xing (五行), pinyin **wǔ xíng**; here it is presented as Five Phases. A saved phase records your classification of the note. The optional relative labels explain that classification against the current note's phase.
+
+The default follows Dumo's `status` convention: 🟢 Wood, 🔴 Fire, 🟤 Earth, 🟡 Metal and 🔵 Water. For example, use `status: 🟢`, or a list containing the same phase. Plain English phase IDs remain accepted aliases. Wood starts at the top; Fire, Earth, Metal and Water follow clockwise with green, red, brown, yellow and blue colors. Existing saved presets keep their own property/mappings, including older `phase` configurations.
 
 The generating cycle is **Wood → Fire → Earth → Metal → Water → Wood**. Regulation skips one phase forward. Reordering the visible regions does not reorder this model.
 
