@@ -6739,3 +6739,8 @@ Native30PASS4/4 saved bars/native pickers each set actual Mind Map root and atte
 ### 2026-10-27 - iOS shared node-control sizing
 
 Accepted main ccb7189; scoped CSS reset on existing ThoughtNode controls defeats Obsidian tablet padding (actual 42x16 editor reproduction before fix), disables native appearance and bounds editor16px. Section10/14px, branch16px symbol/44px touch target retained. No new owner/API/action or layout/index work. Node22.22.2 actual build/types/full official scanner/architecture9 and affected browser30 PASS. Full regression deferred; physical iOS pending. Highest-risk manual check: iPad Safari/WKWebView with actual theme, both control shapes and single-tap actions; phone/tablet touch remains separate from desktop emulation. Exact Help reload20:02:35.132Z preserves current canvas/camera/cards, no notes edited. Receipt docs/validation/ios-node-controls-2026-10-27.md. No merge/release/production access.
+
+
+### 2026-10-27 - Scanner-safe Compass endpoint fallback
+
+Maintainer-reported no-unsafe-call/no-unsafe-return at occurrenceEditor.ts35: replace rows.at(-1) with rows[rows.length-1], retaining role/last-match/empty-array behavior without ES2022 library declaration. No cast/suppression/target changes.37 affected editor tests, actual build/types/full scanner PASS Node22.22.2. Final exact Help reload20:05:27.963Z retains center/liveRoot/view/preset/camera, immediate29cards29visible; no note edits. iOS physical acceptance remains pending for PR227. Risk check: existing duplicate-role endpoint and dirty-editor switching tests pass; no extra native platform claim.

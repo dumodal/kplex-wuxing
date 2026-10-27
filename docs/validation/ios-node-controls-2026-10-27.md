@@ -26,3 +26,13 @@ Exact artifacts copied and plugin reloaded in `kplex-help` at `2026-10-27T20:02:
 - `main.js` SHA256: `f5a5301296cfa1155fee72ed6d95131670c57e15cf06ac5832bb3b633bba727b` (unchanged).
 - `styles.css` SHA256: `d300b29c863d73b89d1c0cfc0851171726ca21dd6867a5744c4ac6b780ee2ab1`.
 - Manifest remains 0.3.0. No release or merge performed.
+
+## Requested scanner follow-up
+
+`classic/occurrenceEditor.ts:35` used `rows.at(-1)` in a typed endpoint fallback while the project's declared library target is ES2021. Replaced it with `rows[rows.length - 1]`, preserving role preference, last-match fallback and `undefined` for empty arrays without depending on the ES2022 declaration. No assertions, rule suppressions or library-target changes.
+
+- `node --test tests/compass-occurrence-editor.test.mjs tests/editor-area-growth.test.mjs tests/editor-switch.test.mjs`: **37/37 pass** on Node 22.22.2.
+- Real build/types and full `npm run lint:obsidian`: pass after the correction.
+- Final Help deployment/reload at `2026-10-27T20:05:27.963Z` preserved leaf, center/live root, view, preset and camera. Immediate observation showed 29 cards / 29 visible versus 37 / 33 before reload; no equal-card-count assertion is claimed for this reload. No note edits or navigation performed.
+- Final `main.js` SHA256: `2a45f29402df6960425d9442872d13ef24faae66ada3a0438b05b5a65450362d`. CSS hash above unchanged.
+- The maintainer's newer Help commit `e20b3c2` was integrated without force-pushing. Local settings/workspace were backed up and byte-for-byte restored; their changes remain uncommitted.
