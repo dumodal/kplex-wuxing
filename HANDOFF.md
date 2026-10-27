@@ -19,10 +19,8 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# PR #222 preset library handoff
+# History and pins enhancement
 
-Starting 809510f; archive 0a1365e pushed. Six complete portable JSON packages preserved before removal; only Wu Xing and Local map roles inherited. Saved definitions retained. Wu Xing aligns with Dumo fa038f0: status emoji assignments, Wood-first fixed order and matching phase colors. Centered focus/canonical evidence/relative roles/decorative guides preserved; star/tilt/bilingual remain future opportunities. Literal HTTPS help no longer falsely flags as drive-path privacy content; real private paths remain guarded.
+User-authorized merge of PR222 confirmed at35dccd595861406d31e4f8a709def4c225cb13e1 (head22e06ff; clean, no check runs). Existing final focused/native receipts apply; full regression remains deferred. New branch2026-10-27-history-pins-node-styles starts at that accepted main.
 
-162 focused tests PASS, real build/types/full scanner and architecture 9/zero violations PASS on Node 22.22.2. Windows exact-build native20 PASS 17/17, two-default manager screenshot reviewed, no opening save. Final restoration 2026-10-27T12:50:01.480Z: 9 config/117 content/original workspace/window/digest. Main SHA256 5a32c460a951df1f7d517fd939de0d0fcd425455f3962b10623658988afef1e0. Receipts docs/validation/preset-retirement-wuxing-222-2026-10-27.md. Help deployment follows. Both PRs draft/open/unmerged; full regression/CI deferred; no production changes.
-
-Published implementation 8cd3f60 and Help 294b662 are remote-verified. Exact artifacts deployed/reloaded 2026-10-27T12:57:15.238Z, preserving leaf/center/Facets/help-workbench/camera. Three Help guides explain two defaults/optional imports/status emoji convention. No modal draft lost, no runtime note edits/navigation; user data/workspace excluded. Styles/manifest unchanged and byte-equal.
+History and pins now optionally project shared resolveNodeStyle/nodePaint through nodeListPresentation: current kind/type/tag colors, pattern, border, icon and prefix. Compact dimensions remain list-owned. History uses HorizontalDragScroll with primary-mouse threshold/capture, synthesized-click suppression, cancellation/blur/unmount cleanup and owning document listeners; touch/pen/wheel/keyboard remain native. No metadata or graph writes.40 affected browser/domain tests PASS; build/types/full official scanner/architecture9PASS Node22.22.2. Windows native verification pending; do not merge enhancement.

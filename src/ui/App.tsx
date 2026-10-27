@@ -17,6 +17,8 @@
  * current native files and captured Plex links share drop navigation without source acquisition.
  * Native-view sessions retain independent centers/pending native follow and memory-only Footprints
  * across React/window remounts. Saved history and pins continue through the shared settings writer.
+ * Saved chips project the shared node style resolver; the History list owns mouse grab scrolling
+ * independently of node activation, native touch scrolling and canvas gestures.
  */
 import { subscribeAppearanceSources } from "../adapters/obsidian/colorChanges";
 import {CanvasViewContributionController} from "./plexViews/CanvasViewContributionController";
@@ -71,6 +73,7 @@ import type { DocumentSyncMode, KplexViewSurface, NodeSortOrder, SidecarMarkdown
 import { SearchBox } from "./features/SearchBox";
 import { searchResultIconName } from "./features/searchResultPresentation";
 import { nodeListPresentation } from "./nodeListPresentation";
+import {HorizontalDragScroll} from "./components/HorizontalDragScroll";
 import {nodeMarkdownLink} from "./nodeMarkdownLink";
 import { createLegacyGraphSearchRead } from "../adapters/obsidian/graphContracts";
 import { isEmbeddedMarkdownLeaf } from "../adapters/obsidian/embeddedMarkdownLeaf";
@@ -1247,17 +1250,17 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
   // both loading and graph surfaces; unresolved targets stay inert until their owner publishes.
   const historyBar = <footer className="kplex-history-bar">
     <span className="kplex-history-label">{translate("app.pastNodes")}</span>
-    <div className="kplex-history-list">
+    <HorizontalDragScroll className="kplex-history-list">
       {plugin.settings.navigationHistory.slice(-14).reverse().map((path, indexValue) => {
         const item = plugin.index.get(path);
-        const {label: title, icon} = item ? nodeListPresentation(item, plugin.index.titleFor(item)) : {label: path, icon: "file-question"};
+        const {label: title, icon, style} = item ? nodeListPresentation(item, plugin.index.titleFor(item), paintSettings) : {label: path, icon: "file-question", style: undefined};
         return <button key={`${path}:${indexValue}`} data-kplex-history-path={path} aria-label={`${title}\n${path}`} disabled={!item}
-          className={path === activePath ? "is-active" : ""}
+          className={path === activePath ? "is-active" : ""} style={style}
           onClick={/** Dispatch only this currently available saved identity; no fallback or note creation. */ () => {if (item) actions.dispatch({id: "node.activate", source: "toolbar", target: {kind: "explicit", node: actionNodeRef(item)}});}}>
           <ObsidianIcon name={icon} size={12} /><span className="kplex-history-text">{title}</span>
         </button>;
       })}
-    </div>
+    </HorizontalDragScroll>
   </footer>;
 
   if (!page) return <div
@@ -1455,8 +1458,8 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
 
         {pinnedPages.length > 0 && <div className="kplex-pinned-bar" aria-label={translate("app.pinnedNodes")}>
           {pinnedPages.map((pinned) => {
-            const { label: title, icon } = nodeListPresentation(pinned, plugin.index.titleFor(pinned));
-            return <div key={pinned.path} className={`kplex-pinned-chip${pinned.path === page.path ? " is-active" : ""}`}>
+            const { label: title, icon, style } = nodeListPresentation(pinned, plugin.index.titleFor(pinned), paintSettings);
+            return <div key={pinned.path} style={style} className={`kplex-pinned-chip${pinned.path === page.path ? " is-active" : ""}`}>
               <button className="kplex-pinned-open" data-kplex-pinned-path={pinned.path} aria-label={`${title}\n${pinned.path}`} onClick={() => actions.dispatch({ id: "node.activate", source: "toolbar", target: { kind: "explicit", node: actionNodeRef(pinned) } })}><ObsidianIcon name={icon} size={12} /><span>{title}</span></button>
               <button className="kplex-pinned-remove" aria-label={translate("app.unpinNode", { title })} onClick={() => actions.dispatch({ id: "pin.remove", source: "toolbar", target: { kind: "explicit", node: actionNodeRef(pinned) } })}><ObsidianIcon name="x" size={11} /></button>
             </div>;

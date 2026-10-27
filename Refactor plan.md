@@ -6709,3 +6709,8 @@ Starting 809510f. Six workflow presets exported before retirement in 0a1365e; on
 162 focused tests and real build/types/full scanner/architecture9 PASS Node22.22.2. Native20 PASS17/17 including actual two-default manager/no opening save, four custom Help classifiers, canonical bounds, continuations and existing Settings/import checks. Restoration 12:50:01.480Z,9config/117content/original workspace/window/digest. Receipts docs/validation/preset-retirement-wuxing-222-2026-10-27.md. Risk-based follow-up: new status-property versus saved phase-property workflows on macOS/minimum-host/physical mobile. Full regression/CI deferred; PRs draft/open/unmerged.
 
 Implementation8cd3f60 and Help294b662 published/remote-verified. Exact Help-only reload12:57:15.238Z preserves leaf/center/preset/camera; original root visible without navigation. Three authorized guide edits; saved four-example Help config and user data/workspace preserved. Styles/manifest unchanged and byte-equal.
+
+
+### 2026-10-27 - History/pins node styles and mouse scroll
+
+PR222 merged by explicit maintainer instruction at35dccd5; new isolated branch begins there. Saved chips reuse existing resolveNodeStyle/nodePaint with live paint settings, preserving kind/tag/type precedence and compact geometry. Shared horizontal mouse scroll requires a5px horizontal gesture, leaves ordinary clicks/keyboard/touch/pen intact and retires capture on cancellation/blur/unmount in its owning document.40 affected checks plus real build/types/full scanner/architecture9PASS Node22.22.2. Windows check pending. Risk-based acceptance: drag versus click, live semantic style changes and popout owner cleanup. No new parser/index/writer; full regression remains deferred.

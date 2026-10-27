@@ -31,11 +31,12 @@ export {startCenterWatchdog} from './src/ui/components/centerWatchdog';export {s
 import {startCenterWatchdog} from './src/ui/components/centerWatchdog';
 import {classicViewDefinition as classic} from './src/core/plex/views/classic/definition';
 import React,{useState,useEffect,useLayoutEffect,useRef} from 'react';import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';
+import {HorizontalDragScroll} from './src/ui/components/HorizontalDragScroll';
 /** Saved rows precede native tree availability; later publication upgrades the same exact slots. */
 export async function startupHistory(){
  const paths=Array.from({length:14},(_,i)=>'Notes/Note-'+i+'.md'),pages=new Map(),clicks=[];
  const plugin={settings:{navigationHistory:paths},index:{get:path=>pages.get(path),titleFor:page=>page.name},isNavigationFallbackReady:()=>false};
- const activePath=paths.at(-1),translate=key=>key,actions={dispatch:request=>clicks.push(request.target.node.identity)};
+ const activePath=paths.at(-1),paintSettings={},translate=key=>key,actions={dispatch:request=>clicks.push(request.target.node.identity)};
  const actionNodeRef=page=>({identity:page.path}),nodeListPresentation=(page,title)=>({label:title,icon:'file-text'}),ObsidianIcon=()=>null;
  const rootRef={current:null},canvasNameId='test-canvas',indexStatus={},indexStatusRef={current:null},indexStatusInfoOpen=false,indexStatusMessage=null;
  const IndexStatusIndicator=()=>null,InfoBubble=()=>null,displayState={zen:false},supportButton=null;
