@@ -20,10 +20,30 @@ export async function acceptHelpVaultFacets222(x) {
   p.settings.renderAlias=payload.renderAlias;p.settings.nameFields=payload.nameFields;
   p.settings.canvasViewSettings=structuredClone(payload.canvasViewSettings);await p.saveSettings(false,false);p.index.notifyPresentation();
   /** Keep every modal opened by this scenario under its exact cleanup lifetime. */
-  const closeModals=async()=>{for(let i=0;i<8&&doc.querySelector('.modal');i++){doc.querySelectorAll('.modal-close-button').item(doc.querySelectorAll('.modal-close-button').length-1)?.click();await wait(70);}if(app.setting.isOpen)app.setting.close();};
+  const closeModals=async()=>{for(let i=0;i<8&&doc.querySelector('.modal');i++){for(const type of ['keyDown','keyUp'])native.webContents.sendInputEvent({type,keyCode:'Escape'});await wait(90);}if(app.setting.isOpen)app.setting.close();check(!doc.querySelector('.modal'),'Owned modal did not close');};
   restores.push(closeModals);
-  const screenshot=async name=>{await wait(180);const r=root(host).querySelector('.kplex-plex').getBoundingClientRect();require('node:fs').writeFileSync(c.screenshotPrefix+'-help-'+name+'.png',(await native.webContents.capturePage({x:Math.ceil(r.x),y:Math.ceil(r.y),width:Math.floor(r.width),height:Math.floor(r.height)})).toPNG());};
-  const captureModal=async name=>{await wait(140);const r=doc.querySelector('.modal').getBoundingClientRect();require('node:fs').writeFileSync(c.screenshotPrefix+'-help-'+name+'.png',(await native.webContents.capturePage({x:Math.ceil(r.x),y:Math.ceil(r.y),width:Math.floor(r.width),height:Math.floor(r.height)})).toPNG());};
+  const screenshot=async name=>{
+    // Use ordinary shared zoom actions to make the demonstrated content readable without cutting it.
+    check(!doc.querySelector('.modal'),'Canvas capture blocked by an owned modal');
+    const graph=root(host).querySelector('.kplex-plex'),surface=[...p.actionSurfaceHosts].find(([,entry])=>entry.leaf===host)?.[0];
+    const measured=()=>{
+      const regions=[...graph.querySelectorAll('.kplex-view-region')].map(el=>el.getBoundingClientRect()),nodes=[...graph.querySelectorAll('.kplex-thought')].map(el=>{const r=el.getBoundingClientRect(),scroll=el.closest('.kplex-zone-scroll');if(!scroll)return r;const c=scroll.getBoundingClientRect(),left=Math.max(r.left,c.left),right=Math.min(r.right,c.right),top=Math.max(r.top,c.top),bottom=Math.min(r.bottom,c.bottom);return {left,right,top,bottom,width:right-left,height:bottom-top}});
+      return [...regions,...nodes].filter(b=>b.width>0&&b.height>0);
+    };
+    const bounds=()=>{const all=measured();return {left:Math.min(...all.map(b=>b.left)),right:Math.max(...all.map(b=>b.right)),top:Math.min(...all.map(b=>b.top)),bottom:Math.max(...all.map(b=>b.bottom))}};
+    for(let attempt=0;attempt<6;attempt++){
+      const b=bounds(),canvas=graph.getBoundingClientRect(),centerX=(b.left+b.right)/2,centerY=(b.top+b.bottom)/2,x=Math.round(canvas.x+canvas.width/2),y=Math.round(canvas.y+canvas.height/2),dx=Math.round((x-centerX)*.4),dy=Math.round((y-centerY)*.4);if(Math.abs(dx)+Math.abs(dy)<5)break;
+      native.webContents.sendInputEvent({type:'mouseMove',x,y});await wait(20);native.webContents.sendInputEvent({type:'mouseDown',x,y,button:'middle',clickCount:1});await wait(20);native.webContents.sendInputEvent({type:'mouseMove',x:x+dx,y:y+dy,button:'middle'});await wait(40);native.webContents.sendInputEvent({type:'mouseUp',x:x+dx,y:y+dy,button:'middle',clickCount:1});await wait(70);
+    }
+    for(let step=0;step<10;step++){
+      const r=graph.getBoundingClientRect(),items=measured();if(!items.length)break;
+      const b={left:Math.min(...items.map(b=>b.left)),right:Math.max(...items.map(b=>b.right)),top:Math.min(...items.map(b=>b.top)),bottom:Math.max(...items.map(b=>b.bottom))},x=r.x+r.width/2,y=r.y+r.height/2;
+      if(x+(b.left-x)*1.15<r.left+36||x+(b.right-x)*1.15>r.right-36||y+(b.top-y)*1.15<r.top+36||y+(b.bottom-y)*1.15>r.bottom-36)break;
+      await p.actionManager.dispatch({id:'view.zoom-in',source:'internal',surfaceId:surface});await wait(40);
+    }
+    await wait(180);const framed=bounds(),r=graph.getBoundingClientRect();c.progress={...c.progress,helpFraming:{name,bounds:framed,canvas:{left:r.left,right:r.right,top:r.top,bottom:r.bottom}}};check(framed.left>=r.left&&framed.right<=r.right&&framed.top>=r.top&&framed.bottom<=r.bottom,'Help content clipped during screenshot: '+name);require('node:fs').writeFileSync(c.screenshotPrefix+'-help-'+name+'.png',(await native.webContents.capturePage({x:Math.ceil(r.x),y:Math.ceil(r.y),width:Math.floor(r.width),height:Math.floor(r.height)})).toPNG());
+  };
+  const captureModal=async name=>{await wait(140);const r=[...doc.querySelectorAll('.modal')].at(-1).getBoundingClientRect();require('node:fs').writeFileSync(c.screenshotPrefix+'-help-'+name+'.png',(await native.webContents.capturePage({x:Math.ceil(r.x),y:Math.ceil(r.y),width:Math.floor(r.width),height:Math.floor(r.height)})).toPNG());};
   const card=note=>[...root(host).querySelectorAll('.kplex-thought')].find(el=>el.dataset.kplexPath===owned(note));
   for(const demo of payload.demos){
     const target=refs.get(demo.center);check(target,'Help center missing');p.notifyNavigation(target.path,host);await until(()=>center(host)===target.path,'Help attention absent');
@@ -36,14 +56,23 @@ export async function acceptHelpVaultFacets222(x) {
     if(demo.preset==='help-workshop'){
       root(host).querySelector('.kplex-filter-trigger').click();await until(()=>panel(host),'Preset Help panel absent');panel(host).querySelector('[data-kplex-view-choice="preset"]').querySelectorAll('button')[1].click();
       await until(()=>doc.querySelector('.kplex-markdown-help-modal h1'),'Real preset Help absent');await captureModal('preset-help');
-      const edit=[...doc.querySelector('.kplex-markdown-help-modal').querySelectorAll('button')].find(button=>button.textContent===p.translator('view.editHelp'));check(edit,'Existing Edit help missing');edit.click();
-      await until(()=>doc.querySelector('.kplex-facet-help-settings')?.closest('.modal'),'Native preset editor absent');await captureModal('preset-editor');await closeModals();
-      if(panel(host))panel(host).querySelector('.kplex-filter-panel-header button').click();cases.push({id:'native-help-preset-help-and-editor-captured-without-saving'});
+      await closeModals();if(panel(host))panel(host).querySelector('.kplex-filter-panel-header button').click();cases.push({id:'native-help-preset-markdown-captured'});
     }
   }
+
   const tooMany=[];
   for(const [source,file]of refs){const page=p.index.get(file.path),children=p.index.neighbours(page,'child');if(children.length>12)tooMany.push({source,children:children.map(row=>row.page.path.startsWith(file.parent.path+'/')?row.page.path.slice(file.parent.path.length+1):row.page.path)});}
   c.progress={...c.progress,helpCanonicalChildren:{checked:refs.size,tooMany}};check(!tooMany.length,'Native Help child count exceeds12: '+JSON.stringify(tooMany));
   cases.push({id:'native-help-canonical-child-budget',checked:refs.size,maximum:12});
-  const mind=refs.get('09 Showcase examples/Example - Workshop plan');if(mind){p.notifyNavigation(mind.path,host);await until(()=>center(host)===mind.path,'Workshop plan absent');await choose(host,'mindmap');panel(host).querySelector('.kplex-filter-panel-header button').click();await wait(180);const surface=[...p.actionSurfaceHosts].find(([,entry])=>entry.leaf===host)?.[0];await p.actionManager.dispatch({id:'view.fit',source:'internal',surfaceId:surface});await screenshot('mindmap-workshop');cases.push({id:'native-help-mindmap-canvas-captured'});}
+  check(p.settingsTab.openCanvasViewManager('wuxing','help-workshop'),'Registered preset manager refused editor');await until(()=>doc.querySelector('.kplex-facet-preset-editor'),'Registered native preset editor absent');await captureModal('preset-editor');await closeModals();cases.push({id:'native-help-preset-editor-captured-through-registered-settings-owner-without-save'});
+  // Capture actual native sharing/review surfaces without copying, downloading or importing.
+  check(p.settingsTab.openCanvasViewManager('wuxing'),'Native preset manager refused');await until(()=>doc.querySelector('.kplex-style-manager-modal'),'Preset manager absent');
+  const manager=doc.querySelector('.kplex-style-manager-modal'),exportButton=[...manager.querySelectorAll('button')].find(button=>button.textContent===p.translator('sharing.exportPreset'));check(exportButton,'Native export action absent');exportButton.click();
+  await until(()=>doc.querySelector('.kplex-portable-package-modal textarea')?.value,'Native export JSON absent');const exported=doc.querySelector('.kplex-portable-package-modal textarea').value;check(JSON.parse(exported),'Export is not JSON');await captureModal('sharing-export');
+  const cancelExport=[...doc.querySelector('.kplex-portable-package-modal').querySelectorAll('button')].find(button=>button.textContent===p.translator('common.cancel'));check(cancelExport,'Native export Cancel absent');cancelExport.click();await wait(80);[...manager.querySelectorAll('button')].find(button=>button.textContent===p.translator('sharing.importPreset')).click();
+  await until(()=>doc.querySelector('.kplex-portable-package-modal textarea'),'Native import source absent');const incoming=doc.querySelector('.kplex-portable-package-modal textarea');incoming.value=exported;incoming.dispatchEvent(new doc.defaultView.Event('input',{bubbles:true}));
+  const accessible=button=>button.getAttribute('aria-label')??(button.getAttribute('aria-labelledby')??'').split(/\s+/).map(id=>doc.getElementById(id)?.textContent??'').join(' ')??button.textContent;
+  const preview=[...doc.querySelector('.kplex-portable-package-modal').querySelectorAll('button')].find(button=>accessible(button)===p.translator('sharing.preview'));check(preview,'Native Preview import action absent');preview.click();
+  await until(()=>doc.querySelector('.kplex-package-preview')?.textContent.trim(),'Native import review absent');await captureModal('sharing-preview');await closeModals();cases.push({id:'native-help-sharing-export-preview-captured-without-import-download-or-clipboard'});
+  const mind=refs.get('09 Showcase examples/Example - Workshop plan');if(mind){p.notifyNavigation(mind.path,host);await until(()=>center(host)===mind.path,'Workshop plan absent');await choose(host,'mindmap');panel(host).querySelector('.kplex-filter-panel-header button').click();await wait(180);const surface=[...p.actionSurfaceHosts].find(([,entry])=>entry.leaf===host)?.[0];await p.actionManager.dispatch({id:'view.fit',source:'internal',surfaceId:surface});const material=byPath.get('09 Showcase examples/Example - Workshop materials'),disclosure=material&&card(material)?.querySelector('.is-branch-disclosure');if(disclosure?.getAttribute('aria-expanded')==='false'){disclosure.click();await wait(200);await p.actionManager.dispatch({id:'view.fit',source:'internal',surfaceId:surface});}await screenshot('mindmap-workshop');cases.push({id:'native-help-mindmap-canvas-captured'});await choose(host,'classic');panel(host).querySelector('.kplex-filter-panel-header button').click();await p.actionManager.dispatch({id:'view.fit',source:'internal',surfaceId:surface});await screenshot('compass-workshop');await p.actionManager.dispatch({id:'keyboard.help',source:'internal',surfaceId:surface});await until(()=>doc.querySelector('.modal'),'Native keyboard Help absent');await captureModal('keyboard-help');await closeModals();cases.push({id:'native-help-compass-and-current-keyboard-help-captured'});}
 }
