@@ -114,7 +114,7 @@ export class PlexViewSession {
   /** Restored intent grants no native authority. Admit this exact occurrence/file before opening it. */
   readEditorIntent(): SavedPlexEditorIntent | null {
     const raw = this.restoredEditors;
-    if (this.closed || this.editors.bindings.length || this.definition.editorHosting !== "occurrence" || !raw || typeof raw !== "object"
+    if (this.closed || this.editors.bindings.length || this.definition.editorHosting === undefined || !raw || typeof raw !== "object"
       || Reflect.get(raw, "version") !== 1) return null;
     const bindings: unknown = Reflect.get(raw, "bindings");
     if (!Array.isArray(bindings) || bindings.length !== 1) return null;

@@ -23,7 +23,7 @@ export function admitOccurrenceEditors(definition: PlexViewDefinition, projectio
   source: {get: (id: string) => GraphPage | undefined}, host?: OccurrenceEditorHost): ReadonlyMap<string, AdmittedOccurrenceEditor> {
   const admitted = new Map<string, AdmittedOccurrenceEditor>();
   if (!host?.bindings.length) return admitted;
-  if (definition.editorHosting !== "occurrence" || host.bindings.length > 1) throw new Error("Unsupported editor binding host");
+  if (definition.editorHosting === undefined || host.bindings.length > 1) throw new Error("Unsupported editor binding host");
   for (const binding of host.bindings) {
     const occurrences = projection.occurrences.filter(row => row.id === binding.occurrenceId);
     const occurrence = occurrences[0];

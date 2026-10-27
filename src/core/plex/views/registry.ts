@@ -30,7 +30,7 @@ export class PlexViewRegistry {
         || definition.badgeBudget < 1 || definition.badgeBudget > 2048)) throw new Error("Invalid view badge budget");
       if (definition.areaPreferenceBudget !== undefined && (!Number.isInteger(definition.areaPreferenceBudget)
         || definition.areaPreferenceBudget < 1 || definition.areaPreferenceBudget > 192)) throw new Error("Invalid area preference budget");
-      if (definition.editorHosting !== undefined && (definition.editorHosting !== "occurrence" || !definition.capabilities.editor)) {
+      if (definition.editorHosting !== undefined && (!["occurrence", "attention-and-occurrence"].includes(definition.editorHosting) || !definition.capabilities.editor)) {
         throw new Error("Unsupported internal editor hosting policy");
       }
       if (definition.navigation !== undefined && definition.navigation !== "rooted") throw new Error("Unsupported internal navigation policy");

@@ -1027,7 +1027,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
 
   /** Accept current native files and exact Plex URL/tag/placeholder links without source acquisition. */
   const handlePlexDragOver = (event: ReactDragEvent<HTMLDivElement>) => {
-    if (documentSession.plexView.definition.editorHosting === "occurrence" && (event.target as Element).closest(".kplex-central-editor-overlay")) return;
+    if (documentSession.plexView.definition.editorHosting !== undefined && (event.target as Element).closest(".kplex-central-editor-overlay")) return;
     const target = draggedGraphPage(plugin.app, plugin.index, event);
     if (!target && (nodeLinkDragSource(plugin.app) || !getDraggedFile(plugin.app)) && !event.dataTransfer.types.includes("text/plain")) return;
     event.preventDefault();
@@ -1035,7 +1035,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
 
   /** Re-center on an existing dropped endpoint; only native files may wait for partial indexing. */
   const handlePlexDrop = (event: ReactDragEvent<HTMLDivElement>) => {
-    if (documentSession.plexView.definition.editorHosting === "occurrence" && (event.target as Element).closest(".kplex-central-editor-overlay")) return;
+    if (documentSession.plexView.definition.editorHosting !== undefined && (event.target as Element).closest(".kplex-central-editor-overlay")) return;
     let target = draggedGraphPage(plugin.app, plugin.index, event);
     const file = getDraggedFile(plugin.app);
     if (!target && (nodeLinkDragSource(plugin.app) || !file)) return;

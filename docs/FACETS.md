@@ -1,5 +1,7 @@
 # Facets
 
+The editor button on a neighboring note opens that note in its category, without changing the focus or classification. The same single native editor saves and closes before opening another document. Its area grows temporarily in width/height to fit; closing restores the configured area size. Central automatic editing keeps its existing behavior.
+
 Facets places the current note in the center and its directly related notes in configurable category regions. Its colored badge shows the current note's classification. The surrounding categories do not replace the recorded relationships between notes.
 
 Open **Views and lenses → Canvas view → Facets**. Choose a preset in the same panel. Manage definitions under **Settings → K-Plex → Canvas behavior → Views → Facets**. Each canvas keeps its own selected view/preset, camera and attention; definitions are shared settings. Switching views preserves lenses, filters and unsaved lens drafts.

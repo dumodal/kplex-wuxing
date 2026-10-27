@@ -19,12 +19,8 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# History and pins enhancement
+# Editor placement and area growth
 
-User-authorized merge of PR222 confirmed at35dccd595861406d31e4f8a709def4c225cb13e1 (head22e06ff; clean, no check runs). Existing final focused/native receipts apply; full regression remains deferred. New branch2026-10-27-history-pins-node-styles starts at that accepted main.
+PR225 merged by explicit instruction at d450ecc9c75287dca8e15626c7b7f8b9ccbb32ec; new branch2026-10-27-editor-area-growth starts there. Facets opts into additive attention-and-occurrence hosting: existing central attention editor retained; other notes bind shared occurrence owner in place. Single editor/native save guards remain. Classic packing now receives exact editor measurements and temporarily raises area caps; no saved setting writes. Shared scroll reveal runs once per binding/dimension and preserves native focus/manual scrolling. Facets/Mind Map measured category/subtree widths/heights retain their existing owners.
 
-History and pins now optionally project shared resolveNodeStyle/nodePaint through nodeListPresentation: current kind/type/tag colors, pattern, border, icon and prefix. Compact dimensions remain list-owned. History uses HorizontalDragScroll with primary-mouse threshold/capture, synthesized-click suppression, cancellation/blur/unmount cleanup and owning document listeners; touch/pen/wheel/keyboard remain native. No metadata or graph writes.40 affected browser/domain tests PASS; build/types/full official scanner/architecture9PASS Node22.22.2. Windows native verification pending; do not merge enhancement.
-
-Final42focused checks PASS (5new saved-list browser cases including second-document cleanup and touch after cancelled mouse). Final build/types/full scanner/architecture9PASS. Native26PASS3/3 with trusted60px drag/no navigation and actual live style writer. Earlier22-25driver setup/held-button/release sequencing corrected; resources restored each attempt, final15:25:57.919Z9config/117content/original workspace/window/digest. Mainf797c965f47afcf9eda0b2af12c1094335e026be7448429e740ea5aa7a731f65. PR225 draft/open; Help deployment follows. Receipts docs/validation/saved-node-lists-2026-10-27.md.
-
-Exact final artifacts deployed/reloaded in Help15:27:29.003Z with same leaf/center/Facets/help-workbench/37cards and unchanged x/scale. Native height settled954.23to952.57px, automatic camera y477to476.5px; no user navigation or note edits. User-owned Help data/workspace excluded.
+35focused checks PASS; broader82run79PASS/3fail. Exact accepted-main source comparison independently confirms the same3session failures (14/17baseline): old tests assume Classic editorHosting undefined despite accepted Compass occurrence capability. Assertions retained; not unrelated fixes. Actual build/types/full scanner/architecture9PASS Node22.22.2. Native three-view dirty-save/resize lane in progress. No merge of this branch/release/production deployment.

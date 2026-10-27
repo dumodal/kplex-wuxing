@@ -38,6 +38,21 @@ test('another occurrence waits for native save/close before admitting one replac
  assert.equal(binding.target.nodeId,'B.md');assert.notEqual(binding.id,f.old.id);assert.equal(f.editors.bindings.length,1);
  assert(f.events.indexOf('native-close')<f.events.lastIndexOf('binding-change'));assert.deepEqual(f.notices,[]);
 });
+
+test('Facets noncentral editor reuses binding save/close without attention navigation',async()=>{
+ const f=fixture();f.deps.viewDefinition={id:'wuxing',editorHosting:'attention-and-occurrence'};
+ const action=production('editorExpandAction',f.deps),pending=action.execute({});f.gate.resolve();
+ assert.equal((await pending).status,'completed');assert.equal(f.editors.bindings[0].viewId,'wuxing');
+ assert.equal(f.editors.bindings[0].occurrenceId,'B');assert.equal(f.editors.bindings[0].target.path,'B.md');
+ assert(!f.events.some(event=>event.startsWith('navigate:')||event.startsWith('enabled:')));
+});
+
+test('Facets central editor retains existing attention-host activation after saving a bound neighbor',async()=>{
+ const f=fixture();f.deps.viewDefinition={id:'wuxing',editorHosting:'attention-and-occurrence'};f.deps.activePath='B.md';f.deps.editorAttention.current='B.md';
+ const action=production('editorExpandAction',f.deps),pending=action.execute({});f.gate.resolve();
+ assert.equal((await pending).status,'completed');assert.equal(f.editors.bindings.length,0);
+ assert(f.events.includes('navigate:B.md')&&f.events.includes('enabled:true'));
+});
 test('failed native save keeps the original buffer binding and refuses replacement',async()=>{
  const f=fixture(),result=f.action.execute({});f.gate.reject(Error('Disk failure'));assert.equal((await result).status,'failed');
  assert.equal(f.editors.bindings[0].id,f.old.id);assert.equal(f.editors.bindings[0].closing,false);assert.deepEqual(f.notices,['actions.editor-save-failed']);

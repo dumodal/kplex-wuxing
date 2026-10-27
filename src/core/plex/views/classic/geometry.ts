@@ -6,7 +6,7 @@ export type ClassicGeometryPreferences = Readonly<{
   parentColumns: number; childColumns: number; siblingRelativeSize: number; lateralArrangement?: "split" | "left";
   parentMaxHeight: number; childMaxHeight: number; friendMaxHeight: number; siblingMaxHeight: number;
 }>;
-export type ClassicMeasuredNode = {x: number; y: number; width: number; height: number; role: Role | "center"};
+export type ClassicMeasuredNode = {x: number; y: number; width: number; height: number; role: Role | "center"; editor?: true};
 export type ClassicGeometryRead<N> = Readonly<{
   reserve: (node: N) => number; verticalReserve: (node: N) => number; width: (node: N) => number;
   mini: (node: N, envelope: boolean) => {width: number; viewportHeight: number; topGap: number} | null;
@@ -297,6 +297,16 @@ export function viewportFor<N extends ClassicMeasuredNode>(
 /** Position private measured occurrences with the existing Classic area/collision policy. */
 export function layoutClassic<N extends ClassicMeasuredNode>(input: {center: N; parents: N[]; children: N[]; leftFriends: N[]; rightFriends: N[]; siblings: N[]},
   settings: ClassicGeometryPreferences, read: ClassicGeometryRead<N>, editor = false) {
+  // An editor owns its full measured body plus area tools/padding. Treat configured caps as
+  // minima only while that exact occurrence is expanded; no preference is persisted or clamped.
+  /** Reserve the expanded body and native controls, independently of the configured area cap. */
+  const editorHeight = (rows: readonly N[]): number => Math.max(0, ...rows.filter(row => row.editor).map(row => row.height + 72));
+  if ([...input.parents, ...input.children, ...input.leftFriends, ...input.rightFriends, ...input.siblings].some(row => row.editor)) {
+    settings = {...settings, parentMaxHeight: Math.max(settings.parentMaxHeight, editorHeight(input.parents)),
+      childMaxHeight: Math.max(settings.childMaxHeight, editorHeight(input.children)),
+      friendMaxHeight: Math.max(settings.friendMaxHeight, editorHeight([...input.leftFriends, ...input.rightFriends])),
+      siblingMaxHeight: Math.max(settings.siblingMaxHeight, editorHeight(input.siblings))};
+  }
   // Compactness controls inter-node spacing and label length. Expanded view adds vertical
   // space per thought/row only when that thought actually has visible child thoughts.
   const center = input.center;

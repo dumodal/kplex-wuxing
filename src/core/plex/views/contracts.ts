@@ -177,8 +177,9 @@ export interface PlexViewDefinition {
   /** Optional retained size-key budget across presets; ordinary views keep64 per dimension. */
   readonly areaPreferenceBudget?: number;
   readonly defaultState: unknown;
-  /** Omit for the existing attention-following host. Occurrence hosting requires explicit shared bindings. */
-  readonly editorHosting?: "occurrence";
+  /** Omit for attention-only hosting. Occurrence hosting uses explicit shared bindings;
+   * attention-and-occurrence retains the central attention host until another occurrence binds. */
+  readonly editorHosting?: "occurrence" | "attention-and-occurrence";
   /** Single central Markdown document. Requires sections capability; omission preserves the
    * attention source. Rooted policies may explicitly follow their pinned layout root instead. */
   readonly sectionSource?: "attention" | "layout-root";

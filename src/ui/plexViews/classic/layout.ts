@@ -248,6 +248,7 @@ export function buildScene(
     siblingRelativeSize: settings.siblingRelativeSize, lateralArrangement: settings.lateralArrangement, parentMaxHeight: settings.parentMaxHeight,
     childMaxHeight: settings.childMaxHeight, friendMaxHeight: settings.friendMaxHeight, siblingMaxHeight: settings.siblingMaxHeight};
   const geometry = classicViewDefinition.layout(projection, nodes.map((node, position) => ({id: String(position), width: node.width, height: node.height,
+    ...(editor && classicEditorKey(node, neighborhood.center.path) === editor.binding.occurrenceId && node.page.file === editor.page.file ? {editor: true as const} : {}),
     expandedWidth: measured.get(node)!.width, expandedReserve: measured.get(node)!.reserve,
     mini: measured.get(node)!.mini, envelope: measured.get(node)!.envelope})), preferences, Boolean(centerSizeOverride));
   nodes.forEach((node, position) => Object.assign(node, geometry.positions.get(String(position))));
