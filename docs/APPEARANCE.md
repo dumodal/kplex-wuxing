@@ -1,5 +1,10 @@
 # Colors and appearance
 
+History and Pinned Nodes reuse the canvas node styles: note-type and tag overrides, kind-specific
+colors, fill patterns, borders, icons and prefixes. They keep compact list dimensions; the active
+item has a separate accent outline. Drag History left or right with the primary mouse button to
+scroll it. A click still opens the chosen note; touch, trackpad and keyboard keep their usual behavior.
+
 A fresh K-Plex installation follows Obsidian’s theme. Open **Settings → K-Plex → Visual styling → Colors** to change colors. No companion plugin is required.
 
 ## Save named K-Plex themes
