@@ -39,8 +39,9 @@ export class AddToOntologyModal extends Modal {
   private releaseWindow:(()=>void)|null=null;
   private readonly usageDialogs=new Set<OntologyUsageModal>();
 
-  /** Empty names open Add field; existing identities remain read-only, including both pair endpoints. */
-  constructor(private plugin:KplexPlugin,private fieldName:string,private onSaved?:()=>void,private onClosed?:()=>void,private onUsage?:(field:string,result:OntologyUsageResult)=>void){super(plugin.app);}
+  /** Empty names open Add field; a connection caller can retain its captured relationship role.
+   * Existing identities stay read-only. Save returns the accepted physical name to its owner. */
+  constructor(private plugin:KplexPlugin,private fieldName:string,private onSaved?:(field:string)=>void,private onClosed?:()=>void,private onUsage?:(field:string,result:OntologyUsageResult)=>void,private context?:Readonly<{role:OntologyRole}>){super(plugin.app);}
 
   /** Capture raw configuration and remote owner before mounting an explicit Save/Cancel form. */
   onOpen():void {
@@ -58,7 +59,7 @@ export class AddToOntologyModal extends Modal {
   private render():void {
     this.suggestions?.close();this.contentEl.empty();
     const t=this.plugin.translator,config=ontologyConfiguration(this.opening!);
-    this.selected=config.roles.get(normalizeFieldName(this.fieldName))??'child';
+    this.selected=config.roles.get(normalizeFieldName(this.fieldName))??this.context?.role??'child';
     this.partner=config.pairs.get(normalizeFieldName(this.fieldName))?.partner??'';
     this.createPartner=false;this.removing=false;
     this.setTitle(this.fieldName?t('ontology.addTitle',{field:this.fieldName}):t('ontology.manager.add'));
@@ -84,7 +85,7 @@ export class AddToOntologyModal extends Modal {
       this.partnerControl=text;text.setValue(this.partner).setPlaceholder(t('ontology.pairNone'));
       text.inputEl.setAttribute('aria-label',t('ontology.pairWith'));
       text.onChange(/** Typed partner names do not create vocabulary without the explicit new-field choice. */ value=>{this.partner=value;this.refresh();});
-      this.suggestions=new OntologyPartnerSuggest(this.app,text.inputEl,()=>this.eligible(),/** A retired/pending form cannot accept a suggestion. */ field=>{if(this.opened&&!this.busy){this.partner=field;this.createPartner=false;this.refresh();}},()=>ontologyConfiguration(this.plugin.settings),t);
+      this.suggestions=new OntologyPartnerSuggest(this.app,text.inputEl,()=>this.eligible(),/** Creation is an explicit local choice; both fields still share the single Save. */ (field,create)=>{if(this.opened&&!this.busy){this.partner=field;this.createPartner=create;this.refresh();}},()=>ontologyConfiguration(this.plugin.settings),t,field=>this.canCreatePartner(field));
     });
     this.createPartnerRow=new Setting(this.contentEl).setName(t('ontology.manager.createPartner')).setDesc(t('ontology.manager.createPartnerHelp')).addToggle(/** Creating a second new physical field is an explicit draft choice. */ toggle=>{this.createPartnerControl=toggle;toggle.setValue(false).onChange(/** Revalidate the whole two-name candidate. */ value=>{this.createPartner=value;this.refresh();});});
     this.preview=this.contentEl.createEl('p',{cls:'setting-item-description kplex-ontology-preview',attr:{role:'status'}});
@@ -108,6 +109,12 @@ export class AddToOntologyModal extends Modal {
     const fields=eligibleOntologyPartners(config,this.fieldName,this.selected);
     if(pair&&ONTOLOGY_RECIPROCAL[this.selected]&&!fields.includes(pair.partner))fields.unshift(pair.partner);
     return fields;
+  }
+
+  /** Offer creation only when the canonical validator accepts both current draft endpoints. */
+  private canCreatePartner(field:string):boolean {
+    if(!this.opened||this.busy||this.committed||this.composing||this.removing)return false;
+    try{applyOntologyEdit(this.plugin.settings,{kind:'assign',field:this.fieldName.trim(),role:this.selected,partner:field,createPartner:true});return true;}catch{return false;}
   }
 
   /** Convert local controls to one finite typed operation; the writer repeats all validation. */
@@ -142,7 +149,7 @@ export class AddToOntologyModal extends Modal {
     this.modalEl.setAttribute('aria-busy',String(this.busy));
     for(const button of Array.from(this.contentEl.querySelectorAll('button')))if(button!==this.cancelButton?.buttonEl)button.disabled=this.busy||this.committed;
     this.saveButton?.setButtonText(t(this.removing?'ontology.manager.confirmRemove':pairMove?'ontology.manager.saveBoth':'common.save')).setDisabled(this.busy||this.committed||this.composing||!valid);
-    this.roleControl?.setDisabled(this.busy||this.removing);this.partnerControl?.setDisabled(this.busy||this.removing);
+    this.roleControl?.setDisabled(this.busy||this.removing||Boolean(this.context));this.partnerControl?.setDisabled(this.busy||this.removing);
     for(const input of Array.from(this.contentEl.querySelectorAll('input')))input.disabled=this.busy||this.committed||this.removing;
     this.endpointControl?.setDisabled(this.busy||this.removing||this.createPartner||this.composing||this.selected!==pair?.role||this.partner!==pair?.partner);
   }
@@ -156,10 +163,10 @@ export class AddToOntologyModal extends Modal {
       if(!this.opened||this.generation!==generation)return;
       this.committed=true;
       if(result.refreshPending)new Notice(this.plugin.translator('styles.operation.savedRefreshPending'));
-      this.onSaved?.();this.close();
+      this.onSaved?.(this.fieldName.trim());this.close();
     }catch(error){
       if(this.opened&&this.generation===generation&&this.feedback){this.feedback.setText(this.plugin.translator(this.committed?'styles.operation.savedRefreshPending':error instanceof Error&&error.name==='SettingsValidationError'?'ontology.pairInvalid':error instanceof Error&&error.name==='SettingsConflictError'?'settings.ontology.conflict':'styles.operation.notSaved'));this.feedback.toggle(true);}
-    }finally{this.busy=false;if(this.opened&&this.generation===generation){this.modalEl.setAttribute('aria-busy','false');for(const button of Array.from(this.contentEl.querySelectorAll('button')))if(button!==this.cancelButton?.buttonEl)button.disabled=this.committed;this.saveButton?.setDisabled(this.committed||!this.valid());this.roleControl?.setDisabled(this.committed||this.removing);this.createPartnerControl?.setDisabled(this.committed||this.removing);for(const input of Array.from(this.contentEl.querySelectorAll('input')))input.disabled=this.committed||this.removing;}}
+    }finally{this.busy=false;if(this.opened&&this.generation===generation){this.modalEl.setAttribute('aria-busy','false');for(const button of Array.from(this.contentEl.querySelectorAll('button')))if(button!==this.cancelButton?.buttonEl)button.disabled=this.committed;this.saveButton?.setDisabled(this.committed||!this.valid());this.roleControl?.setDisabled(this.committed||this.removing||Boolean(this.context));this.createPartnerControl?.setDisabled(this.committed||this.removing);for(const input of Array.from(this.contentEl.querySelectorAll('input')))input.disabled=this.committed||this.removing;}}
   }
 
   /** Retire only this invocation; an operation already accepted by storage remains owned by the queue. */

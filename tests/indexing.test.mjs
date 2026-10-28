@@ -613,17 +613,20 @@ for (const file of [
   "src/ui/plexViews/facets/helpSettings.ts",
   "src/ui/predicates/conditionChoices.ts",
   "src/ui/predicates/PredicateConditions.tsx",
+  "src/ui/predicates/PredicateExpressionField.tsx",
   "src/ui/ObsidianIcon.tsx",
   "src/ui/predicates/PredicateRuleEditor.tsx",
   "src/ui/predicates/predicateMessages.ts",
   "src/ui/plexViews/sections.ts",
   "src/ui/plexViews/scene.ts",
+  "src/ui/plexViews/areaVisibility.ts",
   "src/ui/plexViews/facets/FacetPresetRemoval.ts",
   "src/ui/plexViews/contributionContracts.ts",
   "src/ui/plexViews/contributionValidation.ts",
   "src/ui/plexViews/mindmap/settings.ts",
   "src/ui/plexViews/labels.ts",
   "src/ui/plexViews/classic/settings.ts",
+  "src/ui/plexViews/classic/occurrenceEditor.ts",
   "src/application/ActionManager.ts",
   "src/application/IndexingActivity.ts",
   "src/application/SessionEventRecorder.ts",
@@ -5139,13 +5142,15 @@ try {
     const edgeJs = ts.transpileModule(plexGraphSource.slice(markerStart, markerEnd) + plexGraphSource.slice(edgeStart, edgeEnd), {
       compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None, jsx: ts.JsxEmit.React },
     }).outputText;
-    const Edge = new Function("React", "LinkDirection", "edgePhysicalOccurrence", "gatesForEdge", "gatePoint", "edgeGeometry", "alphaHexToCss", "relationLabel", "NATIVE_LINK_STROKE", "NATIVE_LINK_TEXT", "DEFAULT_RENDERED_LINK_WIDTH", `${edgeJs}; return Edge;`)(
+    const Edge = new Function("React", "LinkDirection", "edgePhysicalOccurrence", "gatesForEdge", "gatePoint", "edgeGeometry", "alphaHexToCss", "relationLabel", "NATIVE_LINK_STROKE", "NATIVE_LINK_TEXT", "DEFAULT_RENDERED_LINK_WIDTH", "edgeViewportEndpoints", "edgeViewportClip", `${edgeJs}; return Edge;`)(
       { createElement: (type, props, ...children) => ({ type, props, children }) }, LinkDirection,
       require(join(temp, "src/ui/plexViews/scene.js")).edgePhysicalOccurrence,
       () => ({ source: "left", target: "right" }), () => ({ x: 0, y: 0 }),
       () => ({ d: "M0 0L1 1", midpoint: { x: 0, y: 0 } }), value => value, value => value,
       require(join(temp, "src/index/style.js")).NATIVE_LINK_STROKE, require(join(temp, "src/index/style.js")).NATIVE_LINK_TEXT,
       require(join(temp, "src/index/style.js")).DEFAULT_RENDERED_LINK_WIDTH,
+      require(join(temp, "src/ui/plexViews/areaVisibility.js")).edgeViewportEndpoints,
+      require(join(temp, "src/ui/plexViews/areaVisibility.js")).edgeViewportClip,
     );
     try {
       assert.equal(await arrowIndex.rebuild(), true);
@@ -5162,7 +5167,7 @@ try {
           assert(edge, "Defined edge is projected from the selected center");
           assert.equal(edge.direction, center === 0 ? LinkDirection.FROM : LinkDirection.TO);
           const rendered = Edge({ edge, nodes: new Map(scene.nodes.map(node => [node.page.path, node])), inverseArrowDirection,
-            connectorStyle: "straight", crossLinkOpacity: 1, highlighted: false, dimmed: false });
+            viewportForNode: () => undefined, connectorStyle: "straight", crossLinkOpacity: 1, highlighted: false, dimmed: false });
           const visiblePath = rendered.children.find(child => child?.props?.className === "kplex-edge-visible");
           const expectedStart = center === 0 ? !inverseArrowDirection : inverseArrowDirection;
           assert.equal(visiblePath.props.markerStart, expectedStart ? "url(#kplex-arrow)" : undefined);
