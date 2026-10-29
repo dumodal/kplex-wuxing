@@ -48,7 +48,7 @@ assert(graphBuilderSource.includes("publishFileCommit?: PatchFilePublisher"), "I
 assert(graphIndexSource.includes("private publishIncrementalFile: PatchFilePublisher"), "GraphIndex must own the coherent graph/fingerprint/search/cache observer boundary");
 assert(graphBuilderSource.includes("async buildStructuralBaseline()"), "Cold startup must have a low-cost structure/link baseline before Markdown ingestion");
 assert(graphIndexSource.includes("async rebuildProgressively("), "GraphIndex must own progressive cold-start publication");
-assert(mainSource.includes("this.index.rebuildProgressively(this.startupGraphSeedPaths()"), "Initial cold startup must use the progressive index path");
+assert(mainSource.includes("rebuiltIndex.rebuildProgressively(this.startupGraphSeedPaths()"), "Initial cold startup must use the progressive index path on its captured index");
 assert(mainSource.includes('this.performRebuild(false, false, "startup:initial-index", true)'), "Cold startup must not accidentally set the force flag that bypasses progressive publication");
 assert(mainSource.includes("this.index.size > 0 && !structuralDirty && this.dirtyMarkdownPaths.size === 0"), "An empty cold index must not take the clean-index early return");
 const startupSeedSource = mainSource.slice(mainSource.indexOf("  private startupGraphSeedPaths()"), mainSource.indexOf("  /** Resolve a missing center", mainSource.indexOf("  private startupGraphSeedPaths()")));

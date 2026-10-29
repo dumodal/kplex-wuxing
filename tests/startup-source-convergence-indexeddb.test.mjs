@@ -13,7 +13,37 @@ import {startupSourceCoordinatorSource} from './support/startupSourceCoordinator
 
 const bundle = await contributorBrowserBundle(['src/main.ts', 'src/index/GraphIndex.ts', 'src/index/GraphBuilder.ts',
   'src/index/IndexSnapshot.ts', 'src/core/graph/compiler.ts', 'src/adapters/obsidian/metadataSourceCollector.ts',
-  'src/adapters/obsidian/ontologySourceCollector.ts'], {'src/main.ts': startupSourceCoordinatorSource()});
+  'src/adapters/obsidian/ontologySourceCollector.ts', 'src/adapters/obsidian/startupDiagnostics.ts'], {'src/main.ts': startupSourceCoordinatorSource()});
+
+test('source closure publishes terminal progress inside the per-note throttle window without demanded scopes', /** A real inventory release must notify even when semantic recovery has nothing to publish. */ async () => {
+  const browser = await chromiumHarness(bundle);
+  try {
+    assert.equal(await browser.evaluate(contributorBrowserInitialize), true);
+    assert.equal(await browser.evaluate(`(async()=>{
+      const M=sourceModules,f=await fixture('source-terminal-progress');
+      const centerGateSettings=${centerGateSettings.toString()};
+      let index;
+      try {
+        f.add('A.md','');await f.acquire();f.acquisition.close();
+        f.app.vault.getName=()=> 'source-terminal-progress';
+        const progress=new M.StartupDiagnostics();progress.begin(false);
+        const notifications=[],p=new M.StartupSourceCoordinator();
+        Object.assign(p,{app:f.app,settings:{...centerGateSettings(),lastActivePath:'',pinnedNodes:[],tagStyleList:[],
+          inferAllLinksAsFriends:false,inverseInfer:false,showFullTagName:false,
+          hierarchy:{hidden:[],parents:[],children:[],leftFriends:[],rightFriends:[],previous:[],next:[],exclusions:[]}},
+          startupDiagnostics:progress,lastStartupProgressNotification:performance.now()+10000,
+          notifyIndexStatus(){notifications.push({phase:progress.progress('source')?.phase,active:!!index.sourceAcquisition.inventory});}});
+        index=new M.GraphIndex(p,f.app,true,'eager');p.index=index;index.preparationDeferred=false;
+        p.notifyStartupProgress();equal(notifications.length,0,'Ordinary progress is still throttled');
+        index.sourceAcquisition.enableInventory();
+        ok(await index.sourceAcquisition.reconcile(),'Actual source authority closes');
+        equal(notifications,[{phase:'complete',active:false}],'Final notification bypasses throttling after inventory ownership releases');
+        equal(index.semanticPreparationTasks.size,0,'No semantic publication or demand supplied the missing update');
+        return true;
+      } finally {index?.destroy();f.close();}
+    })()`), true);
+  } finally {await browser.cleanup();}
+});
 
 for (const fault of ['metadata', 'evicted-unsaved']) test(`real ${fault} recovery automatically completes the stranded startup coordinator`, /** Recover through native metadata notification, never a manual second adoption call. */ async () => {
   const browser = await chromiumHarness(bundle);
