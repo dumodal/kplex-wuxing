@@ -5,10 +5,11 @@ import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import ts from 'typescript';
 import {loadPortableModules} from './support/portableTypeScript.mjs';
-const {exports:{PlexEditorBindings,classicEditorKey}}=loadPortableModules(['src/application/PlexEditorBindings.ts','src/ui/plexViews/classic/occurrenceEditor.ts']);
+const {exports:{PlexEditorBindings,classicEditorKey,actionNodeRef,resolveActionPage}}=loadPortableModules(['src/application/PlexEditorBindings.ts','src/ui/plexViews/classic/occurrenceEditor.ts','src/adapters/obsidian/actionNode.ts']);
 const source=ts.createSourceFile('PlexGraph.tsx',readFileSync(new URL('../src/ui/PlexGraph.tsx',import.meta.url),'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+const appSource=ts.createSourceFile('App.tsx',readFileSync(new URL('../src/ui/App.tsx',import.meta.url),'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
 /** Extract actual action/close code without initializing a synthetic native Obsidian editor. */
-function production(name,deps){let expression;const visit=node=>{if(ts.isVariableDeclaration(node)&&node.name.getText(source)===name)expression=node.initializer.getText(source);ts.forEachChild(node,visit)};visit(source);assert(expression,name);
+function production(name,deps,module=source){let expression;const visit=node=>{if(ts.isVariableDeclaration(node)&&node.name.getText(module)===name){const value=node.initializer;expression=ts.isCallExpression(value)&&value.expression.getText(module)==='useCallback'?value.arguments[0].getText(module):value.getText(module)}ts.forEachChild(node,visit)};visit(module);assert(expression,name);
  const compiled=ts.transpileModule('const selected='+expression,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.None}}).outputText;
  return Function(...Object.keys(deps),compiled+';return selected')(...Object.values(deps));}
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return{promise,resolve,reject}};
@@ -141,11 +142,12 @@ function centerNavigationFixture(){
  const scene={nodes:[{occurrenceId:f.old.occurrenceId,page:{path:'A.md',file:f.oldFile},branch:{depth:0}}]};
  Object.assign(f.deps,{centerEditorNavigation:pending,rooted:true,sceneScope:'A.md',scene,
   viewDefinition:{id:'mindmap',hierarchy:{primary:'center'}},supportsBoundEditor:page=>page.file?.extension==='md',
-  selectionPreflight:{current:async()=> (await f.deps.closeBoundEditor(f.old.id)).status==='completed'},
+  selectionPreflight:{current:async()=> !f.editors.bindings.length || (await f.deps.closeBoundEditor(f.old.id)).status==='completed'},
   setEditorNavigationRevision:()=>{},index:{isVisiblePage:()=>true},
   resolveActionPage:()=>f.state.node?.page??null});
  f.deps.viewSession.layoutRoot=()=>f.state.root;
- return{...f,pending,scene,prepare:production('prepareEditorNavigation',f.deps),complete:production('completeEditorNavigation',f.deps),restore:production('restoreNavigatedEditor',f.deps)};
+ const hasPending=production('hasPendingEditorNavigation',f.deps);f.deps.hasPendingEditorNavigation=hasPending;
+ return{...f,pending,scene,hasPending,prepare:production('prepareEditorNavigation',f.deps),complete:production('completeEditorNavigation',f.deps),restore:production('restoreNavigatedEditor',f.deps)};
 }
 
 test('Mind Map navigation saves its center then restores mode and dimensions at the new admitted root',async()=>{
@@ -183,4 +185,64 @@ test('a newer explicit editor cancels the pending center handoff',async()=>{
  const newer=f.editors.open({...f.old,occurrenceId:'chosen',target:{...f.old.target,nodeId:'C.md',path:'C.md'}}).binding;
  f.restore();assert.equal(f.editors.bindings[0].id,newer.id);assert.equal(f.pending.current,null);
  f.editors.beginClose(newer.id).commit();f.restore();assert.equal(f.editors.bindings.length,0);
+});
+
+/** Wire App and graph production callbacks to one editor/session, including synchronous root notifications. */
+function onwardNavigationFixture(){
+ const f=centerNavigationFixture(),pages=new Map([['A.md',{path:'A.md',file:f.oldFile}],['B.md',f.node.page],
+  ...['C.md','D.md'].map(path=>[path,{path,file:{path,extension:'md'}}])]);
+ const files=new Map([...pages].map(([path,page])=>[path,page.file]));
+ Object.assign(f.deps.index,{get:path=>pages.get(path)});
+ Object.assign(f.deps,{actionNodeRef,resolveActionPage,supportsBoundEditor:page=>page.file?.extension==='md'&&files.get(page.path)===page.file});
+ f.hasPending=production('hasPendingEditorNavigation',f.deps);f.deps.hasPendingEditorNavigation=f.hasPending;
+ f.prepare=production('prepareEditorNavigation',f.deps);f.complete=production('completeEditorNavigation',f.deps);f.restore=production('restoreNavigatedEditor',f.deps);
+ const view=f.deps.viewSession;view.definition={navigation:'rooted'};
+ view.setRoot=id=>{assert.equal(f.editors.bindings.length,0);f.state.root=id;f.restore();return true;};
+ const active={current:'A.md'},pending={current:null};let activate;
+ const deps={plugin:{app:{vault:{getFileByPath:path=>files.get(path)}},index:f.deps.index,settings:{navigationHistory:['A.md']},
+  saveSettings:async()=>{},syncPageToDocumentLeaf:async()=>{},syncSidecarToPage:async()=>{}},
+  documentSession:{plexView:view,footprints:{accept(){}},persist(){}},pendingEditorNavigation:pending,
+  graphActionPorts:{current:{prepareEditorTransition:f.prepare,hasPendingEditorTransition:f.hasPending,completeEditorTransition:f.complete}},
+  nodeId:id=>id,activePathRef:active,activePageRef:{current:pages.get('A.md')},activeFileRef:{current:f.oldFile},actionNodeRef,resolveActionPage,
+  pendingFileExplorerDropRef:{current:null},pendingDocumentFollowRef:{current:null},pendingDocumentDemandRef:{current:null},
+  wander:{pause(){}},setNavigationOrigin(){},setActivePath(){},setHistoryCursor(){},releasePendingDocumentDemand(){},hostLeaf:{},
+  translate:key=>key,Notice:class{constructor(message){f.notices.push(message)}},activate:(...args)=>activate(...args)};
+ activate=production('activate',deps,appSource);
+ return{...f,pages,files,active,navigate:name=>activate(pages.get(name),true,true,'user',true),
+  show(name){f.scene.nodes=[{page:pages.get(name),occurrenceId:'root',branch:{depth:0}}];f.restore();}};
+}
+/** Settle only promise continuations; no index progress, fake timer or manual editor opening. */
+async function settleNavigation(){for(let n=0;n<20;n++)await Promise.resolve();}
+
+for(const mode of ['source','preview'])test(`delayed Mind Map root B transfers ${mode} editor intent onward to C`,async()=>{
+ const f=onwardNavigationFixture();f.editors.setMode(f.old.id,mode);
+ f.navigate('B.md');f.gate.resolve();await settleNavigation();
+ f.scene.nodes=[];f.restore();assert.equal(f.active.current,'B.md');assert(f.hasPending());assert.equal(f.editors.bindings.length,0);
+ f.navigate('C.md');await settleNavigation();
+ assert.equal(f.active.current,'C.md');assert.equal(f.pending.current.target.identity,'C.md');
+ f.show('B.md');assert.equal(f.editors.bindings.length,0,'Late B publication cannot open its obsolete editor');
+ f.show('C.md');const binding=f.editors.bindings[0];assert.equal(binding.target.path,'C.md');assert.equal(binding.mode,mode);
+ assert.deepEqual(binding.dimensions,f.old.dimensions);assert.equal(f.events.filter(event=>event==='native-save').length,1);
+ assert.equal(f.pending.current,null);assert.deepEqual(f.notices,[]);
+});
+
+test('several onward destinations share the saved intent and accept only the latest root',async()=>{
+ const f=onwardNavigationFixture();f.navigate('B.md');f.gate.resolve();await settleNavigation();f.scene.nodes=[];
+ f.navigate('C.md');f.navigate('D.md');await settleNavigation();
+ assert.equal(f.state.root,'D.md');f.show('C.md');assert.equal(f.editors.bindings.length,0);
+ f.show('D.md');assert.equal(f.editors.bindings[0].target.path,'D.md');assert.equal(f.events.filter(event=>event==='native-save').length,1);
+});
+
+for(const invalid of ['replaced-file','preflight','retired-view','unsupported'])test(`onward editor handoff handles ${invalid} without a stale replacement`,async()=>{
+ const f=onwardNavigationFixture();f.navigate('B.md');f.gate.resolve();await settleNavigation();f.scene.nodes=[];
+ if(invalid==='preflight')f.deps.selectionPreflight.current=async()=>false;
+ if(invalid==='unsupported')f.files.get('C.md').extension='png';
+ f.navigate('C.md');
+ if(invalid==='replaced-file'){const page={path:'C.md',file:{path:'C.md',extension:'md'}};f.pages.set('C.md',page);f.files.set('C.md',page.file);}
+ if(invalid==='retired-view')f.state.current=false;
+ await settleNavigation();
+ if(invalid==='replaced-file'||invalid==='preflight'){
+  assert.equal(f.state.root,'B.md');f.show('B.md');assert.equal(f.editors.bindings[0].target.path,'B.md','Rejected onward navigation keeps the current saved editor intent');
+ }else{f.show('C.md');assert.equal(f.editors.bindings.length,0);assert.equal(f.pending.current,null);}
+ assert.equal(f.events.filter(event=>event==='native-save').length,1);
 });

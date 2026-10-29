@@ -392,7 +392,8 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     if (reroot && target.file && plugin.app.vault.getFileByPath(target.file.path) !== target.file) return false;
     const changesRoot = reroot && documentSession.plexView.definition.navigation === "rooted"
       && documentSession.plexView.layoutRoot(nodeId(activePathRef.current)) !== target.path;
-    if (pendingEditorNavigation.current || documentSession.plexView.editors.bindings.length && (changesRoot
+    if (pendingEditorNavigation.current || changesRoot && graphActionPorts.current?.hasPendingEditorTransition?.()
+      || documentSession.plexView.editors.bindings.length && (changesRoot
       || documentSession.plexView.definition.navigation !== "rooted" && target.path !== activePathRef.current)) {
       if (origin === "follow" || target.file && plugin.app.vault.getFileByPath(target.file.path) !== target.file) return false;
       const ports = graphActionPorts.current, prepare = ports?.prepareEditorTransition;if (!prepare) return false;

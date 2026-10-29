@@ -759,7 +759,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const boundEditorClose = useRef<{id: string; close: () => Promise<void>} | null>(null);
   const editorViewLease = useRef<(() => void) | null>(null);
   const selectionPreflight = useRef<() => Promise<boolean>>(async () => true);
-  const centerEditorNavigation = useRef<{binding: PlexEditorBinding; current: () => boolean; target?: NodeRef} | null>(null);
+  const centerEditorNavigation = useRef<{binding: PlexEditorBinding; current: () => boolean; target?: NodeRef; navigating?: boolean} | null>(null);
   const [editorNavigationRevision, setEditorNavigationRevision] = useState(0);
   const editorSwitch = useRef<object | null>(null);
   const [editorSwitching, setEditorSwitching] = useState(false);
@@ -1739,29 +1739,46 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     } finally {if (editorSwitch.current === token) {editorSwitch.current = null;if (viewport.current?.isConnected) setEditorSwitching(false);}}
   };
 
-  /** Save the exact outgoing native host; only a centered hierarchy editor follows a reroot. */
+  /** Inspect only current presentation intent; a new explicit editor or root retires the old handoff. */
+  const hasPendingEditorNavigation = (): boolean => {
+    const pending = centerEditorNavigation.current;
+    return Boolean(pending?.target && !pending.navigating && pending.current() && viewSession && !viewSession.editors.bindings.length
+      && viewSession.layoutRoot(nodeId(activePath)) === pending.target.identity);
+  };
+  /** Save the exact outgoing native host, or join its already-saved center presentation. */
   const prepareEditorNavigation = async (): Promise<boolean> => {
+    const previous = hasPendingEditorNavigation() ? centerEditorNavigation.current : null;
     centerEditorNavigation.current = null;
     const binding = viewSession?.editors.bindings[0];
     const carry = binding && viewSession && rooted && viewDefinition.hierarchy?.primary === "center"
       && scene.nodes.some(node => occurrenceKey(node) === binding.occurrenceId && node.page.path === sceneScope && node.branch?.depth === 0)
-      ? {binding, current: viewSession.capture()} : null;
-    if (!await selectionPreflight.current()) return false;
-    if (carry?.current()) centerEditorNavigation.current = carry;
+      ? {binding, current: viewSession.capture()} : previous;
+    if (!await selectionPreflight.current()) {
+      if (previous?.current() && !viewSession?.editors.bindings.length && !centerEditorNavigation.current)
+        centerEditorNavigation.current = previous;
+      return false;
+    }
+    if (carry?.current()) centerEditorNavigation.current = {...carry, navigating: true};
     return true;
   };
   /** Queue presentation intent, never a native editor, until the new root is actually displayed. */
   const completeEditorNavigation = (page: GraphPage | null): void => {
     const pending = centerEditorNavigation.current;
+    // An onward request rejected before rerooting retains the already-saved current editor intent.
+    if (!page && pending?.target && pending.current() && !viewSession?.editors.bindings.length
+      && viewSession?.layoutRoot(nodeId(activePath)) === pending.target.identity) {
+      pending.navigating = false;setEditorNavigationRevision(revision => revision + 1);return;
+    }
     if (!pending || !page || !pending.current() || !supportsBoundEditor(page)
       || viewSession?.layoutRoot(nodeId(page.path)) !== page.path) {centerEditorNavigation.current = null; return;}
     pending.target = actionNodeRef(page);
+    pending.navigating = false;
     setEditorNavigationRevision(revision => revision + 1);
   };
   /** Reacquire exact file and root occurrence after save/navigation before opening the next host. */
   const restoreNavigatedEditor = (): void => {
     const pending = centerEditorNavigation.current, target = pending?.target;
-    if (!pending || !target) return;
+    if (!pending || !target || pending.navigating) return;
     if (!pending.current() || !viewSession || viewSession.layoutRoot(nodeId(activePath)) !== target.identity) {
       centerEditorNavigation.current = null; return;
     }
@@ -4643,6 +4660,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       sceneMotion.cancelAll(); preserveCameraOnNextLayout.current = true;
     },
     prepareEditorTransition: prepareEditorNavigation,
+    hasPendingEditorTransition: hasPendingEditorNavigation,
     completeEditorTransition: completeEditorNavigation,
     prepareNavigation, readWanderScene, highlightWander, clearWander,
     navigateWander: /** Accept only an exact still-displayed destination through the shared App activation path. */ destination => {

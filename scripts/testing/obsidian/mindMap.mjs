@@ -172,6 +172,31 @@ async function scenario(app,c){
    await until(()=>instance(host)?.view.getMode()==='preview'&&!root(host).querySelector('.kplex-central-editor-status'),'New native preview host did not finish opening');
    cases.push({id:'fold-controls-preserve-root-editor-and-next-center-preserves-preview-mode'});
    await act(host,'editor.collapse',{bindingId:session(host).editors.bindings[0].id});
+   session(host).setRoot(path('R'));p.notifyNavigation(path('R'),host);
+   await until(()=>nodes(host).some(node=>node.dataset.kplexKeyboardId==='root'&&node.dataset.kplexPath===path('R')),'Onward fixture root absent');
+   check((await act(host,'editor.expand',undefined,target('R','root'))).status==='completed','Onward root editor did not open');
+   await until(()=>instance(host)?.view.editor&&session(host).editors.bindings[0]?.target.path===path('R'),'Onward native root editor absent');
+   const onward=session(host).editors.bindings[0];
+   await act(host,'editor.resize',{bindingId:onward.id,width:640,height:380});
+   root(host).querySelector('.kplex-central-editor-content .cm-content')?.focus();await clickNative(preview);
+   await until(()=>instance(host)?.view.getMode()==='preview','Onward native preview mode did not settle');
+   const sourceLeaf=instance(host),sourceSave=sourceLeaf.view.save;let sourceSaves=0;
+   sourceLeaf.view.save=function(...args){sourceSaves++;return sourceSave.apply(this,args)};restores.push(()=>{sourceLeaf.view.save=sourceSave});
+   const capture=p.index.captureSemanticGateRead;
+   p.index.captureSemanticGateRead=function(...args){const proof=capture.apply(this,args);return session(host).layoutRoot(path('R'))===path('P')?{...proof,isCurrent:()=>false}:proof};
+   restores.push(()=>{p.index.captureSemanticGateRead=capture});
+   await act(host,'view.fit');await clickNative(()=>nodes(host).find(node=>node.dataset.kplexPath===path('P')));
+   await until(()=>session(host).layoutRoot(path('P'))===path('P')&&host.view.documentSession.centerPath===path('P')&&!session(host).editors.bindings.length&&root(host).querySelector('.kplex-view-error'),'Expected delayed P scene without an admitted editor');
+   const savesAfterClose=sourceSaves,search=root(host).querySelector('input.kplex-search');
+   search.focus();search.select();await until(()=>search.ownerDocument.activeElement===search,'Onward search did not focus');
+   await win.webContents.insertText(path('C'));
+   const onwardResult=()=>[...search.ownerDocument.querySelectorAll('.kplex-search-result')].find(element=>element.textContent.includes(path('C')));
+   await until(onwardResult,'Onward C search result absent');await clickNative(onwardResult);
+   await until(()=>session(host).layoutRoot(path('C'))===path('C')&&host.view.documentSession.centerPath===path('C')&&session(host).editors.bindings[0]?.target.path===path('C')&&instance(host)?.view.file?.path===path('C')&&instance(host)?.view.getMode()==='preview'&&!root(host).querySelector('.kplex-central-editor-status'),'Onward C did not receive the saved editor intent');
+   check(session(host).editors.bindings[0].dimensions.width===640&&session(host).editors.bindings[0].dimensions.height===380&&sourceSaves===savesAfterClose,'Onward handoff changed size or saved the original host again');
+   p.index.captureSemanticGateRead=capture;sourceLeaf.view.save=sourceSave;
+   cases.push({id:'delayed-root-onward-search-retains-native-editor-mode-size-and-save-ownership'});
+   await act(host,'editor.collapse',{bindingId:session(host).editors.bindings[0].id});
   }else if(c.lane==='interactions'){
    await c.acceptInteractions({app,p,c,host,hosts,restores,path,root,session,nodes,act,check,wait,until,clickNative,cases,instance});
   }else if(c.lane==='editor'){
