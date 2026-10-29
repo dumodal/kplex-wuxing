@@ -1,7 +1,8 @@
 /** Production density/profile migration and geometry checks; host shells are doubled, layout is real. */
 import assert from "node:assert/strict";
 import { build } from "esbuild";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import ts from "typescript";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -10,12 +11,12 @@ import test from "node:test";
 const temp = mkdtempSync(join(tmpdir(), "kplex-density-"));
 process.on("exit", () => rmSync(temp, { recursive: true, force: true }));
 await build({
-  stdin: { contents: 'export * from "./src/settings"; export * from "./src/ui/layout"; export * from "./src/core/graph/settingsPolicy"; export * from "./src/core/plex/viewPresentation"; export { effectiveViewSettings } from "./src/ui/viewProfile";', resolveDir: process.cwd() },
+  stdin: { contents: 'export * from "./src/settings"; export * from "./src/ui/plexViews/classic/settings"; export * from "./src/ui/layout"; export * from "./src/core/graph/settingsPolicy"; export * from "./src/core/plex/viewPresentation"; export { effectiveViewSettings } from "./src/ui/viewProfile";', resolveDir: process.cwd() },
   outfile: join(temp, "geometry.mjs"), bundle: true, platform: "node", format: "esm",
   plugins: [{ name: "obsidian-boundary", setup(builder) {
     builder.onResolve({ filter: /^obsidian$/ }, () => ({ path: "obsidian", namespace: "double" }));
     builder.onLoad({ filter: /.*/, namespace: "double" }, () => ({ contents: `
-      export class App {} export class ButtonComponent {} export class Modal {} export class Notice {} export class Setting {} export class AbstractInputSuggest {}
+      export class Component {load(){} unload(){}} export const MarkdownRenderer={render:()=>{throw Error("Native Markdown is outside this finite fixture")}}; export class App {} export class ButtonComponent {} export class Modal {} export class SuggestModal extends Modal {} export class ColorComponent {} export class Notice {} export class Setting {} export class AbstractInputSuggest {}
       export class ExtraButtonComponent {} export class Scope {}
       export class SearchComponent {} export const setIcon = () => {}; export const setTooltip = () => {};
       export class PluginSettingTab {} export const getIcon = () => null; export const getIconIds = () => [];
@@ -101,6 +102,65 @@ test("effective surface settings preserve selected legacy axis fallback, inherit
   const next = geometry.effectiveViewSettings(settings, "leaf", environment);
   assert.notEqual(next, effective); assert.equal(next.horizontalCompactingFactor, 1.8);
   assert.equal(next.compactView, true); assert.equal(next.compactingFactor, 3.1);
+});
+
+test("simplified arrangement persists independently for all devices and surfaces without semantic effects", async () => {
+  const settings = geometry.migrateAndMergeSettings(undefined);
+  const tab = Object.create(geometry.KplexSettingTab.prototype);
+  const effects = [];
+  let previous = geometry.captureSettingsPolicy(settings);
+  tab.kplexPlugin = { settings, translator: (key, args = {}) => `${key}:${JSON.stringify(args)}`,
+    async saveSettings(rebuild) {
+      assert.equal(rebuild, false);
+      const current = geometry.captureSettingsPolicy(settings);
+      effects.push(geometry.classifySettingsChange(previous, current)); previous = current;
+    } };
+  const contribution = geometry.classicSettingsContribution.items({translate: tab.kplexPlugin.translator,
+    areaTint: () => ({name: "Owned tint action"}), key: () => {throw Error("Compass must retain legacy keys");}});
+  const flatten = items => items.flatMap(item => [item, ...flatten(item.items ?? [])]);
+  const rows = flatten(contribution).filter(row => row.control?.key.startsWith("layout."));
+  assert.equal(rows.length, 6);
+  assert.equal(new Set(rows.map(row => row.control.key)).size, 6);
+  const signature = geometry.encodeIndexSettingsSignature(settings);
+  for (const device of ["desktop", "tablet", "mobile"]) for (const surface of ["leaf", "sidepanel"]) {
+    const key = `layout.${device}.${surface}.lateralArrangement`;
+    assert.equal(tab.getControlValue(key), false, "An omitted preference retains established geometry");
+    await tab.setControlValue(key, true);
+    assert.equal(tab.getControlValue(key), true);
+    const environment = { device: device === "mobile" ? "phone" : device };
+    assert.equal(geometry.effectiveViewSettings(settings, surface, environment).lateralArrangement, "left");
+    assert.equal(geometry.effectiveViewSettings(settings, "popout", environment).lateralArrangement, "left");
+  }
+  assert.equal(geometry.encodeIndexSettingsSignature(settings), signature);
+  for (const effect of effects) {
+    assert.equal(effect.semanticInvalidation, false); assert.equal(effect.presentationFacets, false);
+    assert.equal(effect.searchTerms, false); assert.equal(effect.nodeVisuals, false);
+    assert.equal(effect.render, true); assert.deepEqual(effect.changedKeys, ["layoutProfiles"]);
+  }
+  const restarted = geometry.migrateAndMergeSettings(JSON.parse(JSON.stringify(settings)));
+  assert.deepEqual(restarted.layoutProfiles, settings.layoutProfiles);
+  const imported = geometry.importExcaliBrainGraphSettings({ layoutProfiles: { "desktop:leaf": { lateralArrangement: "split" } } }, settings);
+  assert.deepEqual(imported.layoutProfiles, settings.layoutProfiles, "Foreign appearance cannot alter local layout preferences");
+  await tab.setControlValue("layout.desktop.leaf.lateralArrangement", false);
+  assert.equal(geometry.effectiveViewSettings(settings, "leaf", { device: "desktop" }).lateralArrangement, "split");
+  assert.equal(geometry.effectiveViewSettings(settings, "popout", { device: "desktop" }).lateralArrangement, "split");
+  assert.equal(geometry.effectiveViewSettings(settings, "sidepanel", { device: "desktop" }).lateralArrangement, "left");
+});
+
+test("main-tab arrangement is live in pop-outs without replacing their independent density", () => {
+  const settings = geometry.migrateAndMergeSettings({ layoutProfiles: {
+    "desktop:leaf": { lateralArrangement: "left", compactingFactor: 1.5 },
+    "desktop:popout": { lateralArrangement: "split", compactingFactor: 3.75 },
+    "tablet:leaf": { lateralArrangement: "unknown" },
+  } });
+  const environment = { device: "desktop" };
+  const first = geometry.effectiveViewSettings(settings, "popout", environment);
+  assert.equal(first.lateralArrangement, "left"); assert.equal(first.compactingFactor, 3.75);
+  settings.layoutProfiles["desktop:leaf"].lateralArrangement = "split";
+  const second = geometry.effectiveViewSettings(settings, "popout", environment);
+  assert.notEqual(first, second); assert.equal(second.lateralArrangement, "split");
+  assert.equal(second.compactingFactor, 3.75);
+  assert.equal(geometry.effectiveViewSettings(settings, "leaf", { device: "tablet" }).lateralArrangement, "split");
 });
 
 test("normal compact-off equal-axis layout retains established default physical gaps", () => {
@@ -206,6 +266,14 @@ test("rendered count projection reads current numbers without changing geometry 
   const transient = { ...node, page: { ...node.page, transient: { kind: "section", sourcePath: "Center.md", actualPath: "Center.md", sectionId: "section" } },
     gateStats: { top: { visibleCount: 13, hasAny: true } } };
   calls.length = 0;assert.equal(geometry.projectNodeCounts(transient, live), transient);assert.equal(calls.length, 0);
+  const target = { ...node, page: { ...node.page, path: "section-target:one", transient: { kind: "section-target", actualPath: node.page.path, sourcePath: "Center.md", sectionId: "section" } } };
+  let canonical = { ...node.page };
+  const current = { ...live, get: path => path === node.page.path ? canonical : undefined };
+  assert.equal(geometry.presentationPage(target.page, current), canonical);
+  assert.equal(geometry.projectNodeCounts(target, current).gateStats.top.visibleCount, 9);
+  assert.deepEqual(calls, [node.page.path], "Never query the synthetic occurrence path");
+  canonical = undefined;
+  assert.equal(geometry.projectNodeCounts(target, current), target, "A removed canonical target remains unavailable");
 });
 
 test("viewport count selection includes partially clipped rows and excludes rows touching outside edges", () => {
@@ -243,6 +311,54 @@ test("clipped cross-link projection equals full-scene edges while querying only 
     const structural = projected.filter(edge => [edge.sourcePath, edge.targetPath].sort().join("/") === "P0.md/S0.md");
     if (visible.has("S0.md")) assert.equal(structural.length, 1, "Structural sibling edges are never duplicated");
   }
+});
+
+test("focused crosslinks preserve canonical orientation, exact gates, styles and bounded visible adjacency", () => {
+  const source=ts.createSourceFile('PlexGraph.tsx',readFileSync('src/ui/PlexGraph.tsx','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+  const definition=source.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text==='gatesForEdge');assert(definition);
+  const gates=new Function("classicPorts",ts.transpileModule(definition.getText(source),{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText+';return gatesForEdge;')(geometry.classicPorts);
+  const pages=new Map(['Center','A','B','C','D','E','Synthetic'].map(name=>[name+'.md',page(name)]));
+  pages.get('Synthetic.md').transient={kind:'section-target',sourcePath:'Center.md',actualPath:'A.md',sectionId:'s'};
+  const pairs={
+    'A.md':[['B.md','child','ab',1],['C.md','parent','ac',2],['D.md','left','ad',1],['E.md','right','ae',2]],
+    'B.md':[['A.md','parent','ab',2],['C.md','left','unrelated',1]],
+    'C.md':[['A.md','child','ac',1],['B.md','right','unrelated',2]],
+    'D.md':[['A.md','right','ad',2]],'E.md':[['A.md','left','ae',1]],
+  };
+  const calls=[],linked={visibleRelationshipsWithin(node,targets){
+    assert.notEqual(node.path,'Synthetic.md');calls.push({source:node.path,targets:[...targets]});
+    return(pairs[node.path]??[]).filter(([path])=>targets.has(path)).map(([path,role,typeDefinition,linkDirection])=>({page:pages.get(path),role,typeDefinition,linkDirection,relationType:1}));
+  }};
+  const settings={...defaults,hierarchyLinkStyles:{ab:{strokeWidth:2.5,showLabel:true},ac:{strokeStyle:'dashed'},ad:{endArrowHead:'triangle'},ae:{fontSize:13}}};
+  const nodes=[...pages.values()].map((page,n)=>({page,x:n%2?-500:500,y:0}));
+  const full=[];geometry.appendVisibleCrossLinks(nodes,full,linked,settings,'Center.md');
+  assert.deepEqual(full.map(edge=>[edge.sourcePath,edge.targetPath,edge.role]),[
+    ['A.md','B.md','child'],['A.md','C.md','parent'],['A.md','D.md','left'],['A.md','E.md','right'],['B.md','C.md','left'],
+  ]);
+  // Independent endpoint expectations, not a second invocation of the new selector as oracle.
+  const expected={
+    'A.md':{top:['ac'],bottom:['ab'],left:['ad'],right:['ae']},
+    'B.md':{top:['ab'],bottom:[],left:['unrelated'],right:[]},
+    'C.md':{top:[],bottom:['ac'],left:[],right:['unrelated']},
+    'D.md':{top:[],bottom:[],left:[],right:['ad']},
+    'E.md':{top:[],bottom:[],left:['ae'],right:[]},
+  };
+  for(const path of Object.keys(expected))for(const gate of [null,'top','bottom','left','right']){
+    calls.length=0;const output=[];
+    geometry.appendVisibleCrossLinks(nodes,output,linked,settings,'Center.md',{path,accepts:edge=>!gate||edge.sourcePath===path&&gates(edge).source===gate||edge.targetPath===path&&gates(edge).target===gate});
+    const ids=gate?expected[path][gate]:Object.values(expected[path]).flat();
+    assert.deepEqual(output,full.filter(edge=>ids.includes(edge.typeDefinition)),path+'/'+gate+' must preserve exact normal directed/style output');
+    assert(calls.length<=1+(pairs[path]?.length??0),'Only the hovered adjacency and incident earlier endpoints may be queried');
+    assert(calls.every(call=>call.source===path||pairs[path].some(([other])=>other===call.source)),'Unrelated sources must not be queried');
+  }
+  for(const path of ['Center.md','Synthetic.md','Missing.md']){
+    calls.length=0;const output=[];geometry.appendVisibleCrossLinks(nodes,output,linked,settings,'Center.md',{path,accepts:()=>true});assert.deepEqual(output,[]);assert.equal(calls.length,0);
+  }
+  const clipped=nodes.filter(node=>['Center.md','A.md','B.md'].includes(node.page.path)),output=[];
+  geometry.appendVisibleCrossLinks(clipped,output,linked,settings,'Center.md',{path:'A.md',accepts:()=>true});assert.deepEqual(output.map(edge=>edge.typeDefinition),['ab']);
+  const structural={...full[0],id:'sibling-parent:A.md:B.md',isCrossLink:false},seeded=[structural];
+  geometry.appendVisibleCrossLinks(nodes,seeded,linked,settings,'Center.md',{path:'B.md',accepts:()=>true});
+  assert.equal(seeded.filter(edge=>edge.sourcePath==='A.md'&&edge.targetPath==='B.md').length,1,'Existing structural pairs cannot be duplicated');assert.equal(seeded[0],structural);
 });
 
 test("expanded scroll viewports and editable areas include actual child-box widths", () => {
@@ -283,6 +399,29 @@ test("section headings and clusters obey both density axes, spacing targets and 
   assert(nested(spaced).y - heading(spaced).y > nested(base).y - heading(base).y);
 });
 
+test("section relation whitespace responds to density without enlarging the empty inter-section gutter", () => {
+  const expansion = sectionFixture();
+  const scene = density => geometry.buildSectionExpandedScene(expansion, index, {...defaults, horizontalCompactingFactor:density, compactingFactor:density}, new Set(["root"]), false);
+  const loose = scene(1), dense = scene(4);
+  const firstCluster = s => {
+    const start = s.nodes.findIndex(n=>n.page.path==="Heading.md");
+    // Section relation occurrences are appended before their heading; use edge provenance to select them.
+    const paths = new Set(s.edges.filter(e=>e.id.startsWith('section-edge:')&&e.sourcePath==='Heading.md').map(e=>e.targetPath));
+    const ordinaryCount = geometry.buildScene(expansion.centerNeighborhood,index,defaults,false).nodes.length;
+    return s.nodes.filter((n,i)=>i>=ordinaryCount&&i<=start&&(paths.has(n.page.path)||n.page.path==='Heading.md'));
+  };
+  const row = s => firstCluster(s).filter(n=>n.role==='child').sort((a,b)=>a.y-b.y||a.x-b.x);
+  assert(gap(row(loose)[0],row(loose)[1],'x')>=gap(row(dense)[0],row(dense)[1],'x')+25);
+  assert(gap(row(loose)[0],row(loose)[4],'y')>=gap(row(dense)[0],row(dense)[4],'y')+10);
+  for (const [density,s] of [[1,loose],[4,dense]]) {
+    const first = firstCluster(s), start = Math.min(...first.map(n=>n.y-n.height/2));
+    const last = Math.max(...first.map(n=>n.y+n.height/2));
+    const later = s.nodes.filter(n=>n.y-n.height/2>=last-1e-8&&!first.includes(n));
+    const next = Math.min(...later.map(n=>n.y-n.height/2));
+    assert(start<last); assert(Math.abs(next-last-(density===1?48:20)*geometry.spacingPolicy(defaults).spacing)<1e-7);
+  }
+});
+
 test("independent dense/sparse axes keep zone-clipped thoughts and expanded boxes separate", () => {
   const n = neighborhood(15);
   const children = neighborhood(9).children;
@@ -301,7 +440,7 @@ test("independent dense/sparse axes keep zone-clipped thoughts and expanded boxe
         y: node.y + node.height / 2 + box.topGap + box.viewportHeight / 2 });
     }
     const clipped = occupied.flatMap(node => {
-      const panel = scene.zoneViewports[node.role];
+      const panel = scene.zoneViewports[geometry.scrollZoneForRole(node.role, settings.lateralArrangement)];
       if (!panel) return [node];
       const top = Math.max(node.y - node.height / 2, panel.top), bottom = Math.min(node.y + node.height / 2, panel.top + panel.height);
       return bottom > top ? [{ ...node, y: (top + bottom) / 2, height: bottom - top }] : [];
@@ -341,7 +480,8 @@ test("parent columns one-to-three govern density-weighted lateral area boundarie
     const desired = geometry.lateralAreaGap(settings, seams.parentWidth);
     assert(Math.abs(seams.right - desired) < 1e-8, `right parent${parentColumns}/H${horizontalCompactingFactor}`);
     assert(Math.abs(seams.left - desired) < 1e-8);
-    assert(Math.abs(seams.sibling - desired) < 1e-8);
+    assert(Math.abs(seams.sibling - Math.max(0, desired)) < 1e-8,
+      "Independent Challenger/Sibling scroll areas cannot share the parent margin overlap");
     if (horizontalCompactingFactor < 3) assert(seams.right > 0);
     if (horizontalCompactingFactor === 3) assert.equal(seams.right, 0);
     if (horizontalCompactingFactor === 4) assert(Math.abs(seams.right + seams.parentWidth * 0.05) < 1e-8);
@@ -353,6 +493,77 @@ test("parent columns one-to-three govern density-weighted lateral area boundarie
   const siblingsOnly = { ...n, rightFriends: [] };
   const scene = geometry.buildScene(siblingsOnly, index, { ...defaults, horizontalCompactingFactor: 3 }, false);
   assert(Math.abs(scene.zoneAreas.sibling.left - scene.zoneAreas.parent.left - scene.zoneAreas.parent.width) < 1e-8);
+});
+
+test("issue 175 keeps Challenger and Sibling areas disjoint at dense layout settings", () => {
+  for (const horizontalCompactingFactor of [3, 3.5, 4]) for (const parentColumns of [1, 2, 3]) {
+    const settings = { ...defaults, horizontalCompactingFactor, parentColumns };
+    const scene = geometry.buildScene(neighborhood(15), index, settings, false);
+    const challenger = scene.zoneAreas.right, sibling = scene.zoneAreas.sibling;
+    assert(sibling.left >= challenger.left + challenger.width - 1e-8,
+      `Independent areas overlapped at density ${horizontalCompactingFactor}, parent columns ${parentColumns}`);
+  }
+});
+
+test("one-sided layout shares one left scroll area without merging roles or semantic edges", () => {
+  const n = neighborhood(30);
+  n.leftFriends = n.children.map((relation, i) => ({ ...relation, page: page(`LF${i}`), role: "left" }));
+  n.rightFriends = n.children.map((relation, i) => ({ ...relation, page: page(`RC${i}`), role: "right" }));
+  const semanticBefore = JSON.stringify(n);
+  const children = neighborhood(9).children;
+  const expandedIndex = { ...index, neighbours: () => children };
+  for (const graphDepth of [1, 2]) for (const h of [0.75, 4]) for (const v of [0.75, 4])
+    for (const friendMaxHeight of [140, 350, 800]) for (const wrapNodeLabels of [false, true]) for (const editor of [false, true]) {
+    const settings = { ...defaults, graphDepth, horizontalCompactingFactor: h, compactingFactor: v,
+      lateralArrangement: "left", friendMaxHeight, wrapNodeLabels };
+    const scene = geometry.buildScene(n, expandedIndex, settings, false, editor ? { width: 900, height: 600 } : undefined);
+    const friends = scene.zoneAreas.left;
+    assert.equal(scene.zoneAreas.right, undefined);
+    assert(friends.left + friends.width <= scene.zoneAreas.parent.left + 1e-8,
+      "The shared left strip must not overlap the parent area");
+    assert.equal(friends.height, Math.max(120, friendMaxHeight));
+    assert(scene.zoneViewports.left, "Both groups share the bounded overflow owner");
+    assert.equal(scene.zoneViewports.right, undefined);
+    assert.equal(geometry.scrollZoneForRole("right", "left"), "left");
+    assert.equal(geometry.scrollZoneForRole("next", "left"), "left");
+    assert(scene.nodes.filter(node => node.role === "left" || node.role === "right").every(node => node.x < 0));
+    assert(scene.nodes.filter(node => node.role === "sibling").every(node => node.x > 0));
+    const split = geometry.buildScene(n, expandedIndex, { ...settings, lateralArrangement: "split" }, false,
+      editor ? { width: 900, height: 600 } : undefined);
+    assert.deepEqual(scene.edges, split.edges, "Moving areas cannot change connector roles, ontology definitions or directions");
+    const occupied = [...scene.nodes];
+    if (graphDepth === 2) for (const node of scene.nodes) {
+      if (node.role === "center") continue;
+      const box = geometry.expandedMiniLayout(settings, node.width, children.length, node.role === "sibling" ? geometry.siblingScale(settings) : 1);
+      occupied.push({ ...node, width: box.width, height: box.viewportHeight,
+        y: node.y + node.height / 2 + box.topGap + box.viewportHeight / 2 });
+    }
+    const clipped = occupied.flatMap(node => {
+      const panel = scene.zoneViewports[geometry.scrollZoneForRole(node.role, settings.lateralArrangement)];
+      if (!panel) return [node];
+      const top = Math.max(node.y - node.height / 2, panel.top), bottom = Math.min(node.y + node.height / 2, panel.top + panel.height);
+      return bottom > top ? [{ ...node, y: (top + bottom) / 2, height: bottom - top }] : [];
+    });
+    noOverlap(clipped, `simplified/depth${graphDepth}/h${h}/v${v}/height${friendMaxHeight}/wrap${wrapNodeLabels}/editor${editor}`);
+  }
+  assert.equal(JSON.stringify(n), semanticBefore, "Layout cannot modify source-owned pages or relationships");
+});
+
+test("simplified section expansion places both lateral groups left while preserving source provenance", () => {
+  const expansion = sectionFixture();
+  const settings = { ...defaults, lateralArrangement: "left" };
+  for (const horizontalCompactingFactor of [0.75, 4]) for (const compactingFactor of [0.75, 4]) {
+    const chosen = { ...settings, horizontalCompactingFactor, compactingFactor };
+    const scene = geometry.buildSectionExpandedScene(expansion, index, chosen, new Set(["root"]), false);
+    const split = geometry.buildSectionExpandedScene(expansion, index, { ...chosen, lateralArrangement: "split" }, new Set(["root"]), false);
+    assert.deepEqual(scene.edges, split.edges);
+    const headings = new Map(scene.nodes.filter(node => ["Heading.md", "Nested.md"].includes(node.page.path)).map(node => [node.page.path, node]));
+    for (const edge of scene.edges.filter(edge => edge.id.startsWith("section-edge:") && ["left", "right"].includes(edge.role))) {
+      const source = headings.get(edge.sourcePath), target = scene.nodes.find(node => node.page.path === edge.targetPath && node.role === edge.role);
+      assert(target.x + target.width / 2 < source.x - source.width / 2);
+    }
+    noOverlap(scene.nodes.slice(12), `simplified section/H${horizontalCompactingFactor}/V${compactingFactor}`);
+  }
 });
 
 test("child columns, child titles, row count and vertical density never move lateral horizontal anchors", () => {
@@ -444,175 +655,4 @@ test("global font size migrates, stays presentation-only and grows node/expanded
   const smallStyle=geometry.buildScene(sparse(),index,{...defaults,baseFontSize:28,wrapNodeLabels:true,baseNodeStyle:{...defaults.baseNodeStyle,fontSize:8},centralNodeStyle:{...defaults.centralNodeStyle,fontSize:8}},false);
   for(const node of smallStyle.nodes){assert(node.height>=geometry.nodeLabelFontSize(node.style.fontSize,node.role==="center",28)*2.3+8,"Clamped small style must fit both painted line boxes");}
   noOverlap(smallStyle.nodes,"small-style-large-base-font");
-});
-
-
-test("Wu Xing fixed phase vertices move the active note without rotating the five colors", () => {
-  const phases = ["🟢", "🔴", "🟤", "🟡", "🔵"];
-  const cycle = ["🟡", "🔵", "🟢", "🔴", "🟤"];
-  const roleFields = ["siblings", "children", "rightFriends", "leftFriends", "parents"];
-  for (const phase of phases) {
-    const current = page("Current"); current.phase = phase; current.noteType = "🔴";
-    const n = {center: current, parents: [], children: [], leftFriends: [], rightFriends: [], siblings: []};
-    for (const target of phases) {
-      const p = page(target); p.phase = target; p.noteType = "🔴";
-      n[roleFields[(cycle.indexOf(target) - cycle.indexOf(phase) + 5) % 5]].push({page:p, relationType:1, typeDefinition:"", linkDirection:0});
-    }
-    const colors = Object.fromEntries(phases.map((p,i)=>[p,{backgroundColor:`#00000${i}`} ]));
-    const ix = {...index, isWuXingMode:()=>true, wuXingPhase:p=>p.phase};
-    const scene = geometry.buildScene(n, ix, {...defaults, noteTypeStyles:colors}, false);
-    assert.deepEqual(scene.wuXing.vertices.map(v=>v.phase), phases);
-    const active = scene.nodes[0], vertex = scene.wuXing.vertices.find(v=>v.phase===phase);
-    assert.equal(active.x,vertex.x);
-    assert.equal(active.y-active.height/2,vertex.frame.top+62*vertex.scale,"active card owns the first lane below the phase heading");
-    assert(active.y+active.height/2<vertex.frame.top+vertex.frame.height,"the active card stays inside its phase frame");
-    assert(Math.hypot(active.x,active.y)>200);
-    assert.deepEqual(scene.wuXing.focalPoint,{x:0,y:0});
-    for(const node of scene.nodes) assert.equal(node.style.backgroundColor,colors[node.page.phase].backgroundColor,"live status wins over stale cached noteType");
-    assert.equal(scene.nodes.find(node=>node.role==="sibling").x, active.x);
-    assert.equal(scene.edges.length,5,"no imaginary phase connections");
-    noOverlap(scene.nodes,"phase ring");
-    noOverlap(scene.wuXing.vertices.map(v=>({x:v.frame.left+v.frame.width/2,y:v.frame.top+v.frame.height/2,width:v.frame.width,height:v.frame.height,page:{path:v.phase}})),"phase frames");
-    const [wood,fire,earth,metal,water]=scene.wuXing.vertices;
-    assert(wood.y<fire.y && fire.x>0 && earth.y>0 && metal.x<0 && water.y<0);
-    assert(wood.x>water.x && wood.x<fire.x, "perspective may shift the top vertex laterally without changing phase order");
-  }
-});
-
-test("Wu Xing large groups scroll within separate bounded phase panels", () => {
-  const n=neighborhood(300);n.center.phase="🟡";
-  const ix={...index,isWuXingMode:()=>true,wuXingPhase:p=>p.phase ?? "🔵"};
-  const scene=geometry.buildScene(n,ix,defaults,false);
-  assert(scene.zoneViewports.parent && scene.zoneViewports.child);
-  for(const panel of Object.values(scene.zoneViewports)) {
-    assert(panel.height<=defaults.childMaxHeight);
-    assert(panel.contentHeight>=panel.height);
-    assert.equal(panel.initialScrollTop,0);
-  }
-  const areas=Object.values(scene.zoneAreas).map(a=>({x:a.left+a.width/2,y:a.top+a.height/2,width:a.width,height:a.height,page:{path:a.key}}));
-  noOverlap(areas,"large ring panels");
-});
-
-
-test("local radar uses note counts, preserves empty phases and responds to unequal distributions", () => {
-  const make = counts => {
-    const n={center:page("Current"),parents:[],children:[],rightFriends:[],leftFriends:[],siblings:[]};
-    n.center.phase="🟡";
-    const fields=["siblings","children","rightFriends","leftFriends","parents"];
-    counts.forEach((count,i)=>{n[fields[i]]=Array.from({length:count-(i===0?1:0)},(_,j)=>({page:page(`${i}-${j}`),relationType:1,typeDefinition:"",linkDirection:0}));});
-    return geometry.buildScene(n,{...index,isWuXingMode:()=>true,wuXingPhase:p=>p.phase ?? "🔵"},defaults,false);
-  };
-  const balanced=make([2,2,2,2,2]).wuXing.vertices;
-  const radii=balanced.map(v=>Math.hypot(v.radarX,v.radarY));
-  assert(radii.every(r=>Math.abs(r-radii[0])<1e-8));
-  const uneven=make([1,8,4,2,0]).wuXing.vertices;
-  assert.deepEqual(uneven.map(v=>v.count),[4,2,0,1,8]);
-  const water=uneven.find(v=>v.phase==="🔵"), metal=uneven.find(v=>v.phase==="🟡");
-  assert(Math.hypot(water.radarX,water.radarY)>Math.hypot(metal.radarX,metal.radarY));
-  const earth=uneven.find(v=>v.phase==="🟤");assert.equal(Math.hypot(earth.radarX,earth.radarY),0);
-  assert.equal(uneven.reduce((sum,v)=>sum+v.count,0),15);
-});
-
-
-test("radar counts retain recognized connections beyond the displayed per-phase cap", () => {
- const n=neighborhood(1);n.center.phase="🟡";
- n.wuXingCounts={sibling:1,child:1000,right:100,left:0,parent:0};
- const scene=geometry.buildScene(n,{...index,isWuXingMode:()=>true,wuXingPhase:p=>p.phase ?? "🔵"},defaults,false);
- assert.equal(scene.wuXing.vertices.find(v=>v.phase==="🔵").count,1000);
- assert.equal(scene.wuXing.vertices.find(v=>v.phase==="🟢").count,100);
- assert.equal(scene.wuXing.vertices.find(v=>v.phase==="🟡").count,2);
-});
-
-
-test("empty phases retain visible frames without inventing note neighbors", () => {
- const n={center:page("Current"),parents:[],children:[],rightFriends:[],leftFriends:[],siblings:[]};
- n.center.phase="🟡";
- const scene=geometry.buildScene(n,{...index,isWuXingMode:()=>true,wuXingPhase:p=>p.phase},defaults,false);
- assert.equal(scene.nodes.length,1);assert.equal(scene.edges.length,0);assert.equal(scene.wuXing.vertices.length,5);
- assert.equal(scene.wuXing.vertices.filter(v=>v.count===0).length,4);
- assert(scene.wuXing.vertices.every(v=>v.frame.width>0 && v.frame.height>0));
-});
-
-
-test("Wu Xing camera offsets migrate safely and remain live in cached surface facades", () => {
-  assert.equal(defaults.wuxingYaw, 0);
-  assert.equal(defaults.wuxingPitch, 0);
-  const clamped = geometry.migrateAndMergeSettings({ wuxingYaw: 900, wuxingPitch: -900 });
-  assert.equal(clamped.wuxingYaw, 25);
-  assert.equal(clamped.wuxingPitch, -25);
-  const invalid = geometry.migrateAndMergeSettings({ wuxingYaw: NaN, wuxingPitch: Infinity });
-  assert.equal(invalid.wuxingYaw, 0);
-  assert.equal(invalid.wuxingPitch, 0);
-  const settings = geometry.migrateAndMergeSettings({ wuxingYaw: 10, wuxingPitch: -8 });
-  const views = ["leaf", "sidepanel", "popout"].map(surface => geometry.effectiveViewSettings(settings, surface, { device: "desktop" }));
-  settings.wuxingYaw = -12;
-  settings.wuxingPitch = 7;
-  for (const view of views) {
-    assert.equal(view.wuxingYaw, -12);
-    assert.equal(view.wuxingPitch, 7);
-  }
-  settings.wuxingYaw = settings.wuxingPitch = 0;
-  for (const view of views) assert.deepEqual([view.wuxingYaw, view.wuxingPitch], [0, 0]);
-});
-
-
-test("phase frames have count-independent world dimensions and bounded scroll content", () => {
- const make=count=>{const n=neighborhood(0);n.center.phase="🟢";n.parents=[];n.leftFriends=[];n.rightFriends=[];n.siblings=Array.from({length:count},(_,i)=>({page:page(`Wood${i}`),relationType:1,typeDefinition:"",linkDirection:0}));return geometry.buildScene(n,{...index,isWuXingMode:()=>true,wuXingPhase:p=>p.phase??"🟢"},defaults,false);};
- const sparse=make(1),dense=make(300);
- assert.deepEqual(sparse.wuXing.vertices,dense.wuXing.vertices.map((v,i)=>({...v,count:sparse.wuXing.vertices[i].count})),"same proportions preserve plane and frames despite more notes");
- assert(dense.zoneViewports.sibling.contentHeight>dense.zoneViewports.sibling.height);
- assert.equal(dense.wuXing.vertices.length,5);
- const dims=dense.wuXing.vertices.map(v=>[v.frame.width/v.scale,v.frame.height/v.scale]);
- assert(dims.every(d=>Math.abs(d[0]-dims[0][0])<1e-8&&Math.abs(d[1]-dims[0][1])<1e-8));
-});
-
-
-test("phase frames remain separate through allowed manual tilt extremes", () => {
- const n=neighborhood(1);n.center.phase="🟢";
- for(const yaw of [-25,0,25]) for(const pitch of [-25,0,25]) {
-   const scene=geometry.buildScene(n,{...index,isWuXingMode:()=>true,wuXingPhase:p=>p.phase??"🟢"},{...defaults,wuxingYaw:yaw,wuxingPitch:pitch},false);
-   noOverlap(scene.wuXing.vertices.map(v=>({x:v.frame.left+v.frame.width/2,y:v.frame.top+v.frame.height/2,width:v.frame.width,height:v.frame.height,page:{path:v.phase}})),`tilt ${yaw},${pitch}`);
- }
-});
-
-
-test("Wu Xing ontology seeds five bilingual groups once and preserves user edits", () => {
- const settings=geometry.migrateAndMergeSettings({});
- settings.hierarchy.parents.push("custom_source");
- assert.equal(geometry.initializeWuXingOntology(settings),true);
- assert.equal(geometry.WUXING_ONTOLOGY_GROUPS.length,5);
- assert.deepEqual(settings.hierarchy.previous,["同我","Kinship","比肩","Affinity","劫财","Alliance"]);
- assert(settings.hierarchy.parents.includes("custom_source"));
- assert(!settings.hierarchy.parents.includes("Parent"));
- assert.deepEqual(geometry.migrateAndMergeSettings(settings).hierarchy.previous,settings.hierarchy.previous);
- assert(!geometry.migrateAndMergeSettings(settings).hierarchy.rightFriends.includes("Challenger"));
- settings.hierarchy.previous=["自定义"];
- const reloaded=geometry.migrateAndMergeSettings(settings);
- assert.equal(geometry.initializeWuXingOntology(reloaded),false);
- assert.deepEqual(reloaded.hierarchy.previous,["自定义"]);
-});
-
-
-test("Wu Xing display language survives settings reload without changing metadata aliases or layout", () => {
-  const initial = geometry.migrateAndMergeSettings({});
-  assert.equal(initial.wuxingLanguage, "en");
-  assert.equal(initial.wuxingGuideSeen, false);
-  assert.equal(geometry.migrateAndMergeSettings({wuxingLanguage: "unsupported"}).wuxingLanguage, "en");
-  geometry.initializeWuXingOntology(initial);
-  initial.wuxingLanguage = "en";
-  initial.wuxingYaw = 12;
-  const reloaded = geometry.migrateAndMergeSettings(JSON.parse(JSON.stringify(initial)));
-  assert.equal(reloaded.wuxingLanguage, "en");
-  assert.equal(reloaded.wuxingYaw, 12);
-  assert.deepEqual(reloaded.hierarchy, initial.hierarchy);
-});
-
-
-test("explicit Chinese and dismissed onboarding survive reload while fresh settings use English", () => {
-  const settings = geometry.migrateAndMergeSettings({wuxingLanguage:"zh",wuxingGuideSeen:true});
-  assert.equal(settings.wuxingLanguage,"zh");
-  assert.equal(settings.wuxingGuideSeen,true);
-  const reloaded = geometry.migrateAndMergeSettings(JSON.parse(JSON.stringify(settings)));
-  assert.equal(reloaded.wuxingLanguage,"zh");
-  assert.equal(reloaded.wuxingGuideSeen,true);
 });

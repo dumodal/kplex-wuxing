@@ -5,6 +5,7 @@
  * available counts as lower bounds without granting relationship authority.
  */
 import type { TFile } from "obsidian";
+import type { ColorValue } from "./core/contracts/colorValue";
 import { LinkDirection, RelationType, type Role, type RelationshipRole, type SemanticRelation } from "./core/graph/relations";
 
 export { LinkDirection, RelationType };
@@ -32,10 +33,10 @@ export type Hierarchy = {
 export type NodeStyle = {
   prefix?: string;
   icon?: string;
-  backgroundColor?: string;
+  backgroundColor?: ColorValue;
   fillStyle?: FillStyle;
-  textColor?: string;
-  borderColor?: string;
+  textColor?: ColorValue;
+  borderColor?: ColorValue;
   fontSize?: number;
   fontFamily?: number;
   maxLabelLength?: number;
@@ -47,15 +48,15 @@ export type NodeStyle = {
   padding?: number;
   gateRadius?: number;
   gateOffset?: number;
-  gateStrokeColor?: string;
-  gateBackgroundColor?: string;
+  gateStrokeColor?: ColorValue;
+  gateBackgroundColor?: ColorValue;
   gateFillStyle?: FillStyle;
   embedWidth?: number;
   embedHeight?: number;
 };
 
 export type LinkStyle = {
-  strokeColor?: string;
+  strokeColor?: ColorValue;
   strokeWidth?: number;
   strokeStyle?: StrokeStyle;
   roughness?: number;
@@ -64,7 +65,7 @@ export type LinkStyle = {
   showLabel?: boolean;
   fontSize?: number;
   fontFamily?: number;
-  textColor?: string;
+  textColor?: ColorValue;
 };
 
 export type Relation = SemanticRelation<GraphPage>;
@@ -84,12 +85,14 @@ export type GraphPage = {
   primaryStyleTag: string | null;
   styleTags: string[];
   maxLabelLength: number;
-  /** Runtime-only visual identity used by central-section expansion. Never persisted in GraphIndex. */
+  /** Runtime-only visual identity for section expansion and relation groups. Never persisted in GraphIndex. */
   transient?: {
-    kind: "section" | "section-target";
+    kind: "section" | "section-target" | "group";
     sourcePath: string;
     actualPath?: string;
     sectionId: string;
+    /** Runtime-only relation bucket; never serialized or treated as a native endpoint. */
+    groupMembers?: readonly Neighbour[];
     heading?: string;
     level?: number;
     subpath?: string;
@@ -114,8 +117,6 @@ export type Neighborhood = {
   leftFriends: Neighbour[];
   rightFriends: Neighbour[];
   siblings: Neighbour[];
-  /** Available Wu Xing connections before per-zone display limits and local visual filtering. */
-  wuXingCounts?: Record<ScrollZone, number>;
 };
 
 export type GateStat = {
@@ -147,11 +148,25 @@ export type NodeVisual = {
 };
 
 export type PositionedNode = {
-  /** Optional billboard presentation, independent from note styles and semantic roles. */
-  presentationScale?: number;
-  presentationOpacity?: number;
-  /** Painted label size for overview layouts, already adjusted for local perspective. */
-  presentationFontSize?: number;
+  /** Shared measured decoration, with no semantic gate/drop authority. */
+  viewBadge?: Readonly<{label: string; description?: string; background?: import("./core/contracts/colorValue").ColorValue;
+    width: number; height: number; fontSize: number; presentation?: "category" | "status"}>;
+  viewDescription?: string;
+  /** Independent visual occurrence; canonical page identity remains the action/write target. */
+  occurrenceId?: string;
+  areaId?: string;
+  representation?: "thought" | "point";
+  physicalPorts?: Partial<Record<GateSide, GateRole>>;
+  /** Presentation-only aggregate from the bounded view reader, independent of the port's default creation role. */
+  /** Display-only canonical count hydration; projection incidence never grants write authority. */
+  peerPort?: import("./core/plex/views/contracts").PlexOccurrence["peerPort"] & {
+    shownCount?: number; hasAny?: boolean; coverage?: GateStat["coverage"]; countUnavailable?: boolean;
+  };
+  /** Canonical source of this occurrence's primary real relationship, independent of current attention. */
+  semanticSourceId?: string;
+  branch?: import("./core/plex/views/contracts").PlexBranch;
+  /** Shared touch disclosure clearance, independent of the note body and canonical gates. */
+  controlReserve?: Readonly<{right: number; bottom: number}>;
   page: GraphPage;
   role: Role | "center";
   relationType?: RelationType;
@@ -168,6 +183,15 @@ export type PositionedNode = {
 };
 
 export type PositionedEdge = {
+  kind?: "semantic" | "derived" | "decorative";
+  sourceOccurrence?: string;
+  targetOccurrence?: string;
+  /** Measured sub-node geometry only; canonical occurrence/path/edit endpoints stay unchanged. */
+  sourceSectionOccurrence?: string;
+  sourcePort?: GateSide;
+  targetPort?: GateSide;
+  /** Display-only directional wording; physical typeDefinition remains the style/filter/mutation key. */
+  caption?: string;
   id: string;
   sourcePath: string;
   targetPath: string;

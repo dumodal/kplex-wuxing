@@ -6,6 +6,15 @@
 export type FitCamera = Readonly<{ x: number; y: number; scale: number }>;
 export type FitBounds = Readonly<{ left: number; top: number; right: number; bottom: number }>;
 
+/** Preserve the world point underneath a caller-selected viewport point while changing scale.
+ * Manual translation and off-origin geometry remain intact; callers retain platform clamps and
+ * automatic/manual camera ownership. Invalid input leaves the current camera unchanged. */
+export function zoomedViewportCamera(camera: FitCamera, point: {x: number; y: number}, scale: number): FitCamera {
+  if (![camera.x, camera.y, camera.scale, point.x, point.y, scale].every(Number.isFinite) || camera.scale <= 0 || scale <= 0) return {...camera};
+  const ratio = scale / camera.scale;
+  return {scale, x: point.x - (point.x - camera.x) * ratio, y: point.y - (point.y - camera.y) * ratio};
+}
+
 /** Fit all supplied bounds around the focus, retaining the scale ceiling and viewport padding. */
 export function centeredViewportFit(width: number, height: number, focus: { x: number; y: number },
   bounds: FitBounds, maxScale: number, padding = 46): FitCamera {
@@ -20,25 +29,4 @@ export function centeredViewportFit(width: number, height: number, focus: { x: n
 /** Compare only camera intent, excluding geometry that may change during native layout. */
 export function sameFitCamera(a: FitCamera, b: FitCamera): boolean {
   return a.x === b.x && a.y === b.y && a.scale === b.scale;
-}
-
-
-/** Include empty phase frames and complete outer control routes in the overview camera. */
-export function wuXingScaffoldBounds(vertices: readonly {
-  frame: { left: number; top: number; width: number; height: number };
-  controlRoute?: readonly { x: number; y: number }[];
-}[]): FitBounds | null {
-  if (!vertices.length) return null;
-  let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
-  /** Expand finite world-space geometry with room for frame headings and relation labels. */
-  const include = (x: number, y: number, padding: number): void => {
-    left = Math.min(left, x - padding); top = Math.min(top, y - padding);
-    right = Math.max(right, x + padding); bottom = Math.max(bottom, y + padding);
-  };
-  for (const vertex of vertices) {
-    include(vertex.frame.left, vertex.frame.top, 48);
-    include(vertex.frame.left + vertex.frame.width, vertex.frame.top + vertex.frame.height, 48);
-    for (const point of vertex.controlRoute ?? []) include(point.x, point.y, 28);
-  }
-  return { left, top, right, bottom };
 }

@@ -165,27 +165,29 @@ test("ontology assignment acquires synchronously and a dismissed durable save ha
   let release, writes = 0;
   const completion = new Promise(resolve => { release = resolve; });
   const context = { opened: true, busy: false, generation: 1, fieldName: "Topic", saveButton: { setDisabled() {} },
-    onSaved: assert.fail, close: assert.fail, plugin: { assignFieldToOntology: async () => { writes++; await completion; } } };
+    opening:{}, operation:()=>({kind:"assign",field:"Topic",role:"child",partner:null}), modalEl:{setAttribute(){}},contentEl:{querySelectorAll:()=>[]},selected:"child", partner:"", current:()=>true, valid:()=>true, refresh(){this.saveButton.setDisabled(this.busy)}, onSaved: assert.fail, close: assert.fail, plugin: { editOntologyConfiguration: async edit => { assert.deepEqual(edit,{kind:"assign",field:"Topic",role:"child",partner:null});writes++; await completion;return {refreshPending:false}; } } };
   const save = production("save", { Notice: class { constructor() { assert.fail("late Notice"); } } }, "src/ui/AddToOntologyModal.ts").bind(context);
   const first = save("child"), duplicate = save("parent"); assert.equal(writes, 1); assert.equal(context.busy, true);
   context.opened = false; release(); await Promise.all([first, duplicate]); assert.equal(context.busy, false);
 });
 
 test("ontology assignment failure retains its shell and permits explicit retry without unhandled rejection", async () => {
-  const notices = [], disabled = [];
+  const notices = [], disabled = [], feedback = [];
   const context = { opened: true, busy: false, generation: 1, fieldName: "Topic", saveButton: { setDisabled: value => disabled.push(value) },
-    onSaved: assert.fail, close: assert.fail, plugin: { assignFieldToOntology: async () => { throw new Error("expected save failure"); }, translator: key => key } };
+    opening:{}, operation:()=>({kind:"assign",field:"Topic",role:"child",partner:null}), modalEl:{setAttribute(){}},contentEl:{querySelectorAll:()=>[]},selected:"child", partner:"", current:()=>true, valid:()=>true, refresh(){this.saveButton.setDisabled(this.busy)}, feedback:{setText:value=>feedback.push(value),toggle(){}},
+    onSaved: assert.fail, close: assert.fail, plugin: { editOntologyConfiguration: async () => { throw new Error("expected save failure"); }, translator: key => key } };
   const save = production("save", { Notice: class { constructor(message) { notices.push(message); } } }, "src/ui/AddToOntologyModal.ts").bind(context);
-  await save("child"); assert.deepEqual(notices, ["actions.failed"]); assert.deepEqual(disabled, [true, false]); assert.equal(context.busy, false);
-  context.opened = false; await save("child"); assert.equal(notices.length, 1);
+  await save(); assert.deepEqual(notices, []); assert.deepEqual(feedback,["styles.operation.notSaved"]); assert.deepEqual(disabled, [true, false]); assert.equal(context.busy, false);
+  context.opened = false; await save(); assert.equal(notices.length, 0); assert.equal(feedback.length,1);
 });
 
 test("ontology shells release each native invocation exactly once", () => {
   for (const path of ["src/ui/AddToOntologyModal.ts"]) {
-    let closes = 0;
-    const context = { opened: true, recorder: null, releasePreferences: null, pendingBinding: null, contentEl: { empty() {} }, onClosed: () => closes++ };
+    let closes = 0, usageCloses = 0;
+    const context = { opened: true, usageDialogs:new Set([{close:()=>usageCloses++}]),recorder: null, releasePreferences: null, pendingBinding: null, contentEl: { empty() {} }, onClosed: () => closes++ };
     const close = production("onClose", {}, path).bind(context);
     close(); close(); assert.equal(closes, 1); context.opened = true; close(); assert.equal(closes, 2);
+    assert.equal(usageCloses,1);assert.equal(context.usageDialogs.size,0);
   }
 });
 
@@ -198,6 +200,7 @@ async function settingsBrowser(keyConvention = "windows") {
     export class Scope{constructor(){this.handlers=[]}register(modifiers,key,callback){const value={callback};this.handlers.push(value);return value}unregister(value){this.handlers=this.handlers.filter(x=>x!==value)}}
     export class Modal{constructor(app){this.app=app;this.scope=new Scope();this.modalEl=document.createElement('div');this.modalEl.className='modal';this.contentEl=this.modalEl.appendChild(document.createElement('div'));this.contentEl.className='modal-content'}setTitle(){}open(){document.body.append(this.modalEl);this.onOpen?.()}close(){this.onClose?.();this.modalEl.remove()}}
     export class ButtonComponent{constructor(parent){this.buttonEl=parent.createEl('button',{attr:{type:'button'}})}setButtonText(value){this.buttonEl.textContent=value;return this}}
+    export class Notice{constructor(message){window.lastSettingsNotice=message}}
     export class SearchComponent{constructor(parent){this.inputEl=parent.createDiv({cls:'search-input-container'}).createEl('input')}setPlaceholder(value){this.inputEl.placeholder=value;return this}onChange(fn){this.inputEl.addEventListener('input',()=>fn(this.inputEl.value));return this}setValue(value){this.inputEl.value=value;return this}}
     export class Setting{constructor(parent){this.components=[];this.settingEl=parent.createDiv({cls:'setting-item'});this.infoEl=this.settingEl.createDiv({cls:'setting-item-info'});this.nameEl=this.infoEl.createDiv({cls:'setting-item-name'});this.descEl=this.infoEl.createDiv({cls:'setting-item-description'});this.controlEl=this.settingEl.createDiv({cls:'setting-item-control'})}setClass(value){this.settingEl.classList.add(value);return this}setName(value){this.nameEl.textContent=value;return this}setDesc(value){this.description=value;this.descEl.textContent=value;return this}addDropdown(cb){const selectEl=this.controlEl.createEl('select');const component={selectEl,addOption(value,text){const option=selectEl.createEl('option',{text});option.value=value;return this},setValue(value){selectEl.value=value;return this},getValue(){return selectEl.value}};this.components.push(component);cb(component);return this}addToggle(cb){const input=this.controlEl.createEl('input');input.type='checkbox';let changeCallback;const component={setValue(v){if(input.checked!==v){input.checked=v;changeCallback?.(v)}return this},setDisabled(v){input.disabled=v;return this},onChange(fn){changeCallback=fn;input.addEventListener('change',()=>fn(input.checked));return this}};this.components.push(component);cb(component);return this}}
   `;
@@ -324,7 +327,7 @@ test("actual declarative rows remain globally searchable while native group filt
       const migratedDocumentClears=s.input.value===''&&s.list.querySelectorAll('.kplex-action-filtered').length===0;
       const sourceRealmRetained=migratedSearch instanceof window.Element&&!(migratedSearch instanceof frame.contentWindow.Element);
       const publication=s.list.querySelector('[data-action-id="search.focus"] [data-kplex-action-control=publication]');publication.focus();const originalSave=s.plugin.updateActionPreferences;let finish;s.plugin.updateActionPreferences=async value=>{await new Promise(done=>finish=done);await originalSave.call(s.plugin,value)};publication.click();finish();for(let turn=0;s.controller.saving&&turn<20;turn++)await Promise.resolve();
-      const stableToggle=s.rows[1].controlEl.querySelector('input')===originalToggle&&s.rows[1].components.length===1&&s.rows[2].components.length===1;const migratedEquivalentFocus=targetDocument.activeElement===s.list.querySelector('[data-action-id="search.focus"] [data-kplex-action-control=publication]')&&targetDocument.activeElement!==publication;s.plugin.updateActionPreferences=originalSave;
+      const stableToggle=s.rows[1].controlEl.querySelector('input')===originalToggle&&s.rows[1].components.length===1&&!s.definition.items.some(item=>item.aliases?.includes('crossSectionAtBoundary'));const migratedEquivalentFocus=targetDocument.activeElement===s.list.querySelector('[data-action-id="search.focus"] [data-kplex-action-control=publication]')&&targetDocument.activeElement!==publication;s.plugin.updateActionPreferences=originalSave;
 
 
 
@@ -613,7 +616,7 @@ test("row-local publication guidance refreshes independent native keys in place 
       const s=makeSettings(),c=s.controller,action=sourceModules.ACTION_BY_ID.get('graph.focus'),id='k-plex:'+action.command.id;const style=document.head.createEl('style',{text:${JSON.stringify(readFileSync(new URL("../styles.css", import.meta.url), "utf8"))}});document.body.style.setProperty('--text-warning','rgb(1, 2, 3)');document.body.style.setProperty('--text-muted','rgb(4, 5, 6)');
       const definition=s.definition.items.find(item=>item.aliases?.includes('graph.focus')),outside=document.body.createDiv(),setting=new sourceModules.Setting(outside),release=definition.render(setting,{listEl:outside});
       const row=setting.settingEl,status=()=>row.querySelector('.kplex-action-publication-state').textContent,local=JSON.stringify(s.plugin.settings.actionPreferences.localBindings);
-      const guidance=row.querySelector('.kplex-action-scope').textContent.includes('focused Plex')&&row.querySelector('.setting-command-hotkeys').getAttribute('aria-label')==='Local shortcuts';
+      const guidance=row.querySelector('.kplex-action-scope').textContent.includes('focused canvas')&&row.querySelector('.setting-command-hotkeys').getAttribute('aria-label')==='Local shortcuts';
       const unknown=status().includes('Global shortcut not checked');s.nativeCommands[id]={name:'Localized focus graph'};s.defaultHotkeys[id]=[];c.refresh();const absent=status().includes('No global shortcut');
       const button=row.querySelector('[data-kplex-action-control=publication]');button.focus();s.customHotkeys[id]=[{key:'F9',modifiers:['Mod']}];c.refresh();
       const updated=status().includes('Global shortcut: ⌘ F9')&&row.querySelector('[data-kplex-action-control=publication]')===button&&document.activeElement===button;

@@ -13,7 +13,7 @@ await build({ stdin: { contents: 'export * from "./src/core/plex/internalHotkeys
   plugins: [{ name: "host-types-only", setup(builder) {
     builder.onResolve({ filter: /^obsidian$/ }, () => ({ path: "obsidian", namespace: "stub" }));
     builder.onLoad({ filter: /.*/, namespace: "stub" }, () => ({ contents: `
-      export class App {} export class ButtonComponent {} export class Modal {} export class Notice {} export class AbstractInputSuggest {} export class Setting {}
+      export class Component {load(){} unload(){}} export const MarkdownRenderer={render:()=>{throw Error("Native Markdown is outside this finite fixture")}}; export class App {} export class ButtonComponent {} export class Modal {} export class SuggestModal extends Modal {} export class ColorComponent {} export class Notice {} export class AbstractInputSuggest {} export class Setting {}
       export class ExtraButtonComponent {} export class Scope {}
       export class SearchComponent {} export const setIcon = () => {}; export const setTooltip = () => {};
       export class PluginSettingTab {} export const getIcon = () => null; export const getIconIds = () => [];
@@ -44,7 +44,9 @@ test("defaults, explicit disable, partial upgrades, malformed bindings and unkno
   assert.equal(hotkeys.resolveInternalHotkey(event("ArrowUp"), saved.internalHotkeys, "macos"), null);
   assert.equal(hotkeys.resolveInternalHotkey(event("j"), saved.internalHotkeys, "macos"), "moveDown");
   assert.deepEqual(hotkeys.importExcaliBrainGraphSettings({ internalHotkeys: { moveUp: { key: "x" } } }, saved).internalHotkeys, saved.internalHotkeys);
-  const effects = hotkeys.classifySettingsChange(hotkeys.captureSettingsPolicy(defaults), hotkeys.captureSettingsPolicy(saved));
+  // Compare the same saved-settings ontology: fresh installs now deliberately start with pairs.
+  const legacyDefaults = hotkeys.migrateAndMergeSettings({internalHotkeys: {}});
+  const effects = hotkeys.classifySettingsChange(hotkeys.captureSettingsPolicy(legacyDefaults), hotkeys.captureSettingsPolicy(saved));
   assert.equal(effects.semanticInvalidation, false); assert.equal(effects.searchTerms, false); assert.equal(effects.presentationFacets, false);
 });
 

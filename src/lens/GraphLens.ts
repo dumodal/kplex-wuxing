@@ -1,18 +1,21 @@
 /**
  * Legacy host composition for persisted Graph Lenses, sanitation and portable predicate compilation. Validation returns structured issues; UI consumers own names and error copy.
+ * Shared color sanitation preserves typed theme/palette references through portable lens layering.
  */
+import {graphLensSemanticError, type PortableLensValidationIssue as GraphLensValidationIssue} from "../core/plex/lensValidation";
+export {validateGraphLensExpression} from "../core/plex/lensValidation";
 import type { GraphPage, LinkStyle, NodeStyle, StrokeStyle, FillStyle } from "../types";
 import { createLegacyEvidenceProvider, lensCandidateFromLegacy, type LegacyEvidenceSource } from "../adapters/obsidian/predicateContracts";
 import { matchesPortableLenses, portableLensStyle } from "../core/plex/lens";
+import { NODE_COLOR_FIELDS, LINK_COLOR_FIELDS, colorValuesEqual, sanitizeColorValue, type ColorValue } from "../core/contracts/colorValue";
 import {
   compileGraphPredicate,
   type CompiledGraphPredicate,
   type GraphPredicateEdgeContext,
   type GraphPredicateEngine,
-  type GraphPredicateExpression,
   type GraphPredicateValue,
 } from "./GraphPredicate";
-import { tryParseGraphPredicateExpression, type PredicateParseIssue } from "./GraphPredicateParser";
+import { tryParseGraphPredicateExpression } from "./GraphPredicateParser";
 
 export type GraphLensScope = "node" | "edge" | "evidence";
 export type GraphLensMode = "include" | "exclude" | "style";
@@ -38,12 +41,7 @@ export type CompiledGraphLens = GraphLensDefinition & {
   predicate: CompiledGraphPredicate;
 };
 
-export type GraphLensValidationIssue =
-  | { code: "parse"; issue: PredicateParseIssue }
-  | { code: "selector-reference-required" }
-  | { code: "unknown-edge-role"; value: string }
-  | { code: "unknown-edge-kind"; value: string }
-  | { code: "unknown-edge-direction"; value: string };
+export type {PortableLensValidationIssue as GraphLensValidationIssue} from "../core/plex/lensValidation";
 
 export type GraphLensCompileError = { id: string; name: string; error: GraphLensValidationIssue };
 
@@ -62,8 +60,6 @@ export const EMPTY_GRAPH_LENS_SET: CompiledGraphLensSet = {
 };
 
 const VALID_EDGE_ROLES = new Set(["parent", "child", "left", "right", "previous", "next", "sibling"]);
-const VALID_EDGE_KINDS = new Set(["defined", "inferred"]);
-const VALID_EDGE_DIRECTIONS = new Set(["from", "to", "both"]);
 
 function literalString(value: GraphPredicateValue | undefined): string | null {
   return value?.kind === "literal" && typeof value.value === "string" ? value.value : null;
@@ -87,45 +83,10 @@ function migrateEarlyCheckpointLensExpression(scope: GraphLensScope, source: str
   return `edge.definition.equals(${JSON.stringify(value)})`;
 }
 
-/** Validate enum-valued relationship selectors recursively and return the first structured issue without formatting English. */
-function graphLensSemanticError(expression: GraphPredicateExpression): GraphLensValidationIssue | null {
-  const inspect = (item: GraphPredicateExpression): GraphLensValidationIssue | null => {
-    if (item.kind === "all" || item.kind === "any") {
-      for (const child of item.expressions) {
-        const error = inspect(child);
-        if (error) return error;
-      }
-      return null;
-    }
-    if (item.kind === "not") return inspect(item.expression);
-    let property: string | null = null;
-    let value: string | null = null;
-    if (item.kind === "compare") {
-      property = propertyKey(item.left);
-      value = literalString(item.right);
-    } else if (item.functionName === "text.equals" || item.functionName === "collection.contains") {
-      property = propertyKey(item.args[0]);
-      value = literalString(item.args[1]);
-    }
-    if (!property || value === null) return null;
-    const normalized = value.trim().toLocaleLowerCase();
-    if (property === "edge.role" && !VALID_EDGE_ROLES.has(normalized)) {
-      return { code: "unknown-edge-role", value };
-    }
-    if (property === "edge.kind" && !VALID_EDGE_KINDS.has(normalized)) return { code: "unknown-edge-kind", value };
-    if (property === "edge.direction" && !VALID_EDGE_DIRECTIONS.has(normalized)) return { code: "unknown-edge-direction", value };
-    return null;
-  };
-  return inspect(expression);
-}
-
 const VALID_STROKE_STYLES = new Set<StrokeStyle>(["solid", "dashed", "dotted"]);
 const VALID_FILL_STYLES = new Set<FillStyle>(["solid", "hachure", "cross-hatch"]);
-const HEX_COLOR = /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/i;
-
-function sanitizeColor(value: unknown): string | undefined {
-  return typeof value === "string" && HEX_COLOR.test(value.trim()) ? value.trim() : undefined;
-}
+/** Reuse the color contract; references remain identities and never become sampled RGB values. */
+function sanitizeColor(value: unknown): ColorValue | undefined { return sanitizeColorValue(value); }
 
 function sanitizeWidth(value: unknown): number | undefined {
   if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
@@ -160,8 +121,8 @@ function sanitizeGraphLensStyle(value: unknown, scope: GraphLensScope): GraphLen
 
 export function defaultGraphLensStyle(scope: GraphLensScope): GraphLensStyle {
   return scope === "node"
-    ? { node: { borderColor: "#ffb300", strokeWidth: 2 } }
-    : { edge: { strokeColor: "#ffb300", strokeWidth: 2 } };
+    ? { node: { borderColor: {kind: "theme", variable: "--interactive-accent"}, strokeWidth: 2 } }
+    : { edge: { strokeColor: {kind: "theme", variable: "--interactive-accent"}, strokeWidth: 2 } };
 }
 
 export function createGraphLensId(): string {
@@ -226,15 +187,6 @@ export function compileGraphLensDefinitions(definitions: readonly GraphLensDefin
   return { lenses, errors, usesFrontmatter, noteProperties };
 }
 
-/** Validate syntax, selector dependencies and relationship enum values for editor feedback without producing UI text. */
-export function validateGraphLensExpression(expression: string): GraphLensValidationIssue | null {
-  const parsed = tryParseGraphPredicateExpression(expression);
-  if (!parsed.expression) return { code: "parse", issue: parsed.error ?? { code: "invalid-expression", position: 1 } };
-  const predicate = compileGraphPredicate(parsed.expression);
-  if (predicate.dependencies.namespaces.size === 0) return { code: "selector-reference-required" };
-  return graphLensSemanticError(parsed.expression);
-}
-
 export type GraphLensCandidate = {
   page: GraphPage;
   label: string;
@@ -258,4 +210,50 @@ export function graphLensNodeStyle(engine: GraphPredicateEngine, index: LegacyEv
 export function graphLensEdgeStyle(engine: GraphPredicateEngine, index: LegacyEvidenceSource, lensSet: CompiledGraphLensSet, candidate: GraphLensCandidate): GraphLensEdgeStyle {
   if (!lensSet.lenses.some((lens) => lens.mode === "style" && lens.scope !== "node" && lens.style?.edge)) return {};
   return portableLensStyle(engine.portable, createLegacyEvidenceProvider(index), lensSet.lenses, lensCandidateFromLegacy(candidate), "edge");
+}
+
+/** Merge one detached editor action against the latest queued definitions without resurrecting stale colors. */
+export function mergeGraphLensDefinitions(initial: readonly GraphLensDefinition[], edited: readonly GraphLensDefinition[], latest: readonly GraphLensDefinition[]): GraphLensDefinition[] {
+  const before = new Map(initial.map(lens => [lens.id, lens])), after = new Map(edited.map(lens => [lens.id, lens]));
+  const current = new Map(latest.map(lens => [lens.id, lens]));
+  for (const opening of initial) if (!after.has(opening.id)) current.delete(opening.id);
+  for (const candidate of edited) {
+    const opening = before.get(candidate.id), live = current.get(candidate.id);
+    if (!opening) {if (live) throw new Error("Lens identity already exists"); current.set(candidate.id, structuredClone(candidate)); continue;}
+    if (JSON.stringify(opening) === JSON.stringify(candidate)) continue;
+    if (!live) throw new Error("Edited lens no longer exists");
+    const next = {...live};
+    for (const field of ["name", "enabled", "scope", "mode", "expression"] as const)
+      if (opening[field] !== candidate[field]) Object.assign(next, {[field]: candidate[field]});
+    if (JSON.stringify(opening.style) !== JSON.stringify(candidate.style)) {
+      const style = {...live.style};
+      for (const target of ["node", "edge"] as const) {
+        const first = opening.style?.[target], proposed = candidate.style?.[target];
+        if (JSON.stringify(first) === JSON.stringify(proposed)) continue;
+        if (proposed === undefined) {delete style[target]; continue;}
+        const layer = {...live.style?.[target]};
+        const fields = target === "node" ? [...NODE_COLOR_FIELDS, "fillStyle", "strokeWidth", "strokeStyle"]
+          : [...LINK_COLOR_FIELDS, "strokeWidth", "strokeStyle", "showLabel"];
+        for (const field of fields) {
+          const oldValue: unknown = first && Reflect.get(first, field), newValue: unknown = Reflect.get(proposed, field);
+          const unchanged = (target === "node" ? NODE_COLOR_FIELDS : LINK_COLOR_FIELDS).some(color => color === field)
+            ? colorValuesEqual(oldValue, newValue) : oldValue === newValue;
+          if (unchanged) continue;
+          if (newValue === undefined) Reflect.deleteProperty(layer, field); else Object.assign(layer, {[field]: newValue});
+        }
+        Object.assign(style, {[target]: layer});
+      }
+      next.style = Object.keys(style).length ? style : undefined;
+    }
+    current.set(candidate.id, next);
+  }
+  const result = latest.filter(lens => current.has(lens.id)).map(lens => current.get(lens.id)!);
+  for (const candidate of edited) if (!latest.some(lens => lens.id === candidate.id)) {const added = current.get(candidate.id); if (added) result.push(added);}
+  const oldOrder = initial.filter(lens => after.has(lens.id)).map(lens => lens.id);
+  const newOrder = edited.filter(lens => before.has(lens.id) && current.has(lens.id)).map(lens => lens.id);
+  if (JSON.stringify(oldOrder) !== JSON.stringify(newOrder)) {
+    const ordered = newOrder.map(id => current.get(id)!); let position = 0;
+    return result.map(lens => newOrder.includes(lens.id) ? ordered[position++] : lens);
+  }
+  return result;
 }

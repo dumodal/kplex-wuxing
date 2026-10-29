@@ -26,6 +26,7 @@ const output = process.env.KPLEX_HOST_REPORT_DIR;
 const nativeOSKeys = process.env.KPLEX_ACTION_NATIVE_OS_KEYS === "true";
 const recorderOSKeys = process.env.KPLEX_ACTION_RECORDER_OS_KEYS === "true";
 const diagnosticH13Only = process.env.KPLEX_ACTION_DIAGNOSTIC_H13_ONLY === "true";
+if (nativeOSKeys && platform() !== "darwin") throw new Error("The optional OS_CUA clipboard lane currently requires macOS; use Electron input on Windows");
 if (!output) throw new Error("Set KPLEX_HOST_REPORT_DIR explicitly");
 mkdirSync(output, { recursive: true });
 const driverSource = readFileSync(fileURLToPath(import.meta.url));
@@ -37,7 +38,7 @@ const companionPath = join(target.config, "plugins", "obsidian-excalidraw-plugin
 const report = { status: "running", diagnosticOnly: diagnosticH13Only, acceptance: !diagnosticH13Only, startedAt: new Date().toISOString(), node: process.version, clipboardKeyTransport: nativeOSKeys ? "OS_CUA" : "Electron_sendInputEvent", recorderKeyTransport:recorderOSKeys ? "OS_CUA" : "Electron_sendInputEvent", externalOSKeyArrivalTimeoutMs: nativeOSKeys || recorderOSKeys ? 60000 : null, pluginBehaviorTimeoutMs: 15000, hardware: { platform: platform(), arch: arch(), cpuModel: cpus()[0]?.model, cpuCount: cpus().length, memoryGiB: totalmem() / 2 ** 30 }, priorAcceptanceDriverSha256: "ff30d52fc18d721d8da0cb4e72ea3a314fc54136bd09c8b5f191b79865226b43", driverSha256: createHash("sha256").update(driverSource).digest("hex"), artifacts: {},
   limitations: ["Electron trusted native key delivery asserted separately from synthetic DOM protocol probes; no physical keyboard, screen reader or physical touch/tablet/IME acceptance",
     "Pop-out ownership/migration tested through native leaves and DOM session input; trusted cross-window OS key delivery remains separate",
-    "Optional OS_CUA clipboard accelerators require separately delivered OS automation and exact trusted DOM key provenance; this is not physical-keyboard acceptance"] };
+    "Optional OS_CUA clipboard accelerators currently support macOS only and require separately delivered OS automation and exact trusted DOM key provenance; this is not physical-keyboard acceptance"] };
 let installed = false;
 
 /** Fail closed on process errors and Obsidian's error text even when the CLI exits zero. */
@@ -59,6 +60,12 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
   const p = app.plugins.plugins["k-plex"];
   if (!p?.actionManager) throw new Error("Exact action-manager plugin is not loaded");
   const remote = require("@electron/remote"), nativeWindow = remote.getCurrentWindow();
+  // Match the established native sidecar lane's owning-renderer platform convention. Explicit
+  // Meta and Option recorder fixtures below remain literal keys, independent of semantic Mod.
+  const mac = window.navigator.platform.toLowerCase().includes("mac");
+  const primaryModifier = mac ? "meta" : "control", primaryKeyFlag = mac ? "metaKey" : "ctrlKey";
+  const primaryScopeModifiers = mac ? "Meta,Shift" : "Ctrl,Shift";
+  if (nativeOSKeys && !mac) throw new Error("OS_CUA clipboard input requires the selected macOS renderer");
   remote.app.show?.(); remote.app.focus({ steal: true }); nativeWindow.restore(); nativeWindow.show(); nativeWindow.moveTop(); nativeWindow.focus(); nativeWindow.webContents.focus();
   const c = window.__kplexActionTest = { p, originalSettings: JSON.parse(JSON.stringify(p.settings)), folder: `Kplex-Action-Regression-${Date.now()}`,
     owned: [], created: [], wrappers: [], newLeaves: [], scenarios: [], done: false, cancelled: false };
@@ -183,7 +190,7 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
       const element = [...composer().querySelectorAll("select")].find(select => select.getAttribute("aria-label") === p.translator("addRelated.completionMode"));
       check(Boolean(element), "Completion selector missing"); element.value = intent; element.dispatchEvent(new element.ownerDocument.defaultView.Event("change", { bubbles: true }));
     };
-    /** Dispatch native DOM key events with actual macOS modifier conventions and optional repeat/composition state. */
+    /** Dispatch native DOM key events with explicit host modifier facts and optional repeat/composition state. */
     const key = (element, name, options = {}) => element.dispatchEvent(new element.ownerDocument.defaultView.KeyboardEvent("keydown", { key: name, code: name, bubbles: true, cancelable: true, ...options }));
     /** Deliver trusted Electron input; explicit Option probes verify physical code/modifiers despite native glyph differences.
      * @remarks API reference: https://www.electronjs.org/docs/latest/api/web-contents#contentssendinputeventinputevent
@@ -215,7 +222,7 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
     };
     /** Request only owned-editor OS clipboard accelerators, separating capped external arrival from native behavior deadlines. */
     const clipboardKey = async (keyCode, expectedLeaf, expectedElement) => {
-      if (!nativeOSKeys) return trustedKey(keyCode, ["meta"]);
+      if (!nativeOSKeys) return trustedKey(keyCode, [primaryModifier]);
       check(["v", "a", "c", "z"].includes(keyCode), "Unsupported OS clipboard key request");
       const path = expectedLeaf?.view.file?.path;
       check(typeof path === "string" && path.startsWith(c.folder + "/") && c.owned.includes(path), "OS clipboard key escaped an owned fixture");
@@ -401,16 +408,16 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
         if (result.state !== "accepted") return result;
         return { ...result, run: async (...args) => { const outcome = await result.run(...args); record.outcome = outcome.status; return outcome; } };
       });
-      await until(() => { const scope = app.keymap.getWindowStack(window).scope; return document.activeElement === root && scope !== previousGraphScope && scope?.win === window && scope.parent === c.hostLeaf.view.scope && scope.keys?.some(item => item.key === "F9" && item.modifiers === "Meta,Shift"); }, "Persisted F9 compiler generation not installed in native Scope");
+      await until(() => { const scope = app.keymap.getWindowStack(window).scope; return document.activeElement === root && scope !== previousGraphScope && scope?.win === window && scope.parent === c.hostLeaf.view.scope && scope.keys?.some(item => item.key === "F9" && item.modifiers === primaryScopeModifiers); }, "Persisted F9 compiler generation not installed in native Scope");
       const nativeStack = app.keymap.getWindowStack(window);
-      c.initialGraph = { focused: document.activeElement === root, center: root.querySelector(".kplex-role-center")?.dataset.kplexPath, characterKeys: p.settings.actionPreferences.characterShortcutsEnabled, bindings: p.settings.actionPreferences.localBindings["pin.toggle"], scopeKeys: nativeStack.scope?.keys?.map(item => ({ key: item.key, modifiers: item.modifiers })), scopeOwnerWindow: nativeStack.scope?.win === window };
+      c.initialGraph = { platform: window.navigator.platform, primaryModifier, expectedScopeModifiers: primaryScopeModifiers, focused: document.activeElement === root, center: root.querySelector(".kplex-role-center")?.dataset.kplexPath, characterKeys: p.settings.actionPreferences.characterShortcutsEnabled, bindings: p.settings.actionPreferences.localBindings["pin.toggle"], scopeKeys: nativeStack.scope?.keys?.map(item => ({ key: item.key, modifiers: item.modifiers })), scopeOwnerWindow: nativeStack.scope?.win === window };
       const pinned = p.settings.pinnedNodes.includes(c.a.path);
-      await trustedKey("F9", ["meta", "shift"]);
+      await trustedKey("F9", [primaryModifier, "shift"]);
       await until(() => p.settings.pinnedNodes.includes(c.a.path) !== pinned, "Local same-chord action did not run");
       check(!composer(), "Parent host command also opened a composer for graph-owned chord");
       app.workspace.setActiveLeaf(c.editorLeaf, { focus: true }); c.editorLeaf.view.editor?.focus();
       check(!root.contains(document.activeElement), "External editor focus setup failed");
-      await trustedKey("F9", ["meta", "shift"]); await awaitComposer();
+      await trustedKey("F9", [primaryModifier, "shift"]); await awaitComposer();
       check(p.settings.pinnedNodes.includes(c.a.path) !== pinned, "Graph local key ran outside the graph"); await closeComposer();
       // A real toolbar button owns Enter, even when graph selection exists.
       app.workspace.setActiveLeaf(c.hostLeaf, { focus: true });
@@ -449,7 +456,7 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
       await until(() => modal.querySelector('button[data-kplex-primary-action="true"]')?.disabled === false && dialog.submitCallback && dialog.submitCallback !== previousSubmit, "Creation input and live submit callback not accepted");
       const nameInput = modal.querySelector(".kplex-add-related-note-search input"); nameInput.focus();
       await until(() => document.activeElement === nameInput && !modal.querySelector('input[aria-expanded="true"]'), "Return submit did not own current name focus without suggestions");
-      await trustedKey("Enter", ["meta"]);
+      await trustedKey("Enter", [primaryModifier]);
       await until(() => !composer() && c.created.length === 1, "Return creation did not complete", 30000);
       check(p.settings.lastActivePath === c.a.path, "Return unexpectedly followed new node");
       check((await app.vault.read(c.a)).includes(name), "Captured center relationship not saved");
@@ -460,7 +467,7 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
     await scenario("H03-explicit-create-edit-focuses-owned-native-sidecar", async () => {
       await center(c.a.path); check(!p.hasAssociatedEditor(c.hostLeaf), "Owned test surface already has an editor before explicit edit");
       const beforeLeaves = new Set(); app.workspace.iterateAllLeaves(leaf => beforeLeaves.add(leaf));
-      const before = c.created.length, priorMode = p.settings.documentSyncMode;
+      const before = c.created.length, priorMode = p.getDocumentSyncMode(c.hostLeaf);
       /** Capture ownership/focus facts only; leaf contents and unrelated vault paths are excluded. */
       const captureEdit = phase => {
         const managed = p.sidecarLeaves.get(c.hostLeaf), file = c.created.length > before ? c.created.at(-1) : null;
@@ -494,7 +501,7 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
         app.workspace.iterateAllLeaves(leaf => { if (!beforeLeaves.has(leaf)) c.newLeaves.push(leaf); });
         const managed = p.sidecarLeaves.get(c.hostLeaf);
         if (managed && !beforeLeaves.has(managed) && p.hasAssociatedEditor(c.hostLeaf)) await p.closeSidecar(c.hostLeaf, false);
-        p.settings.documentSyncMode = priorMode;
+        await p.setDocumentSyncMode(c.hostLeaf,priorMode);
       }
       await center(c.a.path); c.hostLeaf.view.containerEl.querySelector(".kplex-app").focus();
     });
@@ -506,7 +513,7 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
       for (let index = 0; index < 3; index++) {
         const before = c.created.length, name = `Action-another-${Date.now()}-${index}`, element = modal.querySelector(".kplex-add-related-note-search input");
         await enterComposerName(name);
-        key(element, "Enter", { metaKey: true, shiftKey: true }); key(element, "Enter", { metaKey: true, shiftKey: true, repeat: true });
+        key(element, "Enter", { [primaryKeyFlag]: true, shiftKey: true }); key(element, "Enter", { [primaryKeyFlag]: true, shiftKey: true, repeat: true });
         await until(() => c.created.length === before + 1 && element.value === "" && !element.disabled && document.activeElement === element, "Another did not clear and refocus after confirmed save", 30000);
         check(composer() === modal, "Another closed composer"); check((await app.vault.read(c.a)).includes(name), "Another origin changed");
         check(!(await app.vault.read(c.b)).includes(name), "Another modified current center instead of captured origin");
@@ -539,7 +546,7 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
         input(element, "Target-C"); await until(() => element.getAttribute("aria-expanded") === "true", "Target suggestion not shown");
         const previousSubmit = c.ownedComposerDialog.submitCallback;
         key(element, "Enter"); await until(() => modal.querySelector(".kplex-add-related-link-button") && c.ownedComposerDialog.submitCallback !== previousSubmit, "Enter did not select target and commit its callback"); check(writes === 0, "Suggestion selection also saved");
-        key(element, "Enter", { metaKey: true }); await until(() => !composer(), "Intentional submit did not save", 30000); check(writes === 1, "Suggestion submit wrote more than once");
+        key(element, "Enter", { [primaryKeyFlag]: true }); await until(() => !composer(), "Intentional submit did not save", 30000); check(writes === 1, "Suggestion submit wrote more than once");
       } finally { p.createRelationToPage = original; }
     });
 
@@ -571,7 +578,7 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
         c.ownedComposerDialog = p.openRelationModal({ mode: "create", origin: p.index.get(c.a.path), semanticRole: "right", fixedTarget: p.index.get(pendingTarget.path), hostLeaf: c.hostLeaf, onCommitted: result => { state = result.state; } });
         const modal = await awaitComposer(); submit(); await until(() => state === "saved-pending", "Saved write incorrectly reported failure");
         check((await app.vault.read(c.a)).includes("Pending-target"), "Saved-pending content missing"); check(writes === 1, "Pending write duplicated");
-        const element = modal.querySelector(".kplex-add-related-note-search input"); key(element, "Enter", { metaKey: true }); await delay(50); check(writes === 1, "Pending submit retried a mutation");
+        const element = modal.querySelector(".kplex-add-related-note-search input"); key(element, "Enter", { [primaryKeyFlag]: true }); await delay(50); check(writes === 1, "Pending submit retried a mutation");
         const refresh = [...modal.querySelectorAll("button")].find(button => button.textContent === p.translator("addRelated.refreshSaved")); check(Boolean(refresh), "Targeted saved refresh missing"); refresh.click();
         await until(() => !element.disabled, "Saved refresh did not permit explicit continuation", 30000); check(writes === 1, "Refresh reissued mutation"); await closeComposer();
       } finally { p.publishSavedRelationship = originalPublish; p.index.prepareRelationshipPair = originalPair; p.writeRelationship = originalWrite; }
@@ -667,12 +674,12 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
         const selectedPath = selected().dataset.kplexPath, style = window.getComputedStyle(selected());
         const outlineWidth = style.outlineWidth, boxShadow = style.boxShadow;
         check(style.outlineWidth === "3px" && style.boxShadow !== "none", "Selected node lacks stronger visible ring and glow");
-        await trustedKey("Enter",["meta"]);
-        await until(() => p.settings.lastActivePath === selectedPath && p.isSidecarOpen(c.hostLeaf) && p.sidecarLeaves.get(c.hostLeaf)?.view.file?.path === selectedPath, "Cmd+Enter did not center and ensure selected note in sidecar");
+        await trustedKey("Enter",[primaryModifier]);
+        await until(() => p.settings.lastActivePath === selectedPath && p.isSidecarOpen(c.hostLeaf) && p.sidecarLeaves.get(c.hostLeaf)?.view.file?.path === selectedPath, "Mod+Enter did not center and ensure selected note in sidecar");
         companion = p.sidecarLeaves.get(c.hostLeaf); c.newLeaves.push(companion);
-        check(companion !== c.hostLeaf && companion.view.getViewType() === "markdown", "Cmd+Enter opened the wrong native representation");
-        root().focus(); await trustedKey("Enter",["meta"]);
-        await until(() => p.isSidecarOpen(c.hostLeaf) && p.sidecarLeaves.get(c.hostLeaf) === companion && companion.view.file?.path === selectedPath, "Repeated Cmd+Enter toggled or replaced sidecar");
+        check(companion !== c.hostLeaf && companion.view.getViewType() === "markdown", "Mod+Enter opened the wrong native representation");
+        root().focus(); await trustedKey("Enter",[primaryModifier]);
+        await until(() => p.isSidecarOpen(c.hostLeaf) && p.sidecarLeaves.get(c.hostLeaf) === companion && companion.view.file?.path === selectedPath, "Repeated Mod+Enter toggled or replaced sidecar");
         c.laptopDefaultsProof = {selectedPath,outlineWidth,boxShadow,sidecarReused:true,helpReadOnly:true,searchTypingPreserved:true};
       } finally {
         nativeWindow.setMinimumSize(...helpWindowGeometry.minimum); nativeWindow.setBounds(helpWindowGeometry.bounds);
@@ -721,9 +728,11 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
         await until(() => indicator()?.dataset.kplexTypeQuery === phrase && indicator().dataset.kplexTypeCount === "2" && matchIds.includes(selected()), "Native graph phrase did not select exactly its two displayed cross-area matches");
         const badgeBounds = indicator().getBoundingClientRect();
         const magnifierBounds=root().querySelector(".kplex-find").getBoundingClientRect(),plexBounds=indicator().parentElement.getBoundingClientRect();
-        check(Math.abs(badgeBounds.top-magnifierBounds.top)<1&&Math.abs(badgeBounds.left-plexBounds.left-(plexBounds.right-magnifierBounds.right))<1,"Native typing badge is not symmetric to its top-right magnifier");
-        c.typingBadgeGeometry={top:badgeBounds.top,leftInset:badgeBounds.left-plexBounds.left,rightInset:plexBounds.right-magnifierBounds.right,magnifierTop:magnifierBounds.top};
-        for (const control of root().querySelectorAll(".kplex-layout-controls, .kplex-zoom-controls, .kplex-find")) {
+        const toolbarBounds=root().querySelector(".kplex-scene-tools").getBoundingClientRect();
+        c.typingBadgeGeometry={top:badgeBounds.top,leftInset:badgeBounds.left-plexBounds.left,rightInset:plexBounds.right-magnifierBounds.right,magnifierTop:magnifierBounds.top,toolbarRightInset:plexBounds.right-toolbarBounds.right,toolbarTop:toolbarBounds.top,badge:badgeBounds.toJSON(),controls:[...root().querySelectorAll(".kplex-layout-controls, .kplex-zoom-controls, .kplex-find, .kplex-scene-tools")].map(control=>{const r=control.getBoundingClientRect();return{className:control.className,bounds:r.toJSON(),overlap:r.width>0&&r.height>0&&!(badgeBounds.right<=r.left||badgeBounds.left>=r.right||badgeBounds.bottom<=r.top||badgeBounds.top>=r.bottom)}})};
+        // Find shares the top-right toolbar with Footprints; symmetry belongs to the toolbar edge.
+        check(Math.abs(badgeBounds.top-toolbarBounds.top)<1&&Math.abs(badgeBounds.left-plexBounds.left-(plexBounds.right-toolbarBounds.right))<1,"Native typing badge is not symmetric to its top-right toolbar");
+        for (const control of root().querySelectorAll(".kplex-layout-controls, .kplex-zoom-controls, .kplex-find, .kplex-scene-tools")) {
           const bounds = control.getBoundingClientRect();
           if (bounds.width && bounds.height) check(badgeBounds.right <= bounds.left || badgeBounds.left >= bounds.right || badgeBounds.bottom <= bounds.top || badgeBounds.top >= bounds.bottom, "Typing feedback overlaps a native graph control");
         }
@@ -1124,7 +1133,7 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
           await until(() => editor === document.activeElement && app.workspace.activeLeaf?.view.getViewType() === "markdown" && app.workspace.activeLeaf.view.containerEl.contains(editor), "Supported editor.focus shortcut did not focus embedded native editor");
         };
         await focusEmbeddedEditor(); graphKeys = 0;
-        await trustedKey("Down"); await trustedKey("Down", ["meta"]); check(graphKeys === 0 && !composer(), "Embedded editor native arrow opened/moved graph");
+        await trustedKey("Down"); await trustedKey("Down", [primaryModifier]); check(graphKeys === 0 && !composer(), "Embedded editor native arrow opened/moved graph");
         check(JSON.stringify(p.actionManager.readSnapshot(c.surfaceId).selected) === JSON.stringify(selected), "Editor navigation changed graph selection");
         /** Observe native finder structure and bounded Scope ownership without recording document text. */
         const findFacts = phase => {
@@ -1141,7 +1150,7 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
           });
         };
         findFacts("embedded-before");
-        await trustedKey("f", ["meta"]); check(graphKeys === 0, "Embedded editor Mod+F invoked Plex Find");
+        await trustedKey("f", [primaryModifier]); check(graphKeys === 0, "Embedded editor Mod+F invoked Plex Find");
         check(!root().querySelector(".kplex-find-input") || document.activeElement !== root().querySelector(".kplex-find-input"), "Editor find transferred into Plex Find");
         try { await until(() => [...root().querySelectorAll(".document-search-container input")].some(element => element === document.activeElement), "Native embedded-editor Find did not open"); }
         catch (error) { findFacts("embedded-timeout"); throw error; }
@@ -1166,7 +1175,7 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
               activeNativeViewContainsFocus: Boolean(app.workspace.activeLeaf?.view.containerEl.contains(document.activeElement)), activeClass: document.activeElement?.className,
               trustedKey: c.lastTrustedKey ? { ...c.lastTrustedKey } : null, graphKeyPreparations: graphKeys, scopes });
           };
-          clipboard.writeText(marker); await trustedKey("End", ["meta"]); await clipboardKey("v", ownedNativeLeaf, editor);
+          clipboard.writeText(marker); await trustedKey("End", [primaryModifier]); await clipboardKey("v", ownedNativeLeaf, editor);
           clipboardFacts("owned-after-paste-key", ownedNativeLeaf, editor);
           try { await until(() => modelContainsMarker(ownedNativeLeaf), "Native editor paste was blocked"); }
           catch (error) {
@@ -1176,7 +1185,7 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
               await until(() => app.workspace.activeLeaf === c.editorLeaf && c.editorLeaf.view.containerEl.contains(document.activeElement), "Owned outside clipboard baseline not focused");
               const outside = c.editorLeaf.view.containerEl.querySelector(".cm-content");
               clipboard.writeText(marker); clipboardFacts("outside-before-paste-key", c.editorLeaf, outside);
-              await trustedKey("End", ["meta"]); await clipboardKey("v", c.editorLeaf, outside);
+              await trustedKey("End", [primaryModifier]); await clipboardKey("v", c.editorLeaf, outside);
               await until(() => modelContainsMarker(c.editorLeaf), "Outside native editor clipboard baseline paste was blocked").catch(baselineError => { c.clipboardBaselineError = String(baselineError); });
               clipboardFacts("outside-after-paste-key", c.editorLeaf, outside);
             } catch (baselineError) { c.clipboardBaselineError = String(baselineError); }
@@ -1260,13 +1269,19 @@ function nativeActionProbe(publishableActions, nativeOSKeys, diagnosticH13Only, 
       traceNativeModeMethod(c.nativeModeLeaf.view, "setState");
       (c.nativeModeTimeline ??= []).push({ phase: "source-before-mode-control", ...c.captureNativeMode() });
       // Native openFile mounts CodeMirror before its async completion commits documentView and the React mode toolbar.
-      const preview = () => root().querySelector('button[aria-label="'+p.translator("centralEditor.showPreview")+'"]');
+      // Accepted TooltipButton labels use aria-labelledby; inspect the real accessible name.
+      const editorModeControl = key => [...root().querySelectorAll(".kplex-central-editor-toolbar button")].find(button => {
+        const ids=(button.getAttribute("aria-labelledby")??"").split(/\s+/).filter(Boolean);
+        const name=ids.length?ids.map(id=>button.ownerDocument.getElementById(id)?.textContent??"").join(" ").trim():button.getAttribute("aria-label");
+        return name===p.translator(key);
+      });
+      const preview = () => editorModeControl("centralEditor.showPreview");
       await until(() => preview()?.getClientRects().length && !preview().disabled, "Native Markdown preview toggle missing"); preview().click();
       await until(() => { const view = c.nativeModeLeaf.view, container = view.previewMode?.containerEl; return view.getMode() === "preview" && container?.isConnected && container.getClientRects().length && root().querySelector(".kplex-central-editor-leaf-host")?.contains(container); }, "Owned Markdown reading representation did not mount");
       (c.nativeModeTimeline ??= []).push({ phase: "reading-mode-ready", ...c.captureNativeMode() });
       await enterRepresentation("markdown", (view, focused) => view.getMode() === "preview" && Boolean(view.previewMode?.containerEl?.contains(focused)), "Trusted editor.focus did not enter exact native Markdown preview");
       (c.nativeModeTimeline ??= []).push({ phase: "reading-mode-focused", ...c.captureNativeMode() });
-      const source = () => root().querySelector('button[aria-label="'+p.translator("centralEditor.showEditor")+'"]');
+      const source = () => editorModeControl("centralEditor.showEditor");
       await until(() => source()?.getClientRects().length && !source().disabled, "Owned native source-mode restore control missing"); source().click();
       await until(() => root().querySelector(".cm-content")?.getClientRects().length, "Owned source mode was not restored after preview");
       const companion = app.plugins.plugins["obsidian-excalidraw-plugin"];
@@ -1524,7 +1539,7 @@ try {
   const end = Date.now() + 600000;
   while (true) {
     await wait(500);
-    const progressCode = "JSON.stringify({done:window.__kplexActionTest?.done,currentScenario:window.__kplexActionTest?.currentScenario,error:window.__kplexActionTest?.error,value:window.__kplexActionTest?.value,scenarios:window.__kplexActionTest?.scenarios,osKeyRequest:window.__kplexActionTest?.osKeyRequest,osKeyProofs:window.__kplexActionTest?.osKeyProofs,lastTrustedKey:window.__kplexActionTest?.lastTrustedKey,laptopDefaultsProof:window.__kplexActionTest?.laptopDefaultsProof,typedSelectionProof:window.__kplexActionTest?.typedSelectionProof,optionKeyReceipts:window.__kplexActionTest?.optionKeyReceipts,optionHotkeySearchProof:window.__kplexActionTest?.optionHotkeySearchProof,globalSettingsDestinationTrace:window.__kplexActionTest?.globalSettingsDestinationTrace,globalSettingsNativeLookup:window.__kplexActionTest?.globalSettingsNativeLookup,globalSettingsResultEvents:window.__kplexActionTest?.globalSettingsResultEvents,globalSettingsNavigation:window.__kplexActionTest?.globalSettingsNavigation,nativeWindowCloseProof:window.__kplexActionTest?.nativeWindowCloseProof,nativeTitlebarReadiness:window.__kplexActionTest?.nativeTitlebarReadiness,helpPaletteGeometry:window.__kplexActionTest?.helpPaletteGeometry,commandPaletteGeometry:window.__kplexActionTest?.commandPaletteGeometry,gearPointerGeometry:window.__kplexActionTest?.gearPointerGeometry,pointerDeliveries:window.__kplexActionTest?.pointerDeliveries,initialGraph:window.__kplexActionTest?.initialGraph,prepared:window.__kplexActionTest?.prepared,editProof:window.__kplexActionTest?.editProof,nativeModeTimeline:window.__kplexActionTest?.nativeModeTimeline,nativeModeCalls:window.__kplexActionTest?.nativeModeCalls,pointerForegroundTrace:window.__kplexActionTest?.pointerForegroundTrace,windowLifecycle:window.__kplexActionTest?.windowLifecycle,windowLifecycleDropped:window.__kplexActionTest?.windowLifecycleDropped,findDiagnostics:window.__kplexActionTest?.findDiagnostics,clipboardDiagnostics:window.__kplexActionTest?.clipboardDiagnostics,clipboardBaselineError:window.__kplexActionTest?.clipboardBaselineError,representationFocusProof:window.__kplexActionTest?.representationFocusProof,drawingFocusUnavailable:window.__kplexActionTest?.drawingFocusUnavailable,failureSnapshot:window.__kplexActionTest?.failureSnapshot})";
+    const progressCode = "JSON.stringify({done:window.__kplexActionTest?.done,currentScenario:window.__kplexActionTest?.currentScenario,error:window.__kplexActionTest?.error,value:window.__kplexActionTest?.value,scenarios:window.__kplexActionTest?.scenarios,osKeyRequest:window.__kplexActionTest?.osKeyRequest,osKeyProofs:window.__kplexActionTest?.osKeyProofs,lastTrustedKey:window.__kplexActionTest?.lastTrustedKey,laptopDefaultsProof:window.__kplexActionTest?.laptopDefaultsProof,typedSelectionProof:window.__kplexActionTest?.typedSelectionProof,typingBadgeGeometry:window.__kplexActionTest?.typingBadgeGeometry,optionKeyReceipts:window.__kplexActionTest?.optionKeyReceipts,optionHotkeySearchProof:window.__kplexActionTest?.optionHotkeySearchProof,globalSettingsDestinationTrace:window.__kplexActionTest?.globalSettingsDestinationTrace,globalSettingsNativeLookup:window.__kplexActionTest?.globalSettingsNativeLookup,globalSettingsResultEvents:window.__kplexActionTest?.globalSettingsResultEvents,globalSettingsNavigation:window.__kplexActionTest?.globalSettingsNavigation,nativeWindowCloseProof:window.__kplexActionTest?.nativeWindowCloseProof,nativeTitlebarReadiness:window.__kplexActionTest?.nativeTitlebarReadiness,helpPaletteGeometry:window.__kplexActionTest?.helpPaletteGeometry,commandPaletteGeometry:window.__kplexActionTest?.commandPaletteGeometry,gearPointerGeometry:window.__kplexActionTest?.gearPointerGeometry,pointerDeliveries:window.__kplexActionTest?.pointerDeliveries,initialGraph:window.__kplexActionTest?.initialGraph,prepared:window.__kplexActionTest?.prepared,editProof:window.__kplexActionTest?.editProof,nativeModeTimeline:window.__kplexActionTest?.nativeModeTimeline,nativeModeCalls:window.__kplexActionTest?.nativeModeCalls,pointerForegroundTrace:window.__kplexActionTest?.pointerForegroundTrace,windowLifecycle:window.__kplexActionTest?.windowLifecycle,windowLifecycleDropped:window.__kplexActionTest?.windowLifecycleDropped,findDiagnostics:window.__kplexActionTest?.findDiagnostics,clipboardDiagnostics:window.__kplexActionTest?.clipboardDiagnostics,clipboardBaselineError:window.__kplexActionTest?.clipboardBaselineError,representationFocusProof:window.__kplexActionTest?.representationFocusProof,drawingFocusUnavailable:window.__kplexActionTest?.drawingFocusUnavailable,failureSnapshot:window.__kplexActionTest?.failureSnapshot})";
     let state;
     /** Retain each failed read-only transport poll; renderer timers and mutation calls are untouched. */
     const recordProgressTransportFailure = (error, attempt) => {

@@ -26,7 +26,7 @@ await build({
         ()=>({path:'obsidian',namespace:'native'}));
       builder.onLoad({filter:/.*/,namespace:'native'},
         /** Supply unused native UI exports plus the editor-owned context required by selection. */
-        ()=>({contents:'export class EditorSuggest {constructor(app){this.app=app;this.context=null}} export class App {} export class Modal {} export class Notice {} export class AbstractInputSuggest {} export class PluginSettingTab {} export class Scope {} export class Setting {} export class ButtonComponent {} export class ExtraButtonComponent {} export class SearchComponent {} export const setIcon=()=>{},setTooltip=()=>{},getIcon=()=>null,getIconIds=()=>[],getLanguage=()=>"en",Platform={};',loader:'js'}));
+        ()=>({contents:'export class EditorSuggest {constructor(app){this.app=app;this.context=null}} export class Component {load(){} unload(){}} export const MarkdownRenderer={render:()=>{throw Error("Native Markdown is outside this finite fixture")}}; export class App {} export class Modal {} export class SuggestModal extends Modal {} export class ColorComponent {} export class Notice {} export class AbstractInputSuggest {} export class PluginSettingTab {} export class Scope {} export class Setting {} export class ButtonComponent {} export class ExtraButtonComponent {} export class SearchComponent {} export const setIcon=()=>{},setTooltip=()=>{},getIcon=()=>null,getIconIds=()=>[],getLanguage=()=>"en",Platform={};',loader:'js'}));
     }
   }]
 });
@@ -69,7 +69,8 @@ test('fresh factory mnemonics select configured roles and replace only the captu
 test('saved historical, empty and custom triggers remain authoritative through migration and reload',
   /** Preserve deliberate saved values, live matching, disabled behavior and nonsemantic settings effects. */
   ()=>{
-    const fresh=migrateAndMergeSettings({});
+    // Both sides model persisted trigger settings, retaining historical unpaired ontology.
+    const savedDefaults=migrateAndMergeSettings({primaryTagField:"Tags"});
     for(const [friend,previous] of [['::l','::e'],['','::e'],['::l',''],['🧠+','é[.*]+'],['friend!','past?']]){
       const raw={ontologySuggesterLeftFriendTrigger:friend,ontologySuggesterPreviousTrigger:previous,hierarchy:structuredClone(defaults.hierarchy),primaryTagField:'Tags'};
       const settings=migrateAndMergeSettings(raw);
@@ -87,7 +88,7 @@ test('saved historical, empty and custom triggers remain authoritative through m
         // nonempty. Preserve that deliberate historical precedence rather than migrating it.
         assert.deepEqual(owner.getSuggestions({...info,editor:{}}),!friend&&field==='Previous'?[]:[field],JSON.stringify({friend,previous,field}));
       }
-      const effect=classifySettingsChange(captureSettingsPolicy(fresh),captureSettingsPolicy(migrateAndMergeSettings({ontologySuggesterLeftFriendTrigger:friend,ontologySuggesterPreviousTrigger:previous})));
+      const effect=classifySettingsChange(captureSettingsPolicy(savedDefaults),captureSettingsPolicy(migrateAndMergeSettings({ontologySuggesterLeftFriendTrigger:friend,ontologySuggesterPreviousTrigger:previous})));
       assert.equal(effect.semanticInvalidation,false);
       settings.allowOntologySuggester=false;
       assert.equal(owner.onTrigger({line:0,ch:0},{
@@ -157,4 +158,12 @@ test('large native no-trigger prose and overlapping custom literal input finish 
   writeFileSync(probe,`import assert from 'node:assert/strict';import {OntologySuggester} from './suggester.mjs';const settings=${JSON.stringify(defaults)};const owner=new OntologySuggester({app:{},settings});for(const text of ['Ordinary prose about a quiet afternoon. '.repeat(5000),'z'.repeat(512*1024)])assert.equal(owner.onTrigger({line:0,ch:text.length},{getLine:()=>text},null),null);settings.ontologySuggesterTrigger='a'.repeat(10000)+'b';const repeated='a'.repeat(512*1024);assert.equal(owner.onTrigger({line:0,ch:repeated.length},{getLine:()=>repeated},null),null);const text='Ordinary prose words. '.repeat(5000)+'::pPro';const info=owner.onTrigger({line:0,ch:text.length},{getLine:()=>text},null);assert.equal(info.query,'Pro');assert.equal(info.start.ch,text.length-6);console.log('bounded real owner passed');`);
   const result=spawnSync(process.execPath,[probe],{encoding:'utf8',timeout:8000});
   assert.equal(result.error,undefined,result.error?.message);assert.equal(result.status,0,result.stdout+result.stderr);assert.match(result.stdout,/bounded real owner passed/);
+});
+
+test('pair-aware native suggestions retain independent physical fields, roles and exact insertion',()=>{
+ const settings=migrateAndMergeSettings({ontologyPairingVersion:1,hierarchy:{parents:['based on/quoted in'],children:[],leftFriends:['supports/supported by'],rightFriends:[],previous:[],next:[],hidden:[],exclusions:[]}});
+ const owner=new OntologySuggester({app:{},settings});let info=invoke(owner,'::cbased');assert.deepEqual(owner.getSuggestions({...info}),['quoted in']);
+ info=invoke(owner,':::support');const options=owner.getSuggestions({...info});assert(options.includes('supports')&&options.includes('supported by'));
+ let replacement;owner.context={editor:{replaceRange:(...args)=>replacement=args}};owner.selectSuggestion('supported by');assert.equal(replacement[0],'supported by:: ');
+ info=invoke(owner,':::based');assert.deepEqual(owner.getSuggestions({...info}),['based on','quoted in']);
 });

@@ -1,13 +1,303 @@
-/** Production restart adoption, finite physical presentation facets and selective source repair through real browser IndexedDB. */
+/** Production restart adoption, source repair and exact resource-observer forwarding through real browser IndexedDB. */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { contributorBrowserBundle, contributorBrowserInitialize } from "./support/contributorBrowserFixture.mjs";
 import { chromiumHarness } from "./support/browserTypeScript.mjs";
 import { hostOracle, collect } from "./support/cachedSourceFixture.mjs";
 import { fullCenterIndex, currentNeighborhoodView, centerGateSettings } from "./support/requestedCenterGateFixture.mjs";
+import { createStartupResourceProbe } from "../scripts/testing/obsidian/startupResources.mjs";
 
 const bundle = await contributorBrowserBundle(["src/index/GraphIndex.ts", "src/index/GraphBuilder.ts", "src/index/IndexSnapshot.ts",
   "src/core/graph/compiler.ts", "src/adapters/obsidian/metadataSourceCollector.ts", "src/adapters/obsidian/ontologySourceCollector.ts"]);
+
+/** A fresh current-session full parse is distinct from a path/mtime cache predating a missing head. */
+test("a full build without native create events shares its complete parse across missing-head source reconciliation", async () => {
+  const browser = await chromiumHarness(bundle);
+  try {
+    assert.equal(await browser.evaluate(contributorBrowserInitialize), true);
+    assert.equal(await browser.evaluate(`(async()=>{
+      const M=sourceModules,f=await fixture('full-build-missing-head-input');
+      try {
+        const file=f.add('Missing.md','Status:: complete');
+        const settings={hierarchy:{hidden:[],parents:[],children:[],leftFriends:[],rightFriends:[],previous:[],next:[],exclusions:[]},
+          noteTypeField:'type',primaryTagField:'type',thumbnailProperty:'thumbnail',nodeImageProperty:'image',
+          inferAllLinksAsFriends:false,inverseInfer:false,showFullTagName:false,tagStyleList:[],baseNodeStyle:{maxLabelLength:30}};
+        const parser={parse:async text=>{f.parses.push(text);return M.parseBodyMetadata(text);}};
+        const builder=new M.GraphBuilder({settings,getIndexSourceRevision:()=>0},f.app,new Map(),parser,f.cache,()=>true,new Map(),f.acquisition);
+        ok(await builder.build({acquireSources:false}),'Complete semantic graph builds without acquiring sources');
+        equal((await f.repository.inspect(file.path)).head,null,'Source head is genuinely absent in real IDB');
+        equal(f.acquisition.state(file).revision,0,'No native create/change event was supplied');
+        equal(f.reads.length,1,'Full build read once');equal(f.parses.length,1,'Full build parsed once');
+        ok(await f.acquisition.reconcile(),'Actual missing-head restart inventory and source acquisition close');
+        equal(f.reads.length,1,'A synthetic source-incarnation fence does not reread the already-current native input');
+        equal(f.parses.length,1,'A synthetic source-incarnation fence does not reparse the already-current native input');
+        equal((await f.repository.inspect(file.path)).head.state,'complete','Only real source acquisition grants durable authority');return true;
+      } finally {f.close();}
+    })()`), true);
+  } finally { await browser.cleanup(); }
+});
+
+for (const nativeEdit of [false, true]) test(`a held queued parser receipt crosses only its explicit missing-head fence (native edit ${nativeEdit})`, async () => {
+  const browser = await chromiumHarness(bundle);
+  try {
+    assert.equal(await browser.evaluate(contributorBrowserInitialize), true);
+    assert.equal(await browser.evaluate(`(async()=>{
+      const f=await fixture('missing-head-held-queue-${nativeEdit}');let release,entered,releaseAcquire,enterAcquire;
+      const hold=new Promise(resolve=>release=resolve),reached=new Promise(resolve=>entered=resolve);
+      const holdAcquire=new Promise(resolve=>releaseAcquire=resolve),acquireReached=new Promise(resolve=>enterAcquire=resolve);
+      try {
+        const file=f.add('Queued.md','Status:: before');
+        ok(await f.acquisition.readRequestedBody(file,()=>true),'A current native full parse enters the ordinary queue');
+        const receipt=f.acquisition.bodyInputs.get(file),sourceCapture=f.acquisition.capture(file),queued=f.cache.queuedBodyWrites.get(file.path);
+        const put=f.cache.putBodies.bind(f.cache);f.cache.putBodies=async records=>{entered();await hold;return put(records);};
+        window.clearTimeout(f.cache.bodyWriteTimer);f.cache.bodyWriteTimer=null;
+        const writing=f.cache.flushQueuedBodyWrites();await reached;
+        const acquire=f.acquisition.acquire.bind(f.acquisition);let beforeAcquire;
+        f.acquisition.acquire=async(...args)=>{
+          if(!beforeAcquire){
+            const state=f.acquisition.state(file);
+            beforeAcquire={dirty:state.dirty,bodyDirty:state.bodyDirty,created:state.created,head:(await f.repository.inspect(file.path)).head};
+            enterAcquire();await holdAcquire;
+          }
+          return acquire(...args);
+        };
+        const reconciling=f.acquisition.reconcile();await acquireReached;
+        equal(beforeAcquire,{dirty:true,bodyDirty:true,created:true,head:null},'Parser reuse cannot clear dirty/created state or grant source durability');
+        ok(f.acquisition.bodyInputs.get(file)===receipt,'Only the exact accepted receipt object is carried');
+        ok(!f.acquisition.current(sourceCapture,()=>true),'Original semantic/source capture remains cancelled by the synthetic revision');
+        ok(queued.isCurrent(),'The queued record follows its exact explicitly carried missing-head receipt');
+        equal(f.reads.length,1,'Synthetic fence reuses the actual native input');equal(f.parses.length,1,'No duplicate complete parse');
+        if(${nativeEdit}){
+          f.texts.set(file.path,'Status:: after!');f.app.vault.trigger('modify',file);
+          ok(!queued.isCurrent(),'A real equal-stat native edit retires the carried receipt');
+          equal(f.acquisition.getBodyCacheRequest(file),null,'Native edit cannot carry an old receipt');
+          const current=await f.acquisition.readRequestedBody(file,()=>true);
+          equal(current.inlineFields.status,['after!'],'Current native input replaces the retired queued record');
+          equal(f.reads.length,2,'Genuine equal-stat edit reads again');equal(f.parses.length,2,'Genuine equal-stat edit parses again');
+        }
+        releaseAcquire();equal(await reconciling,!${nativeEdit},'Only the unchanged source pass may acquire durable authority');
+        release();await writing;
+        if(${nativeEdit}){
+          equal((await f.cache.getBody(file.path,file.stat.mtime)).inlineFields.status,['after!'],'Old held completion cannot replace newer queued bytes');
+          equal((await f.repository.inspect(file.path)).head,null,'A current optional parser write cannot acquire the cancelled source');
+        } else {
+          equal((await f.acquisition.readBody(file)).inlineFields.status,['before'],'Only actual completed source acquisition owns durable body authority');
+        }
+        return true;
+      } finally {releaseAcquire?.();release?.();f.close();}
+    })()`), true);
+  } finally { await browser.cleanup(); }
+});
+
+/** Competing completed producers must not replace the body selected by the latest exact receipt. */
+test("a held actual queued write cannot overwrite a newer completed receipt for the same input", async () => {
+  const browser = await chromiumHarness(bundle);
+  try {
+    assert.equal(await browser.evaluate(contributorBrowserInitialize), true);
+    assert.equal(await browser.evaluate(`(async()=>{
+      const f=await fixture('competing-completed-body-receipts');let release,entered;
+      const hold=new Promise(resolve=>release=resolve),reached=new Promise(resolve=>entered=resolve);
+      try {
+        const file=f.add('Competing.md','Status:: complete');
+        f.acquisition.start();f.app.vault.trigger('create',file);
+        const state=f.acquisition.state(file),before={revision:state.revision,dirty:state.dirty,bodyDirty:state.bodyDirty,created:state.created};
+        const older=f.acquisition.captureBodyInput(file,()=>true);
+        const oldBody=await f.acquisition.parse(await f.app.vault.cachedRead(file));ok(older.accept(),'First actual full parse accepts');
+        f.cache.queueBodyWrite(file.path,file.stat.mtime,oldBody,older);
+        window.clearTimeout(f.cache.bodyWriteTimer);f.cache.bodyWriteTimer=null;
+        const open=f.cache.open.bind(f.cache);let first=true;
+        f.cache.open=async()=>{if(first){first=false;entered();await hold;}return open();};
+        const writing=f.cache.flushQueuedBodyWrites();await reached;
+        const newer=f.acquisition.captureBodyInput(file,()=>true);
+        const newBody=await f.acquisition.parse(await f.app.vault.cachedRead(file));ok(newer.accept(),'A competing actual full parse accepts the exact unchanged input');
+        ok(await f.cache.putBody(file.path,file.stat.mtime,newBody,newer),'The selected receipt reaches real IndexedDB before the old queue resumes');
+        equal(f.acquisition.getBodyCacheRequest(file).inputToken,newer.inputToken,'The newest accepted receipt selects its own actual record');
+        release();await writing;
+        equal((await f.acquisition.readRequestedBody(file,()=>true)).inlineFields.status,['complete'],'Source projection uses the current complete parser record');
+        equal(f.reads.length,2,'The superseded queued write cannot force a third native read');
+        equal(f.parses.length,2,'The superseded queued write cannot force a third complete parse');
+        ok(!older.isCurrent()&&newer.isCurrent(),'Write guards follow only the exact selected accepted receipt');
+        equal({revision:state.revision,dirty:state.dirty,bodyDirty:state.bodyDirty,created:state.created},before,'Optional selection does not change source dirty/incarnation state');
+        equal((await f.repository.inspect(file.path)).head,null,'Competing optional writes grant no durable source authority');
+        return true;
+      } finally {release?.();f.close();}
+    })()`), true);
+  } finally { await browser.cleanup(); }
+});
+
+/** A later genuine source pass must wake subscribed status UI after saved hydration has ended. */
+test("source inventory notifies status after complete snapshot hydration without graph publication", async () => {
+  const browser = await chromiumHarness(bundle);
+  try {
+    assert.equal(await browser.evaluate(contributorBrowserInitialize), true);
+    assert.equal(await browser.evaluate(`(/** Restore a real saved graph before a later host validation wave. */ async()=>{
+      const assert=Object.assign(/** Adapt the independent collector oracle's assertion contract. */ (v,m)=>ok(v,m),{equal}),M=sourceModules,f=await fixture('post-hydration-source-progress');let initial,index,release,notifications=0;
+      const hostOracle=${hostOracle.toString()},collect=${collect.toString()},fullCenterIndex=${fullCenterIndex.toString()},centerGateSettings=${centerGateSettings.toString()};
+      try {
+        f.text=f.texts;f.add('A.md','Friends:: [[B]]');f.add('B.md','');f.app.vault.getName=/** Select this fixture's actual existing IndexedDB database. */ ()=> 'post-hydration-source-progress';
+        await f.acquire();ok(await f.acquisition.reconcile(),'Seed real source authority');
+        const semantic={hierarchy:{hidden:[],parents:[],children:[],leftFriends:['Friends'],rightFriends:[],previous:[],next:[]},inferAllLinksAsFriends:false,inverseInfer:false,showFullTagName:true,tagStyleList:[],maxLabelLength:30};
+        initial=await fullCenterIndex(M,f,await hostOracle(f,[...f.files.keys()],semantic,{noteTypeField:'Type',primaryTagField:'Style'},true),semantic,centerGateSettings({showFolderNodes:false}));
+        const settings={...initial.plugin.settings,lastActivePath:'A.md',pinnedNodes:[]};
+        ok(await f.cache.writeSnapshot({createdAt:Date.now(),urlAliasVersion:2,vaultSignature:M.computeVaultSignature(f.app),settingsSignature:M.computeIndexSettingsSignature(settings),discoveredFields:[]},
+          [...initial.state.pages.values()].map(/** Use the production page serializer. */ page=>M.persistedPageFromGraphPage(page)),[...initial.state.evidence.declarations()].map(/** Preserve the canonical declaration multiset. */ item=>M.persistedDeclarationFromEvidence(item))),'Seed genuine complete snapshot');
+        initial.destroy();initial=null;f.acquisition.close();
+        index=new M.GraphIndex({app:f.app,settings,getIndexSourceRevision:/** Keep the host graph epoch unchanged during this source-only wave. */ ()=>0,
+          notifyStartupProgress:/** Observe the real constructor's status notification boundary. */ ()=>{notifications++;}},f.app);
+        index.scheduleOrphanCleanup=/** Keep unrelated delayed orphan maintenance outside this short fixture. */ ()=>{};
+        release=index.acquireSemanticDemand('A.md');ok((await index.restorePersistedSnapshot(['A.md'])).restored,'Actual saved snapshot restores');
+        if(index.hasPendingSnapshotHydration())ok((await index.waitForSnapshotHydration()).restored,'Full hydration completes');
+        equal(index.getSnapshotHydrationDiagnostics().phase,'complete','Source wave follows genuine completed hydration');
+        ok(await index.sourceAcquisition.flush(),'Initial source work drains');
+        const revision=index.publicationRevision;notifications=0;
+        f.app.metadataCache.trigger('resolved');ok(await index.sourceAcquisition.reconcile(),'Later unchanged host wave closes');
+        ok(notifications>0,'Actual inventory progress wakes subscribed status listeners after hydration');
+        equal(index.publicationRevision,revision,'Progress notification does not publish a graph');
+        equal(index.getSourceAcquisitionCounters().vaultReads,0,'No note reread');equal(index.getSourceAcquisitionCounters().parses,0,'No parser work');return true;
+      } finally {release?.();initial?.destroy();index?.destroy();f.close();}
+    })()`), true);
+  } finally { await browser.cleanup(); }
+});
+
+/** Measurement must not create repeated wrappers, substitute native requests/promises or export source payloads. */
+test("startup resource observer is self-contained and preserves native forwarding and cleanup", async () => {
+  const browser=await chromiumHarness(bundle);
+  try {
+    assert.equal(await browser.evaluate(contributorBrowserInitialize),true);
+    assert.equal(await browser.evaluate(`window.sourceResourceFactory=(${createStartupResourceProbe.toString()});true`),true);
+    assert.equal(await browser.evaluate(`(/** Exercise the observer against genuine source/storage operations. */ async()=>{
+      const f=await fixture('resource-observer-contract');let probe,request,promise,receiver,nativeTransaction,transactionReceiver,selectedPromise,selectedReceiver;
+      const nativeGet=IDBObjectStore.prototype.get,nativeTransactionMethod=IDBDatabase.prototype.transaction,inspect=f.repository.inspect,readSelected=f.repository.readSelected;
+      /** Witness the actual native request without replacing it. */
+      const getWitness=function(...args){receiver=this;request=nativeGet.apply(this,args);return request;};
+      /** Witness the exact returned repository promise. */
+      const inspectWitness=function(...args){promise=inspect.apply(this,args);return promise;};
+      /** Witness native transaction and selected-reader identities before the probe observes them. */
+      const transactionWitness=function(...args){transactionReceiver=this;nativeTransaction=nativeTransactionMethod.apply(this,args);return nativeTransaction;};
+      const selectedWitness=function(...args){selectedReceiver=this;selectedPromise=readSelected.apply(this,args);return selectedPromise;};
+      try {
+        const file=f.add('Observer-private-A.md','Friends:: [[Observer-private-B]]');
+        f.add('Observer-private-B.md','');await f.acquire();ok(await f.acquisition.reconcile(),'Seed real source authority');
+        const originalCache=f.app.metadataCache.getFileCache,originalDaily=f.acquisition.metadataHost.dailyNotesSettings;
+        IDBObjectStore.prototype.get=getWitness;IDBDatabase.prototype.transaction=transactionWitness;f.repository.inspect=inspectWitness;f.repository.readSelected=selectedWitness;
+        probe=window.sourceResourceFactory({phase:()=> 'probe',now:()=>performance.now(),cpuProcess:{pid:123,type:'renderer',privateOwner:'never-export-process-extra.md'},databaseName:dbName('resource-observer-contract'),detailed:true});
+        equal(probe.snapshot().cpuProcess,{pid:123,type:'renderer'},'Only the CPU closure process identity is retained');
+        ok(!JSON.stringify(probe.snapshot()).includes('never-export-process-extra.md'),'CPU identity excludes arbitrary properties');
+        probe.attach({sourceAcquisition:f.acquisition,indexedDb:f.cache});
+        f.acquisition.metadataHost.dailyNotesSettings();
+        const db=await f.cache.open(),tx=db.transaction('sourceHeads','readonly'),store=tx.objectStore('sourceHeads');
+        ok(tx===nativeTransaction&&transactionReceiver===db,'Exact native transaction and receiver preserved');
+        const completed=new Promise(/** Retain the native transaction's terminal event. */ (resolve,reject)=>{tx.oncomplete=resolve;tx.onabort=()=>reject(tx.error);});
+        const returned=store.get(file.path);ok(returned===request&&receiver===store,'Exact native request and receiver preserved');
+        await value(returned);await completed;
+        const observed=f.repository.inspect(file.path,[]);ok(observed===promise,'Exact original repository promise preserved');
+        equal((await observed).reason,'ready','Genuine selected head remains valid');
+        f.acquisition.metadataHost.dailyNotesSettings();
+        equal(probe.snapshot().groups['probe:host.dailyNotesSettings'].calls,2,'Host wrapper installed once despite multiple IDB requests');
+        ok(await f.acquisition.readBody(file),'Actual bounded family decoder remains usable');
+        let resume,entered;const hold=new Promise(resolve=>{resume=resolve}),reached=new Promise(resolve=>{entered=resolve});
+        const selected=f.repository.readSelected(file.path,stamp=>stamp.saved?'ready':'unsaved',async reader=>{
+          entered();await hold;return reader.visit('metadata',()=>true);
+        });
+        ok(selected===selectedPromise&&selectedReceiver===f.repository,'Exact selected-reader promise and receiver preserved');
+        await reached;
+        const held=probe.snapshot();
+        equal(held.readers.active,1,'Actual selected source reader remains active while its consumer is held');
+        equal(held.readerWaitUnion.active,0,'Consumer-owned holding time is outside the pin/release/selection await union');
+        ok(held.leases.live>0&&held.leases.trackedLive===held.leases.live,'Committed source-family lease rows protect the held consumer');
+        equal(held.drain.readers,false,'Held reader cannot be called drained');equal(held.drain.sourceLeases,false,'Held durable leases cannot be called drained');
+        resume();equal((await selected).outcome,'ready','Held real family reader completes normally');
+        const snapshot=probe.snapshot();equal(snapshot.activeTransactions,0,'Native transactions drained');equal(snapshot.pending,0,'Observed promises drained');
+        ok(snapshot.decodePeak>0&&snapshot.decodeCurrent===0,'Decode reservations released');
+        equal(snapshot.readers.active,0,'Source reader lifetime drained');equal(snapshot.readers.started,snapshot.readers.released,'Each observed reader retired');
+        ok(snapshot.readers.peak>=1&&snapshot.readers.elapsedMs>=0,'Reader high-water and elapsed lifetime recorded');
+        ok(snapshot.leases.created>0&&snapshot.leases.created===snapshot.leases.retired,'Committed source leases have matching retirement requests');
+        equal(snapshot.leases.live,0,'No observed source lease rows remain');equal(snapshot.leases.trackedLive,0,'No private opaque lease keys retained after drain');
+        equal(snapshot.leases.unknownRetirements,0,'Every source lease retirement belongs to an observed creation');
+        ok(Object.values(snapshot.drain).every(Boolean),'Methods, native transactions, reader lifetimes and decode all genuinely drain');
+        equal(snapshot.groups['probe:repository.inspect.headOnly'].calls,1,'Head-only observations are separately attributed');
+        ok(snapshot.groups['probe:repository.pin.families'].calls>0&&snapshot.groups['probe:repository.pin.headOnly'].calls>0,'Both actual pin paths attributed');
+        for(const method of ['readBody','readSelected','visitFamily','releaseLeases','unpin','selectionReason']){
+          const group=snapshot.groups['probe:repository.'+method];ok(group.calls>0&&group.active===0&&group.elapsedMs>=0,'Actual method lifecycle attributed: '+method);
+        }
+        const unionMethods=['pin','releaseLeases','selectionReason'].map(method=>snapshot.groups['probe:repository.'+method]);
+        equal(snapshot.readerWaitUnion.calls,unionMethods.reduce((sum,group)=>sum+group.calls,0),'Union includes exactly the three named await owners');
+        equal(snapshot.readerWaitUnion.active,0,'Reader wait union drained');
+        ok(snapshot.readerWaitUnion.elapsedMs<=unionMethods.reduce((sum,group)=>sum+group.elapsedMs,0),'Overlapping await union never exceeds summed inclusive method time');
+        ok(snapshot.groups['probe:storage.source-lease.pin.readwrite'].completed>0&&snapshot.groups['probe:storage.source-lease.release.readwrite'].completed>0,'Actual lease transactions separately classified by source protocol keys');
+        const created=snapshot.leases.created,retired=snapshot.leases.retired;
+        await edit(db,['meta'],transaction=>{const store=transaction.objectStore('meta'),key='source-impact-lease:Observer-private-contributor';store.put({key,impactSlot:0});store.delete(key);});
+        const afterContributor=probe.snapshot();equal(afterContributor.leases.created,created,'Contributor lease rows are not source-family leases');
+        equal(afterContributor.leases.retired,retired,'Contributor cleanup is not source-family retirement');
+        equal(afterContributor.groups['probe:storage.contributor-lease.readwrite'].completed,1,'Contributor protocol operations have their own aggregate bucket');
+        // A genuine unexpected abort can close this cache's normal handle. Exercise it last;
+        // the probe must observe that policy, never replace it to keep a test handle usable.
+        const aborted=db.transaction('meta','readwrite'),abortedDone=new Promise(resolve=>aborted.addEventListener('abort',resolve,{once:true}));
+        aborted.objectStore('meta').add({key:'source-lease:Observer-private-aborted',sourceId:file.path,revision:'private-revision',owner:'private-owner'});aborted.abort();await abortedDone;
+        const afterAbort=probe.snapshot();equal(afterAbort.leases.created,created,'Aborted lease creation is never counted durable');
+        equal(afterAbort.leases.abortedCreates,1,'Aborted source-row request retained as a separate failure');
+        snapshot.readers.active=999;snapshot.leases.live=999;equal(probe.snapshot().readers.active,0,'Reader observations are copied');equal(probe.snapshot().leases.live,0,'Lease observations are copied');
+        ok(!JSON.stringify(snapshot).includes('Observer-private-'),'Only aggregate diagnostics exported');
+        probe.stop();
+        ok(IDBObjectStore.prototype.get===getWitness&&IDBDatabase.prototype.transaction===transactionWitness&&f.repository.inspect===inspectWitness&&f.repository.readSelected===selectedWitness,'Exact wrapped methods restored');
+        ok(f.app.metadataCache.getFileCache===originalCache&&f.acquisition.metadataHost.dailyNotesSettings===originalDaily,'Exact host methods restored');
+        const digest=f.repository.runtime.digest;let digestPromise,digestReceiver;
+        const digestWitness=function(...args){digestReceiver=this;digestPromise=digest.apply(this,args);return digestPromise;};
+        f.repository.runtime.digest=digestWitness;
+        try{
+          probe=window.sourceResourceFactory({phase:()=> 'counts',now:()=>performance.now(),databaseName:dbName('resource-observer-contract'),detailed:false});
+          probe.attach({sourceAcquisition:f.acquisition,indexedDb:f.cache});
+          const text='[1,"snapshot-pages","test",""]',result=f.repository.runtime.digest(text);
+          ok(result===digestPromise&&digestReceiver===f.repository.runtime,'Counts preserve original digest promise and receiver');await result;
+          await f.repository.runtime.digest('Observer-private-raw-input');
+          const counted=probe.snapshot();equal(counted.hashing['snapshot-pages'],{calls:1,utf16Units:text.length},'Receipt payload hash work is counted without encoding a copy');
+          ok(!('readers' in counted)&&!('leases' in counted)&&!('readerWaitUnion' in counted)&&!('drain' in counted),'Counts mode adds no detailed lifetime observations');
+          ok(f.repository.inspect===inspectWitness&&f.repository.readSelected===selectedWitness,'Counts mode does not wrap extra reader methods');
+          equal(counted.hashing.source.calls,1,'Source hashes remain separately counted');
+          ok(!JSON.stringify(counted).includes('Observer-private-'),'Hash payload text is never retained or exported');
+          counted.hashing.source.calls=999;equal(probe.snapshot().hashing.source.calls,1,'Caller cannot mutate private counters');
+          probe.stop();ok(f.repository.runtime.digest===digestWitness,'Exact digest method restored');
+        }finally{probe?.stop();f.repository.runtime.digest=digest;}
+        return true;
+      } finally {probe?.stop();IDBObjectStore.prototype.get=nativeGet;IDBDatabase.prototype.transaction=nativeTransactionMethod;f.repository.inspect=inspect;f.repository.readSelected=readSelected;f.close();}
+    })()`),true);
+  } finally {await browser.cleanup();}
+});
+
+/** An ended reader can retain conservative durable protection after its release transaction aborts. */
+test("startup resource observer never mistakes an aborted source lease retirement for durable drain", async () => {
+  const browser=await chromiumHarness(bundle);
+  try {
+    assert.equal(await browser.evaluate(contributorBrowserInitialize),true);
+    assert.equal(await browser.evaluate(`window.sourceResourceFactory=(${createStartupResourceProbe.toString()});true`),true);
+    assert.equal(await browser.evaluate(`(async()=>{
+      const f=await fixture('resource-observer-retirement'),nativeDelete=IDBObjectStore.prototype.delete;let probe,reopened,abortedDone;
+      try {
+        f.add('Observer-private-retained.md','Friends:: [[Observer-private-target]]');await f.acquire();
+        IDBObjectStore.prototype.delete=function(key){
+          const request=nativeDelete.apply(this,arguments);
+          if(this.name==='meta'&&typeof key==='string'&&key.startsWith('source-lease:')){
+            abortedDone=new Promise(resolve=>this.transaction.addEventListener('abort',resolve,{once:true}));this.transaction.abort();
+          }
+          return request;
+        };
+        probe=window.sourceResourceFactory({phase:()=> 'failed-release',now:()=>performance.now(),databaseName:dbName('resource-observer-retirement'),detailed:true});
+        probe.attach({sourceAcquisition:f.acquisition,indexedDb:f.cache});
+        equal(await f.repository.visit('Observer-private-retained.md','metadata',()=>true),'ready','Original visit result is not rewritten by measurement');
+        await abortedDone;
+        const snapshot=probe.snapshot();
+        equal(snapshot.readers.active,0,'The caller lifetime genuinely ended');
+        ok(snapshot.leases.created>0&&snapshot.leases.retired===0&&snapshot.leases.abortedRetires>0,'An aborted retirement never counts as committed deletion: '+JSON.stringify(snapshot.leases));
+        ok(snapshot.leases.live>0&&!snapshot.drain.sourceLeases,'Ended readers with durable orphan protection cannot count as fully drained');
+        reopened=await rawOpen(dbName('resource-observer-retirement'));
+        const rows=await value(reopened.transaction('meta','readonly').objectStore('meta').getAll());
+        equal(rows.filter(row=>row.key?.startsWith('source-lease:')).length,snapshot.leases.live,'Independent connection confirms actual retained durable rows');
+        ok(!JSON.stringify(snapshot).includes('Observer-private-'),'Failure observations still export no private keys or payloads');
+        return true;
+      } finally {probe?.stop();IDBObjectStore.prototype.delete=nativeDelete;reopened?.close();f.close();}
+    })()`),true);
+  } finally {await browser.cleanup();}
+});
 
 /** An exception after complete navigation must retain that owner until existing neutral recovery finishes. */
 test("trusted warm evidence exception retains navigable graph for source recovery", async () => {
@@ -60,7 +350,7 @@ test("trusted warm evidence exception retains navigable graph for source recover
   } finally {await browser.cleanup();}
 });
 
-/** Real source/storage work consumes a queued debounce while a genuinely newer event retains its own pass. */
+/** Real source/storage work consumes a queued debounce and drains a scoped event before readiness. */
 for(const lateEvent of [false,true]){
   test(`explicit source reconciliation consumes its scheduled request${lateEvent?' and preserves an event during the pass':''}`,async()=>{
     const browser=await chromiumHarness(bundle);
@@ -84,14 +374,13 @@ for(const lateEvent of [false,true]){
             await reached;ok(f.acquisition.inventory,'A real captured pass is active');
             const joined=f.acquisition.reconcile();file.stat.mtime++;f.texts.set(file.path,'Field:: Changed');
             f.app.vault.trigger('modify',file);ok(f.acquisition.requested,'New event retains follow-up ownership');
-            release();equal(await first,false,'New source event supersedes the earlier captured pass');equal(await joined,false,'Active joins retain the same superseded outcome');
-            // The actual event fan-out has its own completion request. Let that existing owner
-            // finish before firing its shared debounce, matching an ordinary quiet event burst.
+            release();ok(await first,'The same scoped sweep drains the newer source event before completion');ok(await joined,'Active joins retain the same current completed outcome');
+            // The original event and its fan-out are both covered by this pass's final dependency
+            // proof; a completed pass must not leave an empty second debounce/readiness signal.
             await f.acquisition.knownFanoutTasks.get(file);
-            equal(notifications,0,'A stale pass cannot emit readiness');equal(queued.size,1,'Exactly one new event pass scheduled');
-            const next=f.acquisition.timer;ok(next!==scheduled&&queued.has(next),'New request is independently owned');
-            f.repository.headPage=headPage;const callback=queued.get(next);queued.delete(next);callback();
-            ok(await f.acquisition.flush(),'The existing follow-up repairs and closes real source authority');
+            equal(notifications,1,'Only current completed work emits readiness');equal(queued.size,0,'Drained source work schedules no duplicate pass');
+            equal(f.acquisition.requested,false,'The exact final event fence consumed this request');
+            f.repository.headPage=headPage;
             const current=await f.repository.inspect(file.path);equal(current.head.physical.mtime,file.stat.mtime,'Actual changed physical revision acquired');
             ok(current.head.sourceRevision!==before.sourceRevision,'New event produces a genuine canonical head');
             const values=[];equal(await f.repository.visit(file.path,'values',rows=>{values.push(...rows);return true;}),'ready','Current canonical family authenticated');
@@ -313,6 +602,10 @@ for (const { cancel, retry } of [{ cancel: false, retry: false }, { cancel: true
           ok(!index.state.pages.has('Orphan.png'),'Physical search does not publish a canonical graph page');
           ok(!index.semanticScopes.get('Orphan.png')?.completePaths.has('Orphan.png'),'Physical filename does not certify a semantic scope');
           if(cancel){
+            // The finite P1 preflight now precedes fallback admission. Drain its genuine live
+            // foreground owners before isolating late source-authority cancellation; otherwise
+            // policy invalidation legitimately readmits that still-pending visible demand.
+            await wait(()=>index.onDemandTasks.size===0&&index.onDemandBaselineTask===null);
             if(retry){unblock();await wait(()=>index.startupSourceAuthorityWaiter!==null)}
             const pending=index.waitForSnapshotHydration();index.invalidateSemanticPolicy();equal((await pending).restored,false,'Cancelled startup');
             const state=index.state,diagnostics=index.getSnapshotHydrationDiagnostics();unblock();await new Promise(r=>setTimeout(r,100));
@@ -339,12 +632,14 @@ for (const { cancel, retry } of [{ cancel: false, retry: false }, { cancel: true
   });
 }
 
+/** An unchanged resolver wave authenticates each resolution family once; changed targets still use canonical repair. */
 test("restart resolver waves retain identical heads and automatically update genuinely changed bindings", async () => {
   const browser = await chromiumHarness(bundle);
   try {
     assert.equal(await browser.evaluate(contributorBrowserInitialize), true);
     assert.equal(await browser.evaluate(`(async()=>{
-      const M=sourceModules,f=await fixture('si5-restart-resolver-wave');let restarted;
+      const M=sourceModules,f=await fixture('si5-restart-resolver-wave');let restarted,resolutionVisits=0;
+      const visitFamily=f.repository.visitFamily;
       const wait=async predicate=>{const start=Date.now();while(Date.now()-start<15000){if(predicate())return;await new Promise(r=>setTimeout(r,20))}throw Error('Resolver adoption did not converge')};
       try{
         f.add('A.md','Friends:: [[Alias]]');f.add('B.md','');f.add('C.md','');
@@ -352,12 +647,14 @@ test("restart resolver waves retain identical heads and automatically update gen
         await f.acquire();ok(await f.acquisition.reconcile(),'Initial source authority');
         const db=await f.cache.open(),heads=await value(db.transaction('sourceHeads').objectStore('sourceHeads').getAll());
         f.acquisition.close();f.work.reset();f.reads.length=0;f.parses.length=0;
+        f.repository.visitFamily=/** Count actual family authentication while forwarding the original promise. */ function(view,family,...args){if(family==='resolution')resolutionVisits++;return visitFamily.call(this,view,family,...args);};
         restarted=new M.ObsidianSourceAcquisition(f.app,f.cache,async text=>{f.parses.push(text);return M.parseBodyMetadata(text)});
         restarted.start();f.app.metadataCache.trigger('resolved');ok(!restarted.hasSemanticDependencies(),'Uncertain startup event closes readiness');
         restarted.enableInventory();await wait(()=>restarted.hasSemanticDependencies()&&!restarted.inventory);
         equal(await value(db.transaction('sourceHeads').objectStore('sourceHeads').getAll()),heads,'Identical current resolutions retain exact prior heads');
         equal(f.work.writes,[],'No source restamping for resolver close');equal(f.reads,[],'No Markdown reads');equal(f.parses,[],'No parsing');
         equal(restarted.getCounters().resolutionRefreshes,0,'No resolution persistence for equal output');
+        equal(resolutionVisits,f.files.size,'Each unchanged resolution family is authenticated once, without an earlier duplicate validation');
         const transaction=f.repository.transaction,modes=[];f.repository.transaction=function(db,stores,mode,...args){modes.push({stores,mode});return transaction.call(this,db,stores,mode,...args)};
         let inspected;try{inspected=await f.repository.inspect('A.md',[])}finally{f.repository.transaction=transaction}
         equal(modes,[{stores:['sourceHeads'],mode:'readonly'}],'Head-only inspection never writes cleanup leases');
@@ -372,7 +669,7 @@ test("restart resolver waves retain identical heads and automatically update gen
         equal(facts.filter(r=>r.kind==='reference-resolution').map(r=>r.target?.entity.id),['C.md'],'Canonical new target');
         equal(f.work.writes,['replace:A.md'],'Only changed resolution replaced');equal(f.reads,[],'Cached binding change reads no Markdown');equal(f.parses,[],'Cached binding change parses nothing');
         return true;
-      }finally{restarted?.close();f.close()}
+      }finally{f.repository.visitFamily=visitFamily;restarted?.close();f.close()}
     })()`), true);
   } finally { await browser.cleanup(); }
 });
@@ -429,6 +726,70 @@ test("decoded body validation is reused only while the exact selected head is un
     })()`), true);
   } finally { await browser.cleanup(); }
 });
+
+/** Deferred equality must still authenticate payloads and reject changed source/head lifetimes. */
+for(const mode of ['corrupt','foreground-proof','replacement','cancelled','same-stat']){
+  test(`resolver comparison retains source integrity and finality: ${mode}`,async()=>{
+    const browser=await chromiumHarness(bundle);
+    try{
+      assert.equal(await browser.evaluate(contributorBrowserInitialize),true);
+      assert.equal(await browser.evaluate(`(/** Exercise actual acquisition and selected-family validation. */ async()=>{
+        const M=sourceModules,f=await fixture('resolver-proof-${mode}'),mode=${JSON.stringify(mode)};let owner,peer,current=true,injected=false;
+        const inspect=f.repository.inspect,selections=[];
+        try{
+          const file=f.add('A.md','Friends:: [[B]]');f.add('B.md','');await f.acquire();ok(await f.acquisition.reconcile(),'Seed genuine source authority');
+          const before=await f.repository.inspect(file.path),db=await f.cache.open();f.acquisition.close();
+          owner=new M.ObsidianSourceAcquisition(f.app,f.cache,async text=>{f.parses.push(text);return M.parseBodyMetadata(text)});
+          owner.start();f.app.metadataCache.trigger('resolved');
+          const body=await owner.readBody(file);ok(body,'Selected body families authenticated');
+          /** Damage the selected resolution posting without changing body families. */
+          const corrupt=async()=>edit(db,['sourcePostings'],tx=>tx.objectStore('sourcePostings').delete([file.path,before.head.families.resolution.revision,'resolution',0]));
+          let externalHead;
+          if(mode==='corrupt')await corrupt();
+          if(mode==='replacement'){
+            peer=new M.KplexIndexedDbCache('resolver-proof-'+mode);ok(await peer.open(),'Independent connection');
+            equal((await peer.sources.replace({sourceId:file.path,physical:before.head.physical,observation:before.head.observation,expected:before.expected,families:before.head.families})).outcome,'activated','Concurrent selected-head replacement');
+            externalHead=(await peer.sources.inspect(file.path,[])).head;
+          }
+          f.repository.inspect=/** Preserve the original inspection and inject only at its return boundary. */ async function(id,families,...args){
+            selections.push([...families]);const selected=await inspect.call(this,id,families,...args);
+            if(id===file.path&&families.includes('metadata')&&!injected){
+              if(mode==='cancelled'){injected=true;current=false;}
+              else if(mode==='same-stat'){injected=true;f.app.vault.trigger('modify',file);}
+              else if(mode==='foreground-proof'&&families.length===1){
+                injected=true;
+                const foreground=await owner.readBody(file);ok(foreground,'Genuine concurrent foreground body selection');
+                ok((await owner.acquire(file,foreground)).saved,'Actual foreground equality proves this host observation');
+                await corrupt();
+              }
+            }
+            return selected;
+          };
+          const acquired=await owner.acquire(file,body,()=>current);f.repository.inspect=inspect;
+          if(mode==='cancelled'||mode==='same-stat'){
+            equal(acquired.current,false,'Retired source cannot publish from the selected body');
+            if(mode==='same-stat')ok(owner.needsBodyRead(file),'Equal-stat source event retains real reacquisition');
+            else equal((await f.repository.inspect(file.path,[])).sequence,before.sequence,'Cancellation preserves old head');
+          }else{
+            ok(acquired.current&&acquired.saved,'Current source converges through real validation/repair');
+            const after=await f.repository.inspect(file.path),facts=[];
+            equal(after.reason,'ready','Every final family validates');
+            equal(await f.repository.visit(file.path,'resolution',rows=>{facts.push(...rows);return true}),'ready','Resolution postings authenticated');
+            equal(facts.filter(row=>row.kind==='reference-resolution').map(row=>row.target?.entity.id),['B.md'],'Canonical binding retained');
+            if(mode==='corrupt'||mode==='foreground-proof'&&injected)ok(after.sequence>before.sequence,'Missing posting repaired rather than falsely accepted');
+            if(mode==='replacement'){
+              ok(selections.some(families=>JSON.stringify(families)===JSON.stringify(M.SOURCE_FAMILIES)),'Changed selection requires all-family validation');
+              equal(after.head,externalHead,'Concurrent selected head cannot be overwritten by stale body proof');
+            }
+            equal(f.repository.decodeBytes,0,'Transient decode budget released');
+          }
+          equal(f.reads.length,0,'Cached proof never reads Markdown');equal(f.parses.length,0,'Cached proof never reparses');
+          return true;
+        }finally{f.repository.inspect=inspect;owner?.close();peer?.close();f.close();}
+      })()`),true);
+    }finally{await browser.cleanup();}
+  });
+}
 
 test("restart after ontology changes reuses the old graph only as a source-backed baseline", async () => {
   const browser = await chromiumHarness(bundle);
@@ -508,8 +869,11 @@ test("late Eager bootstrap cannot certify an old-policy snapshot over a current 
         index.publishSnapshotPreview=async(...args)=>{
           ok(index.sourceBackedSemantics,'Changed-policy candidate already selected source strategy');
           ok(!index.sourceAcquisition.hasSemanticDependencies(),'Source closure remains behind targeted preview');
-          release=index.acquireSemanticDemand('A.md');baseline=index.onDemandBaselineTask;
-          ok(baseline,'Real partial-Eager fallback admitted after classification');return preview(...args);
+          release=index.acquireSemanticDemand('A.md');
+          // Admit the actual public P2 producer explicitly. Demand first prepares a finite P1
+          // cover now, so synchronously reading its future baseline task is not an admission.
+          baseline=index.initializeOnDemandBaseline();
+          ok(baseline===index.onDemandBaselineTask,'Real partial-Eager fallback admitted after classification');return preview(...args);
         };
         let entered;const reached=new Promise(r=>entered=r),hold=new Promise(r=>unblock=r);
         const evidence=index.indexedDb.iterateSnapshotEvidence.bind(index.indexedDb);

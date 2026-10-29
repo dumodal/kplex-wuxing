@@ -2,7 +2,8 @@
  * Owns document-scoped control hints for the Obsidian UI shell: delayed mouse hover and consumed
  * long presses share one measured, theme-styled tooltip. Native aria-label hints are suppressed by
  * scoped CSS because Obsidian's warm-tooltip shortcut bypasses delay and its bottom clamp overlaps
- * controls. Each document has one reference-counted owner; the last release removes all resources.
+ * controls. Explicitly marked controls can use referenced accessible names to avoid the native
+ * aria-label tooltip path entirely. Each document has one reference-counted owner; the last release removes all resources.
  */
 const HOVER_MS = 650;
 const LONG_PRESS_MS = 450;
@@ -42,9 +43,12 @@ function scopedTooltipTarget(target: EventTarget | null): HTMLElement | null {
   return element.closest("[data-kplex-tooltip-scope]") ? element : null;
 }
 
-/** Prefer the accessible localized name; legacy title/text fallback is retained for long presses. */
+/** Resolve referenced accessible names in this control's document; retain legacy aria/title/text fallbacks. */
 function tooltipText(element: HTMLElement): string {
-  return element.getAttribute("aria-label")?.trim()
+  const referenced = element.getAttribute("aria-labelledby")?.trim().split(/\s+/)
+    .map(/** Label IDs belong to the actual control document, including popouts. */ id => element.ownerDocument.getElementById(id)?.textContent?.trim() ?? "")
+    .filter(Boolean).join(" ");
+  return referenced || element.getAttribute("aria-label")?.trim()
     || element.getAttribute("title")?.trim()
     || element.textContent?.trim()
     || "";
@@ -85,6 +89,7 @@ export function installKplexLongPressTooltips(doc: Document): () => void {
   let hoverTimer = 0;
   let hoverTarget: HTMLElement | null = null;
   let hoverVisible = false;
+  let alternatePressed = false;
 
   /** Cancel only this document owner's pending long press. */
   const clearPressTimer = () => {
@@ -113,7 +118,7 @@ export function installKplexLongPressTooltips(doc: Document): () => void {
     hoverVisible = false;
   };
 
-  /** Measure the themed hint and flip above at the window or caller-marked canvas boundary. */
+  /** Honor a control's preferred side, falling back only when it cannot fit inside its boundary. */
   const showTooltip = (element: HTMLElement, hover = false) => {
     const text = tooltipText(element);
     if (!text || !element.isConnected || !element.getClientRects().length) return;
@@ -131,10 +136,12 @@ export function installKplexLongPressTooltips(doc: Document): () => void {
     const below = buttonRect.bottom + margin;
     const above = buttonRect.top - tooltipRect.height - margin;
     const fitsBelow = below + tooltipRect.height <= Math.min(view.innerHeight, boundary?.bottom ?? view.innerHeight) - margin;
-    const top = fitsBelow ? below : above;
+    const fitsAbove = above >= Math.max(margin, (boundary?.top ?? 0) + margin);
+    const placeAbove = element.dataset.tooltipPosition === "top" && fitsAbove || !fitsBelow;
+    const top = placeAbove ? above : below;
     // If neither side fits, showing no hint is preferable to obscuring the control being used.
     if (top < Math.max(margin, (boundary?.top ?? 0) + margin)) { removeTooltip(); return; }
-    tooltip.toggleClass("mod-top", !fitsBelow);
+    tooltip.toggleClass("mod-top", placeAbove);
     const arrow = tooltip.createDiv({ cls: "tooltip-arrow" });
     arrow.setCssStyles({ left: `${Math.max(margin, Math.min(tooltipRect.width - margin, buttonRect.left + buttonRect.width / 2 - left))}px` });
     tooltip.setCssStyles({ left: `${left}px`, top: `${Math.max(margin, top)}px` });
@@ -151,19 +158,39 @@ export function installKplexLongPressTooltips(doc: Document): () => void {
     if (hoverVisible) removeTooltip();
   };
 
+  /** Gate hints share the normal delay/placement while their caller owns the modifier preference. */
+  const hoverAllowed = (element: HTMLElement): boolean => !element.hasAttribute("data-kplex-tooltip-requires-alt") || alternatePressed;
+
+  /** Preserve the hovered target while withholding a gated hint, allowing a stationary modifier press. */
+  const scheduleHover = (target: HTMLElement): void => {
+    if (hoverTimer) view.clearTimeout(hoverTimer);
+    hoverTimer = 0;
+    if (hoverVisible) removeTooltip();
+    if (!hoverAllowed(target)) return;
+    hoverTimer = view.setTimeout(/** Re-read labels and eligibility after React/host updates. */ () => {
+      hoverTimer = 0;
+      if (hoverTarget !== target || hoverTooltipTarget(target) !== target || !hoverAllowed(target)) return;
+      showTooltip(target, true);
+    }, HOVER_MS);
+  };
+
+  /** Modifier release immediately hides only modifier-gated hints; ordinary controls keep their existing lifetime. */
+  const updateAlternate = (pressed: boolean): void => {
+    if (alternatePressed === pressed) return;
+    alternatePressed = pressed;
+    if (hoverTarget?.hasAttribute("data-kplex-tooltip-requires-alt")) scheduleHover(hoverTarget);
+  };
+
   /** Restart the full delay only when entering a different mouse-hover control. */
   const onPointerOver = (event: PointerEvent) => {
     if (event.pointerType !== "mouse" || event.buttons !== 0) return;
+    updateAlternate(event.altKey);
     const target = hoverTooltipTarget(event.target);
     if (target === hoverTarget) return;
     clearHover();
     if (!target) return;
     hoverTarget = target;
-    hoverTimer = view.setTimeout(/** Re-read labels and eligibility after React/host updates. */ () => {
-      hoverTimer = 0;
-      if (hoverTarget !== target || hoverTooltipTarget(target) !== target) return;
-      showTooltip(target, true);
-    }, HOVER_MS);
+    scheduleHover(target);
   };
 
   /** Ignore movement between the icon, text and input descendants of the same control. */
@@ -171,8 +198,12 @@ export function installKplexLongPressTooltips(doc: Document): () => void {
     if (hoverTarget && hoverTooltipTarget(event.relatedTarget) !== hoverTarget) clearHover();
   };
 
-  /** Escape dismisses the hint without consuming the application's own Escape action. */
-  const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") clearHover(); };
+  /** Escape retains application priority; an Alt/Option press can authorize the stationary hovered gate. */
+  const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") clearHover(); else updateAlternate(event.altKey || event.key === "Alt"); };
+  /** Key release does not require another pointer event to hide a gated hint. */
+  const onKeyUp = (event: KeyboardEvent) => { updateAlternate(event.altKey); };
+  /** A blurred document cannot retain a modifier from another window's keyboard session. */
+  const onBlur = (): void => { alternatePressed = false; clearHover(); };
 
   /** Reset pending touch state without invalidating its separately owned synthesized-click guard. */
   const resetActivePress = () => {
@@ -219,6 +250,7 @@ export function installKplexLongPressTooltips(doc: Document): () => void {
 
   /** Movement cancels a pending long press while preserving already-earned click suppression. */
   const onPointerMove = (event: PointerEvent) => {
+    if (event.pointerType === "mouse" && event.buttons === 0) updateAlternate(event.altKey);
     if (!activeTarget || event.pointerId !== activePointerId) return;
     if (Math.hypot(event.clientX - startX, event.clientY - startY) <= MOVE_TOLERANCE_PX) return;
     clearPressTimer();
@@ -262,16 +294,18 @@ export function installKplexLongPressTooltips(doc: Document): () => void {
   };
 
   const Observer = (view as Window & { MutationObserver: typeof MutationObserver }).MutationObserver;
-  const observer = new Observer(/** Retired controls cannot retain visible or pending hints. */ () => {
+  const observer = new Observer(/** Retired controls and changed gate preferences cannot retain an unauthorized hint. */ records => {
     if (hoverTarget && (!hoverTarget.isConnected || hoverTarget.ownerDocument !== doc)) clearHover();
+    else if (hoverTarget && records.some(/** Only a modifier-policy change on this hovered control renews the delay. */ record => record.type === "attributes" && record.target === hoverTarget)) scheduleHover(hoverTarget);
   });
-  observer.observe(doc.body, { childList: true, subtree: true });
+  observer.observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-kplex-tooltip-requires-alt"] });
   doc.addEventListener("pointerover", onPointerOver, true);
   doc.addEventListener("pointerout", onPointerOut, true);
   doc.addEventListener("scroll", clearHover, true);
   doc.addEventListener("wheel", clearHover, true);
   doc.addEventListener("keydown", onKeyDown, true);
-  view.addEventListener("blur", clearHover);
+  doc.addEventListener("keyup", onKeyUp, true);
+  view.addEventListener("blur", onBlur);
   view.addEventListener("resize", clearHover);
 
   doc.addEventListener("pointerdown", onPointerDown, true);
@@ -299,7 +333,8 @@ export function installKplexLongPressTooltips(doc: Document): () => void {
     doc.removeEventListener("scroll", clearHover, true);
     doc.removeEventListener("wheel", clearHover, true);
     doc.removeEventListener("keydown", onKeyDown, true);
-    view.removeEventListener("blur", clearHover);
+    doc.removeEventListener("keyup", onKeyUp, true);
+    view.removeEventListener("blur", onBlur);
     view.removeEventListener("resize", clearHover);
   };
   const state = { users: 0, cleanup };

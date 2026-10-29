@@ -34,6 +34,54 @@ The superseded `prepareCachedSemantics` and global `contributorDiscovery` acquis
 
 The [independence design](INDEX_SETTINGS_INDEPENDENCE_DESIGN.md) tracks acceptance. Earlier SI4a/private proofs remain historical evidence, not separate live runtime routes.
 
+## Startup admission
+
+The restart-required per-device policy is captured once from the main host's existing presentation
+environment. Desktop defaults on, tablet and phone off; phone maps to the persisted `mobile` key.
+Missing/malformed booleans use those defaults and explicit false survives migration. The six flat
+settings are workflow preferences, excluded from appearance/import inventories and graph signatures.
+See [startup controls](STARTUP_INDEXING.md) for user-facing behavior.
+
+`main.ts` owns one session admission task, with the existing restore/initial/rebuild tasks retaining
+their completion and retry ownership. Lightweight native setup, saved navigation and Sidecar restore
+remain independent. Layout readiness plus an enabled policy, an actual opening, or explicit rebuild
+admits the existing catalog/cache/source/URL pipeline. An early opening is remembered; inactive live
+views count. Native mounting never awaits the task. Reopening retains successful phases; initial
+cancellation and storage retry stay with their existing owners. The former large-cold-iOS pre-open
+veto is replaced by the device policy; platform memory budgets and post-open cancellation remain.
+
+Before admission, GraphIndex retains demand without starting it. The pre-restore fence records native
+changes in existing coalesced owner/path records; deleted identities are discarded, not journaled.
+Source acquisition keeps dirty body/metadata observations without starting its subscriptions or
+repository work. Admission validates current policy/inventory normally, including equal-stat edits.
+URL replay/discovery respects those edit fences instead of treating stat-matching cached input as
+current. Unchanged warm caches remain reusable. Hydration/source watchdogs begin with admitted work.
+
+Obsidian emits `Vault.create` for existing files during pre-layout vault discovery. The temporary
+fence retains native physical inventory observations, but does not classify that enumeration as a
+body edit or retire independent URL cache owners. Normal restart source/metadata/resolution and
+Date-environment validation still runs; modifies/deletes/renames and post-layout creates retain
+ordinary invalidation, including same-stat edits before admission.
+
+An incomplete source-backed initial adoption remains owned by the initial-index coordinator.
+Settled source inventory, requested semantic completion and coherent settings publications can
+notify one coalesced continuation. It joins original preparation/adoption, rechecks lifetime,
+policy/demand/source/publication fences and lets actual adoption establish completion. Unchanged
+failed input does not create a retry loop. While that owner is incomplete, an automatic dirty-index
+flush cannot replace startup-only, zero-edited-path backlog with a competing full builder. Genuine
+edits, structural changes, cold/on-demand work and explicit rebuilding retain their existing owners.
+
+The legacy `urlIndexingMode` setting already migrates to `background`; this feature does not restore
+the retired URL-mode UI or make graph/cache admission depend on that compatibility field.
+
+Device strategy is captured alongside startup admission: `indexingModeDesktop`,
+`indexingModeTablet`, and `indexingModeMobile` default to Eager/On demand/On demand. These six
+flat workflow preferences merge independently across devices and stay outside semantic signatures,
+appearance themes and foreign imports. The global `indexingMode` remains compatibility data;
+production passes the captured strategy explicitly into GraphIndex. Runtime diagnostics report
+that captured strategy rather than a later settings edit. Missing device fields adopt the stated
+defaults independently, including upgrades from the former global strategy.
+
 ## Pipeline
 
 ```text

@@ -1,8 +1,9 @@
 /** Native Obsidian view for a file- or URL-backed central Plex node. Live editor geometry supplies
  * the small-node drawing-fit policy on opening and untouched reading-mode viewport resizing.
  * Per-note Markdown scaling affects only native Markdown content; controls, fullscreen and canvas
- * views retain untransformed native geometry and pointer coordinates. */
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+ * views retain untransformed native geometry and pointer coordinates. Toolbar controls use
+ * referenced accessible names and the shell's single shared tooltip owner. */
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { Notice, type TFile, type WorkspaceLeaf } from "obsidian";
 import type KplexPlugin from "../main";
 import type { Translator } from "../lang";
@@ -17,11 +18,14 @@ import { markdownZoomMode, withMarkdownZoomMode } from "../core/plex/markdownZoo
 import { ObsidianIcon } from "./ObsidianIcon";
 import { EmbeddedWebPage } from "./EmbeddedWebPage";
 import { urlEmbed } from "./features/urlEmbed";
+import { TooltipButton } from "./components/TooltipButton";
 
 /** Own the center’s native file leaf or desktop/mobile web guest, plus local view/maximize controls and the caller-owned shared node menu. */
 export function CentralNodeEditor({
   plugin,
   hostLeaf,
+  bindingId,
+  onCloseReady,
   page,
   defaultMode,
   maximized,
@@ -35,6 +39,8 @@ export function CentralNodeEditor({
   translate,
 }: {
   plugin: KplexPlugin;
+  bindingId?: string;
+  onCloseReady?: (close: () => Promise<void>) => (() => void);
   hostLeaf: WorkspaceLeaf;
   page: GraphPage;
   defaultMode: EmbeddedMarkdownMode;
@@ -49,9 +55,12 @@ export function CentralNodeEditor({
   translate: Translator;
 }) {
   const webTarget = page.url ? urlEmbed(page.url) : null;
+  const toolbarLabelId = useId();
   const useWebFrame = Boolean(webTarget);
   const mountRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<EmbeddedMarkdownLeafController | null>(null);
+  const closeReadyRef = useRef(onCloseReady);
+  closeReadyRef.current = onCloseReady;
   const fileRef = useRef(page.file);
   const defaultModeRef = useRef(defaultMode);
   const onNavigateRef = useRef(onNavigate);
@@ -81,18 +90,21 @@ export function CentralNodeEditor({
       }, (nextView) => {
         setDocumentView(nextView);
       }, activateHostLeafOnInteraction, /** Read current normal-node policy for opening and untouched reading-mode resizing. */ () =>
-        plugin.settings.excalidrawFitOnNodeOpen && !maximizedRef.current);
+        plugin.settings.excalidrawFitOnNodeOpen && !maximizedRef.current,
+      bindingId ? nextFile => onNavigateRef.current(nextFile) : undefined);
     } catch (error) {
       console.error("K-Plex failed to create the embedded central leaf.", error);
       setStatus("error");
       return;
     }
     controllerRef.current = controller;
+    const releaseClose = closeReadyRef.current?.(() => controller.close());
     return () => {
+      releaseClose?.();
       controllerRef.current = null;
       controller.dispose();
     };
-  }, [plugin, hostLeaf, activateHostLeafOnInteraction, useWebFrame]);
+  }, [plugin, hostLeaf, activateHostLeafOnInteraction, useWebFrame, bindingId]);
 
   useEffect(/** Route this center to its native file leaf or explicitly opened URL guest without changing history. */ () => {
     const controller = controllerRef.current;
@@ -119,7 +131,7 @@ export function CentralNodeEditor({
       if (!cancelled) setStatus("error");
     });
     return () => { cancelled = true; };
-  }, [page.path, page.file, page.url, plugin, useWebFrame]);
+  }, [bindingId ? null : page.path, page.file, page.url, plugin, useWebFrame, bindingId]);
 
   useEffect(/** Notify native files when their layout box changes; web guests own their resize observer. */ () => {
     const mount = mountRef.current;
@@ -184,37 +196,38 @@ export function CentralNodeEditor({
   >
     {useWebFrame && webTarget ? <EmbeddedWebPage target={webTarget} label={page.name || page.url || page.path} />
       : <div ref={mountRef} className="kplex-central-editor-leaf-host" />}
-    <div className="kplex-central-editor-toolbar" role="toolbar" aria-label={translate("centralEditor.toolbar")}>
-      {excalidrawFile && documentView && <button
+    <div className="kplex-central-editor-toolbar" role="toolbar" aria-labelledby={toolbarLabelId}>
+      <span id={toolbarLabelId} className="kplex-accessible-name">{translate("centralEditor.toolbar")}</span>
+      {excalidrawFile && documentView && <TooltipButton
         type="button"
-        aria-label={translate(documentView === "excalidraw" ? "centralEditor.showMarkdown" : "centralEditor.showDrawing")}
+        label={translate(documentView === "excalidraw" ? "centralEditor.showMarkdown" : "centralEditor.showDrawing")}
         onClick={toggleExcalidrawView}
-      ><ObsidianIcon name={documentView === "excalidraw" ? "text" : "palette"} size={12} /></button>}
-      {documentView && <button
+      ><ObsidianIcon name={documentView === "excalidraw" ? "text" : "palette"} size={12} /></TooltipButton>}
+      {documentView && <TooltipButton
         type="button"
-        aria-label={translate(mode === "source" ? "centralEditor.showPreview" : "centralEditor.showEditor")}
+        label={translate(mode === "source" ? "centralEditor.showPreview" : "centralEditor.showEditor")}
         onClick={toggleMode}
-      ><ObsidianIcon name={mode === "source" ? "book-open" : "square-pen"} size={12} /></button>}
-      {documentView === "markdown" && !maximized && <button
+      ><ObsidianIcon name={mode === "source" ? "book-open" : "square-pen"} size={12} /></TooltipButton>}
+      {documentView === "markdown" && !maximized && <TooltipButton
         type="button"
         data-kplex-markdown-zoom-toggle
-        aria-label={translate(scaleMarkdownWithZoom ? "centralEditor.keepTextSize" : "centralEditor.scaleWithZoom")}
+        label={translate(scaleMarkdownWithZoom ? "centralEditor.keepTextSize" : "centralEditor.scaleWithZoom")}
         aria-pressed={scaleMarkdownWithZoom}
         onClick={toggleMarkdownZoom}
-      ><ObsidianIcon name={scaleMarkdownWithZoom ? "scaling" : "type"} size={12} /></button>}
-      {allowMaximize && <button
+      ><ObsidianIcon name={scaleMarkdownWithZoom ? "scaling" : "type"} size={12} /></TooltipButton>}
+      {allowMaximize && <TooltipButton
         type="button"
-        aria-label={translate(maximized ? "centralEditor.restore" : "centralEditor.maximize")}
+        label={translate(maximized ? "centralEditor.restore" : "centralEditor.maximize")}
         onClick={() => onMaximizedChange(!maximized)}
-      ><ObsidianIcon name={maximized ? "minimize-2" : "maximize-2"} size={12} /></button>}
-      <button
+      ><ObsidianIcon name={maximized ? "minimize-2" : "maximize-2"} size={12} /></TooltipButton>}
+      <TooltipButton
         type="button"
-        aria-label={translate("app.useNormalCentralNode")}
+        label={translate("app.useNormalCentralNode")}
         onClick={onCollapse}
-      ><ObsidianIcon name="rectangle-ellipsis" size={12} /></button>
-      <button type="button" aria-label={translate("graph.openMenu")}
+      ><ObsidianIcon name="rectangle-ellipsis" size={12} /></TooltipButton>
+      <TooltipButton type="button" label={translate("graph.openMenu")}
         onClick={/** Use the graph's existing node actions and host destinations in both editor sizes. */ (event) => onOpenMenu(event.currentTarget)}
-      ><ObsidianIcon name="ellipsis-vertical" size={12} /></button>
+      ><ObsidianIcon name="ellipsis-vertical" size={12} /></TooltipButton>
     </div>
     {status === "loading" && <div className="kplex-central-editor-status" aria-live="polite">{translate("centralEditor.loading")}</div>}
     {status === "error" && <div className="kplex-central-editor-status is-error" role="status">{translate("centralEditor.unavailable")}</div>}

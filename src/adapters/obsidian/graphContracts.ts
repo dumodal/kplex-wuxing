@@ -1,7 +1,8 @@
 /**
  * Maps K-Plex host graph/settings facades to narrow portable read contracts. Host page identity
  * stays at this boundary; adapters capture date policy for live and cached compilation without
- * reclassifying relationships or changing physical source facts.
+ * reclassifying relationships or changing physical source facts. Find adds a visible tag marker
+ * and removes structural prefixes only from secondary display text, never from activation identity.
  */
 import type { KplexSettings } from "../../settings";
 import type { GraphPage } from "../../types";
@@ -9,9 +10,10 @@ import type { GraphSearchRead } from "../../core/graph/read";
 import { nodeId, type GraphNodeKind, type GraphNodeView } from "../../core/graph/model";
 import type { GraphCompilerSettings } from "../../core/graph/compiler";
 import { sanitizeDatePropertyRelations, type SemanticIndexSettings } from "../../core/graph/settings";
+import {ontologyConfiguration} from "../../core/contracts/ontologyConfiguration";
 
 /** Read the explicit host node facets without inferring kind or case rules from its opaque ID. */
-function kindOf(page: GraphPage): GraphNodeKind {
+export function graphNodeKindFromLegacy(page: GraphPage): GraphNodeKind {
   if (page.isFolder) return "container";
   if (page.isTag) return "tag";
   if (page.url) return "url";
@@ -22,7 +24,7 @@ function kindOf(page: GraphPage): GraphNodeKind {
 
 /** Map one returned host page to a bounded read view; shared metadata remains revision-scoped. */
 export function graphNodeViewFromLegacy(page: GraphPage): GraphNodeView {
-  const kind = kindOf(page);
+  const kind = graphNodeKindFromLegacy(page);
   return {
     id: nodeId(page.path),
     name: page.name,
@@ -53,7 +55,7 @@ export function graphNodeViewFromLegacy(page: GraphPage): GraphNodeView {
 
 /** Capture the exact finite compiler policy used by both full builds and cached semantic preparation. */
 export function graphCompilerSettingsFromLegacy(settings: KplexSettings): GraphCompilerSettings {
-  const hierarchy = settings.hierarchy;
+  const hierarchy = ontologyConfiguration(settings).hierarchy;
   return {
     hierarchy: {
       hidden: [...hierarchy.hidden],
@@ -78,7 +80,7 @@ export function graphCompilerSettingsFromLegacy(settings: KplexSettings): GraphC
 /** Map persisted host settings to the semantic subset used by the portable graph. */
 export function semanticIndexSettingsFromLegacy(settings: KplexSettings): SemanticIndexSettings {
   return {
-    hierarchy: settings.hierarchy,
+    hierarchy: ontologyConfiguration(settings).hierarchy,
     inferAllLinksAsFriends: settings.inferAllLinksAsFriends,
     inverseInfer: settings.inverseInfer,
     datePropertyRelations: sanitizeDatePropertyRelations(settings.datePropertyRelations),
@@ -98,15 +100,17 @@ type LegacySearchSource = Readonly<{
 
 /**
  * Adapts the legacy semantic-index search facade without exposing GraphPage/TFile to consumers.
- * Search ordering/visibility stay with the legacy source; this boundary only maps returned values.
+ * Search ordering/visibility stay with the legacy source; tag markers and folder display paths
+ * remain presentation-only while the mapped semantic node retains its exact activation identity.
  */
 export function createLegacyGraphSearchRead(source: LegacySearchSource): GraphSearchRead {
   return {
+    /** Map only ranked bounded hits, retaining source ordering and revision-scoped metadata. */
     search(query, limit) {
-      return source.search(query, limit).map((page) => ({
+      return source.search(query, limit).map(/** Display source-specific paths without rewriting the mapped identity. */ (page) => ({
         node: graphNodeViewFromLegacy(page),
-        label: source.titleFor(page),
-        detail: page.path,
+        label: page.isTag ? `#${source.titleFor(page).replace(/^#/, "")}` : source.titleFor(page),
+        detail: page.isTag ? `#${page.path.replace(/^tag:/, "")}` : page.isFolder ? page.path.replace(/^folder:/, "") : page.path,
       }));
     },
   };

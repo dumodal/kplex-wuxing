@@ -8,6 +8,29 @@ This is the accepted SI3 persistence contract and historical contributor prototy
 
 `src/adapters/obsidian/sourceAcquisition.ts` owns observed file incarnations/events, MetadataCache readiness, legacy migration, inventory and host resolution. It calls the existing exported `resolveObsidianReferenceTarget()` and Date collector. No path/basename guesser, Date grammar or semantic classifier is added.
 
+Complete current-process parses may carry an optional parser-input token through the existing hot,
+queued and durable body cache. Acquisition validates native file identity, path, mtime/ctime/size,
+observed per-file revision and parser version before sharing that input. An unrelated host-resolution
+change does not invalidate lexical input, but still cancels semantic captures. A missing/tombstoned
+head's synchronous synthetic incarnation increment may carry only an already-current accepted
+receipt; actual host events and replacement identities cannot. Reuse never clears dirty/created or
+unsaved state, establishes source completeness, or grants edit authority. Source activation retains
+its independent host/caller/metadata/storage fences. URL-only projections cannot be certified as
+complete bodies. Optional body-queue eviction can require reparsing; it cannot remove source facts
+or masks. See the [PR201 validation record](validation/indexing-cpu-201-2026-10-21.md).
+
+An explicit URL-owner change independently retires optional sharing before task coalescing. A weak
+per-file input epoch rejects parses captured before that observation but accepted afterward; the
+accepted receipt also retires its queued persistence guard. This changes no source observation
+revision, dirty/created flag, inventory scheduling or unsaved mask. Ordinary unchanged URL discovery
+and source publication retain sharing. Native source events remain the source authority fence.
+
+A completed full-build parse enters the existing hot body cache before yielding, independently of
+graph/source publication. Before parser submission, the builder rechecks its original input lifetime
+and selects only an already-complete matching hot/queued token after its existing priority checkpoint.
+Accepted cache-write guards also require that exact receipt to remain selected, so an older delayed
+writer cannot overwrite the body required by a newer token. Batched persistence remains unchanged.
+
 `KplexIndexedDbCache` remains the single connection owner. It also owns narrowly scoped, temporary existing-database handles used only to retire an ended contributor reader after normal-handle failure; they cannot make the normal writer available. Incremental `GraphBuilder` calls acquisition **before semantic no-op suppression**. A complete semantic rebuild uses neutral facts for body reuse but leaves source activation to the independent inventory after authoritative publication; it does not wait for a source write per note. `GraphIndex` also starts inventory after complete snapshot hydration. Preview/checkpoint hydration does not claim source completeness. The C14 publication callback remains synchronous; private source staging and graph preparation are asynchronous and separately fenced. Staging can add private-path latency; no latency improvement is claimed.
 
 ## SI4a selected-head read capability — Accepted
@@ -185,7 +208,27 @@ Heads carry an opaque physical incarnation, observed path/mtime and actual size/
 
 Writers capture a previous-head expectation and stage immutable revision-scoped chunks/postings in bounded transactions. Producers and codecs validate exact allowlists and frame finality before staging; activation atomically checks that all declared chunk and posting counts committed. A subsequent read validates hashes, contents, contiguous payload/candidate frames and regenerated postings before reuse. Valid unchanged families can retain their immutable revisions while resolution alone is replaced.
 
+Ordinary replacement may preserve selected local-dependency counts while publishing genuinely new source facts. The write-local proof requires a healthy current-format complete predecessor and closed local state. Authentication starts only after the fully staged new count/digest matches its predecessor, so changed projections do not pay for a failed old-row proof. It validates every old row, recomputes the original rolling digest using the old revision's byte/page boundaries, and checks that each selected key count covers that predecessor's full occurrence multiplicity. Hashing occurs outside IndexedDB transactions. A bounded page map and first-occurrence index seeks ensure each distinct key's occurrence range is counted once, without retaining a whole-source key set. Activation rechecks the exact predecessor/owner, global local-state revision, current lifetime, overlays, staging marker, count and stored/new/recomputed digest equality. Any mismatch retains ordinary count repair. The digest keeps its original byte-sensitive page boundaries, so identical projections can conservatively miss reuse when revision lengths change.
+
+Reuse does not suppress source/family publication, primary mutation tickets, sequence changes or invalidation. Selected counts remain intact and old inactive membership rows use the existing durable private reclaim marker; ordinary replacement drains that bounded reclaim before returning. Interrupted reclaim remains resumable at reopen or the next write. Optional alias upgrades keep their separate failure semantics. This is not a new storage-integrity scrub or a global proof cache. The implementation and measured limits are recorded in [the dependency-count reuse validation](validation/dependency-count-reuse-204-2026-10-23.md).
+
+Ordinary selected-count repair reads a contiguous cursor prefix under the shared 256-record/256 KiB page allowance, with the existing individually legal oversized-singleton exception. Every primary source/revision/ordinal and row envelope is authenticated; a missing or unexpected coordinate rejects the transaction. One ledger read per page-distinct key retains only its validated scalar count. Every old decrement precedes every new increment, including intermediate underflow/overflow checks; final net equality cannot hide corrupt starting counts. One final mutation per distinct key, an exact validated old-prefix range deletion, and journal cursor/pending advancement commit in the original readwrite transaction. Mutable counts never leave that transaction. Abort or process interruption preserves exactly-once page recovery, independent writers remain serialized by IndexedDB, and the existing between-page yield/cancellation boundaries remain. This does not change private staging/reclaim or the authenticated unchanged-projection fast path. See [the ordinary dependency-repair validation](validation/dependency-repair-batching-207-2026-10-23.md) for operation counts, complete-cost comparisons and platform limits.
+
 For a single-chunk disk family, the chunk and first byte/record-bounded posting page share one readonly transaction. A decode-budgeted preview determines that page's exact range; it grants no authority. Normal SHA/frame/posting/final-manifest validation and selected-head/lease fences still run before reuse. Remaining posting pages, multi-chunk families and memory fallback retain their ordinary read path. Invalid previews fall back to the original failure classification, and every terminal path releases the decode reservation.
+
+An ordinary `visit(metadata)` can instead prepare that same chunk/page inside its atomic head/all-selected-family-lease transaction. Eligibility is current primary grammar, exactly one metadata chunk, at most `SOURCE_MAX_BATCH_RECORDS` records and at most `SOURCE_CHUNK_TARGET_BYTES` encoded bytes. Actual suspicious oversized rows skip speculative parsing. The existing aggregate decode budget remains authoritative. No crypto, caller consumption or host-task yield runs inside the native transaction. All authentication and ordinary freshness checks still follow; no proof survives this selected reader lifetime. `readSelected`, head-only inspection and other family visitors retain their existing contracts.
+
+The registered source view owns an unconsumed preview, including during close before the pin promise resumes. Family consumption takes and clears that ownership; release clears any remaining reservation before its existing idempotent lease-retirement promise. Failed native deletion still leaves conservative durable protection. Dense/legacy/oversized cases issue no speculative chunk request, although their metadata pin's write-transaction scope includes chunk/posting stores. This is a bounded coordination reduction, not fewer leases/hashes or a new reclamation policy. See the [PR205 validation record](validation/cached-source-read-batching-205-2026-10-23.md) for measured scope and limits.
+
+`inspectWithLocalDependencies()` returns a clean readonly dependency-owner/head selection to the
+restart host caller without a preceding head-only transaction. This call-local observation grants
+no family protection. Exceptional owners retain the original inspect-then-ensure fallback, including
+legacy primary authentication before derivative repair. An optional expected head on `visit()`
+requires a saved matching revision/sequence before consumption, then matches it again while deleting
+that reader's leases in the existing original-connection transaction. Abort, failed final read,
+cancellation or a newer local memory/deletion overlay cannot return ready. Facts consumed before the
+final result remain private. Normal visits keep their original release scope; no receipt is cached
+and no lease is transferred between calls.
 
 One short transaction rechecks the expected head and family counts, increments `source-sequence` and selects the complete head. Same-source work has one active and one replaceable pending producer; an obsolete independent writer loses the compare-and-swap. A canceled or unloaded writer cannot select a head after its fence fails. Intentionally canceled transactions are distinguished from unexpected aborts, which enter storage-degraded recovery.
 

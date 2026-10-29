@@ -36,6 +36,40 @@ Arrows mean **may import**, not call direction. A capability interface belongs i
 | `src/adapters/obsidian/` | Vault/source collection, writes, storage, native shells and lifecycle binding | Other layers, lang and Obsidian |
 | `src/main.ts` | Plugin lifecycle and composition | Other layers and Obsidian |
 
+## Internal Plex view policies
+
+`core/plex/views/` contains host-free projection/layout definitions and the static
+registry. Classic's ordered neighbourhood/sibling policy and measured geometry
+have one implementation; retained host APIs delegate to it. `ui/plexViews/`
+binds admitted canonical pages, lazy styles/counts and existing sections through
+narrow host reads. Definitions receive revision-scoped DTOs, finite preferences
+and measurements; they cannot access the plugin, GraphIndex, Vault or native leaves.
+
+`application/PlexViewSession` owns per-document view choice, bounded restoration
+and exact outgoing-resource disposal. `KplexDocumentSession` retains native
+workspace/editor/Sidecar ownership. Shared actions additionally fence view
+revision; occurrence IDs remain separate from canonical endpoints. The shared
+renderer accepts explicit areas, physical ports and entry/editor/frame anchors. Compass and Facets retain the existing single attention-following native editor. Accepted Mind Map uses the shared capacity-one occurrence host; it does not introduce a second editor implementation or authorize simultaneous editors. Both off-origin framing and rooted/manual/restored camera guards remain part of the shared host.
+Production definitions are Compass (`classic`), Mind Map (`mindmap`) and Facets (`wuxing`, retaining its stored identity). Facets presets reuse cached-property availability, the shared predicate/lens owner, measured badges/colors, explicit native assignment actions and input-transparent model decorations. Pure policy never writes note metadata or classifies a phase-derived model guide as canonical evidence. Corpus scoring, arbitrary multihop demand
+and compact large-map rendering require explicit follow-up capabilities. The [API reference](CANVAS_VIEW_API.md) and [developer guide](CANVAS_VIEW_DEVELOPER_GUIDE.md) identify the current public entries and executable examples.
+See [the implemented contract and capability matrix](PLEX_VIEW_PLUGINS.md#16-implemented-boundary-and-capability-matrix).
+This scoped feature does not resume C15–C26 or retire compatibility facades.
+
+`core/plex/views/configuration.ts` validates finite versioned type settings separately
+from session state. `ui/plexViews/settingsContributions.ts` composes native declarative
+pages under **Canvas behavior → Views**, with Compass's legacy controls retaining
+their flat/profile/color owners. New namespace writes share the existing serialized
+settings writer; incoming changes merge supported fields without replacing unrelated
+view configuration. Unknown/future payloads remain inert and preserved.
+
+The native **Canvas view** select is part of **Views and lenses**. It captures the
+opening session, subscribes to its successful selection, rechecks editor/lifetime
+guards and leaves the panel/draft mounted across compatible transitions. The existing
+registry supplies production options; disabled Compass remains visible when alone.
+Same-scope selection and new type configuration do not acquire or rebuild sources. Shared controlled condition rows serve lenses and native Facets rule drafts; availability-aware evaluation explicitly distinguishes current/candidate properties and unknown inputs without changing legacy boolean matching.
+
+Optional section snapshots adapt the existing explicit `SectionExpansion` owner for one source revision. Ordinary shared node measurement/tree/fold rendering and validated physical source anchors retain canonical note/occurrence/evidence identities. `sectionSource` selects attention (Compass/compatibility) or the pinned layout root (Mind Map); unsupported Facets hides/refuses section controls. Central source editors exclude their own outline, while another bound editor retains its document and lifetime. Structural heading rows remain separate from canonical hierarchy branches. Non-Classic conformance and Mind Map integration have separate tests and exact-source native acceptance.
+
 ## Action dispatch boundary
 
 The action-manager feature extends the accepted C14 boundaries without resuming structural C15–C26 work. `src/core/plex/actions.ts` owns finite stable IDs, immutable metadata and discriminated request/target/outcome values. `actionPreferences.ts` owns bounded workflow preferences, legacy binding migration and compiled chord/context matching. Neither module acquires host state or executable behavior from persisted data.
@@ -49,6 +83,8 @@ The action-manager feature extends the accepted C14 boundaries without resuming 
 Published commands associate with the graph-focused surface in the owning window, then the active main or sidebar K-Plex leaf, then the recent leaf. Native `getMostRecentLeaf()` excludes sidebars, so it cannot alone identify a sidebar's selected target while the command palette owns focus. The shared center remains independent of this association; selected actions retain the resolved occurrence and never substitute an unrelated native editor or center.
 
 App and PlexGraph supply fresh-ref implementation/snapshot ports and retain selection, projection, camera, history and native workspace ownership. The focused-region keyboard adapter shares one synchronous acceptance path across concrete native Scope registrations and root-local DOM delivery; native widgets, editors and modal session protocols keep their input ownership. Composer sessions retain captured native endpoint identity and distinguish saved publication, saved-pending and recoverable partial creation. These boundaries create no second graph store, history engine, mutation scheduler or relationship classifier.
+
+Adding a relationship to a newly created physical file is an additive native frontmatter write. It checks the captured file identities inside `FileManager.processFrontMatter`, preserves existing property values and template metadata, and does not require canonical pair readiness or read the parent drawing body. Its `saved-pending` result means the property is committed while ordinary metadata/source reconciliation catches up; the composer can complete Return, Create another or Open for editing immediately. It does not grant semantic write authority to stale evidence. General relinking and provenance-sensitive removal retain their existing canonical-pair requirements.
 
 The keyboard adapter installs a committed preference matcher and native bindings synchronously, separately from React hint rerendering and surface registration. Concrete keys exist only for the current actual focus region, and an owning-document focus lease prevents background popouts from acquiring the globally active native keymap. Native Scope stops after a matching concrete callback even when it returns undefined; `src/adapters/obsidian/actionScope.ts` therefore feature-detects the reviewed unofficial parent `handleKey(KeyboardEvent, KeymapInfo)` boundary. Only a declined native callback delegates to the exact captured parent, with the original event/context and receiver. A separate event WeakSet prevents DOM redelivery; accepted parent false is consumed, unhandled undefined remains unconsumed, and retired scopes cannot forward. Concrete actions take priority. The later typing-selection workflow adds graph-only key-null fallbacks for exactly empty/Shift modifier masks; declined events use the same exact parent bridge. There is no all-modifier graph capture, synthesized production input or global command/hotkey lookup. Primary release declarations and the native inspection are retained in the action validation report. Explicit graph focus reveals its captured native surface before focusing, with a post-reveal generation fence. Editor focus uses an exact-mount native adapter: the current native view receives its public focus request, while the companion drawing uses its existing focusable canvas root. Completion requires visible native content to own DOM focus; a hidden title or nonfocusable wrapper cannot report success. Mount migration, background documents and controller disposal retire the focus capability. The embedded-leaf adapter reconciles exact live-mount focus at owning-document bubble phase, after native ancestor WorkspaceLeaf handlers; it preserves the existing desktop versus sidebar/mobile activation policy, changes no Scope, and removes its listener before disposal.
 
@@ -185,6 +221,14 @@ output follows normal source replacement. Every comparison retains family reader
 frames/chunks/postings and rejects cancellation or a changed selected head. A head-only manifest
 inspection uses a read-only transaction because it owns no chunks requiring cleanup protection.
 
+Unchanged restart host comparison uses `inspectWithLocalDependencies()` to share the clean
+dependency-owner/head selection. Its result is call-local observation, not durable publication
+authority. Legacy, repair, memory and uncertain selections retain ordinary inspection/repair.
+The subsequent metadata visit pins and authenticates normally, matches the observed revision and
+sequence before delivery, and checks them again in its existing original-connection lease-release
+transaction. Native incarnation/stat, cache/environment, cancellation and final dependency-projection
+fences remain independent. No source-head cache, schema or scheduling policy is added.
+
 A decoded body's weakly held selection avoids repeating values/body-URL validation only when the
 subsequent inspection selects the exact same durable revision and sequence. Host families remain
 independently validated, and a changed head falls back to full validation. Inventory CPU slices use
@@ -221,3 +265,42 @@ relationship coverage. Native scale and physical-device acceptance remain SI5 wo
 Fresh printable defaults use Alt/Option physical key codes; presentation maps familiar codes to readable keycaps while matching remains code-based. Saved overrides/disables retain their meaning. `usePlexTypeSelection` owns a separate ephemeral phrase over the existing displayed occurrence projection, preserving exact occurrence IDs across areas and expanded rows. Selection and reveal stay in `usePlexKeyboardNavigation`; there is no vault acquisition, filtering, center change or persistent query. Graph query controls use finite native Scope registrations; exact empty/Shift text fallbacks run after concrete local bindings so graph typing takes precedence over parent letter shortcuts. Declined input forwards its original event/context to the captured parent once. Physical native registrations use the host’s uppercase/base virtual key while the compiler verifies actual code/modifiers. The common dispatcher gives connection sessions and custom actions their existing priority. Native editors/search/widgets never enter this graph-only typing owner.
 
 App's center-and-open-sidecar operation shares the existing centering/history path while deferring document synchronization to the explicit owned sidecar open. PlexGraph dispatches it for an accepted existing node. It never toggles the sidecar or adopts arbitrary user leaves; existing sidecar capability/lifetime rules remain authoritative. Separate explicit edge-arrow actions can acquire the visible eligible tab in one unambiguous adjacent group on the configured side. They select the initial synchronization direction before entering the existing managed companion lifecycle; normal Open and geometry-only observation still do not acquire ordinary tabs.
+
+## Appearance and native color editors
+
+PR #158 extends the existing settings, presentation and view owners. C14 remains accepted and C15–C26 remain paused; this feature introduces no source format, cache schema, semantic classifier or scheduler.
+
+| Responsibility | Owner |
+| --- | --- |
+| Literal/theme/palette identities and finite known appearance slots | `core/contracts/colorValue.ts`, `appearance.ts` |
+| Local paired palette, four semantic slots, optional Compass preferences | `core/plex/colorPreferences.ts`, settings migration |
+| Atomic replacement/adoption and edited-field merging | `core/plex/colorEditing.ts`, existing serialized `main.updateStyleSettings()` queue |
+| Style inheritance and final supplied-field lens precedence | `index/style.ts`, existing lens/projection owners |
+| Actual document/mode CSS binding | Obsidian `ColorScope`; fixed-owner appearance subscriptions |
+| Detached native drafts, paired examples and retirement | `StyleEditorModal`, shared source/literal controls and `ColorPreview` |
+| Four clipped viewport sectors | `core/plex/compassBackground.ts`; existing PlexGraph camera/resize owner |
+| Exact moving-center pose | Existing `ElementMotion` and sampled `centerArrivalFrames` |
+
+A color value is a preserved literal string, `{kind: "theme", variable}` or `{kind: "palette", id}`. Identity is independent of its current RGB and of an editable palette name. `colorPreferences.version = 1` stores literal Light/Dark pairs, semantic source choices and an off-by-default Compass object. An absent intensity inherits; numeric 0–15 is an explicit percentage. The local `standardStyleDefaults` marker distinguishes native absence from legacy backfill. Foreign graph imports retain local appearance preferences. Factory-equal saved literals remain explicit.
+
+Unsupported preference formats or known unsupported lens colors retain their original raw JSON through unrelated saves and imports; destructive/editing operations are read-only. Runtime preservation markers are omitted from persisted settings. A future producer adding source forms/slots must version its format; the known-slot visitor is deliberately not an arbitrary JSON reference scanner.
+
+The disk queue captures latest appearance fields at execution, validates, saves, then publishes committed fields whose owners have not changed. It copies the complete finite inventory, including deleted optional root values. Editors merge only explicitly changed fields. A durable save followed by failed display refresh reports saved/pending, rather than inviting a destructive retry. Palette deletion/replacement is one settings-only operation. Paint classification strips known colors while retaining conservative mixed-geometry/predicate behavior. Ordinary source events compare fixed appearance owners without enumerating style dictionaries or probing CSS. Stable scene occurrences reuse resolved base paint.
+
+Live graph colors use bounded actual-document CSS bindings; they never depend on preview snapshots. Previews alone copy already loaded CSS into a script-free, resource-blocked isolated document. Per-editor revision caches cap CSS at 8 MiB estimated UTF-16, 128 sheets/30,000 rules, 32 ancestors, 64 requested tokens and 16 built-in expressions. Inaccessible, incomplete or unmodelled context is Estimated. Samples never become saved RGB. The per-mode base and source-alpha layers keep transparent counterpart cards independent of the current modal; uncertain underlying surfaces cannot certify contrast.
+
+Compass uses four non-interactive SVG polygons outside the camera. Its apex comes from captured rendered-center geometry, the current camera and the exact owned animation's piecewise numeric poses. Web Animations [iteration progress already includes effect easing](https://www.w3.org/TR/web-animations-1/#iteration-progress); it is not eased a second time. Native editor overlays use their real settled geometry. One center-only pose record supports enabling tint during arrival, including when tint was off. Existing camera frames follow only active center motion; completion, cancellation, supersession, hidden/zero-size views, migration and unload stop following. No per-frame node-rectangle scan or independent idle loop is introduced. Sector color/intensity changes retain existing source, layout, editor, image and camera owners.
+
+See [appearance guide](APPEARANCE.md), [public theme tokens](THEMING.md) and [validation/evidence](validation/native-styling-158-2026-10-15.md).
+
+Settings subpages replace the tab root, and a native CSS refresh can replace an open editor's originating subpage. The existing tab separates that transient action-page guard from the stable owning Settings body used for theme sampling. Attached roots retain their explicit local CSS context. Lazy Compass opening still checks the original page and generation; the modal's lifetime owns its callbacks and window cleanup. No other window is selected implicitly.
+
+`ColorSwatchList` shares one bounded preview snapshot across a visible page's property pairs and style sequences, using the same preview-only source projection as usage cards. Native descriptions are cloned by Obsidian; the overview binds the mounted clones through the declarative render lifecycle. Palette-only edits reuse the pending/completed snapshot. Native row cleanup and window teardown retire the owner. Literal palette rows reuse the same dual-strip renderer without CSS harvesting. `colorCounterpart` performs only an explicitly requested local HSL-lightness reflection, retaining exact alpha; display rounding never normalizes untouched persisted literals.
+
+## Per-Plex document sessions and Footprints
+
+`BaseKplexView` owns one `KplexDocumentSession` per native incarnation. It survives React/window remounts and ends on native close. Its version-1 native workspace projection allowlists center, sync mode, verified target ID and companion preferences. `nativeLeafId()` isolates the host ID bridge and validates it through public `Workspace.getLeafById()`. A duplicated leaf can copy its center, but cannot copy ownership. Legacy global preferences seed one unambiguous startup host. Incoming plugin settings update defaults, not live workspace claims.
+
+`sidecarLeaves` remains the only managed-companion map. Existing host-scoped requests and destination-scoped native completion leases serialize both ordinary and managed opens. Completion checks native view incarnation, ownership revision, destination, request identity, captured path and canonical TFile. Accepted native opens cannot be cancelled; retirement prevents their later mode/focus/remembered-state effects. Pending native file/URL observations belong to the session and retain exact source-leaf/revision proof across remounts. Hidden observations do not acquire semantic demand. Unknown URLs wait for existing catalog publication rather than starting a discovery pass.
+
+`PlexFootprints` is a portable, memory-only chronological sequence of visit IDs and small action references. App records at accepted activation, seeds once from the accepted center and remaps paths through the existing early native rename owner. It retains no native files, pages, graph revisions, DOM or content. Global history/pins keep their previous settings writer and semantics. No trail enters workspace/settings/cache/support projections. Only an explicit Copy as Markdown gesture projects the current trail into clipboard text; there is no automatic or persisted trail export. `PlexFootprintsPanel` resolves only a 40-row range with shared `collectionRange`, `FloatingLayer`, saved-node labels and host icons; opening/resetting has no source or settings capabilities. The sequence naturally grows until reset/close; only rendering is bounded. The disclosure shows newest first without reversing the retained store. ClipboardSession owns the shared synchronous writer/pending/denial/retirement mechanics used by both Footprints and the support-report compatibility facade; copying uses the invoking document and no acquisition or settings capability. See [PR #187 validation](validation/plex-sync-footprints-187-2026-10-19.md).

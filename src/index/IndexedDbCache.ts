@@ -1,6 +1,5 @@
 /**
- * Vault-local IndexedDB storage for neutral source facts, parsed bodies and graph snapshots.
- * The Wu Xing fork uses an isolated namespace and never cleans up upstream plugin storage.
+ * Fork-isolated, vault-local IndexedDB storage for neutral source facts, parsed bodies and graph snapshots.
  * Complete and partial checkpoint metadata point to independent chunk generations only after
  * their writes finish; callers own semantic validity, disposable URL-facet versions and plugin-lifetime cancellation. Retired
  * contributor pins may use one cleanup-only existing-database connection after normal-handle
@@ -17,6 +16,10 @@
  * records or changing admission, transaction ordering or cancellation behavior.
  * Valid queued parsed bodies are optional cache hits before and during persistence; they grant no
  * durability or neutral-source authority. A successful flush retires only its exact queued records.
+ * Optional observation tokens bind complete parser records to a caller's current native receipt;
+ * they do not authenticate arbitrary stored content. Runtime write guards are never serialized.
+ * The coalescing body queue is bounded by count and estimated parser DTO bytes, with weak numeric
+ * estimates and oldest-entry eviction. Storage failure or eviction changes no source facts or masks.
  * Settings-only maintenance estimates logical payloads through sequential cursors. Purging ends
  * this owner's lifetime before deleting this vault's database; no same-session reopen is allowed.
  * Broad maintenance uses its injected P4 checkpoint; URL-owner restoration supplies a P3 override,
@@ -25,14 +28,16 @@
  * may retire unabortable storage work without allowing a late consumer publication.
  */
 import { yieldToHostTask } from "../adapters/obsidian/yieldToHostTask";
+import {sanitizeCenterRecoveryDiagnostic, type CenterRecoveryDiagnostic} from "../core/contracts/centerRecovery";
 import { sanitizeChangedSettingKeys, type SettingDiagnosticKey } from "../core/graph/settingsPolicy";
 import { Platform } from "obsidian";
 import { NeutralSourceRepository, SOURCE_HEAD_STORE, SOURCE_CHUNK_STORE, SOURCE_POSTING_STORE,
   SOURCE_REVISION_INDEX, SOURCE_FAMILY_INDEX, SOURCE_LOOKUP_INDEX, SOURCE_LEASE_INDEX } from "./SourceRepository";
 import { SOURCE_LOCAL_DEPENDENCY_STATE_KEY, SOURCE_LOCAL_DEPENDENCY_STORE, SOURCE_LOCAL_KEY_STORE, SOURCE_LOCAL_LOOKUP_INDEX, SOURCE_LOCAL_OWNER_STORE, SOURCE_LOCAL_REPAIR_STORE,
   SOURCE_LOCAL_REVISION_INDEX, sourceLocalDependencyState } from "./SourceLocalDependencies";
-import { SOURCE_DEPENDENCY_STORE, sourceDependencyState, validSourceFact } from "./SourceFacts";
+import { SOURCE_BODY_PARSER_VERSION, SOURCE_DEPENDENCY_STORE, sourceDependencyState, validSourceFact } from "./SourceFacts";
 import type { ParsedBodyMetadata } from "../core/parser/metadata";
+import { estimateReferenceRecordBytes } from "../core/graph/source";
 import type { PersistedEvidenceDeclaration, PersistedPage } from "./IndexSnapshot";
 
 import { SOURCE_IMPACT_STORE, SOURCE_IMPACT_SLOT_INDEX, SOURCE_IMPACT_LEASE_INDEX } from "./SourceContributorJournal";
@@ -40,7 +45,7 @@ import { SOURCE_IMPACT_STORE, SOURCE_IMPACT_SLOT_INDEX, SOURCE_IMPACT_LEASE_INDE
 import { releaseContributorRootLeaseFresh, type ContributorRootLease } from "./SourceContributorLease";
 
 const DB_VERSION = 10;
-const BODY_CACHE_VERSION = 3;
+const BODY_CACHE_VERSION = SOURCE_BODY_PARSER_VERSION;
 const META_STORE = "meta";
 const PAGE_STORE = "pages";
 const EVIDENCE_STORE = "evidence";
@@ -81,11 +86,12 @@ export type IndexDiagnosticEntry = {
   completedMarkdownFiles?: number;
   durationMs?: number;
   changedKeys?: SettingDiagnosticKey[];
+  centerCheck?: CenterRecoveryDiagnostic;
 };
 
 /** Revalidate stored history and public exports without copying arbitrary diagnostic fields. */
 export function sanitizeIndexDiagnostics(entries: readonly unknown[]): IndexDiagnosticEntry[] {
-  return entries.flatMap((item): IndexDiagnosticEntry[] => {
+  const all = entries.flatMap((item): IndexDiagnosticEntry[] => {
     if (!isUnknownRecord(item) || typeof item.at !== "number" || !Number.isFinite(item.at) || typeof item.reason !== "string" ||
       !/^[a-z0-9:|_-]{1,240}$/.test(item.reason) ||
       (item.stage !== "restore" && item.stage !== "reconcile" && item.stage !== "build" && item.stage !== "persist")) return [];
@@ -96,8 +102,19 @@ export function sanitizeIndexDiagnostics(entries: readonly unknown[]): IndexDiag
     }
     const changedKeys = sanitizeChangedSettingKeys(item.changedKeys);
     if (changedKeys.length) sanitized.changedKeys = changedKeys;
+    const centerCheck = sanitizeCenterRecoveryDiagnostic(item.centerCheck);
+    if (centerCheck) sanitized.centerCheck = centerCheck;
     return [sanitized];
-  }).slice(-20);
+  });
+  const recent = all.slice(-20);
+  // Keep the latest two nontrivial center receipts shareable after later background patch traffic.
+  for (const entry of all.filter(item => item.centerCheck && item.centerCheck.outcome !== "healthy").slice(-2).reverse()) {
+    if (recent.includes(entry)) continue;
+    const replace = recent.findIndex(item => !item.centerCheck);
+    if (replace < 0) break;
+    recent.splice(replace, 1); recent.unshift(entry);
+  }
+  return recent;
 }
 
 /** Path-free reason codes for an unsuccessful snapshot stream. */
@@ -112,7 +129,13 @@ export type SnapshotWriteFailureReason = "storage-unavailable" | "cancelled" | "
 
 type PageRecord = { generation: string; path: string; value: PersistedPage };
 type EvidenceRecord = { generation: string; key: string; value: PersistedEvidenceDeclaration };
-type BodyRecord = { path: string; mtime: number; parserVersion: number; body: ParsedBodyMetadata };
+/** An optional exact-input token binds this record to an observation instead of only path/mtime. */
+export type BodyCacheRequest = { path: string; mtime: number; inputToken?: string };
+/** Runtime validity is rechecked before storage and never serialized into IndexedDB. */
+export type BodyCacheStamp = { inputToken: string; isCurrent: () => boolean };
+export type BodyCacheWrite = BodyCacheRequest & { body: ParsedBodyMetadata; isCurrent?: () => boolean };
+type BodyRecord = BodyCacheRequest & { parserVersion: number; body: ParsedBodyMetadata };
+type QueuedBodyRecord = BodyRecord & { isCurrent?: () => boolean; estimatedBytes: number };
 
 /** Reject malformed URL alias payloads before a disposable parser-cache hit reaches live collection. */
 function validCachedBody(body: ParsedBodyMetadata | undefined): body is ParsedBodyMetadata {
@@ -262,7 +285,7 @@ function isIndexedDbSnapshotMeta(value: unknown): value is IndexedDbSnapshotMeta
 }
 
 
-/** Isolate this fork’s persistent index from upstream K-Plex in the same vault. */
+/** Derive the existing fork cache identity without opening or clearing upstream databases. */
 function safeDbName(vaultName: string): string {
   const encoded = Array.from(new TextEncoder().encode(vaultName))
     .map((value) => value.toString(16).padStart(2, "0"))
@@ -324,7 +347,10 @@ export class KplexIndexedDbCache {
   private dbPromise: Promise<IDBDatabase | null> | null = null;
   private openFailureCount = 0;
   private openRetryAfter = 0;
-  private queuedBodyWrites = new Map<string, BodyRecord>();
+  private queuedBodyWrites = new Map<string, QueuedBodyRecord>();
+  /** Parser DTO estimates are weak and numeric: no second retained body collection or serialization. */
+  private readonly bodyPayloadBytes = new WeakMap<ParsedBodyMetadata, number>();
+  private queuedBodyBytes = 0;
   private bodyWriteTimer: number | null = null;
   private bodyWriteInFlight = false;
 
@@ -335,6 +361,11 @@ export class KplexIndexedDbCache {
   private newerDatabase = false;
   private maintenanceReads = new Set<IDBTransaction>();
   private purgePromise: Promise<boolean> | null = null;
+
+  /** Read retained body-write state only; queued includes the current batch until its ordinary commit. */
+  getActivityState(): Readonly<{queuedBodies: number; writerActive: boolean}> {
+    return {queuedBodies: this.queuedBodyWrites.size, writerActive: this.bodyWriteInFlight};
+  }
 
   /** Share one connection owner. The injected checkpoint belongs to broad cache maintenance (P4);
    * caller-specific URL restore overrides it with P3 and foreground point reads never borrow it. */
@@ -534,6 +565,7 @@ export class KplexIndexedDbCache {
     if (this.bodyWriteTimer !== null) window.clearTimeout(this.bodyWriteTimer);
     this.bodyWriteTimer = null;
     this.queuedBodyWrites.clear();
+    this.queuedBodyBytes = 0;
     const pending = this.dbPromise;
     this.dbPromise = null;
     void pending?.then((db) => {
@@ -1082,12 +1114,13 @@ export class KplexIndexedDbCache {
     }
   }
 
-  /** Read optional parser-cache data, including matching current queued writes; callers own native validity. */
-  async getBodies(requests: ReadonlyArray<{ path: string; mtime: number }>): Promise<Map<string, ParsedBodyMetadata>> {
+  /** Read optional complete parser records in one transaction. Exact-token requests reject other
+   * equal-stat records; native lifetime checks remain with the source owner after this await. */
+  async getBodies(requests: ReadonlyArray<BodyCacheRequest>): Promise<Map<string, ParsedBodyMetadata>> {
     const result = new Map<string, ParsedBodyMetadata>();
     if (this.closed || !requests.length) return result;
-    const missing = requests.filter(({ path, mtime }) => {
-      const body = this.getQueuedBody(path, mtime);
+    const missing = requests.filter(({ path, mtime, inputToken }) => {
+      const body = this.getQueuedBody(path, mtime, inputToken);
       if (!body) return true;
       result.set(path, body);
       return false;
@@ -1104,24 +1137,26 @@ export class KplexIndexedDbCache {
         for (let i = 0; i < missing.length; i += 1) {
           const request = missing[i];
           const value = values[i];
-          if (value && value.mtime === request.mtime && value.parserVersion === BODY_CACHE_VERSION && validCachedBody(value.body)) result.set(request.path, value.body);
+          if (value && value.path === request.path && value.mtime === request.mtime && value.parserVersion === BODY_CACHE_VERSION
+            && (request.inputToken === undefined || value.inputToken === request.inputToken) && validCachedBody(value.body)) result.set(request.path, value.body);
         }
       } catch { /* Queued parser data remains reusable when optional persistence is unavailable. */ }
     }
     if (this.closed) return new Map();
     // A producer can replace or enqueue a record while the readonly transaction is pending.
-    for (const { path, mtime } of requests) {
-      const body = this.getQueuedBody(path, mtime);
+    for (const { path, mtime, inputToken } of requests) {
+      const body = this.getQueuedBody(path, mtime, inputToken);
       if (body) result.set(path, body);
     }
     return result;
   }
 
   /** Peek completed write-behind data synchronously at a caller's native-I/O admission boundary.
-   * The same parser/path/mtime guards apply; this optional hit grants no durability/source authority. */
-  getQueuedBody(path: string, mtime: number): ParsedBodyMetadata | null {
+   * Parser/path/mtime, optional exact-token and runtime guards apply; a hit grants no source authority. */
+  getQueuedBody(path: string, mtime: number, inputToken?: string): ParsedBodyMetadata | null {
     const record = this.closed ? undefined : this.queuedBodyWrites.get(path);
     return record && record.path === path && record.mtime === mtime && record.parserVersion === BODY_CACHE_VERSION
+      && (inputToken === undefined || record.inputToken === inputToken) && record.isCurrent?.() !== false
       && validCachedBody(record.body) ? record.body : null;
   }
 
@@ -1131,15 +1166,23 @@ export class KplexIndexedDbCache {
     return ready;
   }
 
-  async putBodies(records: ReadonlyArray<{ path: string; mtime: number; body: ParsedBodyMetadata }>): Promise<boolean> {
+  /** Preserve batching while rejecting retired inputs after connection acquisition. Only plain
+   * complete parser records and opaque tokens reach structured-clone storage, never runtime guards. */
+  async putBodies(records: ReadonlyArray<BodyCacheWrite>): Promise<boolean> {
     if (!records.length) return true;
     const db = await this.open();
-    if (!db || !db.objectStoreNames.contains(BODY_STORE)) return false;
+    if (!db || this.closed || !db.objectStoreNames.contains(BODY_STORE)) return false;
     try {
+      const currentRecords = records.filter(record => record.isCurrent?.() !== false);
+      if (!currentRecords.length) return true;
       const tx = this.openTransaction(db, BODY_STORE, "readwrite");
       const done = transactionDone(tx);
       const store = tx.objectStore(BODY_STORE);
-      for (const record of records) store.put({ ...record, parserVersion: BODY_CACHE_VERSION } satisfies BodyRecord);
+      for (const record of currentRecords) {
+        // A function would make structured cloning fail. Persist only the complete parser record.
+        store.put({ path: record.path, mtime: record.mtime, body: record.body, inputToken: record.inputToken,
+          parserVersion: BODY_CACHE_VERSION } satisfies BodyRecord);
+      }
       await done;
       return true;
     } catch {
@@ -1151,16 +1194,46 @@ export class KplexIndexedDbCache {
    * Coalescing write-behind for live edits. Runtime graph publication must never wait for an
    * IndexedDB write: on Chromium/WebKit, unrelated snapshot maintenance can hold storage work for
    * seconds. The latest queued record for a path remains an optional read hit until its transaction
-   * completes, including during failed flush/retry; queuing does not attest durable source facts.
+   * completes, including during failed flush/retry, unless the count/byte budget evicts it. Budgets
+   * estimate parser DTO strings/containers rather than raw Markdown or actual process memory.
+   * Queuing, retirement and eviction do not attest or alter durable neutral source facts.
    */
-  queueBodyWrite(path: string, mtime: number, body: ParsedBodyMetadata): void {
-    if (this.closed) return;
-    this.queuedBodyWrites.set(path, { path, mtime, parserVersion: BODY_CACHE_VERSION, body });
+  queueBodyWrite(path: string, mtime: number, body: ParsedBodyMetadata, stamp?: BodyCacheStamp): void {
+    if (this.closed || stamp?.isCurrent() === false) return;
+    this.removeQueuedBody(path);
+    // This estimates parser DTO strings/containers, not raw Markdown or actual process memory.
+    // Existing bounded in-flight batches can additionally retain one retired queue's payloads.
+    let bodyBytes = this.bodyPayloadBytes.get(body);
+    if (bodyBytes === undefined) {
+      bodyBytes = estimateReferenceRecordBytes(body);
+      this.bodyPayloadBytes.set(body, bodyBytes);
+    }
+    const estimatedBytes = bodyBytes + 128 + 2 * path.length;
+    const maxBytes = (Platform.isIosApp ? 4 : Platform.isMobile ? 8 : 32) * 1024 * 1024;
+    const maxRecords = Platform.isIosApp ? 48 : Platform.isMobile ? 160 : 1200;
+    // Dropping an optional accelerator never changes neutral facts, dirty state or live graph authority.
+    if (estimatedBytes > maxBytes) return;
+    while (this.queuedBodyWrites.size >= maxRecords || this.queuedBodyBytes + estimatedBytes > maxBytes) {
+      const oldest = this.queuedBodyWrites.keys().next();
+      if (oldest.done) break;
+      this.removeQueuedBody(oldest.value);
+    }
+    this.queuedBodyWrites.set(path, { path, mtime, parserVersion: BODY_CACHE_VERSION, body, estimatedBytes,
+      inputToken: stamp?.inputToken, isCurrent: stamp?.isCurrent });
+    this.queuedBodyBytes += estimatedBytes;
     if (this.bodyWriteTimer !== null || this.bodyWriteInFlight) return;
     this.bodyWriteTimer = window.setTimeout(() => {
       this.bodyWriteTimer = null;
       void this.flushQueuedBodyWrites();
     }, Platform.isMobile ? 1200 : 700);
+  }
+
+  /** Identity guards keep completion of an old in-flight batch from removing a newer replacement. */
+  private removeQueuedBody(path: string, expected?: QueuedBodyRecord): void {
+    const record = this.queuedBodyWrites.get(path);
+    if (!record || expected !== undefined && record !== expected) return;
+    this.queuedBodyWrites.delete(path);
+    this.queuedBodyBytes -= record.estimatedBytes;
   }
 
   /** Flush bounded batches without hiding in-flight hits or deleting a newer replacement for a path. */
@@ -1170,15 +1243,17 @@ export class KplexIndexedDbCache {
     try {
       const limit = Platform.isIosApp ? 16 : Platform.isMobile ? 32 : 64;
       while (!this.closed && this.queuedBodyWrites.size) {
-        const records: BodyRecord[] = [];
+        const records: QueuedBodyRecord[] = [];
         for (const record of this.queuedBodyWrites.values()) {
+          if (record.isCurrent?.() === false) { this.removeQueuedBody(record.path, record); continue; }
           records.push(record);
           if (records.length >= limit) break;
         }
+        if (!records.length) break;
         const ok = await this.putBodies(records);
         if (!ok) break;
         for (const record of records) {
-          if (this.queuedBodyWrites.get(record.path) === record) this.queuedBodyWrites.delete(record.path);
+          this.removeQueuedBody(record.path, record);
         }
         if (Platform.isMobile) await yieldToHostTask();
       }
@@ -1267,37 +1342,30 @@ export class KplexIndexedDbCache {
     } catch { /* disposable cache cleanup only */ }
   }
 
-  /** Reuse a completed parsed body before optional persistence, without acquiring source authority. */
-  async getBody(path: string, mtime: number): Promise<ParsedBodyMetadata | null> {
-    const queued = this.getQueuedBody(path, mtime);
+  /** Reuse a complete parser record before optional persistence, matching an exact token when
+   * supplied. This optional input neither acquires source authority nor authenticates stored bytes. */
+  async getBody(path: string, mtime: number, inputToken?: string): Promise<ParsedBodyMetadata | null> {
+    const queued = this.getQueuedBody(path, mtime, inputToken);
     if (queued) return queued;
     const db = await this.open();
-    if (!db || this.closed) return this.getQueuedBody(path, mtime);
+    if (!db || this.closed) return this.getQueuedBody(path, mtime, inputToken);
     try {
       const tx = this.openTransaction(db, BODY_STORE, "readonly");
       const done = transactionDone(tx);
       const value = await requestResult(tx.objectStore(BODY_STORE).get(path)) as BodyRecord | undefined;
       await done;
       if (this.closed) return null;
-      const hit = Boolean(value && value.mtime === mtime && value.parserVersion === BODY_CACHE_VERSION && validCachedBody(value.body));
-      return this.getQueuedBody(path, mtime) ?? (hit ? value!.body : null);
+      const hit = Boolean(value && value.path === path && value.mtime === mtime && value.parserVersion === BODY_CACHE_VERSION
+        && (inputToken === undefined || value.inputToken === inputToken) && validCachedBody(value.body));
+      return this.getQueuedBody(path, mtime, inputToken) ?? (hit ? value!.body : null);
     } catch {
-      return this.getQueuedBody(path, mtime);
+      return this.getQueuedBody(path, mtime, inputToken);
     }
   }
 
-  async putBody(path: string, mtime: number, body: ParsedBodyMetadata): Promise<boolean> {
-    const db = await this.open();
-    if (!db || !db.objectStoreNames.contains(BODY_STORE)) return false;
-    try {
-      const tx = this.openTransaction(db, BODY_STORE, "readwrite");
-      const done = transactionDone(tx);
-      tx.objectStore(BODY_STORE).put({ path, mtime, parserVersion: BODY_CACHE_VERSION, body } satisfies BodyRecord);
-      await done;
-      return true;
-    } catch {
-      return false;
-    }
+  /** Scalar compatibility uses the same guarded serializer as the full-build and queued batch paths. */
+  async putBody(path: string, mtime: number, body: ParsedBodyMetadata, stamp?: BodyCacheStamp): Promise<boolean> {
+    return this.putBodies([{ path, mtime, body, ...stamp }]);
   }
 
   async deleteBody(path: string): Promise<void> {
@@ -1311,7 +1379,7 @@ export class KplexIndexedDbCache {
     } catch { /* cache cleanup only */ }
   }
 
-  /** Remove only this fork’s obsolete local storage, preserving upstream caches. */
+  /** Remove only this fork's obsolete cache keys; upstream and ExcaliBrain storage remain owned by their plugins. */
   async clearLegacyLocalStorage(app: { saveLocalStorage(key: string, value: unknown): void }): Promise<void> {
     for (const key of [
       "kplex-wuxing:index-body-cache:v1",

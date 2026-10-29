@@ -3,6 +3,8 @@
  * allowlisted projections, never entire mutable plugin settings. Encoded values remain private;
  * only built-in key names may cross the diagnostic boundary. Array order/multiplicity is retained for the owning policy.
  */
+import {appearanceWithoutColors,isColorAppearanceKey} from "../contracts/appearance";
+import {ontologyConfiguration} from "../contracts/ontologyConfiguration";
 import { sanitizeDatePropertyRelations, type DatePropertyRelations, type SemanticHierarchy } from "./settings";
 
 export const HIERARCHY_ROLES = ["hidden", "parents", "children", "leftFriends", "rightFriends", "previous", "next"] as const;
@@ -11,18 +13,19 @@ export const PRESENTATION_KEYS = [
   "baseNodeStyle", "centralNodeStyle", "inferredNodeStyle", "virtualNodeStyle", "siblingNodeStyle", "urlNodeStyle",
   "attachmentNodeStyle", "folderNodeStyle", "tagNodeStyle", "tagNodeStyles", "noteTypeStyles", "displayAllStylePrefixes",
   "baseLinkStyle", "inferredLinkStyle", "folderLinkStyle", "tagLinkStyle", "hierarchyLinkStyles", "attachmentImageDisplay", "allowRemoteNodeImages",
+  "colorPreferences", "standardStyleDefaults",
 ] as const;
 const SEMANTIC_KEYS = ["inferAllLinksAsFriends", "inverseInfer", "thumbnailProperty", "nodeImageProperty", "datePropertyRelations"] as const;
 const VIEW_KEYS = [
   "hierarchy.exclusions", "showFolderNodes", "showTagNodes", "showPageNodes", "showAttachments", "showURLNodes",
   "showVirtualNodes", "showInferredNodes", "renderSiblings", "showCrossLinks", "nodeSortOrder", "graphLenses", "excludeFilepaths",
-  "backgroundColor", "connectorStyle", "graphDepth", "compactingFactor", "horizontalCompactingFactor", "compactView", "maxItemCount",
+  "backgroundColor", "connectorStyle", "graphDepth", "groupRelations", "compactingFactor", "horizontalCompactingFactor", "compactView", "maxItemCount",
   "minLinkLength", "inverseArrowDirection", "showNeighborCount", "wrapNodeLabels", "baseFontSize", "siblingRelativeSize", "crossLinkOpacity",
   "applyPowerFilter", "parentColumns", "childColumns", "friendMaxHeight", "siblingMaxHeight", "parentMaxHeight",
-  "childMaxHeight", "animationSpeed", "layoutProfiles", "typographyProfiles", "allowAutozoom", "embedCentralNode", "centerEmbedWidth", "centerEmbedHeight",
+  "childMaxHeight", "animationSpeed", "layoutProfiles", "typographyProfiles", "canvasViewSettings", "allowAutozoom", "embedCentralNode", "centerEmbedWidth", "centerEmbedHeight",
 ] as const;
 export const SETTING_DIAGNOSTIC_KEYS = [
-  ...HIERARCHY_ROLES.map((role) => `hierarchy.${role}` as const), ...SEMANTIC_KEYS,
+  ...HIERARCHY_ROLES.map((role) => `hierarchy.${role}` as const), ...SEMANTIC_KEYS, "ontologyPairs",
   ...PRESENTATION_KEYS, "baseNodeStyle.maxLabelLength", ...VIEW_KEYS,
 ] as const;
 export type SettingDiagnosticKey = typeof SETTING_DIAGNOSTIC_KEYS[number];
@@ -30,6 +33,7 @@ export type SettingDiagnosticKey = typeof SETTING_DIAGNOSTIC_KEYS[number];
 /** Narrow structural input: K-Plex supplies these fields without leaking its host-owned type. */
 export type SettingsPolicyInput = Readonly<{
   hierarchy: SemanticHierarchy;
+  ontologyPairingVersion?: number;
   inferAllLinksAsFriends: boolean;
   inverseInfer: boolean;
   datePropertyRelations?: DatePropertyRelations;
@@ -54,6 +58,8 @@ export type SettingsEffects = Readonly<{
   render: boolean;
   /** Device typography changes require rendering, without expanding or recanonicalizing a scope. */
   typographyOnly: boolean;
+  /** Color source/value edits repaint existing geometry without requesting semantic work. */
+  paintOnly: boolean;
   changedKeys: readonly SettingDiagnosticKey[];
 }>;
 
@@ -77,7 +83,7 @@ function encode(value: unknown): string {
 /** Pick only semantic roles and suppression inputs; discovery exclusions are not compiled policy. */
 function semanticValues(settings: SettingsPolicyInput): Record<string, unknown> {
   return {
-    hierarchy: Object.fromEntries(HIERARCHY_ROLES.map((role) => [role, [...settings.hierarchy[role]]])),
+    hierarchy: Object.fromEntries(HIERARCHY_ROLES.map((role) => [role, [...ontologyConfiguration(settings).hierarchy[role]]])),
     inferAllLinksAsFriends: settings.inferAllLinksAsFriends,
     inverseInfer: settings.inverseInfer,
     datePropertyRelations: sanitizeDatePropertyRelations(settings.datePropertyRelations),
@@ -89,14 +95,16 @@ function semanticValues(settings: SettingsPolicyInput): Record<string, unknown> 
 /** Capture before the next mutation. The caller may continue mutating its original settings. */
 export function captureSettingsPolicy(settings: SettingsPolicyInput): SettingsPolicy {
   const values: Partial<Record<SettingDiagnosticKey, string>> = {};
-  for (const role of HIERARCHY_ROLES) values[`hierarchy.${role}`] = encode(settings.hierarchy[role]);
+  const configuration = ontologyConfiguration(settings);
+  for (const role of HIERARCHY_ROLES) values[`hierarchy.${role}`] = encode(configuration.hierarchy[role]);
+  values.ontologyPairs = encode([...configuration.pairs].sort(/** Pair declaration position does not change the bidirectional caption lookup. */ ([first], [second]) => first.localeCompare(second)));
   const semantic = semanticValues(settings);
   for (const key of SEMANTIC_KEYS) values[key] = encode(semantic[key]);
   for (const key of PRESENTATION_KEYS) values[key] = encode(settings[key]);
   values["baseNodeStyle.maxLabelLength"] = encode(settings.baseNodeStyle.maxLabelLength ?? 30);
   const record: object = settings;
   for (const key of VIEW_KEYS) {
-    values[key] = encode(key === "hierarchy.exclusions" ? settings.hierarchy.exclusions :
+    values[key] = encode(key === "hierarchy.exclusions" ? configuration.hierarchy.exclusions :
       Object.prototype.hasOwnProperty.call(record, key) ? Reflect.get(record, key) : undefined);
   }
   return { values };
@@ -111,6 +119,7 @@ function effectsForKeys(changedKeys: readonly SettingDiagnosticKey[]): SettingsE
     searchTerms: has("showFullTagName", "renderAlias", "nameFields", "nodeTitleScript"),
     nodeVisuals: has("thumbnailProperty", "nodeImageProperty", "attachmentImageDisplay", "allowRemoteNodeImages"),
     render: changedKeys.length > 0,
+    paintOnly: false,
     typographyOnly: changedKeys.length === 1 && changedKeys[0] === "typographyProfiles",
     changedKeys,
   };
@@ -118,7 +127,17 @@ function effectsForKeys(changedKeys: readonly SettingDiagnosticKey[]): SettingsE
 
 /** Compare immutable projections, including changes made through managers or legacy imports. */
 export function classifySettingsChange(before: SettingsPolicy, after: SettingsPolicy): SettingsEffects {
-  return effectsForKeys(SETTING_DIAGNOSTIC_KEYS.filter((key) => before.values[key] !== after.values[key]));
+  const changed = SETTING_DIAGNOSTIC_KEYS.filter((key) => before.values[key] !== after.values[key]);
+  const paintOnly = changed.length > 0 && changed.every(key => {
+    if (!isColorAppearanceKey(key)) return false;
+    try {
+      const previous = before.values[key], next = after.values[key];
+      const decodedPrevious: unknown = previous === undefined || previous === "undefined" ? undefined : JSON.parse(previous);
+      const decodedNext: unknown = next === undefined || next === "undefined" ? undefined : JSON.parse(next);
+      return encode(appearanceWithoutColors(key, decodedPrevious)) === encode(appearanceWithoutColors(key, decodedNext));
+    } catch { return false; }
+  });
+  return { ...effectsForKeys(changed), paintOnly };
 }
 
 /** Style dictionaries and their matching order change presentation without invalidating requested semantic coverage. Mixed changes retain their existing refresh policy. */

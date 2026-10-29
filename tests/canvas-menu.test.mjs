@@ -1,5 +1,5 @@
 /**
- * Compiled canvas-menu routing and cancelable background-draft contracts. Finite Obsidian component
+ * Compiled canvas-menu routing. Alpha/source, pending Save and retirement contracts live in color-editors.test.mjs. Finite Obsidian component
  * doubles observe callbacks/lifetimes only; installed typings, production build and the native lane
  * remain authoritative for real Menu, Modal and ColorComponent behavior.
  */
@@ -13,11 +13,10 @@ import test from 'node:test';
 const dir=mkdtempSync(join(tmpdir(),'kplex-canvas-menu-'));
 process.on('exit',/** Retire only this suite's emitted fixture. */()=>rmSync(dir,{recursive:true,force:true}));
 const stub=join(dir,'obsidian.cjs');
-writeFileSync(stub,`exports.Menu=class{items=[];addItem(cb){const item={setTitle(v){this.title=v;return this},setIcon(v){this.icon=v;return this},setChecked(v){this.checked=v;return this},onClick(v){this.click=v;return this}};cb(item);this.items.push(item)}addSeparator(){this.items.push({separator:true})}};
-exports.Modal=class{constructor(){this.contentEl={buttons:[],empty(){this.buttons=[]}};this.titleEl={setText(){}};this.modalEl={addClass(){}}}open(){this.onOpen()}close(){this.onClose()}};
-exports.Setting=class{constructor(el){this.el=el}setName(){return this}addColorPicker(cb){const p={setValue(v){this.value=v;return this},onChange(cb){this.change=cb;return this}};this.el.picker=p;cb(p);return this}addButton(cb){const b={setButtonText(v){this.label=v;return this},setCta(){return this},setDisabled(v){this.disabled=v;return this},onClick(cb){this.click=cb;return this}};this.el.buttons.push(b);cb(b);return this}};exports.Notice=class{};`);
-await build({stdin:{resolveDir:process.cwd(),contents:`export * from './src/ui/plexContextMenu';export * from './src/ui/PlexBackgroundModal';`},outfile:join(dir,'suite.cjs'),bundle:true,platform:'node',format:'cjs',alias:{obsidian:stub}});
-const{createPlexContextMenu,PlexBackgroundModal}=(await import(pathToFileURL(join(dir,'suite.cjs')))).default;
+writeFileSync(stub,`exports.Menu=class{items=[];addItem(cb){const item={setTitle(v){this.title=v;return this},setIcon(v){this.icon=v;return this},setChecked(v){this.checked=v;return this},setDisabled(v){this.disabled=v;return this},setIsLabel(v){this.isLabel=v;return this},onClick(v){this.click=v;return this}};cb(item);this.items.push(item)}addSeparator(){this.items.push({separator:true})}};
+`);
+await build({stdin:{resolveDir:process.cwd(),contents:`export * from './src/ui/plexContextMenu';`},outfile:join(dir,'suite.cjs'),bundle:true,platform:'node',format:'cjs',alias:{obsidian:stub}});
+const{createPlexContextMenu}=(await import(pathToFileURL(join(dir,'suite.cjs')))).default;
 
 test('desktop canvas menu routes settings/display/playback/background and ends with support',/** Checked states belong to the caller and support is invoked synchronously. */()=>{
  const calls=[];const menu=createPlexContextMenu({translate:key=>key,zen:true,fullscreen:false,fullscreenAvailable:true,runAction:id=>calls.push(id),openSettings:()=>calls.push('settings'),chooseBackground:()=>calls.push('background'),reportBug:()=>calls.push('report')});
@@ -32,11 +31,14 @@ test('unavailable fullscreen is omitted without hiding other canvas actions',/**
  assert.equal(menu.items.some(item=>item.title==='actions.canvasFullscreen'),false);assert.equal(menu.items.find(item=>item.title==='actions.canvasZen').checked,false);assert.equal(menu.items.at(-1).title,'support.reportTitle');
 });
 
-test('cancel and retired Save callbacks never persist the local background draft',/** Native detached callbacks must not mutate settings after view teardown closes the picker. */async()=>{
- const writes=[];let closed=0;const modal=new PlexBackgroundModal({},'#11223366',key=>key,async color=>{writes.push(color)},()=>closed++);modal.open();const save=modal.contentEl.buttons.find(button=>button.label==='common.save');modal.contentEl.picker.change('#abcdef');modal.close();modal.close();await save.click();assert.deepEqual(writes,[]);assert.equal(closed,1);
-});
-
-test('unchanged Save preserves alpha; changed Save follows Settings and repeated Save serializes',/** One accepted write commits the chosen opaque color and then releases the native shell. */async()=>{
- const unchanged=[];const first=new PlexBackgroundModal({},'#11223366',key=>key,async color=>{unchanged.push(color)});first.open();await first.contentEl.buttons.find(button=>button.label==='common.save').click();assert.deepEqual(unchanged,['#11223366']);
- const writes=[];let resolve,closed=0;const pending=new Promise(done=>{resolve=done});const modal=new PlexBackgroundModal({},'#11223366',key=>key,async color=>{writes.push(color);await pending},()=>closed++);modal.open();modal.contentEl.picker.change('#ABCDEF');const save=modal.contentEl.buttons.find(button=>button.label==='common.save');const completion=save.click();await save.click();assert.deepEqual(writes,['#abcdefff']);assert.equal(save.disabled,true);resolve();await completion;assert.equal(closed,1);assert.equal(modal.contentEl.buttons.length,0);
+test('registered native submenu fallback preserves common items and checked/disabled contribution meaning',async()=>{
+ const calls=[];const menu=createPlexContextMenu({translate:key=>key,zen:false,fullscreen:false,fullscreenAvailable:false,runAction(){},openSettings(){},chooseBackground(){},reportBug(){},
+  contributions:[{kind:'submenu',id:'presets',label:{literal:'Presets'},enabled:true,items:[
+   {kind:'action',id:'one',label:{literal:'One'},checked:true,enabled:true,command:{run:async()=>{calls.push('one');return{status:'completed'}}}},
+   {kind:'action',id:'two',label:{literal:'Two'},enabled:false,unavailableReason:{literal:'Not available'},command:{run:async()=>{throw Error('Disabled must not run')}}},
+  ]}]});
+ assert.equal(menu.items.find(item=>item.title==='Presets').isLabel,true,'Minimum host uses native flat fallback');
+ const one=menu.items.find(item=>item.title==='One'),two=menu.items.find(item=>item.title==='Two — Not available');
+ assert.equal(one.checked,true);assert.equal(two.disabled,true);one.click();two.click();await Promise.resolve();assert.deepEqual(calls,['one']);
+ assert.equal(menu.items.at(-1).title,'support.reportTitle');assert.equal(menu.items.some(item=>item.title==='actions.canvasSettings'),true);
 });
