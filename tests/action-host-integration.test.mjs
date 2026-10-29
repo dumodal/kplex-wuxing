@@ -1,4 +1,6 @@
-/** Host workflow persistence, menu/surface lifetimes and delayed physical identity use actual production callbacks. */
+/** Host workflow persistence, menu/surface lifetimes and delayed physical identity use actual
+ * production callbacks. Shortcut saves target default generation3; generations1/2 remain migratable,
+ * while genuinely newer generations must fail before storage, publication or semantic work. */
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import ts from 'typescript';
@@ -271,7 +273,7 @@ test('explicit overlap with inherited defaults saves both and survives marked re
   const writes=[],current=host(async data=>writes.push(structuredClone(data)));
   const next=draft(current);delete next.defaultBindingsVersion;next.localBindings['pin.toggle']=[{match:'code',value:'KeyR',modifiers:['alt']}];
   await current.updateActionPreferences(next);
-  assert.equal(writes.length,1);assert.equal(current.settings.actionPreferences.defaultBindingsVersion,1);
+  assert.equal(writes.length,1);assert.equal(current.settings.actionPreferences.defaultBindingsVersion,3);
   assert.equal(current.settings.actionPreferences.localBindings['node.rename'],undefined,'Inherited default is retained rather than disabled');
   const reloaded=contracts.migrateActionPreferences(writes[0]).preferences;
   assert.equal(contracts.compileActionBindings(reloaded,'windows').resolve({key:'r',code:'KeyR',altKey:true,ctrlKey:false,metaKey:false,shiftKey:false},'graph').state,'ambiguous');
@@ -288,12 +290,33 @@ test('explicit overlap with inherited defaults saves both and survives marked re
   assert.equal(contracts.compileActionBindings(resetReload,'windows').resolve({key:'r',code:'KeyR',altKey:true,ctrlKey:false,metaKey:false,shiftKey:false},'graph').state,'ambiguous');
 });
 
-test('malformed and future-generation workflow preferences reject before persistence or publication', async () => {
-  const writes=[],current=host(async data=>writes.push(data));
+test('malformed and future-generation workflow preferences reject before persistence or publication', /** Invalid input must leave both memory and downstream publication untouched. */ async () => {
+  let publications=0,notifications=0;
+  const writes=[],current=host(/** Record storage attempts so rejection cannot hide a partial save. */ async data=>writes.push(data));
+  const previous=current.settings.actionPreferences;
+  current.actionPublisher.sync=/** Record forbidden publication of an invalid draft. */ ()=>{publications++;return {failures:[]}};
+  current.actionPreferenceListeners.add(/** Record forbidden notification of an invalid draft. */ ()=>notifications++);
   const invalid=draft(current);invalid.localBindings['pin.toggle']=[{match:'code',value:'UnknownCode',modifiers:['alt']}];
   await assert.rejects(current.updateActionPreferences(invalid),/actions.invalidPreferences/);
-  const future=draft(current);future.defaultBindingsVersion=2;await assert.rejects(current.updateActionPreferences(future),/actions.invalidPreferences/);
-  assert.equal(writes.length,0);
+  for(const defaultBindingsVersion of [4,Number.MAX_SAFE_INTEGER]){
+    const future=draft(current);future.defaultBindingsVersion=defaultBindingsVersion;
+    await assert.rejects(current.updateActionPreferences(future),/actions.invalidPreferences/);
+  }
+  assert.equal(current.settings.actionPreferences,previous);
+  assert.deepEqual([writes.length,publications,notifications],[0,0,0]);
+});
+
+for(const defaultBindingsVersion of [1,2])test('explicit shortcut save accepts supported default generation '+defaultBindingsVersion, /** Older supported drafts migrate without discarding an intentionally overlapping shortcut. */ async()=>{
+  const writes=[],current=host(/** Capture the actual serialized settings for reload validation. */ async data=>writes.push(structuredClone(data)));
+  const next=draft(current);next.defaultBindingsVersion=defaultBindingsVersion;
+  next.localBindings['pin.toggle']=[{match:'code',value:'KeyR',modifiers:['alt']}];
+  const before=structuredClone(next);await current.updateActionPreferences(next);
+  assert.deepEqual(next,before,'Saving cannot mutate the caller draft');assert.equal(writes.length,1);
+  assert.equal(current.settings.actionPreferences.defaultBindingsVersion,3);
+  const reloaded=contracts.migrateActionPreferences(writes[0]).preferences;
+  assert.deepEqual(reloaded.localBindings['pin.toggle'],next.localBindings['pin.toggle']);
+  assert.equal(reloaded.localBindings['node.rename'],undefined,'Explicit overlaps retain the inherited shortcut');
+  assert.equal(contracts.compileActionBindings(reloaded,'windows').resolve({key:'r',code:'KeyR',altKey:true,ctrlKey:false,metaKey:false,shiftKey:false},'graph').state,'ambiguous');
 });
 
 test('host file incarnation rejects delayed delete/recreate despite identical path and kind', () => {

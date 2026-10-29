@@ -1,4 +1,6 @@
 /**
+ * Public per-file resolve and exact native file-topology events attribute their following all-files
+ * resolver close without a timing guess. Unknown topology remains global; each close consumes once.
  * One transient empty-folder create can join a known file resolver wave only under a complete
  * physical owner's pre-insertion proof; bounded native membership never replaces source validation.
  * Obsidian-owned neutral acquisition and inventory reconciliation. Physical parser inputs and lexical
@@ -111,9 +113,9 @@ export type SourceAcquisitionCounters = Readonly<{
 export type SourceAcquisitionResult = Readonly<{ current: boolean; saved: boolean; reason: SourceReason }>;
 
 /**
- * Native Obsidian file events are followed by metadata:resolved within the same short resolver wave.
- * The timer is only a bounded stale-token retirement guard; coverage still requires an observed,
- * fully known TFile wave or a separately qualified empty-folder create, consumed by the first close.
+ * Raw modification witnesses retire quickly. Public per-file resolve and exact native file-topology
+ * observations supply stronger attribution for their next global close, independently of this timer.
+ * No witness covers unknown topology, and every global close consumes its witness exactly once.
  */
 const KNOWN_RESOLVER_WAVE_RETIRE_MS = 50;
 const EMPTY_FOLDER_CREATE_MAX_MEMBERS = 32;
@@ -213,6 +215,9 @@ export class ObsidianSourceAcquisition {
   private resolverCloseObserved = false;
   private resolverActivityReason: ActivityReason = "unscoped-resolved";
   private activityGlobalReason: ActivityReason | null = null;
+  private nativeResolvedWave = false;
+  private nativeTopologyWave = false;
+  private uncoveredResolverSinceClose = false;
   /** One coalesced retry clock keeps transient deferred local fan-out live without a per-event queue. */
   private deferredResolutionRetryTimer: number | null = null;
   private deferredResolutionRetryDelay = DEFERRED_RESOLUTION_RETRY_MIN_MS;
@@ -330,6 +335,12 @@ export class ObsidianSourceAcquisition {
         this.requestInventory();
         return;
       }
+      // Obsidian can reuse cached links after a pure file move and emit only `resolved`, with
+      // no per-file `resolve`. The exact Vault topology event already queues its old/new owner
+      // and resolution dependents; keep that one native receipt until its first global close.
+      // Folder events still require their separate complete membership proof below.
+      if (file && effectiveKind === "topology"
+        && (this.app.vault.getFileByPath(file.path) === file || this.app.vault.getFileByPath(file.path) === null)) this.nativeTopologyWave = true;
       const coveredFolder = createdFolder ? this.beginEmptyFolderCreateWave(createdFolder) : false;
       if (!createdFolder && !file) this.retireEmptyFolderCreateWave();
       if (file && created) this.observeEmptyFolderMember(file);
@@ -387,10 +398,22 @@ export class ObsidianSourceAcquisition {
       }
     });
     const metadata = this.app.metadataCache.on("changed", (file) => changed(file));
+    const resolve = this.app.metadataCache.on("resolve", /** The public per-file event identifies
+     * which owner's resolved/unresolved links actually changed, even after a slow native queue.
+     * Its following all-files close needs no timer-based guess. Unknown/replaced owners fail closed. */ file => {
+      if (file instanceof TFile && file.extension === "md" && this.app.vault.getFileByPath(file.path) === file) {
+        this.nativeResolvedWave = true;
+        this.state(file).resolutionDirty = true;
+        changed(file);
+      } else {
+        this.noteResolverWaveCause(false);
+        changed(undefined, false, undefined, false, "resolution");
+      }
+    });
     const resolved = this.app.metadataCache.on("resolved", () => changed(undefined, false, undefined, false, "resolution"));
     this.cleanup.push(() => this.app.vault.offref(create), () => this.app.vault.offref(modify),
       () => this.app.vault.offref(rename), () => this.app.vault.offref(remove),
-      () => this.app.metadataCache.offref(metadata), () => this.app.metadataCache.offref(resolved));
+      () => this.app.metadataCache.offref(metadata), () => this.app.metadataCache.offref(resolve), () => this.app.metadataCache.offref(resolved));
   }
   /**
    * Match only the already observed native create. The complete graph owner supplies a synchronous
@@ -426,6 +449,7 @@ export class ObsidianSourceAcquisition {
     this.emptyFolderCreateWave.invalidate?.();
     this.emptyFolderCreateWave = null;
     this.uncoveredResolverWave = true;
+    this.uncoveredResolverSinceClose = true;
   }
 
   /** Track only real direct native CREATE identities, bounded independently of vault size. */
@@ -485,7 +509,7 @@ export class ObsidianSourceAcquisition {
       else wave.lastCauseAt = observedAt;
     }
     if (covered) this.knownResolverWave = true;
-    else this.uncoveredResolverWave = true;
+    else { this.uncoveredResolverWave = true; this.uncoveredResolverSinceClose = true; }
     const generation = ++this.resolverWaveGeneration;
     if (this.resolverWaveTimer !== null) window.clearTimeout(this.resolverWaveTimer);
     this.resolverWaveTimer = window.setTimeout(() => {
@@ -495,7 +519,10 @@ export class ObsidianSourceAcquisition {
       this.knownResolverWave = false;
       this.uncoveredResolverWave = false;
       const wave = this.emptyFolderCreateWave;
-      if (wave && !this.emptyFolderMembershipComplete(wave)) wave.invalidate?.();
+      if (wave && !this.emptyFolderMembershipComplete(wave)) {
+        wave.invalidate?.();
+        this.uncoveredResolverSinceClose = true;
+      }
       this.emptyFolderCreateWave = null;
     }, KNOWN_RESOLVER_WAVE_RETIRE_MS);
   }
@@ -503,16 +530,18 @@ export class ObsidianSourceAcquisition {
   /** Consume a known native wave only after its optional bounded folder witness also closes. */
   private consumeKnownResolverWave(): boolean {
     const folderCovered = !this.emptyFolderCreateWave || this.emptyFolderWaveComplete(this.emptyFolderCreateWave);
-    const covered = this.knownResolverWave && !this.uncoveredResolverWave && folderCovered;
+    const covered = (this.knownResolverWave || this.nativeResolvedWave || this.nativeTopologyWave)
+      && !this.uncoveredResolverWave && !this.uncoveredResolverSinceClose && folderCovered;
     if (!folderCovered) this.uncoveredResolverWave = true;
     this.resolverActivityReason = covered ? (this.emptyFolderCreateWave ? "qualified-folder" : "known-resolver")
-      : this.uncoveredResolverWave ? "uncovered-non-file"
+      : this.uncoveredResolverWave || this.uncoveredResolverSinceClose ? "uncovered-non-file"
       : this.resolverWaveExpired ? "expired-resolver" : this.resolverCloseObserved ? "extra-resolved" : "unscoped-resolved";
     if (covered && this.emptyFolderCreateWave) {
       try { this.startupDiagnostics?.activityCause?.("qualified-folder"); }
       catch { /* Successful native coverage never depends on optional accounting. */ }
     }
     this.resolverCloseObserved = true;
+    this.nativeResolvedWave = false; this.nativeTopologyWave = false; this.uncoveredResolverSinceClose = false;
     this.resolverWaveExpired = false;
     this.resolverWaveGeneration += 1;
     if (this.resolverWaveTimer !== null) window.clearTimeout(this.resolverWaveTimer);
@@ -567,6 +596,7 @@ export class ObsidianSourceAcquisition {
     if (this.deferredResolutionRetryTimer !== null) window.clearTimeout(this.deferredResolutionRetryTimer);
     this.timer = null; this.pollTimer = null; this.resolverWaveTimer = null; this.deferredResolutionRetryTimer = null;
     this.knownResolverWave = false; this.uncoveredResolverWave = false;
+    this.nativeResolvedWave = false; this.nativeTopologyWave = false; this.uncoveredResolverSinceClose = false;
     this.emptyFolderCreateWave = null;
   }
   /** Allocate an incarnation lazily; a matching restart head can supply its already durable identity. */

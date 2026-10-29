@@ -1,6 +1,7 @@
 /**
  * Bundles K-Plex UI components into real browser fixtures for interaction, portal and cleanup
- * assertions. Canonical CSS selectors are shared with production; fixtures are removed after each run.
+ * assertions. Fixtures supply current scene/editor/viewport capabilities and navigation contracts;
+ * canonical CSS selectors are shared with production and fixtures are removed after each run.
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -1321,7 +1322,8 @@ test("ActionButton rendered browser behavior", () => {
   runBrowserDom(browserEntry(), "ActionButton browser behavior passed");
 });
 
-/** Exercise production reconciliation keys and thought DOM across a mutable rename/placeholder handover. */
+/** Exercise production reconciliation keys and thought DOM across a mutable rename/placeholder
+ * handover, supplying the current extracted renderer's native editor-eligibility capabilities. */
 function attachmentRenameBrowserEntry() {
   return `
 import {occurrenceKey,edgeOccurrence,edgePhysicalOccurrence,semanticSceneEdge} from ${JSON.stringify(join(root,'src/ui/plexViews/scene.ts'))};
@@ -1362,7 +1364,8 @@ const predicate = null, lenses = { lenses: [] }, paintLenses = lenses, predicate
 let styleReads=0;const measuredStyle=()=>new Proxy({textColor:"#abcdef"},{ownKeys(target){styleReads++;return Reflect.ownKeys(target)}});
 settings.baseNodeStyle=measuredStyle();let paintSettings=settings;
 const graphLensNodeStyle = () => ({});
-const occurrenceEditorPolicy = false;
+const occurrenceEditorPolicy = false, editorSwitching = false;
+${uiDefinitions("src/ui/PlexGraph.tsx", ["CENTRAL_EDITOR_IMAGE_EXTENSIONS", "supportsCentralEditorFile", "supportsBoundEditor"])}
 const centralEditorCapable = true, finding = false, hover = null, crossLinkPeek = null, activeNodeFlair = null, findNodePaths = new Set(), keyboardSelection = null;
 const connectionStateFor = () => "normal", onCentralNodeEditorChange = () => {}, openCentralEditor = () => {}, centralEditorCanMaximize = true, gateKey = (path, gate) => path + ":" + gate;
 const persistentPageFor = (page) => page;
@@ -1377,7 +1380,7 @@ const nativeNodeDrag={current:null},viewport={current:null},suppressActivateUnti
 import {actionNodeRef,resolveActionPage} from ${JSON.stringify(join(root,'src/adapters/obsidian/actionNode.ts'))};
 import {captureSurfaceContinuation} from ${JSON.stringify(join(root,'src/ui/surfaceContinuation.ts'))};
 const Keymap={isModEvent:event=>event.ctrlKey||event.metaKey},openNode=(...args)=>miniOpened.push(args),clearHoverIntent=()=>{},setExternalDropZone=()=>{};
-const runNodeAction=(...args)=>activated.push(args);
+const runNodeAction=(...args)=>activated.push(args),setPropertyDropArea=()=>{};
 ${uiDefinitions("src/ui/PlexGraph.tsx", ["isPlaceholderFolderGesture", "isCenterNodeGesture", "activateOccurrence", "activateNode"])}
 const manager={draggable:null,dragLink:(event,linktext,sourcePath,title,source)=>({type:"link",linktext,sourcePath,title,source}),onDragStart(event,value){this.draggable=value},onDragEnd(){this.draggable=null}};
 const previewed=[];
@@ -2114,7 +2117,8 @@ test("Toolbar consumes spare space and search width before wrapping; labels use 
  runBrowserDom(responsiveToolbarBrowserEntry(),"Toolbar shrink and two-line label browser behavior passed");
 });
 
-/** Exercise the selection-only owner in two realms; shared Scope/DOM delivery is covered by action-surface-ui. */
+/** Exercise the selection-only owner in two realms, including ordinary boundary crossing.
+ * Shared Scope/DOM delivery is covered by action-surface-ui. */
 function plexKeyboardBrowserEntry() {
   return `
 import React from "react";
@@ -2129,17 +2133,17 @@ try {
  const frames=[document,(()=>{const f=document.createElement("iframe");document.body.append(f);return f.contentDocument})()];
  for(const doc of frames){
   const container=doc.createElement("div");doc.body.append(container);
-  let normalMode=true,crossSections=false,activePath="center",projection=nodes,reveals=[],selection;
-  function Surface(){selection=usePlexKeyboardNavigation({normalMode,activePath,crossSections,nodes:projection,reveal:n=>reveals.push(n.id)});
+  let normalMode=true,activePath="center",projection=nodes,reveals=[],selection;
+  function Surface(){selection=usePlexKeyboardNavigation({normalMode,activePath,nodes:projection,reveal:n=>reveals.push(n.id)});
    return React.createElement("div",{className:"kplex-app",tabIndex:0,"data-selection":selection.selectedId??""})}
   const app=createRoot(container),render=()=>flushSync(()=>app.render(React.createElement(Surface)));render();
   const el=container.firstElementChild;
   const move=(direction,section=false)=>flushSync(()=>selection.move(direction,section));
-  move("up");check(el.dataset.selection==="center","plain movement left the center section");
-  move("up",true);check(el.dataset.selection==="p1","section jump did not enter parent area");
+  move("up");check(el.dataset.selection==="p1","plain movement did not cross the exhausted center area");
+  move("down",true);move("up",true);check(el.dataset.selection==="p1","section jump did not enter parent area");
   move("right");check(el.dataset.selection==="p2","grid movement did not select adjacent column");
   move("down",true);check(el.dataset.selection==="center","section jump did not return to center");
-  crossSections=true;render();move("up");check(el.dataset.selection==="p1","opted-in boundary movement did not enter parent area");
+  render();move("up");check(el.dataset.selection==="p1","ordinary boundary movement did not enter parent area");
   normalMode=false;render();check(selection.readSelected()===null&&el.dataset.selection==="","inactive graph retained selection");
   normalMode=true;render();check(selection.readSelected()===null,"mode restore resurrected retired selection");
   move("up",true);move("right");check(el.dataset.selection==="p2","selection after mode restoration failed");
@@ -2457,7 +2461,7 @@ const page=path=>({path,name:path,file:{extension:'md'},aliases:[],tags:[],style
 const index={titleFor:p=>p.name,neighbourCount:()=>0,gateStats:()=>({}),neighbours:()=>[],visibleRelationshipsWithin:()=>[]};
 let layoutNeighborhood={center:page('Center.md'),parents:[],children:[{page:page('Child.md'),role:'child',relationType:1}],leftFriends:[],rightFriends:[],siblings:[]};
 let semanticRevision=0;
-const layoutSectionExpansion=null,expandedSectionIds=new Set(),layoutRevision=0,showCrossLinks=false,globalFiltering=false,centralEditorSize=undefined;
+const layoutSectionExpansion=null,expandedSectionIds=new Set(),layoutRevision=0,showCrossLinks=false,globalFiltering=false,centralEditorSize=undefined,boundEditorBinding=undefined,boundEditorPage=null;
 const profileSurface='tab',compiledGraphLenses={lenses:[],errors:[],usesFrontmatter:false},centerMode={embedCentralNode:false,centralNodeMarkdownMode:'source'};
 const plugin={settings:{baseNodeStyle:{fontSize:18,textColor:'#abcdef'},centralNodeStyle:{fontSize:30},baseLinkStyle:{},noteTypeStyles:{},tagNodeStyles:{},tagStyleList:[],hierarchyLinkStyles:{},graphLenses:[],
  compactingFactor:2,horizontalCompactingFactor:2,graphDepth:1,baseFontSize:12.4,compactView:false,maxItemCount:100,parentColumns:2,childColumns:5,parentMaxHeight:300,childMaxHeight:400,friendMaxHeight:350,siblingMaxHeight:250,siblingRelativeSize:50,minLinkLength:18,wrapNodeLabels:false},getViewSettings(){return {...this.settings}}};
@@ -2495,7 +2499,8 @@ try{const container=document.createElement('div');document.body.append(container
 }
 test('color publication reuses actual scene layout, images, native editor, focus and camera',()=>runBrowserDom(colorPaintBrowserEntry(),'Color paint preserves layout and editor passed'));
 
-/** Mount the actual hover effect, edge projection/highlight memos and SVG renderer around finite host inputs. */
+/** Mount the actual hover effect, edge projection/highlight memos and viewport-aware SVG
+ * renderer around finite host inputs; these flat fixture nodes have no scroll continuation area. */
 function crosslinkPeekBrowserEntry(){
  const source=ts.createSourceFile('PlexGraph.tsx',readFileSync('src/ui/PlexGraph.tsx','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX),effects=[],edgeHighlights=[];
  /** Keep production lifetime/visibility callbacks intact without constructing the native plugin shell. */
@@ -2518,6 +2523,7 @@ import{ontologyConfiguration}from ${JSON.stringify(join(root,"src/core/contracts
 import{hasDirectionalCaption,directionalRelationCaption}from ${JSON.stringify(join(root,"src/core/plex/directionalRelationCaption.ts"))};
 import{HoverHighlight,bindHoverHighlight}from ${JSON.stringify(join(root,'src/ui/components/hoverHighlight.ts'))};
 import{LinkDirection}from ${JSON.stringify(join(root,'src/types.ts'))};
+import{edgeViewportEndpoints,edgeViewportClip}from ${JSON.stringify(join(root,'src/ui/plexViews/areaVisibility.ts'))};
 import{buildScene as realBuildScene,sceneLayoutPolicyKey,neighborhoodSceneKey,bindSceneNeighborhood,appendVisibleCrossLinks,gateDiameter}from ${JSON.stringify(join(root,'src/ui/layout.ts'))};
 import{alphaHexToCss,resolveLinkStyle,DEFAULT_RENDERED_LINK_WIDTH,NATIVE_LINK_STROKE,NATIVE_LINK_TEXT,NATIVE_LINK_LABEL_FILL}from ${JSON.stringify(join(root,'src/index/style.ts'))};
 const result=document.querySelector('#result'),check=(value,message)=>{if(!value)throw Error(message)};
@@ -2549,7 +2555,7 @@ function Graph(){
  ${uiDefinitions('src/ui/PlexGraph.tsx',['connectionCaption','visibleEdgeProjection','visibleEdges','paintedEdges','interaction'])}
  ${effectCode}
  fixture={enter(path,gate,alt=false){scheduleHoverIntent(gate?{kind:'gate',path,gate}:{kind:'node',path},{pointerType:'mouse',isTrusted:true,altKey:alt})},key:alt=>hoverHighlight.current.modifier(alt,true),leave:()=>clearHoverIntent(true),setRequired,setShown,setHidden,scene,interaction};
- return <div ref={viewport} className='kplex-plex' style={{width:1000,height:800}}><input defaultValue='unsaved editor'/><svg width='1000' height='800'>{paintedEdges.map(edge=><Edge key={edge.id} edge={edge} nodes={renderedNodeMap} inverseArrowDirection={true} connectorStyle='bezier' labelBackground={NATIVE_LINK_LABEL_FILL} crossLinkOpacity={0} highlighted={${edgeHighlights[0]}} dimmed={false} passive={Boolean(crossLinkPeek&&!showCrossLinks&&edge.isCrossLink)} onHover={()=>{}} onMove={()=>{}} onLeave={()=>{}} onContextMenu={()=>{}}/>)}</svg>{scene.nodes.map(node=><div key={node.page.path} data-node={node.page.path}>{node.label}</div>)}</div>;
+ return <div ref={viewport} className='kplex-plex' style={{width:1000,height:800}}><input defaultValue='unsaved editor'/><svg width='1000' height='800'>{paintedEdges.map(edge=><Edge viewportForNode={()=>undefined} key={edge.id} edge={edge} nodes={renderedNodeMap} inverseArrowDirection={true} connectorStyle='bezier' labelBackground={NATIVE_LINK_LABEL_FILL} crossLinkOpacity={0} highlighted={${edgeHighlights[0]}} dimmed={false} passive={Boolean(crossLinkPeek&&!showCrossLinks&&edge.isCrossLink)} onHover={()=>{}} onMove={()=>{}} onLeave={()=>{}} onContextMenu={()=>{}}/>)}</svg>{scene.nodes.map(node=><div key={node.page.path} data-node={node.page.path}>{node.label}</div>)}</div>;
 }
 try{
  const element=document.createElement('div');document.body.append(element);const root=createRoot(element);flushSync(()=>root.render(<PeekBoundary><Graph/></PeekBoundary>));const initial=counters.layout,nodes=[...element.querySelectorAll('[data-node]')],input=element.querySelector('input');check(input,element.querySelector('[data-peek-error]')?.textContent||'Mounted graph input absent');input.focus();input.setSelectionRange(2,2);
@@ -2573,7 +2579,8 @@ try{
 
 test('transient crosslink paint uses mounted projection/highlight/SVG owners without scene, focus or visibility changes',()=>runBrowserDom(crosslinkPeekBrowserEntry(),'Transient crosslink paint passed'));
 
-/** Render the actual caption callback and shared SVG labels for ordinary and transient endpoints. */
+/** Render the actual caption callback and viewport-aware SVG labels for ordinary and transient
+ * endpoints; the fixture supplies the renderer's explicit no-scroll viewport capability. */
 function directionalCaptionBrowserEntry(){return `
 import React,{useCallback}from'react';import{flushSync}from'react-dom';import{createRoot}from'react-dom/client';
 import{edgePhysicalOccurrence}from ${JSON.stringify(join(root,'src/ui/plexViews/scene.ts'))};
@@ -2582,6 +2589,7 @@ import{hasDirectionalCaption,directionalRelationCaption}from ${JSON.stringify(jo
 import{classicPorts}from ${JSON.stringify(join(root,"src/core/plex/views/classic/definition.ts"))};
 import{gateDiameter}from ${JSON.stringify(join(root,"src/ui/layout.ts"))};
 import{LinkDirection}from ${JSON.stringify(join(root,'src/types.ts'))};
+import{edgeViewportEndpoints,edgeViewportClip}from ${JSON.stringify(join(root,'src/ui/plexViews/areaVisibility.ts'))};
 import{alphaHexToCss,DEFAULT_RENDERED_LINK_WIDTH,NATIVE_LINK_STROKE,NATIVE_LINK_TEXT}from ${JSON.stringify(join(root,'src/index/style.ts'))};
 ${uiDefinitions('src/ui/PlexGraph.tsx',['GATE_GAP','GENERIC_RELATION_LABELS','gateKey','gatesForEdge','gatePoint','gateVector','cubicPoint','edgeGeometry','relationLabel','markerFor','Edge','EdgeLabel'])}
 const result=document.querySelector('#result'),check=(value,message)=>{if(!value)throw Error(message)},page=path=>({path,style:{},x:path==='A'?0:200,y:0,width:100,height:40,page:{path}});
@@ -2594,7 +2602,7 @@ function App({reverse=false,show=true,paired=true,transient=false,folded=false,d
  ${uiDefinitions('src/ui/PlexGraph.tsx',['connectionCaption'])}
  const style={showLabel:show,fontSize:12,strokeWidth:3},caption=connectionCaption(definition,show,sourcePath,targetPath,transient?(folded?undefined:sectionPage):{path:sourcePath},transient?targetPage:{path:targetPath});
  const nodes=new Map([[sourcePath,{...page('A'),page:{path:sourcePath}}],[targetPath,{...page('B'),page:{path:targetPath}}]]),edge={id:'pair',sourcePath,targetPath,role:'previous',relationType:1,typeDefinition:definition,caption,direction:1,style};
- return <svg>{mini?<EdgeLabel label={show?relationLabel(caption):null} midpoint={{x:100,y:50}} style={style} background='none'/>:<Edge edge={edge} nodes={nodes} inverseArrowDirection={true} connectorStyle='bezier' labelBackground='none' crossLinkOpacity={1} highlighted={false} dimmed={false}/>}</svg>;
+ return <svg>{mini?<EdgeLabel label={show?relationLabel(caption):null} midpoint={{x:100,y:50}} style={style} background='none'/>:<Edge viewportForNode={()=>undefined} edge={edge} nodes={nodes} inverseArrowDirection={true} connectorStyle='bezier' labelBackground='none' crossLinkOpacity={1} highlighted={false} dimmed={false}/>}</svg>;
 }
 try{const container=document.createElement('div');document.body.append(container);const root=createRoot(container),label=()=>container.querySelector('.kplex-edge-label')?.textContent;
  flushSync(()=>root.render(<App paired={false}/>));check(label()==='replies to'&&reads===0,'Unpaired caption requested evidence or changed wording');

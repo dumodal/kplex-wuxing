@@ -1026,3 +1026,82 @@ for(const operation of ["build","folderGates"]){
     }finally{release();f.preview.dispose();owner.close();}
   });
 }
+
+/** Folder selection keeps only a capped prefix plus one compiler chunk and needs no Markdown metadata. */
+test('native folder ordering considers late members in bounded windows without metadata or recursive reads', async () => {
+  const f=folderFixture();let largest=0;
+  for(let n=129;n>=0;n--)f.addFile(`Notes/N${String(n).padStart(3,'0')}.md`);
+  try {
+    const result=await f.preview.build('folder:Notes',{
+      /** A deterministic external display policy proves selection happens before retention. */
+      selectFolderChildren: (paths,limit)=>{largest=Math.max(largest,paths.length);return [...paths].sort().slice(0,limit);},
+    });
+    assert(result);assert(largest<=74,'The cover retains at most ten candidates plus one 64-member chunk');
+    assert.deepEqual([...result.state.pages.get('folder:Notes').neighbours.keys()].filter(path=>path.endsWith('.md')).sort(),
+      Array.from({length:10},(_,n)=>`Notes/N${String(n).padStart(3,'0')}.md`));
+    assert.equal(result.structuralGates.get('folder:Notes').bottom.visibleCount,130,'Counts still cover every native child');
+  } finally {f.preview.dispose();}
+});
+
+/** A display-policy replacement cancels a private sorted cover at the same cooperative boundary as native changes. */
+test('native sorted folder cover closes its caller policy fence after a yield', async () => {
+  let current=true;
+  const f=folderFixture({onYield:async()=>{current=false;}});
+  for(let n=0;n<130;n++)f.addFile(`Notes/N${n}.md`);
+  try {assert.equal(await f.preview.build('folder:Notes',{isCurrent:()=>current,selectFolderChildren:(paths,limit)=>paths.slice(0,limit)}),null);}
+  finally {f.preview.dispose();}
+});
+
+/** Final native validation closes earlier owners after later source awaits without scanning on each record. */
+for (const mutation of ['stat', 'replacement', 'rename', 'metadata']) test('host cover rejects an earlier owner changed during a later body await (' + mutation + ')', async () => {
+  const f = fixture();
+  let changed = false;
+  try {
+    const result = await f.preview.build(f.centerPath, { completeHostCover: true,
+      bodyForPath: async path => {
+        if (path !== 'Notes/Ordinary.md') return undefined;
+        await Promise.resolve();
+        const center = f.files.get(f.centerPath);
+        if (mutation === 'metadata') f.cache.set(f.centerPath, {frontmatter: {Right: '[[Ordinary]]'}, tags: []});
+        if (mutation === 'stat') center.stat.mtime++;
+        if (mutation === 'replacement') f.files.set(f.centerPath, new TFile(f.centerPath, center.parent));
+        if (mutation === 'rename') { f.files.delete(f.centerPath); center.path = 'Notes/Moved.md'; f.files.set(center.path, center); }
+        changed = true;
+        return undefined;
+      },
+    });
+    assert(changed, 'A real earlier native owner changes after its own source collection');
+    assert.equal(result, null, 'A private compilation cannot publish stale native identity/stat facts');
+  } finally { f.preview.dispose(); }
+});
+
+/** Partial recovery may omit an unavailable peer, but ordinary covers and selected owners remain strict. */
+for (const unavailable of ['missing', 'oversized']) test('partial host recovery omits uncertified peer incidence (' + unavailable + ')', async () => {
+  const f = fixture();
+  try {
+    const peer = 'Notes/Parent.md';
+    if (unavailable === 'missing') f.cache.delete(peer);
+    else f.cache.set(peer, {frontmatter: {Huge: 'x'.repeat(2 * 1024 * 1024)}, tags: []});
+    assert.equal(await f.preview.build(f.centerPath, {completeHostCover: true}), null, 'Ordinary count covers cannot become partial');
+    assert.equal(await f.preview.build(f.centerPath, {completeHostCover: true, requiredMetadataPaths: new Set([f.centerPath, peer])}), null, 'Selected unavailable metadata is terminal for that surface');
+    const partial = await f.preview.build(f.centerPath, {completeHostCover: true, requiredMetadataPaths: new Set([f.centerPath, 'Notes/Ordinary.md'])});
+    assert(partial);
+    assert(!partial.state.pages.has(peer), 'The omitted physical peer is not a certified endpoint');
+    assert(!partial.state.pages.get(f.centerPath).neighbours.has(peer), 'Unknown explicit overrides cannot become inferred links');
+    assert.deepEqual(partial.state.evidence.between(f.centerPath, peer), [], 'No provenance from an uncertified pair escapes');
+    assert(partial.state.pages.get(f.centerPath).neighbours.has('Notes/Ordinary.md'), 'Healthy selected incidence survives');
+  } finally {f.preview.dispose();}
+});
+
+/** Both visible-row limits and candidate limits participate in private native publication finality. */
+test('native candidate overscan rejects a visible limit decrease while a chunk is yielded', async () => {
+  let changed = false;
+  const f = folderFixture({settings: {maxItemCount: 20}, onYield: async () => {
+    if (!changed) {changed = true; f.setSettings({...f.settings(), maxItemCount: 10});}
+  }});
+  for (let n = 0; n < 130; n++) f.addFile('Notes/N' + n + '.md');
+  try {
+    assert.equal(await f.preview.build('folder:Notes', {folderCandidateLimit: 101}), null);
+    assert(changed, 'A real cooperative chunk observes the setting change');
+  } finally {f.preview.dispose();}
+});

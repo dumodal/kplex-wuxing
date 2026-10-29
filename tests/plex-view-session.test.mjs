@@ -1,4 +1,6 @@
-/** Actual internal registry/session policies: isolation, fallback, stale work and bounded restoration. */
+/** Actual internal registry/session policies: isolation, fallback, stale work and bounded restoration.
+ * Compass uses explicit editor bindings and save/close preflight. Separate named test-only views
+ * retain coverage of compatible legacy central editors without pretending Compass still uses them. */
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFileSync} from 'node:fs';
@@ -73,7 +75,7 @@ test('invalid occurrence intent never acquires capacity or publishes binding sta
  assert.equal(changes,0);assert.deepEqual(owner.bindings,[]);assert.equal(owner.open(base).status,'opened');
 });
 
-test('bound editor retirement is explicit while attention-following definitions remain unchanged',()=>{
+test('bound editor retirement is explicit and Compass selection cannot bypass editor save and close', /** Current Compass hosting requires native persistence before switching definitions. */ ()=>{
  const bound={...M.probeViewDefinition,id:'test.bound',editorHosting:'occurrence'};
  const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.probeViewDefinition,bound]);
  const a=new M.PlexViewSession(registry,()=>{}),b=new M.PlexViewSession(registry,()=>{});
@@ -83,8 +85,9 @@ test('bound editor retirement is explicit while attention-following definitions 
  assert.equal(live(),true,'Attention/view preference retirement does not retarget B');assert.equal(a.editors.bindings[0].target.nodeId,'B.md');
  assert.deepEqual(b.editors.bindings,[]);a.select('classic');assert.equal(a.definition.id,bound.id,'Changing definitions requires explicit native close first');
  const close=a.editors.beginClose(opened.binding.id);close.commit();a.select('classic');assert.equal(a.definition.id,'classic');
- const release=a.retainEditor();a.select('test.situated');assert.equal(a.definition.id,'test.situated','Unchanged off-centre attention definition retains compatible switching');release();
- assert.equal(M.probeViewDefinition.editorHosting,undefined);assert.equal(M.builtInPlexViews.resolve('classic').editorHosting,undefined);
+ const release=a.retainEditor();a.select('test.situated');assert.equal(a.definition.id,'classic','A retained Compass editor cannot be discarded by synchronous selection');
+ release();a.select('test.situated');assert.equal(a.definition.id,'test.situated','Selection proceeds after native hosting is released');
+ assert.equal(M.probeViewDefinition.editorHosting,undefined);assert.equal(M.builtInPlexViews.resolve('classic').editorHosting,'occurrence');
  assert.throws(()=>new M.PlexViewRegistry([...M.builtInPlexViews.available,{...bound,editorHosting:'unknown'}]));
  assert.throws(()=>new M.PlexViewRegistry([...M.builtInPlexViews.available,{...bound,capabilities:{...bound.capabilities,editor:false}}]));
  a.dispose();b.dispose();assert.equal(a.canSelect('classic'),false);
@@ -168,11 +171,12 @@ test('malformed, oversized, cyclic and deep state cannot retain unbounded worksp
   a.select('../unsafe');assert.equal(a.definition.id,'test.situated');a.dispose();a.select('classic');assert.equal(a.definition.id,'test.situated');
 });
 
-test('compatible editor leases, per-view heights and transient geometry survive only their intended scope',()=>{
+test('compatible legacy central editors, per-view heights and transient geometry survive only their intended scope', /** Explicit legacy fixtures keep compatibility coverage separate from current Compass policy. */ ()=>{
+  const legacy={...M.probeViewDefinition,id:'test.central-editor'};
   const incompatible={...M.probeViewDefinition,id:'test.no-editor',capabilities:{...M.probeViewDefinition.capabilities,editor:false}};
-  const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.probeViewDefinition,incompatible]);
+  const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.probeViewDefinition,legacy,incompatible],legacy.id);
   let writes=0;const a=new M.PlexViewSession(registry,()=>writes++),release=a.retainEditor();
-  a.select('test.no-editor');assert.equal(a.definition.id,'classic');assert.equal(writes,0);
+  a.select('test.no-editor');assert.equal(a.definition.id,legacy.id);assert.equal(writes,0);
   a.select('test.situated');assert.equal(a.definition.id,'test.situated');const current=a.capture();
   assert.equal(a.setAreaHeight('groveHeight',170),true);assert.equal(current(),true,'Preference changes do not retire the view');
   for(const key of ['__proto__','constructor','prototype']) assert.equal(a.setAreaHeight(key,150),false);
@@ -180,20 +184,41 @@ test('compatible editor leases, per-view heights and transient geometry survive 
   const transient={attention:'Focus.md',camera:{x:40,y:-10,scale:0.8},selected:'repeat-above',unfolded:['one']};
   a.retainTransient('test.situated',transient);transient.camera.x=999;
   assert.equal(a.readTransient('test.situated','Focus.md').camera.x,40,'Caller mutation cannot alter the retained camera');
-  a.select('classic');assert.deepEqual(a.getAreaHeights(),{});a.select('test.situated');assert.deepEqual(a.getAreaHeights(),{groveHeight:170});
+  a.select(legacy.id);assert.deepEqual(a.getAreaHeights(),{});a.select('test.situated');assert.deepEqual(a.getAreaHeights(),{groveHeight:170});
   const saved=JSON.parse(JSON.stringify(a.getState()));assert.equal(JSON.stringify(saved).includes('repeat-above'),false);
   const b=new M.PlexViewSession(registry,()=>{});b.restore(saved);assert.deepEqual(b.getAreaHeights(),{groveHeight:170});assert.equal(b.readTransient('test.situated','Focus.md'),undefined);
   assert.equal(a.readTransient('test.situated','Other.md'),undefined);assert.equal(a.readTransient('test.situated','Focus.md'),undefined,'A root change permanently retires old transient state');
   release();release();a.select('test.no-editor');assert.equal(a.definition.id,'test.no-editor');a.dispose();b.dispose();
 });
 
-test('a live attention editor blocks occurrence-host selection while unchanged attention definitions remain compatible',()=>{
- const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.probeViewDefinition]),session=new M.PlexViewSession(registry,()=>{}),release=session.retainEditor();
- assert.equal(session.canSelect('mindmap'),false);session.select('mindmap');assert.equal(session.definition.id,'classic');
+test('legacy central editors switch only between compatible test views until released', /** Legacy attention-only support remains covered independently of Compass's explicit bindings. */ ()=>{
+ const legacy={...M.probeViewDefinition,id:'test.central-editor'};
+ const registry=new M.PlexViewRegistry([...M.builtInPlexViews.available,M.probeViewDefinition,legacy],legacy.id),session=new M.PlexViewSession(registry,()=>{}),release=session.retainEditor();
+ assert.equal(session.canSelect('mindmap'),false);session.select('mindmap');assert.equal(session.definition.id,legacy.id);
+ assert.equal(session.canSelect('classic'),false,'Current Compass hosting also requires save and close');
  assert.equal(session.canSelect('test.situated'),true);session.select('test.situated');assert.equal(session.definition.id,'test.situated');
  session.select('mindmap');assert.equal(session.definition.id,'test.situated');release();assert.equal(session.canSelect('mindmap'),true);session.select('mindmap');assert.equal(session.definition.id,'mindmap');session.dispose();
 });
 
+
+for(const saveSucceeds of [false,true])test('Compass view change '+(saveSucceeds?'waits for save and close':'retains its editor after a failed save'), /** The production session must preserve the binding and current view until its captured native host accepts persistence. */ async()=>{
+ const session=new M.PlexViewSession(M.builtInPlexViews,/** Session persistence is unrelated to native file saving. */ ()=>{});
+ const intent={...occurrenceIntent(),viewId:'classic'},opened=session.editors.open(intent),binding=opened.binding;
+ const release=session.retainEditor();let finish,saves=0;
+ const unguard=session.guardSelection(/** Model only the host save result; real native editor callbacks are covered in editor-switch tests. */ async()=>{
+   saves++;const saved=await new Promise(/** Keep native persistence pending while observing session behavior. */ resolve=>{finish=resolve});
+   if(!saved)return false;
+   session.editors.beginClose(binding.id).commit();release();return true;
+ });
+ const pending=session.requestSelection('mindmap');
+ assert.equal(saves,1);assert.equal(session.definition.id,'classic');assert.equal(session.editors.bindings[0],binding);
+ session.select('mindmap');assert.equal(session.definition.id,'classic','Synchronous selection cannot bypass a pending save');
+ finish(saveSucceeds);assert.equal(await pending,saveSucceeds);
+ assert.equal(session.definition.id,saveSucceeds?'mindmap':'classic');
+ assert.equal(session.editors.bindings.length,saveSucceeds?0:1);
+ if(!saveSucceeds)assert.equal(session.editors.bindings[0],binding,'Failed save retains the original note binding');
+ unguard();release();session.dispose();
+});
 
 test('action snapshot reads view retirement synchronously before React can publish another render',()=>{
  const source=ts.createSourceFile('usePlexActions.ts',readFileSync('src/ui/usePlexActions.ts','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let body;

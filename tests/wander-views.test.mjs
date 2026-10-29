@@ -1,5 +1,6 @@
 /** Issue221: real renderer/controller navigation across each registered canvas policy and the
- * public example, with prepared local incidence and intentionally incomplete gate counts. */
+ * public example, with prepared local incidence and intentionally incomplete gate counts.
+ * Ordinary Mind Map note clicks and modified clicks both use accepted destination centering. */
 import assert from 'node:assert/strict';
 import {canvasSceneFixture} from './support/canvasSceneFixture.mjs';
 import test from 'node:test';
@@ -8,7 +9,7 @@ import {plexViewBrowserModules} from './support/plexViewBrowser.mjs';
 const output=await plexViewBrowserModules();
 const initialize=canvasSceneFixture;
 
-test('Alt/Option click explicitly centers through shared actions in every view and ordinary Mind Map clicks retain the root',async()=>{
+test('Alt/Option click explicitly centers through shared actions in every view and ordinary Mind Map clicks use accepted centering',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${initialize}
  const errors=[];window.addEventListener('error',event=>errors.push(event.message));let opened=0;plugin.openFileInMainTab=()=>{opened++};
@@ -25,9 +26,10 @@ test('Alt/Option click explicitly centers through shared actions in every view a
   const card=ui.container.querySelector('.kplex-thought[data-kplex-path="B.md"]');check(card,'Displayed B '+definition.id);
   if(definition.navigation==='rooted'){
    M.flushSync(()=>card.dispatchEvent(new MouseEvent('click',{bubbles:true})));await wait();
-   check(ui.session.layoutRoot('A.md')==='A.md'&&accepted.length===0,'Ordinary branch click keeps root/attention policy');
+   check(ui.session.layoutRoot('B.md')==='B.md'&&accepted.length===1&&accepted[0].intent==='destination','Ordinary note click uses accepted centering');
+   check(ui.session.setRoot('A.md'),'Reset explicit test root');ui.props.activePath='A.md';ui.render();await wait();accepted.length=0;
   }
-  M.flushSync(()=>card.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,altKey:true,detail:1})));await wait();await wait();
+  M.flushSync(()=>ui.container.querySelector('.kplex-thought[data-kplex-path="B.md"]').dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,altKey:true,detail:1})));await wait();await wait();
   check(accepted.length===1&&accepted[0].path==='B.md'&&accepted[0].intent==='destination','Shared destination accepted '+definition.id);
   check(ui.props.activePath==='B.md','Attention centered '+definition.id);
   if(definition.navigation==='rooted')check(ui.session.layoutRoot('B.md')==='B.md','Pinned root changed explicitly');
