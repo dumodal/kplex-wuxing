@@ -12,6 +12,14 @@ export type ClassicProjectionRead<P, R extends ClassicRelation<P>> = Readonly<{
   sort: (rows: R[]) => R[];
 }>;
 
+/** Bound a sorted parent candidate pool before Classic removes occupied direct zones.
+ * Four direct zones can occupy at most `4 * maximum` nodes plus the center; retaining that
+ * prefix and another `maximum` candidates preserves every possible displayed sibling without
+ * requiring a complete parent graph. The final per-zone display cap remains unchanged. */
+export function classicSiblingCandidateLimit(maximum: number): number {
+  return 5 * Math.max(1, Math.floor(maximum)) + 1;
+}
+
 /** Preserve direct area order/caps before sibling assembly; stronger witnesses win without reclassification. */
 export function projectClassicNeighborhood<P, R extends ClassicRelation<P>>(center: P,
   read: ClassicProjectionRead<P, R>, maximum: number, renderSiblings: boolean): ClassicNeighborhood<P, R> {

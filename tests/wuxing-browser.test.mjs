@@ -1,4 +1,5 @@
-/** Actual production Wu Xing/shared canvas mounts in Chromium. Native editor behavior is covered separately in the exact-build Windows lane. */
+/** Actual production Wu Xing/shared canvas mounts in Chromium. Hit-test scenarios size the
+ * browser viewport to contain the fixed canvas. Native editor behavior has separate host coverage. */
 import {archivedFacetPresets} from './support/facetPresetArchive.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -303,6 +304,7 @@ test('Facets production presets share captured controls, measured badges and liv
 test('production Wu Xing decorates real local notes, refreshes cached fields, retains shared Find/actions/grouping and retires listeners',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{
+ await host.command('Emulation.setDeviceMetricsOverride',{width:1280,height:1000,deviceScaleFactor:1,mobile:false});
  const result=await host.evaluate(`(async()=>{
  const M=sourceModules,errors=[],check=(value,message)=>{if(!value)throw Error(message)},wait=()=>new Promise(resolve=>setTimeout(resolve,50));
  window.addEventListener('error',event=>errors.push(event.message));

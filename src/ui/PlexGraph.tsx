@@ -1,4 +1,5 @@
 /**
+ * Visible recovery inputs belong to this canvas's attention, root, hierarchy and editor scopes.
  * Central Markdown outlines use the definition's explicit attention/root source, independent
  * from branch disclosure and other editor documents. The existing section owner loads only
  * explicit requests, fences rerooted reads and shares measurement, tree drawing and actions.
@@ -2705,19 +2706,22 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     retainedPresentationDemand.current = pages;
     return pages;
   }, [scene.nodes, visibleNodePaths, expandedClusters, index]);
+  const presentationDemandCenters = useMemo(/** Keep recovery ownership stable across presentation-only renders. */ () => new Set([
+    activePath, sceneScope, ...hierarchyDemand.held, ...(boundEditorBinding ? [boundEditorBinding.target.nodeId] : []),
+  ]), [activePath, sceneScope, hierarchyDemand.revision, boundEditorBinding?.target.nodeId, viewDefinition.id, viewLifetime]);
   useEffect(() => {
     let release: (() => void) | null = null;
     /** Hidden Obsidian leaves stay mounted; release optional work until this surface is revealed. */
     const refreshVisibility = (): void => {
       const visible = plugin.isKplexLeafVisible(hostLeaf);
-      if (visible && !release) release = index.acquirePresentationDemand(presentationDemandPages);
+      if (visible && !release) release = index.acquirePresentationDemand(presentationDemandPages, presentationDemandCenters);
       else if (!visible && release) { release(); release = null; }
     };
     refreshVisibility();
     const releaseView = viewSession?.own(() => {release?.();release = null;});
     const unsubscribe = plugin.subscribeKplexVisibility(refreshVisibility);
     return () => { unsubscribe(); releaseView?.(); release?.(); };
-  }, [plugin, hostLeaf, index, presentationDemandPages, viewSession, viewLifetime]);
+  }, [plugin, hostLeaf, index, presentationDemandPages, presentationDemandCenters, viewSession, viewLifetime]);
 
   const expandedConnectors = useMemo(() => {
     if (settings.graphDepth !== 2) return [] as Array<{ key:string;d:string;stroke:string;width:number;dash?:string;markerStart?:string;markerEnd?:string;definition?:string;caption?:string;midpoint:Point;style:PositionedEdge['style'] }>;

@@ -1,5 +1,7 @@
-/** The shared condition rows and lossless mode switch run in the actual React/native preset UI. */
+/** Shared condition rows and lossless mode switching run in actual React/native preset UI.
+ * Archived ARC is supplied explicitly as saved user data, independently of shipped templates. */
 import assert from 'node:assert/strict';
+import {archivedFacetPresets} from './support/facetPresetArchive.mjs';
 import test from 'node:test';
 import {colorEditorScenario} from './support/colorEditorBrowser.mjs';
 
@@ -29,7 +31,7 @@ test('rule Code preserves strict equality and typing focus; shared Simple rows e
 
 test('native preset rules reject invalid/unsupported plans and save current/candidate code through the original entry writer',async()=>{
  assert.equal(await colorEditorScenario(`(async()=>{
- const M=sourceModules,check=(value,message)=>{if(!value)throw Error(message)},p=await createAppearanceHost({});p.viewSettingsRegistry=M.builtInCanvasViewSettings;p.manifest={id:'k-plex'};
+ const M=sourceModules,check=(value,message)=>{if(!value)throw Error(message)},p=await createAppearanceHost({canvasViewSettings:{wuxing:{version:2,values:{presets:{arc:${JSON.stringify(archivedFacetPresets.arc)}}}}}});p.viewSettingsRegistry=M.builtInCanvasViewSettings;p.manifest={id:'k-plex'};
  let disk=structuredClone(p.writes.at(-1));p.writes=[];p.loadData=async()=>structuredClone(disk);p.saveData=async value=>{disk=structuredClone(value);p.writes.push(structuredClone(value))};p.initializeSettingsReconciliation(structuredClone(disk));
  const app={workspace:{on:()=>({}),offref:()=>{}}},tab=new M.KplexSettingTab(app,p),t=M.createTranslator('en');tab.openCanvasViewManager('wuxing');const manager=M.TestModal.instances.at(-1);
  [...manager.contentEl.querySelectorAll('.kplex-style-manager-row')].find(row=>row.textContent.startsWith('ARC')).click();const editor=M.TestModal.instances.at(-1);

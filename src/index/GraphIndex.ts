@@ -1,4 +1,18 @@
 /**
+ * Warm eager views can compile finite visible owners through the same local compiler at P1,
+ * independently of global contributor closure. Exact local certificates fence that read cover;
+ * complete-neighborhood and write authority remain with the canonical source owners.
+ * Each canvas leases its own selected owners; source observations re-admit every active recovery
+ * certificate. Each surface extends successful inputs independently; unavailable peers cannot block it.
+ * Certified input-group attempts suppress presentation-only retries until a real input/group change.
+ * Compiler guards check epochs in O(1), with exact owner checks at read/publication boundaries.
+ * Centers validate contributors once per read; borrowed endpoints use exact O(1) fences.
+ * Native folder sorting refreshes once per drained source batch and retains canonical note facets.
+ * Superseded folder requests stop at cooperative boundaries; their callers await the current replacement.
+ * Native folder identities retain small visibility-qualified count proofs across preview replacement;
+ * abandoned count work carries the owning scope guard into the existing structural compiler.
+ * Each demanded center owns its incoming cover. Native folder selection uses bounded sorted
+ * candidates and cached native degrees; partial covers cannot erase canonical pair provenance.
  * Every per-file publisher retires affected local read covers before notifying, including batched
  * ingestion. Independent URL parsing retains its complete input in the bounded optional body queue
  * before projecting URL-only facts. Exact observation tokens permit hot/queued foreground reuse;
@@ -100,7 +114,7 @@
  * Node imagery remains lazy presentation data. Live consent and a visual epoch fence cache reads,
  * pending durable-body results and mounted consumers without changing graph semantics or sources.
  */
-import {projectClassicNeighborhood} from "../core/plex/views/classic/projection";
+import {classicSiblingCandidateLimit, projectClassicNeighborhood} from "../core/plex/views/classic/projection";
 import type {TAbstractFile} from 'obsidian';
 import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
 import { canonicalWebUrl } from "../adapters/obsidian/urlIdentity";
@@ -280,6 +294,17 @@ export type SemanticPreparationDiagnostics = Readonly<{
   dependencyVisits: number;
   fullBuilds: number;
   lastReason: string | null;
+}>;
+
+/** Visibility-qualified structural totals; these prove numeric gates only, never semantic/edit authority. */
+type NativeFolderGateProof = Readonly<{
+  gates: Partial<GateStats>; coverageSignature: string; structuralRevision: number;
+}>;
+
+/** Constant-size native observation shared by count-cache hits and cooperative compilation guards. */
+type NativeFolderGateObservation = Readonly<{
+  path: string; name: string; parent: TFolder | null; parentPath: string | undefined; parentName: string | undefined;
+  children: TAbstractFile[]; childCount: number;
 }>;
 
 type FileRevision = { mtime: number; size: number };
@@ -510,6 +535,16 @@ export class GraphIndex {
     sourceRevision: number; policyRevision: number; demandRevision: number;
     files: ReadonlyMap<TFile, FileRevision>;
   }>>();
+  /** Finite eager recovery reuses local compiler publications without replacing the full baseline. */
+  private visibleRecoveryCertificates = new WeakMap<ReturnType<typeof createGraphState>, Readonly<{
+    maintenance: number; host: number; paths: ReadonlySet<string>;
+    /** Parsed selected bodies belong only to this finite read proof, never a durable/global cache. */
+    bodies: ReadonlyMap<string, ParsedBodyMetadata>;
+    /** Only actual surface input groups attempted under this certificate may suppress an unchanged retry. */
+    attemptedSignature?: string;
+    attemptedOwners?: ReadonlyMap<TFile, Readonly<{ path: string; revision: FileRevision; event: number; metadataAvailable: boolean }>>;
+    owners: ReadonlyMap<TFile, Readonly<{ path: string; revision: FileRevision; event: number }>>;
+  }>>();
   private retainedLocalScopes = new Map<string, Readonly<{ state: ReturnType<typeof createGraphState>; sourceRevision: number; policyRevision: number; cached: boolean }>>();
   private localHandoverStarts = 0;
   private localHandoverCompletions = 0;
@@ -537,6 +572,14 @@ export class GraphIndex {
   private visiblePresentation = new Map<string, {
     pages: Map<GraphPage, number>; revision: number; pending: boolean; queued: boolean; task: Promise<void> | null;
   }>();
+  /** Each surface owns its finite recovery inputs independently of other mounted canvases. */
+  private recoveryPresentationLeases = new Map<symbol, ReadonlyMap<string, ReadonlySet<string>>>();
+  private recoveryPresentationRevisions = new Map<string, number>();
+  /** Wake only a retired warm-recovery observation; pending I/O cannot delay newly visible inputs. */
+  private recoveryObservationWakeups = new Map<string, () => void>();
+  /** Source batches coalesce sort refreshes without rebuilding a folder for every P4 commit. */
+  private dirtyFolderPresentation = new Set<string>();
+  private folderPresentationRefreshTask: Promise<void> | null = null;
   private visiblePresentationCounters = { retries: 0, completed: 0, superseded: 0 };
   /** Only canonical facet/search policy changes supersede legacy URL vocabulary preparation. */
   private aliasVocabularyPresentationRevision = 0;
@@ -586,11 +629,17 @@ export class GraphIndex {
   private hostPreviewScopes = new Map<string, ReturnType<typeof createGraphState>>();
   private hostPreviewSettings = new WeakMap<GraphPage, GraphCompilerSettings>();
   /** Count-only native folder proofs are scoped to visibility and observed tree lifetime. */
-  private folderGateInfo = new WeakMap<GraphPage, Readonly<{
-    gates: Partial<GateStats>; coverageSignature: string; structuralRevision: number;
+  private folderGateInfo = new WeakMap<GraphPage, NativeFolderGateProof>();
+  /** Native identity outlives disposable preview pages; retain one small current count proof per folder. */
+  private nativeFolderGateProofs = new WeakMap<TFolder, Readonly<{
+    observation: NativeFolderGateObservation; proof: NativeFolderGateProof;
   }>>();
+  /** Native preparation supplies exact folder degrees; render-time sorting never queries the Vault. */
+  private nativeFolderDegrees = new WeakMap<GraphPage, Readonly<{ structuralRevision: number; degree: number }>>();
   private hostStructuralRevision = 0;
   private hostPreviewRequests = new Map<string, number>();
+  /** Awaiters of a cancelled native request join its current replacement, never obsolete CPU work. */
+  private hostPreviewTasks = new Map<string, Readonly<{ request: number; workPriority: IndexWorkPriority; task: Promise<void> }>>();
   private hostBacklinksReady: Promise<void> | null = null;
   private fieldCache = new Map<string, FieldCacheEntry>();
   /** Compact semantic fingerprints survive hot-body LRU eviction so prose-only edits stay cheap. */
@@ -776,6 +825,205 @@ export class GraphIndex {
     const maintenanceRevision = this.sourceAcquisition.getMaintenanceRevision();
     if (this.usesLocalForeground()) void this.ensureOnDemandCenter(path);
     else if (this.fullSemanticPolicyRevision !== this.semanticPolicyRevision || this.fullSemanticMaintenanceRevision !== maintenanceRevision) void this.ensureSemanticScope(path);
+    void this.ensureVisibleSemanticRecovery(path);
+  }
+
+  /** Collect the union of visible inputs belonging to this center's own surfaces only. */
+  private recoveryVisiblePaths(center: string): Set<string> {
+    const paths = new Set([center]);
+    for (const lease of this.recoveryPresentationLeases.values()) for (const path of lease.get(center) ?? []) paths.add(path);
+    return paths;
+  }
+
+  /** A warm eager view can refresh selected owners without the closed-world contributor catalog.
+   * Reuse the existing P1 scheduler, body reader and local canonical compiler. This cover proves
+   * positive local facts only: it never changes source authority, full state or editing readiness. */
+  private ensureVisibleSemanticRecovery(centerPath: string): Promise<void> {
+    const existing = this.onDemandPreviewTasks.get(centerPath);
+    if (existing) {
+      this.recoveryObservationWakeups.get(centerPath)?.();
+      return existing;
+    }
+    // Native folder membership has its own sorted P2 cover; a second P1 semantic preview would
+    // duplicate that work and cannot contribute Markdown-owned ontology for a folder center.
+    if (centerPath.startsWith("folder:") || this.preparationDeferred || this.usesLocalForeground() || this.sourceAcquisition.hasSemanticDependencies() || this.hasCurrentCanonicalCenter(centerPath)
+      || this.retainedLocalScopeFor(centerPath)
+      || !this.semanticDemandCounts.has(centerPath)) return Promise.resolve();
+    let coveredPaths: ReadonlySet<string> | undefined;
+    const task = this.withForegroundPriority(/** Retry changed observations only while the same view still demands this center. */ async () => {
+      // React replaces a surface's old/new leases synchronously. Observe the settled group set
+      // before acquiring bodies, so a transient removal cannot reread unchanged failed inputs.
+      await Promise.resolve();
+      while (!this.diagnosticsClosed && !this.persistentCachePurged && this.semanticDemandCounts.has(centerPath)
+        && !this.usesLocalForeground() && !this.sourceAcquisition.hasSemanticDependencies()
+        && !this.hasCurrentCanonicalCenter(centerPath) && !this.retainedLocalScopeFor(centerPath)) {
+        const source = this.plugin.getIndexSourceRevision(), policy = this.semanticPolicyRevision;
+        const maintenance = this.sourceAcquisition.getMaintenanceRevision(), host = this.hostPreview.observationRevision();
+        const demand = this.semanticDemandRevision.get(centerPath) ?? 0;
+        const paths = this.recoveryVisiblePaths(centerPath);
+        const covers = [...this.recoveryPresentationLeases.values()].flatMap(/** Keep each surface's all-or-nothing input boundary. */
+          lease => lease.has(centerPath) ? [lease.get(centerPath)!] : []);
+        if (!covers.length) covers.push(new Set([centerPath]));
+        // Page objects change on presentation, but unchanged input groups must not repeatedly
+        // publish new page objects while a peer remains unavailable. Group boundaries matter:
+        // a newly independent healthy surface may recover despite a formerly failing union.
+        const signature = [...new Set(covers.map(/** Compare path membership, independently of lease identity/order. */
+          cover => JSON.stringify([...cover].sort())))].sort().join("\n");
+        const presentation = this.recoveryPresentationRevisions.get(centerPath) ?? 0;
+        coveredPaths = paths;
+        const previous = this.visibleRecoveryScope(centerPath);
+        const proof = previous && this.visibleRecoveryCertificates.get(previous);
+        /** Unnotified replacement/rename retires the selected attempt; it never authorizes a new incarnation. */
+        const attemptOwnersCurrent = (owners: NonNullable<NonNullable<typeof proof>["attemptedOwners"]>): boolean =>
+          [...owners].every(/** Keep physical observations independent of metadata availability changes. */
+            ([file, observed]) => file.path === observed.path && this.app.vault.getFileByPath(observed.path) === file
+              && fileRevisionMatches(file, observed.revision) && this.sourceAcquisition.getFileRevision(file) === observed.event);
+        /** An unchanged native owner's metadata can arrive before notification; that alone may re-admit it. */
+        const attemptsCurrent = (owners: NonNullable<NonNullable<typeof proof>["attemptedOwners"]>): boolean =>
+          attemptOwnersCurrent(owners) && [...owners].every(/** Retain capability booleans, never metadata payloads. */
+            ([file, observed]) => Boolean(this.app.metadataCache.getFileCache(file)) === observed.metadataAvailable);
+        if (proof && (proof.attemptedSignature === signature && proof.attemptedOwners && attemptsCurrent(proof.attemptedOwners)
+          || [...paths].every(/** Existing selected owners need no repeated body acquisition. */ path => proof.paths.has(path)))) return;
+        const attemptedOwners = new Map<TFile, Readonly<{ path: string; revision: FileRevision; event: number; metadataAvailable: boolean }>>();
+        for (const path of paths) {
+          const file = this.app.vault.getFileByPath(path);
+          if (file) attemptedOwners.set(file, { path, revision: captureFileRevision(file),
+            event: this.sourceAcquisition.getFileRevision(file), metadataAvailable: Boolean(this.app.metadataCache.getFileCache(file)) });
+        }
+        /** All asynchronous source/compile steps belong to these captured source, policy and view tokens. */
+        const current = (): boolean => !this.diagnosticsClosed && !this.persistentCachePurged
+          && !this.usesLocalForeground() && !this.sourceAcquisition.hasSemanticDependencies()
+          && !this.hasCurrentCanonicalCenter(centerPath)
+          && presentation === (this.recoveryPresentationRevisions.get(centerPath) ?? 0)
+          && this.semanticDemandCounts.has(centerPath) && demand === (this.semanticDemandRevision.get(centerPath) ?? 0)
+          && source === this.plugin.getIndexSourceRevision() && policy === this.semanticPolicyRevision
+          && maintenance === this.sourceAcquisition.getMaintenanceRevision() && host === this.hostPreview.observationRevision();
+        // Acquire each surface independently: one pending native/cache read must not hold a
+        // healthy peer behind it. Share each selected read within this observation, then serialize
+        // only compilation/publication so a late surface always includes earlier successful owners.
+        let accepted = new Set([centerPath, ...(proof?.paths ?? [])].filter(/** Reuse only still-visible certified inputs. */ path => paths.has(path)));
+        let recovered = previous;
+        const initialAccepted = accepted;
+        const bodies = new Map([...proof?.bodies ?? []].filter(/** Reuse exact successful inputs only while their certificate remains readable. */
+          ([path]) => accepted.has(path)));
+        const reads = new Map<string, Promise<ParsedBodyMetadata | null>>();
+        const metadata = new Map([...attemptedOwners].map(/** Close metadata identity across pre-acquisition and compilation. */
+          ([file]) => [file, this.app.metadataCache.getFileCache(file)] as const));
+        /** Validate one captured native/body/metadata owner in constant time between awaits. */
+        const ownerCurrent = (file: TFile): boolean => {
+          const observed = attemptedOwners.get(file);
+          return current() && Boolean(observed && file.path === observed.path
+            && this.app.vault.getFileByPath(observed.path) === file && fileRevisionMatches(file, observed.revision)
+            && observed.event === this.sourceAcquisition.getFileRevision(file)
+            && metadata.get(file) === this.app.metadataCache.getFileCache(file));
+        };
+        /** Deduplicate physical acquisition without serializing unrelated owners or retaining raw text. */
+        const acquireBody = (file: TFile): Promise<ParsedBodyMetadata | null> => {
+          const path = file.path, existing = reads.get(path), retained = bodies.get(path);
+          if (retained) return Promise.resolve(ownerCurrent(file) ? retained : null);
+          if (existing) return existing;
+          const read = this.sourceAcquisition.readRequestedBody(file, /** Fence only this read's exact owner. */ () => ownerCurrent(file))
+            .then(/** Reuse only an input that still belongs to this observation. */ body => {
+              if (!body || !ownerCurrent(file)) return null;
+              bodies.set(path, body);
+              return body;
+            }).catch(/** Optional acquisition failure retires this owner, never a healthy peer. */ () => null);
+          reads.set(path, read);
+          return read;
+        };
+        let publication: Promise<void> = Promise.resolve();
+        let wake: (() => void) | undefined;
+        const retired = new Promise<void>(/** Real demand/source observations wake a retired pass without polling native I/O. */ resolve => {
+          wake = /** An unchanged re-render cannot admit another acquisition pass. */ () => { if (!current()) resolve(); };
+          this.recoveryObservationWakeups.set(centerPath, wake);
+        });
+        const prepared = Promise.all(covers.map(/** Prepare surfaces independently, retaining each one's all-or-nothing byte boundary. */ async cover => {
+          const preparation = new Set([...initialAccepted, ...cover]);
+          let bytes = 0;
+          for (const path of preparation) {
+            const file = this.app.vault.getFileByPath(path);
+            if (!file || file.extension !== "md") continue;
+            if (path === centerPath || cover.has(path)) bytes += file.stat.size;
+            if (bytes > 64 * 1024 * 1024 || !ownerCurrent(file)) return;
+            if (!await acquireBody(file) || !ownerCurrent(file)) return;
+          }
+          // A ready surface alone enters this lane. Pending peer reads hold no publication slot.
+          publication = publication.then(/** Extend the latest successful cover without concurrent replacement. */ async () => {
+            if (!current() || recovered && [...cover].every(/** Skip duplicate already-published groups. */ path => accepted.has(path))) return;
+            const selected = new Set([...accepted, ...cover]);
+            const files = new Map([...attemptedOwners].filter(/** Preserve original input observations for the complete successful union. */
+              ([, observed]) => selected.has(observed.path)));
+            /** Close all selected native and metadata owners once immediately before publication. */
+            const inputsCurrent = (): boolean => current() && [...files.keys()].every(ownerCurrent);
+            if (!inputsCurrent()) return;
+            const scope = await this.publishOnDemandHostScope(centerPath, current, INDEX_WORK_PRIORITY.currentNode,
+              /** Compilation consumes only already-acquired bodies; it never joins a pending peer. */ path => selected.has(path) ? bodies.get(path) : undefined,
+              selected, inputsCurrent);
+            if (!current() || !scope) return;
+            accepted = selected;
+            recovered = scope;
+            // Nonselected host contributors retain native identity/stat/same-stat event fences.
+            const owners = new Map<TFile, Readonly<{ path: string; revision: FileRevision; event: number }>>(files);
+            for (const page of scope.pages.values()) if (page.file && !owners.has(page.file)) owners.set(page.file, {
+              path: page.path, revision: captureFileRevision(page.file), event: this.sourceAcquisition.getFileRevision(page.file),
+            });
+            this.visibleRecoveryCertificates.set(scope, { maintenance, host, paths: selected, owners,
+              bodies: new Map([...bodies].filter(/** A failed or pending peer owns no retained successful input. */ ([path]) => selected.has(path))) });
+            this.relationViewCache = new WeakMap();
+            this.emitPresentation();
+          }).catch(/** A rejected optional private compiler cannot poison another ready surface's lane. */ () => undefined);
+          await publication;
+        }).map(/** Optional preparation faults are local to their own surface, including detached native getters. */
+          preparation => preparation.catch(/** Keep healthy peers running after a rejected optional owner. */ () => undefined)));
+        await Promise.race([prepared, retired]);
+        if (this.recoveryObservationWakeups.get(centerPath) === wake) this.recoveryObservationWakeups.delete(centerPath);
+        if (!current()) continue;
+        if (!attemptOwnersCurrent(attemptedOwners)) return;
+        if (!attemptsCurrent(attemptedOwners)) continue;
+        const completed = recovered && this.visibleRecoveryCertificates.get(recovered);
+        if (completed && recovered) this.visibleRecoveryCertificates.set(recovered, { ...completed, attemptedSignature: signature, attemptedOwners });
+        return;
+      }
+    }, INDEX_WORK_PRIORITY.currentNode).catch(/** Optional foreground reads preserve the last coherent view on unavailable input. */ () => undefined).finally(
+      /** Release only this finite task; canonical/global owners retain their own lifetimes. */ () => {
+        if (this.onDemandPreviewTasks.get(centerPath) === task) {
+          this.onDemandPreviewTasks.delete(centerPath);
+          this.recoveryObservationWakeups.delete(centerPath);
+        }
+        this.emitPresentation();
+        // New materialization can arrive during an awaited selected read. Admit that real change
+        // once after this task settles; unchanged unavailable input never schedules itself again.
+        const covered = coveredPaths;
+        if (covered && [...this.recoveryVisiblePaths(centerPath)].some(/** Detect only newly materialized owners. */
+          path => !covered.has(path))) void this.ensureVisibleSemanticRecovery(centerPath);
+      });
+    this.onDemandPreviewTasks.set(centerPath, task);
+    return task;
+  }
+
+  /** Select an eager recovery cover only under its original exact local observation certificate. */
+  private visibleRecoveryScope(path: string): ReturnType<typeof createGraphState> | undefined {
+    if (this.hasCurrentCanonicalCenter(path)) return undefined;
+    for (const [center, scope] of this.onDemandHostScopes) {
+      // A displayed endpoint may borrow partial facts; an actual center needs its own incoming
+      // contributor cover. Another view's selected-body certificate cannot satisfy that demand.
+      if (this.semanticDemandCounts.has(path) && center !== path) continue;
+      const proof = this.visibleRecoveryCertificates.get(scope), local = this.localScopeCertificates.get(scope);
+      if (!proof || !local || !proof.paths.has(path) || !this.semanticDemandCounts.has(center)
+        || proof.maintenance !== this.sourceAcquisition.getMaintenanceRevision() || proof.host !== this.hostPreview.observationRevision()
+        || local.sourceRevision !== this.plugin.getIndexSourceRevision() || local.policyRevision !== this.semanticPolicyRevision
+        || local.demandRevision !== (this.semanticDemandRevision.get(center) ?? 0)) continue;
+      let current = true;
+      // A center validates its complete contributor certificate once per center read. A borrowed
+      // endpoint needs only its own native identity/stat/event fence, keeping neighbor reads linear.
+      const endpoint = scope.pages.get(path)?.file;
+      const owners = center === path ? proof.owners : endpoint && proof.owners.has(endpoint)
+        ? [[endpoint, proof.owners.get(endpoint)!] as const] : [];
+      for (const [file, observed] of owners) if (file.path !== observed.path || this.app.vault.getFileByPath(observed.path) !== file
+        || !fileRevisionMatches(file, observed.revision) || observed.event !== this.sourceAcquisition.getFileRevision(file)) { current = false; break; }
+      if (current && scope.pages.has(path)) return scope;
+    }
+    return undefined;
   }
 
   /** Session strategy, independent of restart-required setting edits. */
@@ -809,6 +1057,7 @@ export class GraphIndex {
     while (this.onDemandTasks.size && !this.diagnosticsClosed && !this.persistentCachePurged) {
       await Promise.all([...this.onDemandTasks.values()]);
     }
+    await this.refreshDemandedFolderPresentation();
     return !this.diagnosticsClosed && !this.persistentCachePurged;
   }
 
@@ -840,6 +1089,10 @@ export class GraphIndex {
     this.retirePhysicalFolderInventory();
     if (this.persistentCachePurged) return this.indexedDb.purgeAndClose();
     this.persistentCachePurged = true;
+    this.nativeFolderGateProofs = new WeakMap();
+    this.folderGateInfo = new WeakMap();
+    for (const wake of this.recoveryObservationWakeups.values()) wake();
+    this.recoveryObservationWakeups.clear();
     this.snapshotRestoreRequest++;
     this.cancelSnapshotRestoreWait?.();
     this.cancelUrlRestore?.();
@@ -1133,10 +1386,13 @@ export class GraphIndex {
 
   /** Compile available local host/body facts before display truncation, preserving canonical precedence.
    * The caller carries its actual P1/P2 lane and may supply an already-fenced requested body;
-   * this publisher acquires no body itself and retains only readonly local presentation proof. */
+   * this publisher acquires no body itself and retains only readonly local presentation proof.
+   * Returns the published scope, or undefined for retired/unavailable input. A rejected caller
+   * input cannot retire a previously published cover belonging to another available surface. */
   private async publishOnDemandHostScope(centerPath: string, current: () => boolean,
     workPriority: IndexWorkPriority = INDEX_WORK_PRIORITY.visibleNeighborhood,
-    requestedBody?: (path: string) => ParsedBodyMetadata | undefined): Promise<void> {
+    requestedBody?: (path: string) => ParsedBodyMetadata | undefined | Promise<ParsedBodyMetadata | undefined>,
+    additionalPaths?: Iterable<string>, inputAvailable?: () => boolean): Promise<ReturnType<typeof createGraphState> | undefined> {
     // An observed host/source/URL epoch can retire private preparation without retiring its
     // live demand. Retry that preparation within the existing owner, rather than draining with
     // an absent cover when a conservative canonical patch cannot admit a new target yet.
@@ -1149,12 +1405,15 @@ export class GraphIndex {
         && source === this.plugin.getIndexSourceRevision()
         && revision === (this.onDemandGateRevisions.get(centerPath) ?? 0);
       const scope = await this.hostPreview.build(centerPath, { completeHostCover: true,
+        // Only selected warm-recovery inputs may use partial metadata. Ordinary count covers
+        // retain their complete-contributor requirement and never gain false zero authority.
+        ...(inputAvailable && additionalPaths ? { requiredMetadataPaths: new Set(additionalPaths) } : {}),
         entityForPath: path => this.onDemandEntityFact(path),
-        additionalPaths: this.state.pages.get(centerPath)?.neighbours.keys(), isCurrent: scopedCurrent,
+        additionalPaths: additionalPaths ?? this.state.pages.get(centerPath)?.neighbours.keys(), isCurrent: scopedCurrent,
         checkpoint: () => this.workScheduler.checkpoint(workPriority),
         /** Only exact live hot bodies are selected; missing bodies stay absent, never trigger reads. */
-        bodyForPath: path => {
-          const requested = requestedBody?.(path);
+        bodyForPath: async path => {
+          const requested = await requestedBody?.(path);
           if (requested) return requested;
           const file = this.app.vault.getFileByPath(path), hot = this.fieldCache.get(path);
           if (file && hot?.mtime === file.stat.mtime && !this.sourceAcquisition.needsBodyRead(file)) return hot.body;
@@ -1164,10 +1423,11 @@ export class GraphIndex {
         },
       });
       if (!scopedCurrent()) continue;
+      if (inputAvailable?.() === false) return;
       if (compilerSignature !== JSON.stringify(graphCompilerSettingsFromLegacy(this.plugin.settings))
         || coverageSignature !== this.semanticCoverageSignature()) continue;
       if (!scope) {
-        this.onDemandHostScopes.delete(centerPath);
+        if (!inputAvailable) this.onDemandHostScopes.delete(centerPath);
         this.onDemandUnavailableCounts.set(centerPath, { sourceRevision: source, hostRevision, signature: this.semanticCoverageSignature(), revision });
         this.emitPresentation();
         return;
@@ -1181,8 +1441,9 @@ export class GraphIndex {
       for (const page of scope.state.pages.values()) this.hostPreviewSettings.set(page, scope.settings);
       this.relationViewCache = new WeakMap();
       this.emitPresentation();
-      return;
+      return scope.state;
     }
+    return undefined;
   }
 
   /** Preserve fresh finite cached semantic pairs while untouched owners remain physically current.
@@ -1283,10 +1544,29 @@ export class GraphIndex {
       this.hostPreviewScopes.delete(path);
       this.hostPreviewRequests.set(path, (this.hostPreviewRequests.get(path) ?? 0) + 1);
     }
+    void this.refreshDemandedFolderPresentation();
     if (this.fullSemanticSourceRevision === revision && !tagsChanged) return;
     this.fullSemanticSourceRevision = revision;
     this.relationViewCache = new WeakMap<GraphPage, CachedRelationView>();
     this.emitPresentation();
+  }
+
+  /** Refresh only dirty demanded folders after an atomic host batch, coalescing later batches
+   * through the existing P2 scheduler. Native membership remains readable during preparation. */
+  private refreshDemandedFolderPresentation(): Promise<void> {
+    if (this.folderPresentationRefreshTask) return this.folderPresentationRefreshTask;
+    if (!this.dirtyFolderPresentation.size || this.diagnosticsClosed || this.persistentCachePurged) return Promise.resolve();
+    const task = this.withForegroundPriority(/** Drain actual source batches rather than one rebuild per source commit. */ async () => {
+      while (this.dirtyFolderPresentation.size && !this.diagnosticsClosed && !this.persistentCachePurged) {
+        const paths = [...this.dirtyFolderPresentation];
+        this.dirtyFolderPresentation.clear();
+        for (const path of paths) if (this.semanticDemandCounts.has(path)) await this.publishHostMetadataPreview(path, INDEX_WORK_PRIORITY.visibleNeighborhood);
+      }
+    }, INDEX_WORK_PRIORITY.visibleNeighborhood).finally(/** Release the coalesced batch after all awaited sort preparation. */ () => {
+      if (this.folderPresentationRefreshTask === task) this.folderPresentationRefreshTask = null;
+    });
+    this.folderPresentationRefreshTask = task;
+    return task;
   }
 
   /** Check available published adjacency, including current URL discovery and exact pair updates, without acquiring any facts. */
@@ -1414,18 +1694,34 @@ export class GraphIndex {
     if (prepared) this.plugin.startupDiagnostics?.mark("host-search-ready");
   }
 
-  /** Publish a provisional host scope separately from every authoritative graph/evidence owner. */
-  async publishHostMetadataPreview(centerPath: string,
+  /** Publish a provisional host scope separately from every authoritative graph/evidence owner.
+   * Superseded native folder calls await their actual replacement, preserving caller readiness. */
+  publishHostMetadataPreview(centerPath: string,
     workPriority: IndexWorkPriority = INDEX_WORK_PRIORITY.currentNode): Promise<void> {
-    if (this.preparationDeferred || this.diagnosticsClosed || this.persistentCachePurged) return;
+    if (this.preparationDeferred || this.diagnosticsClosed || this.persistentCachePurged) return Promise.resolve();
+    const folder = centerPath.startsWith("folder:"), tag = this.hostPreview.hasTag(centerPath);
+    if (this.hasCurrentCanonicalTag(centerPath) || !folder && !tag && this.hasCurrentCanonicalCenter(centerPath)) return Promise.resolve();
+    const request = (this.hostPreviewRequests.get(centerPath) ?? 0) + 1;
+    this.hostPreviewRequests.set(centerPath, request);
+    const task = this.prepareHostMetadataPreview(centerPath, workPriority, request).finally(
+      /** Retire only this request's waiter; an older completion cannot remove its replacement. */ () => {
+        if (this.hostPreviewTasks.get(centerPath)?.request === request) this.hostPreviewTasks.delete(centerPath);
+      });
+    this.hostPreviewTasks.set(centerPath, { request, workPriority, task });
+    return task;
+  }
+
+  /** Compile a private host cover under one request. Cancelled folders stop at checkpoints;
+   * their callers still await the actual newer request so cancellation cannot shorten readiness. */
+  private async prepareHostMetadataPreview(centerPath: string, workPriority: IndexWorkPriority, request: number): Promise<void> {
     const publication = this.publicationRevision;
     const sourceRevision = this.plugin.getIndexSourceRevision();
     const folder = centerPath.startsWith("folder:"), tag = this.hostPreview.hasTag(centerPath), structuralRevision = this.hostStructuralRevision;
     const coverageSignature = this.semanticCoverageSignature();
     const compilerSignature = JSON.stringify(graphCompilerSettingsFromLegacy(this.plugin.settings));
-    if (this.hasCurrentCanonicalTag(centerPath) || !tag && this.hasCurrentCanonicalCenter(centerPath)) return;
-    const request = (this.hostPreviewRequests.get(centerPath) ?? 0) + 1;
-    this.hostPreviewRequests.set(centerPath, request);
+    const folderSelectionSignature = `${this.plugin.settings.maxItemCount}:${this.relationViewSignature()}`;
+    const nativeFolder = folder ? this.nativeFolderForPath(centerPath) : null;
+    const nativeObservation = nativeFolder ? this.observeNativeFolderGates(nativeFolder) : undefined;
     // Native folder membership is independent of the global Markdown backlink scan.
     if (!folder && !tag) {
       this.hostBacklinksReady ??= this.hostPreview.initializeBacklinks();
@@ -1433,23 +1729,74 @@ export class GraphIndex {
     }
     if (this.diagnosticsClosed) return;
     const preview = await this.hostPreview.build(centerPath,
-      { checkpoint: () => this.workScheduler.checkpoint(workPriority) });
-    if (!preview || this.diagnosticsClosed || this.hostPreviewRequests.get(centerPath) !== request
-      || (folder ? structuralRevision !== this.hostStructuralRevision || coverageSignature !== this.semanticCoverageSignature()
+      { checkpoint: () => this.workScheduler.checkpoint(workPriority),
+        isCurrent: /** Retire superseded native work at the next checkpoint, before scanning more candidate windows. */
+          () => !folder || !this.diagnosticsClosed && !this.persistentCachePurged
+            && this.hostPreviewRequests.get(centerPath) === request && structuralRevision === this.hostStructuralRevision
+            && Boolean(nativeFolder && nativeObservation && this.nativeFolderGateObservationCurrent(nativeFolder, nativeObservation))
+            && folderSelectionSignature === `${this.plugin.settings.maxItemCount}:${this.relationViewSignature()}`,
+        selectFolderChildren: /** Keep the index's shared ordering before the finite folder cover is truncated. */
+          (paths, limit) => this.selectNativeFolderChildren(paths, limit),
+        // A later sibling consumer must not inherit this folder center's visible row cap.
+        // Preparing one bounded pool also covers navigation/toggles without another native scan.
+        folderCandidateLimit: classicSiblingCandidateLimit(this.plugin.settings.maxItemCount) });
+    if (folder && !this.diagnosticsClosed && !this.persistentCachePurged && this.hostPreviewRequests.get(centerPath) !== request) {
+      const replacement = this.hostPreviewTasks.get(centerPath);
+      if (replacement && replacement.request > request) {
+        // The retired caller can still hold its outer foreground lease. Waiting on a lower
+        // lane would deadlock its replacement at that lease's checkpoint. Re-admit the current
+        // native observation at the caller's priority; the old lower pass cancels cooperatively.
+        if (replacement.workPriority > workPriority) await this.publishHostMetadataPreview(centerPath, workPriority);
+        else await replacement.task;
+      }
+      return;
+    }
+    if (!preview || this.diagnosticsClosed || this.persistentCachePurged || this.hostPreviewRequests.get(centerPath) !== request
+      || (folder ? !nativeFolder || !nativeObservation || !this.nativeFolderGateObservationCurrent(nativeFolder, nativeObservation)
+        || structuralRevision !== this.hostStructuralRevision || coverageSignature !== this.semanticCoverageSignature()
+        || folderSelectionSignature !== `${this.plugin.settings.maxItemCount}:${this.relationViewSignature()}`
         || compilerSignature !== JSON.stringify(graphCompilerSettingsFromLegacy(this.plugin.settings))
         : publication !== this.publicationRevision || sourceRevision !== this.plugin.getIndexSourceRevision())
-      || this.hasCurrentCanonicalTag(centerPath) || !tag && this.hasCurrentCanonicalCenter(centerPath)) return;
+      || this.hasCurrentCanonicalTag(centerPath) || !folder && !tag && this.hasCurrentCanonicalCenter(centerPath)) return;
     this.hostPreviewScopes.set(centerPath, preview.state);
     for (const page of preview.state.pages.values()) this.hostPreviewSettings.set(page, preview.settings);
+    for (const page of preview.state.pages.values()) if (page.isFolder) {
+      const native = page.path === "folder:/" ? this.app.vault.getRoot() : this.app.vault.getFolderByPath(page.path.slice("folder:".length));
+      if (native) this.nativeFolderDegrees.set(page, { structuralRevision, degree: native.children.length + Number(Boolean(native.parent)) });
+    }
     for (const [path, gates] of preview.structuralGates ?? []) {
       const page = preview.state.pages.get(path);
-      if (page) this.folderGateInfo.set(page, { gates, coverageSignature,
-        structuralRevision: this.hostStructuralRevision });
+      if (page) {
+        const proof = { gates, coverageSignature, structuralRevision };
+        this.folderGateInfo.set(page, proof);
+        if (path === centerPath && nativeFolder && nativeObservation) {
+          this.nativeFolderGateProofs.set(nativeFolder, { observation: nativeObservation, proof });
+        }
+      }
     }
     this.plugin.startupDiagnostics?.mark("host-preview-ready");
     this.emitPresentation();
-    void this.withForegroundPriority(() => this.prepareVisibleFolderGates(preview.state.pages.values(),
+    void this.withForegroundPriority(() => this.prepareVisibleFolderGates([...preview.visiblePaths].flatMap(/** Overscan candidates are not displayed child-folder demands. */
+      path => { const page = preview.state.pages.get(path); return page ? [page] : []; }),
       () => this.hostPreviewScopes.get(centerPath) === preview.state), 2);
+  }
+
+  /** Rank one bounded native-member window with the existing relation sorter. Reuse current
+   * presentation/degree facets when available; physical fallbacks never acquire bodies or sources. */
+  private selectNativeFolderChildren(paths: readonly string[], limit: number): readonly string[] {
+    const candidates: Neighbour[] = [];
+    const nativeDegrees = new Map<GraphPage, number>();
+    for (const path of paths) {
+      const page = this.get(path);
+      const file = this.app.vault.getFileByPath(path);
+      const folder = !file && path.startsWith("folder:") ? this.app.vault.getFolderByPath(path.slice("folder:".length)) : null;
+      const current = page && (file ? page.file === file : Boolean(folder && page.isFolder)) ? page
+        : file ? this.hostFileSearchPage(file) : folder ? this.hostFolderSearchPage(folder) : undefined;
+      if (current) candidates.push({ page: current, role: "child", relationType: RelationType.DEFINED, linkDirection: LinkDirection.FROM });
+      if (current && folder) nativeDegrees.set(current, folder.children.length + Number(Boolean(folder.parent)));
+    }
+    return this.sortNeighbours(candidates, nativeDegrees).slice(0, limit).map(/** Only selected coordinates cross the private structural compiler boundary. */
+      item => item.page.path);
   }
 
   /** Retire native membership proofs on every Vault topology event, including pre-restore events.
@@ -1464,6 +1811,7 @@ export class GraphIndex {
     this.hostStructuralRevision += 1;
     this.navigableSnapshotSourceRevision = null;
     this.folderGateInfo = new WeakMap();
+    this.nativeFolderGateProofs = new WeakMap();
     this.relationViewCache = new WeakMap();
     if (this.preparationDeferred) return;
     // Run after the synchronous Vault listener has applied its delta/source revision. Recounting
@@ -1484,28 +1832,64 @@ export class GraphIndex {
     });
   }
 
+  /** Resolve exact native folder identity through the typed Vault API, including both root spellings. */
+  private nativeFolderForPath(path: string): TFolder | null {
+    return path === "folder:/" || path === "folder:" ? this.app.vault.getRoot()
+      : path.startsWith("folder:") ? this.app.vault.getFolderByPath(path.slice("folder:".length)) : null;
+  }
+
+  /** Capture native coordinates without copying members or retaining another graph/metadata mirror. */
+  private observeNativeFolderGates(folder: TFolder): NativeFolderGateObservation {
+    return { path: folder.path, name: folder.name, parent: folder.parent,
+      parentPath: folder.parent?.path, parentName: folder.parent?.name,
+      children: folder.children, childCount: folder.children.length };
+  }
+
+  /** Constant-time native fencing supplements topology events; Markdown body edits do not invalidate counts. */
+  private nativeFolderGateObservationCurrent(folder: TFolder, observed: NativeFolderGateObservation): boolean {
+    return folder.path === observed.path && folder.name === observed.name && folder.parent === observed.parent
+      && this.nativeFolderForPath(!observed.path || observed.path === "/" ? "folder:/" : `folder:${observed.path}`) === folder
+      && folder.children === observed.children && folder.children.length === observed.childCount
+      && folder.parent?.path === observed.parentPath && folder.parent?.name === observed.parentName
+      && (!observed.parent || this.nativeFolderForPath(!observed.parentPath || observed.parentPath === "/" ? "folder:/" : `folder:${observed.parentPath}`) === observed.parent);
+  }
+
   /**
-   * Supplement only finite displayed folder endpoints with parent/child totals. Each native folder
-   * is counted independently; no descendant graph is retained and no incidence/write proof changes.
-   * Scope replacement, topology and visibility fence every awaited result. Markdown metadata
-   * events do not change native membership and must not cancel unrelated structural totals.
+   * Supplement finite displayed folders with parent/child totals. Reuse a count proof by native
+   * identity, observed tree lifetime and visibility even when its preview page is replaced. Each
+   * uncached folder is counted independently; its owning scope guard reaches the private compiler
+   * so abandoned counts stop at cooperative boundaries. No incidence/write authority changes.
    */
   private async prepareVisibleFolderGates(pages: Iterable<GraphPage>, ownsScope: () => boolean): Promise<void> {
     const coverageSignature = this.semanticCoverageSignature(), structuralRevision = this.hostStructuralRevision;
-    const current = (): boolean => !this.diagnosticsClosed && ownsScope()
+    const current = (): boolean => !this.diagnosticsClosed && !this.persistentCachePurged && ownsScope()
       && structuralRevision === this.hostStructuralRevision && coverageSignature === this.semanticCoverageSignature();
     let remaining = Math.min(300, Math.max(1, this.plugin.settings.maxItemCount || 100)), changed = false;
     for (const page of pages) {
       if (!current()) return;
-      const existing = this.folderGateInfo.get(page);
-      if (!page.isFolder || !this.isVisiblePage(page) || (existing?.coverageSignature === coverageSignature
-        && existing.structuralRevision === structuralRevision)) continue;
+      if (!page.isFolder || !this.isVisiblePage(page)) continue;
+      const folder = this.nativeFolderForPath(page.path);
+      if (!folder) continue;
+      const cached = this.nativeFolderGateProofs.get(folder);
+      if (cached?.proof.coverageSignature === coverageSignature && cached.proof.structuralRevision === structuralRevision
+        && this.nativeFolderGateObservationCurrent(folder, cached.observation)) {
+        if (this.folderGateInfo.get(page) !== cached.proof) {
+          this.folderGateInfo.set(page, cached.proof);
+          changed = true;
+        }
+        continue;
+      }
       if (remaining-- <= 0) break;
+      const observation = this.observeNativeFolderGates(folder);
+      /** Exact native identity and owning scope must survive every compiler yield and the final return. */
+      const countCurrent = (): boolean => current() && this.nativeFolderGateObservationCurrent(folder, observation);
       const gates = await this.hostPreview.folderGates(page.path,
-        () => this.workScheduler.checkpoint(INDEX_WORK_PRIORITY.visibleNeighborhood));
-      if (!current()) return;
+        /** Count compilation retains the existing visible-neighborhood priority. */ () => this.workScheduler.checkpoint(INDEX_WORK_PRIORITY.visibleNeighborhood), countCurrent);
+      if (!countCurrent()) return;
       if (!gates) continue;
-      this.folderGateInfo.set(page, { gates, coverageSignature, structuralRevision });
+      const proof = { gates, coverageSignature, structuralRevision };
+      this.nativeFolderGateProofs.set(folder, { observation, proof });
+      this.folderGateInfo.set(page, proof);
       changed = true;
     }
     if (changed && current()) {
@@ -1635,9 +2019,15 @@ export class GraphIndex {
     let visible = false;
     for (const center of centers) {
       const page = this.hostPreviewScopes.get(center)?.pages.get(center) ?? this.semanticPage(center);
-      if (center !== changedPath && !page?.neighbours.has(changedPath) && !affectedTargets.has(center)) continue;
+      const nativeMember = page?.isFolder && file?.parent
+        && center === (!file.parent.path || file.parent.path === "/" ? "folder:/" : `folder:${file.parent.path}`);
+      // Global source/host tokens close every recovery certificate, including stationary views.
+      // Re-admit each live center using only its own finite visible owners through the P1 scheduler.
+      void this.ensureVisibleSemanticRecovery(center);
+      if (center !== changedPath && !page?.neighbours.has(changedPath) && !affectedTargets.has(center) && !nativeMember) continue;
       visible = true;
       void this.withForegroundPriority(() => this.publishHostMetadataPreview(center, INDEX_WORK_PRIORITY.visibleNeighborhood), 2);
+      void this.ensureVisibleSemanticRecovery(center);
     }
     return visible;
   }
@@ -2157,7 +2547,9 @@ export class GraphIndex {
   viewScopeCoverage(path: string): Readonly<{coverage: "local" | "cached" | "unavailable"; prepared: boolean; complete: boolean; pending: boolean}> {
     if (this.diagnosticsClosed || this.persistentCachePurged) return {coverage: "unavailable", prepared: false, complete: false, pending: false};
     const complete = this.hasCurrentCanonicalCenter(path), local = this.onDemandHostScopes.get(path);
-    const prepared = complete || this.hasCurrentOnDemandCachedScope(path) || Boolean(local && this.semanticPage(path) === local.pages.get(path));
+    const nativeFolder = this.hostPreviewScopes.get(path)?.pages.get(path);
+    const prepared = complete || Boolean(nativeFolder?.isFolder && this.semanticPage(path) === nativeFolder)
+      || this.hasCurrentOnDemandCachedScope(path) || Boolean(local && this.semanticPage(path) === local.pages.get(path));
     const pending = this.onDemandTasks.has(path) || this.onDemandPreviewTasks.has(path) || this.onDemandGateTasks.has(path)
       || this.onDemandBuildWaiters.has(path) || this.semanticPreparationTasks.has(path)
       || this.semanticDemandCounts.has(path) && this.onDemandBaselineTask !== null;
@@ -2229,7 +2621,7 @@ export class GraphIndex {
 
   /** Actual local tasks are separate from optional absent global authority. */
   private hasOnDemandWork(): boolean { return this.usesLocalForeground() && (this.onDemandBaselineTask !== null || this.onDemandTasks.size > 0
-    || this.onDemandPreviewTasks.size > 0 || this.onDemandGateTasks.size > 0); }
+    || this.onDemandGateTasks.size > 0) || this.onDemandPreviewTasks.size > 0; }
 
   /** Return one current demanded failure reason without exposing paths or trusting historical aggregate counters. */
   getSemanticPreparationFailure(): string | null {
@@ -2321,6 +2713,7 @@ export class GraphIndex {
     if ((this.onDemandHostScopes.size || this.onDemandCachedScopes.size) && !this.retainedLocalScopes.size) {
       this.onDemandBaselineRevision++;
       for (const [center, state] of new Map([...this.onDemandCachedScopes, ...this.onDemandHostScopes])) {
+        if (this.visibleRecoveryCertificates.has(state)) continue;
         const cached = this.onDemandHostScopes.get(center) !== state;
         const certificate = this.localScopeCertificates.get(state);
         const sourceRevision = cached ? this.onDemandCachedSourceRevision : certificate?.sourceRevision;
@@ -2358,6 +2751,7 @@ export class GraphIndex {
         this.hostPreviewRequests.set(path, (this.hostPreviewRequests.get(path) ?? 0) + 1);
         this.semanticDemandRevision.set(path, (this.semanticDemandRevision.get(path) ?? 0) + 1);
         this.retainReleasedSemanticScope(path);
+        this.recoveryObservationWakeups.get(path)?.();
       } else this.semanticDemandCounts.set(path, count);
     };
   }
@@ -2408,7 +2802,8 @@ export class GraphIndex {
     const paths = new Set<string>();
     for (const [path, count] of this.semanticDemandCounts) if (count > 0) paths.add(path);
     if (this.plugin.settings.lastActivePath) paths.add(this.plugin.settings.lastActivePath);
-    await Promise.all([...paths].map((path) => this.ensureSemanticScope(path)));
+    await Promise.all([...paths].map(/** Current visible owners refresh independently of complete contributor discovery. */
+      path => Promise.all([this.ensureSemanticScope(path), this.ensureVisibleSemanticRecovery(path)])));
     this.notifyInitialSourceRecovery();
   }
 
@@ -2782,7 +3177,8 @@ export class GraphIndex {
       this.onDemandGateCounts = new WeakMap(); this.onDemandPresentationPages = new WeakMap();
     }
     if (optional) this.siblingEnrichmentScopes.set(scope, presentationRevision);
-    this.hostPreviewScopes.delete(centerPath);
+    // Native folder membership has an independent lifetime from note-source compilation.
+    if (!this.hostPreviewScopes.get(centerPath)?.pages.get(centerPath)?.isFolder) this.hostPreviewScopes.delete(centerPath);
     this.retireRelationshipPairs(scope);
     for (const page of pagesByPath.values()) {
       const info = this.preparedPageInfo.get(page);
@@ -2846,6 +3242,7 @@ export class GraphIndex {
   /** Coalesce one center/revision request and reject stale completion through the captured demand token. */
   private ensureSemanticScope(centerPath: string): Promise<void> {
     if (this.preparationDeferred) return Promise.resolve();
+    void this.ensureVisibleSemanticRecovery(centerPath);
     if (this.pendingStructuralTasks > 0) return Promise.resolve();
     // A complete current publication already owns aliases, outgoing relationships and search.
     // Do not replace it with a narrower source projection on navigation or a stale task's retry.
@@ -2953,6 +3350,10 @@ export class GraphIndex {
    * Within the existing On-demand baseline, tags retain indexed structural incidence: a local
    * cover may reconstruct only direct member notes and omit a child tag's descendant-owned edge. */
   private semanticPage(path: string): GraphPage | undefined {
+    // Direct folder membership belongs to the native Vault tree. Its finite projection remains
+    // readable across Markdown/source repair; those unrelated epochs cannot empty a folder view.
+    const nativeFolder = this.hostPreviewScopes.get(path)?.pages.get(path);
+    if (nativeFolder?.isFolder && (path === "folder:/" || this.app.vault.getFolderByPath(path.slice("folder:".length)))) return nativeFolder;
     if (/^https?:\/\//i.test(path)) {
       path = canonicalWebUrl(path);
       const canonical = this.state.pages.get(path);
@@ -2971,6 +3372,8 @@ export class GraphIndex {
     }
     const retained = this.retainedLocalScopeFor(path);
     if (retained) return this.mergeOnDemandCachedPage(retained.pages.get(path)!);
+    const recovery = this.visibleRecoveryScope(path);
+    if (recovery) return recovery.pages.get(path);
     // A page prepared by any current scope wins over suppression recorded by another current scope.
     // This keeps two visible Plexes composable when their bounded affected sets overlap.
     for (const scope of this.semanticScopes.values()) if (scope.maintenanceRevision === maintenanceRevision
@@ -3060,9 +3463,12 @@ export class GraphIndex {
     const canonical = this.state.pages.get(path) ?? (this.urlPageHasCurrentSupport(path) ? this.publishedUrlState.pages.get(path) : undefined);
     const direct = this.hostPreviewScopes.get(path)?.pages.get(path);
     if (direct) return direct;
-    for (const scope of this.hostPreviewScopes.values()) {
+    for (const [center, scope] of this.hostPreviewScopes) {
       const page = scope.pages.get(path);
-      if (page) return page;
+      // Native membership proves edges, not Markdown display facets. Keep a note's actual aliases
+      // and other published facets when a sparse folder child happens to cover the same endpoint.
+      if (page && !(canonical?.file && canonical.file === page.file && canonical.file.path === path
+        && scope.pages.get(center)?.isFolder)) return page;
     }
     return canonical ?? this.borrowedLocalFilePage(path) ?? this.currentPhysicalSearchPage(path);
   }
@@ -3124,10 +3530,20 @@ export class GraphIndex {
    * Keep optional presentation inputs current for this surface's finite visible set. Initial demand
    * also repairs sparse candidates incorrectly regarded as ready by an older node publication.
    * Release retires callbacks without clearing a previously known type or style.
+   * @param centers Semantic scopes owned by this surface, including hierarchy/editor demands.
+   * Legacy callers infer only direct readable adjacency when several centers are active.
    */
-  acquirePresentationDemand(pages: Iterable<GraphPage>): () => void {
+  acquirePresentationDemand(pages: Iterable<GraphPage>, centers?: Iterable<string>): () => void {
     if (this.diagnosticsClosed || this.persistentCachePurged) return () => {};
     const selected = [...new Set(pages)].filter(page => page.file?.extension === "md");
+    const lease = Symbol("visible-recovery-inputs");
+    const owners = new Map<string, ReadonlySet<string>>();
+    const explicit = centers !== undefined;
+    const requested = [...new Set(centers ?? this.semanticDemandCounts.keys())];
+    for (const center of requested) owners.set(center, new Set(selected.filter(/** Legacy callers infer only readable local adjacency. */
+      page => explicit || requested.length === 1 || page.path === center || this.hasReadableNeighbour(center, page.path)).map(/** Retain paths, never another canvas's page objects. */ page => page.path)));
+    this.recoveryPresentationLeases.set(lease, owners);
+    for (const center of owners.keys()) this.recoveryPresentationRevisions.set(center, (this.recoveryPresentationRevisions.get(center) ?? 0) + 1);
     for (const page of selected) {
       let entry = this.visiblePresentation.get(page.path);
       if (!entry) {
@@ -3138,10 +3554,14 @@ export class GraphIndex {
       entry.revision += 1;
       void this.refreshVisiblePresentation(page.path);
     }
+    for (const center of owners.keys()) void this.ensureVisibleSemanticRecovery(center);
     let released = false;
     return () => {
       if (released) return;
       released = true;
+      this.recoveryPresentationLeases.delete(lease);
+      for (const center of owners.keys()) this.recoveryPresentationRevisions.set(center, (this.recoveryPresentationRevisions.get(center) ?? 0) + 1);
+      for (const center of owners.keys()) void this.ensureVisibleSemanticRecovery(center);
       for (const page of selected) {
         const entry = this.visiblePresentation.get(page.path);
         if (!entry) continue;
@@ -3375,7 +3795,8 @@ export class GraphIndex {
       if (!policyCurrent() || (effects.presentationFacets && !facets)) continue;
       const search = effects.searchTerms ? await this.prepareSearchIndex(state, current, undefined, settings, facets) : null;
       if (!policyCurrent() || (facets && !facets.isCurrent()) || (effects.searchTerms && !search)) continue;
-      // No await below this line: policy, facets and search become visible as one publication.
+      // Publish policy, facets, search and notifications synchronously. The separate native
+      // folder replacement below may await, retaining its predecessor until that cover is ready.
       if (facets) applyPreparedPresentation(facets, this.presentationStatuses);
       this.presentationSettings = settings;
       if (!effects.paintOnly) this.presentationRevision += 1;
@@ -3389,6 +3810,16 @@ export class GraphIndex {
       this.emitPresentation({ kind: effects.paintOnly ? "paint" : "presentation", changedKeys: keys });
       if (effects.presentationFacets || effects.searchTerms) this.retryUrlAliasUpgrade();
       if (!effects.paintOnly) this.notifyInitialSourceRecovery();
+      // Native covers retain bounded sorted membership, so a changed limit/filter/title policy
+      // needs a new cover as well as a repaint. Keep the predecessor readable until publication.
+      if (keys.some(/** Only ordering, visibility and candidate limits can change retained native membership. */ key =>
+        ["maxItemCount", "nodeSortOrder", "renderAlias", "nameFields", "nodeTitleScript", "excludeFilepaths",
+          "showFolderNodes", "showTagNodes", "showPageNodes", "showAttachments", "showURLNodes", "showVirtualNodes", "showInferredNodes"].includes(key))) {
+        const centers = [...this.semanticDemandCounts.keys()].filter(/** Only active native folder centers own this finite replacement. */
+          path => path.startsWith("folder:"));
+        await Promise.all(centers.map(/** Each folder compiles direct native members through its existing P2 owner. */
+          path => this.withForegroundPriority(() => this.publishHostMetadataPreview(path, INDEX_WORK_PRIORITY.visibleNeighborhood), INDEX_WORK_PRIORITY.visibleNeighborhood)));
+      }
       return;
     }
   }
@@ -4505,14 +4936,21 @@ export class GraphIndex {
     this.cancelSnapshotRestoreWait?.();
     this.cancelUrlRestore?.();
     this.visiblePresentation.clear();
+    this.recoveryPresentationLeases.clear();
+    this.recoveryPresentationRevisions.clear();
+    this.dirtyFolderPresentation.clear();
     this.sourceAcquisition.close();
     this.diagnosticsClosed = true;
+    for (const wake of this.recoveryObservationWakeups.values()) wake();
+    this.recoveryObservationWakeups.clear();
     if (this.urlFlushTimer !== null) window.clearTimeout(this.urlFlushTimer);
     this.urlFlushTimer = null; this.pendingUrlPaths.clear(); this.pendingUrlOwners.clear();
     this.retainedLocalScopes.clear();
     this.eagerPreviewArbitration?.release();
     this.workScheduler.close();
     this.hostPreview.dispose();
+    this.nativeFolderGateProofs = new WeakMap();
+    this.folderGateInfo = new WeakMap();
     this.hostPreviewScopes.clear();
     this.onDemandCachedScopes.clear();
     this.onDemandHostScopes.clear();
@@ -4525,6 +4963,7 @@ export class GraphIndex {
     this.onDemandGateRevisions.clear();
     this.onDemandUnavailableCounts.clear();
     this.hostPreviewRequests.clear();
+    this.hostPreviewTasks.clear();
     this.presentationRun += 1;
     this.semanticPolicyRevision += 1;
     this.semanticDemandRevision.clear();
@@ -5719,11 +6158,15 @@ export class GraphIndex {
       this.semanticPreparationFailures.delete(center);
     }
     for (const [center, preview] of this.hostPreviewScopes) if (commit.touchedPagePaths.has(center) || preview.pages.has(commit.sourcePath)) {
+      if (preview.pages.get(center)?.isFolder) continue;
       this.hostPreviewScopes.delete(center);
       this.hostPreviewRequests.set(center, (this.hostPreviewRequests.get(center) ?? 0) + 1);
     }
     for (const path of commit.touchedPagePaths) {
       const page = this.state.pages.get(path);
+      const parent = page?.file?.parent;
+      const folder = parent && (!parent.path || parent.path === "/" ? "folder:/" : `folder:${parent.path}`);
+      if (folder && this.semanticDemandCounts.has(folder)) this.dirtyFolderPresentation.add(folder);
       if (page) this.cachedSnapshotPages.delete(page);
       if (!page) continue;
       if (path !== commit.sourcePath) {
@@ -5791,6 +6234,7 @@ export class GraphIndex {
   private publishIncrementalFile: PatchFilePublisher = (commit: PatchFileCommit, publishPreparedState: () => void): void => {
     this.commitPreparedFile(commit, publishPreparedState);
     for (const [center, preview] of this.hostPreviewScopes) if (center === commit.sourcePath || preview.pages.has(commit.sourcePath)) {
+      if (preview.pages.get(center)?.isFolder) continue;
       this.hostPreviewScopes.delete(center);
       this.hostPreviewRequests.set(center, (this.hostPreviewRequests.get(center) ?? 0) + 1);
     }
@@ -7141,6 +7585,7 @@ export class GraphIndex {
     let changed = false;
     for (const [center, scope] of this.hostPreviewScopes) {
       if (![...affected].some(target => center === target || scope.pages.has(target))) continue;
+      if (scope.pages.get(center)?.isFolder && center !== path) continue;
       this.hostPreviewRequests.set(center, (this.hostPreviewRequests.get(center) ?? 0) + 1);
       // A newer native preview can be the only readable incidence during canonical source repair.
       // Rename remaps this exact file below; the request token still rejects late old-path builds.
@@ -8034,6 +8479,10 @@ export class GraphIndex {
 
   /** Select coherent relation flags with their compiling policy, including uncertified partial incidence. */
   private semanticRelationSource(page: GraphPage): Readonly<{ page: GraphPage; settings: GraphCompilerSettings }> {
+    const nativeFolder = this.hostPreviewScopes.get(page.path)?.pages.get(page.path);
+    if (nativeFolder?.isFolder && this.semanticPage(page.path) === nativeFolder) return {
+      page: nativeFolder, settings: this.hostPreviewSettings.get(nativeFolder) ?? this.fullSemanticSettings,
+    };
     const info = this.preparedPageInfo.get(page);
     if (info?.completeRelations) return { page: this.composeRelationshipPairs(this.composeUrlRelations(page)), settings: info.settings };
     const scope = this.semanticScopeForPath(page.path);
@@ -8042,6 +8491,7 @@ export class GraphIndex {
     // owns their complete relation/count presentation. Selecting the warm page in semanticPage()
     // would also replace those freshly prepared facets with older snapshot labels.
     if (!this.preparedPageInfo.get(selected)?.completeRelations
+      && !this.visibleRecoveryScope(page.path)
       && !(selected.isTag && this.hostPreviewSettings.has(selected))
       && (this.navigableSnapshotSourceRevision === this.plugin.getIndexSourceRevision()
         && !this.retiredSnapshotPaths.has(page.path)
@@ -8144,6 +8594,20 @@ export class GraphIndex {
   private semanticEvidenceWithoutUrls(sourcePath: string, targetPath: string): Readonly<{ evidence: RelationEvidence[]; settings: GraphCompilerSettings }> {
     const pair = this.relationshipPairs.get(relationshipPairKey(sourcePath, targetPath));
     if (pair) return { evidence: pair.evidence.between(sourcePath, targetPath), settings: pair.settings };
+    for (const path of [sourcePath, targetPath]) {
+      const scope = this.hostPreviewScopes.get(path), folder = scope?.pages.get(path);
+      if (scope && folder?.isFolder && this.semanticPage(path) === folder) {
+        const evidence = scope.evidence.between(sourcePath, targetPath);
+        // A capped cover owns its retained pairs only. Missing candidates do not prove absence
+        // and cannot mask a complete source publication's file-parent provenance.
+        if (evidence.length) return { evidence, settings: this.hostPreviewSettings.get(folder) ?? this.fullSemanticSettings };
+      }
+    }
+    const recovery = [sourcePath, targetPath].map(/** Evidence must come from the same selected finite compiler publication. */
+      path => this.visibleRecoveryScope(path)).find(/** Complete current scopes retain reader precedence. */
+      scope => scope && [sourcePath, targetPath].some(path => this.semanticPage(path) === scope.pages.get(path)));
+    if (recovery) return { evidence: recovery.evidence.between(sourcePath, targetPath),
+      settings: this.hostPreviewSettings.get(recovery.pages.get(sourcePath) ?? recovery.pages.get(targetPath)!) ?? this.fullSemanticSettings };
     const retained = this.retainedLocalScopeFor(sourcePath) ?? this.retainedLocalScopeFor(targetPath);
     if (retained) return { evidence: retained.evidence.between(sourcePath, targetPath), settings: this.fullSemanticSettings };
     const preview = [this.hostPreviewScopes.get(sourcePath), this.hostPreviewScopes.get(targetPath)].find(
@@ -8222,19 +8686,27 @@ export class GraphIndex {
   /**
    * Sort a rendered zone without source work. Connection order uses certified raw degree or complete
    * incidence; partial pages with unknown totals follow known totals, ordered by stable title/identity.
+   * @param preparedNativeDegrees Exact direct-member counts supplied only by private native folder
+   * preparation. Ordinary readers use already-published proofs and never acquire host facts here.
    */
-  sortNeighbours(items: readonly Neighbour[]): Neighbour[] {
+  sortNeighbours(items: readonly Neighbour[], preparedNativeDegrees?: ReadonlyMap<GraphPage, number>): Neighbour[] {
     if (items.length < 2) return [...items];
     const order = this.plugin.settings.nodeSortOrder;
     const keyed = items.map((item) => {
       const info = this.preparedPageInfo.get(item.page);
+      const native = this.nativeFolderDegrees.get(item.page);
+      const nativeDegree = preparedNativeDegrees?.get(item.page)
+        ?? (native?.structuralRevision === this.hostStructuralRevision ? native.degree : undefined);
       return {
         item,
         title: this.titleFor(item.page),
         modified: item.page.file?.stat.mtime ?? item.page.mtime ?? 0,
         created: item.page.file?.stat.ctime ?? 0,
         // Induced neighbours certify finite pairs, never the unselected parent's total degree.
-        connections: info?.rawDegree ?? (info?.completeRelations === false ? null : item.page.neighbours.size),
+        // Another canvas's capped folder page cannot replace its certified direct native total.
+        // Private selection supplies its own counts; published proofs expire on topology events.
+        connections: nativeDegree ?? info?.rawDegree ?? (info?.completeRelations === false
+          || item.page.isFolder && this.hostPreviewSettings.has(item.page) ? null : item.page.neighbours.size),
         entityId: info?.entityId ?? graphNodeViewFromLegacy(item.page).id,
       };
     });
@@ -8411,7 +8883,12 @@ export class GraphIndex {
       }
     }
 
-    const result: CachedRelationView = { signature, roles, gateStats, neighbourCount: uniqueVisible.size };
+    // A native folder's bounded candidates are presentation input, not its total degree. Its
+    // independently certified parent/child gates are disjoint and prove the exact visible total.
+    const neighbourCount = source.isFolder && this.hostPreviewSettings.has(source)
+      && gateStats.top.complete === true && gateStats.bottom.complete === true
+      ? gateStats.top.visibleCount + gateStats.bottom.visibleCount : uniqueVisible.size;
+    const result: CachedRelationView = { signature, roles, gateStats, neighbourCount };
     this.relationViewCache.set(source, result);
     return result;
   }

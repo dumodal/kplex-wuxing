@@ -1,5 +1,6 @@
 /** Targeted actual shared canvas interaction checks. Native host facts are finite fixtures;
- * view projection/layout, action acceptance and semantic button/touch dispatch are production. */
+ * view projection/layout, action acceptance and semantic button/touch dispatch are production.
+ * Pointer-specific disclosure assertions preserve a16px symbol and a44px coarse-pointer target. */
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {chromiumHarness} from './support/browserTypeScript.mjs';
@@ -38,8 +39,9 @@ for(const coarse of [false,true])test(`shared node controls resist tablet button
      check(box.width===size&&box.height===size,'Section control stays square: '+box.width+'x'+box.height);
     }
     if(view==='mindmap'){
-     const branch=ui.container.querySelector('.has-expanded-hit-target'),box=branch.getBoundingClientRect(),symbol=branch.querySelector('.kplex-branch-disclosure-symbol').getBoundingClientRect();
-     check(box.width===44&&box.height===44&&symbol.width===16&&symbol.height===16,'Branch preserves 44px touch area and 16px visible symbol');
+     const branch=ui.container.querySelector('.is-branch-disclosure'),box=branch.getBoundingClientRect(),symbol=branch.querySelector('.kplex-branch-disclosure-symbol').getBoundingClientRect();
+     const targetSize=${coarse}?44:16;
+     check(box.width===targetSize&&box.height===targetSize&&symbol.width===16&&symbol.height===16,'Branch preserves pointer-specific target and 16px visible symbol');
     }
     ui.close();
    }

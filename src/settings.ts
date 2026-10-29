@@ -1,4 +1,6 @@
-/**
+/** Native numeric rows fence their shared slider against removal/adoption while accepted saves
+ * retain persistence ownership.
+ *
  * Obsidian settings persistence, bounded legacy graph import, declarative controls and style/ontology
  * managers. Foreign imports cannot change plugin workflow preferences; own persisted K-Plex keys
  * remain stable. Sparse device typography inherits shared defaults and native scope-qualified rows never write on initial render. Per-surface density preserves the legacy vertical key and migrates horizontal
@@ -2732,7 +2734,8 @@ export class KplexSettingTab extends PluginSettingTab {
     });
   }
 
-  /** Bind the finite theme-owned native scalar types without changing global control ownership. */
+  /** Bind the finite theme-owned native scalar types without changing global control ownership.
+   * Numeric delivery shares the row's document/generation guard, including its deferred completion. */
   private bindThemeScalar(item: SettingDefinition<DeclarativeSettingKey>): SettingDefinition<DeclarativeSettingKey> {
       if (!("control" in item) || !item.control) return item;
       const control = item.control;
@@ -2777,7 +2780,7 @@ export class KplexSettingTab extends PluginSettingTab {
           };
           const value = this.getControlValue(control.key) ?? control.defaultValue;
           if (control.type === "slider") {
-            const slider = numberSlider(setting, {label: item.name, value: Number(value), min: control.min, max: control.max, step: control.step, disabled, onChange: change});
+            const slider = numberSlider(setting, {isCurrent: currentControl, label: item.name, value: Number(value), min: control.min, max: control.max, step: control.step, disabled, onChange: change});
             state.dispose = () => slider.dispose();
             state.refresh = /** Same-activation edits update peers without replacing a live slider or emitting another change. */ () => {if (currentControl()) slider.setValue(Number(this.getControlValue(control.key) ?? control.defaultValue));};
           }
@@ -2800,7 +2803,8 @@ export class KplexSettingTab extends PluginSettingTab {
   }
 
   /** Adapt every declarative numeric preference to the shared visible-value native slider.
-   * Captured keys and the existing scalar writer retain view/settings reconciliation authority. */
+   * Captured keys and the existing scalar writer retain view/settings reconciliation authority.
+   * Row retirement also fences the shared slider's deferred display and incoming native events. */
   private numberControl(item: SettingDefinition<DeclarativeSettingKey>, control: Extract<NonNullable<SettingDefinition<DeclarativeSettingKey>["control"]>, {type: "slider"}>, unavailable = false): SettingDefinition<DeclarativeSettingKey> {
     const key = this.receivedControlKey(control.key) as DeclarativeSettingKey;
     const plugin = this.kplexPlugin;
@@ -2812,7 +2816,7 @@ export class KplexSettingTab extends PluginSettingTab {
         const current = (): boolean => active && setting.settingEl.isConnected && setting.settingEl.ownerDocument === doc && !doc.defaultView?.closed;
         setting.settingEl.dataset.kplexSettingKey = key;
         const read = (): number => Number(readValue(key) ?? control.defaultValue ?? control.min);
-        const slider = numberSlider(setting, {label: item.name, value: read(), min: control.min, max: control.max, step: control.step,
+        const slider = numberSlider(setting, {isCurrent: current, label: item.name, value: read(), min: control.min, max: control.max, step: control.step,
           disabled: unavailable || (typeof control.disabled === "function" ? control.disabled() : control.disabled),
           onChange: async value => {
             if (!current()) return;

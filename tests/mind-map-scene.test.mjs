@@ -58,7 +58,7 @@ test('the real hierarchy reader admits the full bounded scene and coverage never
  f.settings.canvasViewSettings.mindmap.values.maximumOccurrences=256;
  const result=f.prepare();assert.equal(result.failure,false);assert.equal(result.scene.nodes.length,256);assert(result.projection.truncated);assert.equal(result.projection.preparation.parents.length,8);
  const native={diagnosticsClosed:false,persistentCachePurged:false,hasCurrentCanonicalCenter:()=>false,hasCurrentOnDemandCachedScope:()=>false,
-  onDemandHostScopes:new Map(),onDemandTasks:new Map(),onDemandPreviewTasks:new Map(),onDemandGateTasks:new Map(),onDemandBuildWaiters:new Map(),semanticPreparationTasks:new Map(),semanticDemandCounts:new Map(),onDemandBaselineTask:null,get:id=>f.pages.get(id)};
+  hostPreviewScopes:new Map(),onDemandHostScopes:new Map(),onDemandTasks:new Map(),onDemandPreviewTasks:new Map(),onDemandGateTasks:new Map(),onDemandBuildWaiters:new Map(),semanticPreparationTasks:new Map(),semanticDemandCounts:new Map(),onDemandBaselineTask:null,get:id=>f.pages.get(id)};
  assert.deepEqual(M.GraphIndex.prototype.viewScopeCoverage.call(native,'B'),{coverage:'cached',prepared:false,complete:false,pending:false});
  native.onDemandTasks.set('B',{});assert.equal(M.GraphIndex.prototype.viewScopeCoverage.call(native,'B').pending,true);
  native.hasCurrentCanonicalCenter=()=>true;assert.equal(M.GraphIndex.prototype.viewScopeCoverage.call(native,'B').complete,true);
