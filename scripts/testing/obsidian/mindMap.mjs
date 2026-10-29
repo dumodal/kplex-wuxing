@@ -134,6 +134,44 @@ async function scenario(app,c){
    await until(cycle,'Genuine child-branch cycle reference absent');await act(host,'view.fit');await wait(100);await clickNative(cycle);
    await until(()=>p.actionManager.readSnapshot(surface(host))?.selected?.occurrenceId==='root'&&[...document.querySelectorAll('.notice')].some(element=>element.textContent===p.translator('mindmap.cycleReference')),'Cycle did not reveal its earlier occurrence with a Notice');
    check(session(host).layoutRoot(path('R'))===path('R')&&host.view.documentSession.centerPath===path('R'),'Cycle inspection changed root or attention');cases.push({id:'native-cycle-reference-reveals-earlier-occurrence-and-notice'});
+  }else if(c.lane==='center-navigation'){
+   p.notifyNavigation(path('R'),host);
+   await until(()=>host.view.documentSession.centerPath===path('R'),'Initial center R absent');
+   check((await act(host,'editor.expand',undefined,target('R','root'))).status==='completed','Root editor did not open');
+   await until(()=>instance(host)?.view.editor&&session(host).editors.bindings[0]?.target.path===path('R'),'Native root editor absent');
+   const oldLeaf=instance(host),editor=oldLeaf.view.editor,save=oldLeaf.view.save;
+   const binding=session(host).editors.bindings[0],marker='Owned-center-navigation-'+Date.now();
+   check((await act(host,'editor.resize',{bindingId:binding.id,width:620,height:400})).status==='completed','Root editor resize rejected');
+   editor.replaceRange('\n'+marker+'\n',editor.getCursor('to'));
+   check(!(await app.vault.read(files.find(file=>file.path===path('R')))).includes(marker),'Root buffer must be genuinely dirty');
+   let rejected=0;oldLeaf.view.save=async()=>{rejected++;throw Error('Owned center navigation save rejection')};restores.push(()=>{oldLeaf.view.save=save});
+   await act(host,'view.fit');
+   await clickNative(()=>nodes(host).find(node=>node.dataset.kplexPath===path('P')));
+   await until(()=>rejected>0&&!session(host).editors.bindings[0]?.closing,'Navigation save rejection did not settle');
+   check(instance(host)===oldLeaf&&editor.getValue().includes(marker)&&session(host).layoutRoot(path('R'))===path('R')&&host.view.documentSession.centerPath===path('R'),'Failed navigation discarded or retargeted the dirty editor');
+   cases.push({id:'center-navigation-save-failure-preserves-native-buffer-root-and-attention'});
+   oldLeaf.view.save=save;
+   await clickNative(()=>nodes(host).find(node=>node.dataset.kplexPath===path('P')));
+   await until(()=>session(host).layoutRoot(path('P'))===path('P')&&host.view.documentSession.centerPath===path('P')&&session(host).editors.bindings[0]?.target.path===path('P')&&instance(host)?.view.file?.path===path('P'),'Clicked child did not become the native editor center');
+   check((await app.vault.read(files.find(file=>file.path===path('R')))).includes(marker),'Center navigation lost unsaved source edits');
+   const next=session(host).editors.bindings[0];
+   check(next.mode==='source'&&next.dimensions.width===620&&next.dimensions.height===400&&next.id!==binding.id&&session(host).editors.bindings.length===1,'Center navigation lost mode, dimensions or capacity');
+   cases.push({id:'trusted-node-click-saves-source-and-transfers-root-editor-mode-and-size'});
+   const fold=()=>nodes(host).find(node=>node.dataset.kplexKeyboardId==='root')?.querySelector('.kplex-section-fold-handle');
+   await clickNative(fold);await until(()=>!nodes(host).some(node=>node.dataset.kplexPath===path('B')),'Fold button did not hide children');
+   check(session(host).editors.bindings[0]?.id===next.id&&instance(host)?.view.file?.path===path('P'),'Folding children changed the root editor');
+   await clickNative(fold);await until(()=>nodes(host).some(node=>node.dataset.kplexPath===path('B')),'Unfold button did not restore children');
+   const preview=()=>[...root(host).querySelectorAll('.kplex-central-editor-toolbar button')].find(button=>button.getAttribute('aria-label')===p.translator('centralEditor.showPreview')
+    ||button.ownerDocument.getElementById(button.getAttribute('aria-labelledby'))?.textContent===p.translator('centralEditor.showPreview'));
+   root(host).querySelector('.kplex-central-editor-content .cm-content')?.focus();
+   await clickNative(preview);
+   await until(()=>instance(host)?.view.getMode()==='preview','Native preview mode did not settle');
+   await act(host,'view.fit');await clickNative(()=>nodes(host).find(node=>node.dataset.kplexPath===path('B')));
+   await until(()=>session(host).layoutRoot(path('B'))===path('B')&&session(host).editors.bindings[0]?.target.path===path('B')&&instance(host)?.view.file?.path===path('B'),'Preview editor did not follow the clicked center');
+   check(session(host).editors.bindings[0].mode==='preview','Preview intent was lost during recentering: '+JSON.stringify({mode:session(host).editors.bindings[0].mode,native:instance(host).view.getMode()}));
+   await until(()=>instance(host)?.view.getMode()==='preview'&&!root(host).querySelector('.kplex-central-editor-status'),'New native preview host did not finish opening');
+   cases.push({id:'fold-controls-preserve-root-editor-and-next-center-preserves-preview-mode'});
+   await act(host,'editor.collapse',{bindingId:session(host).editors.bindings[0].id});
   }else if(c.lane==='interactions'){
    await c.acceptInteractions({app,p,c,host,hosts,restores,path,root,session,nodes,act,check,wait,until,clickNative,cases,instance});
   }else if(c.lane==='editor'){
@@ -226,7 +264,7 @@ async function scenario(app,c){
 }
 
 if(process.env.KPLEX_TEST_VAULT_NAME!=='kplex-test-small')throw Error('Explicit Small required');
-const lane=process.env.KPLEX_MINDMAP_LANE??'editor';if(!['editor','sessions','navigation','interactions'].includes(lane))throw Error('Expected editor, sessions, navigation or interactions lane');
+const lane=process.env.KPLEX_MINDMAP_LANE??'editor';if(!['editor','sessions','navigation','interactions','center-navigation'].includes(lane))throw Error('Expected editor, sessions, navigation, interactions or center-navigation lane');
 const target=validateTarget({vaultName:process.env.KPLEX_TEST_VAULT_NAME,vaultPath:process.env.KPLEX_TEST_VAULT_PATH,configDir:process.env.KPLEX_TEST_CONFIG_DIR});
 const definitions='c.nativeDragOnly='+JSON.stringify(process.env.KPLEX_MINDMAP_DRAG_ONLY==='true')+';c.prepareViewport='+JSON.stringify(process.env.KPLEX_NATIVE_MAIN_VIEWPORT==='true')+';c.lane='+JSON.stringify(lane)+';c.originalData='+JSON.stringify(readFileSync(join(target.pluginDir,'data.json'),'utf8'))+';c.documentSessions=('+nativeDocumentSessions.toString()+');c.acceptInteractions=('+acceptMindMapInteractions.toString()+');c.htmlDrag=('+nativeHtmlDrag.toString()+');c.acceptNativeDrag=('+acceptNativeOccurrenceDrag.toString()+');';
 await runControlledProbe('mindmap-219-'+lane,scenario,definitions,['src/main.ts','src/application/PlexHierarchyDemand.ts','src/application/PlexViewSession.ts','src/ui/App.tsx','src/ui/NewRelatedNoteModal.ts','src/ui/KplexDocumentSession.ts','src/core/plex/views/contracts.ts','src/core/plex/views/registry.ts','src/core/plex/views/mindmap/configuration.ts','src/ui/plexViews/settingsContributions.ts','src/ui/plexViews/measurement.ts','src/types.ts','src/ui/PlexGraph.tsx','src/ui/ThoughtNode.tsx','src/ui/plexViews/prepareScene.ts','src/ui/plexViews/useHierarchyDemand.ts','src/core/plex/views/mindmap/definition.ts','src/core/plex/views/mindmap/projection.ts','src/core/plex/views/mindmap/layout.ts','src/ui/plexViews/mindmap/settings.ts','scripts/testing/obsidian/mindMap.mjs','scripts/testing/obsidian/mindMapInteractions.mjs','scripts/testing/obsidian/nativeHtmlDrag.mjs','scripts/testing/obsidian/nativeOccurrenceDrag.mjs','src/core/plex/views/areaLayout.ts','src/ui/plexViews/crossLinks.ts','src/ui/plexViews/reflowArea.ts','src/adapters/obsidian/nodeLinkDrag.ts','scripts/testing/obsidian/nativeDocumentSessions.mjs'],{maximumMs:240000});

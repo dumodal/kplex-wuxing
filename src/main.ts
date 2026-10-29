@@ -1244,6 +1244,9 @@ export default class KplexPlugin extends Plugin {
       throw error;
     }
     if (this.unloading || this.index !== index) return;
+    // A concurrent complete fallback can retire source adoption while its await is settling.
+    // Its certified completion must not be overwritten by the retired adopter's false result.
+    adopted ||= this.initialIndexComplete && index.isFullSnapshotHydrated() && !index.hasSourceBackedStartup();
     this.initialSourceIndexIncomplete = !adopted;
     this.initialIndexComplete = adopted;
     if (adopted) {
@@ -1693,17 +1696,18 @@ export default class KplexPlugin extends Plugin {
         return;
       }
       if (showNotice) new Notice(this.translator("notice.rebuildingIndex"), 1200);
+      const rebuiltIndex = this.index;
       const progressiveStartup = allowClosed && !showNotice && !force && !this.initialIndexComplete && !this.index.isFullSnapshotHydrated();
       this.index.noteBuildDecision(progressiveStartup ? "cold-progressive" : "full-rebuild",
         [...this.indexBacklogReasons].sort().join("|") || reason);
       const published = progressiveStartup
-        ? await this.index.rebuildProgressively(this.startupGraphSeedPaths(), {
+        ? await rebuiltIndex.rebuildProgressively(this.startupGraphSeedPaths(), {
           // Keep the large-iOS low-memory checkpoint strategy, but only after the useful center
           // neighborhood has been published so first paint is no longer blocked by vault prewarm.
           prewarmBodyCache: Platform.isIosApp && this.app.vault.getMarkdownFiles().length > 5000,
         })
-        : await this.index.rebuild();
-      if (this.unloading) return;
+        : await rebuiltIndex.rebuild();
+      if (this.unloading || this.index !== rebuiltIndex) return;
       if (!published) {
         this.indexDirty = true;
         this.indexBacklogReasons.add(reason);
@@ -1717,6 +1721,14 @@ export default class KplexPlugin extends Plugin {
           }, 1100);
         }
         return;
+      }
+
+      // A cancelled initial owner may already have released its task. A later complete fallback
+      // publication must finish that startup too; partial/source-backed publications still belong
+      // to their adopter. Newer edits retain their dirty backlog and ordinary catch-up checks.
+      if (rebuiltIndex.isFullSnapshotHydrated() && !rebuiltIndex.hasSourceBackedStartup()) {
+        this.initialIndexComplete = true;
+        this.initialSourceIndexIncomplete = false;
       }
 
       // The authoritative build covered its startup reasons. New Markdown files created after
@@ -4094,10 +4106,10 @@ export default class KplexPlugin extends Plugin {
     };
   }
 
-  /** Notify actual startup activity at most four times per second, without graph revisions or new timers. */
-  notifyStartupProgress(): void {
+  /** Throttle per-note activity, but always publish settled progress without a trailing timer. */
+  notifyStartupProgress(settled = false): void {
     const now = window.performance.now();
-    if (now - this.lastStartupProgressNotification < 250) return;
+    if (!settled && now - this.lastStartupProgressNotification < 250) return;
     this.lastStartupProgressNotification = now;
     this.notifyIndexStatus();
   }

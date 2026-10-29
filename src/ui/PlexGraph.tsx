@@ -759,6 +759,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const boundEditorClose = useRef<{id: string; close: () => Promise<void>} | null>(null);
   const editorViewLease = useRef<(() => void) | null>(null);
   const selectionPreflight = useRef<() => Promise<boolean>>(async () => true);
+  const centerEditorNavigation = useRef<{binding: PlexEditorBinding; current: () => boolean; target?: NodeRef} | null>(null);
+  const [editorNavigationRevision, setEditorNavigationRevision] = useState(0);
   const editorSwitch = useRef<object | null>(null);
   const [editorSwitching, setEditorSwitching] = useState(false);
   const editorExpansionCurrent = useRef<(context: ActionContext) => PositionedNode | null>(() => null);
@@ -1736,6 +1738,46 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       return true;
     } finally {if (editorSwitch.current === token) {editorSwitch.current = null;if (viewport.current?.isConnected) setEditorSwitching(false);}}
   };
+
+  /** Save the exact outgoing native host; only a centered hierarchy editor follows a reroot. */
+  const prepareEditorNavigation = async (): Promise<boolean> => {
+    centerEditorNavigation.current = null;
+    const binding = viewSession?.editors.bindings[0];
+    const carry = binding && viewSession && rooted && viewDefinition.hierarchy?.primary === "center"
+      && scene.nodes.some(node => occurrenceKey(node) === binding.occurrenceId && node.page.path === sceneScope && node.branch?.depth === 0)
+      ? {binding, current: viewSession.capture()} : null;
+    if (!await selectionPreflight.current()) return false;
+    if (carry?.current()) centerEditorNavigation.current = carry;
+    return true;
+  };
+  /** Queue presentation intent, never a native editor, until the new root is actually displayed. */
+  const completeEditorNavigation = (page: GraphPage | null): void => {
+    const pending = centerEditorNavigation.current;
+    if (!pending || !page || !pending.current() || !supportsBoundEditor(page)
+      || viewSession?.layoutRoot(nodeId(page.path)) !== page.path) {centerEditorNavigation.current = null; return;}
+    pending.target = actionNodeRef(page);
+    setEditorNavigationRevision(revision => revision + 1);
+  };
+  /** Reacquire exact file and root occurrence after save/navigation before opening the next host. */
+  const restoreNavigatedEditor = (): void => {
+    const pending = centerEditorNavigation.current, target = pending?.target;
+    if (!pending || !target) return;
+    if (!pending.current() || !viewSession || viewSession.layoutRoot(nodeId(activePath)) !== target.identity) {
+      centerEditorNavigation.current = null; return;
+    }
+    const page = resolveActionPage(index, target);
+    if (!page || !supportsBoundEditor(page) || !index.isVisiblePage(page)) {centerEditorNavigation.current = null; return;}
+    const node = scene.nodes.find(row => row.page.file === page.file && row.page.path === page.path && row.branch?.depth === 0);
+    if (viewSession.editors.bindings.length) {centerEditorNavigation.current = null; return;}
+    if (!node) return;
+    centerEditorNavigation.current = null;
+    const reference = actionNodeRef(page);
+    if (!reference.fileIdentity || !page.file) return;
+    preserveCameraOnNextLayout.current = true;
+    viewSession.editors.open({...pending.binding, occurrenceId: occurrenceKey(node),
+      target: {nodeId: nodeId(reference.identity), path: page.file.path, fileIdentity: reference.fileIdentity}});
+  };
+  useLayoutEffect(restoreNavigatedEditor, [editorNavigationRevision, viewRevision, viewLifetime, activePath, scene.nodes, renderRevision, semanticRevision]);
 
   /** Restore the graph camera when necessary, then return the center to its compact Plex node. */
   const collapseCentralEditor = (): void => {
@@ -4363,12 +4405,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       availability: /** Reroot is explicit and never implicitly closes a native editor. */ context => {
         const page = graphActionPage(context);
         if (!viewDefinition.hierarchy || !viewSession || !page || page.transient) return {state: "disabled", reasonKey: "actions.target-unavailable"};
-        return viewSession.editors.bindings.length && page.path !== sceneScope ? {state: "disabled", reasonKey: "actions.branch-editor-blocked"} : {state: "enabled"};
+        return viewSession.editors.bindings.length && page.path !== sceneScope ? {state: "disabled", reasonKey: "actions.root-editor-blocked"} : {state: "enabled"};
       },
       execute: /** The rooted session retires outgoing frontier/camera scope through its existing lifetime. */ context => {
         const page = graphActionPage(context);
         if (!viewDefinition.hierarchy || !viewSession || !page || page.transient) return {status: "unavailable", reasonKey: "actions.target-unavailable"};
-        return viewSession.setRoot(nodeId(page.path)) ? {status: "completed"} : {status: "unavailable", reasonKey: "actions.branch-editor-blocked"};
+        return viewSession.setRoot(nodeId(page.path)) ? {status: "completed"} : {status: "unavailable", reasonKey: "actions.root-editor-blocked"};
       },
     },
     "editor.expand": editorExpandAction,
@@ -4396,15 +4438,15 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       // displayed branch occurrence. Their root admission must not depend on branch-click policy.
       const savedDestination = context.request.target?.kind === "explicit" && context.target.kind === "node" && !context.target.occurrenceId;
       if (savedDestination || context.request.source === "local-hotkey" || context.request.id === "node.activate" && context.request.args?.intent === "destination") {
-        if (viewDefinition.navigation === "rooted" && (!viewSession || viewSession.editors.bindings.length && page.path !== sceneScope))
-          return {status: "unavailable", reasonKey: "actions.branch-editor-blocked"};
+        if (viewDefinition.navigation === "rooted" && !viewSession)
+          return {status: "unavailable", reasonKey: "actions.target-unavailable"};
         if (context.target.kind === "node" && context.target.occurrenceId) navigationOccurrence.current = {identity: page.path, id: context.target.occurrenceId};
         return onActivate(page, "destination") === false ? {status: "unavailable", reasonKey: "actions.target-unavailable"} : {status: "completed"};
       }
       // Preserve legacy branch activation policy for implicit targets. Displayed occurrences
       // remain distinct from saved destinations and retain their native editor/attention guards.
       if (viewDefinition.hierarchy?.primary === "expand" && context.target.kind === "node" && !context.target.occurrenceId
-        && !viewSession?.setRoot(nodeId(page.path))) return {status: "unavailable", reasonKey: "actions.branch-editor-blocked"};
+        && !viewSession?.setRoot(nodeId(page.path))) return {status: "unavailable", reasonKey: "actions.root-editor-blocked"};
       if (context.target.kind === "node" && context.target.occurrenceId) navigationOccurrence.current = { identity: page.path, id: context.target.occurrenceId };
       onActivate(page);
       return;
@@ -4600,7 +4642,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     preparePresentationChange: /** Preserve the existing manual/restored camera owner across view configuration and state changes. */ () => {
       sceneMotion.cancelAll(); preserveCameraOnNextLayout.current = true;
     },
-    prepareEditorTransition: () => selectionPreflight.current(),
+    prepareEditorTransition: prepareEditorNavigation,
+    completeEditorTransition: completeEditorNavigation,
     prepareNavigation, readWanderScene, highlightWander, clearWander,
     navigateWander: /** Accept only an exact still-displayed destination through the shared App activation path. */ destination => {
       const page = resolveWanderDestination(destination);

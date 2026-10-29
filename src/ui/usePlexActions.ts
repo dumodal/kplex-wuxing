@@ -29,6 +29,8 @@ export interface GraphActionPorts {
   canEditAreas?: () => boolean;
   /** Save/close the one native host before an explicit attention transition removes its occurrence. */
   prepareEditorTransition?: () => Promise<boolean>;
+  /** Restore a saved center-editor presentation only after the latest exact navigation succeeds. */
+  completeEditorTransition?: (target: GraphPage | null) => void;
   prepareNavigation?: (identity: string, origin: "user" | "wander" | "follow") => void;
   readWanderScene?: () => WanderScene;
   highlightWander?: (destination: WanderDestination) => boolean;

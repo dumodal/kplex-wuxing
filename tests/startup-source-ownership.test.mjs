@@ -15,7 +15,7 @@ const module = ts.createSourceFile('main.ts', source, ts.ScriptTarget.Latest, tr
 const plugin = module.statements.find(/** Select the real plugin lifecycle owner. */ node => ts.isClassDeclaration(node) && node.name?.text === 'KplexPlugin');
 const names = new Set(['performRebuild', 'rebuildIndex', 'pruneMissingDirtyMarkdownPaths',
   'registerReactiveIndexListeners', 'pruneManagedMetadataWrites', 'scheduleRebuild',
-  'settlePatchOnlyBacklogIfIdle', 'countDeletedMarkdownFile']);
+  'settlePatchOnlyBacklogIfIdle', 'countDeletedMarkdownFile', 'computeIndexStatusFacts']);
 const methods = plugin.members.filter(/** Copy complete production implementations, not alternate fixture algorithms. */ member => names.has(member.name?.getText(module)));
 assert.equal(methods.length, names.size);
 const onload = plugin.members.find(/** Locate the original timer registration. */ member => member.name?.getText(module) === 'onload');
@@ -228,3 +228,71 @@ for (const [showNotice, force] of [[true, false], [false, true]]) {
     finally { f.close(); }
   });
 }
+
+test('successful automatic fallback finishes startup after the initial progressive build was cancelled', /** Preserve the incident order without storage delays or a manual second initial call. */ async () => {
+  const f = fixture({sourceBacked: false, reasons: ['startup:partial-restore-incomplete']}), {p} = f;
+  let hydrated = false, progressive = 0;
+  p.initialIndexTask = null; p.rebuildTimer = null; p.metadataStabilized = true;
+  p.index.hasPhysicalBaseline = () => hydrated;
+  p.index.isFullSnapshotHydrated = () => hydrated;
+  p.index.hasRestoredCheckpoint = () => false;
+  p.index.hasIncrementalRestorePatch = () => false;
+  p.index.hasPendingSemanticPreparation = () => false;
+  p.index.hasPendingSearchVocabulary = () => false;
+  p.index.indexedMarkdownFileCount = () => 1;
+  p.index.rebuildProgressively = async () => { progressive++; return false; };
+  p.index.rebuild = async () => { f.counts.full++; hydrated = true; return true; };
+  p.scheduleRebuild = () => {};
+  try {
+    await p.ensureInitialIndex();
+    assert.equal(progressive, 1); assert.equal(p.initialIndexComplete, false);
+    assert.equal(p.initialIndexTask, null, 'Cancelled initial owner has released its task');
+    await p.rebuildIndex(false, false, 'startup:post-initial-backlog');
+    assert.equal(p.initialIndexComplete, true);
+    assert.equal(p.initialSourceIndexIncomplete, false);
+    assert.deepEqual(p.computeIndexStatusFacts(1, false), {upToDate: true, phase: 'ready', indexedFiles: 1, totalFiles: 1});
+    await p.ensureInitialIndex();
+    assert.equal(f.counts.full, 1, 'Completed fallback needs no additional full rebuild');
+  } finally { f.close(); }
+});
+
+for (const boundary of ['cancelled', 'partial', 'source-backed', 'unloaded', 'replaced']) {
+  test(`${boundary} fallback cannot finish initial startup`, /** Only a successful complete publication from this live index can establish completion. */ async () => {
+    const f = fixture({sourceBacked: false, published: true}), {p} = f, index = p.index;
+    index.rebuild = async () => {
+      f.counts.full++;
+      if (boundary === 'partial') index.isFullSnapshotHydrated = () => false;
+      if (boundary === 'source-backed') index.hasSourceBackedStartup = () => true;
+      if (boundary === 'unloaded') p.unloading = true;
+      if (boundary === 'replaced') p.index = {...index};
+      return boundary !== 'cancelled';
+    };
+    try { await p.rebuildIndex(false, false, 'fallback'); assert.equal(p.initialIndexComplete, false); }
+    finally { f.close(); }
+  });
+}
+
+test('a retired source adopter cannot undo a complete concurrent fallback', /** Settle the earlier adopter after the successful canonical publication. */ async () => {
+  const f = fixture({published: true, reasons: ['vault:rename-folder']}), {p} = f;
+  let settle;
+  p.index.adoptStartupSources = () => new Promise(resolve => {settle = resolve;});
+  const adoption = p.adoptInitialSourceIndex();
+  p.index.rebuild = async () => {p.index.hasSourceBackedStartup = () => false; return true;};
+  try {
+    await p.rebuildIndex(false, false, 'fallback');
+    assert.equal(p.initialIndexComplete, true);
+    settle(false); await adoption;
+    assert.equal(p.initialIndexComplete, true); assert.equal(p.initialSourceIndexIncomplete, false);
+  } finally {settle(false); f.close();}
+});
+
+test('new edits during a successful fallback keep their dirty backlog', /** Startup completion does not acknowledge a newer source observation. */ async () => {
+  const f = fixture({sourceBacked: false, published: true}), {p} = f;
+  p.index.rebuild = async () => {p.indexDirtyRevision++; p.dirtyMarkdownPaths.add('A.md'); return true;};
+  p.index.insertCreatedFile = () => {};
+  try {
+    await p.rebuildIndex(false, false, 'fallback');
+    assert.equal(p.initialIndexComplete, true); assert.equal(p.indexDirty, true);
+    assert.deepEqual([...p.dirtyMarkdownPaths], ['A.md']);
+  } finally {f.close();}
+});

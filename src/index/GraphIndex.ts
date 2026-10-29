@@ -780,6 +780,9 @@ export class GraphIndex {
         this.retrySourceNodeImpacts();
         this.retryUrlAliasUpgrade();
         this.notifyInitialSourceRecovery();
+        // Closure can be the last update: bypass per-note throttling even when semantic retries
+        // reuse an already-authoritative graph and therefore emit no publication of their own.
+        this.plugin.notifyStartupProgress?.(true);
       },
       /** Refresh subscribed source progress; only the source-authority phase advances its watchdog. */
       () => {

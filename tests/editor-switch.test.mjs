@@ -134,3 +134,53 @@ test('Compass noncentral editor saves its legacy central host then binds in plac
  const binding=f.editors.bindings[0];assert.equal(binding.viewId,'classic');assert.equal(binding.occurrenceId,classicEditorKey(f.node,'A.md'));assert.equal(binding.target.path,'B.md');
  assert(!f.events.some(event=>event.startsWith('navigate:')));assert(f.events.includes('enabled:false'));
 });
+
+/** Drive the actual navigation handoff and native close transaction across a root publication. */
+function centerNavigationFixture(){
+ const f=fixture(),pending={current:null};f.file.extension='md';f.oldFile.extension='md';f.state.root='A.md';
+ const scene={nodes:[{occurrenceId:f.old.occurrenceId,page:{path:'A.md',file:f.oldFile},branch:{depth:0}}]};
+ Object.assign(f.deps,{centerEditorNavigation:pending,rooted:true,sceneScope:'A.md',scene,
+  viewDefinition:{id:'mindmap',hierarchy:{primary:'center'}},supportsBoundEditor:page=>page.file?.extension==='md',
+  selectionPreflight:{current:async()=> (await f.deps.closeBoundEditor(f.old.id)).status==='completed'},
+  setEditorNavigationRevision:()=>{},index:{isVisiblePage:()=>true},
+  resolveActionPage:()=>f.state.node?.page??null});
+ f.deps.viewSession.layoutRoot=()=>f.state.root;
+ return{...f,pending,scene,prepare:production('prepareEditorNavigation',f.deps),complete:production('completeEditorNavigation',f.deps),restore:production('restoreNavigatedEditor',f.deps)};
+}
+
+test('Mind Map navigation saves its center then restores mode and dimensions at the new admitted root',async()=>{
+ const f=centerNavigationFixture(),ready=f.prepare();assert(f.events.includes('native-save'));assert.equal(f.editors.bindings[0].id,f.old.id);
+ f.gate.resolve();assert.equal(await ready,true);assert.equal(f.editors.bindings.length,0);
+ f.state.root='B.md';f.complete(f.node.page);f.scene.nodes=[];f.restore();assert.equal(f.editors.bindings.length,0,'Wait for the new root occurrence to be displayed');
+ f.scene.nodes=[{...f.node,occurrenceId:'new-root',branch:{depth:0}}];f.restore();
+ const next=f.editors.bindings[0];assert(next);assert.notEqual(next.id,f.old.id);assert.equal(next.occurrenceId,'new-root');assert.equal(next.target.path,'B.md');
+ assert.equal(next.mode,f.old.mode);assert.deepEqual(next.dimensions,f.old.dimensions);assert.equal(next.target.fileIdentity,'file-B');assert.equal(f.pending.current,null);assert.deepEqual(f.notices,[]);
+});
+
+for(const invalid of ['save','view','root','unsupported','hidden','missing'])test('center editor handoff rejects '+invalid,async()=>{
+ const f=centerNavigationFixture(),ready=f.prepare();
+ if(invalid==='save')f.gate.reject(Error('Save failed'));else f.gate.resolve();
+ const accepted=await ready;
+ if(invalid==='save'){assert.equal(accepted,false);assert.equal(f.editors.bindings[0].id,f.old.id);assert.equal(f.editors.bindings[0].closing,false);assert.equal(f.pending.current,null);return;}
+ f.state.root='B.md';f.complete(f.node.page);f.scene.nodes=[{...f.node,branch:{depth:0}}];
+ if(invalid==='view')f.state.current=false;
+ if(invalid==='root')f.state.root='C.md';
+ if(invalid==='unsupported')f.file.extension='png';
+ if(invalid==='hidden')f.deps.index.isVisiblePage=()=>false;
+ if(invalid==='missing')f.state.node=null;
+ f.restore();assert.equal(f.editors.bindings.length,0);assert.equal(f.pending.current,null);
+});
+
+test('an editor on a different Mind Map occurrence is saved without becoming the new center editor',async()=>{
+ const f=centerNavigationFixture();f.scene.nodes[0].branch.depth=1;
+ const ready=f.prepare();f.gate.resolve();assert.equal(await ready,true);assert.equal(f.pending.current,null);
+ f.state.root='B.md';f.complete(f.node.page);f.restore();assert.equal(f.editors.bindings.length,0);
+});
+
+test('a newer explicit editor cancels the pending center handoff',async()=>{
+ const f=centerNavigationFixture(),ready=f.prepare();f.gate.resolve();await ready;
+ f.state.root='B.md';f.complete(f.node.page);f.scene.nodes=[{...f.node,branch:{depth:0}}];
+ const newer=f.editors.open({...f.old,occurrenceId:'chosen',target:{...f.old.target,nodeId:'C.md',path:'C.md'}}).binding;
+ f.restore();assert.equal(f.editors.bindings[0].id,newer.id);assert.equal(f.pending.current,null);
+ f.editors.beginClose(newer.id).commit();f.restore();assert.equal(f.editors.bindings.length,0);
+});
