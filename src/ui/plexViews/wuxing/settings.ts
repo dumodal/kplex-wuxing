@@ -5,6 +5,7 @@ import {facetLibrary} from "../../../core/plex/views/facets/configuration";
 import {facetState, orderedFacetPresets, resolveFacetPreset} from "../../../core/plex/views/facets/state";
 import {facetPresetLabel, facetHasWuXingPhases} from "../../../core/plex/views/facets/labels";
 import {FacetPresetManager} from "../facets/FacetPresetManager";
+import {createFacetCaptionEditor} from "../facets/FacetCaptionEditor";
 import {facetDiagnostics} from "../../../core/plex/views/facets/presentation";
 import {facetHelpText} from "../facets/help";
 
@@ -30,7 +31,7 @@ export const wuXingSettingsContribution: CanvasViewSettingsContribution = {
     return target === selected.id && (selected.status === "ready" || selected.status === "replaced")
       ? {name: facetPresetLabel(selected.preset), markdown: facetHelpText(selected.id, selected.preset)} : null;
   },
-  manager: (app, context, target) => new FacetPresetManager(app, context, target),
+  manager: (app, context, target) => createFacetCaptionEditor(app, context, target) ?? new FacetPresetManager(app, context, target),
   items: ({translate, manage}) => [{name: translate("facets.about"), desc: translate("facets.aboutHelp")},
     ...(manage ? [{name: translate("facets.manage"), desc: translate("facets.managerHelp"), action: manage}] : [])],
   choices: context => [presetChoice(context)].flatMap(/** Only the selected preset contributes a choice; layout belongs to its saved definition. */ choice => choice ? [choice] : []),
@@ -49,10 +50,11 @@ export const wuXingSettingsContribution: CanvasViewSettingsContribution = {
     return [
       {...address("diagnostics"), path: [selected.id, "diagnostics", "combined"], kind: "checkbox", labelKey: "facets.combineDiagnostics",
         hintKey: "facets.combineDiagnosticsCanvasHint", state: {value: facetDiagnostics(selected.preset, selected.id, state).combined, actionId: "diagnostics.combine"}},
-      {...address("spacing"), labelKey: "wuxing.spacing", icon: "move-horizontal", min: 24, max: 200, step: 8},
-      {...address("regionWidth"), labelKey: "wuxing.width", icon: "move-horizontal", min: 200, max: 640, step: 20},
+      {...address("spacing"), labelKey: "wuxing.spacing", icon: "move-horizontal", min: 0, max: 200, step: 2},
+      {...address("regionWidth"), labelKey: selected.preset.sizing === "content" ? "facets.contentWidth" : "wuxing.width", icon: "move-horizontal", min: 200, max: 640, step: 20},
       {...address("regionHeight"), labelKey: "wuxing.height", icon: "move-vertical", min: 160, max: 600, step: 20},
       {...address("guides"), kind: "checkbox", labelKey: "wuxing.guides"},
+      {...address("hideGroups"), kind: "checkbox", labelKey: "facets.hideGroups"},
       {...address("tints"), kind: "checkbox", labelKey: "wuxing.tints"},
       ...(selected.preset.interpretation === "wuxing" && facetHasWuXingPhases(selected.preset) ? [
         {...address("relativeLabels"), kind: "checkbox" as const, labelKey: "facets.relativeLabels" as const},

@@ -4120,3 +4120,74 @@ button.kplex-sidecar-unfold-plex:focus-visible,
 .kplex-number-value { min-width: 3em; text-align: end; font-variant-numeric: tabular-nums; color: var(--text-muted); }
 .kplex-number-setting .slider-value { display: none; }
 .kplex-literal-opacity .setting-item { padding: 0; border: 0; }
+
+/* Only caption text is an editable settings target; guide lines retain no graph/drop authority. */
+.kplex-view-guide-caption.is-editable { pointer-events: all; cursor: text; outline: none; }
+.kplex-view-guide-caption.is-editable:hover rect,
+.kplex-view-guide-caption.is-editable:focus-visible rect { stroke: var(--interactive-accent); stroke-width: 2; }
+.kplex-facet-caption-editor .setting-item-control > input[type="text"] { width: min(420px, 60vw); }
+
+/* Compact in-canvas notes share a calm text scale; maximized documents retain native typography. */
+.kplex-central-editor-content:not(.is-maximized) .kplex-central-editor-leaf-host {
+  --font-text-size: 14px;
+  --inline-title-size: 18px;
+  --h1-size: 1.28em;
+  --h2-size: 1.18em;
+  --h3-size: 1.1em;
+}
+.kplex-central-editor-content:not(.is-maximized) .kplex-central-editor-leaf-host .cm-content,
+.kplex-central-editor-content:not(.is-maximized) .kplex-central-editor-leaf-host .markdown-preview-view {
+  font-size: 14px;
+}
+.kplex-central-editor-content:not(.is-maximized) .kplex-central-editor-leaf-host .inline-title {
+  font-size: 18px;
+}
+
+/* Process guides and concrete relationship labels use one quiet typographic treatment. */
+.kplex-edge-label,
+.kplex-view-guide-caption text {
+  fill: var(--text-muted);
+  font-family: var(--font-interface);
+  font-weight: 400;
+}
+
+/* Keep the Facets preset name in its selector, outside the working canvas. */
+.kplex-plex .kplex-view-heading { display: none; }
+
+/* The focused note communicates its phase through its layered border. */
+.kplex-role-center > .kplex-node-badge { display: none; }
+
+/* Facets uses free card-to-card connectors, without ontology compass handles. */
+[data-kplex-free-connections] > .kplex-gate-wrap { display: none; }
+
+.kplex-main-column.is-history-hidden { grid-template-rows: auto minmax(0, 1fr); }
+
+/* A viewport overlay shares the bottom controls' open middle, without reserving a footer row. */
+.kplex-diagnostics-dock { position: absolute; z-index: 25; bottom: 16px; left: 80px; right: 230px; display: flex; align-items: center; justify-content: flex-start; gap: 8px; min-height: 36px; padding: 4px 8px; overflow-x: auto; border-radius: 8px; background: var(--background-primary); }
+.kplex-diagnostics-dock-title { flex: 0 0 auto; font-size: 11px; color: var(--text-muted); }
+.kplex-diagnostics-dock button { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; max-width: 220px; height: 32px; padding: 4px 10px; background: var(--background-secondary); color: var(--text-muted); border: 1px solid var(--background-modifier-border); box-shadow: none; font-size: 12px; }
+.kplex-diagnostics-dock button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kplex-diagnostics-dock-empty { color: var(--text-faint); font-size: 11px; }
+.kplex-diagnostics-dock-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; overflow: hidden; }
+@media (max-width: 600px) { .kplex-diagnostics-dock { left: 52px; right: 174px; } }
+
+.kplex-diagnostics-dock-lines .is-hidden { display: none; }
+
+.kplex-diagnostics-dock-title { margin-left: auto; }
+.kplex-diagnostics-dock > :last-child { margin-right: auto; }
+
+.kplex-edge-label-wrap.is-editable { cursor: text; outline: none; }
+.kplex-edge-label-wrap.is-editable:hover rect,
+.kplex-edge-label-wrap.is-editable:focus-visible rect { stroke: var(--interactive-accent); stroke-width: 1; }
+
+.kplex-diagnostics-dock-lines path { pointer-events: stroke; cursor: text; }
+.kplex-diagnostics-dock-lines text { pointer-events: all; cursor: text; fill: var(--text-muted); font-family: var(--font-interface); font-size: 12px; font-weight: 400; paint-order: stroke; stroke: var(--background-primary); stroke-width: 4px; stroke-linejoin: round; }
+
+/* Loose directional clusters retain invisible drop bounds and small orientation/count labels. */
+.kplex-view-region.is-loose > rect,
+.kplex-view-region.is-loose > path { fill: none; stroke: none; }
+.kplex-diagnostics-dock-lines text { font-size: 11px; }
+
+/* Hide phase headers and controls without removing notes or property drop areas. */
+.kplex-view-region.is-group-hidden > text,
+.kplex-zone-panel.is-group-hidden > .kplex-zone-tools { display: none; }

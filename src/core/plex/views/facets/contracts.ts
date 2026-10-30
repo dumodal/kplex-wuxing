@@ -9,7 +9,7 @@ export type FacetFlowStyle = Readonly<{direction?: "forward" | "backward" | "bot
   caption?: string; captionPosition?: "start" | "middle" | "end"}>;
 export type FacetFlowOverride = Readonly<{source: string; target: string} & FacetFlowStyle>;
 export type FacetDiagnosticStatus = "unassigned" | "conflicting" | "checking" | "unresolved";
-export type FacetDiagnostics = Readonly<{combined?: boolean; side?: "top" | "right" | "bottom" | "left";
+export type FacetDiagnostics = Readonly<{dock?: boolean; combined?: boolean; side?: "top" | "right" | "bottom" | "left";
   orientation?: "horizontal" | "vertical"; showEmpty?: boolean; order?: readonly FacetDiagnosticStatus[]}>;
 /** Canvas-local preset selection and diagnostics. Legacy layout choices are retained only for
  * restoration compatibility; the preset's saved layout is authoritative in every canvas. */
@@ -23,6 +23,9 @@ export type FacetPreset = Readonly<{version: 1; name: string; nameKey?: string; 
   /** Optional model reading; ordered phase identities remain separate from geometry/order. */
   interpretation?: "wuxing"; relativeLabels?: boolean; regulatingGuides?: boolean;
   diagnostics?: FacetDiagnostics;
+  arrangement?: "grid" | "scatter";
+  sizing?: "fixed" | "content"; showHistory?: boolean; hideGroups?: boolean;
+  relationshipCaptions?: Readonly<Record<string, string>>;
   layout?: FacetLayout; focusAnchor?: FacetFocusAnchor; reverse?: boolean;
   /** Stable defaults are separate from the existing per-canvas area dimension maps. */
   areaSizes?: Readonly<{categories?: Readonly<Record<string, FacetAreaSize>>; diagnostics?: Readonly<Record<string, FacetAreaSize>>}>;

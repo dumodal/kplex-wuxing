@@ -17,7 +17,7 @@ const index={isVisiblePage:()=>true,get:path=>pages.get(path),titleFor:page=>pag
  acquireSemanticDemand:()=>{work.acquisitions++;return()=>work.releases++},acquirePresentationDemand:()=>()=>{},getNodeVisualRevision:()=>0,resolveNodeVisuals:async()=>new Map(),invalidateNodeVisual:()=>{},
  gateStats:unavailableCounts,neighbourCount:()=>0,subscribe,subscribePresentation:subscribe,visibleRelationshipsWithin:()=>[],explainRelationship:()=>null,
  getNeighborhood:path=>({center:pages.get(path),parents:rows(pages.get(path),'parent'),children:rows(pages.get(path),'child'),leftFriends:[],rightFriends:[],siblings:[]})};
-const plugin={settings,index,viewSettingsRegistry:M.builtInCanvasViewSettings,translator:M.createTranslator('en'),app:{workspace:{...nativeEvents},
+const plugin={readCanvasViewConfiguration:id=>({status:"available",values:settings.canvasViewSettings?.[id]?.values??{}}),settings,index,viewSettingsRegistry:M.builtInCanvasViewSettings,translator:M.createTranslator('en'),app:{workspace:{...nativeEvents},
  metadataCache:{...nativeEvents,getFileCache:file=>{work.properties++;return fieldCaches.get(file.path)}},vault:{getFileByPath:path=>pages.get(path)?.file??null,cachedRead:()=>{work.body++;throw Error('Unexpected body read')},getMarkdownFiles:()=>{work.scans++;throw Error('Unexpected inventory')}}},
  saveSettings:async()=>{},getTypographyDevice:()=> 'desktop',isKplexLeafVisible:()=>visible,subscribeKplexVisibility:subscribe,subscribeNodeFlair:subscribe,
  getHierarchyColorRevision:()=>0,isActionSurfaceCurrent:()=>true,getSavedSettingsPolicy:()=>null};

@@ -2,7 +2,7 @@
  * and stable category-pair overrides share one grammar; no relationship or settings writer lives here. */
 import {Setting} from "obsidian";
 import type {FacetPreset, FacetFlowStyle} from "../../../core/plex/views/facets/contracts";
-import {facetFlowId, facetFlowStyle, facetFlowOrder} from "../../../core/plex/views/facets/flow";
+import {facetFlowId, facetFlowStyle, facetFlowPairs} from "../../../core/plex/views/facets/flow";
 import {facetCategoryLabel} from "../../../core/plex/views/facets/labels";
 import {canvasViewText} from "../labels";
 import type {Translator} from "../../../lang";
@@ -30,9 +30,9 @@ export function renderFacetFlowSettings(body: HTMLElement, read: () => FacetPres
   section.createDiv({cls: "setting-item-description", text: t("facets.flowHelp")});
   styleControls(section, /** Read current shared defaults between native field events. */ () => read().flow ?? {},
     /** Merge one default field without freezing pair inheritance. */ patch => change({...read(), flow: {...read().flow, ...patch}}, false), t);
-  const preset = read(), order = facetFlowOrder(preset);
-  for (const [index, target] of order.slice(1).entries()) {
-    const source = order[index], id = facetFlowId(source, target), pair = section.createDiv();
+  const preset = read();
+  for (const {source, target} of facetFlowPairs(preset)) {
+    const id = facetFlowId(source, target), pair = section.createDiv();
     const override = preset.flowOverrides?.some(/** A pair retains identity when its geometric direction reverses. */ value => facetFlowId(value.source, value.target) === id);
     new Setting(pair).setName(t("facets.flowPair", {source: canvasViewText(facetCategoryLabel(preset.categories[source], source), t), target: canvasViewText(facetCategoryLabel(preset.categories[target], target), t)}))
       .addToggle(/** Removing an override restores the actual preset defaults. */ input => input.setValue(override ?? false).onChange(/** Structural changes show/hide only explicitly enabled pair controls. */ enabled => {

@@ -64,3 +64,30 @@ export function measuredAreaGrid(items: readonly MeasuredAreaItem[], columns: nu
   }
   return {positions, width: x - columnGap + paddingX, height: y - rowGap + paddingBottom};
 }
+
+/** Stable loose packing uses actual measured envelopes and seeded spiral candidates, not rows.
+ * Repeated input stays still; collisions reserve adornments and a finite gap between cards. */
+export function measuredAreaScatter(items: readonly MeasuredAreaItem[], widthTarget = 320, gap = 18): MeasuredAreaGrid {
+  const cells = [...measuredCells(items)].sort(/** Stable identities avoid visual reshuffling from display-sort changes. */ (a, b) => a.item.id.localeCompare(b.item.id));
+  if (!cells.length) return {positions: new Map(), width: 0, height: 0};
+  const placed: {cell: MeasuredCell; x: number; y: number}[] = [], stretch = Math.max(.65, Math.min(2, widthTarget / 320));
+  let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+  for (const cell of cells) {
+    let seed = 2166136261;for (const char of cell.item.id) seed = Math.imul(seed ^ char.charCodeAt(0), 16777619);
+    const phase = (seed >>> 0) / 4294967296 * Math.PI * 2;
+    let x = 0, y = 0, found = false;
+    for (let attempt = 0; attempt < 2048; attempt++) {
+      const angle = phase + attempt * 2.399963229728653, radius = 28 * Math.sqrt(attempt + 1);
+      x = Math.cos(angle) * radius * stretch;y = Math.sin(angle) * radius / stretch;
+      if (placed.every(/** A candidate is legal only outside every complete measured envelope. */ other =>
+        Math.abs(x - other.x) >= (cell.width + other.cell.width) / 2 + gap || Math.abs(y - other.y) >= (cell.height + other.cell.height) / 2 + gap)) {found = true;break;}
+    }
+    if (!found) {x = Number.isFinite(right) ? right + gap + cell.width / 2 : 0;y = 0;}
+    placed.push({cell, x, y});left = Math.min(left, x - cell.width / 2);right = Math.max(right, x + cell.width / 2);
+    top = Math.min(top, y - cell.height / 2);bottom = Math.max(bottom, y + cell.height / 2);
+  }
+  const positions = new Map<string, ViewRect>();
+  for (const {cell, x, y} of placed) positions.set(cell.item.id, {x: x - left + 24 + (cell.left - cell.right) / 2,
+    y: y - top + 18 + (cell.top - cell.bottom) / 2, width: cell.item.width, height: cell.item.height});
+  return {positions, width: right - left + 48, height: bottom - top + 36};
+}

@@ -70,6 +70,19 @@ export function nodeBadgeSize(label: string, settings: KplexSettings, presentati
   return {width: Math.max(56, Math.min(300, measured.width - 36)), height: Math.ceil(fontSize * 1.6 + 8), fontSize};
 }
 
+/** Guide prose is not a short note badge: reserve full-width CJK/emoji advances and a readable
+ * baseline before layout chooses its ring radius. Bounds remain finite for authored 80-character text. */
+export function guideCaptionSize(label: string, settings: KplexSettings): {width: number; height: number; fontSize: number} {
+  const fontSize = clamp(settings.baseLinkStyle.fontSize ?? 18, 10, 48);
+  let advance = 0;
+  for (const character of label) {
+    if (/\p{Mark}/u.test(character) || character === "\u200d") continue;
+    const code = character.codePointAt(0) ?? 0;
+    advance += code >= 0x2e80 ? 1.05 : .7;
+  }
+  return {width: Math.max(64, Math.min(1000, Math.ceil(advance * fontSize + 32))), height: Math.ceil(fontSize * 1.6 + 8), fontSize};
+}
+
 /** Keep geometry count-free when requested; provisional zero values never certify absent edges. */
 export function countsForLayout(page: GraphPage, index: Pick<GraphIndex, "neighbourCount" | "gateStats">, deferred: boolean): Pick<PositionedNode, "neighbourCount" | "gateStats"> {
   if (page.transient?.kind === "group") return { neighbourCount: 0, gateStats: {

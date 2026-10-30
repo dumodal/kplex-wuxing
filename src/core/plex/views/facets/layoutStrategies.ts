@@ -47,11 +47,27 @@ function concentricFrames(sizes: readonly Readonly<{width: number; height: numbe
 /** One strategy boundary receives only measured rectangles. Quadrants is admitted only for4;
  * the effective-layout owner supplies an explicit circular fallback for incompatible presets. */
 export function facetCategoryFrames(sizes: readonly Readonly<{width: number; height: number}>[], focus: ViewRect, badge: ViewRect | undefined,
-  spacing: number, layout: FacetLayout, anchor?: FacetFocusAnchor): FacetRegionFrames {
+  spacing: number, layout: FacetLayout, anchor?: FacetFocusAnchor, compact = false): FacetRegionFrames {
   const envelope = focusEnvelope(focus, badge), diagonal = Math.max(...sizes.map(/** Circular separation reserves complete individual rectangles. */ size => Math.hypot(size.width, size.height)));
   const centerRadius = Math.max(Math.hypot(focus.width, focus.height) / 2,
     badge ? Math.hypot(Math.max(Math.abs(badge.x), Math.abs(badge.x + badge.width)), Math.max(Math.abs(badge.y), Math.abs(badge.y + badge.height))) : 0);
-  const radius = Math.max((diagonal + spacing) / (2 * Math.sin(Math.PI / sizes.length)), centerRadius + diagonal / 2 + spacing);
+  let radius = Math.max((diagonal + spacing) / (2 * Math.sin(Math.PI / sizes.length)), centerRadius + diagonal / 2 + spacing);
+  if (compact && layout === "circular") {
+    const points = sizes.map(/** Use actual horizontal/vertical extents instead of enclosing circles. */ (_, i) => {
+      const angle = -Math.PI / 2 + i * Math.PI * 2 / sizes.length;return {x: Math.cos(angle), y: Math.sin(angle)};
+    });
+    radius = 0;
+    for (let i = 0; i < sizes.length; i++) {
+      const a = sizes[i], p = points[i];
+      radius = Math.max(radius, Math.min(((a.width + envelope.width) / 2 + spacing) / Math.max(Math.abs(p.x), 1e-12),
+        ((a.height + envelope.height) / 2 + spacing) / Math.max(Math.abs(p.y), 1e-12)));
+      for (let j = 0; j < i; j++) {
+        const b = sizes[j], q = points[j];
+        radius = Math.max(radius, Math.min(((a.width + b.width) / 2 + spacing) / Math.max(Math.abs(p.x - q.x), 1e-12),
+          ((a.height + b.height) / 2 + spacing) / Math.max(Math.abs(p.y - q.y), 1e-12)));
+      }
+    }
+  }
   let frames: readonly FacetRegionFrame[];
   if (layout === "concentric") frames = concentricFrames(sizes, envelope, spacing);
   else if (layout === "vertical" || layout === "horizontal") frames = linearFrames(sizes, envelope, spacing, layout === "horizontal", anchor ?? (layout === "horizontal" ? "top" : "left"));

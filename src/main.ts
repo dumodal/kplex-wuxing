@@ -2519,6 +2519,11 @@ export default class KplexPlugin extends Plugin {
     if (this.openSettingsPage(this.translator("settings.ui.ontology"))) this.settingsTab?.openOntologyManager('hidden');
   }
 
+  /** Open only the registered native caption settings surface; do not move map focus or open a Settings page. */
+  openCanvasGuideCaption(target: string): boolean {
+    return this.settingsTab?.openCanvasViewManager("wuxing", target) ?? false;
+  }
+
   /** Reuse native page-path navigation with the existing owning-tab fallback for settings cross-links. */
   openCanvasViewSettings(id: string, target?: string): boolean {
     const definition = this.viewSettingsRegistry.definition(id);

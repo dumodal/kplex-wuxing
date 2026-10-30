@@ -1,6 +1,6 @@
 {
   "name": "kplex-wuxing",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A TheBrain-inspired visual knowledge navigator for Obsidian, rebuilt in React.",
   "main": "dist/main.js",
   "type": "module",

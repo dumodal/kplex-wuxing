@@ -10,6 +10,18 @@ import {canvasViewText} from "../labels";
 /** Layout/anchor choices rerender only this small native draft, never a native note editor. */
 export function renderFacetLayoutSettings(body: HTMLElement, read: () => FacetPreset, change: (preset: FacetPreset) => void, t: Translator): void {
   const preset = read();
+  new Setting(body).setName(t("facets.arrangement")).addDropdown(/** Stable loose packing changes presentation, never membership. */ input => input
+    .addOptions({grid: t("facets.arrangementGrid"), scatter: t("facets.arrangementScatter")}).setValue(preset.arrangement ?? "grid")
+    .onChange(/** Only declared arrangement modes enter the current preset draft. */ arrangement => {
+      if (arrangement === "grid" || arrangement === "scatter") change({...read(), arrangement});
+    }));
+  new Setting(body).setName(t("facets.showHistory")).addToggle(/** History is a presentation preference; its saved entries remain intact. */ input => input
+    .setValue(preset.showHistory ?? true).onChange(/** Keep this switch with the current captured preset draft. */ showHistory => change({...read(), showHistory})));
+  new Setting(body).setName(t("facets.sizing")).setDesc(t("facets.sizingHelp")).addDropdown(/** Size policy belongs to this preset's detached draft. */ input => input
+    .addOptions({fixed: t("facets.sizingFixed"), content: t("facets.sizingContent")}).setValue(preset.sizing ?? "fixed")
+    .onChange(/** Unknown control values never enter portable preset settings. */ sizing => {
+      if (sizing === "fixed" || sizing === "content") change({...read(), sizing});
+    }));
   new Setting(body).setName(t("facets.layout")).addDropdown(/** The same stable layout catalog serves the captured canvas choice. */ input => {
     for (const id of FACET_LAYOUTS) input.addOption(id, t(`facets.layout.${id}`));
     const quadrants = input.selectEl.querySelector<HTMLOptionElement>('option[value="quadrants"]');if (quadrants) quadrants.disabled = preset.order.length !== 4;

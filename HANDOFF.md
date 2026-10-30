@@ -19,14 +19,10 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Wu Xing fork upstream synchronization
+# Wu Xing process captions delivered
 
-- Request: synchronize the existing fork to current upstream before developing editable process captions.
-- Starting branch/head: `wuxing-local-design` at `4253471af944e2206555506322ec9665ddbedf36`.
-- Destination: `sync/upstream-2026-10-30`; merge source `upstream/main` at `6596f689c07f1b8c9ba84d09b7cf9c01f929a568` (0.3.0).
-- Adopt upstream Compass/Mind Map/Facets architecture. Keep fork manifests, serialized workspace view IDs, and IndexedDB/cache cleanup namespaces isolated as `kplex-wuxing`.
-- Retain status/emoji recognition through upstream's built-in Wu Xing Facets preset. Existing old-fork visual effects and guided terminology are preserved on the original branch, not overlaid on the new architecture. Historical fork docs are not current feature claims.
-- Local gradient/docs changes are preserved in the named pre-sync Git stash and Downloads task backup.
-- No editable five-edge captions have been implemented in this synchronization. No vault settings, note content, or installed plugin artifacts were changed. No GitHub push or PR is included.
-- Validation: Node 22.22.2, locked dependencies installed with lifecycle scripts disabled; `npm run verify` completed with two browser failures; all other lanes passed. The folder-order failure reproduces in an untouched upstream snapshot; the 20,015-owner browser test timed out and remains unresolved. Independent real production build passed; exact details and artifact receipts are in `docs/validation/wuxing-upstream-sync-2026-10-30.md`. Native startup/large-vault acceptance remains untested; no disposable vault is configured for this synchronization.
-- Logs and exact local backups: `/Users/dumo/Downloads/dumodal-Codex/2026-10-30-kplex-upstream-sync/`.
+- Version 0.3.1, five circular process captions and direct native editing implemented on `sync/upstream-2026-10-30`. Saved uncommitted; no push or PR.
+- Installed exact production artifacts into dumodal and verified actual Obsidian runtime, five visible captions, direct double-click editing, durable save, restored test text and unchanged note status/content. Current preset: “五行 · 过程导航”.
+- Final affected suite 65/65, ESLint and production build pass. Full regression has recorded browser-storage failures/stall; do not claim all checks passed.
+- Evidence and limits: [process captions validation](docs/validation/wuxing-process-captions-2026-10-30.md).
+- Previous synchronization and known upstream baseline: [sync validation](docs/validation/wuxing-upstream-sync-2026-10-30.md).

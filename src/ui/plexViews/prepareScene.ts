@@ -6,7 +6,7 @@ import {nodeId, type NodeId, type GraphNodeView} from "../../core/graph/model";
 import type {PlexViewDefinition, PlexViewRead, PlexProjection, PlexMeasurement, PlexOccurrence, PlexViewEdge, PlexViewPropertyDependencies, PlexNodeBadge, PlexDecorationTextSize} from "../../core/plex/views/contracts";
 import {RelationType, type GraphPage, type PositionedNode, type PositionedEdge, type Role, type Neighbour} from "../../types";
 import {resolveNodeStyle, resolveLinkStyle} from "../../index/style";
-import {deferredNodeCounts, nodeSize, sectionNodeSize, nodeBadgeSize} from "./measurement";
+import {deferredNodeCounts, nodeSize, sectionNodeSize, nodeBadgeSize, guideCaptionSize} from "./measurement";
 import {projectRelationGroups} from "./groupRelations";
 import type {Translator} from "../../lang";
 import type {HostPlexScene} from "./scene";
@@ -343,7 +343,7 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
       if (!label || typeof label.id !== "string" || !label.id || label.id.length > 128 || decorationMeasurements.has(label.id)
         || !validCanvasViewText(label.label) || "literal" in label.label && label.label.literal.length > 80) throw new Error("Invalid decoration label");
       const text = grouping?.translate ? canvasViewText(label.label, grouping.translate) : "literal" in label.label ? label.label.literal : label.label.key;
-      decorationMeasurements.set(label.id, nodeBadgeSize(text, settings));
+      decorationMeasurements.set(label.id, guideCaptionSize(text, settings));
     }
     const layout = definition.layout(filtered, measurements, state, Boolean(editorSize), {areaHeights: grouping?.areaHeights ?? {}, areaWidths: grouping?.areaWidths ?? {}, configuration, decorationMeasurements});
     if (!current() || !read.isCurrent()) return {scene: empty, projection: null, failure: true};
@@ -446,7 +446,11 @@ export function prepareViewScene(definition: PlexViewDefinition, read: PlexViewR
         || mark.stroke !== undefined && mark.stroke !== "line" && mark.stroke !== "none"
         || mark.caption !== undefined && (!validCanvasViewText(mark.caption.label) || "literal" in mark.caption.label && mark.caption.label.literal.length > 80
           || !Object.values(mark.caption.bounds).every(Number.isFinite) || mark.caption.bounds.width <= 0 || mark.caption.bounds.width > 1000
-          || mark.caption.bounds.height <= 0 || mark.caption.bounds.height > 200 || !Number.isFinite(mark.caption.fontSize) || mark.caption.fontSize < 1 || mark.caption.fontSize > 80)
+          || mark.caption.bounds.height <= 0 || mark.caption.bounds.height > 1000 || !Number.isFinite(mark.caption.fontSize) || mark.caption.fontSize < 1 || mark.caption.fontSize > 80
+          || mark.caption.rotation !== undefined && (!Number.isFinite(mark.caption.rotation.angle) || Math.abs(mark.caption.rotation.angle) > 90
+            || !Object.values(mark.caption.rotation.center).every(Number.isFinite) || !Number.isFinite(mark.caption.rotation.width)
+            || mark.caption.rotation.width <= 0 || mark.caption.rotation.width > 1000 || !Number.isFinite(mark.caption.rotation.height)
+            || mark.caption.rotation.height <= 0 || mark.caption.rotation.height > 200))
         || mark.variant !== undefined && mark.variant !== "generating" && mark.variant !== "regulating") throw new Error("Invalid decoration guide");
     }
     if (sectionHost && !sectionHost.isCurrent()) throw new Error("Retired section revision");

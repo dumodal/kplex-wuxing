@@ -141,11 +141,13 @@ export type PlexArea = Readonly<{
     /** Keep measured positions while retaining matching ancestors; omitted policies preserve filtered repacking. */
     filterLayout?: "keep"}>;
 }>;
-/** Pure presentation marks have no semantic endpoints or interaction/write authority. */
+/** Presentation marks have no semantic endpoints or graph/drop authority; caption editing only changes preset prose. */
 export type PlexDecoration = Readonly<{id: string} & (
   {kind: "region"; bounds: ViewRect; shape?: PlexAreaShape; labelKey: string; label?: string; description?: CanvasViewText; areaId?: AreaId; tint?: "water" | "wood" | "fire" | "earth" | "metal"; color?: ColorValue; count?: boolean}
   | {kind: "guide"; points: readonly ViewPoint[]; directed?: boolean; direction?: "forward" | "backward" | "both"; stroke?: "line" | "none";
-    caption?: Readonly<{label: CanvasViewText; bounds: ViewRect; fontSize: number}>; variant?: "generating" | "regulating"}
+    caption?: Readonly<{label: CanvasViewText; bounds: ViewRect; fontSize: number;
+      /** Optional upright local text box; bounds remains its complete rotated fitting footprint. */
+      rotation?: Readonly<{angle: number; center: ViewPoint; width: number; height: number}>}>; variant?: "generating" | "regulating"}
 )>;
 export type PlexViewLayout = Readonly<{
   positions: ReadonlyMap<OccurrenceId, ViewRect>; areas: readonly PlexArea[];

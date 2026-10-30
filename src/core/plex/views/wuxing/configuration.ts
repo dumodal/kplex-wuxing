@@ -31,7 +31,7 @@ export const wuXingConfigurationSchema: PlexViewConfigurationSchema = {
     field: {defaultValue: "phase", validate: value => text(value, 128) && typeof value === "string" && value.trim().length > 0},
     order: {defaultValue: WUXING_PHASES.join(","), validate: value => wuXingPhaseOrder(value) !== null},
     start: {defaultValue: "water", validate: isWuXingPhase},
-    spacing: {defaultValue: 56, validate: value => number(value, 24, 200)},
+    spacing: {defaultValue: 56, validate: value => number(value, 0, 200)},
     regionWidth: {defaultValue: 320, validate: value => number(value, 200, 640)},
     regionHeight: {defaultValue: 280, validate: value => number(value, 160, 600)},
     guides: {defaultValue: true, validate: value => typeof value === "boolean"},

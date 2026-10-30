@@ -10,6 +10,8 @@ import type {Translator} from "../../../lang";
 export function renderDiagnosticSettings(body: HTMLElement, read: () => FacetDiagnostics | undefined, t: Translator,
   change: (value: FacetDiagnostics, structural: boolean) => void): void {
   const current = read() ?? {};
+  new Setting(body).setName(t("facets.diagnosticsDock")).addToggle(/** Viewport docking is visual only; classification and saved world-side intent remain unchanged. */ input => input
+    .setValue(current.dock ?? false).onChange(/** Rebuild only this detached settings form. */ dock => change({...read(), dock}, true)));
   new Setting(body).setName(t("facets.combineDiagnostics")).setDesc(t("facets.combineDiagnosticsHelp")).addToggle(/** Shared defaults change only after the parent native Save. */ input => input
     .setValue(current.combined ?? true).onChange(/** Changing mode rerenders the conditional arrangement control. */ combined => change({...read(), combined}, true)));
   new Setting(body).setName(t("facets.diagnosticsSide")).addDropdown(/** Physical sides are stable data, not localized identifiers. */ input => input

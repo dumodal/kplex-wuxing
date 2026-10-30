@@ -5,6 +5,7 @@
  * explicit requests, fences rerooted reads and shares measurement, tree drawing and actions.
  * Host-bound Plex scene composition, shared captured center-arrival motion and finite Wander navigation ports, layout and relationship interactions. Semantic resolution stays index/core-owned; UI labels and on-demand evidence hints use the injected translator. Navigation fits keep the central node centered and follow late geometry until manual camera input; publication and ordinary pane resizing preserve manual intent. Sidecar open/close transitions explicitly reframe the current viewport after native layout settles, with pending work retired by input, navigation or unmount. View-owned display transitions retain camera coordinates and scene settings. Device typography stages scalar live preferences and persists after input settles; unmount flushes storage without replaying stale overrides. Area-height gestures own viewport pointer capture and persist existing presentation settings on completion or interruption. History and pinned drag targets share composer eligibility; external file drops follow the rendered area's semantic role. Theme-native area previews follow the existing drop action without intercepting capture or moving the dragged thought. Visible rows retain finite cache-only presentation demand; hidden surfaces and effect teardown release it. Geometry defers gate/count queries until a row intersects the displayed viewport, including partially clipped rows. Ordinary unfiltered scenes project cross-links for clipped visible rows; filtered and section scenes retain their established edge/count policy. Scene-local React keys capture paths before canonical pages can mutate during rename; semantic pages and actions retain their live identity. Normal-mode keyboard and exact-phrase typing selection are view-local; the displayed occurrence projection supplies all candidates and the shared selection owner reveals them without changing the center, filters or native search. Host methods own activation/rename/creation. Filtered badge numerators use revision-scoped semantic endpoint membership independently of connector routing and viewport clipping. Pane-fit native layout controls own local touch containment and bounded scrolling without changing preferences or browser range behavior. Accessible layout-wrapper hints use the shell's shared tooltip owner; inputs retain concise accessible names.
  * Hierarchy Find selects and reveals exact occurrences without activating attention or opening an editor.
+ * Double-clicking measured guide captions opens only their captured preset text editor, never a semantic relationship action.
  * Registered view layout rails share the native Settings queued writer and measured layout pipeline;
  * they preserve camera intent and editor instances without acquiring semantic sources.
  * Visual resolution and metadata refreshes retain the index consent epoch; teardown and revocation
@@ -100,6 +101,10 @@ import {occurrenceKey, edgeOccurrence, edgePhysicalOccurrence, semanticSceneEdge
 import {createPlexSectionViewContext} from "./plexViews/sections";
 import {viewLabel} from "./plexViews/labels";
 import {ViewDecorations, viewDecorationCounts} from "./plexViews/ViewDecorations";
+import {relationshipCaptionKey, relationshipCaptionTarget} from "../core/plex/views/facets/flow";
+import {facetLibrary} from "../core/plex/views/facets/configuration";
+import {facetState, resolveFacetPreset} from "../core/plex/views/facets/state";
+import {facetCaptionTarget, facetFlowId, facetFlowPairs} from "../core/plex/views/facets/flow";
 import {createLegacyPropertyProvider} from "../adapters/obsidian/predicateContracts";
 import { DropAreaPreview } from "./components/DropAreaPreview";
 import { DoubleTapGesture } from "./components/DoubleTapGesture";
@@ -438,6 +443,17 @@ function edgeGeometry(a: Point, b: Point, sourceGate: GateSide, targetGate: Gate
   };
 }
 
+/** Intersect the center-to-center ray with a card boundary; physical side is only a clipping hint. */
+function freeCardAnchor(node: PositionedNode, other: PositionedNode): {point: Point; port: GateSide} {
+  const dx = other.x - node.x, dy = other.y - node.y;
+  const tx = dx ? node.width / 2 / Math.abs(dx) : Infinity;
+  const ty = dy ? node.height / 2 / Math.abs(dy) : Infinity;
+  const t = Math.min(tx, ty);
+  if (!Number.isFinite(t)) return {point: {x: node.x, y: node.y}, port: "right"};
+  return {point: {x: node.x + dx * t, y: node.y + dy * t},
+    port: tx < ty ? dx < 0 ? "left" : "right" : dy < 0 ? "top" : "bottom"};
+}
+
 /** Return the actual connector label; default role/topology definitions remain visually suppressed. */
 function relationLabel(typeDefinition?: string): string | null {
   const label = typeDefinition?.trim();
@@ -594,6 +610,10 @@ function Edge({
   highlighted,
   dimmed,
   passive = false,
+  freeConnections = false,
+  annotation,
+  onEditAnnotation,
+  annotationLabel,
   onHover,
   onMove,
   onLeave,
@@ -609,6 +629,10 @@ function Edge({
   highlighted: boolean;
   dimmed: boolean;
   passive?: boolean;
+  freeConnections?: boolean;
+  annotation?: string;
+  onEditAnnotation?: () => void;
+  annotationLabel?: string;
   onHover: (event: PointerEvent<SVGPathElement>) => void;
   onMove: (event: PointerEvent<SVGPathElement>) => void;
   onLeave: () => void;
@@ -618,9 +642,12 @@ function Edge({
   const target = nodes.get(edgePhysicalOccurrence(edge, "target"));
   if (!source || !target) return null;
 
-  const gates = gatesForEdge(edge);
-  const a = gatePoint(source, gates.source);
-  const b = gatePoint(target, gates.target);
+  const fixedGates = gatesForEdge(edge);
+  const start = freeConnections ? freeCardAnchor(source, target) : {point: gatePoint(source, fixedGates.source), port: fixedGates.source};
+  const end = freeConnections ? freeCardAnchor(target, source) : {point: gatePoint(target, fixedGates.target), port: fixedGates.target};
+  const gates = {source: start.port, target: end.port};
+  const a = start.point;
+  const b = end.point;
   const sourceArea = viewportForNode(source), targetArea = viewportForNode(target);
   const endpoints = edgeViewportEndpoints(a, b, gates.source, gates.target, sourceArea, targetArea, {source, target});
   if (!endpoints) return null;
@@ -628,20 +655,20 @@ function Edge({
   // anchors freely; the canvas clips them, without cutting a curve at an unrelated union box.
   const clip = sourceArea && sourceArea === targetArea ? edgeViewportClip(edge, nodes, viewportForNode) : undefined;
   if (clip === null) return null;
-  const geometry = edgeGeometry(endpoints.source.point, endpoints.target.point, endpoints.source.port, endpoints.target.port, connectorStyle);
+  const geometry = edgeGeometry(endpoints.source.point, endpoints.target.point, endpoints.source.port, endpoints.target.port, freeConnections ? "straight" : connectorStyle);
   const style = edge.style;
-  const dash = style.strokeStyle === "dashed" ? "7 7" : style.strokeStyle === "dotted" ? "2 6" : undefined;
+  const dash = freeConnections ? "7 7" : style.strokeStyle === "dashed" ? "7 7" : style.strokeStyle === "dotted" ? "2 6" : undefined;
   const reverse = edge.direction === (inverseArrowDirection ? LinkDirection.TO : LinkDirection.FROM);
   const markerStart = endpoints.source.continued ? undefined : markerFor(reverse ? style.endArrowHead : style.startArrowHead);
   const markerEnd = endpoints.target.continued ? undefined : markerFor(reverse ? style.startArrowHead : style.endArrowHead);
   const baseWidth = style.strokeWidth ?? DEFAULT_RENDERED_LINK_WIDTH;
   const strokeWidth = highlighted ? Math.max(baseWidth + 1.7, 2.8) : baseWidth;
   const stroke = alphaHexToCss(style.strokeColor, NATIVE_LINK_STROKE);
-  const label = style.showLabel && !endpoints.source.continued && !endpoints.target.continued ? relationLabel(edge.caption ?? edge.typeDefinition) : null;
+  const label = !endpoints.source.continued && !endpoints.target.continued ? annotation || (style.showLabel ? relationLabel(edge.caption ?? edge.typeDefinition) : null) : null;
 
   const resolvedCrossLinkOpacity = edge.isCrossLink && !highlighted ? crossLinkOpacity : undefined;
 
-  const content = <g className={`kplex-edge${edge.isCrossLink ? " is-cross-link" : ""}${passive ? " is-hover-peek" : ""}${highlighted ? " is-highlighted" : ""}${dimmed ? " is-dimmed" : ""}`}>
+  const content = <g onDoubleClick={onEditAnnotation ? event => {event.preventDefault();event.stopPropagation();onEditAnnotation();} : undefined} className={`kplex-edge${edge.isCrossLink ? " is-cross-link" : ""}${passive ? " is-hover-peek" : ""}${highlighted ? " is-highlighted" : ""}${dimmed ? " is-dimmed" : ""}`}>
     <path
       className="kplex-edge-visible"
       opacity={resolvedCrossLinkOpacity}
@@ -662,6 +689,7 @@ function Edge({
       stroke="transparent"
       strokeWidth={Math.max(14, baseWidth + 12)}
       vectorEffect="non-scaling-stroke"
+      onPointerDown={onEditAnnotation ? event => {if (event.button === 0 && event.pointerType !== "touch") event.stopPropagation();} : undefined}
       onPointerEnter={onHover}
       onPointerMove={onMove}
       onPointerLeave={onLeave}
@@ -671,7 +699,7 @@ function Edge({
       data-kplex-edge-continuation={end} className="kplex-edge-continuation" aria-hidden="true" pointerEvents="none"
       cx={endpoints[end].point.x} cy={endpoints[end].point.y} r={3.5} fill={labelBackground} stroke={stroke}
       strokeWidth={1.5} vectorEffect="non-scaling-stroke" opacity={resolvedCrossLinkOpacity} /> : null)}
-    <EdgeLabel label={label} midpoint={geometry.midpoint} style={style} background={labelBackground} opacity={resolvedCrossLinkOpacity} />
+    <EdgeLabel label={label} midpoint={geometry.midpoint} style={style} background={labelBackground} opacity={resolvedCrossLinkOpacity} onEdit={onEditAnnotation} editLabel={annotationLabel} />
   </g>;
   return clip ? <svg x={clip.left} y={clip.top} width={clip.width} height={clip.height}
     viewBox={`${clip.left} ${clip.top} ${clip.width} ${clip.height}`} overflow="hidden">{content}</svg> : content;
@@ -679,10 +707,13 @@ function Edge({
 
 /** Shared SVG label presentation for ordinary and expanded-descendant connectors. Caption text
  * is already projected; this component preserves existing generic suppression, fonts and colors. */
-function EdgeLabel({label,midpoint,style,background,opacity}:{label:string|null;midpoint:Point;style:PositionedEdge['style'];background:string;opacity?:number}){
+function EdgeLabel({label,midpoint,style,background,opacity,onEdit,editLabel}:{label:string|null;midpoint:Point;style:PositionedEdge['style'];background:string;opacity?:number;onEdit?:()=>void;editLabel?:string}){
   if(!label)return null;
-  const fontSize=style.fontSize??10,labelWidth=Math.max(20,label.length*fontSize*.58+10),labelHeight=fontSize+6;
-  return <g className="kplex-edge-label-wrap" pointerEvents="none" opacity={opacity}>
+  const fontSize=style.fontSize??10,labelWidth=Math.max(20,Array.from(label).reduce((width,char)=>width+(char.codePointAt(0)!>255?1:.58),0)*fontSize+12),labelHeight=fontSize+6;
+  return <g className={`kplex-edge-label-wrap${onEdit ? " is-editable" : ""}`} pointerEvents={onEdit ? "all" : "none"} opacity={opacity}
+    role={onEdit ? "button" : undefined} tabIndex={onEdit ? 0 : undefined} aria-label={onEdit ? `${editLabel}: ${label}` : undefined}
+    onPointerDown={onEdit ? event => event.stopPropagation() : undefined}
+    onKeyDown={onEdit ? event => {if (event.key === "Enter" || event.key === " ") {event.preventDefault();event.stopPropagation();onEdit();}} : undefined}>
       <rect
         x={midpoint.x - labelWidth / 2}
         y={midpoint.y - labelHeight / 2}
@@ -701,6 +732,60 @@ function EdgeLabel({label,midpoint,style,background,opacity}:{label:string|null;
         fontSize={fontSize}
       >{label}</text>
     </g>;
+}
+
+/** Screen-fixed diagnostics reuse canonical navigation/drag writers and the owned camera frame. */
+function DiagnosticsDock({nodes, edges, root, sync, title, empty, activate, drag, finishDrag, captions, edit}: {
+  nodes: readonly PositionedNode[]; edges: readonly PositionedEdge[]; root: {current: HTMLDivElement | null};
+  sync: {current: () => void}; title: string; empty: string; activate: (node: PositionedNode) => void;
+  drag: (node: PositionedNode, event: DragEvent<HTMLButtonElement>) => void; finishDrag: () => void;
+  captions: Readonly<Record<string, string>>; edit?: (edge: PositionedEdge) => void;
+}) {
+  const tray = useRef<HTMLDivElement | null>(null), lines = useRef<SVGSVGElement | null>(null);
+  useLayoutEffect(/** Own finite geometry updates without a polling loop or graph reads. */ () => {
+    /** Paint visible dock continuations from actual rendered card boundaries. */
+    const update = (): void => {
+      const host = root.current, strip = tray.current, svg = lines.current;if (!host || !strip || !svg) return;
+      const base = host.getBoundingClientRect(), clip = strip.getBoundingClientRect();
+      const cards = Array.from(host.querySelectorAll<HTMLElement>('[data-kplex-path]'));
+      for (const row of Array.from(svg.querySelectorAll<SVGPathElement>('path'))) {
+        const edge = edges[Number(row.dataset.edge)], a = edge && cards.find(card => card.dataset.kplexPath === edge.sourcePath && !strip.contains(card)),
+          b = edge && cards.find(card => card.dataset.kplexPath === edge.targetPath && strip.contains(card));
+        if (!a || !b) {row.parentElement?.classList.add('is-hidden');continue;}
+        const ar = a.getBoundingClientRect(), br = b.getBoundingClientRect();
+        if (br.right <= clip.left || br.left >= clip.right) {row.parentElement?.classList.add('is-hidden');continue;}
+        const ax = ar.x + ar.width / 2, ay = ar.y + ar.height / 2, bx = br.x + br.width / 2, dx = bx - ax, dy = br.top - ay;
+        const t = Math.min(dx ? ar.width / 2 / Math.abs(dx) : Infinity, dy ? ar.height / 2 / Math.abs(dy) : Infinity);
+        row.setAttribute('d', `M ${ax + dx * t - base.left} ${ay + dy * t - base.top} L ${bx - base.left} ${br.top - base.top}`);row.parentElement?.classList.remove('is-hidden');
+        const label = row.parentElement?.querySelector('text');
+        if (label) {label.setAttribute('x', String((ax + dx * t + bx) / 2 - base.left));label.setAttribute('y', String((ay + dy * t + br.top) / 2 - base.top));}
+      }
+    };
+    sync.current = update;update();
+    const owner = root.current?.ownerDocument.defaultView, observer = owner ? new owner.ResizeObserver(update) : null;
+    if (root.current) observer?.observe(root.current);if (tray.current) observer?.observe(tray.current);
+    return () => {observer?.disconnect();if (sync.current === update) sync.current = () => {};};
+  }, [nodes, edges, root, sync]);
+  return <>
+    <svg ref={lines} className="kplex-diagnostics-dock-lines" aria-hidden="true">{edges.map((edge, i) =>
+      <g key={edge.id ?? i} onPointerDown={event => event.stopPropagation()} onDoubleClick={edit ? event => {event.preventDefault();event.stopPropagation();edit(edge);} : undefined}>
+        <path data-edge={i} fill="none" stroke="var(--text-faint)" strokeWidth="1" strokeDasharray="5 5" />
+        <text textAnchor="middle" dominantBaseline="central">{captions[relationshipCaptionKey(edge)] || relationLabel(edge.caption ?? edge.typeDefinition)}</text>
+      </g>)}</svg>
+    <div ref={tray} className="kplex-diagnostics-dock" role="region" aria-label={title}
+      onPointerDown={/** Keep strip input outside world pan gestures. */ event => event.stopPropagation()}
+      onWheel={/** Native strip scrolling owns its gesture. */ event => event.stopPropagation()}
+      onScroll={/** Repaint only dock continuations after horizontal scrolling. */ () => sync.current()}>
+      <span className="kplex-diagnostics-dock-title">{title}</span>
+      {nodes.length ? nodes.map(node => <button key={occurrenceKey(node)} data-kplex-path={node.page.path}
+        title={`${node.label}${node.viewBadge?.label ? ' · ' + node.viewBadge.label : ''}`} draggable={canDragNodeLink(node.page)}
+        onDragStart={/** Export the captured existing-note payload. */ event => drag(node, event)}
+        onDragEnd={finishDrag}
+        onClick={/** The existing navigation owner changes attention. */ event => {event.stopPropagation();activate(node);}}>
+        <ObsidianIcon name="file-text" size={14} /><span>{node.label}</span>
+      </button>) : <span className="kplex-diagnostics-dock-empty">{empty}</span>}
+    </div>
+  </>;
 }
 
 /** Compose the deterministic Plex scene; native-follow layouts land immediately while explicit navigation retains motion and central Open uses a main tab. */
@@ -1063,6 +1148,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const viewFailed = Boolean(sceneGeometry.failed);
   const scene = useMemo(() => viewFailed || layoutSectionExpansion || !classic ? sceneGeometry : classic.bind(sceneGeometry, layoutNeighborhood),
     [classic, viewFailed, sceneGeometry, layoutNeighborhood, layoutSectionExpansion]);
+  const dockLibrary = viewDefinition.id === "wuxing" ? facetLibrary(readViewConfiguration(viewDefinition, settings.canvasViewSettings)) : null;
+  const captionPreset = dockLibrary ? resolveFacetPreset(dockLibrary, facetState(viewSession?.state)?.preset ?? "wuxing") : null;
+  const diagnosticsDocked = Boolean(dockLibrary && resolveFacetPreset(dockLibrary, facetState(viewSession?.state)?.preset ?? "wuxing").preset.diagnostics?.dock);
+  const dockAreas = new Set(diagnosticsDocked ? Object.keys(scene.zoneAreas).filter(/** Only diagnostic identities leave world geometry. */ id => id.includes('"diagnostics"') || id.includes('"status"')) : []);
+  const dockNodes = scene.nodes.filter(/** Preserve all canonical occurrences in the shared action scene. */ node => node.areaId && dockAreas.has(node.areaId));
+  const dockPaths = new Set(dockNodes.map(/** Canonical identities retain existing semantic incidence. */ node => node.page.path));
+  const dockEdges = scene.edges.filter(/** Continue actual inbound edges into the fixed tray. */ edge => dockPaths.has(edge.targetPath) && !dockPaths.has(edge.sourcePath));
   const classicEditorCounts = useMemo(/** One linear pass rejects ambiguous section copies before native admission. */ () => {
     if (!classic) return null;
     const counts = new Map<string, number>();for (const node of scene.nodes) {const key = classic.editorKey(node, activePath);if (key) counts.set(key, (counts.get(key) ?? 0) + 1);}return counts;
@@ -1214,6 +1306,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     };
   }, [plugin, index, visualPageByPath, settings.thumbnailProperty, settings.nodeImageProperty, settings.attachmentImageDisplay, settings.allowRemoteNodeImages]);
   const viewport = useRef<HTMLDivElement | null>(null);
+  const diagnosticDockSync = useRef<() => void>(() => {});
   useEffect(/** Check the initial stationary center, with no timer reset on ordinary graph progress. */ () => {
     if (!classic || initialCenterChecked.current) return;
     const element = viewport.current, owner = element?.ownerDocument, view = owner?.defaultView;
@@ -1609,6 +1702,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         if (element) element.style.transform = `translate(${current.x}px, ${current.y}px) scale(${current.scale})`;
         syncCentralEditorOverlay();
       }
+      diagnosticDockSync.current();
       if (compassSync.current()) requestCameraFrame();
     });
   };
@@ -1933,6 +2027,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         node.y + node.height / 2 + Math.max(14, (node.controlReserve?.bottom ?? 0) + 4));
     }
     for (const zone of ZONES) {
+      if (dockAreas.has(zone)) continue;
       const panel = scene.zoneViewports[zone];
       if (!panel) continue;
       includeRect(panel.left - 12, panel.top - 12, panel.left + panel.width + 12, panel.top + panel.height + 12);
@@ -1940,13 +2035,14 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
 
     // Empty labeled regions are part of a view's scene, even when no thought supplies their extents.
     for (const decoration of scene.decorations ?? []) {
+      if (decoration.kind === "region" && dockAreas.has(decoration.areaId ?? decoration.id)) continue;
       if (decoration.kind === "region") includeRect(decoration.bounds.x - 12, decoration.bounds.y - 12, decoration.bounds.x + decoration.bounds.width + 12, decoration.bounds.y + decoration.bounds.height + 12);
       else {
         if (decoration.stroke !== "none") for (const point of decoration.points) includeRect(point.x - 12, point.y - 12, point.x + 12, point.y + 12);
         const bounds = decoration.caption?.bounds;if (bounds) includeRect(bounds.x - 4, bounds.y - 4, bounds.x + bounds.width + 4, bounds.y + bounds.height + 4);
       }
     }
-    for (const badge of scene.badgeBounds ?? []) includeRect(badge.bounds.x - 4, badge.bounds.y - 4, badge.bounds.x + badge.bounds.width + 4, badge.bounds.y + badge.bounds.height + 4);
+    for (const badge of scene.badgeBounds ?? []) if (!dockNodes.some(node => occurrenceKey(node) === badge.occurrenceId)) includeRect(badge.bounds.x - 4, badge.bounds.y - 4, badge.bounds.x + badge.bounds.width + 4, badge.bounds.y + badge.bounds.height + 4);
 
     if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
       applyCamera({ x: el.clientWidth / 2, y: el.clientHeight / 2, scale: 1 }, true);
@@ -1955,7 +2051,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
 
     const maxScale = Platform.isIosApp ? IOS_MAX_ZOOM : MAX_ZOOM;
     const center = framingOccurrence() ?? { x: 0, y: 0 };
-    applyCamera(centeredViewportFit(el.clientWidth, el.clientHeight, center,
+    applyCamera(centeredViewportFit(el.clientWidth, el.clientHeight - (diagnosticsDocked ? 64 : 0), center,
       { left: minX, top: minY, right: maxX, bottom: maxY }, maxScale), true);
   };
   fitCurrentScene.current = fit;
@@ -3268,8 +3364,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const target = e.target as Element;
     if (target.closest(".kplex-central-editor-content, .kplex-zoom-controls, .kplex-zone-tools, .kplex-layout-controls, .kplex-filter-panel, input, select, textarea, button")) return;
     if (centralEditorMaximized) return;
-
-
+    // Bare-canvas gestures explicitly return keyboard ownership from the embedded editor.
+    if (!target.closest("[data-kplex-path], .kplex-edge-hit, [data-kplex-gate]")) {
+      viewport.current?.closest<HTMLElement>(".kplex-app")?.focus({preventScroll: true});
+    }
     armAreaSettingsDismiss(e, target);
 
     // Empty-canvas click/touch is an explicit escape hatch for hover intent. Pointer-leave events
@@ -4961,6 +5059,12 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const origin = scene.nodes.find(node => node.page.path === edge.sourcePath)?.page ?? index.get(edge.sourcePath);
     const target = scene.nodes.find(node => node.page.path === edge.targetPath)?.page ?? index.get(edge.targetPath);
     if (!origin || !target) return;
+    if (captionPreset && (captionPreset.status === "ready" || captionPreset.status === "replaced")) {
+      menu.addItem(/** A discoverable nonsemantic edit remains separate from relationship mutation actions. */ item => item
+        .setTitle(translate("facets.relationshipCaption")).setIcon("pencil").onClick(/** Capture only the existing edge's presentation identity. */ () => {
+          clearHoverIntent(true);plugin.openCanvasGuideCaption(relationshipCaptionTarget(captionPreset.id, relationshipCaptionKey(edge)));
+        }));
+    }
     const membership = tagMembershipPair(origin, target);
     if (membership) {
       const toNoteType = !isNoteTypeTagConnection(origin, target);
@@ -4983,7 +5087,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
    * existing canvas owner/lifetime and exact canonical source fence removal authority. Descendant
    * strips without one admitted primary scene edge remain copy-only, with their own displayed key.
    */
-  const beginNativeNodeDrag = (page: GraphPage, role: Role | "center", label: string, event: DragEvent<HTMLDivElement>): void => {
+  const beginNativeNodeDrag = (page: GraphPage, role: Role | "center", label: string, event: DragEvent<HTMLElement>): void => {
     const owner = viewport.current, element = event.currentTarget, id = element.dataset.kplexKeyboardId;
     if (!owner) { event.preventDefault(); return; }
     clearHoverIntent(true);
@@ -5060,6 +5164,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       node={nodeForDisplay}
       translate={translate}
       badgeColorRevision={badgeColorRevision}
+      freeConnections={viewDefinition.id === "wuxing"}
       branchStatus={visibleEdgeProjection.limited && baseNode === navigationNode() ? translate("mindmap.limited") : baseNode.branch?.reference ? translate("mindmap.reference") : baseNode.branch?.status === "loading" ? translate("mindmap.loading")
         : baseNode.branch?.status === "limited" ? translate("mindmap.limited") : baseNode.branch?.status === "partial" ? translate("mindmap.partial")
         : baseNode.branch?.status === "unavailable" ? translate("mindmap.unavailable") : undefined}
@@ -5198,7 +5303,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const displayedNodes = layout.nodes.filter((node) => !isDraggedNode(node));
     return <div
       key={zone}
-      className={`kplex-zone-panel kplex-zone-${zone}`}
+      className={`kplex-zone-panel kplex-zone-${zone}${captionPreset?.preset.hideGroups && zone.includes('"category"') ? " is-group-hidden" : ""}`}
       style={{ left: panel.left, top: panel.top, width: panel.width, height: panel.height }}
     >
       <div className="kplex-zone-tools" onPointerDown={(event: PointerEvent<HTMLDivElement>) => event.stopPropagation()}>
@@ -5567,7 +5672,15 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
           void plugin.actionManager.dispatch({id: "editor.collapse", source: "toolbar", surfaceId: actionSurfaceId, args: {bindingId: boundEditorBinding.id}});
         }}>{translate("actions.editor.collapse")}</button>}</div>}
     <div ref={cameraElement} className="kplex-camera" style={{ transform: `translate(${camera.current.x}px, ${camera.current.y}px) scale(${camera.current.scale})` }}>
-      {scene.decorations && <ViewDecorations decorations={scene.decorations} translate={translate}
+      {scene.decorations && <ViewDecorations hideGroups={captionPreset?.preset.hideGroups === true} loose={captionPreset?.preset.arrangement === "scatter"} decorations={scene.decorations.filter(mark => mark.kind !== "region" || !dockAreas.has(mark.areaId ?? mark.id))} translate={translate}
+        onEditCaption={viewDefinition.id === "wuxing" ? /** Only current category-pair captions can open the registered text settings owner. */ id => {
+          const configuration = plugin.readCanvasViewConfiguration("wuxing"), library = facetLibrary(configuration), state = facetState(viewSession?.state);
+          if (!library || !state) return;
+          const selected = resolveFacetPreset(library, state.preset);
+          if (selected.status !== "ready" && selected.status !== "replaced") return;
+          const pair = facetFlowPairs(selected.preset).find(item => id === facetFlowId(item.source, item.target) || id === `facets-guide-1-${item.source}-${item.target}`);
+          if (pair) plugin.openCanvasGuideCaption(facetCaptionTarget(selected.id, pair.source, pair.target));
+        } : undefined}
         counts={viewDecorationCounts(scene.decorations, scene.nodes, filterMatchedNodePaths, zoneDisplayLayouts)} />}
       <svg className="kplex-links" width="3200" height="2400" viewBox="-1600 -1200 3200 2400">
         <defs>
@@ -5603,13 +5716,20 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
             />}
           </g>;
         })}
-        {paintedEdges.map((edge) => <Edge
+        {paintedEdges.filter(edge => !dockPaths.has(edge.sourcePath) && !dockPaths.has(edge.targetPath)).map((edge) => <Edge
           key={edge.id}
           edge={edge}
           nodes={renderedNodeMap}
           viewportForNode={node => {const zone = areaForNode(node);return zone ? scene.zoneViewports[zone] : undefined;}}
           inverseArrowDirection={settings.inverseArrowDirection}
           connectorStyle={settings.connectorStyle}
+          freeConnections={viewDefinition.id === "wuxing"}
+          annotation={captionPreset?.preset.relationshipCaptions?.[relationshipCaptionKey(edge)]}
+          annotationLabel={translate("facets.relationshipCaption")}
+          onEditAnnotation={captionPreset && (captionPreset.status === "ready" || captionPreset.status === "replaced") ? () => {
+            clearHoverIntent(true);
+            plugin.openCanvasGuideCaption(relationshipCaptionTarget(captionPreset.id, relationshipCaptionKey(edge)));
+          } : undefined}
           labelBackground={NATIVE_LINK_LABEL_FILL}
           crossLinkOpacity={Math.max(0, Math.min(1, settings.crossLinkOpacity / 100))}
           highlighted={!connectDrag && (crossLinkPeek !== null && interaction.edgeIds.has(edge.id)
@@ -5642,15 +5762,15 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       {areaSettingsMode
         ? ZONES.map((zone) => {
           const area = scene.zoneAreas[zone];
-          return area ? renderAreaFrame(zone, area) : null;
+          return area && !dockAreas.has(zone) ? renderAreaFrame(zone, area) : null;
         })
-        : visibleAreaZone && visibleArea ? renderAreaFrame(visibleAreaZone, visibleArea) : null}
+        : visibleAreaZone && visibleArea && !dockAreas.has(visibleAreaZone) ? renderAreaFrame(visibleAreaZone, visibleArea) : null}
 
       <div className="kplex-nodes">
         {standardNodes.filter((node) => !isDraggedNode(node) && visibleOccurrenceIds.has(occurrenceKey(node))).map((node) => renderNode(node, renderedNodeMap.get(occurrenceKey(node)) ?? node))}
         {ZONES.map((zone) => {
           const panel = scene.zoneViewports[zone];
-          return panel ? renderScrollZone(zone, panel) : null;
+          return panel && !dockAreas.has(zone) ? renderScrollZone(zone, panel) : null;
         })}
         {settings.graphDepth === 2 && expandedClusters.map(renderExpandedCluster)}
         {draggedBaseNode && renderNode(draggedBaseNode, renderedNodeMap.get(draggedBaseNode.page.path) ?? draggedBaseNode)}
@@ -5685,6 +5805,11 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         height: Math.max(1, displayedEditorNode.height * camera.current.scale),
         visibility: boundEditorConcealed ? "hidden" : undefined,
         "--kplex-editor-camera-scale": camera.current.scale,
+        ...(displayedEditorNode.role === "center" && displayedEditorNode.viewBadge?.background && displayedEditorNode.viewBadge.presentation !== "status" ? {
+          borderColor: colorValueCss(displayedEditorNode.viewBadge.background, "var(--background-modifier-border)"),
+          borderWidth: "2px",
+          boxShadow: `3px 4px 0 0 ${colorValueCss(displayedEditorNode.viewBadge.background, "var(--background-modifier-border)")}`,
+        } : {}),
       } as CSSProperties}
       onContextMenu={(event: MouseEvent<HTMLDivElement>) => event.stopPropagation()}
     >
@@ -5772,6 +5897,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       </div>
     </LayoutControls>
 
+    {diagnosticsDocked && <DiagnosticsDock nodes={dockNodes} edges={dockEdges} root={viewport} sync={diagnosticDockSync}
+      title={translate("facets.diagnostics")} empty={translate("facets.unassigned")}
+      captions={captionPreset?.preset.relationshipCaptions ?? {}}
+      edit={captionPreset ? edge => {plugin.openCanvasGuideCaption(relationshipCaptionTarget(captionPreset.id, relationshipCaptionKey(edge)));} : undefined}
+      activate={node => onActivate(node.page, "destination")}
+      finishDrag={endNativeNodeDrag}
+      drag={(node, event) => {event.currentTarget.dataset.kplexKeyboardId = sceneNodeKeys.get(node) ?? occurrenceKey(node);beginNativeNodeDrag(node.page, node.role, node.label, event);}} />}
     <div className="kplex-zoom-controls">
       {viewDefinition.hierarchy && <>
         {activePath !== sceneScope && <button type="button" aria-label={translate("mindmap.useAttentionRoot")}

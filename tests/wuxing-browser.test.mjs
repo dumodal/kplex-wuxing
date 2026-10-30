@@ -284,7 +284,7 @@ test('Facets production presets share captured controls, measured badges and liv
    check(a.container.querySelector('.kplex-camera').style.transform===camera,'Preset change preserves manual camera');
    const context={viewId:'wuxing',state:a.session.state,configuration:{status:'available',values:settings.canvasViewSettings.wuxing?.values??{}}};
    const controls=M.builtInCanvasViewSettings.layoutControls(M.wuXingViewDefinition,context),configControls=controls.filter(control=>!control.state),combine=controls.find(control=>control.state);
-   check(configControls.length===(preset==='wuxing'?7:5)&&controls.every(control=>control.field==='presets'&&control.path[0]===preset),'Shared rails address only the selected preset and its optional interpretation');
+   check(configControls.length===(preset==='wuxing'?8:6)&&controls.every(control=>control.field==='presets'&&control.path[0]===preset),'Shared rails address only the selected preset and its optional interpretation');
    check(combine?.kind==='checkbox'&&combine.state.value===true&&combine.state.actionId==='diagnostics.combine'&&combine.path.join('/')===preset+'/diagnostics/combined','Combine control captures the selected canvas presentation action');
    check(JSON.stringify(b.session.getState())===beforeB,'Other canvas retains independent selection');
  }
@@ -370,5 +370,100 @@ test('production Wu Xing decorates real local notes, refreshes cached fields, re
  releaseAction();root.unmount();session.dispose();plugin.actionManager.dispose();style.remove();mount.remove();return {errors,events:events.size,work};
  })()`);
  assert.deepEqual(result.errors,[]);assert.equal(result.events,0);assert.equal(result.work.reads,0);assert.equal(result.work.parses,0);assert.equal(result.work.publishes,0);assert.equal(result.work.settingsWrites,0);assert.equal(result.work.semantic,result.work.releases);assert.equal(result.work.presentation,0);
+ }finally{await host.cleanup()}
+});
+
+
+test('circular captions render rotated literal text and double-click edits only the captured preset pair',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ const preset={...structuredClone(M.FACET_TEMPLATES.wuxing),relativeLabels:false,regulatingGuides:false,flow:{caption:'促成下一丛的出现'}};
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:preset});
+ const requests=[];plugin.readCanvasViewConfiguration=()=>({status:"available",values:settings.canvasViewSettings.wuxing.values});
+ plugin.openCanvasGuideCaption=target=>{requests.push(JSON.parse(target));return true};
+ const ui=await mount(M.wuXingViewDefinition),before=JSON.stringify(ui.session.getState()),workBefore={...work};
+ const captions=[...ui.container.querySelectorAll('[data-kplex-guide-caption]')];check(captions.length===5,'All five edges, including the closing edge, have text');
+ check(captions.every(element=>element.textContent.includes('促成下一丛的出现')&&element.getAttribute('transform').includes('rotate(')),'Actual renderer paints along-edge labels');
+ for(const element of captions){const match=element.getAttribute('transform').match(/rotate\\(([^)]+)\\)/);check(match&&Math.abs(Number(match[1]))<=90,'Readable upright text');}
+ const target=captions.find(element=>element.dataset.kplexGuideCaption==='facets-guide-1-water-wood');
+ target.dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));await wait();
+ check(requests.length===1&&JSON.stringify(requests[0])===JSON.stringify(['facets-caption','wuxing','water','wood']),'Closing edge resolves its exact category pair');
+ check(JSON.stringify(ui.session.getState())===before,'Editing a caption does not navigate, reroot or change map state');
+ check(work.body===workBefore.body&&work.scans===workBefore.scans&&work.acquisitions===workBefore.acquisitions,'Caption interaction performs no indexing work');
+ ui.close();plugin.actionManager.dispose();style.remove();return true;
+ })()`),true)}finally{await host.cleanup()}
+});
+
+/** The fixed strip owns only presentation while the graph retains actual diagnostic identities. */
+test('diagnostics viewport dock stays between controls and retains canonical note navigation',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ fieldCaches.get('B.md').frontmatter.status=undefined;
+ const preset={...M.FACET_TEMPLATES.wuxing,guides:false,diagnostics:{dock:true,combined:true,showEmpty:true}};
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:preset});
+ const a=await mount(M.wuXingViewDefinition),tray=a.container.querySelector('.kplex-diagnostics-dock');
+ check(!!tray&&tray.querySelectorAll('button').length===1,'One canonical unassigned note is docked');
+ check(![...a.container.querySelectorAll('.kplex-view-region')].some(e=>e.textContent.includes('Diagnostics')),'No duplicate world diagnostic frame');
+ const button=tray.querySelector('button');check(button.dataset.kplexPath==='B.md','Canonical file identity retained');
+ const rect=tray.getBoundingClientRect(),v=a.container.getBoundingClientRect();check(rect.left>v.left&&rect.right<v.right&&rect.bottom<=v.bottom,'Dock remains inside the viewport middle');
+ const activations=[];a.props.onActivate=page=>activations.push(page.path);a.render();await wait();a.container.querySelector('.kplex-diagnostics-dock button').click();check(activations[0]==='B.md','Click uses existing-note navigation');
+ check(work.body===0&&work.scans===0,'Docking does not parse or scan');a.close();plugin.actionManager.dispose();style.remove();return true;
+ })()`),true)}finally{await host.cleanup()}
+});
+
+/** Leaving text editing for bare canvas returns keyboard ownership without stealing editor input. */
+test('bare canvas pointer returns focus from text editing to the graph keyboard owner',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ const a=await mount(M.wuXingViewDefinition),editor=document.createElement('textarea');a.container.tabIndex=0;a.container.append(editor);editor.focus();
+ editor.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,pointerId:21,pointerType:'mouse'}));check(document.activeElement===editor,'Text input keeps its keyboard scope');
+ const canvas=a.container.querySelector('.kplex-plex');canvas.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,pointerId:22,pointerType:'mouse',clientX:10,clientY:10}));
+ check(document.activeElement===a.container,'Bare canvas explicitly regains graph focus');canvas.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:22,pointerType:'mouse'}));
+ a.close();plugin.actionManager.dispose();style.remove();return true;
+ })()`),true)}finally{await host.cleanup()}
+});
+
+/** Existing and cross-note relationship labels remain semantic-free, editable literal prose. */
+test('real connection captions override generic labels and double-click addresses one captured edge',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ const key=JSON.stringify(['A.md','B.md','Related',1,1]),requests=[];
+ plugin.openCanvasGuideCaption=target=>{requests.push(JSON.parse(target));return true};
+ const preset={...M.FACET_TEMPLATES.wuxing,guides:false,relationshipCaptions:{[key]:'forked from'}};
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:preset});
+ const a=await mount(M.wuXingViewDefinition),label=[...a.container.querySelectorAll('.kplex-edge-label')].find(e=>e.textContent==='forked from');
+ check(!!label,'Literal annotation appears even when the generic relationship name is suppressed');
+ label.dispatchEvent(new MouseEvent('dblclick',{bubbles:true,cancelable:true}));
+ check(requests.length===1&&requests[0][0]==='relationship-caption'&&requests[0][2]===key,'Editing captures only this semantic pair');
+ check(fieldCaches.get('A.md').frontmatter.status==='water'&&work.body===0&&work.scans===0,'Presentation editing does not touch note metadata or acquire sources');
+ a.close();fieldCaches.get('B.md').frontmatter.status=undefined;
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings,{field:'presets',path:['wuxing']},{kind:'set',value:{...preset,diagnostics:{dock:true,combined:true}}});
+ const b=await mount(M.wuXingViewDefinition),dockLabel=[...b.container.querySelectorAll('.kplex-diagnostics-dock-lines text')].find(e=>e.textContent==='forked from');
+ check(!!dockLabel,'Screen-space diagnostic continuations retain their annotations');dockLabel.dispatchEvent(new MouseEvent('dblclick',{bubbles:true,cancelable:true}));check(requests.length===2&&requests[1][2]===key,'Dock annotations use the same exact edge editor');b.close();
+
+ plugin.actionManager.dispose();style.remove();return true;
+ })()`),true)}finally{await host.cleanup()}
+});
+
+/** Real mouse events cover pointer capture and native dblclick synthesis, unlike dispatched DOM events. */
+test('native mouse double-click edits an unlabeled connection without starting canvas pan',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{
+  await host.command('Emulation.setDeviceMetricsOverride',{width:1400,height:1000,deviceScaleFactor:1,mobile:false});
+  const point=await host.evaluate(`(async()=>{${canvasSceneFixture}
+   const requests=[];plugin.openCanvasGuideCaption=value=>{requests.push(value);return true};const a=await mount(M.wuXingViewDefinition);
+   const paths=[...a.container.querySelectorAll('.kplex-edge-hit')];let point;
+   for(const path of paths)for(const fraction of [.5,.35,.65]){const local=path.getPointAtLength(path.getTotalLength()*fraction),matrix=path.getScreenCTM(),p=new DOMPoint(local.x,local.y).matrixTransform(matrix);if(document.elementFromPoint(p.x,p.y)===path)point={x:p.x,y:p.y};}
+   if(!point)throw Error('No visible connection hit target');const camera=a.container.querySelector('.kplex-camera').style.transform;
+   window.mouseAnnotationCheck=()=>({requests:requests.length,cameraUnchanged:a.container.querySelector('.kplex-camera').style.transform===camera});
+   window.mouseAnnotationCleanup=()=>{a.close();plugin.actionManager.dispose();style.remove()};return point;
+  })()`);
+  await host.command('Input.dispatchMouseEvent',{type:'mouseMoved',...point});
+  for(const clickCount of [1,2]){
+   await host.command('Input.dispatchMouseEvent',{type:'mousePressed',...point,button:'left',buttons:1,clickCount});
+   await host.command('Input.dispatchMouseEvent',{type:'mouseReleased',...point,button:'left',buttons:0,clickCount});
+  }
+  assert.deepEqual(await host.evaluate('window.mouseAnnotationCheck()'),{requests:1,cameraUnchanged:true});
+  await host.evaluate('window.mouseAnnotationCleanup()');
  }finally{await host.cleanup()}
 });

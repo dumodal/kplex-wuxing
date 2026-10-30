@@ -432,3 +432,126 @@ test('cycle guides remain bounded optional phase decorations without note endpoi
  assert.equal(M.layoutFacets(f.projection,f.measured,'wuxing',{...f.preset,guides:false}).decorations.filter(row=>row.kind==='guide').length,0);
  assert.equal(M.layoutFacets(f.projection,f.measured,'wuxing',{...f.preset,regulatingGuides:false}).decorations.filter(row=>row.kind==='guide').length,5);
 });
+
+
+test('circular process captions close all five phase edges, stay upright and reserve rotated footprints',()=>{
+ const preset={...M.FACET_TEMPLATES.wuxing,relativeLabels:false,regulatingGuides:false,flow:{caption:'促成下一丛的出现'},
+  flowOverrides:[{source:'metal',target:'water',caption:'整理后继续流动'}]};
+ const pairs=M.facetFlowPairs(preset);assert.equal(pairs.length,5);assert.deepEqual(pairs.at(-1),{source:'water',target:'wood'});
+ const labels=M.facetFlowLabels(preset,'wuxing');assert.equal(labels.length,5);
+ const sizes=new Map(labels.map(label=>[label.id,{width:240,height:36,fontSize:18}]));
+ const projection={entry:'focus',occurrences:[{id:'focus'}]},measured=[{id:'focus',width:240,height:90}];
+ const layout=M.layoutFacets(projection,measured,'wuxing',preset,{},true,{},null,sizes);
+ const guides=layout.decorations.filter(mark=>mark.kind==='guide');assert.equal(guides.length,5);
+ assert(guides.every(mark=>mark.caption&&mark.variant==='generating'));
+ const overlap=(a,b)=>a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y;
+ for(const guide of guides){
+  const c=guide.caption,rotation=c.rotation;assert(Math.abs(rotation.angle)<=90,'No upside-down reading');
+  const a=guide.points[0],b=guide.points.at(-1),angle=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI;
+  assert(Math.abs(Math.sin((angle-rotation.angle)*Math.PI/180))<1e-8,'Text baseline follows its actual edge');
+  for(const area of layout.areas)assert(!overlap(c.bounds,area.bounds),'Measured text avoids all panels, including Diagnostics');
+  assert(c.bounds.x<=rotation.center.x&&c.bounds.x+c.bounds.width>=rotation.center.x,'Rotated footprint contains its pivot');
+ }
+ assert.equal(guides.find(mark=>mark.id==='facets-guide-1-metal-water').caption.label.literal,'整理后继续流动');
+ const reordered={...preset,order:['metal','wood','earth','water','fire'],reverse:true};
+ assert.deepEqual(M.facetFlowPairs(reordered),pairs,'Visual reordering cannot redefine phase generation');
+ const blank={...preset,flowOverrides:[{source:'water',target:'wood',caption:''}]};
+ assert.equal(M.facetFlowLabels(blank,'wuxing').length,4,'An explicit blank can hide the closing-edge caption');
+ assert.deepEqual(M.readFacetCaptionTarget(M.facetCaptionTarget('wuxing','water','wood')),{preset:'wuxing',source:'water',target:'wood'});
+ for(const invalid of ['wuxing','[]','["facets-caption","wuxing","wood","wood"]','x'.repeat(257)])assert.equal(M.readFacetCaptionTarget(invalid),null);
+});
+
+
+test('guide prose measurement reserves full-width Chinese instead of clipping it like a note badge',()=>{
+ const text='促成下一丛的出现',settings=M.migrateAndMergeSettings({}),size=M.guideCaptionSize(text,settings);
+ assert.equal(size.fontSize,settings.baseLinkStyle.fontSize);assert.equal(M.guideCaptionSize(text,{...settings,baseLinkStyle:{...settings.baseLinkStyle,fontSize:28}}).fontSize,28);assert(size.width>=Array.from(text).length*size.fontSize+24);
+ assert(size.height>=size.fontSize*1.6);assert(M.guideCaptionSize('a'.repeat(80),settings).width<=1000);
+});
+
+/** Uneven admitted content expands only its own region and never changes canonical membership. */
+test('content sizing fits unequal note populations, retains fixed defaults and ignores stale manual dimensions',()=>{
+ const f=diagnosticScene(80);for(const key of f.values.keys())if(key.startsWith('extra'))f.values.set(key,{status:'available',value:'wood'});
+ const p=f.project(),measured=f.measure(p),before=JSON.stringify(p),wood=M.facetAreaId('wuxing','category','wood');
+ const preset={...M.FACET_TEMPLATES.wuxing,sizing:'content',relativeLabels:false};
+ assert(M.isFacetPreset(preset));assert(!M.isFacetPreset({...preset,sizing:'unknown'}));
+ for(const layout of ['circular','horizontal','vertical','concentric']){
+  const result=M.layoutFacets(p,measured,'wuxing',{...preset,layout},{[wood]:160},true,{[wood]:200});
+  const populated=result.areas.find(a=>a.id===wood),empty=result.areas.find(a=>a.id===M.facetAreaId('wuxing','category','fire'));
+  assert(populated.viewport.height>empty.viewport.height,'Populated content receives a taller envelope');
+  if(layout!=='concentric')assert(populated.bounds.width>empty.bounds.width,'Independent regions widen; concentric outer bands must still enclose inner bands');
+  for(const area of result.areas){
+   assert(area.viewport.contentHeight<=area.viewport.height,'All admitted rows fit without internal scrolling');
+   assert(!area.heightPreference&&!area.widthPreference,'Adaptive layout ignores manual sizing without deleting it');
+  }
+ }
+ const fixed=M.layoutFacets(p,measured,'wuxing',{...preset,sizing:'fixed'},{[wood]:160},true,{[wood]:300});
+ assert(fixed.areas.find(a=>a.id===wood).viewport.contentHeight>fixed.areas.find(a=>a.id===wood).viewport.height,'Fixed mode retains scrolling');
+ assert.equal(JSON.stringify(p),before,'Sizing cannot rewrite membership, labels, or relations');
+});
+
+/** History visibility travels with the preset without mutating historical identities. */
+test('preset history visibility is optional and admits only explicit booleans',()=>{
+ const p=M.FACET_TEMPLATES.wuxing;
+ for(const showHistory of [true,false])assert(M.isFacetPreset({...p,showHistory}));
+ assert(M.isFacetPreset(p));assert(!M.isFacetPreset({...p,showHistory:'false'}));
+});
+
+/** Zero spacing uses actual card rectangles and never reintroduces overlap. */
+test('compact circular regions admit zero spacing and approach the center without overlap',()=>{
+ const f=scene('wuxing',30),preset={...f.preset,guides:false,spacing:0};
+ assert(M.isFacetPreset(preset));assert(!M.isFacetPreset({...preset,spacing:-1}));
+ const close=M.layoutFacets(f.projection,f.measured,'wuxing',preset),far=M.layoutFacets(f.projection,f.measured,'wuxing',{...preset,spacing:56});
+ const closeRadius=Math.hypot(close.areas[0].bounds.x+close.areas[0].bounds.width/2,close.areas[0].bounds.y+close.areas[0].bounds.height/2);
+ const farRadius=Math.hypot(far.areas[0].bounds.x+far.areas[0].bounds.width/2,far.areas[0].bounds.y+far.areas[0].bounds.height/2);
+ assert(closeRadius<farRadius);
+ const focus=close.positions.get(f.projection.entry),center={x:focus.x-focus.width/2,y:focus.y-focus.height/2,width:focus.width,height:focus.height};
+ const boxes=[center,...close.areas.filter(a=>a.id.includes('category')).map(a=>a.bounds)];
+ for(let i=0;i<boxes.length;i++)for(let j=0;j<i;j++){const a=boxes[i],b=boxes[j];assert(!(a.x<b.x+b.width-1e-7&&b.x<a.x+a.width-1e-7&&a.y<b.y+b.height-1e-7&&b.y<a.y+a.height-1e-7),'Compact envelopes stay separate');}
+});
+
+/** Adaptive width controls the measured column budget while height remains a meaningful minimum. */
+test('adaptive area width and minimum height controls change actual packing without clipping',()=>{
+ const f=diagnosticScene(12);for(const key of f.values.keys())if(key.startsWith('extra'))f.values.set(key,{status:'available',value:'wood'});
+ const p=f.project(),m=f.measure(p),id=M.facetAreaId('wuxing','category','wood');
+ const base={...M.FACET_TEMPLATES.wuxing,sizing:'content',relativeLabels:false,guides:false,regionHeight:160};
+ const area=preset=>M.layoutFacets(p,m,'wuxing',preset).areas.find(a=>a.id===id);
+ const narrow=area({...base,regionWidth:260}),wide=area({...base,regionWidth:640});
+ assert(narrow.bounds.width<wide.bounds.width,'Narrow target packs fewer columns');
+ assert(narrow.bounds.height>wide.bounds.height,'Extra rows grow vertically instead of scrolling');
+ assert.equal(area({...base,regionWidth:640,regionHeight:600}).bounds.height,600,'Minimum height is honored');
+ assert(narrow.viewport.contentHeight<=narrow.viewport.height&&wide.viewport.contentHeight<=wide.viewport.height,'Both targets contain all rows');
+});
+
+/** Annotation identity follows actual evidence, not focus, phase, role position or display order. */
+test('relationship annotations are bounded presentation and survive endpoint focus reversal',()=>{
+ const edge={sourcePath:'A.md',targetPath:'B.md',typeDefinition:'influence',relationType:1,direction:2};
+ const key=M.relationshipCaptionKey(edge);
+ assert.equal(key,M.relationshipCaptionKey({...edge,sourcePath:'B.md',targetPath:'A.md',direction:1}));
+ assert.notEqual(key,M.relationshipCaptionKey({...edge,typeDefinition:'drafted'}));
+ assert(M.validRelationshipCaptionKey(key));assert(!M.validRelationshipCaptionKey('__proto__'));
+ const p={...M.FACET_TEMPLATES.wuxing,relationshipCaptions:{[key]:'提供了起点'}};
+ assert(M.isFacetPreset(p));assert(!M.isFacetPreset({...p,relationshipCaptions:{[key]:'x'.repeat(81)}}));
+ assert.deepEqual(M.readRelationshipCaptionTarget(M.relationshipCaptionTarget('wuxing',key)),{preset:'wuxing',key});
+ assert.equal(M.readRelationshipCaptionTarget('["relationship-caption","wuxing","invalid"]'),null);
+});
+
+/** Loose clouds retain phase directions, stable coordinates and complete unclipped cards. */
+test('loose directional clusters are deterministic and avoid grid alignment and collisions',()=>{
+ const f=diagnosticScene(18);for(const key of f.values.keys())if(key.startsWith('extra'))f.values.set(key,{status:'available',value:'wood'});
+ const p=f.project(),m=f.measure(p),preset={...M.FACET_TEMPLATES.wuxing,arrangement:'scatter',sizing:'content',guides:false,relativeLabels:false};
+ assert(M.isFacetPreset(preset));assert(!M.isFacetPreset({...preset,arrangement:'random'}));
+ const a=M.layoutFacets(p,m,'wuxing',preset),b=M.layoutFacets(p,[...m].reverse(),'wuxing',preset);
+ assert.deepEqual(a.positions,b.positions);
+ const area=a.areas.find(x=>x.id===M.facetAreaId('wuxing','category','wood'));
+ assert.equal(area.viewport.scrollable,false);assert(!area.reflow);assert(area.viewport.contentHeight<=area.viewport.height);
+ const cards=p.occurrences.filter(x=>x.areaId===area.id).map(x=>a.positions.get(x.id));
+ assert(new Set(cards.map(x=>x.x)).size>3);assert(new Set(cards.map(x=>x.y)).size>3);
+ for(let i=0;i<cards.length;i++)for(let j=0;j<i;j++){const x=cards[i],y=cards[j];assert(Math.abs(x.x-y.x)>=(x.width+y.width)/2||Math.abs(x.y-y.y)>=(x.height+y.height)/2);}
+ assert(area.bounds.y+area.bounds.height/2<0,'Wood remains above attention');
+});
+
+/** Hidden phase chrome is an optional reversible presentation preference. */
+test('group visibility accepts booleans without altering category definitions',()=>{
+ const p=M.FACET_TEMPLATES.wuxing;for(const hideGroups of [true,false])assert(M.isFacetPreset({...p,hideGroups}));
+ assert(!M.isFacetPreset({...p,hideGroups:'true'}));assert(M.isFacetPreset(p));
+});

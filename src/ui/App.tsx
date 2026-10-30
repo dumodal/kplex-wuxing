@@ -20,6 +20,8 @@
  * Saved chips project the shared node style resolver; the History list owns mouse grab scrolling
  * independently of node activation, native touch scrolling and canvas gestures.
  */
+import {facetLibrary} from "../core/plex/views/facets/configuration";
+import {facetState, resolveFacetPreset} from "../core/plex/views/facets/state";
 import { subscribeAppearanceSources } from "../adapters/obsidian/colorChanges";
 import {CanvasViewContributionController} from "./plexViews/CanvasViewContributionController";
 import {MarkdownHelpModal} from "./MarkdownHelpModal";
@@ -1248,6 +1250,8 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
 
   // History belongs to loaded settings, not semantic readiness. Preserve every saved slot on
   // both loading and graph surfaces; unresolved targets stay inert until their owner publishes.
+  const historyLibrary = plexViewDefinition.id === "wuxing" ? facetLibrary(plugin.readCanvasViewConfiguration("wuxing")) : null;
+  const historyVisible = !historyLibrary || resolveFacetPreset(historyLibrary, facetState(documentSession.plexView.getState())?.preset ?? "wuxing").preset.showHistory !== false;
   const historyBar = <footer className="kplex-history-bar">
     <span className="kplex-history-label">{translate("app.pastNodes")}</span>
     <HorizontalDragScroll className="kplex-history-list">
@@ -1255,7 +1259,11 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
         const item = plugin.index.get(path);
         const {label: title, icon, style} = item ? nodeListPresentation(item, plugin.index.titleFor(item), paintSettings) : {label: path, icon: "file-question", style: undefined};
         return <button key={`${path}:${indexValue}`} data-kplex-history-path={path} aria-label={`${title}\n${path}`} disabled={!item}
-          className={path === activePath ? "is-active" : ""} style={style}
+          className={path === activePath ? "is-active" : ""} style={style ? {...style,
+            background: `color-mix(in srgb, ${style.background ?? "var(--background-primary)"} 18%, var(--background-primary))`,
+            color: "var(--text-normal)",
+            borderColor: `color-mix(in srgb, ${style.background ?? "var(--background-modifier-border)"} 35%, var(--background-primary))`,
+          } : undefined}
           onClick={/** Dispatch only this currently available saved identity; no fallback or note creation. */ () => {if (item) actions.dispatch({id: "node.activate", source: "toolbar", target: {kind: "explicit", node: actionNodeRef(item)}});}}>
           <ObsidianIcon name={icon} size={12} /><span className="kplex-history-text">{title}</span>
         </button>;
@@ -1274,7 +1282,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     onDrop={handlePlexDrop}
   >
     <span id={canvasNameId} className="kplex-accessible-name">{translate("view.displayName")}</span>
-    <div className={`kplex-main-column${plugin.settings.wrapNodeLabels ? " is-two-line-history" : ""}`}>
+    <div className={`kplex-main-column${plugin.settings.wrapNodeLabels ? " is-two-line-history" : ""}${historyVisible ? "" : " is-history-hidden"}`}>
       <div aria-hidden="true" />
       <div className="kplex-graph-area kplex-empty">
         <div className="kplex-index-status-empty">
@@ -1295,7 +1303,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
         </div>
         <span>{translate("app.buildingIndex")}</span>
       </div>
-      {!displayState.zen && historyBar}
+      {!displayState.zen && historyVisible && historyBar}
     </div>
     {!displayState.zen && <div className="kplex-empty-support">{supportButton}</div>}
   </div>;
@@ -1346,7 +1354,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
     onDrop={handlePlexDrop}
   >
     <span id={canvasNameId} className="kplex-accessible-name">{translate("view.displayName")}</span>
-    <div className={`kplex-main-column${plugin.settings.wrapNodeLabels ? " is-two-line-history" : ""}`}>
+    <div className={`kplex-main-column${plugin.settings.wrapNodeLabels ? " is-two-line-history" : ""}${historyVisible ? "" : " is-history-hidden"}`}>
       <div className="kplex-top-stack">
         <header className="kplex-topbar">
           <IndexStatusIndicator
@@ -1451,6 +1459,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
             <span className="kplex-toolbar-divider" />
             <ToolButton icon={plugin.settings.graphDepth === 2 ? "list-chevrons-down-up" : "list-chevrons-up-down"} title={translate(plugin.settings.graphDepth === 2 ? "app.singleLevelView" : "app.expandedView")} on={plugin.settings.graphDepth === 2} onClick={() => runAction("view.depth.toggle")} />
             <ToolButton icon="group" title={translate("actions.view.groups.toggle")} on={plugin.settings.groupRelations} pressed={plugin.settings.groupRelations} onClick={() => runAction("view.groups.toggle")} />
+            <ToolButton icon="link-2" title={translate("actions.relationship.connect")} onClick={/** Delegate existing-note connections to the current graph action owner. */ () => runAction("relationship.connect")} />
             {isGraphTabCommandAvailable(environment) && <ToolButton icon="plus" title={translate("actions.surface.new-tab")} onClick={() => runAction("surface.new-tab")} />}
             <ToolButton icon="settings" title={translate("app.settingsMenu")} on={areaSettingsMode} onClick={showSettingsMenu} />
           </div>
@@ -1508,7 +1517,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
         </>}
       </div>}
 
-      {historyBar}
+      {historyVisible && historyBar}
     </div>
   </div>;
 }

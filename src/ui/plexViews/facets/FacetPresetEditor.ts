@@ -104,10 +104,11 @@ export class FacetPresetEditor extends StyleEditorModal {
     }, t);
     new Setting(body).setName(t("facets.start")).addDropdown(input => input.addOptions(Object.fromEntries(this.draft.order.map(id => [id, canvasViewText(facetCategoryLabel(this.draft.categories[id], id), t)])))
       .setValue(this.draft.start).onChange(start => {this.draft = {...this.draft, start};this.render();}));
-    for (const [field, label, minimum, maximum, step] of [["spacing", "wuxing.spacing", 24, 200, 8],
+    for (const [field, label, minimum, maximum, step] of [["spacing", "wuxing.spacing", 0, 200, 2],
       ["regionWidth", "wuxing.width", 200, 640, 20], ["regionHeight", "wuxing.height", 160, 600, 20]] as const)
-      numberSlider(new Setting(body).setName(t(label)), {label: t(label), value: this.draft[field], min: minimum, max: maximum, step,
+      numberSlider(new Setting(body).setName(t(field === "regionWidth" && this.draft.sizing === "content" ? "facets.contentWidth" : label)), {label: t(label), value: this.draft[field], min: minimum, max: maximum, step,
         onChange: value => {if (this.canEdit() && this.owner()) {this.draft = {...this.draft, [field]: value};this.validate();}}});
+    new Setting(body).setName(t("facets.hideGroups")).addToggle(/** Group chrome is presentation only, independent of classification. */ input => input.setValue(this.draft.hideGroups ?? false).onChange(/** Keep the native draft and shared Appearance switch consistent. */ hideGroups => {this.draft = {...this.draft, hideGroups};this.validate();}));
     for (const [field, label] of [["guides", "wuxing.guides"], ["tints", "wuxing.tints"]] as const)
       new Setting(body).setName(t(label)).addToggle(input => input.setValue(this.draft[field]).onChange(value => {this.draft = {...this.draft, [field]: value};this.validate();}));
     renderFacetFlowSettings(body, /** Read current sibling layout/preset edits. */ () => this.draft,

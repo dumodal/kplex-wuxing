@@ -253,3 +253,41 @@ test('category Code editor shares full-width expression styling and shows only r
  input(fields(e,t('wuxing.source'))[0],'property','change');check(fields(e,t('wuxing.field'))[0].value===field&&fields(e,t('wuxing.values'))[0].value===values,'Source switching preserves hidden sibling values');close(e);check(JSON.stringify(disk)===unchanged,'Layout/source preview did not save a draft');close(m);css.remove();
  `),true);
 });
+
+
+test('short circular caption editor saves one pair, preserves categories and refuses stale drafts',async()=>{
+ assert.equal(await scenario(`
+ const original=copy(M.FACET_TEMPLATES.wuxing);
+ await p.updateCanvasViewConfiguration('wuxing',{field:'presets',path:['wuxing']},{kind:'set',value:{...original,flow:{caption:'Default process'}}});await drain();
+ const target=JSON.stringify(['facets-caption','wuxing','water','wood']);
+ tab.openCanvasViewManager('wuxing',target);let editor=last();
+ check(editor.modalEl.classList.contains('kplex-facet-caption-editor'),'Uses the short native text form rather than full Settings');
+ input(fields(editor,t('facets.flowCaption'))[0],'Closing edge process');await save(editor);await drain();
+ let preset=disk.canvasViewSettings.wuxing.values.presets.wuxing;
+ equal(preset.categories,original.categories,'No classifier or note-value change');
+ equal(preset.flowOverrides,[{source:'water',target:'wood',caption:'Closing edge process'}],'Only the captured caption is persisted');
+ tab.openCanvasViewManager('wuxing',target);editor=last();check(fields(editor,t('facets.flowCaption'))[0].value==='Closing edge process','Reopening reads the saved value');
+ input(fields(editor,t('facets.flowCaption'))[0],'Unsaved draft');close(editor);
+ equal(disk.canvasViewSettings.wuxing.values.presets.wuxing.flowOverrides,preset.flowOverrides,'Cancel keeps accepted text');
+ tab.openCanvasViewManager('wuxing',target);editor=last();input(fields(editor,t('facets.flowCaption'))[0],'Stale draft');
+ await p.updateCanvasViewConfiguration('wuxing',{field:'presets',path:['wuxing']},{kind:'set',value:{...preset,flow:{caption:'New external default'}}});await drain();
+ check(button(editor,t('common.save')).disabled,'Same-entry replacement fences an old caption form');close(editor);
+ `),true);
+});
+
+/** The original settings queue saves prose, never ontology fields or note links. */
+test('connection annotation editor saves locally, cancels drafts and clears back to native labels',async()=>{
+ assert.equal(await scenario(`
+ const original=copy(M.FACET_TEMPLATES.wuxing),key=JSON.stringify(['A.md','B.md','Related',1,1]);
+ await p.updateCanvasViewConfiguration('wuxing',{field:'presets',path:['wuxing']},{kind:'set',value:original});await drain();
+ const target=JSON.stringify(['relationship-caption','wuxing',key]);
+ tab.openCanvasViewManager('wuxing',target);let editor=last();
+ input(fields(editor,t('facets.relationshipCaption'))[0],'forked from');await save(editor);await drain();
+ let preset=disk.canvasViewSettings.wuxing.values.presets.wuxing;
+ equal(preset.relationshipCaptions,{[key]:'forked from'},'Only this real relationship gets local prose');equal(preset.categories,original.categories,'No classification or metadata edit');
+ tab.openCanvasViewManager('wuxing',target);editor=last();check(fields(editor,t('facets.relationshipCaption'))[0].value==='forked from','Persisted annotation reopens');
+ input(fields(editor,t('facets.relationshipCaption'))[0],'discard me');close(editor);equal(disk.canvasViewSettings.wuxing.values.presets.wuxing.relationshipCaptions,preset.relationshipCaptions,'Cancel never writes');
+ tab.openCanvasViewManager('wuxing',target);editor=last();input(fields(editor,t('facets.relationshipCaption'))[0],'');await save(editor);await drain();
+ equal(disk.canvasViewSettings.wuxing.values.presets.wuxing.relationshipCaptions,{},'Clearing removes only the override');
+ `),true);
+});

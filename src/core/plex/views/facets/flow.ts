@@ -1,10 +1,11 @@
-/** Declarative adjacent-category workflow guides for linear Facets layouts. They are pure
+/** Declarative adjacent-category workflow guides for linear and circular Facets layouts. They are pure
  * decorations with stable unordered pair identities; no note/evidence/drop endpoint is created. */
 import type {FacetPreset, FacetFlowStyle, FacetCanvasState, FacetLayout} from "./contracts";
 import type {PlexDecoration, PlexDecorationText, PlexDecorationTextSize} from "../contracts";
 import type {FacetRegionFrame} from "./layoutStrategies";
 import {facetLayout, facetLayoutOrder} from "./presentation";
 import {configurationRecord as record} from "../configurationValues";
+import {facetHasWuXingPhases, FACET_WUXING_CYCLE} from "./labels";
 
 /** Pair identities survive order reversal; direction is interpreted against the actual sequence. */
 export function facetFlowId(a: string, b: string): string {return JSON.stringify(["facets-flow", ...(a < b ? [a, b] : [b, a])]);}
@@ -12,6 +13,33 @@ export function facetFlowId(a: string, b: string): string {return JSON.stringify
 /** Forward means the preset's logical sequence even when geometry displays it right-to-left
  * or bottom-to-top. Reversal never silently changes which category generates the next stage. */
 export function facetFlowOrder(preset: FacetPreset): readonly string[] {return facetLayoutOrder({...preset, reverse: false});}
+
+/** Circular guides close their actual cycle; Wu Xing follows phase identity despite region reorder.
+ * Linear workflows retain their original open sequence. No note endpoints are introduced. */
+export function facetFlowPairs(preset: FacetPreset): readonly Readonly<{source: string; target: string}>[] {
+  const circular = (preset.layout ?? "circular") === "circular";
+  const order: readonly string[] = circular && preset.interpretation === "wuxing" && facetHasWuXingPhases(preset)
+    ? FACET_WUXING_CYCLE : facetFlowOrder(preset);
+  return order.slice(0, circular ? order.length : -1).map(/** Pair identities refer only to configured categories. */ (source, index) =>
+    ({source, target: order[(index + 1) % order.length]}));
+}
+
+/** Encode a settings-editor address, never a graph action or a semantic edge identity. */
+export function facetCaptionTarget(preset: string, source: string, target: string): string {
+  return JSON.stringify(["facets-caption", preset, source, target]);
+}
+
+/** Reject malformed/oversize target data before the native manager checks current preset membership. */
+export function readFacetCaptionTarget(value?: string): Readonly<{preset: string; source: string; target: string}> | null {
+  if (!value || value.length > 256 || !value.startsWith("[")) return null;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!Array.isArray(parsed) || parsed.length !== 4 || parsed[0] !== "facets-caption"
+      || !parsed.slice(1).every(/** Captured addresses remain finite inert identifiers. */ item => typeof item === "string" && item.length > 0 && item.length <= 48)
+      || parsed[2] === parsed[3]) return null;
+    return {preset: String(parsed[1]), source: String(parsed[2]), target: String(parsed[3])};
+  } catch {return null;}
+}
 
 /** One style grammar serves the preset, overrides and portable validator; text is inert data. */
 export function validFacetFlow(value: unknown): value is FacetFlowStyle {
@@ -30,11 +58,11 @@ export function facetFlowStyle(preset: FacetPreset, a: string, b: string): Facet
 
 /** Supply only currently usable captions to the existing shared text measurement owner. */
 export function facetFlowLabels(preset: FacetPreset, presetId: string, state?: FacetCanvasState | null): readonly PlexDecorationText[] {
-  const layout = facetLayout(preset, presetId, state).effective;if (!preset.guides || layout !== "horizontal" && layout !== "vertical") return [];
-  const order = facetFlowOrder(preset);
-  return order.slice(1).flatMap(/** Every adjacent pair contributes at most one bounded nonempty label. */ (id, index) => {
-    const caption = facetFlowStyle(preset, order[index], id).caption;
-    return caption ? [{id: facetFlowId(order[index], id), label: {literal: caption}}] : [];
+  const layout = facetLayout(preset, presetId, state).effective;
+  if (!preset.guides || !["circular", "horizontal", "vertical"].includes(layout)) return [];
+  return facetFlowPairs({...preset, layout}).flatMap(/** Every cycle edge has its own measured, literal caption. */ ({source, target}) => {
+    const caption = facetFlowStyle(preset, source, target).caption;
+    return caption ? [{id: facetFlowId(source, target), label: {literal: caption}}] : [];
   });
 }
 
@@ -66,4 +94,28 @@ export function layoutFacetFlows(preset: FacetPreset, order: readonly string[], 
       ...(style.style === "arrow" ? {direction: style.direction} : {}),
       ...(caption && captionBounds && style.caption ? {caption: {label: {literal: style.caption}, bounds: captionBounds, fontSize: caption.fontSize}} : {})};
   });
+}
+
+/** Canonical annotation identity retains actual endpoints, field and evidence direction across focus reversal. */
+export function relationshipCaptionKey(edge: {sourcePath: string; targetPath: string; typeDefinition?: string; relationType: number; direction: number | null}): string {
+  const forward = edge.sourcePath < edge.targetPath, direction = edge.direction ?? 0;
+  return JSON.stringify([...(forward ? [edge.sourcePath, edge.targetPath] : [edge.targetPath, edge.sourcePath]),
+    edge.typeDefinition ?? "", edge.relationType, forward || direction === 0 || direction === 3 ? direction : direction === 1 ? 2 : 1]);
+}
+/** Annotation keys are inert bounded provenance, never executable paths or write targets. */
+export function validRelationshipCaptionKey(key: unknown): key is string {
+  if (typeof key !== "string" || key.length > 4096) return false;
+  try {const row: unknown = JSON.parse(key);return Array.isArray(row) && row.length === 5
+    && row.slice(0, 2).every(value => typeof value === "string" && value.length > 0 && value.length <= 1024)
+    && row[0] < row[1] && typeof row[2] === "string" && row[2].length <= 512
+    && typeof row[3] === "number" && [1, 2].includes(row[3]) && typeof row[4] === "number" && [0, 1, 2, 3].includes(row[4]);} catch {return false;}
+}
+/** Only existing valid semantic identities can address the native annotation editor. */
+export function relationshipCaptionTarget(preset: string, key: string): string {return JSON.stringify(["relationship-caption", preset, key]);}
+/** Reject malformed/future editor requests without changing the current preset. */
+export function readRelationshipCaptionTarget(value?: string): {preset: string; key: string} | null {
+  if (!value || value.length > 8192) return null;
+  try {const row: unknown = JSON.parse(value);return Array.isArray(row) && row.length === 3 && row[0] === "relationship-caption"
+    && typeof row[1] === "string" && row[1].length > 0 && row[1].length <= 48 && validRelationshipCaptionKey(row[2])
+    ? {preset: row[1], key: row[2]} : null;} catch {return null;}
 }
