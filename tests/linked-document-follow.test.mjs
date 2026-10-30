@@ -886,7 +886,7 @@ test('partial startup cannot replace the saved center with an earlier available 
 
 /** Actual F4/App/graph activation callbacks distinguish explicit destination changes from independent occurrence attention. */
 test('F4 and center drops reroot only their owning rooted canvas and refuse editor-removing navigation before any side effect',()=>{
- const {state,files,pages}=appFollowFixture(),roots=[],other={root:'Other-root'},view=state.documentSession.plexView={editors:{bindings:[]},definition:{navigation:'rooted'},setRoot:id=>{roots.push(id);view.root=id;return !view.blocked}};
+ const {state,files,pages}=appFollowFixture(),roots=[],other={root:'Other-root'},view=state.documentSession.plexView={editors:{bindings:[]},definition:{navigation:'rooted'},layoutRoot:()=>view.root??'A.md',setRoot:id=>{roots.push(id);view.root=id;return !view.blocked}};
  state.plugin.index.getVaultSearchPage=id=>pages.get(id);
  let inserts=0;state.plugin.index.insertCreatedFile=file=>{inserts++;const page={path:file.path,file};pages.set(file.path,page);return page};
  const activate=state.activate,search=production('searchDestination',{plugin:state.plugin,activate},'src/ui/App.tsx'),graph=production('graphDestination',{activate},'src/ui/App.tsx');
@@ -894,7 +894,7 @@ test('F4 and center drops reroot only their owning rooted canvas and refuse edit
  graph(pages.get('C.md'));assert.equal(view.root,'B.md','Ordinary occurrence attention never reroots');assert.equal(state.renderPath,'C.md');
  graph(pages.get('A.md'),'destination');assert.equal(view.root,'A.md');assert.equal(state.renderPath,'A.md');
  const before={history:[...state.plugin.settings.navigationHistory],companions:state.companions.length,render:state.renderPath};view.blocked=true;
- graph(pages.get('B.md'),'destination');assert.equal(state.renderPath,before.render);assert.deepEqual(state.plugin.settings.navigationHistory,before.history);assert.equal(state.companions.length,before.companions);assert.deepEqual(state.notices,['actions.branch-editor-blocked']);assert.equal(inserts,0);
+ graph(pages.get('B.md'),'destination');assert.equal(state.renderPath,before.render);assert.deepEqual(state.plugin.settings.navigationHistory,before.history);assert.equal(state.companions.length,before.companions);assert.deepEqual(state.notices,['actions.root-editor-blocked']);assert.equal(inserts,0);
  files.set('D.md',{path:'D.md'});const cached={path:'D.md',file:files.get('D.md')};state.plugin.index.getVaultSearchPage=()=>cached;
  search('D.md');assert.equal(inserts,0,'Blocked root cannot materialize a provisional native file');view.blocked=false;search('D.md');assert.equal(inserts,1);assert.equal(state.renderPath,'D.md');
  const replacement={...files.get('D.md')};files.set('D.md',replacement);const rootCount=roots.length;graph(cached,'destination');assert.equal(roots.length,rootCount,'Stale native incarnation cannot even request a root');
@@ -919,4 +919,33 @@ test('Compass save failure, retired lifetime and passive follow cannot remove a 
   if(mode==='follow'){assert.equal(accepted,false);assert.equal(calls,0);}else{if(mode==='retired')live=false;finish(mode!=='failure');await Promise.resolve();await Promise.resolve();}
   assert.equal(f.state.renderPath,'A.md');assert.deepEqual(f.state.companions,[]);assert.deepEqual(f.state.plugin.settings.navigationHistory,['A.md']);
  }
+});
+
+for(const destination of ['C.md','A.md'])test('Mind Map center navigation saves once and accepts the latest '+destination,async()=>{
+ const f=appFollowFixture();let finish,calls=0,root='A.md';const completed=[];
+ const view={editors:{bindings:[{id:'native-root'}]},definition:{navigation:'rooted'},capture:()=>()=>true,
+  layoutRoot:()=>root,setRoot:id=>{assert.equal(view.editors.bindings.length,0,'Save/close precedes reroot');root=id;return true;}};
+ f.state.documentSession.plexView=view;
+ f.state.graphActionPorts.current={prepareEditorTransition:()=>{calls++;return new Promise(resolve=>finish=resolve)},completeEditorTransition:page=>completed.push(page?.path??null)};
+ let activate;const deps={...f.dependencies,pendingEditorNavigation:{current:null},resolveActionPage:(index,ref)=>index.get(ref.identity)??null,activate:(...args)=>activate(...args)};
+ activate=production('activate',deps,'src/ui/App.tsx');
+ assert.equal(activate(f.pages.get('B.md'),true,true,'user',true),true);
+ if(destination==='C.md')view.editors.bindings=[]; // Native close may finish before its navigation continuation.
+ assert.equal(activate(f.pages.get(destination),true,true,'user',true),true);
+ assert.equal(calls,1);assert.equal(root,'A.md');assert.equal(f.state.renderPath,'A.md');
+ view.editors.bindings=[];finish(true);await Promise.resolve();await Promise.resolve();
+ assert.equal(root,destination);assert.equal(f.state.renderPath,destination);assert.deepEqual(completed,[destination]);assert.deepEqual(f.state.notices??[],[]);
+});
+
+for(const failure of ['save','retired','replaced-file'])test('Mind Map '+failure+' cannot accept a pending center or transfer its editor',async()=>{
+ const f=appFollowFixture();let finish,live=true,root='A.md';const completed=[];
+ const view={editors:{bindings:[{id:'native-root'}]},definition:{navigation:'rooted'},capture:()=>()=>live,layoutRoot:()=>root,setRoot:id=>{root=id;return true;}};
+ f.state.documentSession.plexView=view;f.state.graphActionPorts.current={prepareEditorTransition:()=>new Promise(resolve=>finish=resolve),completeEditorTransition:page=>completed.push(page?.path??null)};
+ let activate;const deps={...f.dependencies,pendingEditorNavigation:{current:null},resolveActionPage:(index,ref)=>index.get(ref.identity)??null,activate:(...args)=>activate(...args)};
+ activate=production('activate',deps,'src/ui/App.tsx');activate(f.pages.get('B.md'),true,true,'user',true);
+ if(failure==='retired')live=false;
+ if(failure==='replaced-file')f.files.set('B.md',{...f.files.get('B.md')});
+ if(failure!=='save')view.editors.bindings=[];
+ finish(failure!=='save');await Promise.resolve();await Promise.resolve();
+ assert.equal(root,'A.md');assert.equal(f.state.renderPath,'A.md');assert.deepEqual(f.state.plugin.settings.navigationHistory,['A.md']);assert.deepEqual(completed,[null]);
 });

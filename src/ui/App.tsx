@@ -249,7 +249,7 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
   const syncMenuButtonRef = useRef<HTMLButtonElement>(null);
   const sidecarMoveButtonRef = useRef<HTMLButtonElement>(null);
   const graphActionPorts = useRef<GraphActionPorts | null>(null);
-  const pendingEditorNavigation = useRef<{run: () => void} | null>(null);
+  const pendingEditorNavigation = useRef<{run: () => GraphPage | null} | null>(null);
   const viewContributions = useMemo(/** Own exactly this native canvas; focus never redirects a contributed request. */ () =>
     new CanvasViewContributionController(documentSession.plexView, plugin.viewSettingsRegistry, {
       settings: () => plugin.settings.canvasViewSettings,
@@ -388,22 +388,30 @@ export function KplexApp({ plugin, surface, hostLeaf, translate, environment, on
    * Center an exact page; sidecar-open commands defer document synchronization to their owned open.
    * Passive follow keeps companion propagation: each host destination independently skips an
    * exact same-file observation, while other linked destinations still receive genuine navigation.
-   * Explicit search/history/pin/drop destinations may reroot; refuse an editor-removing root before changing attention or history.
+   * Explicit destinations may reroot after the outgoing editor saves, before changing attention or history.
    */
   const activate = useCallback((target: GraphPage, record = true, syncDocuments = true, origin: "user" | "wander" | "follow" = "user", reroot = false): boolean => {
     if (reroot && target.file && plugin.app.vault.getFileByPath(target.file.path) !== target.file) return false;
-    if (documentSession.plexView.editors.bindings.length && documentSession.plexView.definition.navigation !== "rooted" && target.path !== activePathRef.current) {
+    const changesRoot = reroot && documentSession.plexView.definition.navigation === "rooted"
+      && documentSession.plexView.layoutRoot(nodeId(activePathRef.current)) !== target.path;
+    if (pendingEditorNavigation.current || changesRoot && graphActionPorts.current?.hasPendingEditorTransition?.()
+      || documentSession.plexView.editors.bindings.length && (changesRoot
+      || documentSession.plexView.definition.navigation !== "rooted" && target.path !== activePathRef.current)) {
       if (origin === "follow" || target.file && plugin.app.vault.getFileByPath(target.file.path) !== target.file) return false;
-      const prepare = graphActionPorts.current?.prepareEditorTransition;if (!prepare) return false;
+      const ports = graphActionPorts.current, prepare = ports?.prepareEditorTransition;if (!prepare) return false;
       const current = documentSession.plexView.capture(), reference = actionNodeRef(target);
-      const run = (): void => {const page = resolveActionPage(plugin.index, reference);if (current() && page) activate(page, record, syncDocuments, origin, reroot);};
+      const run = (): GraphPage | null => {const page = resolveActionPage(plugin.index, reference);
+        return current() && page && activate(page, record, syncDocuments, origin, reroot) ? page : null;};
       if (pendingEditorNavigation.current) {pendingEditorNavigation.current.run = run;return true;}
       const pending = {run};pendingEditorNavigation.current = pending;
-      void prepare().then(accepted => {if (pendingEditorNavigation.current !== pending) return;pendingEditorNavigation.current = null;if (accepted && current()) pending.run();}).catch(() => {if (pendingEditorNavigation.current === pending) pendingEditorNavigation.current = null;new Notice(translate("actions.editor-save-failed"));});
+      void prepare().then(accepted => {if (pendingEditorNavigation.current !== pending) return;pendingEditorNavigation.current = null;
+        const page = accepted && current() ? pending.run() : null;
+        ports?.completeEditorTransition?.(page);
+      }).catch(() => {if (pendingEditorNavigation.current === pending) pendingEditorNavigation.current = null;new Notice(translate("actions.editor-save-failed"));});
       return true;
     }
     if (reroot && documentSession.plexView.definition.navigation === "rooted" && !documentSession.plexView.setRoot(nodeId(target.path))) {
-      new Notice(translate("actions.branch-editor-blocked")); return false;
+      new Notice(translate("actions.root-editor-blocked")); return false;
     }
     // Only an accepted explicit destination may materialize its existing native file in the index.
     // A refused root change must not create demand or publish a provisional destination.

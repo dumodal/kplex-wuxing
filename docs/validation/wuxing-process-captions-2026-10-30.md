@@ -84,3 +84,9 @@ New browser acceptance drives Input.dispatchMouseEvent press/release pairs with 
 ### Optional hidden group chrome
 
 Added preset-scoped `hideGroups` and a "Hide Wu Xing groups" checkbox beside cycle-guide/tint appearance controls, plus the native preset editor. It hides category names, relative labels, both count displays and filter controls together, preserving note layout, property drop areas, relation labels and Diagnostics. Enabled on the existing dumodal preset via the live guarded settings writer. Native verification: 10 category text elements and all 5 category tools have computed display none; 14 note cards remain, Diagnostics remains, no scene error. Installed assets byte-verified. No Markdown or ontology changes.
+
+### Upstream 0.3.1 integration
+
+User authorized saving current work to their fork and merging upstream. Custom checkpoint `c085016` was committed and pushed to `origin/sync/upstream-2026-10-30` before integration. Merged exact release tag `0.3.1` (`9e203ed`), not moving upstream main. Its four remaining commits add indexing completion and Mind Map editor navigation fixes plus release metadata. Only conflicts were plugin/package identity in manifest.json, manifest-beta.json, package.json and package-lock.json; preserved `kplex-wuxing` and the existing 0.3.1 version. All source changes merged automatically and were inspected.
+
+Validation on merged tree: production build, release metadata, architecture (0 violations), core (130 tests), Obsidian lint and 239 focused tests passed. Focused suite covers presets, localization, real browser interactions, property drops, editor switching, linked document navigation and source startup ownership/convergence. Full repository regression was not rerun; earlier unrelated baseline limitations remain recorded above. This synchronization changes source/build only: no live vault artifact installation, note writes or settings copies.

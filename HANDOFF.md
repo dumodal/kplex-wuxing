@@ -19,10 +19,11 @@ Obsidian is the production host; preserve the established portable semantic, ide
 
 ---
 
-# Wu Xing process captions delivered
+# Wu Xing fork checkpoint and upstream 0.3.1 integration
 
-- Version 0.3.1, five circular process captions and direct native editing implemented on `sync/upstream-2026-10-30`. Saved uncommitted; no push or PR.
-- Installed exact production artifacts into dumodal and verified actual Obsidian runtime, five visible captions, direct double-click editing, durable save, restored test text and unchanged note status/content. Current preset: “五行 · 过程导航”.
-- Final affected suite 65/65, ESLint and production build pass. Full regression has recorded browser-storage failures/stall; do not claim all checks passed.
-- Evidence and limits: [process captions validation](docs/validation/wuxing-process-captions-2026-10-30.md).
-- Previous synchronization and known upstream baseline: [sync validation](docs/validation/wuxing-upstream-sync-2026-10-30.md).
+- Pre-merge customizations saved as `c085016` and pushed to `origin/sync/upstream-2026-10-30`.
+- Integrated upstream release tag `0.3.1` (`9e203ed`), keeping fork plugin/package identity `kplex-wuxing`. Conflicts were limited to the four identity-bearing package/manifest files; retained the fork versions there.
+- Retains local relation captions, loose directional clusters, hidden group chrome, docked Diagnostics and presentation preferences. Upstream indexing completion and Mind Map editor navigation fixes are included.
+- Production build, architecture, core, Obsidian lint and release metadata checks pass. Focused merged regression results are recorded in the existing validation document.
+- Source integration builds artifacts only; the installed dumodal plugin remains the pre-merge custom build until separately installed. No vault settings or notes changed by synchronization.
+- Evidence: [process captions validation](docs/validation/wuxing-process-captions-2026-10-30.md).
