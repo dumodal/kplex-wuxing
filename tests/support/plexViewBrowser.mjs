@@ -23,6 +23,7 @@ const nativeStub=`
 `;
 return await build({stdin:{resolveDir:process.cwd(),contents:`
   export {createElement,useSyncExternalStore} from 'react';export {createRoot} from 'react-dom/client';export {flushSync} from 'react-dom';
+  export {ThoughtNode} from './src/ui/ThoughtNode';
   export {PlexGraph} from './src/ui/PlexGraph';export {migrateAndMergeSettings} from './src/settings';export {createTranslator} from './src/lang';
   export {PlexViewRegistry} from './src/core/plex/views/registry';export {PlexViewSession} from './src/application/PlexViewSession';
   export {builtInPlexViews} from './src/ui/plexViews/builtins';export {probeViewDefinition} from './tests/support/plexViewProbe';

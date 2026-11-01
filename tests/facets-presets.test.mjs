@@ -438,12 +438,12 @@ test('visibility options retain exact official geometry, membership, evidence an
  const f=scene('wuxing',35),before=f.layout(),work=structuredClone(f.work);
  assert.equal(M.isFacetPreset({...f.preset,spacing:22,arrangement:'scatter',sizing:'content'}),true,'Existing fork spacing and unknown later-stage fields remain readable');
  for(const hideGroups of [false,true])for(const hideGroupBorders of [false,true]){
-  const preset={...f.preset,hideGroups,hideGroupBorders,futurePreference:{keep:'literal'}};
+  const preset={...f.preset,hideGroups,hideGroupBorders,centerOutline:hideGroupBorders,futurePreference:{keep:'literal'}};
   assert.equal(M.isFacetPreset(preset),true);
   assert.deepEqual(M.layoutFacets(f.projection,f.measured,'wuxing',preset),before);
   const saved=JSON.parse(JSON.stringify(preset));assert.deepEqual(saved.futurePreference,{keep:'literal'});
   assert.deepEqual([saved.hideGroups,saved.hideGroupBorders],[hideGroups,hideGroupBorders]);
  }
  assert.deepEqual(f.work,work,'Visibility performs no additional graph/property reads');
- for(const field of ['hideGroups','hideGroupBorders'])for(const bad of ['true',1,null])assert.equal(M.isFacetPreset({...f.preset,[field]:bad}),false);
+ for(const field of ['hideGroups','hideGroupBorders','centerOutline'])for(const bad of ['true',1,null])assert.equal(M.isFacetPreset({...f.preset,[field]:bad}),false);
 });

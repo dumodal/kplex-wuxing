@@ -283,7 +283,7 @@ test('Facets production presets share captured controls, measured badges and liv
    check(a.container.querySelector('.kplex-camera').style.transform===camera,'Preset change preserves manual camera');
    const context={viewId:'wuxing',state:a.session.state,configuration:{status:'available',values:settings.canvasViewSettings.wuxing?.values??{}}};
    const controls=M.builtInCanvasViewSettings.layoutControls(M.wuXingViewDefinition,context),configControls=controls.filter(control=>!control.state),combine=controls.find(control=>control.state);
-   check(configControls.length===(preset==='wuxing'?9:7)&&controls.every(control=>control.field==='presets'&&control.path[0]===preset),'Shared rails address only the selected preset and its optional interpretation');
+   check(configControls.length===(preset==='wuxing'?10:8)&&controls.every(control=>control.field==='presets'&&control.path[0]===preset),'Shared rails address only the selected preset and its optional interpretation');
    check(combine?.kind==='checkbox'&&combine.state.value===true&&combine.state.actionId==='diagnostics.combine'&&combine.path.join('/')===preset+'/diagnostics/combined','Combine control captures the selected canvas presentation action');
    check(JSON.stringify(b.session.getState())===beforeB,'Other canvas retains independent selection');
  }
@@ -378,7 +378,7 @@ test('visibility controls hide category chrome reversibly while preserving node 
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
  const visibilityStyle=document.createElement('style');visibilityStyle.textContent=${JSON.stringify(readFileSync('styles.css','utf8'))};document.head.append(visibilityStyle);
  const a=await mount(M.wuXingViewDefinition),nodes=()=>[...a.container.querySelectorAll('[data-kplex-keyboard-id]')],original=nodes();
- const geometry=()=>nodes().map(node=>[node.dataset.kplexPath,node.style.left,node.style.top,node.style.width,node.style.height]);
+ const geometry=()=>nodes().map(node=>[node.dataset.kplexPath,node.style.left,node.style.top,node.style.width,node.style.height,node.getBoundingClientRect().width,node.getBoundingClientRect().height]);
  const before=JSON.stringify(geometry()),camera=a.container.querySelector('.kplex-camera').style.transform,counts={body:work.body,scans:work.scans,acquisitions:work.acquisitions};
  const categories=()=>[...a.container.querySelectorAll('[data-kplex-decoration]')].filter(node=>JSON.parse(node.dataset.kplexDecoration)[2]==='category');
  check(categories().length===5,'Official five group frames start visible');
@@ -394,4 +394,35 @@ test('visibility controls hide category chrome reversibly while preserving node 
  }
  check(work.body===counts.body&&work.scans===counts.scans&&work.acquisitions===counts.acquisitions,'Toggling never acquires semantic sources');
  a.close();visibilityStyle.remove();plugin.actionManager.dispose();return true;})()`),true)}finally{await host.cleanup()}
+});
+
+
+test('optional center outline changes paint only and preserves card geometry, source work and native content',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ document.body.style.cssText='--background-primary:#181818;--text-normal:#eeeeee;--color-blue:#1144bb;--color-green:#33aa66;--color-red:#cc2233;--color-orange:#dd8833;--color-yellow:#dddd22';
+ const appearanceStyle=document.createElement('style');appearanceStyle.textContent=${JSON.stringify(readFileSync('styles.css','utf8'))};document.head.append(appearanceStyle);
+ const a=await mount(M.wuXingViewDefinition),center=()=>a.container.querySelector('.kplex-role-center[data-kplex-path="A.md"]'),original=center();
+ const geometry=()=>[...a.container.querySelectorAll('[data-kplex-keyboard-id]')].map(node=>[node.dataset.kplexPath,node.style.left,node.style.top,node.style.width,node.style.height,node.getBoundingClientRect().width,node.getBoundingClientRect().height]);
+ const before=JSON.stringify(geometry()),camera=a.container.querySelector('.kplex-camera').style.transform,counts={body:work.body,scans:work.scans,acquisitions:work.acquisitions};
+ const paint=()=>['background','color','borderColor','borderWidth','boxShadow','fontSize'].map(key=>center().style[key]),originalPaint=JSON.stringify(paint()),badgeColor=getComputedStyle(center().querySelector('.kplex-node-badge')).backgroundColor;
+ check(!center().hasAttribute('data-kplex-category-outline'),'Official appearance is the default');
+ for(const enabled of [true,false,true,false]){
+  settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings??{},{field:'presets',path:['wuxing','centerOutline']},{kind:'set',value:enabled});a.props.settings={...settings};a.render();await wait();await wait();
+  check(center()===original&&JSON.stringify(geometry())===before,'Paint switch retains node DOM and every official rectangle');
+  check(a.container.querySelector('.kplex-camera').style.transform===camera,'Paint switch retains camera');
+  if(enabled){check(getComputedStyle(center()).borderColor===badgeColor,'Outline uses the existing category color');check(center().style.boxShadow.includes('3px 4px'),'Offset shadow is present');check(getComputedStyle(center().querySelector('.kplex-node-badge')).visibility==='hidden','Redundant badge is hidden without removing its reserve')}
+  else check(JSON.stringify(paint())===originalPaint,'Disabling restores exact upstream node paint');
+ }
+ const nativeContainer=document.body.appendChild(document.createElement('div')),nativeRoot=M.createRoot(nativeContainer),noop=()=>{},content=M.createElement('input',{defaultValue:'Before typing'});
+ const nativeNode={page:pages.get('A.md'),label:'A',role:'center',style:{},x:0,y:0,width:180,height:60,gateStats:unavailableCounts(),viewBadge:{label:'Water',width:70,height:18,fontSize:12,background:'#224466'}};
+ const nativeProps={node:nativeNode,settings,selected:false,highlighted:false,dimmed:false,highlightedGates:new Set(),translate:M.createTranslator('en'),onActivate:noop,onOpen:noop,onHoverNode:noop,onHoverGate:noop,onHoverEnd:noop,onHoverPreview:noop,onGatePointerDown:noop,onNodePointerDown:noop,content};
+ M.flushSync(()=>nativeRoot.render(M.createElement(M.ThoughtNode,{...nativeProps,centerOutline:false})));
+ const input=nativeContainer.querySelector('input'),nativeCard=nativeContainer.querySelector('.kplex-thought'),nativePaint=nativeCard.style.cssText;input.value='User is typing';
+ M.flushSync(()=>nativeRoot.render(M.createElement(M.ThoughtNode,{...nativeProps,centerOutline:true})));
+ check(nativeContainer.querySelector('input')===input&&input.value==='User is typing','Native editor subtree and typed value survive appearance changes');
+ check(nativeCard.style.cssText===nativePaint&&!nativeCard.hasAttribute('data-kplex-category-outline'),'Embedded content paint remains upstream');
+ M.flushSync(()=>nativeRoot.unmount());nativeContainer.remove();
+ check(work.body===counts.body&&work.scans===counts.scans&&work.acquisitions===counts.acquisitions,'Appearance never acquires sources');
+ a.close();appearanceStyle.remove();plugin.actionManager.dispose();return true;})()`),true)}finally{await host.cleanup()}
 });

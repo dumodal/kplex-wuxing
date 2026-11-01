@@ -9,6 +9,7 @@ import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 const japaneseTranslations = {
   "facets.hideGroups": "グループ名と件数を非表示",
   "facets.hideGroupBorders": "グループの枠を非表示",
+  "facets.centerOutline": "中央ノードの枠にカテゴリの色を使用",
   "drawing.template": "描画テンプレート",
   "drawing.blank": "空の描画",
   "settings.trackpad": "トラックパッド操作",

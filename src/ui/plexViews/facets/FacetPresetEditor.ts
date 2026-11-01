@@ -109,7 +109,7 @@ export class FacetPresetEditor extends StyleEditorModal {
       numberSlider(new Setting(body).setName(t(label)), {label: t(label), value: this.draft[field], min: minimum, max: maximum, step,
         onChange: value => {if (this.canEdit() && this.owner()) {this.draft = {...this.draft, [field]: value};this.validate();}}});
     for (const [field, label] of [["guides", "wuxing.guides"], ["tints", "wuxing.tints"],
-      ["hideGroups", "facets.hideGroups"], ["hideGroupBorders", "facets.hideGroupBorders"]] as const)
+      ["hideGroups", "facets.hideGroups"], ["hideGroupBorders", "facets.hideGroupBorders"], ["centerOutline", "facets.centerOutline"]] as const)
       new Setting(body).setName(t(label)).addToggle(input => input.setValue(this.draft[field] ?? false).onChange(value => {this.draft = {...this.draft, [field]: value};this.validate();}));
     renderFacetFlowSettings(body, /** Read current sibling layout/preset edits. */ () => this.draft,
       /** Guide settings stay inside the same atomic guarded preset Save. */ (preset, structural) => {

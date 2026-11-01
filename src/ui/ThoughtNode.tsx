@@ -19,6 +19,7 @@ import {physicalGateStats} from "./plexViews/measurement";
 import { useId, type CSSProperties, type DragEvent as ReactDragEvent, type MouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import type { GateSide, NodeVisual, PositionedNode } from "../types";
 import {MeasuredNodeBadge} from "./plexViews/MeasuredNodeBadge";
+import {colorValueCss} from "../adapters/obsidian/colorPresentation";
 import {NodeStatus} from "./features/NodeStatus";
 import { nodePaint, nodePaintFallbacks } from "../index/style";
 import type { KplexSettings } from "../settings";
@@ -67,6 +68,7 @@ export function ThoughtNode({
   branchStatus,
   branchStatusHint,
   badgeColorRevision = 0,
+  centerOutline = false,
   visual,
   content,
   cornerAction,
@@ -111,6 +113,8 @@ export function ThoughtNode({
   /** Explanation of coverage/cycle status, independent of counts and relationship authority. */
   branchStatusHint?: string;
   badgeColorRevision?: number;
+  /** Paint-only category outline is disabled for section cards and embedded native editors. */
+  centerOutline?: boolean;
 }) {
   const accessibleNameId = useId();
   const gateStats = physicalGateStats(node);
@@ -139,15 +143,19 @@ export function ThoughtNode({
   >{(branch || fold.kind === "branch") && <span className="kplex-branch-disclosure-symbol"><ObsidianIcon name={fold.expanded ? "chevron-down" : "chevron-right"} size={12} /></span>}</button>;
   const paint = nodePaint(style, nodePaintFallbacks(node));
   const gateSize = gateDiameter(style);
+  const categoryColor = centerOutline && node.role === "center" && !content && !isSection
+    && node.viewBadge?.presentation !== "status" && node.viewBadge?.background
+    ? colorValueCss(node.viewBadge.background, "var(--background-modifier-border)") : undefined;
   const nodeCss = {
     left: node.x - node.width / 2,
     top: node.y - node.height / 2,
     width: node.width,
     height: node.height,
-    background: isSection || content ? undefined : paint.background,
-    color: isSection || content ? undefined : paint.foreground,
-    borderColor: isSection || content ? undefined : paint.border,
-    borderWidth: isSection ? undefined : `${style.strokeWidth ?? 1}px`,
+    background: isSection || content ? undefined : categoryColor ? "var(--background-primary)" : paint.background,
+    color: isSection || content ? undefined : categoryColor ? "var(--text-normal)" : paint.foreground,
+    borderColor: isSection || content ? undefined : categoryColor ?? paint.border,
+    boxShadow: categoryColor ? `3px 4px 0 0 ${categoryColor}` : undefined,
+    borderWidth: categoryColor ? "2px" : isSection ? undefined : `${style.strokeWidth ?? 1}px`,
     borderStyle: isSection ? undefined : strokeStyle,
     borderRadius: isSection ? undefined : (style.strokeShaprness === "sharp" ? 5 : node.role === "center" ? 18 : 12),
     fontSize: `${nodeLabelFontSize(style.fontSize ?? 18, node.role === "center", settings.baseFontSize)}px`,
@@ -179,6 +187,7 @@ export function ThoughtNode({
     className={classes}
     style={nodeCss}
     data-kplex-path={node.page.path}
+    data-kplex-category-outline={Boolean(categoryColor) || undefined}
     role={group ? "button" : undefined}
     aria-label={group ? translate("groups.unfold", { name: node.label, count: group.groupMembers?.length ?? 0 }) : undefined}
     data-kplex-keyboard-id={keyboardId}

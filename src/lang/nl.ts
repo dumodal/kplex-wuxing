@@ -9,6 +9,7 @@ import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 const dutchTranslations = {
   "facets.hideGroups": "Groepslabels en aantallen verbergen",
   "facets.hideGroupBorders": "Groepskaders verbergen",
+  "facets.centerOutline": "Categoriekleur voor de centrale rand gebruiken",
   "drawing.template": "Tekensjabloon",
   "drawing.blank": "Lege tekening",
   "settings.trackpad": "Trackpadnavigatie",

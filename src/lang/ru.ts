@@ -9,6 +9,7 @@ import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 const russianTranslations = {
   "facets.hideGroups": "Скрыть подписи и счётчики групп",
   "facets.hideGroupBorders": "Скрыть рамки групп",
+  "facets.centerOutline": "Использовать цвет категории для контура центра",
   "drawing.template": "Шаблон рисунка",
   "drawing.blank": "Пустой рисунок",
   "settings.trackpad": "Навигация трекпадом",

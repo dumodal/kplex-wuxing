@@ -9,6 +9,7 @@ import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 const spanishTranslations = {
   "facets.hideGroups": "Ocultar etiquetas y recuentos de grupos",
   "facets.hideGroupBorders": "Ocultar marcos de grupos",
+  "facets.centerOutline": "Usar el color de categoría en el borde central",
   "drawing.template": "Plantilla de dibujo",
   "drawing.blank": "Dibujo en blanco",
   "settings.trackpad": "Navegación con panel táctil",

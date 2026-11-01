@@ -25,6 +25,8 @@ export type FacetPreset = Readonly<{version: 1; name: string; nameKey?: string; 
   diagnostics?: FacetDiagnostics;
   /** Paint-only visibility; hidden category chrome retains its measured layout and drop area. */
   hideGroups?: boolean; hideGroupBorders?: boolean;
+  /** Opt-in center-card paint keeps upstream dimensions and native editor ownership. */
+  centerOutline?: boolean;
   layout?: FacetLayout; focusAnchor?: FacetFocusAnchor; reverse?: boolean;
   /** Stable defaults are separate from the existing per-canvas area dimension maps. */
   areaSizes?: Readonly<{categories?: Readonly<Record<string, FacetAreaSize>>; diagnostics?: Readonly<Record<string, FacetAreaSize>>}>;

@@ -5392,6 +5392,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       node={nodeForDisplay}
       translate={translate}
       badgeColorRevision={badgeColorRevision}
+      centerOutline={visibilityPreset?.centerOutline === true}
       branchStatus={visibleEdgeProjection.limited && baseNode === navigationNode() ? translate("mindmap.limited") : baseNode.branch?.reference ? translate("mindmap.reference") : baseNode.branch?.status === "loading" ? translate("mindmap.loading")
         : baseNode.branch?.status === "limited" ? translate("mindmap.limited") : baseNode.branch?.status === "partial" ? translate("mindmap.partial")
         : baseNode.branch?.status === "unavailable" ? translate("mindmap.unavailable") : undefined}

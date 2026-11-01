@@ -3994,3 +3994,6 @@ button.kplex-sidecar-unfold-plex:focus-visible,
 .kplex-zone-panel.is-group-hidden > .kplex-zone-tools { visibility: hidden; }
 .kplex-view-region.is-border-hidden > rect,
 .kplex-view-region.is-border-hidden > path { display: none; }
+
+/* The center outline carries its category color; retain the badge's measured reserve. */
+.kplex-thought[data-kplex-category-outline] > .kplex-node-badge { visibility: hidden; }

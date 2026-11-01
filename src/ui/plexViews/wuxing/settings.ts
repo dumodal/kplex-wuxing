@@ -56,6 +56,7 @@ export const wuXingSettingsContribution: CanvasViewSettingsContribution = {
       {...address("tints"), kind: "checkbox", labelKey: "wuxing.tints"},
       {...address("hideGroups"), kind: "checkbox", labelKey: "facets.hideGroups"},
       {...address("hideGroupBorders"), kind: "checkbox", labelKey: "facets.hideGroupBorders"},
+      {...address("centerOutline"), kind: "checkbox", labelKey: "facets.centerOutline"},
       ...(selected.preset.interpretation === "wuxing" && facetHasWuXingPhases(selected.preset) ? [
         {...address("relativeLabels"), kind: "checkbox" as const, labelKey: "facets.relativeLabels" as const},
         {...address("regulatingGuides"), kind: "checkbox" as const, labelKey: "facets.regulatingGuides" as const},

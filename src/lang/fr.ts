@@ -9,6 +9,7 @@ import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 const frenchTranslations = {
   "facets.hideGroups": "Masquer les libellés et les compteurs des groupes",
   "facets.hideGroupBorders": "Masquer les cadres des groupes",
+  "facets.centerOutline": "Utiliser la couleur de catégorie pour le contour central",
   "drawing.template": "Modèle de dessin",
   "drawing.blank": "Dessin vierge",
   "settings.trackpad": "Navigation au pavé tactile",
