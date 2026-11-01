@@ -1,5 +1,5 @@
 /** One input-transparent reference layer. Existing category bounds and the invisible frame origin are
- * borrowed read-only, so toggling the complete blueprint cannot move notes or native editors. */
+ * borrowed read-only. Phase-only captions and a protected footer are presentation, never layout. */
 import {useId} from "react";
 import type {PlexDecoration} from "../../../core/plex/views/contracts";
 import type {FacetPreset} from "../../../core/plex/views/facets/contracts";
@@ -9,14 +9,15 @@ import {facetCategoryLabel} from "../../../core/plex/views/facets/labels";
 import {canvasViewText} from "../labels";
 import {colorValueCss} from "../../../adapters/obsidian/colorPresentation";
 
-/** Paint the complete optional guide around the virtual origin, independently of attention. */
+/** Paint the focus-independent guide and its opaque footer below the complete phase frame.
+ * The separate footer layer stays above connectors without raising background tints over notes. */
 export function WuXingBlueprint({decorations, presetId, preset, translate}: {
   decorations: readonly PlexDecoration[]; presetId: string; preset: FacetPreset; translate: Translator;
 }) {
   const prefix = useId(), guide = wuXingBlueprint(decorations, presetId, preset);
   if (!guide) return null;
-  const legendX = 0, legendY = 58;
-  return <svg className="kplex-view-decorations kplex-wuxing-blueprint" data-kplex-blueprint="true" role="img"
+  const legendX = guide.legend.x + guide.legend.width / 2, legendY = guide.legend.y + 26;
+  return <><svg className="kplex-view-decorations kplex-wuxing-blueprint" data-kplex-blueprint="true" role="img"
     aria-label={translate("wuxing.blueprint.title")} focusable="false">
     <defs><marker id={`${prefix}-arrow`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
       <path d="M 1 1 L 9 5 L 1 9 Z" />
@@ -24,19 +25,21 @@ export function WuXingBlueprint({decorations, presetId, preset, translate}: {
     {guide.links.map(link => <line key={`${link.kind}-${link.source}`} className={`kplex-blueprint-link is-${link.kind}`}
       data-kplex-blueprint-kind={link.kind} data-kplex-blueprint-source={link.source} data-kplex-blueprint-target={link.target}
       x1={link.start.x} y1={link.start.y} x2={link.end.x} y2={link.end.y} markerEnd={`url(#${prefix}-arrow)`} />)}
-    {guide.phases.map(({phase, bounds, role}) => {
+    {guide.phases.map(({phase, bounds}) => {
       const details = WUXING_BLUEPRINT_PHASES[phase], clipId = `${prefix}-${phase}`, x = bounds.x, y = bounds.y;
       return <g key={phase} className="kplex-blueprint-phase" data-kplex-blueprint-phase={phase}>
         <defs><clipPath id={clipId}><rect x={x + 48} y={y + 4} width={Math.max(0, bounds.width - 60)} height={46} /></clipPath></defs>
         <circle cx={x + 25} cy={y + 25} r={15} style={{stroke: colorValueCss(preset.categories[phase].color, "var(--text-muted)")}} />
         <text className="kplex-blueprint-glyph" x={x + 25} y={y + 25} textAnchor="middle" dominantBaseline="central">{details.glyph}</text>
         <g clipPath={`url(#${clipId})`}>
-          <text className="kplex-blueprint-name" x={x + 48} y={y + 21}>{canvasViewText(facetCategoryLabel(preset.categories[phase], phase), translate)}{role && <tspan className="kplex-blueprint-role">{" · "}{canvasViewText(role, translate)}</tspan>}</text>
+          <text className="kplex-blueprint-name" x={x + 48} y={y + 21}>{canvasViewText(facetCategoryLabel(preset.categories[phase], phase), translate)}</text>
           <text className="kplex-blueprint-meaning" x={x + 48} y={y + 40}>{translate(details.meaning)}</text>
         </g>
       </g>;
     })}
+  </svg><svg className="kplex-view-decorations kplex-wuxing-blueprint kplex-wuxing-guide-footer" data-kplex-guide-footer="true" aria-hidden="true" focusable="false">
     <g className="kplex-blueprint-legend" transform={`translate(${legendX} ${legendY})`}>
+      <rect data-kplex-guide-footer-bounds="true" x={-guide.legend.width / 2} y={-26} width={guide.legend.width} height={guide.legend.height} rx="12" />
       <text className="kplex-blueprint-title" textAnchor="middle" y={0}>{translate("wuxing.blueprint.title")}</text>
       <line className="kplex-blueprint-link is-generating" x1={-165} y1={22} x2={-131} y2={22} markerEnd={`url(#${prefix}-arrow)`} />
       <text x={-121} y={26}>{translate("wuxing.blueprint.generating")}</text>
@@ -44,5 +47,5 @@ export function WuXingBlueprint({decorations, presetId, preset, translate}: {
       <text x={59} y={26}>{translate("wuxing.blueprint.regulating")}</text>
       <text className="kplex-blueprint-cue" textAnchor="middle" y={49}>{translate("wuxing.blueprint.cue")}</text>
     </g>
-  </svg>;
+  </svg></>;
 }

@@ -48,7 +48,7 @@ test('a cold rooted map fits its first prepared local cover once without claimin
 
 /** Supply an asymmetric displayed scene and real camera application/fit/layout owners. */
 function graphFixture() {
-  const ctx={personalWuXing:false,camera:{current:{x:0,y:0,scale:1}},automaticFit:{current:null},activePath:'Center.md',rooted:false,
+  const ctx={personalWuXing:false,blueprintLegendBounds:undefined,camera:{current:{x:0,y:0,scale:1}},automaticFit:{current:null},activePath:'Center.md',rooted:false,
     committedCamera:{current:{x:0,y:0,scale:1}},cameraFlushRevision:{current:0},publishPublicScene:{current:()=>{}},
     cameraMotion:{current:new CameraMotion()},
     cameraIntentPlaced:{current:false},
@@ -487,4 +487,10 @@ test('personal Wu Xing keeps an invisible camera origin when the current note en
   ctx.pathChangedThisRender=false;ctx.applyCamera({...ctx.camera.current,x:230,y:190});ctx.render();ctx.layout();
   assert.equal(ctx.camera.current.x,230);assert.equal(ctx.camera.current.y,190,'Manual camera remains owned by the user');
  }
+});
+
+
+test('Wu Xing explicit fit includes the bottom guide without changing its invisible origin or node geometry',()=>{
+ const ctx=graphFixture();ctx.personalWuXing=true;ctx.blueprintLegendBounds={x:-250,y:800,width:500,height:104};ctx.scene.nodes[0].x=0;ctx.scene.nodes[0].y=0;const nodes=JSON.stringify(ctx.scene.nodes);ctx.render();ctx.fit();
+ assert.equal(ctx.camera.current.x,400);assert.equal(ctx.camera.current.y,300);assert(ctx.camera.current.y+904*ctx.camera.current.scale<=600,'Footer is included in symmetric viewport fit');assert.equal(JSON.stringify(ctx.scene.nodes),nodes);
 });

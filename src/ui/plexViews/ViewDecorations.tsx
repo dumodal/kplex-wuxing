@@ -20,10 +20,11 @@ export function viewDecorationCounts(decorations: readonly PlexDecoration[], nod
   return counts;
 }
 
-/** Render local shown counts supplied by the shared visible-occurrence owner, including expanded group membership. */
-export function ViewDecorations({decorations, counts, translate, hideGroups = false, hideGroupBorders = false, neutralCategories = false}: {decorations: readonly PlexDecoration[]; counts: ReadonlyMap<string, number>; translate: Translator; hideGroups?: boolean; hideGroupBorders?: boolean; neutralCategories?: boolean}) {
+/** Render shared region geometry/counts. Optional soft tints change only paint, retaining shaped
+ * region holes, measured headers, input transparency and all host interaction ownership. */
+export function ViewDecorations({decorations, counts, translate, hideGroups = false, hideGroupBorders = false, neutralCategories = false, softCategoryTints = false}: {decorations: readonly PlexDecoration[]; counts: ReadonlyMap<string, number>; translate: Translator; hideGroups?: boolean; hideGroupBorders?: boolean; neutralCategories?: boolean; softCategoryTints?: boolean}) {
   const prefix = useId();
-  return <svg className="kplex-view-decorations" aria-hidden="true" focusable="false">
+  return <svg className={`kplex-view-decorations${softCategoryTints ? " is-soft-tinted" : ""}`} aria-hidden="true" focusable="false">
     {decorations.some(mark => mark.kind === "guide" && (mark.directed || mark.direction)) && <defs>
       <marker id={`${prefix}-arrow`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
         <path d="M 0 0 L 10 5 L 0 10 Z" fill="var(--text-muted)" />

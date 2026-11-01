@@ -113,6 +113,7 @@ import {facetLibrary} from "../core/plex/views/facets/configuration";
 import {facetState, resolveFacetPreset} from "../core/plex/views/facets/state";
 import {facetIsWuXing} from "../core/plex/views/facets/presentation";
 import {WuXingBlueprint} from "./plexViews/wuxing/WuXingBlueprint";
+import {wuXingBlueprint} from "../core/plex/views/wuxing/blueprint";
 import {createLegacyPropertyProvider} from "../adapters/obsidian/predicateContracts";
 import { DropAreaPreview } from "./components/DropAreaPreview";
 import { DoubleTapGesture } from "./components/DoubleTapGesture";
@@ -1112,6 +1113,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const visibilityPreset = visibilitySelection?.preset ?? null;
   const personalWuXing = !!visibilityPreset && facetIsWuXing(visibilityPreset);
   const showBlueprint = personalWuXing && visibilityPreset.blueprint === true;
+  const blueprintLegendBounds = showBlueprint && scene.decorations && visibilityPreset
+    ? wuXingBlueprint(scene.decorations, visibilitySelection?.id ?? "wuxing", visibilityPreset)?.legend : undefined;
   const classicEditorCounts = useMemo(/** One linear pass rejects ambiguous section copies before native admission. */ () => {
     if (!classic) return null;
     const counts = new Map<string, number>();for (const node of scene.nodes) {const key = classic.editorKey(node, activePath);if (key) counts.set(key, (counts.get(key) ?? 0) + 1);}return counts;
@@ -2083,6 +2086,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         const bounds = decoration.caption?.bounds;if (bounds) includeRect(bounds.x - 4, bounds.y - 4, bounds.x + bounds.width + 4, bounds.y + bounds.height + 4);
       }
     }
+    // The optional footer participates in explicit/initial fitting, never node packing or a toggle-driven camera move.
+    if (blueprintLegendBounds) includeRect(blueprintLegendBounds.x - 12, blueprintLegendBounds.y - 12,
+      blueprintLegendBounds.x + blueprintLegendBounds.width + 12, blueprintLegendBounds.y + blueprintLegendBounds.height + 12);
     for (const badge of scene.badgeBounds ?? []) includeRect(badge.bounds.x - 4, badge.bounds.y - 4, badge.bounds.x + badge.bounds.width + 4, badge.bounds.y + badge.bounds.height + 4);
 
     if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
@@ -5939,7 +5945,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
           void plugin.actionManager.dispatch({id: "editor.collapse", source: "toolbar", surfaceId: actionSurfaceId, args: {bindingId: boundEditorBinding.id}});
         }}>{translate("actions.editor.collapse")}</button>}</div>}
     <div ref={cameraElement} className="kplex-camera" style={{ transform: `translate(${camera.current.x}px, ${camera.current.y}px) scale(${camera.current.scale})` }}>
-      {scene.decorations && <ViewDecorations hideGroups={personalWuXing || visibilityPreset?.hideGroups === true} hideGroupBorders={personalWuXing ? !showBlueprint : visibilityPreset?.hideGroupBorders === true} neutralCategories={personalWuXing} decorations={scene.decorations} translate={translate}
+      {scene.decorations && <ViewDecorations hideGroups={personalWuXing || visibilityPreset?.hideGroups === true} hideGroupBorders={personalWuXing ? !showBlueprint : visibilityPreset?.hideGroupBorders === true} neutralCategories={personalWuXing && !showBlueprint} softCategoryTints={showBlueprint} decorations={scene.decorations} translate={translate}
         counts={viewDecorationCounts(scene.decorations, scene.nodes, filterMatchedNodePaths, zoneDisplayLayouts)} />}
       {showBlueprint && scene.decorations && visibilityPreset && <WuXingBlueprint decorations={scene.decorations} preset={visibilityPreset} presetId={visibilitySelection?.id ?? "wuxing"}
         translate={translate} />}

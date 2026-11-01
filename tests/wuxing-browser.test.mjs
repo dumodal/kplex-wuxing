@@ -238,30 +238,30 @@ test('advanced Facets rules use current/candidate cached metadata in the product
  })()`),true)}finally{await host.cleanup()}
 });
 
-test('relative Wu Xing presentation follows focus and unavailable metadata without new work or semantic edges',async()=>{
+test('Wu Xing reference meanings remain independent of focus and unavailable metadata without source work',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
  fieldCaches.get('A.md').frontmatter.status='wood';fieldCaches.get('B.md').frontmatter.status='metal';
  settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing','blueprint']},{kind:'set',value:true});
  const original=JSON.stringify([...fieldCaches]),a=await mount(M.wuXingViewDefinition),b=await mount(M.wuXingViewDefinition);
  const region=(surface,id)=>surface.container.querySelector('[data-kplex-decoration='+CSS.escape(JSON.stringify(['facets','wuxing','category',id]))+']');
- const label=(surface,id)=>surface.container.querySelector('[data-kplex-blueprint-phase='+id+'] .kplex-blueprint-role')?.textContent.slice(3);
- check(label(a,'wood')==='What shares my phase'&&label(a,'metal')==='What regulates me','Wood reference reading');
+ const label=(surface,id)=>surface.container.querySelector('[data-kplex-blueprint-phase='+id+'] .kplex-blueprint-meaning')?.textContent;
+ const phases=['wood','fire','earth','metal','water'],meaningSnapshot=JSON.stringify(phases.map(id=>label(a,id)));check(label(a,'wood')==='Growth · connections'&&label(a,'metal')==='Refinement · boundaries','Reference contains only fixed phase meanings');check(!a.container.querySelector('.kplex-blueprint-role'),'No relative-to-me guide labels');
  const bState=JSON.stringify(b.session.getState()),bCamera=b.container.querySelector('.kplex-camera').style.transform;
  a.props.activePath='B.md';a.render();await wait();
- check(label(a,'wood')==='What I regulate'&&label(a,'water')==='What I generate'&&label(a,'metal')==='What shares my phase','Metal reference reading');
- check(label(b,'metal')==='What regulates me'&&JSON.stringify(b.session.getState())===bState&&b.container.querySelector('.kplex-camera').style.transform===bCamera,'Other canvas is independent');
+ check(JSON.stringify(phases.map(id=>label(a,id)))===meaningSnapshot,'Changing current note leaves phase meanings unchanged');
+ check(label(b,'metal')==='Refinement · boundaries'&&JSON.stringify(b.session.getState())===bState&&b.container.querySelector('.kplex-camera').style.transform===bCamera,'Other canvas is independent');
  const guides=[...a.container.querySelectorAll('[data-kplex-blueprint-kind]')];check(guides.length===10&&guides.every(row=>row.getAttribute('marker-end')),'Both cycles have decorative direction');
  check(a.container.querySelectorAll('[data-kplex-blueprint-kind=generating]').length===5&&a.container.querySelectorAll('[data-kplex-blueprint-kind=regulating]').length===5,'Cycle families stay distinct');
  const markers=[a,b].map(surface=>surface.container.querySelector('marker').id);check(markers[0]!==markers[1],'Per-canvas marker identities');
  const focused=a.container.querySelector('[data-kplex-path="B.md"]'),camera=a.container.querySelector('.kplex-camera').style.transform;
  for(const phase of [undefined,['wood','metal']]){
   fieldCaches.get('B.md').frontmatter.status=phase;for(const ref of [...events])if(ref?.name==='changed')ref.callback(pages.get('B.md').file);await wait();
-  check(['wood','fire','earth','metal','water'].every(id=>label(a,id)==='Reference phase unavailable'),'No model default for missing/conflicting focus');
+  check(JSON.stringify(phases.map(id=>label(a,id)))===meaningSnapshot&&!a.container.querySelector('.kplex-blueprint-role'),'Missing/conflicting attention does not alter the fixed reference');
   check(a.container.querySelector('[data-kplex-path="B.md"]')===focused&&a.container.querySelector('.kplex-camera').style.transform===camera,'Reclassification retains occurrence/camera');
  }
  fieldCaches.delete('B.md');for(const ref of [...events])if(ref?.name==='changed')ref.callback(pages.get('B.md').file);await wait();
- check(label(a,'wood')==='Reference phase unavailable','Incomplete metadata is not Wood');
+ check(JSON.stringify(phases.map(id=>label(a,id)))===meaningSnapshot,'Reference remains complete even without current metadata');
  check(rows(pages.get('B.md'),'parent')[0].page.path==='A.md'&&rows(pages.get('B.md'),'parent')[0].role==='parent','Canonical relationship remains recorded parent');
  check(work.body===0&&work.scans===0,'Presentation never parses or scans');
  check(JSON.parse(original).find(([path])=>path==='A.md')[1].frontmatter.status===fieldCaches.get('A.md').frontmatter.status,'Focus never writes phases');
@@ -459,14 +459,20 @@ test('one blueprint switch shows all phase frames meanings and straight cycles w
    check(a.container.querySelectorAll('[data-kplex-blueprint-phase]').length===5,'All five phase names and activity meanings are present');
    const links=[...a.container.querySelectorAll('[data-kplex-blueprint-kind]')];check(links.length===10&&links.every(link=>link.tagName.toLowerCase()==='line'),'Both full cycles use straight segments');
    for(const [kind,expected]of [['generating',['wood>fire','fire>earth','earth>metal','metal>water','water>wood']],['regulating',['wood>earth','fire>metal','earth>water','metal>wood','water>fire']]])check(JSON.stringify(links.filter(link=>link.dataset.kplexBlueprintKind===kind).map(link=>link.dataset.kplexBlueprintSource+'>'+link.dataset.kplexBlueprintTarget).sort())===JSON.stringify(expected.sort()),'Correct '+kind+' direction despite all old switches being off');
-   check(a.container.querySelector('.kplex-blueprint-meaning').textContent.length>0,'Each phase has an activity cue');
+   check(a.container.querySelector('.kplex-blueprint-meaning').textContent.length>0&&!a.container.querySelector('.kplex-blueprint-role'),'Only phase names and activity meanings are present');
+   const tinted=a.container.querySelector('.kplex-view-decorations.is-soft-tinted');check(tinted,'The single guide switch enables tint even when old tints=false');
+   const fills=[...tinted.querySelectorAll('.kplex-view-region > rect,.kplex-view-region > path')];check(fills.length===5&&new Set(fills.map(frame=>getComputedStyle(frame).fill)).size===5&&fills.every(frame=>Number(getComputedStyle(frame).fillOpacity)===0.12),'All five colored frame tints are visible');
+   const footer=a.container.querySelector('.kplex-blueprint-legend'),footerBounds=footer.getBoundingClientRect(),frameBottom=Math.max(...[...a.container.querySelectorAll('.kplex-view-region > rect,.kplex-view-region > path')].map(frame=>frame.getBoundingClientRect().bottom));check(footerBounds.top>frameBottom,'Legend is below the complete five-phase framework');
+   check(parseInt(getComputedStyle(a.container.querySelector('[data-kplex-guide-footer]')).zIndex)>parseInt(getComputedStyle(a.container.querySelector('.kplex-links')).zIndex),'Footer paints above semantic connectors');
+   check(getComputedStyle(footer.querySelector('rect')).fillOpacity==='1','Footer has an opaque background shielding its copy');
   }
-  const frames=[...a.container.querySelectorAll('.kplex-view-region > rect,.kplex-view-region > path')];check(frames.length===5&&frames.every(frame=>(getComputedStyle(frame).display!=='none')===enabled),'All phase frames follow the same switch');
+  const frames=[...a.container.querySelectorAll('.kplex-view-region > rect,.kplex-view-region > path')];check(frames.length===5&&frames.every(frame=>(getComputedStyle(frame).display!=='none')===enabled),'All phase frames follow the same switch');check(a.contributions.context().configuration.values.presets.wuxing.tints===false,'Opening the guide preserves legacy tint preference');
   check(nodes().every((node,i)=>node===original[i])&&JSON.stringify(geometry())===before,'No node DOM or measured position changes');
   check(a.container.querySelector('.kplex-camera').style.transform===camera,'The guide never moves the camera');
   check(!a.container.querySelector('.kplex-view-guide'),'No old curved cycle remains behind the guide');
  }
  const menu=a.contributions.menus().find(item=>item.id==='blueprint');check(menu?.checked===false,'Canvas menu reflects the same saved switch');await menu.command.run();a.props.settings={...settings};a.render();await wait();check(a.container.querySelector('[data-kplex-blueprint]'),'Canvas menu opens the same full guide');
+ await a.ports.current.implementations['view.fit'].execute({});await wait();const footerBox=a.container.querySelector('.kplex-blueprint-legend').getBoundingClientRect(),viewBox=a.container.querySelector('.kplex-plex').getBoundingClientRect();check(footerBox.bottom<=viewBox.bottom&&footerBox.left>=viewBox.left&&footerBox.right<=viewBox.right,'Explicit Fit includes the bottom explanation');
  check(work.body===source.body&&work.scans===source.scans&&work.acquisitions===source.acquisitions,'Guide changes acquire no source data');
  a.close();blueprintStyle.remove();plugin.actionManager.dispose();return true;})()`),true)}finally{await host.cleanup()}
 });
@@ -525,7 +531,7 @@ test('situated attention retains its DOM subtree and virtual camera through all 
  check(a.container.querySelector('[data-kplex-path="A.md"]')===focus&&getComputedStyle(focus).clip!=='auto','Scrolling clips the same mounted card');check(a.container.querySelectorAll('.kplex-edge-visible').length===0,'A fully clipped attention paints no floating connections');
  for(const phase of ['wood','fire','earth','metal','water']){fieldCaches.get('A.md').frontmatter.status=phase;for(const ref of [...events])if(ref?.name==='changed')ref.callback(pages.get('A.md').file);await wait();
   check(a.container.querySelectorAll('[data-kplex-path="A.md"]').length===1&&a.container.querySelector('[data-kplex-path="A.md"]')===focus&&focus.querySelector('.kplex-node-badge')===badge,'Phase changes retain one exact card subtree');
-  inside(phase);check(a.container.querySelector('.kplex-camera').style.transform===camera,'Phase changes preserve the invisible frame camera');check(a.container.querySelector('.kplex-blueprint-legend').getAttribute('transform')==='translate(0 58)','Blueprint legend stays at the virtual center');
+  inside(phase);check(a.container.querySelector('.kplex-camera').style.transform===camera,'Phase changes preserve the invisible frame camera');const footer=a.container.querySelector('.kplex-blueprint-legend').getBoundingClientRect();check(footer.top>Math.max(...[...a.container.querySelectorAll('.kplex-view-region > rect')].map(frame=>frame.getBoundingClientRect().bottom)),'Blueprint legend remains below the framework');
  }
  check(water.scrollTop<scrolledTop,'Returning to a scrolled phase minimally reveals the complete current card');
  const positions=focus.style.cssText;a.render();await wait();check(a.container.querySelector('[data-kplex-path="A.md"]')===focus&&focus.style.cssText===positions,'Ordinary publication does not relocate or remount attention');

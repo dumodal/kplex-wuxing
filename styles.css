@@ -4013,3 +4013,9 @@ button.kplex-sidecar-unfold-plex:focus-visible,
 .kplex-blueprint-meaning, .kplex-blueprint-legend text { font-size: 12px; }
 .kplex-blueprint-legend .kplex-blueprint-title { font-size: 13px; font-weight: 500; }
 .kplex-blueprint-legend .kplex-blueprint-cue { font-size: 11px; }
+
+/* One guide switch adds soft phase tints; ordinary Facets region paint is unchanged. */
+.kplex-view-decorations.is-soft-tinted .kplex-view-region > rect,
+.kplex-view-decorations.is-soft-tinted .kplex-view-region > path { fill-opacity: 0.12; stroke-opacity: 0.4; }
+.kplex-wuxing-guide-footer { z-index: 6; }
+.kplex-blueprint-legend > rect { fill: var(--background-primary); fill-opacity: 1; stroke: var(--background-modifier-border); stroke-width: 1; }

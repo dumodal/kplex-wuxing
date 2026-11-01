@@ -1,6 +1,6 @@
 /** Paint-only five-phase blueprint. It joins existing category rectangles and never places
- * notes, queries graph sources, changes classification or reserves additional layout space. */
-import type {PlexDecoration, ViewRect, ViewPoint, CanvasViewText} from "../contracts";
+ * notes, queries graph sources or changes classification. The footer footprint is fit/export-only. */
+import type {PlexDecoration, ViewRect, ViewPoint} from "../contracts";
 import type {FacetPreset} from "../facets/contracts";
 import {FACET_WUXING_CYCLE} from "../facets/labels";
 import {facetAreaId} from "../facets/projection";
@@ -15,7 +15,7 @@ export const WUXING_BLUEPRINT_PHASES = {
   metal: {glyph: "金", meaning: "wuxing.blueprint.metal"},
   water: {glyph: "水", meaning: "wuxing.blueprint.water"},
 } as const;
-export type WuXingBlueprintPhase = Readonly<{phase: WuXingPhase; bounds: ViewRect; role?: CanvasViewText}>;
+export type WuXingBlueprintPhase = Readonly<{phase: WuXingPhase; bounds: ViewRect}>;
 export type WuXingBlueprintLink = Readonly<{source: WuXingPhase; target: WuXingPhase;
   kind: "generating" | "regulating"; start: ViewPoint; end: ViewPoint}>;
 
@@ -37,18 +37,21 @@ function frameLink(a: ViewRect, b: ViewRect): Readonly<{start: ViewPoint; end: V
 /** Phase identities, rather than current focus, translated names or visual order, fix direction:
  * one step generates; two steps regulates. Every interior regulator is a straight star chord. */
 export function wuXingBlueprint(decorations: readonly PlexDecoration[], presetId: string, preset: FacetPreset):
-  Readonly<{phases: readonly WuXingBlueprintPhase[]; links: readonly WuXingBlueprintLink[]}> | null {
+  Readonly<{phases: readonly WuXingBlueprintPhase[]; links: readonly WuXingBlueprintLink[]; legend: ViewRect}> | null {
   if (!facetIsWuXing(preset)) return null;
   const phases: WuXingBlueprintPhase[] = [];
   for (const phase of FACET_WUXING_CYCLE) {
     const region = decorations.find(mark => mark.kind === "region" && mark.id === facetAreaId(presetId, "category", phase));
     if (!region || region.kind !== "region") return null;
-    phases.push({phase, bounds: region.bounds, role: region.description});
+    phases.push({phase, bounds: region.bounds});
   }
   const links: WuXingBlueprintLink[] = [];
   for (const step of [1, 2] as const) for (let index = 0; index < phases.length; index++) {
     const source = phases[index], target = phases[(index + step) % phases.length], segment = frameLink(source.bounds, target.bounds);
     if (segment) links.push({source: source.phase, target: target.phase, kind: step === 1 ? "generating" : "regulating", ...segment});
   }
-  return {phases, links};
+  const left = Math.min(...phases.map(/** The legend follows the full framework rather than attention. */ row => row.bounds.x));
+  const right = Math.max(...phases.map(/** Unequal phase widths keep the footer centered on the complete frame. */ row => row.bounds.x + row.bounds.width));
+  const bottom = Math.max(...phases.map(/** Reserve a clear gap beneath the lowest phase. */ row => row.bounds.y + row.bounds.height));
+  return {phases, links, legend: {x: (left + right) / 2 - 250, y: bottom + 36, width: 500, height: 104}};
 }

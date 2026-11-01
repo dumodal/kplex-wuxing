@@ -493,7 +493,7 @@ test('unified blueprint fixes both five-phase directions independently of legacy
  const layout=M.wuXingViewDefinition.layout(initial,initial.occurrences.map(row=>({id:row.id,width:200,height:50})),state,null,{configuration:cfg});
  assert.equal(layout.decorations.filter(mark=>mark.kind==='guide').length,0,'No invisible legacy guide affects the canvas fit');
  const water=layout.decorations.find(mark=>mark.kind==='region'&&mark.id===M.facetAreaId('wuxing','category','water'));
- assert.equal(water.description.key,'facets.relativeSame','The complete reference role is available even when old relative-label switches were off');
+ assert.equal(water.description,undefined,'Personal phase frames omit attention-relative descriptions');
  assert.equal(M.wuXingBlueprint(layout.decorations.filter(mark=>mark.id!==water.id),'wuxing',legacyPreset),null,'Incomplete frames do not invent a phase location');
 });
 
@@ -527,4 +527,12 @@ test('same-phase parents pack above situated attention on their own rows without
  const layout=M.wuXingViewDefinition.layout(projection,f.measure(projection),state,null,{configuration}),focus=layout.positions.get(projection.entry);
  for(const row of projection.occurrences){const rect=layout.positions.get(row.id);if(row.role==='parent')assert(rect.y+rect.height/2<focus.y-focus.height/2,'Parents have a real row above current attention, even in a wide multi-column phase');if(row.role==='child')assert(rect.y-rect.height/2>focus.y+focus.height/2,'Children have a row below attention');}
  assert.equal(JSON.stringify(projection),before);assert.equal(layout.positions.size,projection.occurrences.length);
+});
+
+test('blueprint meaning is independent of the current note and its legend sits below every complete phase frame',()=>{
+ const f=scene('wuxing',18),layout=M.layoutFacets(f.projection,f.measured,'wuxing',f.preset),guide=M.wuXingBlueprint(layout.decorations,'wuxing',f.preset);
+ assert(guide.legend,'Guide declares a fit/export footprint for its bottom explanation');
+ assert(guide.legend.y>Math.max(...guide.phases.map(row=>row.bounds.y+row.bounds.height)),'Legend is below the whole framework');
+ assert(guide.phases.every(row=>!('role'in row)),'Guide contains fixed phase meanings without relative-to-me roles');
+ assert.deepEqual(M.wuXingBlueprint(layout.decorations.map(mark=>({...mark,description:{literal:'What generates me'}})),'wuxing',f.preset),guide,'Changing attention-relative copy cannot change the reference guide');
 });

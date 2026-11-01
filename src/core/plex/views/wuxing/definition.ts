@@ -10,7 +10,6 @@ import {facetState, resolveFacetPreset, restoreFacetState, reduceFacetState, ord
 import {facetPropertyAssignments} from "../facets/assignment";
 import {compileFacetRules} from "../facets/rules";
 import {facetFlowLabels} from "../facets/flow";
-import {facetRelativeLabel} from "../facets/labels";
 
 export const wuXingViewDefinition: PlexViewDefinition = {
   id: "wuxing", version: 1, labelKey: "view.wuxing", icon: "orbit", editorHosting: "attention-and-occurrence",
@@ -58,14 +57,13 @@ export const wuXingViewDefinition: PlexViewDefinition = {
       !!intent && (selected.status === "ready" || selected.status === "replaced"), context?.areaWidths, intent, context?.decorationMeasurements);
     if (facetShowsDiagnostics(selected.preset)) return layout;
     const categoryAreas = new Set(selected.preset.order.map(id => facetAreaId(selected.id, "category", id)));
-    const partition = projection.occurrences.find(row => row.id === projection.entry)?.groupingPartition;
-    const focusPhase = selected.preset.order.find(id => partition === facetAreaId(selected.id, "category", id));
     return {...layout, areas: layout.areas?.filter(area => categoryAreas.has(area.id)),
       decorations: layout.decorations?.filter(mark => mark.kind === "region" && categoryAreas.has(mark.areaId ?? mark.id)).map(mark => {
         if (mark.kind !== "region") return mark;
         const phase = selected.preset.order.find(id => mark.id === facetAreaId(selected.id, "category", id));
-        // Reference copy is attached only after packing; the unified guide never adds header rows.
-        return {...mark, description: phase ? facetRelativeLabel({...selected.preset, relativeLabels: true}, focusPhase, phase) : undefined};
+        // Personal reference copy is phase-only. Keep measured headers unchanged while supplying
+        // palette colors independently of the old tint flag; the one guide switch owns their paint.
+        return {...mark, description: undefined, ...(phase ? {color: selected.preset.categories[phase].color} : {})};
       })};
   },
   /** Configured colors join the existing owning-document theme and palette projection. */

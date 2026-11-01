@@ -12,7 +12,7 @@ export type CanvasImageSnapshot = Readonly<{
   warnings: Readonly<ImageWarnings>; elements: number;
 }>;
 export type CanvasImageCaptureOptions = ImageExportGuard & Readonly<{center?: HTMLElement | null; maximumElements?: number; maximumCharacters?: number}>;
-const CROP = "[data-kplex-path], .kplex-view-region > rect, .kplex-view-region > path, .kplex-view-guide, .kplex-view-guide-caption, .kplex-edge-visible, .kplex-edge-label, .kplex-area-frame, .kplex-central-editor-overlay";
+const CROP = "[data-kplex-path], .kplex-view-region > rect, .kplex-view-region > path, .kplex-view-guide, .kplex-view-guide-caption, .kplex-blueprint-legend, .kplex-edge-visible, .kplex-edge-label, .kplex-area-frame, .kplex-central-editor-overlay";
 const OMIT = new Set(["script", "style", "iframe", "webview", "object", "embed", "audio", "video", "link", "meta", "base"]);
 
 /** Intersect with actual internal scrolling/overflow clips; the outer camera viewport is deliberately excluded. */
