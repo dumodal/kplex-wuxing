@@ -634,7 +634,7 @@ for (const file of [
   "src/ui/plexViews/sections.ts",
   "src/ui/plexViews/scene.ts",
   "src/ui/plexViews/areaVisibility.ts",
-  "src/ui/plexViews/stackedEdgeRouting.ts",
+  "src/ui/plexViews/floatingEdgeRouting.ts",
   "src/ui/plexViews/facets/FacetPresetRemoval.ts",
   "src/ui/plexViews/contributionContracts.ts",
   "src/ui/plexViews/contributionValidation.ts",

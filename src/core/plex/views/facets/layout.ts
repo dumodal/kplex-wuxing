@@ -2,7 +2,7 @@
  * owners retain clipping/reflow/resizing/camera. Guides remain decorative without endpoints. */
 import type {PlexProjection, PlexMeasurement, PlexViewLayout, PlexArea, PlexDecoration, ViewRect, CanvasViewText, PlexDecorationTextSize} from "../contracts";
 import type {FacetPreset, FacetCanvasState} from "./contracts";
-import {measuredAreaGrid, measuredAreaColumns} from "../areaLayout";
+import {measuredAreaGrid, measuredAreaColumns, type MeasuredAreaGrid} from "../areaLayout";
 import {nodeBadgeBounds, nodeBadgeInsets} from "../decorations";
 import {facetCategoryLabel, facetHasWuXingPhases, facetRelativeLabel, FACET_WUXING_CYCLE} from "./labels";
 import {facetAreaId, facetCombinedAreaId} from "./projection";
@@ -12,26 +12,36 @@ import {facetCategoryFrames} from "./layoutStrategies";
 import {layoutFacetFlows} from "./flow";
 
 /** Reuse the shared measured grid and native area reflow owner. Categorized attention shares
- * measured area/editor containment; empty regions retain their visible bounds and controls. */
+ * measured area/editor containment, with real parent rows above its dedicated row. Empty regions
+ * retain their visible bounds and controls; filtering preserves situated row geometry. */
 function pack(id: string, bounds: ViewRect, projection: PlexProjection, measured: ReadonlyMap<string, PlexMeasurement>,
   positions: Map<string, ViewRect>, label: CanvasViewText, editable: boolean, described = false, partitionOrder?: readonly string[], content = bounds): PlexArea {
   const occurrences = projection.occurrences.filter(row => row.areaId === id);
-  // Keep situated attention first, so a populated phase opens with the current card/editor visible.
-  occurrences.sort(/** Current attention precedes neighbors without changing their stable order. */ (a, b) => Number(b.id === projection.entry) - Number(a.id === projection.entry));
   if (partitionOrder) occurrences.sort(/** Diagnostic rows follow stable status identity, never translated text. */ (a, b) => partitionOrder.indexOf(a.groupingPartition ?? "") - partitionOrder.indexOf(b.groupingPartition ?? ""));
   const items = occurrences.flatMap(/** Missing measurements cannot invent a displayable occurrence. */ row => {const value = measured.get(row.id);return value ? [value] : [];});
   const cells = items.map(/** Badges occupy measured space without replacing canonical card dimensions. */ item => ({...item, insets: nodeBadgeInsets(item, item.badge)}));
-  const columns = measuredAreaColumns(cells, content.width, 18), grid = measuredAreaGrid(cells, columns, 18, 18, 24, 18, 18), header = described ? 78 : 54, top = content.y + header;
+  const columns = measuredAreaColumns(cells, content.width, 18), situated = cells.some(/** Only an explicitly categorized attention changes local row packing. */ cell => cell.id === projection.entry);
+  let grid: MeasuredAreaGrid = measuredAreaGrid(cells, columns, 18, 18, 24, 18, 18);
+  if (situated) {
+    const parents = new Set(occurrences.filter(/** Canonical parent roles provide local order without changing classification. */ row => row.role === "parent").map(/** Retain exact admitted occurrence identity. */ row => row.id));
+    const groups = [cells.filter(/** Parents occupy real rows above attention. */ cell => parents.has(cell.id)), cells.filter(/** Attention owns a separate full-width row. */ cell => cell.id === projection.entry),
+      cells.filter(/** Other relationships retain their existing order below attention. */ cell => cell.id !== projection.entry && !parents.has(cell.id))].filter(/** Empty relationship bands reserve no blank space. */ group => group.length);
+    const bands = groups.map(/** Each band reuses the measured column/grid owner. */ group => measuredAreaGrid(group, measuredAreaColumns(group, content.width, 18), 18, 18, 24, 0, 0));
+    const width = Math.max(...bands.map(/** Align every band around the same phase center. */ band => band.width)), positions = new Map<string, ViewRect>();let y = 18;
+    for (const band of bands) {for (const [key, rect] of band.positions) positions.set(key, {...rect, x: (width - band.width) / 2 + rect.x, y: y + rect.y});y += band.height + 24;}
+    grid = {positions, width, height: y - 24 + 18};
+  }
+  const header = described ? 78 : 54, top = content.y + header;
   for (const [key, rect] of grid.positions) positions.set(key, {...rect, x: content.x + (content.width - grid.width) / 2 + rect.x, y: top + rect.y});
   return {id, bounds, labelKey: "key" in label ? label.key : "", ...("literal" in label ? {label: label.literal} : {}),
     ...(editable ? {resizeEdge: "bottom", heightPreference: {key: id, minimum: 160, maximum: Math.max(1200, bounds.height)},
       widthResizeEdge: "right", widthPreference: {key: id, minimum: 200, maximum: Math.max(2400, bounds.width), value: bounds.width}} : {}),
     viewport: {x: content.x, y: top, width: content.width, height: content.height - header, contentTop: top,
       contentHeight: Math.max(content.height - header, grid.height), initialScrollTop: 0},
-    reflow: {columns, columnGap: 18, rowGap: 18, paddingTop: 18, paddingBottom: 18, autoColumns: true}};
+    reflow: {columns, columnGap: 18, rowGap: 18, paddingTop: 18, paddingBottom: 18, autoColumns: true, ...(situated ? {filterLayout: "keep" as const} : {})}};
 }
-/** Ring radius separates neighboring region diagonals and reserves the center's actual editor
- * plus badge envelope. Preset-scoped area overrides never leak to another preset/category. */
+/** Ring radius separates measured regions around the actual attention envelope or a virtual
+ * origin. Native editor dimensions belong to their actual area; preset size overrides stay local. */
 export function layoutFacets(projection: PlexProjection, measured: readonly PlexMeasurement[], presetId: string, preset: FacetPreset,
   areaHeights: Readonly<Record<string, number>> = {}, editable = true, areaWidths: Readonly<Record<string, number>> = {}, state?: FacetCanvasState | null,
   decorationMeasurements?: ReadonlyMap<string, PlexDecorationTextSize>): PlexViewLayout {

@@ -6,8 +6,8 @@ import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import ts from 'typescript';
 import {loadPortableModules} from './support/portableTypeScript.mjs';
-const {exports: {centeredViewportFit, sameFitCamera, EmbeddedDrawingFit, centerArrivalFrames, hasClickModifier, edgeViewportEndpoints, branchDisclosureReserve, edgeViewportClip, revealRowScrollTop, editorToolbarInsets, CameraMotion, wheelCamera, stackedEdgeRoutes, stackedEdgeGeometry}} = loadPortableModules([
-  'src/ui/plexViews/stackedEdgeRouting.ts', 'src/ui/components/wheelCamera.ts', 'src/ui/components/viewportFit.ts', 'src/adapters/obsidian/EmbeddedDrawingFit.ts', 'src/ui/components/centerArrival.ts', 'src/ui/components/modifierClick.ts', 'src/ui/plexViews/areaVisibility.ts', 'src/ui/plexViews/branchDisclosure.ts', 'src/ui/components/CameraMotion.ts']);
+const {exports: {centeredViewportFit, sameFitCamera, EmbeddedDrawingFit, centerArrivalFrames, hasClickModifier, edgeViewportEndpoints, branchDisclosureReserve, edgeViewportClip, revealRowScrollTop, editorToolbarInsets, CameraMotion, wheelCamera}} = loadPortableModules([
+  'src/ui/components/wheelCamera.ts', 'src/ui/components/viewportFit.ts', 'src/adapters/obsidian/EmbeddedDrawingFit.ts', 'src/ui/components/centerArrival.ts', 'src/ui/components/modifierClick.ts', 'src/ui/plexViews/areaVisibility.ts', 'src/ui/plexViews/branchDisclosure.ts', 'src/ui/components/CameraMotion.ts']);
 const source=ts.createSourceFile('graph.tsx',readFileSync('src/ui/PlexGraph.tsx','utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
 
 /** Run production callbacks with explicit finite composition dependencies, without a second policy. */
@@ -477,33 +477,6 @@ test('layout motion is bounded by the canvas and each native scroll aperture',()
   ctx.viewport.current.getBoundingClientRect=()=>bounds;ctx.viewport.current.querySelectorAll=()=>elements;ctx.render();ctx.layout();
   assert.deepEqual(plays,hidden?[]:['Row0','Row1']);assert.equal(ctx.previousNodeRects.current.size,positions.length,'All constructed geometry remains available without animation');
  }
-});
-
-
-test('aligned phase edges get distinct stable side lanes without changing nodes, ports or direction',()=>{
- const hub={page:{path:'hub'},occurrenceId:'hub',role:'center',x:0,y:0,width:240,height:60};
- const peers=[-180,-300,-420].map((y,index)=>({page:{path:'n'+index},occurrenceId:'n'+index,role:'parent',areaId:'wood',x:0,y,width:180+index*30,height:40}));
- const nodes=new Map([['hub',hub],...peers.map(node=>[node.occurrenceId,node])]);
- const edges=peers.map((node,index)=>({id:'edge'+index,kind:'semantic',sourceOccurrence:'hub',targetOccurrence:node.occurrenceId,sourcePath:'hub',targetPath:node.page.path,sourcePort:'top',targetPort:'bottom',role:'parent',direction:1,style:{}}));
- const original=JSON.stringify({nodes:[...nodes],edges}),plans=stackedEdgeRoutes(edges,nodes);
- assert.equal(plans.size,3);assert.equal(new Set([...plans.values()].map(plan=>plan.laneX)).size,3);
- const snapshot=plans=>[...plans].sort(([a],[b])=>a.localeCompare(b));
- assert.deepEqual(snapshot(stackedEdgeRoutes([...edges].reverse(),new Map([...nodes].reverse()))),snapshot(plans),'Paint/input ordering cannot reshuffle the same routes');
- for(const style of ['bezier','straight']){
-  const geometries=edges.map((edge,index)=>{const source={x:0,y:-37},target={x:0,y:peers[index].y+27};return stackedEdgeGeometry(source,target,plans.get(edge.id),style)});
-  assert.equal(new Set(geometries.map(route=>route.d)).size,3);assert.equal(new Set(geometries.map(route=>route.midpoint.x)).size,3);
-  for(const [index,route]of geometries.entries()){assert(route.d.startsWith('M 0 -37 '));assert(route.d.endsWith('L 0 '+(peers[index].y+27)));assert(route.midpoint.x < -120,'Labels use the individual lane rather than the overlapping trunk');}
- }
- const reversed=edges.map(edge=>({...edge,sourceOccurrence:edge.targetOccurrence,targetOccurrence:edge.sourceOccurrence,sourcePath:edge.targetPath,targetPath:edge.sourcePath,sourcePort:'bottom',targetPort:'top'}));
- const reversePlans=stackedEdgeRoutes(reversed,nodes);
- for(const [index,edge]of reversed.entries()){
-  const a={x:0,y:peers[index].y+27},b={x:0,y:-37},route=stackedEdgeGeometry(a,b,reversePlans.get(edge.id),'bezier');
-  assert(route.d.startsWith('M 0 '+a.y+' '));assert(route.d.endsWith(', 0 -37'),'Reversal preserves the actual source/target gate ownership');
- }
- assert.equal(JSON.stringify({nodes:[...nodes],edges}),original,'No node geometry, semantic role, port or arrow policy is mutated');
- assert.equal(stackedEdgeRoutes(edges.slice(0,1),nodes).size,0,'An isolated connection keeps its original route');
- assert.equal(stackedEdgeRoutes(edges.map(edge=>({...edge,isCrossLink:true})),nodes).size,0,'Cross-links keep their existing routes');
- const offset=new Map([...nodes].map(([id,node])=>[id,node.role==='center'?node:{...node,x:100}]));assert.equal(stackedEdgeRoutes(edges,offset).size,0,'Nonoverlapping diagonal connections stay unchanged');
 });
 
 

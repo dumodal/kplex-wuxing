@@ -460,7 +460,7 @@ test('registered Wu Xing omits Diagnostics without moving phase groups or changi
   assert.equal(layout.areas.length,5);assert(layout.areas.every(area=>JSON.parse(area.id)[2]==='category'));
   assert(layout.decorations.filter(mark=>mark.kind==='region').every(mark=>JSON.parse(mark.id)[2]==='category'));
   assert.equal(layout.positions.size,projection.occurrences.length,'There are no invisible diagnostic layout slots');
-  assert.deepEqual(layout.areas,canonicalLayout.areas.filter(area=>JSON.parse(area.id)[2]==='category'),'Official phase group geometry is unchanged');
+  assert.deepEqual(layout.areas.map(({reflow,...area})=>area),canonicalLayout.areas.filter(area=>JSON.parse(area.id)[2]==='category').map(({reflow,...area})=>area),'Phase bounds and scroll geometry remain unchanged; situated rows retain their filtered layout');
   for(const row of projection.occurrences)if(row.id!==projection.entry)assert.deepEqual(layout.positions.get(row.id),canonicalLayout.positions.get(row.id));
   assert.equal(JSON.stringify(intent),snapshot,'Saved diagnostic preferences remain untouched');
  }
@@ -516,4 +516,15 @@ test('situated Wu Xing attention occupies its real phase exactly once while reta
    assert.equal(layout.positions.size,measured.length);
   }
  }
+});
+
+
+test('same-phase parents pack above situated attention on their own rows without reinterpreting relationships',()=>{
+ const f=diagnosticScene(),phase='water',preset={...M.FACET_TEMPLATES.wuxing,regionWidth:640,regionHeight:600},configuration=available({wuxing:{version:2,values:{presets:{wuxing:preset}}}}),state={version:1,preset:'wuxing'};
+ for(const id of ['focus','assigned','unassigned','checking'])f.values.set(id,{status:'available',value:phase});
+ f.read.relations=(id,role)=>({items:id==='focus'?(role==='parent'?['assigned','unassigned']:role==='child'?['checking']:[]).map(id=>({node:f.nodes.get(id),role,relationType:1,direction:1})):[],coverage:'cached',truncated:false});
+ const input={attention:'focus',maximum:128,state,configuration,read:f.read},projection=M.wuXingViewDefinition.project(input),before=JSON.stringify(projection);
+ const layout=M.wuXingViewDefinition.layout(projection,f.measure(projection),state,null,{configuration}),focus=layout.positions.get(projection.entry);
+ for(const row of projection.occurrences){const rect=layout.positions.get(row.id);if(row.role==='parent')assert(rect.y+rect.height/2<focus.y-focus.height/2,'Parents have a real row above current attention, even in a wide multi-column phase');if(row.role==='child')assert(rect.y-rect.height/2>focus.y+focus.height/2,'Children have a row below attention');}
+ assert.equal(JSON.stringify(projection),before);assert.equal(layout.positions.size,projection.occurrences.length);
 });

@@ -35,7 +35,7 @@
 import { wheelCamera } from "./components/wheelCamera";
 import {editorOverlayClip, editorOverlayFrame} from "./editorOverlayFrame";
 import {edgeViewportClip, edgeViewportEndpoints, revealRowScrollTop, editorToolbarInsets} from "./plexViews/areaVisibility";
-import {stackedEdgeRoutes, stackedEdgeGeometry, type StackedEdgeRoute} from "./plexViews/stackedEdgeRouting";
+import {floatingEdgeRoutes, type FloatingEdgeRoute} from "./plexViews/floatingEdgeRouting";
 import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
 import {hasDirectionalCaption,directionalRelationCaption} from "../core/plex/directionalRelationCaption";
 import { connectionActionAllowed, tagMembershipPair } from "./structuralConnectionActions";
@@ -606,15 +606,17 @@ function filterNeighborhoodForLenses(
   };
 }
 
-/** Paint admitted visible connectors and explicit tree-ancestor continuations. Hidden gates lose their
- * note arrowheads/captions; read-only boundary marks never become node or edit targets. */
+/** Paint admitted connectors and explicit ancestor continuations. Personal Wu Xing consumes
+ * precomputed nearest-border curves; other views retain semantic-gate geometry. Hidden endpoints
+ * lose arrowheads/captions; boundary marks never become node or relationship-edit targets. */
 function Edge({
   edge,
   nodes,
   viewportForNode,
   inverseArrowDirection,
   connectorStyle,
-  stackedRoute,
+  floatingRoute,
+  floatingConnections = false,
   labelBackground,
   crossLinkOpacity,
   highlighted,
@@ -630,7 +632,8 @@ function Edge({
   viewportForNode: (node: PositionedNode) => SceneViewport | undefined;
   inverseArrowDirection: boolean;
   connectorStyle: "bezier" | "straight";
-  stackedRoute?: StackedEdgeRoute;
+  floatingRoute?: FloatingEdgeRoute;
+  floatingConnections?: boolean;
   labelBackground: string;
   crossLinkOpacity: number;
   highlighted: boolean;
@@ -649,18 +652,16 @@ function Edge({
   const a = gatePoint(source, gates.source);
   const b = gatePoint(target, gates.target);
   const sourceArea = viewportForNode(source), targetArea = viewportForNode(target);
-  const endpoints = edgeViewportEndpoints(a, b, gates.source, gates.target, sourceArea, targetArea, {source, target,
+  const endpoints = floatingConnections ? floatingRoute?.endpoints : edgeViewportEndpoints(a, b, gates.source, gates.target, sourceArea, targetArea, {source, target,
     // Only the constructed tree proves ancestor context; arrow direction and ontology roles do not.
     continueSource: target.branch?.parent === edgePhysicalOccurrence(edge, "source"),
     continueTarget: source.branch?.parent === edgePhysicalOccurrence(edge, "target")});
   if (!endpoints) return null;
-  const separated = stackedRoute && !endpoints.source.continued && !endpoints.target.continued
-    ? stackedEdgeGeometry(endpoints.source.point, endpoints.target.point, stackedRoute, connectorStyle) : null;
-  // Separated lanes can leave a shared phase to pass beside its cards. Endpoint visibility was
-  // already proven above; all ordinary internal routes retain their existing area clipping.
-  const clip = !separated && sourceArea && sourceArea === targetArea ? edgeViewportClip(edge, nodes, viewportForNode) : undefined;
+  // Floating curves may pass beside their own phase; visibility and continuation ownership
+  // were already resolved by the same shared endpoint policy. Other views retain their clips.
+  const clip = !floatingConnections && sourceArea && sourceArea === targetArea ? edgeViewportClip(edge, nodes, viewportForNode) : undefined;
   if (clip === null) return null;
-  const geometry = separated ?? edgeGeometry(endpoints.source.point, endpoints.target.point, endpoints.source.port, endpoints.target.port, connectorStyle);
+  const geometry = floatingConnections && floatingRoute ? floatingRoute : edgeGeometry(endpoints.source.point, endpoints.target.point, endpoints.source.port, endpoints.target.port, connectorStyle);
   const style = edge.style;
   const dash = style.strokeStyle === "dashed" ? "7 7" : style.strokeStyle === "dotted" ? "2 6" : undefined;
   const reverse = edge.direction === (inverseArrowDirection ? LinkDirection.TO : LinkDirection.FROM);
@@ -673,7 +674,7 @@ function Edge({
 
   const resolvedCrossLinkOpacity = edge.isCrossLink && !highlighted ? crossLinkOpacity : undefined;
 
-  const content = <g data-kplex-stacked-route={Boolean(separated) || undefined} className={`kplex-edge${edge.isCrossLink ? " is-cross-link" : ""}${passive ? " is-hover-peek" : ""}${highlighted ? " is-highlighted" : ""}${dimmed ? " is-dimmed" : ""}`}>
+  const content = <g data-kplex-floating-route={floatingConnections || undefined} className={`kplex-edge${edge.isCrossLink ? " is-cross-link" : ""}${passive ? " is-hover-peek" : ""}${highlighted ? " is-highlighted" : ""}${dimmed ? " is-dimmed" : ""}`}>
     <g className="kplex-edge-paint">
       <path
         className="kplex-edge-visible"
@@ -3237,20 +3238,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       (renderedNodeMap.get(sourcePath)??renderedNodeMap.get(edgeOccurrence(edge, "source")))?.page,(renderedNodeMap.get(targetPath)??renderedNodeMap.get(edgeOccurrence(edge, "target")))?.page)};
   }), [visibleEdges, renderedNodeMap, neighborhood, paintSettings, predicateEngine, index, paintLenses, connectionCaption, renderRevision, semanticRevision, predicateCenter]);
 
-  const separatedRoutes = useMemo(/** Only paintable endpoints share the finite lane budget; offscreen rows cannot compress visible routes. */ () => {
+  const floatingRoutes = useMemo(/** Personal Wu Xing binds smooth curves to actual card edges;
+   * one scene-owned plan is reused by visible paint and hit targets without changing semantics. */ () => {
     if (!personalWuXing) return null;
-    const viewport = (node: PositionedNode) => node.areaId ? scene.zoneViewports[node.areaId] : undefined;
-    const eligible = paintedEdges.filter(edge => {
-      const source = renderedNodeMap.get(edgePhysicalOccurrence(edge, "source")), target = renderedNodeMap.get(edgePhysicalOccurrence(edge, "target"));
-      if (!source || !target) return false;
-      const gates = gatesForEdge(edge);
-      const endpoints = edgeViewportEndpoints(gatePoint(source, gates.source), gatePoint(target, gates.target), gates.source, gates.target,
-        viewport(source), viewport(target), {source, target,
-          continueSource: target.branch?.parent === edgePhysicalOccurrence(edge, "source"),
-          continueTarget: source.branch?.parent === edgePhysicalOccurrence(edge, "target")});
-      return endpoints && !endpoints.source.continued && !endpoints.target.continued;
-    });
-    return stackedEdgeRoutes(eligible, renderedNodeMap);
+    return floatingEdgeRoutes(paintedEdges, renderedNodeMap, /** Existing area geometry owns row visibility. */ node => node.areaId ? scene.zoneViewports[node.areaId] : undefined);
   }, [personalWuXing, paintedEdges, renderedNodeMap, scene.zoneViewports]);
 
   const interaction = useMemo(() => {
@@ -5437,6 +5428,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       badgeColorRevision={badgeColorRevision}
       centerOutline={visibilityPreset?.centerOutline === true}
       hideCategoryBadge={personalWuXing}
+      hideDirectionalGates={personalWuXing}
       viewportClip={baseNode.role === "center" && baseNode.areaId ? scene.zoneViewports[baseNode.areaId] : undefined}
       branchStatus={visibleEdgeProjection.limited && baseNode === navigationNode() ? translate("mindmap.limited") : baseNode.branch?.reference ? translate("mindmap.reference") : baseNode.branch?.status === "loading" ? translate("mindmap.loading")
         : baseNode.branch?.status === "limited" ? translate("mindmap.limited") : baseNode.branch?.status === "partial" ? translate("mindmap.partial")
@@ -5992,7 +5984,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
           viewportForNode={node => {const zone = areaForNode(node);return zone ? scene.zoneViewports[zone] : undefined;}}
           inverseArrowDirection={settings.inverseArrowDirection}
           connectorStyle={settings.connectorStyle}
-          stackedRoute={separatedRoutes?.get(edge.id)}
+          floatingConnections={personalWuXing}
+          floatingRoute={floatingRoutes?.get(edge.id)}
           labelBackground={NATIVE_LINK_LABEL_FILL}
           crossLinkOpacity={Math.max(0, Math.min(1, settings.crossLinkOpacity / 100))}
           highlighted={!connectDrag && (crossLinkPeek !== null && interaction.edgeIds.has(edge.id)

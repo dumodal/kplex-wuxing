@@ -472,7 +472,7 @@ test('one blueprint switch shows all phase frames meanings and straight cycles w
 });
 
 
-for(const relationRole of ['parent','child']) test('stacked Wu Xing '+relationRole+' connections separate without moving cards or painting hidden rows',async()=>{
+for(const relationRole of ['parent','child']) test('floating Wu Xing '+relationRole+' connections attach smoothly without moving cards or painting hidden rows',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
  const routeStyle=document.createElement('style');routeStyle.textContent=${JSON.stringify(readFileSync('styles.css','utf8'))};document.head.append(routeStyle);
@@ -485,20 +485,20 @@ for(const relationRole of ['parent','child']) test('stacked Wu Xing '+relationRo
  const a=await mount(M.wuXingViewDefinition),before={body:work.body,scans:work.scans,acquisitions:work.acquisitions},canonical=JSON.stringify(index.neighbours(pages.get('A.md'),relationRole).map(row=>[row.page.path,row.role,row.typeDefinition]));
  const geometry=()=>[...a.container.querySelectorAll('[data-kplex-keyboard-id]')].map(node=>[node.dataset.kplexPath,node.style.left,node.style.top,node.style.width,node.style.height]);
  const positions=JSON.stringify(geometry()),camera=a.container.querySelector('.kplex-camera').style.transform;
- const routes=()=>[...a.container.querySelectorAll('[data-kplex-stacked-route]')];
+ const routes=()=>[...a.container.querySelectorAll('[data-kplex-floating-route]')];
  const inspect=()=>{
   check(routes().length>=2,'Several visible column members have independent routes');
   const painted=[...a.container.querySelectorAll('.kplex-edge-visible')];check(painted.length<paths.length,'Hidden rows do not acquire painted paths');
   const column=[...a.container.querySelectorAll('[data-kplex-path]')].filter(node=>paths.includes(node.dataset.kplexPath)&&node.classList.contains('kplex-thought'));check(new Set(column.map(node=>(parseFloat(node.style.left)+parseFloat(node.style.width)/2).toFixed(3))).size<=1,'The official single-column packing remains');
-  for(const group of routes())check(group.querySelector('.kplex-edge-visible').getAttribute('d')===group.querySelector('.kplex-edge-hit').getAttribute('d'),'Visible and interactive paths use identical geometry');
+  for(const group of routes()){const path=group.querySelector('.kplex-edge-visible').getAttribute('d');check(!/[LQHV]/.test(path),'Floating paths contain only smooth cubic segments');check(path===group.querySelector('.kplex-edge-hit').getAttribute('d'),'Visible and interactive paths use identical geometry')}
   const rails=routes().map(group=>group.querySelector('.kplex-edge-visible').getAttribute('d'));check(new Set(rails).size===rails.length,'No two visible paths coincide');
-  const cards=[...a.container.querySelectorAll('.kplex-thought')].filter(node=>{const clip=node.closest('.kplex-zone-scroll');if(!clip)return true;const r=node.getBoundingClientRect(),c=clip.getBoundingClientRect();return r.bottom>c.top&&r.top<c.bottom}).map(node=>node.getBoundingClientRect());
+  const cards=[...a.container.querySelectorAll('.kplex-thought')].filter(node=>{const clip=node.closest('.kplex-zone-scroll');if(!clip)return true;const r=node.getBoundingClientRect(),c=clip.getBoundingClientRect();return r.bottom>c.top&&r.top<c.bottom}).map(node=>{const r=node.getBoundingClientRect(),clip=node.closest('.kplex-zone-scroll')?.getBoundingClientRect();return {path:node.dataset.kplexPath,left:Math.max(r.left,clip?.left??-Infinity),top:Math.max(r.top,clip?.top??-Infinity),right:Math.min(r.right,clip?.right??Infinity),bottom:Math.min(r.bottom,clip?.bottom??Infinity)}});
   for(const group of routes()){
    const path=group.querySelector('.kplex-edge-visible'),length=path.getTotalLength(),matrix=path.getScreenCTM();
-   for(let i=1;i<100;i++){const p=path.getPointAtLength(length*i/100),point=new DOMPoint(p.x,p.y).matrixTransform(matrix);check(!cards.some(card=>point.x>card.left+2&&point.x<card.right-2&&point.y>card.top+2&&point.y<card.bottom-2),'A separated route never crosses a visible note body')}
+   for(let i=1;i<100;i++){const p=path.getPointAtLength(length*i/100),point=new DOMPoint(p.x,p.y).matrixTransform(matrix);check(!cards.some(card=>point.x>card.left+2&&point.x<card.right-2&&point.y>card.top+2&&point.y<card.bottom-2),'A floating curve never crosses a visible note body: '+JSON.stringify({edge:group.querySelector('.kplex-edge-hit').dataset.kplexEdgeId,point:{x:point.x,y:point.y},cards:cards.filter(card=>point.x>card.left+2&&point.x<card.right-2&&point.y>card.top+2&&point.y<card.bottom-2).map(card=>({path:card.path,left:card.left,top:card.top,right:card.right,bottom:card.bottom}))}))}
   }
  };
- inspect();a.render();await wait();check(JSON.stringify(geometry())===positions&&a.container.querySelector('.kplex-camera').style.transform===camera,'Ordinary publication keeps every node and camera');
+ check(a.container.querySelectorAll('[data-kplex-gate], .kplex-gate-count').length===0,'Personal Wu Xing has no fixed direction gates or counts');inspect();a.render();await wait();check(JSON.stringify(geometry())===positions&&a.container.querySelector('.kplex-camera').style.transform===camera,'Ordinary publication keeps every node and camera');
  const area=JSON.stringify(['facets','wuxing','category','wood']),scroll=a.container.querySelector('.'+CSS.escape('kplex-zone-'+area)+' .kplex-zone-scroll');check(scroll.scrollHeight>scroll.clientHeight,'Fixture really overflows');
  const firstIds=routes().map(group=>group.querySelector('.kplex-edge-hit').dataset.kplexEdgeId);scroll.scrollTop=scroll.scrollHeight;scroll.dispatchEvent(new Event('scroll'));await wait();inspect();
  check(JSON.stringify(firstIds)!==JSON.stringify(routes().map(group=>group.querySelector('.kplex-edge-hit').dataset.kplexEdgeId)),'Scrolling replaces routes only with newly visible members');
@@ -520,7 +520,7 @@ test('situated attention retains its DOM subtree and virtual camera through all 
  const area=phase=>a.container.querySelector('.'+CSS.escape('kplex-zone-'+JSON.stringify(['facets','wuxing','category',phase])));
  const inside=phase=>{const f=focus.getBoundingClientRect(),p=area(phase).getBoundingClientRect();check(f.left>=p.left&&f.right<=p.right&&f.top>=p.top&&f.bottom<=p.bottom,'Whole current card is inside '+phase);const hit=document.elementFromPoint(f.left+f.width/2,f.top+f.height/2);if(hit)check(focus.contains(hit),'Current card receives its own body hit')};
  inside('water');check(focus.hasAttribute('data-kplex-category-outline'),'Current note retains its category outline');
- const samePhase=[...a.container.querySelectorAll('[data-kplex-stacked-route]')];check(samePhase.length>=2,'Same-phase connections also have distinct outside-card lanes');
+ const samePhase=[...a.container.querySelectorAll('[data-kplex-floating-route]')];check(samePhase.length>=2,'Same-phase connections use floating curves');
  const water=area('water').querySelector('.kplex-zone-scroll');check(water.scrollHeight>water.clientHeight,'Real phase overflow');water.scrollTop=water.scrollHeight;const scrolledTop=water.scrollTop;water.dispatchEvent(new Event('scroll'));await wait();
  check(a.container.querySelector('[data-kplex-path="A.md"]')===focus&&getComputedStyle(focus).clip!=='auto','Scrolling clips the same mounted card');check(a.container.querySelectorAll('.kplex-edge-visible').length===0,'A fully clipped attention paints no floating connections');
  for(const phase of ['wood','fire','earth','metal','water']){fieldCaches.get('A.md').frontmatter.status=phase;for(const ref of [...events])if(ref?.name==='changed')ref.callback(pages.get('A.md').file);await wait();

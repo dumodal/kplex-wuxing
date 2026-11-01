@@ -14,7 +14,8 @@
  * native incarnation/value changes retire it, independently of index and relationship-write proof.
  * Branch chevrons and Markdown section plus/minus controls remain separate, with shared gesture
  * isolation and caller-owned actions. A caller-owned viewport can clip persistent attention without
- * reparenting its DOM during classification changes. This component owns neither traversal nor source loading.
+ * reparenting its DOM during classification changes. Floating-edge views can omit directional
+ * controls without changing relationship facts. This component owns neither traversal nor source loading.
  */
 import {physicalGateStats} from "./plexViews/measurement";
 import { useId, type CSSProperties, type DragEvent as ReactDragEvent, type MouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
@@ -71,6 +72,7 @@ export function ThoughtNode({
   badgeColorRevision = 0,
   centerOutline = false,
   hideCategoryBadge = false,
+  hideDirectionalGates = false,
   viewportClip,
   visual,
   content,
@@ -120,6 +122,8 @@ export function ThoughtNode({
   centerOutline?: boolean;
   /** Hide a duplicate category chip without changing its reserved layout or native content. */
   hideCategoryBadge?: boolean;
+  /** Floating-edge views omit fixed directional controls without changing relationship facts. */
+  hideDirectionalGates?: boolean;
   /** World-space aperture for a persistent attention card painted outside its scroll container. */
   viewportClip?: Readonly<{left: number; top: number; width: number; height: number}>;
 }) {
@@ -281,7 +285,7 @@ export function ThoughtNode({
     {disclosure(branchFold, true)}
     {branchStatus && node.viewBadge?.presentation !== "status" && <NodeStatus label={branchStatus} description={branchStatusHint} />}
     {group && <span className="kplex-group-count" aria-hidden="true">{group.groupMembers?.length}</span>}
-    {!group && GATES.filter(gate => !node.physicalPorts || Boolean(node.physicalPorts[gate])).map((gate) => {
+    {!group && !hideDirectionalGates && GATES.filter(gate => !node.physicalPorts || Boolean(node.physicalPorts[gate])).map((gate) => {
       // Structural nodes have no lateral relationship vocabulary, even before other counts close.
       const semanticGate = node.physicalPorts?.[gate];
       const structuralLateral = (node.page.isTag || node.page.isFolder) && (semanticGate ? semanticGate === "left" || semanticGate === "right" : gate === "left" || gate === "right");
