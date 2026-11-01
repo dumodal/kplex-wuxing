@@ -1,5 +1,6 @@
 /** Paint-only smooth routing for personal Wu Xing. Measured card borders and visible obstacles
- * determine attachments; semantic roles/ports, canonical edges and host camera remain untouched. */
+ * determine short border-to-border paths; shared line segments are allowed. Semantic roles/ports,
+ * canonical edges, card spacing and host camera remain untouched. */
 import type {GateSide, PositionedEdge, PositionedNode} from "../../types";
 import {edgePhysicalOccurrence, type SceneViewport} from "./scene";
 import {edgeViewportEndpoints, type ViewportEdgeEndpoint} from "./areaVisibility";
@@ -31,6 +32,27 @@ function boundary(node: PositionedNode, toward: Point): Readonly<{point: Point; 
     port: Math.abs(normal.x) > Math.abs(normal.y) ? normal.x < 0 ? "left" : "right" : normal.y < 0 ? "top" : "bottom"};
 }
 
+/** Project onto a rounded outline rather than tracing a ray from the card center. The convex
+ * rounded rectangle permits continuous attachment anywhere along its facing edge. */
+function nearestBoundary(node: PositionedNode, toward: Point): ReturnType<typeof boundary> {
+  const halfWidth = node.width / 2 + 4, halfHeight = node.height / 2 + 4, radius = Math.min(node.role === "center" ? 22 : 16, halfWidth, halfHeight);
+  const x = Math.max(-halfWidth + radius, Math.min(halfWidth - radius, toward.x - node.x));
+  const y = Math.max(-halfHeight + radius, Math.min(halfHeight - radius, toward.y - node.y));
+  const dx = toward.x - node.x - x, dy = toward.y - node.y - y, length = Math.hypot(dx, dy);
+  if (length < 1e-9) return boundary(node, toward);
+  const normal = {x: dx / length, y: dy / length};
+  return {point: {x: node.x + x + normal.x * radius, y: node.y + y + normal.y * radius}, normal,
+    port: Math.abs(normal.x) > Math.abs(normal.y) ? normal.x < 0 ? "left" : "right" : normal.y < 0 ? "top" : "bottom"};
+}
+
+/** Alternate convex projections to find a short pair of outline contacts, including the
+ * shared perpendicular when unequal-width cards overlap horizontally or vertically. */
+function nearestPair(source: PositionedNode, target: PositionedNode): Readonly<{source: ReturnType<typeof boundary>; target: ReturnType<typeof boundary>}> {
+  let from = nearestBoundary(source, target), to = nearestBoundary(target, from.point);
+  for (let step = 0; step < 12; step++) {from = nearestBoundary(source, to.point);to = nearestBoundary(target, from.point);}
+  return {source: from, target: to};
+}
+
 /** Evaluate a cubic for deterministic collision sampling and label placement. */
 function pointAt(curve: Cubic, t: number): Point {
   const u = 1 - t;
@@ -44,7 +66,8 @@ function candidate(source: PositionedNode, target: PositionedNode, sourceArea?: 
   corridor?: Readonly<{axis: "x" | "y"; value: number}>): Candidate | null {
   const sourceAim = corridor ? corridor.axis === "x" ? {x: corridor.value, y: source.y} : {x: source.x, y: corridor.value} : target;
   const targetAim = corridor ? corridor.axis === "x" ? {x: corridor.value, y: target.y} : {x: target.x, y: corridor.value} : source;
-  const from = boundary(source, sourceAim), to = boundary(target, targetAim);
+  const pair = corridor ? undefined : nearestPair(source, target);
+  const from = pair?.source ?? boundary(source, sourceAim), to = pair?.target ?? boundary(target, targetAim);
   const endpoints = edgeViewportEndpoints(from.point, to.point, from.port, to.port, sourceArea, targetArea, {source, target});
   if (!endpoints) return null;
   const a = endpoints.source.point, b = endpoints.target.point;
@@ -92,14 +115,81 @@ function score(route: Candidate, obstacles: readonly Obstacle[]): Readonly<{hits
   return {hits, length};
 }
 
-/** Prefer the direct nearest-border curve. When cards obstruct it, compare broad smooth arcs
- * on either side of the blockers. Four bounded expansions retain deterministic local work;
- * dense unsolved scenes keep the least-obstructed candidate rather than inventing semantic nodes. */
+/** Express a straight shortest span as a cubic, preserving one smooth SVG path vocabulary. */
+function straightCubic(a: Point, b: Point): Cubic {
+  return {a, c1: {x: a.x + (b.x - a.x) / 3, y: a.y + (b.y - a.y) / 3},
+    c2: {x: a.x + (b.x - a.x) * 2 / 3, y: a.y + (b.y - a.y) * 2 / 3}, b};
+}
+
+/** Round only real obstacle turns. Short straight spans stay short; tangent joins contain no
+ * right angles. The corner inset exceeds the maximum cut into a rounded turn. */
+function pathCandidate(source: PositionedNode, target: PositionedNode, corners: readonly Point[], sourceArea?: SceneViewport, targetArea?: SceneViewport): Candidate | null {
+  if (!corners.length) return candidate(source, target, sourceArea, targetArea);
+  const from = nearestBoundary(source, corners[0]), to = nearestBoundary(target, corners[corners.length - 1]);
+  const endpoints = edgeViewportEndpoints(from.point, to.point, from.port, to.port, sourceArea, targetArea, {source, target});if (!endpoints) return null;
+  const points = [endpoints.source.point, ...corners, endpoints.target.point], curves: Cubic[] = [];let current = points[0];
+  for (let index = 1; index < points.length - 1; index++) {
+    const previous = points[index - 1], point = points[index], next = points[index + 1];
+    const incoming = Math.hypot(point.x - previous.x, point.y - previous.y), outgoing = Math.hypot(next.x - point.x, next.y - point.y);
+    if (incoming < 1e-6 || outgoing < 1e-6) continue;
+    const cut = Math.min(24, incoming / 3, outgoing / 3);
+    const before = {x: point.x + (previous.x - point.x) * cut / incoming, y: point.y + (previous.y - point.y) * cut / incoming};
+    const after = {x: point.x + (next.x - point.x) * cut / outgoing, y: point.y + (next.y - point.y) * cut / outgoing};
+    curves.push(straightCubic(current, before), {a: before,
+      c1: {x: before.x + (point.x - before.x) * 2 / 3, y: before.y + (point.y - before.y) * 2 / 3},
+      c2: {x: after.x + (point.x - after.x) * 2 / 3, y: after.y + (point.y - after.y) * 2 / 3}, b: after});current = after;
+  }
+  curves.push(straightCubic(current, points[points.length - 1]));
+  return {curves, endpoints, midpoint: pointAt(curves[Math.floor(curves.length / 2)], 0.5),
+    d: `M ${points[0].x} ${points[0].y} ${curves.map(/** Rounded turns and straight spans share exact tangent endpoints. */ curve => `C ${curve.c1.x} ${curve.c1.y}, ${curve.c2.x} ${curve.c2.y}, ${curve.b.x} ${curve.b.y}`).join(" ")}`};
+}
+
+/** Find a short visible corner path around local blocking cards. Source and target are virtual
+ * vertices: each first/last segment chooses its own nearest outline contact, rather than forcing
+ * both ends to one side. At most32 blockers bound the local visibility graph to130 vertices. */
+function shortestCandidate(source: PositionedNode, target: PositionedNode, obstacles: readonly Obstacle[], blockers: readonly Obstacle[], sourceArea?: SceneViewport, targetArea?: SceneViewport): Candidate | null {
+  const points: Point[] = [source, target];
+  for (const item of [...blockers].sort(/** Stable card identity resolves equal-length alternatives. */ (a, b) => a.id.localeCompare(b.id)).slice(0, 32)) {
+    for (const x of [item.left - 16, item.right + 16]) for (const y of [item.top - 16, item.bottom + 16]) points.push({x, y});
+  }
+  const distances = Array<number>(points.length).fill(Infinity), previous = Array<number>(points.length).fill(-1), visited = new Set<number>();distances[0] = 0;
+  for (let step = 0; step < points.length; step++) {
+    let selected = -1;
+    for (let index = 0; index < points.length; index++) if (!visited.has(index) && (selected < 0 || distances[index] < distances[selected])) selected = index;
+    if (selected < 0 || !Number.isFinite(distances[selected])) break;
+    if (selected === 1) {
+      const corners: Point[] = [];let cursor = previous[1];
+      while (cursor > 1) {corners.push(points[cursor]);cursor = previous[cursor];}
+      corners.reverse();return pathCandidate(source, target, corners, sourceArea, targetArea);
+    }
+    visited.add(selected);
+    for (let next = 1; next < points.length; next++) {
+      if (next === selected || visited.has(next)) continue;
+      const pair = selected === 0 && next === 1 ? nearestPair(source, target) : undefined;
+      const a = pair?.source.point ?? (selected === 0 ? nearestBoundary(source, points[next]).point : points[selected]);
+      const b = pair?.target.point ?? (next === 1 ? nearestBoundary(target, points[selected]).point : points[next]);
+      if (obstacles.some(/** Routes may overlap other links, but visible card bodies remain obstacles. */ obstacle => intersects(a, b, obstacle))) continue;
+      const distance = distances[selected] + Math.hypot(b.x - a.x, b.y - a.y);
+      if (distance < distances[next] - 1e-6) {distances[next] = distance;previous[next] = selected;}
+    }
+  }
+  return null;
+}
+
+/** Prefer the nearest outline pair and then short visible paths around actual blocking cards.
+ * Rounded-corner candidates compete by sampled length; broad outer arcs remain a bounded fallback
+ * for dense scenes. Other links are never obstacles and may freely share any part of the route. */
 function routeAround(source: PositionedNode, target: PositionedNode, obstacles: readonly Obstacle[], sourceArea?: SceneViewport, targetArea?: SceneViewport): FloatingEdgeRoute | null {
   const direct = candidate(source, target, sourceArea, targetArea);if (!direct) return null;
   let best = direct, bestScore = score(direct, obstacles);if (!bestScore.hits.length) return best;
   const blockers = new Map(bestScore.hits.map(/** Retain only actual obstructing card identities. */ item => [item.id, item]));
   for (let attempt = 0; attempt < 4; attempt++) {
+    const shortest = shortestCandidate(source, target, obstacles, [...blockers.values()], sourceArea, targetArea);
+    if (shortest) {
+      const result = score(shortest, obstacles);
+      if (!result.hits.length) return !bestScore.hits.length && bestScore.length < result.length ? best : shortest;
+      for (const hit of result.hits) blockers.set(hit.id, hit);
+    }
     const bounds = [...blockers.values()], margin = 32 + attempt * 24;
     let left = Math.min(...bounds.map(/** Route beside blockers rather than around an unrelated source region. */ item => item.left)) - margin;
     let right = Math.max(...bounds.map(/** Route beside blockers rather than around an unrelated source region. */ item => item.right)) + margin;
@@ -120,7 +210,7 @@ function routeAround(source: PositionedNode, target: PositionedNode, obstacles: 
       if (result.hits.length < bestScore.hits.length || result.hits.length === bestScore.hits.length && result.length < bestScore.length) {best = next;bestScore = result;}
       for (const hit of result.hits) blockers.set(hit.id, hit);
     }
-    if (clear) return clear;
+    if (clear && (bestScore.hits.length || clearLength < bestScore.length)) {best = clear;bestScore = score(clear, obstacles);}
   }
   return best;
 }
