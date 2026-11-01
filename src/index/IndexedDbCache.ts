@@ -1,5 +1,5 @@
 /**
- * Vault-local IndexedDB storage for neutral source facts, parsed bodies and graph snapshots.
+ * Fork-isolated, vault-local IndexedDB storage for neutral source facts, parsed bodies and graph snapshots.
  * Complete and partial checkpoint metadata point to independent chunk generations only after
  * their writes finish; callers own semantic validity, disposable URL-facet versions and plugin-lifetime cancellation. Retired
  * contributor pins may use one cleanup-only existing-database connection after normal-handle
@@ -285,12 +285,13 @@ function isIndexedDbSnapshotMeta(value: unknown): value is IndexedDbSnapshotMeta
 }
 
 
+/** Derive the existing fork cache identity without opening or clearing upstream databases. */
 function safeDbName(vaultName: string): string {
   const encoded = Array.from(new TextEncoder().encode(vaultName))
     .map((value) => value.toString(16).padStart(2, "0"))
     .join("")
     .slice(0, 96);
-  return `k-plex-index-v1-${encoded || "vault"}`;
+  return `kplex-wuxing-index-v1-${encoded || "vault"}`;
 }
 
 /** Iterate container members without allocating another array proportional to a dense record. */
@@ -1378,14 +1379,14 @@ export class KplexIndexedDbCache {
     } catch { /* cache cleanup only */ }
   }
 
+  /** Remove only this fork's obsolete cache keys; upstream and ExcaliBrain storage remain owned by their plugins. */
   async clearLegacyLocalStorage(app: { saveLocalStorage(key: string, value: unknown): void }): Promise<void> {
     for (const key of [
-      "k-plex:index-body-cache:v1",
-      "k-plex:index-body-cache:v2",
-      "k-plex:index-cache:v1",
-      "k-plex:index-snapshot:v1",
-      "excalibrain:index-body-cache:v2",
-      "k-plex:mobile-diagnostics:v1",
+      "kplex-wuxing:index-body-cache:v1",
+      "kplex-wuxing:index-body-cache:v2",
+      "kplex-wuxing:index-cache:v1",
+      "kplex-wuxing:index-snapshot:v1",
+      "kplex-wuxing:mobile-diagnostics:v1",
     ]) {
       try { app.saveLocalStorage(key, null); } catch { /* migration only */ }
     }

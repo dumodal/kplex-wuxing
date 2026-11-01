@@ -13,8 +13,8 @@ import { KplexDisplayModes, registerDisplayModeUnload } from "./KplexDisplayMode
 import { KplexCenterPresentation } from "./KplexCenterPresentation";
 import { KplexDocumentSession, nativeLeafId } from "./KplexDocumentSession";
 
-export const KPLEX_VIEW_TYPE = "k-plex-react-view";
-export const KPLEX_SIDEPANEL_VIEW_TYPE = "k-plex-sidepanel-view";
+export const KPLEX_VIEW_TYPE = "kplex-wuxing-react-view";
+export const KPLEX_SIDEPANEL_VIEW_TYPE = "kplex-wuxing-sidepanel-view";
 
 abstract class BaseKplexView extends ItemView {
   readonly documentSession: KplexDocumentSession;

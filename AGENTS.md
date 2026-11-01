@@ -10,6 +10,8 @@ Develop **K-Plex (Knowledge Plex)** as a dedicated React application inside Obsi
 
 The plugin ID is **`k-plex`** so K-Plex can coexist with legacy ExcaliBrain during migration.
 
+This checkout is the Wu Xing fork. Its plugin ID is **`kplex-wuxing`**, its serialized view IDs are `kplex-wuxing-react-view` and `kplex-wuxing-sidepanel-view`, and its cache namespace is `kplex-wuxing-index-v1-*` / `kplex-wuxing:*`. Preserve these identities. This branch adds visibility controls and node appearance to official 0.4.0, preserving upstream layout and editor behavior. Full custom design remains on `sync/upstream-0.4.0` and `wuxing-local-design`. Do not install into a live vault or change vault settings during source preparation.
+
 ## Build contract
 
 Baseline Node.js: **22.22.2**.

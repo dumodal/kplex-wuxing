@@ -554,6 +554,7 @@ for (const file of [
   "src/adapters/obsidian/fileMenu.ts",
   "src/adapters/obsidian/drawingTemplates.ts",
   "src/adapters/obsidian/nativeSubmenu.ts",
+  "src/core/plex/createdNoteDestination.ts",
   "src/core/plex/startupIndexPreferences.ts",
   "src/index/fieldParser.ts",
   "src/index/MetadataParser.ts",
