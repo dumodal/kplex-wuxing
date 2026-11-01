@@ -54,6 +54,8 @@ export const wuXingSettingsContribution: CanvasViewSettingsContribution = {
       {...address("regionHeight"), labelKey: "wuxing.height", icon: "move-vertical", min: 160, max: 600, step: 20},
       {...address("guides"), kind: "checkbox", labelKey: "wuxing.guides"},
       {...address("tints"), kind: "checkbox", labelKey: "wuxing.tints"},
+      {...address("hideGroups"), kind: "checkbox", labelKey: "facets.hideGroups"},
+      {...address("hideGroupBorders"), kind: "checkbox", labelKey: "facets.hideGroupBorders"},
       ...(selected.preset.interpretation === "wuxing" && facetHasWuXingPhases(selected.preset) ? [
         {...address("relativeLabels"), kind: "checkbox" as const, labelKey: "facets.relativeLabels" as const},
         {...address("regulatingGuides"), kind: "checkbox" as const, labelKey: "facets.regulatingGuides" as const},

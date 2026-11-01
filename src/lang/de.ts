@@ -7,6 +7,8 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const germanTranslations = {
+  "facets.hideGroups": "Gruppenbeschriftungen und Anzahlen ausblenden",
+  "facets.hideGroupBorders": "Gruppenrahmen ausblenden",
   "drawing.template": "Zeichnungsvorlage",
   "drawing.blank": "Leere Zeichnung",
   "settings.trackpad": "Trackpad-Navigation",

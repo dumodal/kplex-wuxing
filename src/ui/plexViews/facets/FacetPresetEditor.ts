@@ -108,8 +108,9 @@ export class FacetPresetEditor extends StyleEditorModal {
       ["regionWidth", "wuxing.width", 200, 640, 20], ["regionHeight", "wuxing.height", 160, 600, 20]] as const)
       numberSlider(new Setting(body).setName(t(label)), {label: t(label), value: this.draft[field], min: minimum, max: maximum, step,
         onChange: value => {if (this.canEdit() && this.owner()) {this.draft = {...this.draft, [field]: value};this.validate();}}});
-    for (const [field, label] of [["guides", "wuxing.guides"], ["tints", "wuxing.tints"]] as const)
-      new Setting(body).setName(t(label)).addToggle(input => input.setValue(this.draft[field]).onChange(value => {this.draft = {...this.draft, [field]: value};this.validate();}));
+    for (const [field, label] of [["guides", "wuxing.guides"], ["tints", "wuxing.tints"],
+      ["hideGroups", "facets.hideGroups"], ["hideGroupBorders", "facets.hideGroupBorders"]] as const)
+      new Setting(body).setName(t(label)).addToggle(input => input.setValue(this.draft[field] ?? false).onChange(value => {this.draft = {...this.draft, [field]: value};this.validate();}));
     renderFacetFlowSettings(body, /** Read current sibling layout/preset edits. */ () => this.draft,
       /** Guide settings stay inside the same atomic guarded preset Save. */ (preset, structural) => {
         if (!this.canEdit()) return;this.draft = preset;if (structural) this.render();else this.validate();

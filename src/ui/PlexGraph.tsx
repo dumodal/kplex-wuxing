@@ -108,6 +108,8 @@ import {occurrenceKey, edgeOccurrence, edgePhysicalOccurrence, semanticSceneEdge
 import {createPlexSectionViewContext} from "./plexViews/sections";
 import {viewLabel} from "./plexViews/labels";
 import {ViewDecorations, viewDecorationCounts} from "./plexViews/ViewDecorations";
+import {facetLibrary} from "../core/plex/views/facets/configuration";
+import {facetState, resolveFacetPreset} from "../core/plex/views/facets/state";
 import {createLegacyPropertyProvider} from "../adapters/obsidian/predicateContracts";
 import { DropAreaPreview } from "./components/DropAreaPreview";
 import { DoubleTapGesture } from "./components/DoubleTapGesture";
@@ -1096,6 +1098,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const viewFailed = Boolean(sceneGeometry.failed);
   const scene = useMemo(() => viewFailed || layoutSectionExpansion || !classic ? sceneGeometry : classic.bind(sceneGeometry, layoutNeighborhood),
     [classic, viewFailed, sceneGeometry, layoutNeighborhood, layoutSectionExpansion]);
+  // Visibility is read after geometry so hiding chrome never changes measured positions.
+  const visibilityLibrary = viewDefinition.id === "wuxing" ? facetLibrary(readViewConfiguration(viewDefinition, settings.canvasViewSettings)) : null;
+  const visibilityPreset = visibilityLibrary ? resolveFacetPreset(visibilityLibrary, facetState(viewSession?.state)?.preset ?? "wuxing").preset : null;
   const classicEditorCounts = useMemo(/** One linear pass rejects ambiguous section copies before native admission. */ () => {
     if (!classic) return null;
     const counts = new Map<string, number>();for (const node of scene.nodes) {const key = classic.editorKey(node, activePath);if (key) counts.set(key, (counts.get(key) ?? 0) + 1);}return counts;
@@ -5524,7 +5529,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const displayedNodes = layout.nodes.filter((node) => !isDraggedNode(node));
     return <div
       key={zone}
-      className={`kplex-zone-panel kplex-zone-${zone}`}
+      className={`kplex-zone-panel kplex-zone-${zone}${visibilityPreset?.hideGroups && zone.includes('"category"') ? " is-group-hidden" : ""}`}
       style={{ left: panel.left, top: panel.top, width: panel.width, height: panel.height }}
     >
       <div className="kplex-zone-tools" onPointerDown={(event: PointerEvent<HTMLDivElement>) => event.stopPropagation()}>
@@ -5894,7 +5899,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
           void plugin.actionManager.dispatch({id: "editor.collapse", source: "toolbar", surfaceId: actionSurfaceId, args: {bindingId: boundEditorBinding.id}});
         }}>{translate("actions.editor.collapse")}</button>}</div>}
     <div ref={cameraElement} className="kplex-camera" style={{ transform: `translate(${camera.current.x}px, ${camera.current.y}px) scale(${camera.current.scale})` }}>
-      {scene.decorations && <ViewDecorations decorations={scene.decorations} translate={translate}
+      {scene.decorations && <ViewDecorations hideGroups={visibilityPreset?.hideGroups === true} hideGroupBorders={visibilityPreset?.hideGroupBorders === true} decorations={scene.decorations} translate={translate}
         counts={viewDecorationCounts(scene.decorations, scene.nodes, filterMatchedNodePaths, zoneDisplayLayouts)} />}
       <svg className="kplex-links" width="3200" height="2400" viewBox="-1600 -1200 3200 2400">
         <defs>

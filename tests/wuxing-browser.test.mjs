@@ -283,7 +283,7 @@ test('Facets production presets share captured controls, measured badges and liv
    check(a.container.querySelector('.kplex-camera').style.transform===camera,'Preset change preserves manual camera');
    const context={viewId:'wuxing',state:a.session.state,configuration:{status:'available',values:settings.canvasViewSettings.wuxing?.values??{}}};
    const controls=M.builtInCanvasViewSettings.layoutControls(M.wuXingViewDefinition,context),configControls=controls.filter(control=>!control.state),combine=controls.find(control=>control.state);
-   check(configControls.length===(preset==='wuxing'?7:5)&&controls.every(control=>control.field==='presets'&&control.path[0]===preset),'Shared rails address only the selected preset and its optional interpretation');
+   check(configControls.length===(preset==='wuxing'?9:7)&&controls.every(control=>control.field==='presets'&&control.path[0]===preset),'Shared rails address only the selected preset and its optional interpretation');
    check(combine?.kind==='checkbox'&&combine.state.value===true&&combine.state.actionId==='diagnostics.combine'&&combine.path.join('/')===preset+'/diagnostics/combined','Combine control captures the selected canvas presentation action');
    check(JSON.stringify(b.session.getState())===beforeB,'Other canvas retains independent selection');
  }
@@ -370,4 +370,28 @@ test('production Wu Xing decorates real local notes, refreshes cached fields, re
  })()`);
  assert.deepEqual(result.errors,[]);assert.equal(result.events,0);assert.equal(result.work.reads,0);assert.equal(result.work.parses,0);assert.equal(result.work.publishes,0);assert.equal(result.work.settingsWrites,0);assert.equal(result.work.semantic,result.work.releases);assert.equal(result.work.presentation,0);
  }finally{await host.cleanup()}
+});
+
+
+test('visibility controls hide category chrome reversibly while preserving node DOM, geometry, camera and source work',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ const visibilityStyle=document.createElement('style');visibilityStyle.textContent=${JSON.stringify(readFileSync('styles.css','utf8'))};document.head.append(visibilityStyle);
+ const a=await mount(M.wuXingViewDefinition),nodes=()=>[...a.container.querySelectorAll('[data-kplex-keyboard-id]')],original=nodes();
+ const geometry=()=>nodes().map(node=>[node.dataset.kplexPath,node.style.left,node.style.top,node.style.width,node.style.height]);
+ const before=JSON.stringify(geometry()),camera=a.container.querySelector('.kplex-camera').style.transform,counts={body:work.body,scans:work.scans,acquisitions:work.acquisitions};
+ const categories=()=>[...a.container.querySelectorAll('[data-kplex-decoration]')].filter(node=>JSON.parse(node.dataset.kplexDecoration)[2]==='category');
+ check(categories().length===5,'Official five group frames start visible');
+ for(const flags of [[true,false],[false,true],[true,true],[false,false]]){
+  for(const [field,value] of [['hideGroups',flags[0]],['hideGroupBorders',flags[1]]])settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings??{},{field:'presets',path:['wuxing',field]},{kind:'set',value});
+  a.props.settings={...settings};a.render();await wait();await wait();
+  check(JSON.stringify(geometry())===before,'Visibility retains all official node rectangles');
+  check(nodes().every((node,i)=>node===original[i]),'Existing node DOM is retained');
+  check(a.container.querySelector('.kplex-camera').style.transform===camera,'Camera is retained');
+  check(categories().every(node=>(getComputedStyle(node.querySelector('text')).visibility==='hidden')===flags[0]),'Group labels and counts follow only their switch');
+  check(categories().every(node=>(getComputedStyle(node.querySelector(':scope > rect,:scope > path')).display==='none')===flags[1]),'Group frames follow only their switch');
+  check([...a.container.querySelectorAll('[data-kplex-decoration]')].filter(node=>JSON.parse(node.dataset.kplexDecoration)[2]!=='category').every(node=>!node.classList.contains('is-group-hidden')&&!node.classList.contains('is-border-hidden')),'Diagnostic regions remain reachable');
+ }
+ check(work.body===counts.body&&work.scans===counts.scans&&work.acquisitions===counts.acquisitions,'Toggling never acquires semantic sources');
+ a.close();visibilityStyle.remove();plugin.actionManager.dispose();return true;})()`),true)}finally{await host.cleanup()}
 });

@@ -37,6 +37,8 @@ export function isFacetPreset(value: unknown): value is FacetPreset {
   if (value.interpretation !== undefined && value.interpretation !== "wuxing"
     || value.relativeLabels !== undefined && typeof value.relativeLabels !== "boolean"
     || value.regulatingGuides !== undefined && typeof value.regulatingGuides !== "boolean") return false;
+  if (value.hideGroups !== undefined && typeof value.hideGroups !== "boolean"
+    || value.hideGroupBorders !== undefined && typeof value.hideGroupBorders !== "boolean") return false;
   if (value.layout !== undefined && !isFacetLayout(value.layout)
     || value.focusAnchor !== undefined && (typeof value.focusAnchor !== "string" || !["top", "bottom", "left", "right"].includes(value.focusAnchor))
     || value.reverse !== undefined && typeof value.reverse !== "boolean") return false;
@@ -74,7 +76,7 @@ export function isFacetPreset(value: unknown): value is FacetPreset {
       || dock.order !== undefined && (!Array.isArray(dock.order) || dock.order.length !== 4 || new Set(dock.order).size !== 4
         || !dock.order.every(isFacetDiagnosticStatus))) return false;
   }
-  for (const [field, minimum, maximum] of [["spacing", 24, 200], ["regionWidth", 200, 640], ["regionHeight", 160, 600]] as const) {
+  for (const [field, minimum, maximum] of [["spacing", 0, 200], ["regionWidth", 200, 640], ["regionHeight", 160, 600]] as const) {
     const scalar = value[field]; if (typeof scalar !== "number" || !Number.isFinite(scalar) || scalar < minimum || scalar > maximum) return false;
   }
   for (const [id, category] of Object.entries(value.categories)) {

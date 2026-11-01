@@ -9,6 +9,8 @@
  * parameters remain unquoted regardless of their names. Locale catalogs inherit this classification.
  */
 export const englishCatalog = {
+  "facets.hideGroups": {"message": "Hide group labels and counts", "context": "Paint-only category visibility; official layout remains unchanged.", "params": []},
+  "facets.hideGroupBorders": {"message": "Hide group frames", "context": "Paint-only category visibility; official layout remains unchanged.", "params": []},
   "drawing.template": {"message": "Drawing template", "context": "File creation, native file menus and wheel navigation preferences.", "params": []},
   "drawing.blank": {"message": "Blank drawing", "context": "File creation, native file menus and wheel navigation preferences.", "params": []},
   "settings.trackpad": {"message": "Trackpad navigation", "context": "File creation, native file menus and wheel navigation preferences.", "params": []},

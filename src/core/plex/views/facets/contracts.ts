@@ -23,6 +23,8 @@ export type FacetPreset = Readonly<{version: 1; name: string; nameKey?: string; 
   /** Optional model reading; ordered phase identities remain separate from geometry/order. */
   interpretation?: "wuxing"; relativeLabels?: boolean; regulatingGuides?: boolean;
   diagnostics?: FacetDiagnostics;
+  /** Paint-only visibility; hidden category chrome retains its measured layout and drop area. */
+  hideGroups?: boolean; hideGroupBorders?: boolean;
   layout?: FacetLayout; focusAnchor?: FacetFocusAnchor; reverse?: boolean;
   /** Stable defaults are separate from the existing per-canvas area dimension maps. */
   areaSizes?: Readonly<{categories?: Readonly<Record<string, FacetAreaSize>>; diagnostics?: Readonly<Record<string, FacetAreaSize>>}>;

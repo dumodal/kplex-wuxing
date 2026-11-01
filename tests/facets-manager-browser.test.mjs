@@ -253,3 +253,19 @@ test('category Code editor shares full-width expression styling and shows only r
  input(fields(e,t('wuxing.source'))[0],'property','change');check(fields(e,t('wuxing.field'))[0].value===field&&fields(e,t('wuxing.values'))[0].value===values,'Source switching preserves hidden sibling values');close(e);check(JSON.stringify(disk)===unchanged,'Layout/source preview did not save a draft');close(m);css.remove();
  `),true);
 });
+
+
+test('visibility switches use detached Save and Cancel and survive persisted reload without erasing unknown fields',async()=>{
+ assert.equal(await scenario(`
+ disk.canvasViewSettings.wuxing.values.presets.arc.futurePreference={keep:'literal'};
+ p.settings.canvasViewSettings=copy(disk.canvasViewSettings);p.initializeSettingsReconciliation(copy(disk));
+ const m=manager(),before=JSON.stringify(disk);let editor=edit(m,'ARC');
+ const toggle=(modal,key,value)=>{const control=fields(modal,t(key))[0];check(control,'Visibility control exists');control.checked=value;control.dispatchEvent(new Event('change',{bubbles:true}))};
+ toggle(editor,'facets.hideGroups',true);toggle(editor,'facets.hideGroupBorders',true);close(editor);equal(JSON.stringify(disk),before,'Cancel is inert');
+ editor=edit(m,'ARC');toggle(editor,'facets.hideGroups',true);toggle(editor,'facets.hideGroupBorders',true);await save(editor);await drain();
+ const saved=JSON.parse(JSON.stringify(disk));equal([saved.canvasViewSettings.wuxing.values.presets.arc.hideGroups,saved.canvasViewSettings.wuxing.values.presets.arc.hideGroupBorders],[true,true],'Both flags persist');
+ const reloaded=await createAppearanceHost(saved);equal(reloaded.settings.canvasViewSettings.wuxing.values.presets.arc.futurePreference,{keep:'literal'},'Unknown preset fields survive reload');
+ equal([reloaded.settings.canvasViewSettings.wuxing.values.presets.arc.hideGroups,reloaded.settings.canvasViewSettings.wuxing.values.presets.arc.hideGroupBorders],[true,true],'A new settings host loads both flags');
+ close(m);
+ `),true);
+});

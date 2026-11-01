@@ -7,6 +7,8 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const traditionalChineseTranslations = {
+  "facets.hideGroups": "隱藏群組標籤與數量",
+  "facets.hideGroupBorders": "隱藏群組框線",
   "drawing.template": "繪圖範本",
   "drawing.blank": "空白繪圖",
   "settings.trackpad": "觸控板導覽",
