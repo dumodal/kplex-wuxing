@@ -35,6 +35,7 @@
 import { wheelCamera } from "./components/wheelCamera";
 import {editorOverlayClip, editorOverlayFrame} from "./editorOverlayFrame";
 import {edgeViewportClip, edgeViewportEndpoints, revealRowScrollTop, editorToolbarInsets} from "./plexViews/areaVisibility";
+import {stackedEdgeRoutes, stackedEdgeGeometry, type StackedEdgeRoute} from "./plexViews/stackedEdgeRouting";
 import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
 import {hasDirectionalCaption,directionalRelationCaption} from "../core/plex/directionalRelationCaption";
 import { connectionActionAllowed, tagMembershipPair } from "./structuralConnectionActions";
@@ -613,6 +614,7 @@ function Edge({
   viewportForNode,
   inverseArrowDirection,
   connectorStyle,
+  stackedRoute,
   labelBackground,
   crossLinkOpacity,
   highlighted,
@@ -628,6 +630,7 @@ function Edge({
   viewportForNode: (node: PositionedNode) => SceneViewport | undefined;
   inverseArrowDirection: boolean;
   connectorStyle: "bezier" | "straight";
+  stackedRoute?: StackedEdgeRoute;
   labelBackground: string;
   crossLinkOpacity: number;
   highlighted: boolean;
@@ -655,7 +658,9 @@ function Edge({
   // anchors freely; the canvas clips them, without cutting a curve at an unrelated union box.
   const clip = sourceArea && sourceArea === targetArea ? edgeViewportClip(edge, nodes, viewportForNode) : undefined;
   if (clip === null) return null;
-  const geometry = edgeGeometry(endpoints.source.point, endpoints.target.point, endpoints.source.port, endpoints.target.port, connectorStyle);
+  const separated = stackedRoute && !endpoints.source.continued && !endpoints.target.continued
+    ? stackedEdgeGeometry(endpoints.source.point, endpoints.target.point, stackedRoute, connectorStyle) : null;
+  const geometry = separated ?? edgeGeometry(endpoints.source.point, endpoints.target.point, endpoints.source.port, endpoints.target.port, connectorStyle);
   const style = edge.style;
   const dash = style.strokeStyle === "dashed" ? "7 7" : style.strokeStyle === "dotted" ? "2 6" : undefined;
   const reverse = edge.direction === (inverseArrowDirection ? LinkDirection.TO : LinkDirection.FROM);
@@ -668,7 +673,7 @@ function Edge({
 
   const resolvedCrossLinkOpacity = edge.isCrossLink && !highlighted ? crossLinkOpacity : undefined;
 
-  const content = <g className={`kplex-edge${edge.isCrossLink ? " is-cross-link" : ""}${passive ? " is-hover-peek" : ""}${highlighted ? " is-highlighted" : ""}${dimmed ? " is-dimmed" : ""}`}>
+  const content = <g data-kplex-stacked-route={Boolean(separated) || undefined} className={`kplex-edge${edge.isCrossLink ? " is-cross-link" : ""}${passive ? " is-hover-peek" : ""}${highlighted ? " is-highlighted" : ""}${dimmed ? " is-dimmed" : ""}`}>
     <g className="kplex-edge-paint">
       <path
         className="kplex-edge-visible"
@@ -3214,6 +3219,22 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     return {...edge,style,caption:connectionCaption(edge.typeDefinition,style.showLabel,sourcePath,targetPath,
       (renderedNodeMap.get(sourcePath)??renderedNodeMap.get(edgeOccurrence(edge, "source")))?.page,(renderedNodeMap.get(targetPath)??renderedNodeMap.get(edgeOccurrence(edge, "target")))?.page)};
   }), [visibleEdges, renderedNodeMap, neighborhood, paintSettings, predicateEngine, index, paintLenses, connectionCaption, renderRevision, semanticRevision, predicateCenter]);
+
+  const separatedRoutes = useMemo(/** Only paintable endpoints share the finite lane budget; offscreen rows cannot compress visible routes. */ () => {
+    if (!personalWuXing) return null;
+    const viewport = (node: PositionedNode) => node.areaId ? scene.zoneViewports[node.areaId] : undefined;
+    const eligible = paintedEdges.filter(edge => {
+      const source = renderedNodeMap.get(edgePhysicalOccurrence(edge, "source")), target = renderedNodeMap.get(edgePhysicalOccurrence(edge, "target"));
+      if (!source || !target) return false;
+      const gates = gatesForEdge(edge);
+      const endpoints = edgeViewportEndpoints(gatePoint(source, gates.source), gatePoint(target, gates.target), gates.source, gates.target,
+        viewport(source), viewport(target), {source, target,
+          continueSource: target.branch?.parent === edgePhysicalOccurrence(edge, "source"),
+          continueTarget: source.branch?.parent === edgePhysicalOccurrence(edge, "target")});
+      return endpoints && !endpoints.source.continued && !endpoints.target.continued;
+    });
+    return stackedEdgeRoutes(eligible, renderedNodeMap);
+  }, [personalWuXing, paintedEdges, renderedNodeMap, scene.zoneViewports]);
 
   const interaction = useMemo(() => {
     const edgeIds = new Set<string>();
@@ -5951,6 +5972,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
           viewportForNode={node => {const zone = areaForNode(node);return zone ? scene.zoneViewports[zone] : undefined;}}
           inverseArrowDirection={settings.inverseArrowDirection}
           connectorStyle={settings.connectorStyle}
+          stackedRoute={separatedRoutes?.get(edge.id)}
           labelBackground={NATIVE_LINK_LABEL_FILL}
           crossLinkOpacity={Math.max(0, Math.min(1, settings.crossLinkOpacity / 100))}
           highlighted={!connectDrag && (crossLinkPeek !== null && interaction.edgeIds.has(edge.id)

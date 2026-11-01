@@ -68,3 +68,19 @@ The user requested removing the standalone Water chip and consolidating phase-fr
 - A Chromium preview checks guide on/off with identical note/camera geometry. It uses synthetic notes, an explicitly light canvas and Chinese copy; it is not a capture of the user's native vault. The preview also verifies that the note title remains present and visible while the category chip is hidden.
 - Logs, preview PNGs, artifact and installation receipts are in `/Users/dumo/Downloads/dumodal-Codex/2026-11-02-kplex-blueprint/`. The installation receipt records the actual backup, installed byte hashes and settings-preservation check.
 - Deployment is limited to the three plugin artifacts in dumodal; no notes or plugin settings are edited. Reload remains a separate native action because Obsidian CLI cannot connect.
+
+
+## 2026-11-02: separate overlapping column connections
+
+The user supplied a screenshot where several vertically stacked notes above the center share one long vertical connector. Their fixed group/card positions must remain stable.
+
+- Root cause: aligned cards have the same physical gate x-coordinate. The existing shallow Bezier controls also share that x-coordinate, so different target distances paint the same vertical segment; opposite-facing semantic ports may also send that segment through cards.
+- The personal Wu Xing renderer now allocates stable side lanes only to groups of at least two aligned vertical center-to-category connections. Nearest destinations use the innermost lane, farther destinations use progressively outer lanes. Input/paint iteration does not change ranking for the same scene.
+- The planner borrows existing rectangles and edge identities. Source and target gate points, source/target order, arrow policy, styles, physical port metadata and canonical relation data are unchanged. Straight and Bezier modes retain their respective path treatment.
+- Only endpoints admitted by the existing viewport-visibility owner share the lane budget. Hidden rows cannot crowd visible lanes; clipping/continuations still use their original rendering owner. Visible and hit paths share exactly the same new path. Connection labels use their individual lane midpoint.
+- Isolated and diagonal connections, cross-links, other views and generic Facets keep existing routing. No node positioning, grouping, card size, camera, index, compiler, note or settings logic changed.
+- Final production build, Obsidian lint and architecture/numeric-control checks passed on Node 22.22.2. Broad targeted run: 142/142 passed. The final parent/child gate-direction browser subset passed 2/2, checking both top and bottom departure gates.
+- New regression coverage checks deterministic lanes under input reversal, exact original gate endpoints and reverse-direction ownership, unchanged nodes/roles/ports, hit-path equality, actual SVG-path samples outside visible card bodies, unchanged camera, viewport scrolling and no hidden-row routes or new semantic acquisition. Existing shared interaction, canvas, history and settings checks remain covered.
+- Before/after PNGs use synthetic notes and identical card geometry. The baseline renders the unchanged production fallback curve; the after image uses the actual new router. They are browser previews, not native vault screenshots.
+- Logs, previews, three-file build and deployment receipt: `/Users/dumo/Downloads/dumodal-Codex/2026-11-02-kplex-separated-connections/`.
+- No full indexing/storage aggregate was rerun for this geometry-only scope. The transpiled indexing fixture inventory includes the new helper module. Native reload remains separate from artifact installation.

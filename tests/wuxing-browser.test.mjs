@@ -470,3 +470,39 @@ test('one blueprint switch shows all phase frames meanings and straight cycles w
  check(work.body===source.body&&work.scans===source.scans&&work.acquisitions===source.acquisitions,'Guide changes acquire no source data');
  a.close();blueprintStyle.remove();plugin.actionManager.dispose();return true;})()`),true)}finally{await host.cleanup()}
 });
+
+
+for(const relationRole of ['parent','child']) test('stacked Wu Xing '+relationRole+' connections separate without moving cards or painting hidden rows',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ const routeStyle=document.createElement('style');routeStyle.textContent=${JSON.stringify(readFileSync('styles.css','utf8'))};document.head.append(routeStyle);
+ const relationRole=${JSON.stringify(relationRole)};
+ const paths=Array.from({length:12},(_,i)=>'Stack '+i+'.md');
+ for(const [i,path]of paths.entries()){const base=pages.get('B.md');pages.set(path,{...base,path,name:'Column note number '+i,file:{...base.file,path,name:path}});fieldCaches.set(path,{frontmatter:{status:'wood'}})}
+ fieldCaches.get('A.md').frontmatter.status='water';index.neighbours=(page,role)=>page.path==='A.md'&&role===relationRole?paths.map(path=>({page:pages.get(path),role,relationType:1,typeDefinition:'Related',linkDirection:1})):[];
+ index.getNeighborhood=path=>({center:pages.get(path),parents:relationRole==='parent'?index.neighbours(pages.get(path),'parent'):[],children:relationRole==='child'?index.neighbours(pages.get(path),'child'):[],leftFriends:[],rightFriends:[],siblings:[]});
+ const preset={...M.FACET_TEMPLATES.wuxing,regionWidth:220,regionHeight:360,blueprint:false};settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:preset});
+ const a=await mount(M.wuXingViewDefinition),before={body:work.body,scans:work.scans,acquisitions:work.acquisitions},canonical=JSON.stringify(index.neighbours(pages.get('A.md'),relationRole).map(row=>[row.page.path,row.role,row.typeDefinition]));
+ const geometry=()=>[...a.container.querySelectorAll('[data-kplex-keyboard-id]')].map(node=>[node.dataset.kplexPath,node.style.left,node.style.top,node.style.width,node.style.height]);
+ const positions=JSON.stringify(geometry()),camera=a.container.querySelector('.kplex-camera').style.transform;
+ const routes=()=>[...a.container.querySelectorAll('[data-kplex-stacked-route]')];
+ const inspect=()=>{
+  check(routes().length>=2,'Several visible column members have independent routes');
+  const painted=[...a.container.querySelectorAll('.kplex-edge-visible')];check(painted.length<paths.length,'Hidden rows do not acquire painted paths');
+  const column=[...a.container.querySelectorAll('[data-kplex-path]')].filter(node=>paths.includes(node.dataset.kplexPath)&&node.classList.contains('kplex-thought'));check(new Set(column.map(node=>(parseFloat(node.style.left)+parseFloat(node.style.width)/2).toFixed(3))).size<=1,'The official single-column packing remains');
+  for(const group of routes())check(group.querySelector('.kplex-edge-visible').getAttribute('d')===group.querySelector('.kplex-edge-hit').getAttribute('d'),'Visible and interactive paths use identical geometry');
+  const rails=routes().map(group=>group.querySelector('.kplex-edge-visible').getAttribute('d'));check(new Set(rails).size===rails.length,'No two visible paths coincide');
+  const cards=[...a.container.querySelectorAll('.kplex-thought')].filter(node=>{const clip=node.closest('.kplex-zone-scroll');if(!clip)return true;const r=node.getBoundingClientRect(),c=clip.getBoundingClientRect();return r.bottom>c.top&&r.top<c.bottom}).map(node=>node.getBoundingClientRect());
+  for(const group of routes()){
+   const path=group.querySelector('.kplex-edge-visible'),length=path.getTotalLength(),matrix=path.getScreenCTM();
+   for(let i=1;i<100;i++){const p=path.getPointAtLength(length*i/100),point=new DOMPoint(p.x,p.y).matrixTransform(matrix);check(!cards.some(card=>point.x>card.left+2&&point.x<card.right-2&&point.y>card.top+2&&point.y<card.bottom-2),'A separated route never crosses a visible note body')}
+  }
+ };
+ inspect();a.render();await wait();check(JSON.stringify(geometry())===positions&&a.container.querySelector('.kplex-camera').style.transform===camera,'Ordinary publication keeps every node and camera');
+ const area=JSON.stringify(['facets','wuxing','category','wood']),scroll=a.container.querySelector('.'+CSS.escape('kplex-zone-'+area)+' .kplex-zone-scroll');check(scroll.scrollHeight>scroll.clientHeight,'Fixture really overflows');
+ const firstIds=routes().map(group=>group.querySelector('.kplex-edge-hit').dataset.kplexEdgeId);scroll.scrollTop=scroll.scrollHeight;scroll.dispatchEvent(new Event('scroll'));await wait();inspect();
+ check(JSON.stringify(firstIds)!==JSON.stringify(routes().map(group=>group.querySelector('.kplex-edge-hit').dataset.kplexEdgeId)),'Scrolling replaces routes only with newly visible members');
+ check(JSON.stringify(index.neighbours(pages.get('A.md'),relationRole).map(row=>[row.page.path,row.role,row.typeDefinition]))===canonical,'Canonical relation identities and roles remain unchanged');
+ check(work.body===before.body&&work.scans===before.scans&&work.acquisitions===before.acquisitions,'Routing and scrolling acquire no new semantic sources');
+ a.close();routeStyle.remove();plugin.actionManager.dispose();return true;})()`),true)}finally{await host.cleanup()}
+});
