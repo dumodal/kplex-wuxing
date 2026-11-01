@@ -93,13 +93,13 @@ test('selected preset deep link opens the existing editor without activating or 
 test('Wu Xing model controls use the original preset draft and queued writer, with read-only explanatory help',async()=>{
  assert.equal(await scenario(`
  const m=manager(),editor=edit(m,'Wu Xing');
- const name=t('facets.relativeLabels'),control=fields(editor,name)[0];
- check(control&&editor.contentEl.textContent.includes(t('facets.wuxingHelp')),'Relative role help is reachable in the native preset editor');
- check(editor.contentEl.textContent.includes(t('facets.cyclesHelp')),'Both model cycles are explained');
- check(control.type==='checkbox','Original native toggle');control.checked=false;control.dispatchEvent(new Event('change',{bubbles:true}));
+ const name=t('wuxing.blueprint.show'),control=fields(editor,name)[0];
+ check(control&&editor.contentEl.textContent.includes(t('wuxing.blueprint.help')),'Unified reference help is reachable in the native preset editor');
+ check(!fields(editor,t('facets.regulatingGuides')).length,'Cycles share one control');
+ check(control.type==='checkbox','Original native toggle');control.checked=true;control.dispatchEvent(new Event('change',{bubbles:true}));
  equal(p.writes,[],'Model controls remain local until Save');await save(editor);await drain();
  const preset=M.facetLibrary(M.readViewConfiguration(M.builtInPlexViews.resolve('wuxing'),p.settings.canvasViewSettings)).presets.wuxing;
- check(preset.relativeLabels===false&&preset.interpretation==='wuxing','Same entry writer persists optional model presentation');
+ check(preset.blueprint===true&&preset.interpretation==='wuxing','Same entry writer persists the complete background guide');
  check(preset.categories.wood.assignment==='\u{1f7e2}','Model control does not change assignment values');close(m);
  `),true);
 });
@@ -280,5 +280,20 @@ test('Wu Xing preset editor omits diagnostic controls while preserving stored di
  check(![...editor.contentEl.querySelectorAll('h4')].some(node=>node.textContent===t('facets.diagnostics')),'No diagnostic sizing section');
  input(fields(editor,t('wuxing.spacing'))[0],96);await save(editor);await drain();equal(disk.canvasViewSettings.wuxing.values.presets.wuxing.diagnostics,previous,'An unrelated save preserves dormant diagnostic preferences');
  editor=edit(m,'ARC');check(fields(editor,t('facets.combineDiagnostics')).length===1,'Other presets retain diagnostics');close(editor);close(m);
+ `),true);
+});
+
+
+test('one native Wu Xing guide switch replaces separate background controls and persists without rewriting legacy preferences',async()=>{
+ assert.equal(await scenario(`
+ const m=manager(),before=JSON.stringify(disk);let editor=edit(m,'Wu Xing');
+ for(const key of ['wuxing.guides','wuxing.tints','facets.hideGroups','facets.hideGroupBorders','facets.relativeLabels','facets.regulatingGuides'])check(!fields(editor,t(key)).length,'Retired independent background control: '+key);
+ const setGuide=(modal,value)=>{const input=fields(modal,t('wuxing.blueprint.show'))[0];check(input,'Single guide checkbox is available');input.checked=value;input.dispatchEvent(new Event('change',{bubbles:true}))};
+ setGuide(editor,true);close(editor);equal(JSON.stringify(disk),before,'Cancel changes no saved preset');
+ editor=edit(m,'Wu Xing');setGuide(editor,true);await save(editor);await drain();
+ const saved=JSON.parse(JSON.stringify(disk)),preset=saved.canvasViewSettings.wuxing.values.presets.wuxing;check(preset.blueprint===true,'Complete guide is saved with one field');
+ const reloaded=await createAppearanceHost(saved);check(reloaded.settings.canvasViewSettings.wuxing.values.presets.wuxing.blueprint===true,'Guide preference survives a new settings host');
+ editor=edit(m,'Wu Xing');setGuide(editor,false);await save(editor);await drain();
+ const after=copy(disk.canvasViewSettings.wuxing.values.presets.wuxing);delete preset.blueprint;delete after.blueprint;equal(after,preset,'Guide off preserves all old display preferences and recognition mappings');close(m);
  `),true);
 });

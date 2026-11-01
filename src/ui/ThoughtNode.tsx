@@ -69,6 +69,7 @@ export function ThoughtNode({
   branchStatusHint,
   badgeColorRevision = 0,
   centerOutline = false,
+  hideCategoryBadge = false,
   visual,
   content,
   cornerAction,
@@ -115,6 +116,8 @@ export function ThoughtNode({
   badgeColorRevision?: number;
   /** Paint-only category outline is disabled for section cards and embedded native editors. */
   centerOutline?: boolean;
+  /** Hide a duplicate category chip without changing its reserved layout or native content. */
+  hideCategoryBadge?: boolean;
 }) {
   const accessibleNameId = useId();
   const gateStats = physicalGateStats(node);
@@ -188,6 +191,7 @@ export function ThoughtNode({
     style={nodeCss}
     data-kplex-path={node.page.path}
     data-kplex-category-outline={Boolean(categoryColor) || undefined}
+    data-kplex-hide-category-badge={hideCategoryBadge && node.role === "center" && node.viewBadge?.presentation !== "status" || undefined}
     role={group ? "button" : undefined}
     aria-label={group ? translate("groups.unfold", { name: node.label, count: group.groupMembers?.length ?? 0 }) : undefined}
     data-kplex-keyboard-id={keyboardId}

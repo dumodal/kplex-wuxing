@@ -18,7 +18,7 @@ import {compileFacetRules} from "../../../core/plex/views/facets/rules";
 import {renderDiagnosticSettings} from "./diagnosticSettings";
 import {renderFacetLayoutSettings} from "./layoutSettings";
 import {renderAreaSizeSettings} from "./areaSizeSettings";
-import {FACET_DIAGNOSTIC_ORDER, facetShowsDiagnostics} from "../../../core/plex/views/facets/presentation";
+import {FACET_DIAGNOSTIC_ORDER, facetShowsDiagnostics, facetIsWuXing} from "../../../core/plex/views/facets/presentation";
 import {renderFacetFlowSettings} from "./flowSettings";
 import {renderPresetHelpSettings} from "./helpSettings";
 import type {ClipboardSession} from "../../../application/ClipboardSession";
@@ -108,10 +108,14 @@ export class FacetPresetEditor extends StyleEditorModal {
       ["regionWidth", "wuxing.width", 200, 640, 20], ["regionHeight", "wuxing.height", 160, 600, 20]] as const)
       numberSlider(new Setting(body).setName(t(label)), {label: t(label), value: this.draft[field], min: minimum, max: maximum, step,
         onChange: value => {if (this.canEdit() && this.owner()) {this.draft = {...this.draft, [field]: value};this.validate();}}});
-    for (const [field, label] of [["guides", "wuxing.guides"], ["tints", "wuxing.tints"],
-      ["hideGroups", "facets.hideGroups"], ["hideGroupBorders", "facets.hideGroupBorders"], ["centerOutline", "facets.centerOutline"]] as const)
+    if (!facetIsWuXing(this.draft)) for (const [field, label] of [["guides", "wuxing.guides"], ["tints", "wuxing.tints"],
+      ["hideGroups", "facets.hideGroups"], ["hideGroupBorders", "facets.hideGroupBorders"]] as const)
       new Setting(body).setName(t(label)).addToggle(input => input.setValue(this.draft[field] ?? false).onChange(value => {this.draft = {...this.draft, [field]: value};this.validate();}));
-    renderFacetFlowSettings(body, /** Read current sibling layout/preset edits. */ () => this.draft,
+    if (facetIsWuXing(this.draft)) new Setting(body).setName(t("wuxing.blueprint.show")).setDesc(t("wuxing.blueprint.help")).addToggle(input => input
+      .setValue(this.draft.blueprint ?? false).onChange(blueprint => {this.draft = {...this.draft, blueprint};this.validate();}));
+    new Setting(body).setName(t("facets.centerOutline")).addToggle(input => input
+      .setValue(this.draft.centerOutline ?? false).onChange(centerOutline => {this.draft = {...this.draft, centerOutline};this.validate();}));
+    if (!facetIsWuXing(this.draft)) renderFacetFlowSettings(body, /** Read current sibling layout/preset edits. */ () => this.draft,
       /** Guide settings stay inside the same atomic guarded preset Save. */ (preset, structural) => {
         if (!this.canEdit()) return;this.draft = preset;if (structural) this.render();else this.validate();
       }, t, flowOpen);
@@ -119,7 +123,7 @@ export class FacetPresetEditor extends StyleEditorModal {
       if (!this.canEdit()) return;
       this.draft = {...this.draft, diagnostics};if (structural) this.render();else this.validate();
     });
-    if (facetHasWuXingPhases(this.draft)) {
+    if (!facetIsWuXing(this.draft) && facetHasWuXingPhases(this.draft)) {
       new Setting(body).setName(t("facets.relativeLabels")).setDesc(t("facets.wuxingHelp")).addToggle(input => input
         .setValue(this.draft.interpretation === "wuxing" && this.draft.relativeLabels === true).onChange(relativeLabels => {
           this.draft = {...this.draft, interpretation: "wuxing", relativeLabels};this.validate();

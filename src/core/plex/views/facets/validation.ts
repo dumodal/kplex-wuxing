@@ -39,7 +39,8 @@ export function isFacetPreset(value: unknown): value is FacetPreset {
     || value.regulatingGuides !== undefined && typeof value.regulatingGuides !== "boolean") return false;
   if (value.hideGroups !== undefined && typeof value.hideGroups !== "boolean"
     || value.hideGroupBorders !== undefined && typeof value.hideGroupBorders !== "boolean"
-    || value.centerOutline !== undefined && typeof value.centerOutline !== "boolean") return false;
+    || value.centerOutline !== undefined && typeof value.centerOutline !== "boolean"
+    || value.blueprint !== undefined && typeof value.blueprint !== "boolean") return false;
   if (value.layout !== undefined && !isFacetLayout(value.layout)
     || value.focusAnchor !== undefined && (typeof value.focusAnchor !== "string" || !["top", "bottom", "left", "right"].includes(value.focusAnchor))
     || value.reverse !== undefined && typeof value.reverse !== "boolean") return false;

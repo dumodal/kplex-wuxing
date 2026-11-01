@@ -21,7 +21,7 @@ export function viewDecorationCounts(decorations: readonly PlexDecoration[], nod
 }
 
 /** Render local shown counts supplied by the shared visible-occurrence owner, including expanded group membership. */
-export function ViewDecorations({decorations, counts, translate, hideGroups = false, hideGroupBorders = false}: {decorations: readonly PlexDecoration[]; counts: ReadonlyMap<string, number>; translate: Translator; hideGroups?: boolean; hideGroupBorders?: boolean}) {
+export function ViewDecorations({decorations, counts, translate, hideGroups = false, hideGroupBorders = false, neutralCategories = false}: {decorations: readonly PlexDecoration[]; counts: ReadonlyMap<string, number>; translate: Translator; hideGroups?: boolean; hideGroupBorders?: boolean; neutralCategories?: boolean}) {
   const prefix = useId();
   return <svg className="kplex-view-decorations" aria-hidden="true" focusable="false">
     {decorations.some(mark => mark.kind === "guide" && (mark.directed || mark.direction)) && <defs>
@@ -44,9 +44,9 @@ export function ViewDecorations({decorations, counts, translate, hideGroups = fa
       : <g key={mark.id} data-kplex-decoration={mark.id} className={`kplex-view-region${hideGroups && mark.id.includes('"category"') ? " is-group-hidden" : ""}${hideGroupBorders && mark.id.includes('"category"') ? " is-border-hidden" : ""}${mark.tint ? ` is-${mark.tint}` : ""}`}>
         <defs><clipPath id={`${prefix}-${index}`}><rect x={mark.bounds.x + 12} y={mark.bounds.y + 4} width={Math.max(0, mark.bounds.width - 24)} height={mark.description ? 68 : 44} /></clipPath></defs>
         {mark.shape ? <path d={areaShapePath(mark.bounds, mark.shape)} fillRule="evenodd"
-          style={mark.color ? {fill: colorValueCss(mark.color, "var(--background-secondary)"), stroke: colorValueCss(mark.color, "var(--background-modifier-border)")} : undefined} />
+          style={mark.color && !(neutralCategories && mark.id.includes('"category"')) ? {fill: colorValueCss(mark.color, "var(--background-secondary)"), stroke: colorValueCss(mark.color, "var(--background-modifier-border)")} : undefined} />
           : <rect x={mark.bounds.x} y={mark.bounds.y} width={mark.bounds.width} height={mark.bounds.height} rx="14"
-            style={mark.color ? {fill: colorValueCss(mark.color, "var(--background-secondary)"), stroke: colorValueCss(mark.color, "var(--background-modifier-border)")} : undefined} />}
+            style={mark.color && !(neutralCategories && mark.id.includes('"category"')) ? {fill: colorValueCss(mark.color, "var(--background-secondary)"), stroke: colorValueCss(mark.color, "var(--background-modifier-border)")} : undefined} />}
         <text clipPath={`url(#${prefix}-${index})`} x={mark.bounds.x + 16} y={mark.bounds.y + 25}>{mark.label ?? viewLabel(mark.labelKey, translate)}</text>
         {mark.description && <text clipPath={`url(#${prefix}-${index})`} className="kplex-view-region-description" x={mark.bounds.x + 16} y={mark.bounds.y + 44}>{canvasViewText(mark.description, translate)}</text>}
         {mark.count && <text className="kplex-view-region-count" x={mark.bounds.x + 16} y={mark.bounds.y + (mark.description ? 64 : 44)}>

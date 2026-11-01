@@ -3,9 +3,9 @@ import type {CanvasViewSettingsContribution} from "../settingsContributions";
 import type {CanvasViewContributionContext, CanvasViewChoice} from "../contributionContracts";
 import {facetLibrary} from "../../../core/plex/views/facets/configuration";
 import {facetState, orderedFacetPresets, resolveFacetPreset} from "../../../core/plex/views/facets/state";
-import {facetPresetLabel, facetHasWuXingPhases} from "../../../core/plex/views/facets/labels";
+import {facetPresetLabel} from "../../../core/plex/views/facets/labels";
 import {FacetPresetManager} from "../facets/FacetPresetManager";
-import {facetDiagnostics, facetShowsDiagnostics} from "../../../core/plex/views/facets/presentation";
+import {facetDiagnostics, facetShowsDiagnostics, facetIsWuXing} from "../../../core/plex/views/facets/presentation";
 import {facetHelpText} from "../facets/help";
 
 /** Both entry points dispatch the same state reducer, preserving independent canvas intent. */
@@ -35,8 +35,13 @@ export const wuXingSettingsContribution: CanvasViewSettingsContribution = {
     ...(manage ? [{name: translate("facets.manage"), desc: translate("facets.managerHelp"), action: manage}] : [])],
   choices: context => [presetChoice(context)].flatMap(/** Only the selected preset contributes a choice; layout belongs to its saved definition. */ choice => choice ? [choice] : []),
   menus: context => {
-    const choice = presetChoice(context);
-    return [...(choice ? [{id: "preset", kind: "submenu" as const, label: choice.label, icon: "orbit", items: choice.options.map(option =>
+    const choice = presetChoice(context), library = facetLibrary(context.configuration), state = facetState(context.state);
+    const selected = library && state ? resolveFacetPreset(library, state.preset) : null;
+    return [
+    ...(selected && facetIsWuXing(selected.preset) && (selected.status === "ready" || selected.status === "replaced") ? [{
+      id: "blueprint", kind: "action" as const, label: {key: "wuxing.blueprint.show" as const}, icon: "layers", checked: selected.preset.blueprint === true,
+      command: {kind: "configuration" as const, address: {field: "presets", path: [selected.id, "blueprint"]}, edit: {kind: "set" as const, value: selected.preset.blueprint !== true}},
+    }] : []),...(choice ? [{id: "preset", kind: "submenu" as const, label: choice.label, icon: "orbit", items: choice.options.map(option =>
       ({...option, kind: "action" as const, checked: option.id === choice.selected}))}] : []),
     {id: "settings", kind: "action", label: {key: "facets.settings"}, icon: "settings", command: {kind: "settings"}}];
   },
@@ -52,15 +57,15 @@ export const wuXingSettingsContribution: CanvasViewSettingsContribution = {
       {...address("spacing"), labelKey: "wuxing.spacing", icon: "move-horizontal", min: 24, max: 200, step: 8},
       {...address("regionWidth"), labelKey: "wuxing.width", icon: "move-horizontal", min: 200, max: 640, step: 20},
       {...address("regionHeight"), labelKey: "wuxing.height", icon: "move-vertical", min: 160, max: 600, step: 20},
-      {...address("guides"), kind: "checkbox", labelKey: "wuxing.guides"},
-      {...address("tints"), kind: "checkbox", labelKey: "wuxing.tints"},
-      {...address("hideGroups"), kind: "checkbox", labelKey: "facets.hideGroups"},
-      {...address("hideGroupBorders"), kind: "checkbox", labelKey: "facets.hideGroupBorders"},
+      ...(facetIsWuXing(selected.preset) ? [
+        {...address("blueprint"), kind: "checkbox" as const, labelKey: "wuxing.blueprint.show" as const, hintKey: "wuxing.blueprint.help" as const},
+      ] : [
+        {...address("guides"), kind: "checkbox" as const, labelKey: "wuxing.guides" as const},
+        {...address("tints"), kind: "checkbox" as const, labelKey: "wuxing.tints" as const},
+        {...address("hideGroups"), kind: "checkbox" as const, labelKey: "facets.hideGroups" as const},
+        {...address("hideGroupBorders"), kind: "checkbox" as const, labelKey: "facets.hideGroupBorders" as const},
+      ]),
       {...address("centerOutline"), kind: "checkbox", labelKey: "facets.centerOutline"},
-      ...(selected.preset.interpretation === "wuxing" && facetHasWuXingPhases(selected.preset) ? [
-        {...address("relativeLabels"), kind: "checkbox" as const, labelKey: "facets.relativeLabels" as const},
-        {...address("regulatingGuides"), kind: "checkbox" as const, labelKey: "facets.regulatingGuides" as const},
-      ] : []),
     ];
   },
 };

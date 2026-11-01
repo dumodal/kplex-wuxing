@@ -110,6 +110,8 @@ import {viewLabel} from "./plexViews/labels";
 import {ViewDecorations, viewDecorationCounts} from "./plexViews/ViewDecorations";
 import {facetLibrary} from "../core/plex/views/facets/configuration";
 import {facetState, resolveFacetPreset} from "../core/plex/views/facets/state";
+import {facetIsWuXing} from "../core/plex/views/facets/presentation";
+import {WuXingBlueprint} from "./plexViews/wuxing/WuXingBlueprint";
 import {createLegacyPropertyProvider} from "../adapters/obsidian/predicateContracts";
 import { DropAreaPreview } from "./components/DropAreaPreview";
 import { DoubleTapGesture } from "./components/DoubleTapGesture";
@@ -1100,7 +1102,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     [classic, viewFailed, sceneGeometry, layoutNeighborhood, layoutSectionExpansion]);
   // Visibility is read after geometry so hiding chrome never changes measured positions.
   const visibilityLibrary = viewDefinition.id === "wuxing" ? facetLibrary(readViewConfiguration(viewDefinition, settings.canvasViewSettings)) : null;
-  const visibilityPreset = visibilityLibrary ? resolveFacetPreset(visibilityLibrary, facetState(viewSession?.state)?.preset ?? "wuxing").preset : null;
+  const visibilitySelection = visibilityLibrary ? resolveFacetPreset(visibilityLibrary, facetState(viewSession?.state)?.preset ?? "wuxing") : null;
+  const visibilityPreset = visibilitySelection?.preset ?? null;
+  const personalWuXing = !!visibilityPreset && facetIsWuXing(visibilityPreset);
+  const showBlueprint = personalWuXing && visibilityPreset.blueprint === true;
   const classicEditorCounts = useMemo(/** One linear pass rejects ambiguous section copies before native admission. */ () => {
     if (!classic) return null;
     const counts = new Map<string, number>();for (const node of scene.nodes) {const key = classic.editorKey(node, activePath);if (key) counts.set(key, (counts.get(key) ?? 0) + 1);}return counts;
@@ -5393,6 +5398,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       translate={translate}
       badgeColorRevision={badgeColorRevision}
       centerOutline={visibilityPreset?.centerOutline === true}
+      hideCategoryBadge={personalWuXing}
       branchStatus={visibleEdgeProjection.limited && baseNode === navigationNode() ? translate("mindmap.limited") : baseNode.branch?.reference ? translate("mindmap.reference") : baseNode.branch?.status === "loading" ? translate("mindmap.loading")
         : baseNode.branch?.status === "limited" ? translate("mindmap.limited") : baseNode.branch?.status === "partial" ? translate("mindmap.partial")
         : baseNode.branch?.status === "unavailable" ? translate("mindmap.unavailable") : undefined}
@@ -5530,7 +5536,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const displayedNodes = layout.nodes.filter((node) => !isDraggedNode(node));
     return <div
       key={zone}
-      className={`kplex-zone-panel kplex-zone-${zone}${visibilityPreset?.hideGroups && zone.includes('"category"') ? " is-group-hidden" : ""}`}
+      className={`kplex-zone-panel kplex-zone-${zone}${(personalWuXing || visibilityPreset?.hideGroups) && zone.includes('"category"') ? " is-group-hidden" : ""}`}
       style={{ left: panel.left, top: panel.top, width: panel.width, height: panel.height }}
     >
       <div className="kplex-zone-tools" onPointerDown={(event: PointerEvent<HTMLDivElement>) => event.stopPropagation()}>
@@ -5900,8 +5906,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
           void plugin.actionManager.dispatch({id: "editor.collapse", source: "toolbar", surfaceId: actionSurfaceId, args: {bindingId: boundEditorBinding.id}});
         }}>{translate("actions.editor.collapse")}</button>}</div>}
     <div ref={cameraElement} className="kplex-camera" style={{ transform: `translate(${camera.current.x}px, ${camera.current.y}px) scale(${camera.current.scale})` }}>
-      {scene.decorations && <ViewDecorations hideGroups={visibilityPreset?.hideGroups === true} hideGroupBorders={visibilityPreset?.hideGroupBorders === true} decorations={scene.decorations} translate={translate}
+      {scene.decorations && <ViewDecorations hideGroups={personalWuXing || visibilityPreset?.hideGroups === true} hideGroupBorders={personalWuXing ? !showBlueprint : visibilityPreset?.hideGroupBorders === true} neutralCategories={personalWuXing} decorations={scene.decorations} translate={translate}
         counts={viewDecorationCounts(scene.decorations, scene.nodes, filterMatchedNodePaths, zoneDisplayLayouts)} />}
+      {showBlueprint && scene.decorations && visibilityPreset && <WuXingBlueprint decorations={scene.decorations} preset={visibilityPreset} presetId={visibilitySelection?.id ?? "wuxing"}
+        translate={translate} center={scene.nodes.find(node => node.role === "center")} />}
       <svg className="kplex-links" width="3200" height="2400" viewBox="-1600 -1200 3200 2400">
         <defs>
           <marker id="kplex-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto-start-reverse" markerUnits="strokeWidth"><path d="M1,1 L8,4.5 L1,8" fill="none" stroke="context-stroke" strokeWidth="1.4" /></marker>

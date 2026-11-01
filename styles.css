@@ -3997,3 +3997,17 @@ button.kplex-sidecar-unfold-plex:focus-visible,
 
 /* The center outline carries its category color; retain the badge's measured reserve. */
 .kplex-thought[data-kplex-category-outline] > .kplex-node-badge { visibility: hidden; }
+
+/* One phase reference layer; paint never becomes a node, drop target or layout owner. */
+.kplex-thought[data-kplex-hide-category-badge] > .kplex-node-badge { visibility: hidden; }
+.kplex-wuxing-blueprint { font-family: var(--font-interface); color: var(--text-muted); }
+.kplex-wuxing-blueprint text { fill: var(--text-muted); font-family: var(--font-interface); }
+.kplex-wuxing-blueprint marker path { fill: var(--background-primary); stroke: var(--text-muted); stroke-width: 1; }
+.kplex-blueprint-link { stroke: var(--text-muted); stroke-width: 1.25; fill: none; opacity: 0.7; }
+.kplex-blueprint-link.is-regulating { stroke-dasharray: 6 6; }
+.kplex-blueprint-phase circle { fill: var(--background-primary); stroke-width: 2; }
+.kplex-blueprint-glyph { font-size: 15px; }
+.kplex-blueprint-name { font-size: 14px; font-weight: 500; }
+.kplex-blueprint-meaning, .kplex-blueprint-legend text { font-size: 12px; }
+.kplex-blueprint-legend .kplex-blueprint-title { font-size: 13px; font-weight: 500; }
+.kplex-blueprint-legend .kplex-blueprint-cue { font-size: 11px; }

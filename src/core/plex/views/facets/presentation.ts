@@ -3,10 +3,13 @@
 import type {FacetPreset, FacetCanvasState, FacetDiagnostics, FacetDiagnosticStatus, FacetLayout} from "./contracts";
 import {facetHasWuXingPhases} from "./labels";
 
-/** The personal five-phase canvas omits diagnostic chrome; generic Facets presets retain it. */
-export function facetShowsDiagnostics(preset: FacetPreset): boolean {
-  return !(preset.interpretation === "wuxing" && facetHasWuXingPhases(preset));
+/** Stable phase identities admit the personal guide independently of translated preset names. */
+export function facetIsWuXing(preset: FacetPreset): boolean {
+  return preset.interpretation === "wuxing" && facetHasWuXingPhases(preset);
 }
+
+/** The personal five-phase canvas omits diagnostic chrome; generic Facets presets retain it. */
+export function facetShowsDiagnostics(preset: FacetPreset): boolean {return !facetIsWuXing(preset);}
 
 export const FACET_DIAGNOSTIC_ORDER: readonly FacetDiagnosticStatus[] = ["unassigned", "conflicting", "checking", "unresolved"];
 export const FACET_LAYOUTS: readonly FacetLayout[] = ["circular", "concentric", "vertical", "horizontal", "quadrants"];

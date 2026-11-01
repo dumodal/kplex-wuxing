@@ -639,6 +639,8 @@ for (const file of [
   "src/ui/plexViews/contributionValidation.ts",
   "src/ui/plexViews/mindmap/settings.ts",
   "src/ui/plexViews/labels.ts",
+  "src/ui/plexViews/wuxing/WuXingBlueprint.tsx",
+  "src/core/plex/views/wuxing/blueprint.ts",
   "src/ui/plexViews/classic/settings.ts",
   "src/ui/plexViews/classic/occurrenceEditor.ts",
   "src/application/ActionManager.ts",

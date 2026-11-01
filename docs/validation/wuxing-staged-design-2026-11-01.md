@@ -50,3 +50,21 @@ The user prefers to keep official note groups and remove the Diagnostics section
 - Presentation projection and layout publication are the affected owners; indexing, source acquisition, canonical graph compilation and persistence implementations are unchanged. Expensive full indexing/storage suites were not rerun for this scope.
 - Current-run evidence and the three-file build are under `/Users/dumo/Downloads/dumodal-Codex/2026-11-02-kplex-five-phase-only/`.
 - No vault notes, settings or installed plugin files were changed. No push was performed. Obsidian CLI remains unavailable, so native typing-flicker acceptance remains pending.
+
+
+## 2026-11-02: one complete five-phase blueprint
+
+The user requested removing the standalone Water chip and consolidating phase-frame visibility, background labels and separate cycle controls into one complete optional reference layer.
+
+- New preset flag `blueprint` defaults off. The canvas Appearance rail, canvas menu and native preset editor address that one saved field. Old guide/tint/relative-label/frame preferences remain stored but do not gate the personal blueprint. Generic Facets presets retain their original controls and measured flow captions.
+- The center category chip is visually hidden while keeping its measured reserve and accessible category description. The actual note title and native editor content remain unchanged.
+- The complete background includes all five group frames, colored phase glyphs, contextual activity cues and roles relative to the selected note. Legacy group text/count controls are replaced by the guide copy. The personal cues are not fixed subject categories.
+- Exactly five generating arrows follow wood, fire, earth, metal, water, wood. Exactly five regulating arrows follow the two-step cycle. Both use straight frame-to-frame segments, with solid versus dashed styles and one legend. They do not become semantic note edges or hit targets. Visual category reorder/reversal does not reverse model direction.
+- The old outer cycle routes are removed from the registered Wu Xing decoration output so invisible guides cannot enlarge canvas fitting. The registered layout adds explanatory relative-role text only after ordinary packing, preserving all card/header dimensions.
+- Turning the blueprint on/off changes only paint. Existing official category packing, actual card rectangles, DOM identity, manual camera, source demand and native hosted input remain stable. No source acquisition, graph compiler or indexing scheduler changes were made.
+- Default guide text/help is available in all eight supported locales. Meaning copy and glyph metadata are centralized for later refinement.
+- Final Node 22.22.2 focused result: 142/142 passed. Coverage includes actual Appearance checkbox/menu actions, Save/Cancel/reload, preserved legacy settings, all ten directed phase edges, reversed category order, missing-reference behavior, live theme colors, actual card rectangles and camera, history/Footprints, localization and existing generic Facets flows. Production build, Obsidian lint, architecture and release metadata passed.
+- The full indexing/storage aggregate was not rerun for this presentation-only scope. The indexing harness module inventory includes both new imported files.
+- A Chromium preview checks guide on/off with identical note/camera geometry. It uses synthetic notes, an explicitly light canvas and Chinese copy; it is not a capture of the user's native vault. The preview also verifies that the note title remains present and visible while the category chip is hidden.
+- Logs, preview PNGs, artifact and installation receipts are in `/Users/dumo/Downloads/dumodal-Codex/2026-11-02-kplex-blueprint/`. The installation receipt records the actual backup, installed byte hashes and settings-preservation check.
+- Deployment is limited to the three plugin artifacts in dumodal; no notes or plugin settings are edited. Reload remains a separate native action because Obsidian CLI cannot connect.

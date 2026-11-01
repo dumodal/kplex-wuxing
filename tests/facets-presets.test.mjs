@@ -9,7 +9,7 @@ const M=await plexViewModules(['src/core/plex/views/facets/contracts.ts','src/co
  'src/core/plex/views/facets/classification.ts','src/core/plex/views/configurationValues.ts',
  'src/core/plex/views/configuration.ts','src/core/plex/views/facets/projection.ts','src/core/plex/views/facets/layout.ts',
  'src/core/plex/views/decorations.ts','src/core/plex/views/facets/presentation.ts',
- 'src/core/plex/views/facets/assignment.ts','src/core/plex/views/wuxing/definition.ts','src/core/plex/views/registry.ts',
+ 'src/core/plex/views/wuxing/blueprint.ts', 'src/core/plex/views/facets/assignment.ts','src/core/plex/views/wuxing/definition.ts','src/core/plex/views/registry.ts',
  'src/core/contracts/areaGeometry.ts','src/core/plex/views/facets/flow.ts','src/core/contracts/markdownHelp.ts','src/lang/index.ts']);
 const definition={id:'wuxing',configuration:M.facetsConfigurationSchema};
 const available=stored=>M.readViewConfiguration(definition,stored),library=stored=>M.facetLibrary(available(stored));
@@ -445,7 +445,7 @@ test('visibility options retain exact official geometry, membership, evidence an
   assert.deepEqual([saved.hideGroups,saved.hideGroupBorders],[hideGroups,hideGroupBorders]);
  }
  assert.deepEqual(f.work,work,'Visibility performs no additional graph/property reads');
- for(const field of ['hideGroups','hideGroupBorders','centerOutline'])for(const bad of ['true',1,null])assert.equal(M.isFacetPreset({...f.preset,[field]:bad}),false);
+ for(const field of ['hideGroups','hideGroupBorders','centerOutline','blueprint'])for(const bad of ['true',1,null])assert.equal(M.isFacetPreset({...f.preset,[field]:bad}),false);
 });
 
 
@@ -466,6 +466,33 @@ test('registered Wu Xing omits Diagnostics without moving phase groups or changi
  }
  assert.equal(JSON.stringify([...f.values]),values);assert(f.read.node('unassigned')&&f.read.node('unsupported'),'Hidden nodes still exist in the canonical reader');
  const center=M.wuXingViewDefinition.project({...input,attention:'unsupported'});assert.equal(center.occurrences.length,1);assert.equal(center.occurrences[0].nodeId,'unsupported','An unsupported current file stays centered');
- const generic={...M.FACET_TEMPLATES.wuxing,name:'Five categories',interpretation:undefined},genericConfig=available({wuxing:{version:2,values:{presets:{generic}}}}),genericInput={...input,state:{version:1,preset:'generic'},configuration:genericConfig};
- assert.deepEqual(M.wuXingViewDefinition.project(genericInput),M.projectFacets(genericInput),'Generic Facets diagnostics remain available');
+ const generic={...M.FACET_TEMPLATES.wuxing,name:'Five categories'};delete generic.interpretation;const genericConfig=available({wuxing:{version:2,values:{presets:{generic}}}}),genericInput={...input,state:{version:1,preset:'generic'},configuration:genericConfig};
+ assert(M.projectFacets(genericInput),'Generic preset remains valid');assert.deepEqual(M.wuXingViewDefinition.project(genericInput),M.projectFacets(genericInput),'Generic Facets diagnostics remain available');
+});
+
+
+test('unified blueprint fixes both five-phase directions independently of legacy switches and visual ordering',()=>{
+ const f=scene('wuxing',18),configuration=available({}),state={version:1,preset:'wuxing'};
+ const expectedGenerating=['wood>fire','fire>earth','earth>metal','metal>water','water>wood'].sort();
+ const expectedRegulating=['wood>earth','fire>metal','earth>water','metal>wood','water>fire'].sort();
+ for(const reverse of [false,true])for(const legacy of [false,true]){
+  const preset={...f.preset,reverse,guides:legacy,regulatingGuides:legacy,relativeLabels:legacy,blueprint:true};
+  const scene=M.layoutFacets(f.projection,f.measured,'wuxing',preset),snapshot=JSON.stringify(scene),guide=M.wuXingBlueprint(scene.decorations,'wuxing',preset);
+  assert.equal(guide.phases.length,5);assert.equal(guide.links.length,10);
+  for(const [kind,expected]of [['generating',expectedGenerating],['regulating',expectedRegulating]])assert.deepEqual(guide.links.filter(link=>link.kind===kind).map(link=>link.source+'>'+link.target).sort(),expected);
+  for(const link of guide.links){
+   const source=guide.phases.find(row=>row.phase===link.source).bounds,target=guide.phases.find(row=>row.phase===link.target).bounds;
+   assert(!M.areaContains(source,link.start)&&!M.areaContains(target,link.end),'Arrow tips stay outside the existing phase frames');
+   assert([link.start.x,link.start.y,link.end.x,link.end.y].every(Number.isFinite));
+  }
+  assert.equal(JSON.stringify(scene),snapshot,'The reference guide never mutates existing frame geometry');
+ }
+ const initial=M.wuXingViewDefinition.project({attention:'N0',maximum:19,state,configuration,read:{coverage:'cached',isCurrent:()=>true,node:id=>({id,kind:'document',file:{extension:'md'}}),compare:()=>0,relations:()=>({items:[],coverage:'cached',truncated:false}),properties:{availability:()=> 'available',read:()=>({status:'available',value:'water'})},scope:()=>({pending:false})}});
+ const legacyPreset={...M.FACET_TEMPLATES.wuxing,relativeLabels:false,guides:false,regulatingGuides:false};
+ const cfg=available({wuxing:{version:2,values:{presets:{wuxing:legacyPreset}}}});
+ const layout=M.wuXingViewDefinition.layout(initial,initial.occurrences.map(row=>({id:row.id,width:200,height:50})),state,null,{configuration:cfg});
+ assert.equal(layout.decorations.filter(mark=>mark.kind==='guide').length,0,'No invisible legacy guide affects the canvas fit');
+ const water=layout.decorations.find(mark=>mark.kind==='region'&&mark.id===M.facetAreaId('wuxing','category','water'));
+ assert.equal(water.description.key,'facets.relativeSame','The complete reference role is available even when old relative-label switches were off');
+ assert.equal(M.wuXingBlueprint(layout.decorations.filter(mark=>mark.id!==water.id),'wuxing',legacyPreset),null,'Incomplete frames do not invent a phase location');
 });

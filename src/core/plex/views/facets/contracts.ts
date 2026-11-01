@@ -27,6 +27,8 @@ export type FacetPreset = Readonly<{version: 1; name: string; nameKey?: string; 
   hideGroups?: boolean; hideGroupBorders?: boolean;
   /** Opt-in center-card paint keeps upstream dimensions and native editor ownership. */
   centerOutline?: boolean;
+  /** One paint-only personal five-phase guide replaces independent legacy guide switches. */
+  blueprint?: boolean;
   layout?: FacetLayout; focusAnchor?: FacetFocusAnchor; reverse?: boolean;
   /** Stable defaults are separate from the existing per-canvas area dimension maps. */
   areaSizes?: Readonly<{categories?: Readonly<Record<string, FacetAreaSize>>; diagnostics?: Readonly<Record<string, FacetAreaSize>>}>;

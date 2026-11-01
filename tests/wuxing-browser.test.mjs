@@ -57,7 +57,7 @@ test('production measured flow captions and arrow policies remain decorative acr
  fieldCaches.get('A.md').frontmatter.status='wood';fieldCaches.get('B.md').frontmatter.status='metal';const ui=await mount(M.wuXingViewDefinition),before={...work};
  const focus=ui.container.querySelector('[data-kplex-path="A.md"]'),camera=ui.container.querySelector('.kplex-camera').style.transform,relations=JSON.stringify(rows(pages.get('A.md'),'child').map(row=>[row.page.path,row.role,row.typeDefinition]));
  for(const layout of ['horizontal','vertical'])for(const reverse of [false,true])for(const style of ['arrow','line','none']){
-  const preset={...structuredClone(M.FACET_TEMPLATES.wuxing),layout,reverse,flow:{direction:'both',style,caption:'Review <script>never executes</script>',captionPosition:'end'}};
+  const preset={...structuredClone(M.FACET_TEMPLATES.wuxing),layout,reverse,flow:{direction:'both',style,caption:'Review <script>never executes</script>',captionPosition:'end'}};delete preset.interpretation;
   settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:preset});ui.props.settings={...settings};ui.props.paintSettings=ui.props.settings;ui.render();await wait();
   const guides=[...ui.container.querySelectorAll('.kplex-view-guide')],captions=[...ui.container.querySelectorAll('.kplex-view-guide-caption')];check(guides.length===4&&captions.length===4,'Shared renderer admits four measured adjacent guides/captions');
   check(guides.every(guide=>style==='arrow'?guide.hasAttribute('marker-start')&&guide.hasAttribute('marker-end'):!guide.hasAttribute('marker-start')&&!guide.hasAttribute('marker-end')),'Arrowheads follow the declared line policy');
@@ -242,16 +242,17 @@ test('relative Wu Xing presentation follows focus and unavailable metadata witho
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
  fieldCaches.get('A.md').frontmatter.status='wood';fieldCaches.get('B.md').frontmatter.status='metal';
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing','blueprint']},{kind:'set',value:true});
  const original=JSON.stringify([...fieldCaches]),a=await mount(M.wuXingViewDefinition),b=await mount(M.wuXingViewDefinition);
  const region=(surface,id)=>surface.container.querySelector('[data-kplex-decoration='+CSS.escape(JSON.stringify(['facets','wuxing','category',id]))+']');
- const label=(surface,id)=>region(surface,id).querySelector('.kplex-view-region-description')?.textContent;
+ const label=(surface,id)=>surface.container.querySelector('[data-kplex-blueprint-phase='+id+'] .kplex-blueprint-role')?.textContent.slice(3);
  check(label(a,'wood')==='What shares my phase'&&label(a,'metal')==='What regulates me','Wood reference reading');
  const bState=JSON.stringify(b.session.getState()),bCamera=b.container.querySelector('.kplex-camera').style.transform;
  a.props.activePath='B.md';a.render();await wait();
  check(label(a,'wood')==='What I regulate'&&label(a,'water')==='What I generate'&&label(a,'metal')==='What shares my phase','Metal reference reading');
  check(label(b,'metal')==='What regulates me'&&JSON.stringify(b.session.getState())===bState&&b.container.querySelector('.kplex-camera').style.transform===bCamera,'Other canvas is independent');
- const guides=[...a.container.querySelectorAll('.kplex-view-guide')];check(guides.length===10&&guides.every(row=>row.getAttribute('marker-end')),'Both cycles have decorative direction');
- check(a.container.querySelectorAll('.kplex-view-guide.is-generating').length===5&&a.container.querySelectorAll('.kplex-view-guide.is-regulating').length===5,'Cycle families stay distinct');
+ const guides=[...a.container.querySelectorAll('[data-kplex-blueprint-kind]')];check(guides.length===10&&guides.every(row=>row.getAttribute('marker-end')),'Both cycles have decorative direction');
+ check(a.container.querySelectorAll('[data-kplex-blueprint-kind=generating]').length===5&&a.container.querySelectorAll('[data-kplex-blueprint-kind=regulating]').length===5,'Cycle families stay distinct');
  const markers=[a,b].map(surface=>surface.container.querySelector('marker').id);check(markers[0]!==markers[1],'Per-canvas marker identities');
  const focused=a.container.querySelector('[data-kplex-path="B.md"]'),camera=a.container.querySelector('.kplex-camera').style.transform;
  for(const phase of [undefined,['wood','metal']]){
@@ -287,7 +288,7 @@ test('Facets production presets share captured controls, measured badges and liv
    check(a.container.querySelector('.kplex-camera').style.transform===camera,'Preset change preserves manual camera');
    const context={viewId:'wuxing',state:a.session.state,configuration:{status:'available',values:settings.canvasViewSettings.wuxing?.values??{}}};
    const controls=M.builtInCanvasViewSettings.layoutControls(M.wuXingViewDefinition,context),configControls=controls.filter(control=>!control.state),combine=controls.find(control=>control.state);
-   check(configControls.length===(preset==='wuxing'?10:8)&&controls.every(control=>control.field==='presets'&&control.path[0]===preset),'Shared rails address only the selected preset and its optional interpretation');
+   check(configControls.length===(preset==='wuxing'?5:8)&&controls.every(control=>control.field==='presets'&&control.path[0]===preset),'Shared rails address only the selected preset and its optional interpretation');
    check(preset==='wuxing' ? !combine : combine?.kind==='checkbox'&&combine.state.value===true&&combine.state.actionId==='diagnostics.combine'&&combine.path.join('/')===preset+'/diagnostics/combined','Wu Xing omits diagnostic controls; generic presets retain their captured action');
    check(JSON.stringify(b.session.getState())===beforeB,'Other canvas retains independent selection');
  }
@@ -297,7 +298,8 @@ test('Facets production presets share captured controls, measured badges and liv
  document.body.style.setProperty('--color-blue','#ffff88');await wait();await wait();
  check(getComputedStyle(badge).color==='rgb(0, 0, 0)','Live theme change chooses readable black text');
  const region=[...a.container.querySelectorAll('[data-kplex-decoration]')].find(row=>row.dataset.kplexDecoration===JSON.stringify(['facets','wuxing','category','water']));
- check(getComputedStyle(region.querySelector(':scope > rect')).fill==='rgb(255, 255, 136)','Region resolves configured native color through the shared scope');
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings,{field:'presets',path:['wuxing','blueprint']},{kind:'set',value:true});a.props.settings={...settings};a.render();await wait();
+ check(getComputedStyle(a.container.querySelector('[data-kplex-blueprint-phase=water] circle')).stroke==='rgb(255, 255, 136)','Blueprint phase ring resolves the configured native color through the shared scope');
  const before={body:work.body,scans:work.scans,acquisitions:work.acquisitions};for(let i=0;i<25;i++)a.ports.current.readWanderScene();
  check(work.body===before.body&&work.scans===before.scans&&work.acquisitions===before.acquisitions,'Presentation and repeated Wander reads acquire no extra source work');
  controller.dispose();a.close();b.close();plugin.actionManager.dispose();check(events.size===0,'Exact shared subscriptions retire');style.remove();return true;
@@ -339,7 +341,7 @@ test('production Wu Xing decorates real local notes, refreshes cached fields, re
  check(region('water').textContent.includes('0 shown locally')&&getNode('Focus.md').querySelector('.kplex-node-badge').textContent==='Water'&&region('wood').textContent.includes('2 shown locally'),'Local counts and fixed attention');
  check(!region('conflicting')&&!region('unresolved')&&!region('unassigned')&&!getNode('Conflict.md')&&!getNode('Unknown.md')&&!getNode('Missing.md'),'Diagnostic nodes and areas are omitted only from Wu Xing');
  check(pages.has('Conflict.md')&&pages.has('Unknown.md')&&pages.has('Missing.md'),'Canonical notes are retained');
- check(mount.querySelectorAll('.kplex-view-guide').length===10,'Both decorative cycles render');check(getComputedStyle(mount.querySelector('.kplex-view-decorations')).pointerEvents==='none','Decorations cannot capture input');
+ check(!mount.querySelector('.kplex-view-guide'),'Legacy cycle marks are replaced by the optional unified blueprint');check(getComputedStyle(mount.querySelector('.kplex-view-decorations')).pointerEvents==='none','Decorations cannot capture input');
  const releaseAction=plugin.actionManager.registerSurface({id:'wuxing',generation:1,get implementations(){return actionPorts.current.implementations},readSnapshot:()=>({mounted:true,visible:true,windowId:'test',center:M.actionNodeRef(pages.get('Focus.md')),selected:actionPorts.current.readSelected(),focusRegion:'graph',interactionRevision:0,viewRevision:session.getSnapshot()})});
  const act=async id=>{let promise;M.flushSync(()=>promise=plugin.actionManager.dispatch({id,source:'local-menu',surfaceId:'wuxing'}));const outcome=await promise;await wait();return outcome};
  const zoomAnchor=()=>{const b=getNode('Focus.md').getBoundingClientRect();return{x:b.x+b.width/2,y:b.y+b.height/2}};
@@ -381,6 +383,8 @@ test('production Wu Xing decorates real local notes, refreshes cached fields, re
 test('visibility controls hide category chrome reversibly while preserving node DOM, geometry, camera and source work',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ const genericPreset={...M.FACET_TEMPLATES.wuxing};delete genericPreset.interpretation;
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:genericPreset});
  const visibilityStyle=document.createElement('style');visibilityStyle.textContent=${JSON.stringify(readFileSync('styles.css','utf8'))};document.head.append(visibilityStyle);
  const a=await mount(M.wuXingViewDefinition),nodes=()=>[...a.container.querySelectorAll('[data-kplex-keyboard-id]')],original=nodes();
  const geometry=()=>nodes().map(node=>[node.dataset.kplexPath,node.style.left,node.style.top,node.style.width,node.style.height,node.getBoundingClientRect().width,node.getBoundingClientRect().height]);
@@ -430,4 +434,39 @@ test('optional center outline changes paint only and preserves card geometry, so
  M.flushSync(()=>nativeRoot.unmount());nativeContainer.remove();
  check(work.body===counts.body&&work.scans===counts.scans&&work.acquisitions===counts.acquisitions,'Appearance never acquires sources');
  a.close();appearanceStyle.remove();plugin.actionManager.dispose();return true;})()`),true)}finally{await host.cleanup()}
+});
+
+
+test('one blueprint switch shows all phase frames meanings and straight cycles while preserving nodes camera and native badge reserves',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ document.body.style.cssText='--background-primary:#ffffff;--background-secondary:#f5f5f5;--text-muted:#555555;--color-blue:#3399ff;--color-green:#22aa55;--color-red:#ff6677;--color-yellow:#eecc33';
+ const blueprintStyle=document.createElement('style');blueprintStyle.textContent=${JSON.stringify(readFileSync('styles.css','utf8'))};document.head.append(blueprintStyle);
+ const preset={...M.FACET_TEMPLATES.wuxing,guides:false,regulatingGuides:false,relativeLabels:false,tints:false,hideGroups:true,hideGroupBorders:true,blueprint:false};
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:preset});
+ const a=await mount(M.wuXingViewDefinition),nodes=()=>[...a.container.querySelectorAll('[data-kplex-keyboard-id]')],original=nodes(),center=()=>a.container.querySelector('.kplex-role-center');
+ const geometry=()=>nodes().map(node=>[node.dataset.kplexPath,node.style.left,node.style.top,node.getBoundingClientRect().width,node.getBoundingClientRect().height]);
+ const before=JSON.stringify(geometry()),camera=a.container.querySelector('.kplex-camera').style.transform,source={body:work.body,scans:work.scans,acquisitions:work.acquisitions};
+ check(getComputedStyle(center().querySelector('.kplex-node-badge')).visibility==='hidden','Duplicate Water chip is hidden even with the guide closed');
+ await a.ports.current.implementations['view.layout-controls'].execute({});await wait();
+ check(a.container.querySelectorAll('input[aria-label="Show five-phase guide"]').length===1,'Appearance has one complete-guide switch');
+ for(const label of ['Show guides','Regulating cycle guides','Hide group labels and counts','Hide group frames'])check(!a.container.querySelector('input[aria-label="'+label+'"]'),'No obsolete independent guide control: '+label);
+ plugin.updateCanvasViewConfiguration=async(id,address,edit)=>{settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings,id==='wuxing'?address:{},edit);a.props.settings={...settings};return {refreshPending:false}};
+ for(const enabled of [true,false,true,false]){
+  const checkbox=a.container.querySelector('input[aria-label="Show five-phase guide"]');check(checkbox.checked!==enabled,'Switch starts at the last saved state');checkbox.click();await wait();a.render();await wait();
+  check((!!a.container.querySelector('[data-kplex-blueprint]'))===enabled,'The complete layer follows the single checkbox');
+  if(enabled){
+   check(a.container.querySelectorAll('[data-kplex-blueprint-phase]').length===5,'All five phase names and activity meanings are present');
+   const links=[...a.container.querySelectorAll('[data-kplex-blueprint-kind]')];check(links.length===10&&links.every(link=>link.tagName.toLowerCase()==='line'),'Both full cycles use straight segments');
+   for(const [kind,expected]of [['generating',['wood>fire','fire>earth','earth>metal','metal>water','water>wood']],['regulating',['wood>earth','fire>metal','earth>water','metal>wood','water>fire']]])check(JSON.stringify(links.filter(link=>link.dataset.kplexBlueprintKind===kind).map(link=>link.dataset.kplexBlueprintSource+'>'+link.dataset.kplexBlueprintTarget).sort())===JSON.stringify(expected.sort()),'Correct '+kind+' direction despite all old switches being off');
+   check(a.container.querySelector('.kplex-blueprint-meaning').textContent.length>0,'Each phase has an activity cue');
+  }
+  const frames=[...a.container.querySelectorAll('.kplex-view-region > rect,.kplex-view-region > path')];check(frames.length===5&&frames.every(frame=>(getComputedStyle(frame).display!=='none')===enabled),'All phase frames follow the same switch');
+  check(nodes().every((node,i)=>node===original[i])&&JSON.stringify(geometry())===before,'No node DOM or measured position changes');
+  check(a.container.querySelector('.kplex-camera').style.transform===camera,'The guide never moves the camera');
+  check(!a.container.querySelector('.kplex-view-guide'),'No old curved cycle remains behind the guide');
+ }
+ const menu=a.contributions.menus().find(item=>item.id==='blueprint');check(menu?.checked===false,'Canvas menu reflects the same saved switch');await menu.command.run();a.props.settings={...settings};a.render();await wait();check(a.container.querySelector('[data-kplex-blueprint]'),'Canvas menu opens the same full guide');
+ check(work.body===source.body&&work.scans===source.scans&&work.acquisitions===source.acquisitions,'Guide changes acquire no source data');
+ a.close();blueprintStyle.remove();plugin.actionManager.dispose();return true;})()`),true)}finally{await host.cleanup()}
 });
