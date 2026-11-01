@@ -13,7 +13,8 @@
  * Revalidation retains only this mounted node's unchanged badge text as cached presentation;
  * native incarnation/value changes retire it, independently of index and relationship-write proof.
  * Branch chevrons and Markdown section plus/minus controls remain separate, with shared gesture
- * isolation and caller-owned actions. This component owns neither traversal nor source loading.
+ * isolation and caller-owned actions. A caller-owned viewport can clip persistent attention without
+ * reparenting its DOM during classification changes. This component owns neither traversal nor source loading.
  */
 import {physicalGateStats} from "./plexViews/measurement";
 import { useId, type CSSProperties, type DragEvent as ReactDragEvent, type MouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
@@ -70,6 +71,7 @@ export function ThoughtNode({
   badgeColorRevision = 0,
   centerOutline = false,
   hideCategoryBadge = false,
+  viewportClip,
   visual,
   content,
   cornerAction,
@@ -118,6 +120,8 @@ export function ThoughtNode({
   centerOutline?: boolean;
   /** Hide a duplicate category chip without changing its reserved layout or native content. */
   hideCategoryBadge?: boolean;
+  /** World-space aperture for a persistent attention card painted outside its scroll container. */
+  viewportClip?: Readonly<{left: number; top: number; width: number; height: number}>;
 }) {
   const accessibleNameId = useId();
   const gateStats = physicalGateStats(node);
@@ -154,6 +158,7 @@ export function ThoughtNode({
     top: node.y - node.height / 2,
     width: node.width,
     height: node.height,
+    clip: viewportClip ? `rect(${viewportClip.top - (node.y - node.height / 2)}px, ${viewportClip.left + viewportClip.width - (node.x - node.width / 2)}px, ${viewportClip.top + viewportClip.height - (node.y - node.height / 2)}px, ${viewportClip.left - (node.x - node.width / 2)}px)` : undefined,
     background: isSection || content ? undefined : categoryColor ? "var(--background-primary)" : paint.background,
     color: isSection || content ? undefined : categoryColor ? "var(--text-normal)" : paint.foreground,
     borderColor: isSection || content ? undefined : categoryColor ?? paint.border,
@@ -188,6 +193,7 @@ export function ThoughtNode({
 
   return <div
     className={classes}
+    data-kplex-situated-attention={viewportClip ? "true" : undefined}
     style={nodeCss}
     data-kplex-path={node.page.path}
     data-kplex-category-outline={Boolean(categoryColor) || undefined}

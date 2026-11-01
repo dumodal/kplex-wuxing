@@ -198,7 +198,7 @@ test('Mind Map parents align to the bottom, grow without native scrolling and re
 });
 
 
-test('plugin reload CSS settlement centers the original note across views without navigation or source work',async()=>{
+test('plugin reload CSS settlement honors each view frame without navigation or source work',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture.replace('height:900px','height:3245px')}
  for(const id of ['classic','wuxing','mindmap'])for(const autozoom of [false,true]){
@@ -206,7 +206,10 @@ test('plugin reload CSS settlement centers the original note across views withou
   const center=ui.container.querySelector('[data-kplex-path="A.md"]'),before={...work};
   ui.container.style.height='500px';await wait();await wait();await wait();
   const v=scope().getBoundingClientRect(),r=center.getBoundingClientRect();
-  check(Math.abs((r.top+r.bottom)/2-(v.top+v.bottom)/2)<2,id+' keeps original center inside final reload viewport without another navigation');
+  if(id==='wuxing'){
+   const camera=new DOMMatrix(ui.container.querySelector('.kplex-camera').style.transform);check(Math.abs(camera.e-v.width/2)<2&&Math.abs(camera.f-v.height/2)<2,'Wu Xing keeps its invisible frame origin centered after reload');
+   const phase=ui.container.querySelector('.'+CSS.escape('kplex-zone-'+JSON.stringify(['facets','wuxing','category','water']))).getBoundingClientRect();check(r.left>=phase.left&&r.right<=phase.right&&r.top>=phase.top&&r.bottom<=phase.bottom,'Current note stays in its phase after CSS settles');
+  }else check(Math.abs((r.top+r.bottom)/2-(v.top+v.bottom)/2)<2,id+' keeps original center inside final reload viewport without another navigation');
   check(ui.props.activePath==='A.md'&&ui.moves.length===0&&ui.container.contains(center),'CSS settlement preserves note and DOM identity');
   check(work.body===before.body&&work.scans===before.scans&&work.acquisitions===before.acquisitions,'CSS settlement does no source work');
   await ui.ports.current.implementations['view.zoom-in'].execute({});await wait();const manual=ui.container.querySelector('.kplex-camera').style.transform;

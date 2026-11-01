@@ -111,3 +111,20 @@ test('legacy editor aperture clips document input while recovery controls remain
     assert.deepEqual(result, {clipped:true,inside:true,outside:false,recovery:true,released:true});
   } finally {await browser.cleanup();}
 });
+
+
+test('personal Wu Xing keeps automatic and bound attention editors inside the same real phase without duplication',()=>{
+ const pages=new Map(['Focus','Neighbor'].map(id=>{const page=viewPage(id);page.file.stat={mtime:1,size:1,ctime:1};return[id,page]}));
+ const source={get:id=>pages.get(id),titleFor:page=>page.name,isVisiblePage:()=>true,captureSemanticGateRead:()=>({isCurrent:()=>true}),neighbours:()=>[],sortNeighbours:rows=>rows,viewScopeCoverage:()=>({coverage:'local',prepared:true,complete:true,pending:false}),explainRelationship:()=>null};
+ const settings=M.migrateAndMergeSettings({groupRelations:false}),read=M.plexViewRead(source,()=>true,16,'Focus',256);read.properties={availability:()=> 'available',read:()=>({status:'available',value:'water'})};
+ const state={version:1,preset:'wuxing'},prepare=(bindings=[],size)=>M.prepareViewScene(M.wuXingViewDefinition,read,source,'Focus',state,settings,()=>true,size,()=>true,{translate:key=>key,unfolded:new Set()},{bindings,supports:()=>true});
+ const normal=prepare(),focus=normal.scene.nodes.find(node=>node.page.path==='Focus'),reference=M.actionNodeRef(focus.page),binding={id:'situated-editor',viewId:'wuxing',occurrenceId:focus.occurrenceId,target:{nodeId:'Focus',path:focus.page.file.path,fileIdentity:reference.fileIdentity},dimensions:{width:920,height:700},mode:'source',closing:false};
+ for(const opened of [prepare([],{width:660,height:410}),prepare([binding])]){
+  assert.equal(opened.failure,false);assert.equal(opened.scene.nodes.length,1);
+  const editor=opened.scene.nodes[0],area=opened.scene.areas.find(row=>row.id===editor.areaId);assert.equal(editor.areaId,focus.areaId);assert.equal(editor.role,'center');assert(editor.x!==0||editor.y!==0);
+  assert(editor.x-editor.width/2>=area.viewport.x&&editor.x+editor.width/2<=area.viewport.x+area.viewport.width);
+  assert(editor.y-editor.height/2>=area.viewport.y&&editor.y+editor.height/2<=area.viewport.y+area.viewport.height);
+  assert.equal(opened.scene.editorOccurrence,focus.occurrenceId);assert.equal(opened.projection.attention,'Focus');assert.deepEqual(opened.projection.edges,normal.projection.edges);
+ }
+ assert.deepEqual(prepare().scene,normal.scene,'Closing restores the normal situated card');
+});

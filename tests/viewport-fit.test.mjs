@@ -48,7 +48,7 @@ test('a cold rooted map fits its first prepared local cover once without claimin
 
 /** Supply an asymmetric displayed scene and real camera application/fit/layout owners. */
 function graphFixture() {
-  const ctx={camera:{current:{x:0,y:0,scale:1}},automaticFit:{current:null},activePath:'Center.md',rooted:false,
+  const ctx={personalWuXing:false,camera:{current:{x:0,y:0,scale:1}},automaticFit:{current:null},activePath:'Center.md',rooted:false,
     committedCamera:{current:{x:0,y:0,scale:1}},cameraFlushRevision:{current:0},publishPublicScene:{current:()=>{}},
     cameraMotion:{current:new CameraMotion()},
     cameraIntentPlaced:{current:false},
@@ -504,4 +504,14 @@ test('aligned phase edges get distinct stable side lanes without changing nodes,
  assert.equal(stackedEdgeRoutes(edges.slice(0,1),nodes).size,0,'An isolated connection keeps its original route');
  assert.equal(stackedEdgeRoutes(edges.map(edge=>({...edge,isCrossLink:true})),nodes).size,0,'Cross-links keep their existing routes');
  const offset=new Map([...nodes].map(([id,node])=>[id,node.role==='center'?node:{...node,x:100}]));assert.equal(stackedEdgeRoutes(edges,offset).size,0,'Nonoverlapping diagonal connections stay unchanged');
+});
+
+
+test('personal Wu Xing keeps an invisible camera origin when the current note enters any phase',()=>{
+ for(const position of [{x:500,y:100},{x:-400,y:300},{x:0,y:-600}])for(const allowAutozoom of [false,true]){
+  const ctx=graphFixture();ctx.personalWuXing=true;ctx.settings.allowAutozoom=allowAutozoom;Object.assign(ctx.scene.nodes[0],position);ctx.render();ctx.layout();
+  assert.equal(ctx.camera.current.x,400);assert.equal(ctx.camera.current.y,300);
+  ctx.pathChangedThisRender=false;ctx.applyCamera({...ctx.camera.current,x:230,y:190});ctx.render();ctx.layout();
+  assert.equal(ctx.camera.current.x,230);assert.equal(ctx.camera.current.y,190,'Manual camera remains owned by the user');
+ }
 });

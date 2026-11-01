@@ -358,6 +358,8 @@ button.kplex-sidecar-unfold-plex:hover,
 .kplex-hotkey-setting .setting-item-control { flex-wrap: wrap; }
 .kplex-thought.is-selected.is-highlighted { box-shadow: 0 0 0 2px var(--interactive-accent), var(--shadow-s); }
 .kplex-role-center { font-weight: 650; z-index: 14; padding: 8px 13px; }
+/* Persistent attention is clipped to its area but stays interactive above the scroll surface. */
+.kplex-thought[data-kplex-situated-attention] { z-index: 18; }
 .kplex-role-sibling { opacity: .86; }
 .kplex-role-sibling.is-dimmed { opacity: .22; }
 .kplex-thought-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

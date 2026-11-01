@@ -1,4 +1,4 @@
-/** Deterministic measured3–7-region packing around one attention/editor envelope. Existing host
+/** Deterministic measured3–7-region packing around an attention/editor envelope or an invisible frame origin. Existing host
  * owners retain clipping/reflow/resizing/camera. Guides remain decorative without endpoints. */
 import type {PlexProjection, PlexMeasurement, PlexViewLayout, PlexArea, PlexDecoration, ViewRect, CanvasViewText, PlexDecorationTextSize} from "../contracts";
 import type {FacetPreset, FacetCanvasState} from "./contracts";
@@ -11,11 +11,13 @@ import {facetDiagnostics, facetLayout, facetLayoutOrder} from "./presentation";
 import {facetCategoryFrames} from "./layoutStrategies";
 import {layoutFacetFlows} from "./flow";
 
-/** Reuse the shared measured grid and native area reflow owner. Fixed attention never belongs
- * to a scroll surface, and empty regions retain their visible bounds and controls. */
+/** Reuse the shared measured grid and native area reflow owner. Categorized attention shares
+ * measured area/editor containment; empty regions retain their visible bounds and controls. */
 function pack(id: string, bounds: ViewRect, projection: PlexProjection, measured: ReadonlyMap<string, PlexMeasurement>,
   positions: Map<string, ViewRect>, label: CanvasViewText, editable: boolean, described = false, partitionOrder?: readonly string[], content = bounds): PlexArea {
   const occurrences = projection.occurrences.filter(row => row.areaId === id);
+  // Keep situated attention first, so a populated phase opens with the current card/editor visible.
+  occurrences.sort(/** Current attention precedes neighbors without changing their stable order. */ (a, b) => Number(b.id === projection.entry) - Number(a.id === projection.entry));
   if (partitionOrder) occurrences.sort(/** Diagnostic rows follow stable status identity, never translated text. */ (a, b) => partitionOrder.indexOf(a.groupingPartition ?? "") - partitionOrder.indexOf(b.groupingPartition ?? ""));
   const items = occurrences.flatMap(/** Missing measurements cannot invent a displayable occurrence. */ row => {const value = measured.get(row.id);return value ? [value] : [];});
   const cells = items.map(/** Badges occupy measured space without replacing canonical card dimensions. */ item => ({...item, insets: nodeBadgeInsets(item, item.badge)}));
@@ -49,9 +51,13 @@ export function layoutFacets(projection: PlexProjection, measured: readonly Plex
     }
     return {width, height};
   };
-  const order = facetLayoutOrder(preset), layout = facetLayout(preset, presetId, state), badge = attention.badge && nodeBadgeBounds({x: 0, y: 0, width: attention.width, height: attention.height}, attention.badge);
+  const situated = projection.occurrences.some(row => row.id === projection.entry && row.areaId);
+  // A compact virtual envelope keeps the frame origin independent of situated title/editor size.
+  // Actual editor dimensions are reserved by the owning category through dimensions()/pack().
+  const frameFocus = situated ? {x: 0, y: 0, width: 200, height: 60} : {x: 0, y: 0, width: attention.width, height: attention.height};
+  const order = facetLayoutOrder(preset), layout = facetLayout(preset, presetId, state), badge = !situated && attention.badge ? nodeBadgeBounds(frameFocus, attention.badge) : undefined;
   const strategy = facetCategoryFrames(order.map(/** Each area owns its actual measured size. */ id => dimensions(facetAreaId(presetId, "category", id))),
-    {x: 0, y: 0, width: attention.width, height: attention.height}, badge, preset.spacing, layout.effective, preset.focusAnchor);
+    frameFocus, badge, preset.spacing, layout.effective, preset.focusAnchor);
   const {radius, diagonal, centers} = strategy;
   const positions = new Map<string, ViewRect>([[projection.entry, {x: 0, y: 0, width: attention.width, height: attention.height}]]);
   const areas: PlexArea[] = [], decorations: PlexDecoration[] = [];

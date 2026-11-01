@@ -1,5 +1,6 @@
 /** Facets retains the persisted wuxing identity. Shared host owners retain measurement,
- * native central/occurrence editing, cached facts and all effects. */
+ * native attention/occurrence editing, cached facts and all effects. Personal Wu Xing situates
+ * classified attention inside its phase without changing canonical identity or relationships. */
 import type {PlexViewDefinition} from "../contracts";
 import {facetsConfigurationSchema, facetLibrary} from "../facets/configuration";
 import {projectFacets, facetAreaId} from "../facets/projection";
@@ -19,14 +20,17 @@ export const wuXingViewDefinition: PlexViewDefinition = {
   defaultState: {version: 1, preset: "wuxing"}, configuration: facetsConfigurationSchema,
   restoreState: restoreFacetState, reduceState: reduceFacetState,
   /** Omit unsupported/unclassified neighbors only from this canvas. Canonical graph facts and
-   * the current center remain available; diagnostic nodes must not survive without layout slots. */
+   * the current attention remain available; diagnostic nodes must not survive without layout slots. */
   project: input => {
     const projection = projectFacets(input), library = facetLibrary(input.configuration);
     if (!projection || !library) return projection;
     const selected = resolveFacetPreset(library, facetState(input.state)?.preset);
     if (facetShowsDiagnostics(selected.preset)) return projection;
     const categoryAreas = new Set(selected.preset.order.map(id => facetAreaId(selected.id, "category", id)));
-    const occurrences = projection.occurrences.filter(row => row.id === projection.entry || categoryAreas.has(row.areaId ?? ""));
+    const occurrences = projection.occurrences.filter(row => row.id === projection.entry || categoryAreas.has(row.areaId ?? "")).map(
+      /** Attention keeps its unique editor/entry identity while joining its actual classified area.
+       * Unsupported current files retain the recovery position rather than inventing a phase. */
+      row => row.id === projection.entry && categoryAreas.has(row.groupingPartition ?? "") ? {...row, areaId: row.groupingPartition} : row);
     const visible = new Set(occurrences.map(row => row.id));
     return {...projection, occurrences, edges: projection.edges.filter(edge => visible.has(edge.source) && visible.has(edge.target))};
   },

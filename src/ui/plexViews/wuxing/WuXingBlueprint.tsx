@@ -1,21 +1,21 @@
-/** One input-transparent reference layer. Existing category bounds and center geometry are
+/** One input-transparent reference layer. Existing category bounds and the invisible frame origin are
  * borrowed read-only, so toggling the complete blueprint cannot move notes or native editors. */
 import {useId} from "react";
 import type {PlexDecoration} from "../../../core/plex/views/contracts";
 import type {FacetPreset} from "../../../core/plex/views/facets/contracts";
 import type {Translator} from "../../../lang";
-import type {PositionedNode} from "../../../types";
 import {wuXingBlueprint, WUXING_BLUEPRINT_PHASES} from "../../../core/plex/views/wuxing/blueprint";
 import {facetCategoryLabel} from "../../../core/plex/views/facets/labels";
 import {canvasViewText} from "../labels";
 import {colorValueCss} from "../../../adapters/obsidian/colorPresentation";
 
-export function WuXingBlueprint({decorations, presetId, preset, translate, center}: {
-  decorations: readonly PlexDecoration[]; presetId: string; preset: FacetPreset; translate: Translator; center?: PositionedNode;
+/** Paint the complete optional guide around the virtual origin, independently of attention. */
+export function WuXingBlueprint({decorations, presetId, preset, translate}: {
+  decorations: readonly PlexDecoration[]; presetId: string; preset: FacetPreset; translate: Translator;
 }) {
   const prefix = useId(), guide = wuXingBlueprint(decorations, presetId, preset);
   if (!guide) return null;
-  const legendX = center?.x ?? 0, legendY = (center?.y ?? 0) + (center?.height ?? 40) / 2 + 38;
+  const legendX = 0, legendY = 58;
   return <svg className="kplex-view-decorations kplex-wuxing-blueprint" data-kplex-blueprint="true" role="img"
     aria-label={translate("wuxing.blueprint.title")} focusable="false">
     <defs><marker id={`${prefix}-arrow`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">

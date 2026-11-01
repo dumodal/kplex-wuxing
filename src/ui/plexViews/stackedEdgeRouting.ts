@@ -1,4 +1,4 @@
-/** Paint-only lanes for collinear center-to-category connections. The plan borrows existing
+/** Paint-only lanes for attention-to-column connections, including situated Wu Xing attention. The plan borrows existing
  * card rectangles and occurrence identities; it never places notes or changes semantic ports. */
 import type {PositionedEdge, PositionedNode} from "../../types";
 import {edgePhysicalOccurrence} from "./scene";
@@ -8,7 +8,7 @@ export type StackedEdgeRoute = Readonly<{laneX: number; hubSource: boolean;
   hub: Readonly<{x: number; y: number; width: number; height: number}>}>;
 type Candidate = Readonly<{edge: PositionedEdge; hub: PositionedNode; peer: PositionedNode; hubSource: boolean}>;
 
-/** Admit only a truly aligned vertical column with at least two connections. Canonical edge
+/** Admit aligned legacy connections or vertical phase columns reached from situated attention. Canonical edge
  * identities break distance ties, so typing/paint changes or input iteration cannot reshuffle lanes.
  * Viewport eligibility stays with the caller and its existing endpoint-visibility owner. */
 export function stackedEdgeRoutes(edges: readonly PositionedEdge[], nodes: ReadonlyMap<string, PositionedNode>): ReadonlyMap<string, StackedEdgeRoute> {
@@ -18,11 +18,11 @@ export function stackedEdgeRoutes(edges: readonly PositionedEdge[], nodes: Reado
     const sourceKey = edgePhysicalOccurrence(edge, "source"), targetKey = edgePhysicalOccurrence(edge, "target");
     const source = nodes.get(sourceKey), target = nodes.get(targetKey);if (!source || !target || source === target) continue;
     const hubSource = source.role === "center", hub = hubSource ? source : target, peer = hubSource ? target : source;
-    if (hub.role !== "center" || peer.role === "center" || !peer.areaId || hub.areaId === peer.areaId) continue;
+    if (hub.role !== "center" || peer.role === "center" || !peer.areaId) continue;
     const hubPort = hubSource ? edge.sourcePort : edge.targetPort, peerPort = hubSource ? edge.targetPort : edge.sourcePort;
     if (hubPort !== "top" && hubPort !== "bottom" || peerPort !== "top" && peerPort !== "bottom") continue;
-    if (Math.abs(peer.x - hub.x) > 12 || Math.abs(peer.y - hub.y) <= (hub.height + peer.height) / 2) continue;
-    const key = JSON.stringify([hubSource ? sourceKey : targetKey, peer.areaId, peer.y < hub.y ? "above" : "below"]);
+    if (Math.abs(peer.x - hub.x) > 12 && !hub.areaId || Math.abs(peer.y - hub.y) <= (hub.height + peer.height) / 2) continue;
+    const key = JSON.stringify([hubSource ? sourceKey : targetKey, peer.areaId, Math.round(peer.x / 12), peer.y < hub.y ? "above" : "below"]);
     const group = groups.get(key) ?? [];group.push({edge, hub, peer, hubSource});groups.set(key, group);
   }
   for (const group of groups.values()) {

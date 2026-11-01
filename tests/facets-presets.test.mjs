@@ -461,7 +461,7 @@ test('registered Wu Xing omits Diagnostics without moving phase groups or changi
   assert(layout.decorations.filter(mark=>mark.kind==='region').every(mark=>JSON.parse(mark.id)[2]==='category'));
   assert.equal(layout.positions.size,projection.occurrences.length,'There are no invisible diagnostic layout slots');
   assert.deepEqual(layout.areas,canonicalLayout.areas.filter(area=>JSON.parse(area.id)[2]==='category'),'Official phase group geometry is unchanged');
-  for(const row of projection.occurrences)assert.deepEqual(layout.positions.get(row.id),canonicalLayout.positions.get(row.id));
+  for(const row of projection.occurrences)if(row.id!==projection.entry)assert.deepEqual(layout.positions.get(row.id),canonicalLayout.positions.get(row.id));
   assert.equal(JSON.stringify(intent),snapshot,'Saved diagnostic preferences remain untouched');
  }
  assert.equal(JSON.stringify([...f.values]),values);assert(f.read.node('unassigned')&&f.read.node('unsupported'),'Hidden nodes still exist in the canonical reader');
@@ -495,4 +495,25 @@ test('unified blueprint fixes both five-phase directions independently of legacy
  const water=layout.decorations.find(mark=>mark.kind==='region'&&mark.id===M.facetAreaId('wuxing','category','water'));
  assert.equal(water.description.key,'facets.relativeSame','The complete reference role is available even when old relative-label switches were off');
  assert.equal(M.wuXingBlueprint(layout.decorations.filter(mark=>mark.id!==water.id),'wuxing',legacyPreset),null,'Incomplete frames do not invent a phase location');
+});
+
+
+test('situated Wu Xing attention occupies its real phase exactly once while retaining editor identity and semantic edges',()=>{
+ const f=diagnosticScene(),configuration=available({}),state={version:1,preset:'wuxing'};
+ for(const phase of M.FACET_TEMPLATES.wuxing.order){
+  f.values.set('focus',{status:'available',value:phase});
+  const input={attention:'focus',maximum:128,state,configuration,read:f.read},canonical=M.projectFacets(input),projection=M.wuXingViewDefinition.project(input);
+  const focus=projection.occurrences.find(row=>row.id===projection.entry),areaId=M.facetAreaId('wuxing','category',phase);
+  assert.equal(focus.areaId,areaId,'Current note belongs to its classified phase');assert.equal(focus.groupingPartition,areaId);
+  assert.equal(projection.editor,projection.entry);assert.equal(projection.occurrences.filter(row=>row.nodeId==='focus').length,1);
+  assert.deepEqual(projection.edges,canonical.edges.filter(edge=>projection.occurrences.some(row=>row.id===edge.target)));
+  for(const size of [{width:220,height:60},{width:620,height:460}]){
+   const measured=f.measure(projection).map(row=>row.id===projection.entry?{...row,...size}:row);
+   const layout=M.wuXingViewDefinition.layout(projection,measured,state,true,{configuration}),rect=layout.positions.get(projection.entry),area=layout.areas.find(row=>row.id===areaId);
+   assert(rect.x!==0||rect.y!==0);assert(M.areaContains(area.bounds,{x:rect.x,y:rect.y}));
+   assert(rect.x-rect.width/2>=area.viewport.x&&rect.x+rect.width/2<=area.viewport.x+area.viewport.width);
+   assert(rect.y-rect.height/2>=area.viewport.y&&rect.y+rect.height/2<=area.viewport.y+area.viewport.height,'The complete current editor remains visible in its region');
+   assert.equal(layout.positions.size,measured.length);
+  }
+ }
 });

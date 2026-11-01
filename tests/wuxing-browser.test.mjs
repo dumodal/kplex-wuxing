@@ -54,7 +54,7 @@ test('production measured flow captions and arrow policies remain decorative acr
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
  document.body.style.setProperty('--text-faint','#888888');document.body.style.setProperty('--text-muted','#999999');
- fieldCaches.get('A.md').frontmatter.status='wood';fieldCaches.get('B.md').frontmatter.status='metal';const ui=await mount(M.wuXingViewDefinition),before={...work};
+ fieldCaches.get('A.md').frontmatter.status='wood';fieldCaches.get('B.md').frontmatter.status='metal';const neutral={...M.FACET_TEMPLATES.wuxing};delete neutral.interpretation;settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:neutral});const ui=await mount(M.wuXingViewDefinition),before={...work};
  const focus=ui.container.querySelector('[data-kplex-path="A.md"]'),camera=ui.container.querySelector('.kplex-camera').style.transform,relations=JSON.stringify(rows(pages.get('A.md'),'child').map(row=>[row.page.path,row.role,row.typeDefinition]));
  for(const layout of ['horizontal','vertical'])for(const reverse of [false,true])for(const style of ['arrow','line','none']){
   const preset={...structuredClone(M.FACET_TEMPLATES.wuxing),layout,reverse,flow:{direction:'both',style,caption:'Review <script>never executes</script>',captionPosition:'end'}};delete preset.interpretation;
@@ -278,13 +278,13 @@ test('Facets production presets share captured controls, measured badges and liv
  const controller=new M.CanvasViewContributionController(a.session,M.builtInCanvasViewSettings,{settings:()=>settings.canvasViewSettings,mounted:()=>a.container.isConnected,
  beforePresentationChange:()=>a.ports.current.preparePresentationChange(),update:()=>{throw Error('Unexpected type write')},openSettings:()=>true,failed:error=>{throw error}});
  const node=()=>[...a.container.querySelectorAll('[data-kplex-keyboard-id]')].find(row=>row.dataset.kplexPath==='A.md'),original=node(),bounds=()=>({top:original.style.top,left:original.style.left});
- const position=bounds(),camera=a.container.querySelector('.kplex-camera').style.transform;
+ const camera=a.container.querySelector('.kplex-camera').style.transform;
  for(const [preset,count] of [['arc',3],['para',4],['wuxing',5],['gtd',6],['eaccess',7],['sensemaking',4],['publishing',5],['map-roles',4]]){
    const choice=controller.choices()[0];check(choice.options.length===8,'Two built-ins and six saved archive fixtures exposed by shared choices');
    check((await choice.options.find(option=>option.id===preset).command.run()).status==='completed','Captured preset action accepted');a.render();await wait();
    const categories=[...a.container.querySelectorAll('[data-kplex-decoration]')].filter(row=>JSON.parse(row.dataset.kplexDecoration)[2]==='category');
    check(categories.length===count,'Exactly the selected preset categories render');check(node()===original,'Preset changes retain attention DOM identity');
-   check(JSON.stringify(bounds())===JSON.stringify(position),'Attention remains centered through preset changes');
+   const point={x:parseFloat(node().style.left)+parseFloat(node().style.width)/2,y:parseFloat(node().style.top)+parseFloat(node().style.height)/2};check(preset==='wuxing'?Math.hypot(point.x,point.y)>100:Math.hypot(point.x,point.y)<1,'Personal Wu Xing situates attention; generic presets retain the center');
    check(a.container.querySelector('.kplex-camera').style.transform===camera,'Preset change preserves manual camera');
    const context={viewId:'wuxing',state:a.session.state,configuration:{status:'available',values:settings.canvasViewSettings.wuxing?.values??{}}};
    const controls=M.builtInCanvasViewSettings.layoutControls(M.wuXingViewDefinition,context),configControls=controls.filter(control=>!control.state),combine=controls.find(control=>control.state);
@@ -338,19 +338,19 @@ test('production Wu Xing decorates real local notes, refreshes cached fields, re
  const render=()=>M.flushSync(()=>root.render(M.createElement(Harness)));render();await wait();
  const getNode=path=>[...mount.querySelectorAll('[data-kplex-keyboard-id]')].find(node=>node.dataset.kplexPath===path),region=id=>[...mount.querySelectorAll('[data-kplex-decoration]')].find(row=>row.dataset.kplexDecoration===JSON.stringify(['facets','wuxing',['water','wood','fire','earth','metal'].includes(id)?'category':'status',id]));
  check(!mount.querySelector('.kplex-view-error'),'Actual Wu Xing scene failed');check(mount.querySelectorAll('.kplex-view-region').length===5,'Only the five phases remain '+JSON.stringify({errors,regions:mount.querySelectorAll('.kplex-view-region').length,text:mount.textContent.slice(0,900)}));
- check(region('water').textContent.includes('0 shown locally')&&getNode('Focus.md').querySelector('.kplex-node-badge').textContent==='Water'&&region('wood').textContent.includes('2 shown locally'),'Local counts and fixed attention');
+ check(region('water').textContent.includes('1 shown locally')&&getNode('Focus.md').querySelector('.kplex-node-badge').textContent==='Water'&&region('wood').textContent.includes('2 shown locally'),'Local counts include the situated attention exactly once');
  check(!region('conflicting')&&!region('unresolved')&&!region('unassigned')&&!getNode('Conflict.md')&&!getNode('Unknown.md')&&!getNode('Missing.md'),'Diagnostic nodes and areas are omitted only from Wu Xing');
  check(pages.has('Conflict.md')&&pages.has('Unknown.md')&&pages.has('Missing.md'),'Canonical notes are retained');
  check(!mount.querySelector('.kplex-view-guide'),'Legacy cycle marks are replaced by the optional unified blueprint');check(getComputedStyle(mount.querySelector('.kplex-view-decorations')).pointerEvents==='none','Decorations cannot capture input');
  const releaseAction=plugin.actionManager.registerSurface({id:'wuxing',generation:1,get implementations(){return actionPorts.current.implementations},readSnapshot:()=>({mounted:true,visible:true,windowId:'test',center:M.actionNodeRef(pages.get('Focus.md')),selected:actionPorts.current.readSelected(),focusRegion:'graph',interactionRevision:0,viewRevision:session.getSnapshot()})});
  const act=async id=>{let promise;M.flushSync(()=>promise=plugin.actionManager.dispatch({id,source:'local-menu',surfaceId:'wuxing'}));const outcome=await promise;await wait();return outcome};
- const zoomAnchor=()=>{const b=getNode('Focus.md').getBoundingClientRect();return{x:b.x+b.width/2,y:b.y+b.height/2}};
+ const zoomAnchor=()=>{const matrix=new DOMMatrix(mount.querySelector('.kplex-camera').style.transform);return{x:matrix.e,y:matrix.f}};
  const zoomBefore=zoomAnchor();await act('view.zoom-in');await wait();const zoomAfter=zoomAnchor();
- check(Math.abs(zoomAfter.x-zoomBefore.x)<1&&Math.abs(zoomAfter.y-zoomBefore.y)<1,'Shared zoom must preserve the off-origin viewport focus');
+ check(Math.abs(zoomAfter.x-zoomBefore.x)<1&&Math.abs(zoomAfter.y-zoomBefore.y)<1,'Shared zoom preserves the invisible frame origin');
  await act('view.zoom-out');await wait();
- const attention=getNode('Focus.md'),beforeTop=attention.style.top;let camera=mount.querySelector('.kplex-camera').style.transform;
+ const attention=getNode('Focus.md'),beforePosition=[attention.style.left,attention.style.top].join(':');let camera=mount.querySelector('.kplex-camera').style.transform;
  const viewportBounds=mount.querySelector('.kplex-plex').getBoundingClientRect(),attentionBounds=attention.getBoundingClientRect();
- check(Math.abs(attentionBounds.x+attentionBounds.width/2-viewportBounds.x-viewportBounds.width/2)<3&&Math.abs(attentionBounds.y+attentionBounds.height/2-viewportBounds.y-viewportBounds.height/2)<3,'Autozoom-off navigation must center the off-origin attention occurrence');
+ check(Math.abs(zoomAnchor().x-viewportBounds.width/2)<3&&Math.abs(zoomAnchor().y-viewportBounds.height/2)<3,'Navigation frames the invisible origin');check(Math.abs(attentionBounds.x+attentionBounds.width/2-viewportBounds.x-viewportBounds.width/2)>20,'Classified attention is visibly inside its phase rather than at the frame origin');
  // Use the real shared drag/drop handlers and native adapter, with a finite host drag manager.
  const manager={draggable:null,dragLink:(event,linktext,sourcePath,title,source)=>{event.dataTransfer.setData('text/plain',linktext);return {type:'link',linktext,sourcePath,title,source,file:pages.get(linktext)?.file??null}},onDragStart(event,value){this.draggable=value},onDragEnd(){this.draggable=null}};
  plugin.app.dragManager=manager;const outbound=new DataTransfer();attention.dispatchEvent(new DragEvent('dragstart',{bubbles:true,cancelable:true,dataTransfer:outbound}));
@@ -363,8 +363,8 @@ test('production Wu Xing decorates real local notes, refreshes cached fields, re
  await act('view.fit');await wait();camera=mount.querySelector('.kplex-camera').style.transform;const afterDropNavigation=activations.length,phaseBounds=region('water').querySelector(':scope > rect').getBoundingClientRect();drop(phaseBounds.x+24,phaseBounds.y+20);await wait();
  check(activations.length===afterDropNavigation&&relationshipWrites.length===0,'A classification phase cannot navigate, assign status or write a relationship');manager.draggable=null;
  fields.get('Focus.md').status='fire';for(const ref of [...events])if(ref?.name==='changed')ref.callback(pages.get('Focus.md').file);await wait();
- check(getNode('Focus.md')===attention,'Cached reclassification retained occurrence DOM identity');check(attention.style.top===beforeTop&&attention.querySelector('.kplex-node-badge').textContent==='Fire','Cached property event updated the centered badge without moving attention');check(mount.querySelector('.kplex-camera').style.transform===camera,'Property event preserved manual camera');
- check(region('fire').textContent.includes('0 shown locally'),'Attention is not duplicated in category counts');
+ check(getNode('Focus.md')===attention,'Cached reclassification retained occurrence DOM identity');check([attention.style.left,attention.style.top].join(':')!==beforePosition&&attention.querySelector('.kplex-node-badge').textContent==='Fire','Cached property event moves the same attention card into its actual phase');check(mount.querySelector('.kplex-camera').style.transform===camera,'Property event preserved manual camera');
+ check(region('fire').textContent.includes('1 shown locally'),'Attention is counted once in its own phase');
  const before={...work},state=JSON.stringify(session.getState());
  settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings,{field:'presets',path:['wuxing','categories','water','label']},{kind:'set',value:'記憶 / Memory'});settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings,{field:'presets',path:['wuxing','guides']},{kind:'set',value:false});props.settings={...settings};props.paintSettings=props.settings;render();await wait();
  check(region('water').textContent.includes('記憶 / Memory')&&!mount.querySelector('.kplex-view-guide'),'Type configuration reaches production decoration');check(JSON.stringify(session.getState())===state,'Type settings do not overwrite per-canvas state');check(JSON.stringify(work)===JSON.stringify(before),'Presentation settings do no extra source work');
@@ -505,4 +505,30 @@ for(const relationRole of ['parent','child']) test('stacked Wu Xing '+relationRo
  check(JSON.stringify(index.neighbours(pages.get('A.md'),relationRole).map(row=>[row.page.path,row.role,row.typeDefinition]))===canonical,'Canonical relation identities and roles remain unchanged');
  check(work.body===before.body&&work.scans===before.scans&&work.acquisitions===before.acquisitions,'Routing and scrolling acquire no new semantic sources');
  a.close();routeStyle.remove();plugin.actionManager.dispose();return true;})()`),true)}finally{await host.cleanup()}
+});
+
+
+test('situated attention retains its DOM subtree and virtual camera through all phases and real area scrolling',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ const paths=Array.from({length:10},(_,i)=>'Water '+i+'.md');
+ for(const path of paths){const base=pages.get('B.md');pages.set(path,{...base,path,name:path,file:{...base.file,path,name:path}});fieldCaches.set(path,{frontmatter:{status:'water'}})}
+ index.neighbours=(page,role)=>page.path==='A.md'&&role==='child'?paths.map(path=>({page:pages.get(path),role,relationType:1,typeDefinition:'Related',linkDirection:1})):[];
+ index.getNeighborhood=path=>({center:pages.get(path),parents:[],children:index.neighbours(pages.get(path),'child'),leftFriends:[],rightFriends:[],siblings:[]});
+ const preset={...M.FACET_TEMPLATES.wuxing,regionWidth:220,regionHeight:320,centerOutline:true,blueprint:true};settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:preset});
+ const a=await mount(M.wuXingViewDefinition),focus=a.container.querySelector('[data-kplex-path="A.md"]'),badge=focus.querySelector('.kplex-node-badge'),camera=a.container.querySelector('.kplex-camera').style.transform,source={...work};
+ const area=phase=>a.container.querySelector('.'+CSS.escape('kplex-zone-'+JSON.stringify(['facets','wuxing','category',phase])));
+ const inside=phase=>{const f=focus.getBoundingClientRect(),p=area(phase).getBoundingClientRect();check(f.left>=p.left&&f.right<=p.right&&f.top>=p.top&&f.bottom<=p.bottom,'Whole current card is inside '+phase);const hit=document.elementFromPoint(f.left+f.width/2,f.top+f.height/2);if(hit)check(focus.contains(hit),'Current card receives its own body hit')};
+ inside('water');check(focus.hasAttribute('data-kplex-category-outline'),'Current note retains its category outline');
+ const samePhase=[...a.container.querySelectorAll('[data-kplex-stacked-route]')];check(samePhase.length>=2,'Same-phase connections also have distinct outside-card lanes');
+ const water=area('water').querySelector('.kplex-zone-scroll');check(water.scrollHeight>water.clientHeight,'Real phase overflow');water.scrollTop=water.scrollHeight;const scrolledTop=water.scrollTop;water.dispatchEvent(new Event('scroll'));await wait();
+ check(a.container.querySelector('[data-kplex-path="A.md"]')===focus&&getComputedStyle(focus).clip!=='auto','Scrolling clips the same mounted card');check(a.container.querySelectorAll('.kplex-edge-visible').length===0,'A fully clipped attention paints no floating connections');
+ for(const phase of ['wood','fire','earth','metal','water']){fieldCaches.get('A.md').frontmatter.status=phase;for(const ref of [...events])if(ref?.name==='changed')ref.callback(pages.get('A.md').file);await wait();
+  check(a.container.querySelectorAll('[data-kplex-path="A.md"]').length===1&&a.container.querySelector('[data-kplex-path="A.md"]')===focus&&focus.querySelector('.kplex-node-badge')===badge,'Phase changes retain one exact card subtree');
+  inside(phase);check(a.container.querySelector('.kplex-camera').style.transform===camera,'Phase changes preserve the invisible frame camera');check(a.container.querySelector('.kplex-blueprint-legend').getAttribute('transform')==='translate(0 58)','Blueprint legend stays at the virtual center');
+ }
+ check(water.scrollTop<scrolledTop,'Returning to a scrolled phase minimally reveals the complete current card');
+ const positions=focus.style.cssText;a.render();await wait();check(a.container.querySelector('[data-kplex-path="A.md"]')===focus&&focus.style.cssText===positions,'Ordinary publication does not relocate or remount attention');
+ check(work.body===source.body&&work.scans===source.scans&&work.acquisitions===source.acquisitions,'Only cached metadata and presentation were used');
+ a.close();plugin.actionManager.dispose();check(events.size===0,'Canvas lifetimes retire');style.remove();return true;})()`),true)}finally{await host.cleanup()}
 });

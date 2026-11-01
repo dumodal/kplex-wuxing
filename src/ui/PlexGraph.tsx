@@ -5,7 +5,7 @@
  * Central Markdown outlines use the definition's explicit attention/root source, independent
  * from branch disclosure and other editor documents. The existing section owner loads only
  * explicit requests, fences rerooted reads and shares measurement, tree drawing and actions.
- * Host-bound Plex scene composition, shared captured center-arrival motion and finite Wander navigation ports, layout and relationship interactions. Semantic resolution stays index/core-owned; UI labels and on-demand evidence hints use the injected translator. Navigation fits keep the central node centered and follow late geometry until manual camera input; publication and ordinary pane resizing preserve manual intent. Sidecar open/close transitions explicitly reframe the current viewport after native layout settles, with pending work retired by input, navigation or unmount. View-owned display transitions retain camera coordinates and scene settings. Device typography stages scalar live preferences and persists after input settles; unmount flushes storage without replaying stale overrides. Area-height gestures own viewport pointer capture and persist existing presentation settings on completion or interruption. History and pinned drag targets share composer eligibility; external file drops follow the rendered area's semantic role. Theme-native area previews follow the existing drop action without intercepting capture or moving the dragged thought. Visible rows retain finite cache-only presentation demand; hidden surfaces and effect teardown release it. Geometry defers gate/count queries until a row intersects the displayed viewport, including partially clipped rows. Ordinary unfiltered scenes project cross-links for clipped visible rows; filtered and section scenes retain their established edge/count policy. Scene-local React keys capture paths before canonical pages can mutate during rename; semantic pages and actions retain their live identity. Normal-mode keyboard and exact-phrase typing selection are view-local; the displayed occurrence projection supplies all candidates and the shared selection owner reveals them without changing the center, filters or native search. Host methods own activation/rename/creation. Filtered badge numerators use revision-scoped semantic endpoint membership independently of connector routing and viewport clipping. Pane-fit native layout controls own local touch containment and bounded scrolling without changing preferences or browser range behavior. Accessible layout-wrapper hints use the shell's shared tooltip owner; inputs retain concise accessible names.
+ * Host-bound Plex scene composition, shared captured center-arrival motion and finite Wander navigation ports, layout and relationship interactions. Semantic resolution stays index/core-owned; UI labels and on-demand evidence hints use the injected translator. Navigation fits follow the declared frame or the personal Wu Xing invisible origin until manual camera input; publication and ordinary pane resizing preserve manual intent. Sidecar open/close transitions explicitly reframe the current viewport after native layout settles, with pending work retired by input, navigation or unmount. View-owned display transitions retain camera coordinates and scene settings. Device typography stages scalar live preferences and persists after input settles; unmount flushes storage without replaying stale overrides. Area-height gestures own viewport pointer capture and persist existing presentation settings on completion or interruption. History and pinned drag targets share composer eligibility; external file drops follow the rendered area's semantic role. Theme-native area previews follow the existing drop action without intercepting capture or moving the dragged thought. Visible rows retain finite cache-only presentation demand; hidden surfaces and effect teardown release it. Geometry defers gate/count queries until a row intersects the displayed viewport, including partially clipped rows. Ordinary unfiltered scenes project cross-links for clipped visible rows; filtered and section scenes retain their established edge/count policy. Scene-local React keys capture paths before canonical pages can mutate during rename; semantic pages and actions retain their live identity. Normal-mode keyboard and exact-phrase typing selection are view-local; the displayed occurrence projection supplies all candidates and the shared selection owner reveals them without changing the center, filters or native search. Host methods own activation/rename/creation. Filtered badge numerators use revision-scoped semantic endpoint membership independently of connector routing and viewport clipping. Pane-fit native layout controls own local touch containment and bounded scrolling without changing preferences or browser range behavior. Accessible layout-wrapper hints use the shell's shared tooltip owner; inputs retain concise accessible names.
  * Hierarchy Find selects and reveals exact occurrences without activating attention or opening an editor.
  * Registered view layout rails share the native Settings queued writer and measured layout pipeline;
  * they preserve camera intent and editor instances without acquiring semantic sources.
@@ -654,12 +654,12 @@ function Edge({
     continueSource: target.branch?.parent === edgePhysicalOccurrence(edge, "source"),
     continueTarget: source.branch?.parent === edgePhysicalOccurrence(edge, "target")});
   if (!endpoints) return null;
-  // Internal routes stay inside their own area. Cross-area routes connect bounded continuation
-  // anchors freely; the canvas clips them, without cutting a curve at an unrelated union box.
-  const clip = sourceArea && sourceArea === targetArea ? edgeViewportClip(edge, nodes, viewportForNode) : undefined;
-  if (clip === null) return null;
   const separated = stackedRoute && !endpoints.source.continued && !endpoints.target.continued
     ? stackedEdgeGeometry(endpoints.source.point, endpoints.target.point, stackedRoute, connectorStyle) : null;
+  // Separated lanes can leave a shared phase to pass beside its cards. Endpoint visibility was
+  // already proven above; all ordinary internal routes retain their existing area clipping.
+  const clip = !separated && sourceArea && sourceArea === targetArea ? edgeViewportClip(edge, nodes, viewportForNode) : undefined;
+  if (clip === null) return null;
   const geometry = separated ?? edgeGeometry(endpoints.source.point, endpoints.target.point, endpoints.source.port, endpoints.target.port, connectorStyle);
   const style = edge.style;
   const dash = style.strokeStyle === "dashed" ? "7 7" : style.strokeStyle === "dotted" ? "2 6" : undefined;
@@ -1155,7 +1155,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   }, [areaSettingsMode, hasEditableAreas, onAreaSettingsModeChange]);
   const isEditorOccurrence = (node: PositionedNode): boolean => occurrenceEditorPolicy ? occurrenceKey(node) === boundEditorBinding?.occurrenceId : scene.editorOccurrence
     ? occurrenceKey(node) === scene.editorOccurrence : Boolean(classic && node.role === "center");
-  const framingOccurrence = (): PositionedNode | undefined => scene.frameOccurrence
+  /** Personal Wu Xing retains the invisible world origin; attention is situated in a phase.
+   * Other views continue to frame their declared occurrence. Manual camera ownership is unchanged. */
+  const framingOccurrence = (): PositionedNode | undefined => personalWuXing ? undefined : scene.frameOccurrence
     ? scene.nodes.find(node => occurrenceKey(node) === scene.frameOccurrence) : scene.nodes.find(node => node.role === "center");
   /** Resolve the current admitted root/entry, never a global active canvas or independent attention target. */
   const navigationNode = (): PositionedNode | undefined => scene.nodes.find(node => occurrenceKey(node) === (scene.projection?.root ?? scene.entryOccurrence))
@@ -2538,10 +2540,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     return map;
   }, [scene.nodes, scene.zoneViewports, zoneDisplayLayouts, zoneScrollTop, nodeDrag]);
 
-  const displayedEditorNode = occurrenceEditorPolicy && centralEditorNode
+  const displayedEditorNode = (occurrenceEditorPolicy || personalWuXing) && centralEditorNode
     ? renderedNodeMap.get(occurrenceKey(centralEditorNode)) ?? centralEditorNode : centralEditorNode;
   const editorArea = displayedEditorNode ? areaForNode(displayedEditorNode) : null;
-  const editorClip = !centralEditorMaximized && occurrenceEditorPolicy && editorArea ? scene.zoneViewports[editorArea] : undefined;
+  const editorClip = !centralEditorMaximized && (occurrenceEditorPolicy || personalWuXing) && editorArea ? scene.zoneViewports[editorArea] : undefined;
   centralEditorGeometry.current = {node: displayedEditorNode, page: centralEditorPage, clip: editorClip};
   useLayoutEffect(/** Scroll/resize update the same native host, including its actual area clipping. */ () => {
     syncCentralEditorOverlay();
@@ -2621,6 +2623,21 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
 
     finishFlair(pending.path, null);
   }, [pendingNodeFlair, scene.nodes, scene.zoneViewports, zoneDisplayLayouts]);
+
+  const revealedAttention = useRef<string | null>(null);
+  useLayoutEffect(/** Reveal newly situated attention once without moving the camera or fighting
+   * subsequent manual area scrolling. Reclassification retains the existing card/editor DOM. */ () => {
+    const node = personalWuXing ? scene.nodes.find(row => occurrenceKey(row) === scene.entryOccurrence) : undefined;
+    const zone = node?.areaId, panel = zone ? scene.zoneViewports[zone] : undefined;
+    if (!node || !zone || !panel) {revealedAttention.current = null;return;}
+    const key = JSON.stringify([sceneScope, scene.entryOccurrence, zone, centralEditorAvailable]);
+    if (revealedAttention.current === key) return;
+    const scroll = zoneScrollRefs.current[zone], local = zoneDisplayLayouts[zone]?.localPositions.get(occurrenceKey(node));
+    if (!scroll || !local) return;
+    const top = revealRowScrollTop(local.y, node.height + 32, scroll.scrollTop, scroll.clientHeight, scroll.scrollHeight);
+    revealedAttention.current = key;
+    if (top !== scroll.scrollTop) {scroll.scrollTop = top;setZoneScrollTop(current => ({...current, [zone]: top}));}
+  }, [personalWuXing, sceneScope, scene.entryOccurrence, scene.nodes, scene.zoneViewports, zoneDisplayLayouts, centralEditorAvailable]);
 
   const revealedEditor = useRef<string | null>(null);
   useLayoutEffect(/** Opening/resizing reveals this exact native document once within its grown area;
@@ -5420,6 +5437,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       badgeColorRevision={badgeColorRevision}
       centerOutline={visibilityPreset?.centerOutline === true}
       hideCategoryBadge={personalWuXing}
+      viewportClip={baseNode.role === "center" && baseNode.areaId ? scene.zoneViewports[baseNode.areaId] : undefined}
       branchStatus={visibleEdgeProjection.limited && baseNode === navigationNode() ? translate("mindmap.limited") : baseNode.branch?.reference ? translate("mindmap.reference") : baseNode.branch?.status === "loading" ? translate("mindmap.loading")
         : baseNode.branch?.status === "limited" ? translate("mindmap.limited") : baseNode.branch?.status === "partial" ? translate("mindmap.partial")
         : baseNode.branch?.status === "unavailable" ? translate("mindmap.unavailable") : undefined}
@@ -5497,7 +5515,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
 
   const standardNodes = scene.nodes.filter((node) => {
     const zone = areaForNode(node);
-    return !zone || !scene.zoneViewports[zone];
+    // Attention retains one React parent across phase and preset changes, preserving native input.
+    // Its rendered coordinates and explicit clip still follow the same area scroll owner.
+    return node.role === "center" || !zone || !scene.zoneViewports[zone];
   });
   const draggedBaseNode = nodeDrag ? scene.nodes.find(isDraggedNode) ?? null : null;
   /**
@@ -5609,7 +5629,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         }}
       >
         <div className="kplex-zone-content" style={{ height: layout.contentHeight }}>
-          {displayedNodes.map((node) => {
+          {displayedNodes.filter(/** Attention stays in the persistent top-level paint slot. */ node => node.role !== "center").map((node) => {
             const local = layout.localPositions.get(occurrenceKey(node));
             if (!local) return null;
             const hydrateCounts = rowIntersectsViewport(local.y, node.height, zoneScrollTop[zone] ?? 0, panel.height);
@@ -5930,7 +5950,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       {scene.decorations && <ViewDecorations hideGroups={personalWuXing || visibilityPreset?.hideGroups === true} hideGroupBorders={personalWuXing ? !showBlueprint : visibilityPreset?.hideGroupBorders === true} neutralCategories={personalWuXing} decorations={scene.decorations} translate={translate}
         counts={viewDecorationCounts(scene.decorations, scene.nodes, filterMatchedNodePaths, zoneDisplayLayouts)} />}
       {showBlueprint && scene.decorations && visibilityPreset && <WuXingBlueprint decorations={scene.decorations} preset={visibilityPreset} presetId={visibilitySelection?.id ?? "wuxing"}
-        translate={translate} center={scene.nodes.find(node => node.role === "center")} />}
+        translate={translate} />}
       <svg className="kplex-links" width="3200" height="2400" viewBox="-1600 -1200 3200 2400">
         <defs>
           <marker id="kplex-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto-start-reverse" markerUnits="strokeWidth"><path d="M1,1 L8,4.5 L1,8" fill="none" stroke="context-stroke" strokeWidth="1.4" /></marker>
@@ -6010,11 +6030,11 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         : visibleAreaZone && visibleArea ? renderAreaFrame(visibleAreaZone, visibleArea) : null}
 
       <div className="kplex-nodes">
-        {standardNodes.filter((node) => !isDraggedNode(node) && visibleOccurrenceIds.has(occurrenceKey(node))).map((node) => renderNode(node, renderedNodeMap.get(occurrenceKey(node)) ?? node))}
         {ZONES.map((zone) => {
           const panel = scene.zoneViewports[zone];
           return panel ? renderScrollZone(zone, panel) : null;
         })}
+        {standardNodes.filter((node) => !isDraggedNode(node) && (node.role === "center" || visibleOccurrenceIds.has(occurrenceKey(node)))).map((node) => renderNode(node, renderedNodeMap.get(occurrenceKey(node)) ?? node, visibleOccurrenceIds.has(occurrenceKey(node))))}
         {settings.graphDepth === 2 && expandedClusters.map(renderExpandedCluster)}
         {draggedBaseNode && renderNode(draggedBaseNode, renderedNodeMap.get(draggedBaseNode.page.path) ?? draggedBaseNode)}
       </div>
