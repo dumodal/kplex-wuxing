@@ -1,6 +1,12 @@
 /** Pure effective presentation defaults. Shared preset configuration and explicit canvas choices
  * remain separate; resolving them never writes, reclassifies a note or acquires a source. */
 import type {FacetPreset, FacetCanvasState, FacetDiagnostics, FacetDiagnosticStatus, FacetLayout} from "./contracts";
+import {facetHasWuXingPhases} from "./labels";
+
+/** The personal five-phase canvas omits diagnostic chrome; generic Facets presets retain it. */
+export function facetShowsDiagnostics(preset: FacetPreset): boolean {
+  return !(preset.interpretation === "wuxing" && facetHasWuXingPhases(preset));
+}
 
 export const FACET_DIAGNOSTIC_ORDER: readonly FacetDiagnosticStatus[] = ["unassigned", "conflicting", "checking", "unresolved"];
 export const FACET_LAYOUTS: readonly FacetLayout[] = ["circular", "concentric", "vertical", "horizontal", "quadrants"];

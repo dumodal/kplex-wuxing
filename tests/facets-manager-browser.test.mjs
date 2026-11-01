@@ -70,13 +70,13 @@ test('native layout defaults preview anchors and preserve exact independent area
 
 test('diagnostics dock edits compose in one detached native draft and save through the existing queue',async()=>{
  assert.equal(await scenario(`
- const m=manager(),editor=edit(m,'Wu Xing');
+ const m=manager(),editor=edit(m,'ARC');
  check(!fields(editor,t('facets.diagnosticsArrangement')).length,'Combined mode hides the irrelevant inter-area arrangement');
  const combine=fields(editor,t('facets.combineDiagnostics'))[0];combine.checked=false;combine.dispatchEvent(new Event('change',{bubbles:true}));
  for(const [label,value]of [['facets.diagnosticsSide','left'],['facets.diagnosticsArrangement','horizontal']]){const select=fields(editor,t(label))[0];select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}))}
  const empty=fields(editor,t('facets.diagnosticsShowEmpty'))[0];empty.checked=false;empty.dispatchEvent(new Event('change',{bubbles:true}));
  equal(p.writes,[],'Dock remains a detached draft until Save');await save(editor);await drain();
- equal(disk.canvasViewSettings.wuxing.values.presets.wuxing.diagnostics,{combined:false,side:'left',orientation:'horizontal',showEmpty:false},'Sequential controls retain sibling draft changes in one queued save');
+ equal(disk.canvasViewSettings.wuxing.values.presets.arc.diagnostics,{combined:false,side:'left',orientation:'horizontal',showEmpty:false},'Sequential controls retain sibling draft changes in one queued save');
  check(p.writes.length===1,'One durable preset update');close(m);
  `),true);
 });
@@ -267,5 +267,18 @@ test('visibility switches use detached Save and Cancel and survive persisted rel
  const reloaded=await createAppearanceHost(saved);equal(reloaded.settings.canvasViewSettings.wuxing.values.presets.arc.futurePreference,{keep:'literal'},'Unknown preset fields survive reload');
  equal([reloaded.settings.canvasViewSettings.wuxing.values.presets.arc.hideGroups,reloaded.settings.canvasViewSettings.wuxing.values.presets.arc.hideGroupBorders,reloaded.settings.canvasViewSettings.wuxing.values.presets.arc.centerOutline],[true,true,true],'A new settings host loads all three flags');
  close(m);
+ `),true);
+});
+
+
+test('Wu Xing preset editor omits diagnostic controls while preserving stored diagnostic preferences',async()=>{
+ assert.equal(await scenario(`
+ let m=manager();let editor=edit(m,'Wu Xing');input(fields(editor,t('wuxing.spacing'))[0],88);await save(editor);await drain();close(m);
+ const previous={combined:false,side:'bottom',showEmpty:true};disk.canvasViewSettings.wuxing.values.presets.wuxing.diagnostics=copy(previous);
+ p.settings.canvasViewSettings=copy(disk.canvasViewSettings);p.initializeSettingsReconciliation(copy(disk));m=manager();editor=edit(m,'Wu Xing');
+ for(const key of ['facets.combineDiagnostics','facets.diagnosticsSide','facets.diagnosticsArrangement','facets.diagnosticsShowEmpty'])check(!fields(editor,t(key)).length,'No obsolete diagnostic control: '+key);
+ check(![...editor.contentEl.querySelectorAll('h4')].some(node=>node.textContent===t('facets.diagnostics')),'No diagnostic sizing section');
+ input(fields(editor,t('wuxing.spacing'))[0],96);await save(editor);await drain();equal(disk.canvasViewSettings.wuxing.values.presets.wuxing.diagnostics,previous,'An unrelated save preserves dormant diagnostic preferences');
+ editor=edit(m,'ARC');check(fields(editor,t('facets.combineDiagnostics')).length===1,'Other presets retain diagnostics');close(editor);close(m);
  `),true);
 });

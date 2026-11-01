@@ -18,7 +18,7 @@ import {compileFacetRules} from "../../../core/plex/views/facets/rules";
 import {renderDiagnosticSettings} from "./diagnosticSettings";
 import {renderFacetLayoutSettings} from "./layoutSettings";
 import {renderAreaSizeSettings} from "./areaSizeSettings";
-import {FACET_DIAGNOSTIC_ORDER} from "../../../core/plex/views/facets/presentation";
+import {FACET_DIAGNOSTIC_ORDER, facetShowsDiagnostics} from "../../../core/plex/views/facets/presentation";
 import {renderFacetFlowSettings} from "./flowSettings";
 import {renderPresetHelpSettings} from "./helpSettings";
 import type {ClipboardSession} from "../../../application/ClipboardSession";
@@ -115,7 +115,7 @@ export class FacetPresetEditor extends StyleEditorModal {
       /** Guide settings stay inside the same atomic guarded preset Save. */ (preset, structural) => {
         if (!this.canEdit()) return;this.draft = preset;if (structural) this.render();else this.validate();
       }, t, flowOpen);
-    renderDiagnosticSettings(body, /** Read current sibling edits before merging one dock control. */ () => this.draft.diagnostics, t, /** Retain all dock edits in this exact guarded native draft. */ (diagnostics, structural) => {
+    if (facetShowsDiagnostics(this.draft)) renderDiagnosticSettings(body, /** Read current sibling edits before merging one dock control. */ () => this.draft.diagnostics, t, /** Retain all dock edits in this exact guarded native draft. */ (diagnostics, structural) => {
       if (!this.canEdit()) return;
       this.draft = {...this.draft, diagnostics};if (structural) this.render();else this.validate();
     });
@@ -136,9 +136,9 @@ export class FacetPresetEditor extends StyleEditorModal {
       this.draft = {...this.draft, order: [...this.draft.order, id], categories: {...this.draft.categories,
         [id]: {label: t("facets.newCategory"), values: [], color: {kind: "theme", variable: "--color-cyan"}}}};this.render();
     }));
-    for (const [field, label] of [["conflictingColor", "facets.conflicting"], ["unassignedColor", "facets.unassigned"]] as const)
+    if (facetShowsDiagnostics(this.draft)) for (const [field, label] of [["conflictingColor", "facets.conflicting"], ["unassignedColor", "facets.unassigned"]] as const)
       this.colors.add(body, t(label), {kind: "node", field: "backgroundColor"}, () => this.draft[field], color => {if (color !== undefined) this.draft = {...this.draft, [field]: color};this.validate();}, () => undefined);
-    for (const id of ["combined", ...FACET_DIAGNOSTIC_ORDER] as const) {
+    if (facetShowsDiagnostics(this.draft)) for (const id of ["combined", ...FACET_DIAGNOSTIC_ORDER] as const) {
       body.createEl("h4", {text: t(id === "combined" ? "facets.diagnostics" : id === "unresolved" ? "facets.cannotClassify" : `facets.${id}`)});
       renderAreaSizeSettings(body, "diagnostics", id, /** Exact values read the current detached draft. */ () => this.draft,
         /** Save remains the existing atomic preset operation. */ preset => {if (this.canEdit()) {this.draft = preset;this.validate();}}, t);

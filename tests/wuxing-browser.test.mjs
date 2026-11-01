@@ -88,7 +88,7 @@ test('preset-owned layouts share definitions without a lens-dialog selector and 
   check((await command.run()).status==='completed','Existing preset writer accepts the layout');a.props.settings={...settings};a.props.paintSettings=a.props.settings;b.props.settings={...settings};b.props.paintSettings=b.props.settings;a.render();b.render();await wait();
   check(a.contributions.context().configuration.values.presets.wuxing.layout===layout,'Saved preset owns the layout');
   check(a.container.querySelector('[data-kplex-path="A.md"]')===focused&&a.container.querySelector('.kplex-camera').style.transform===camera,'Layout changes preserve native focus occurrence and manual camera');
-  check(a.container.querySelectorAll('[data-kplex-decoration]').length===6,'All categories and combined diagnostics stay visible');
+  check(a.container.querySelectorAll('[data-kplex-decoration]').length===5,'Five categories remain without a diagnostic section');
   if(layout==='concentric'){
    const paths=[...a.container.querySelectorAll('.kplex-view-region > path')];check(paths.length===5,'Concentric categories use shared band paths');
    check(paths.every(path=>path.getAttribute('fill-rule')==='evenodd'&&!path.isPointInFill(new DOMPoint(0,0))),'Every painted inner hole excludes the focused note');
@@ -102,9 +102,11 @@ test('preset-owned layouts share definitions without a lens-dialog selector and 
  })()`),true)}finally{await host.cleanup()}
 });
 
-test('combined diagnostics uses shared measured status chips and a captured canvas-only toggle',async()=>{
+test('generic Facets combined diagnostics uses shared measured status chips and a captured canvas-only toggle',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ const genericPreset={...M.FACET_TEMPLATES.wuxing};delete genericPreset.interpretation;
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:genericPreset});
  const extra=Array.from({length:24},(_,i)=>'Diagnostic '+i+'.md');
  for(const path of extra){const base=pages.get('B.md');pages.set(path,{...base,path,name:path,file:{...base.file,path,name:path}});fieldCaches.set(path,{frontmatter:{}})}
  const related=['B.md','C.md',...extra];index.neighbours=(page,role)=>page.path==='A.md'&&role==='child'?related.map(path=>({page:pages.get(path),role,relationType:1,typeDefinition:'Related',linkDirection:1})):[];
@@ -141,7 +143,7 @@ test('combined diagnostics uses shared measured status chips and a captured canv
  check(nodes(a).find(row=>row.dataset.kplexPath==='A.md')===focus&&a.container.querySelector('.kplex-camera').style.transform===camera,'Toggle preserves focused occurrence and manual camera');
  checkbox=a.container.querySelector('input[aria-label="Combine diagnostics"]');checkbox.click();await wait();a.render();await wait();
  check(frame(a,combined)&&a.session.state.combinedDiagnostics.wuxing===true,'Returning to combined records an explicit canvas preference');
- settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing','diagnostics']},{kind:'set',value:{combined:false}});a.props.settings={...settings};a.props.paintSettings=a.props.settings;a.render();await wait();
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings, {field:'presets',path:['wuxing','diagnostics']},{kind:'set',value:{combined:false}});a.props.settings={...settings};a.props.paintSettings=a.props.settings;a.render();await wait();
  check(frame(a,combined),'An explicit canvas preference survives later shared-default changes');
  check(work.body===before.body&&work.scans===before.scans&&work.acquisitions===before.acquisitions&&work.properties-before.properties<300,'Presentation-only changes retain bounded cached-field reads and acquire no sources');
  a.close();b.close();plugin.actionManager.dispose();check(events.size===0,'Combined and separate presentation subscriptions retire');style.remove();return true;
@@ -183,8 +185,10 @@ test('shared bottom-edge pointer resize grows and shrinks Facets category and st
  try{
   await host.command('Emulation.setDeviceMetricsOverride',{width:1500,height:1050,deviceScaleFactor:1,mobile:false});
   await host.evaluate(`(async()=>{${canvasSceneFixture}
+   const genericPreset={...M.FACET_TEMPLATES.wuxing};delete genericPreset.interpretation;
+   settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:genericPreset});
    fieldCaches.get('A.md').frontmatter.status='wood';fieldCaches.get('B.md').frontmatter.status=['water','metal'];fieldCaches.delete('C.md');
-   settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing','categories','wood','label']},{kind:'set',value:'My wood'});
+   settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings, {field:'presets',path:['wuxing','categories','wood','label']},{kind:'set',value:'My wood'});
    settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings, {field:'presets',path:['wuxing','diagnostics']},{kind:'set',value:{combined:false}});
    const ui=await mount(M.wuXingViewDefinition);ui.props.areaSettingsMode=true;ui.render();
    await ui.ports.current.implementations['view.fit'].execute({});await wait();await wait();
@@ -284,7 +288,7 @@ test('Facets production presets share captured controls, measured badges and liv
    const context={viewId:'wuxing',state:a.session.state,configuration:{status:'available',values:settings.canvasViewSettings.wuxing?.values??{}}};
    const controls=M.builtInCanvasViewSettings.layoutControls(M.wuXingViewDefinition,context),configControls=controls.filter(control=>!control.state),combine=controls.find(control=>control.state);
    check(configControls.length===(preset==='wuxing'?10:8)&&controls.every(control=>control.field==='presets'&&control.path[0]===preset),'Shared rails address only the selected preset and its optional interpretation');
-   check(combine?.kind==='checkbox'&&combine.state.value===true&&combine.state.actionId==='diagnostics.combine'&&combine.path.join('/')===preset+'/diagnostics/combined','Combine control captures the selected canvas presentation action');
+   check(preset==='wuxing' ? !combine : combine?.kind==='checkbox'&&combine.state.value===true&&combine.state.actionId==='diagnostics.combine'&&combine.path.join('/')===preset+'/diagnostics/combined','Wu Xing omits diagnostic controls; generic presets retain their captured action');
    check(JSON.stringify(b.session.getState())===beforeB,'Other canvas retains independent selection');
  }
  check(b.container.querySelector('.kplex-node-badge').textContent==='Water','Other canvas retains its own badge');
@@ -331,9 +335,10 @@ test('production Wu Xing decorates real local notes, refreshes cached fields, re
  const root=M.createRoot(mount);function Harness(){const revision=M.useSyncExternalStore(session.subscribe,session.getSnapshot);return M.createElement(M.PlexGraph,{...props,viewDefinition:session.definition,viewRevision:revision})}
  const render=()=>M.flushSync(()=>root.render(M.createElement(Harness)));render();await wait();
  const getNode=path=>[...mount.querySelectorAll('[data-kplex-keyboard-id]')].find(node=>node.dataset.kplexPath===path),region=id=>[...mount.querySelectorAll('[data-kplex-decoration]')].find(row=>row.dataset.kplexDecoration===JSON.stringify(['facets','wuxing',['water','wood','fire','earth','metal'].includes(id)?'category':'status',id]));
- check(!mount.querySelector('.kplex-view-error'),'Actual Wu Xing scene failed');check(mount.querySelectorAll('.kplex-view-region').length===8,'Five phases plus reachable unclassified statuses '+JSON.stringify({errors,regions:mount.querySelectorAll('.kplex-view-region').length,text:mount.textContent.slice(0,900)}));
+ check(!mount.querySelector('.kplex-view-error'),'Actual Wu Xing scene failed');check(mount.querySelectorAll('.kplex-view-region').length===5,'Only the five phases remain '+JSON.stringify({errors,regions:mount.querySelectorAll('.kplex-view-region').length,text:mount.textContent.slice(0,900)}));
  check(region('water').textContent.includes('0 shown locally')&&getNode('Focus.md').querySelector('.kplex-node-badge').textContent==='Water'&&region('wood').textContent.includes('2 shown locally'),'Local counts and fixed attention');
- check(region('conflicting').textContent.includes('1 shown locally')&&region('unresolved').textContent.includes('1 shown locally'),'Conflict and metadata absence stay distinct');
+ check(!region('conflicting')&&!region('unresolved')&&!region('unassigned')&&!getNode('Conflict.md')&&!getNode('Unknown.md')&&!getNode('Missing.md'),'Diagnostic nodes and areas are omitted only from Wu Xing');
+ check(pages.has('Conflict.md')&&pages.has('Unknown.md')&&pages.has('Missing.md'),'Canonical notes are retained');
  check(mount.querySelectorAll('.kplex-view-guide').length===10,'Both decorative cycles render');check(getComputedStyle(mount.querySelector('.kplex-view-decorations')).pointerEvents==='none','Decorations cannot capture input');
  const releaseAction=plugin.actionManager.registerSurface({id:'wuxing',generation:1,get implementations(){return actionPorts.current.implementations},readSnapshot:()=>({mounted:true,visible:true,windowId:'test',center:M.actionNodeRef(pages.get('Focus.md')),selected:actionPorts.current.readSelected(),focusRegion:'graph',interactionRevision:0,viewRevision:session.getSnapshot()})});
  const act=async id=>{let promise;M.flushSync(()=>promise=plugin.actionManager.dispatch({id,source:'local-menu',surfaceId:'wuxing'}));const outcome=await promise;await wait();return outcome};

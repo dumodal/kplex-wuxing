@@ -2,7 +2,8 @@
  * native central/occurrence editing, cached facts and all effects. */
 import type {PlexViewDefinition} from "../contracts";
 import {facetsConfigurationSchema, facetLibrary} from "../facets/configuration";
-import {projectFacets} from "../facets/projection";
+import {projectFacets, facetAreaId} from "../facets/projection";
+import {facetShowsDiagnostics} from "../facets/presentation";
 import {layoutFacets} from "../facets/layout";
 import {facetState, resolveFacetPreset, restoreFacetState, reduceFacetState, orderedFacetPresets} from "../facets/state";
 import {facetPropertyAssignments} from "../facets/assignment";
@@ -15,7 +16,19 @@ export const wuXingViewDefinition: PlexViewDefinition = {
   badgeBudget: 2048,
   areaPreferenceBudget: 192,
   defaultState: {version: 1, preset: "wuxing"}, configuration: facetsConfigurationSchema,
-  restoreState: restoreFacetState, reduceState: reduceFacetState, project: projectFacets,
+  restoreState: restoreFacetState, reduceState: reduceFacetState,
+  /** Omit unsupported/unclassified neighbors only from this canvas. Canonical graph facts and
+   * the current center remain available; diagnostic nodes must not survive without layout slots. */
+  project: input => {
+    const projection = projectFacets(input), library = facetLibrary(input.configuration);
+    if (!projection || !library) return projection;
+    const selected = resolveFacetPreset(library, facetState(input.state)?.preset);
+    if (facetShowsDiagnostics(selected.preset)) return projection;
+    const categoryAreas = new Set(selected.preset.order.map(id => facetAreaId(selected.id, "category", id)));
+    const occurrences = projection.occurrences.filter(row => row.id === projection.entry || categoryAreas.has(row.areaId ?? ""));
+    const visible = new Set(occurrences.map(row => row.id));
+    return {...projection, occurrences, edges: projection.edges.filter(edge => visible.has(edge.source) && visible.has(edge.target))};
+  },
   propertyAssignments: facetPropertyAssignments,
   /** Pure caption declarations reuse host measurement without reading note fields. */
   decorationLabels: (state, configuration) => {
@@ -36,8 +49,12 @@ export const wuXingViewDefinition: PlexViewDefinition = {
     const library = facetLibrary(context?.configuration);
     if (!library) throw new Error("Unavailable Facets configuration");
     const intent = facetState(state), selected = resolveFacetPreset(library, intent?.preset);
-    return layoutFacets(projection, measurements, selected.id, selected.preset, context?.areaHeights,
+    const layout = layoutFacets(projection, measurements, selected.id, selected.preset, context?.areaHeights,
       !!intent && (selected.status === "ready" || selected.status === "replaced"), context?.areaWidths, intent, context?.decorationMeasurements);
+    if (facetShowsDiagnostics(selected.preset)) return layout;
+    const categoryAreas = new Set(selected.preset.order.map(id => facetAreaId(selected.id, "category", id)));
+    return {...layout, areas: layout.areas?.filter(area => categoryAreas.has(area.id)),
+      decorations: layout.decorations?.filter(mark => mark.kind !== "region" || categoryAreas.has(mark.areaId ?? mark.id))};
   },
   /** Configured colors join the existing owning-document theme and palette projection. */
   colorReferences: configuration => {

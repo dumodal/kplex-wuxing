@@ -48,7 +48,7 @@ function diagnosticScene(additional=0){
   properties:{availability:()=> 'available',read:id=>{work.fields++;return values.get(id)}},scope:id=>({pending:id==='checking'})};
  const project=(state={version:1,preset:'wuxing'})=>M.projectFacets({attention:'focus',maximum:128,state,configuration:available({}),read});
  const measure=p=>p.occurrences.map(row=>({id:row.id,width:160,height:44,expandedWidth:160,expandedReserve:0,mini:null,envelope:null,...(row.badge?{badge:{width:120,height:24}}:{})}));
- return {values,work,project,measure};
+ return {values,nodes,read,work,project,measure};
 }
 
 test('measured workflow guides preserve logical direction through both axes, reversal, anchors and caption positions',()=>{
@@ -446,4 +446,26 @@ test('visibility options retain exact official geometry, membership, evidence an
  }
  assert.deepEqual(f.work,work,'Visibility performs no additional graph/property reads');
  for(const field of ['hideGroups','hideGroupBorders','centerOutline'])for(const bad of ['true',1,null])assert.equal(M.isFacetPreset({...f.preset,[field]:bad}),false);
+});
+
+
+test('registered Wu Xing omits Diagnostics without moving phase groups or changing canonical nodes',()=>{
+ const f=diagnosticScene(),configuration=available({}),state={version:1,preset:'wuxing'},input={attention:'focus',maximum:128,state,configuration,read:f.read};
+ const canonical=M.projectFacets(input),canonicalLayout=M.layoutFacets(canonical,f.measure(canonical),'wuxing',M.FACET_TEMPLATES.wuxing),values=JSON.stringify([...f.values]);
+ for(const combined of [true,false]){
+  const intent={...state,combinedDiagnostics:{wuxing:combined}},snapshot=JSON.stringify(intent),projection=M.wuXingViewDefinition.project({...input,state:intent});
+  assert.deepEqual(projection.occurrences.map(row=>row.nodeId),['focus','assigned']);
+  const visible=new Set(projection.occurrences.map(row=>row.id));assert(projection.edges.every(edge=>visible.has(edge.source)&&visible.has(edge.target)));
+  const layout=M.wuXingViewDefinition.layout(projection,f.measure(projection),intent,null,{configuration});
+  assert.equal(layout.areas.length,5);assert(layout.areas.every(area=>JSON.parse(area.id)[2]==='category'));
+  assert(layout.decorations.filter(mark=>mark.kind==='region').every(mark=>JSON.parse(mark.id)[2]==='category'));
+  assert.equal(layout.positions.size,projection.occurrences.length,'There are no invisible diagnostic layout slots');
+  assert.deepEqual(layout.areas,canonicalLayout.areas.filter(area=>JSON.parse(area.id)[2]==='category'),'Official phase group geometry is unchanged');
+  for(const row of projection.occurrences)assert.deepEqual(layout.positions.get(row.id),canonicalLayout.positions.get(row.id));
+  assert.equal(JSON.stringify(intent),snapshot,'Saved diagnostic preferences remain untouched');
+ }
+ assert.equal(JSON.stringify([...f.values]),values);assert(f.read.node('unassigned')&&f.read.node('unsupported'),'Hidden nodes still exist in the canonical reader');
+ const center=M.wuXingViewDefinition.project({...input,attention:'unsupported'});assert.equal(center.occurrences.length,1);assert.equal(center.occurrences[0].nodeId,'unsupported','An unsupported current file stays centered');
+ const generic={...M.FACET_TEMPLATES.wuxing,name:'Five categories',interpretation:undefined},genericConfig=available({wuxing:{version:2,values:{presets:{generic}}}}),genericInput={...input,state:{version:1,preset:'generic'},configuration:genericConfig};
+ assert.deepEqual(M.wuXingViewDefinition.project(genericInput),M.projectFacets(genericInput),'Generic Facets diagnostics remain available');
 });

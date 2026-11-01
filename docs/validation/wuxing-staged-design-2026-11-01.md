@@ -35,3 +35,18 @@ Logs and staged build artifacts: `/Users/dumo/Downloads/dumodal-Codex/2026-11-01
 - Separate three-file installable builds are saved under `step-1-visibility/` and `step-2-node-appearance/` in the log folder. `artifact-receipt.json` identifies commits and file hashes.
 - Both builds preserve plugin ID `kplex-wuxing`. No installed plugin, notes or vault settings have been modified, and no branches were pushed.
 - Native typing-flicker acceptance remains pending. These browser/source results establish presentation behavior, not a confirmed fix in the user's running Obsidian.
+
+
+## 2026-11-02: phase groups only, with original history
+
+The user prefers to keep official note groups and remove the Diagnostics section from the personal Wu Xing canvas. The existing Past notes history footer is retained.
+
+- A shared preset presentation policy omits diagnostics only for presets using the five-phase interpretation and all five phase identities. Generic Facets presets retain diagnostics.
+- The registered view excludes nonassigned neighboring occurrences and their display edges, then omits diagnostic areas and region decorations from its published layout. No empty diagnostic rectangle affects the visible canvas or camera fit. The center remains visible even if its current file cannot be classified.
+- Canonical notes, links, cached facts and search remain unchanged. Official phase group bounds and assigned-node positions compare exactly with their earlier layout. No scatter, content sizing or alternate node packing was added.
+- The Wu Xing native preset editor and canvas controls omit diagnostic options. Saved diagnostic preferences remain intact across unrelated saves. Default Help in all eight locales describes the revised view.
+- App.tsx already includes the upstream history footer on loading and normal graph surfaces. No source change was needed to restore it. The history regression now supplies legacy `showHistory: false` data and still verifies all 14 saved slots and their activation behavior.
+- Final targeted result on Node 22.22.2: 139/139 passed, covering view projection/layout, real Chromium canvas rendering, native settings controls, camera behavior, history/Footprints and localization. Production build, Obsidian lint, architecture and numeric-control checks passed.
+- Presentation projection and layout publication are the affected owners; indexing, source acquisition, canonical graph compilation and persistence implementations are unchanged. Expensive full indexing/storage suites were not rerun for this scope.
+- Current-run evidence and the three-file build are under `/Users/dumo/Downloads/dumodal-Codex/2026-11-02-kplex-five-phase-only/`.
+- No vault notes, settings or installed plugin files were changed. No push was performed. Obsidian CLI remains unavailable, so native typing-flicker acceptance remains pending.
