@@ -30,6 +30,8 @@
  * Their first current local preparation may fit once; manual/restored cameras and live editors win.
  * File-location menu actions share captured action targets and delegate to guarded native APIs.
  * Markdown and PNG export detach only the committed presentation; their dialogs own no graph reader.
+ * Personal Wu Xing paints solid muted connectors against a contrasting solid reference layer;
+ * saved link styles and hover activation preferences remain owned by shared settings.
  * File and folder Open menus share native reveal capabilities; captured folder incarnations cannot transfer to a same-path replacement.
  */
 import { wheelCamera } from "./components/wheelCamera";
@@ -608,7 +610,8 @@ function filterNeighborhoodForLenses(
 }
 
 /** Paint admitted connectors and explicit ancestor continuations. Personal Wu Xing consumes
- * precomputed nearest-border curves; other views retain semantic-gate geometry. Hidden endpoints
+ * precomputed nearest-border curves and solid muted strokes; other views retain their saved styles
+ * and semantic-gate geometry. Hidden endpoints
  * lose arrowheads/captions; boundary marks never become node or relationship-edit targets. */
 function Edge({
   edge,
@@ -664,13 +667,15 @@ function Edge({
   if (clip === null) return null;
   const geometry = floatingConnections && floatingRoute ? floatingRoute : edgeGeometry(endpoints.source.point, endpoints.target.point, endpoints.source.port, endpoints.target.port, connectorStyle);
   const style = edge.style;
-  const dash = style.strokeStyle === "dashed" ? "7 7" : style.strokeStyle === "dotted" ? "2 6" : undefined;
+  const dash = floatingConnections ? undefined : style.strokeStyle === "dashed" ? "7 7" : style.strokeStyle === "dotted" ? "2 6" : undefined;
   const reverse = edge.direction === (inverseArrowDirection ? LinkDirection.TO : LinkDirection.FROM);
   const markerStart = endpoints.source.continued ? undefined : markerFor(reverse ? style.endArrowHead : style.startArrowHead);
   const markerEnd = endpoints.target.continued ? undefined : markerFor(reverse ? style.startArrowHead : style.endArrowHead);
   const baseWidth = style.strokeWidth ?? DEFAULT_RENDERED_LINK_WIDTH;
   const strokeWidth = highlighted ? Math.max(baseWidth + 1.7, 2.8) : baseWidth;
-  const stroke = alphaHexToCss(style.strokeColor, NATIVE_LINK_STROKE);
+  // Personal Wu Xing uses layer contrast rather than dashes as phase vocabulary. Saved styles
+  // and all other views keep their own stroke policy; hover retains the existing activation owner.
+  const stroke = floatingConnections ? "var(--text-muted)" : alphaHexToCss(style.strokeColor, NATIVE_LINK_STROKE);
   const label = style.showLabel && !endpoints.source.continued && !endpoints.target.continued ? relationLabel(edge.caption ?? edge.typeDefinition) : null;
 
   const resolvedCrossLinkOpacity = edge.isCrossLink && !highlighted ? crossLinkOpacity : undefined;

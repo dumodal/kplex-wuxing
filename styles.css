@@ -309,6 +309,7 @@ button.kplex-sidecar-unfold-plex:hover,
 .kplex-edge-hit { pointer-events: stroke; cursor: pointer; }
 .kplex-edge.is-hover-peek .kplex-edge-hit { pointer-events: none; }
 .kplex-edge.is-highlighted .kplex-edge-visible { filter: none; }
+.kplex-edge[data-kplex-floating-route].is-highlighted .kplex-edge-visible { stroke: var(--interactive-accent); }
 .kplex-edge.is-dimmed, .kplex-expanded-connector.is-dimmed { opacity: .16; }
 .kplex-edge-label { pointer-events: none; paint-order: stroke; stroke: var(--kplex-link-label-background, var(--background-primary)); stroke-width: 3px; stroke-linejoin: round; }
 
@@ -4004,9 +4005,9 @@ button.kplex-sidecar-unfold-plex:focus-visible,
 .kplex-thought[data-kplex-hide-category-badge] > .kplex-node-badge { visibility: hidden; }
 .kplex-wuxing-blueprint { font-family: var(--font-interface); color: var(--text-muted); }
 .kplex-wuxing-blueprint text { fill: var(--text-muted); font-family: var(--font-interface); }
-.kplex-wuxing-blueprint marker path { fill: var(--background-primary); stroke: var(--text-muted); stroke-width: 1; }
-.kplex-blueprint-link { stroke: var(--text-muted); stroke-width: 1.25; fill: none; opacity: 0.7; }
-.kplex-blueprint-link.is-regulating { stroke-dasharray: 6 6; }
+.kplex-wuxing-blueprint marker path { fill: var(--background-primary); stroke: var(--text-normal); stroke-width: 1; }
+/* Stroke contrast identifies the reference layer; cycle topology and labels identify meaning. */
+.kplex-blueprint-link { stroke: var(--text-normal); stroke-width: 1.5; fill: none; opacity: 0.9; stroke-dasharray: none; }
 .kplex-blueprint-phase circle { fill: var(--background-primary); stroke-width: 2; }
 .kplex-blueprint-glyph { font-size: 15px; }
 .kplex-blueprint-name { font-size: 14px; font-weight: 500; }

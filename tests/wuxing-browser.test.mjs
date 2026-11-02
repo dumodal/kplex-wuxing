@@ -538,3 +538,21 @@ test('situated attention retains its DOM subtree and virtual camera through all 
  check(work.body===source.body&&work.scans===source.scans&&work.acquisitions===source.acquisitions,'Only cached metadata and presentation were used');
  a.close();plugin.actionManager.dispose();check(events.size===0,'Canvas lifetimes retire');style.remove();return true;})()`),true)}finally{await host.cleanup()}
 });
+
+test('Wu Xing distinguishes the solid reference from solid note links without using dashes as phase meaning',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ document.body.style.cssText='--background-primary:#ffffff;--background-secondary:#f5f5f5;--text-normal:#151515;--text-muted:#999999;--interactive-accent:#8758cc;--color-blue:#3399ff';
+ const preset={...M.FACET_TEMPLATES.wuxing,blueprint:true};settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:preset});settings.baseLinkStyle={...settings.baseLinkStyle,strokeStyle:'dashed'};
+ const a=await mount(M.wuXingViewDefinition),guide=[...a.container.querySelectorAll('[data-kplex-blueprint-kind]')],notes=[...a.container.querySelectorAll('.kplex-edge-visible')],before={...work},saved=JSON.stringify(settings.baseLinkStyle);
+ check(guide.length===10&&notes.length>0,'Both reference and real note links are present');
+ check(guide.every(line=>getComputedStyle(line).strokeDasharray==='none'),'Both reference cycles use solid strokes');check(notes.every(line=>getComputedStyle(line).strokeDasharray==='none'),'Personal note links use solid strokes despite the saved dashed style');
+ check(guide.every(line=>getComputedStyle(line).stroke==='rgb(21, 21, 21)')&&notes.every(line=>getComputedStyle(line).stroke==='rgb(153, 153, 153)'),'Dark reference and lighter note links remain distinct');
+ const group=a.container.querySelector('.kplex-edge'),hit=group.querySelector('.kplex-edge-hit');hit.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse',altKey:true,clientX:300,clientY:300}));await wait();await wait();
+ check(group.classList.contains('is-highlighted')&&getComputedStyle(group.querySelector('.kplex-edge-visible')).stroke==='rgb(135, 88, 204)','Existing hover activation emphasizes the individual note edge');
+ hit.dispatchEvent(new PointerEvent('pointerout',{bubbles:true,pointerType:'mouse'}));await wait();document.body.style.setProperty('--text-normal','#eeeeee');document.body.style.setProperty('--text-muted','#888888');await wait();
+ check(guide.every(line=>getComputedStyle(line).stroke==='rgb(238, 238, 238)'),'Reference contrast adapts to a dark theme');
+ check(JSON.stringify(settings.baseLinkStyle)===saved,'Presentation does not rewrite the saved link style');check(work.body===before.body&&work.scans===before.scans&&work.acquisitions===before.acquisitions,'Line paint acquires no graph sources');
+ const generic={...preset};delete generic.interpretation;settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:generic});a.props.settings={...settings};a.props.paintSettings=a.props.settings;a.render();await wait();check([...a.container.querySelectorAll('.kplex-edge-visible')].every(line=>getComputedStyle(line).strokeDasharray!=='none'),'Generic Facets retains its configured dashed style');
+ a.close();plugin.actionManager.dispose();style.remove();return true;})()`),true)}finally{await host.cleanup()}
+});
