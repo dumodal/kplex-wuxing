@@ -565,3 +565,31 @@ test('Wu Xing keeps note link styles and explains solid guide cycles with a pent
  const generic={...preset};delete generic.interpretation;settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:generic});a.props.settings={...settings};a.props.paintSettings=a.props.settings;a.render();await wait();check([...a.container.querySelectorAll('.kplex-edge-visible')].every(line=>getComputedStyle(line).strokeDasharray!=='none'),'Generic Facets retains its configured dashed style');
  a.close();plugin.actionManager.dispose();style.remove();return true;})()`),true)}finally{await host.cleanup()}
 });
+
+test('hidden blueprint attracts visible cross-phase connections and toggling the guide preserves their exact curves',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ const assignments=[['B.md','wood'],['C.md','wood'],['D.md','fire'],['E.md','earth'],['F.md','metal']];
+ for(const [path,phase]of assignments){const base=pages.get('B.md');if(!pages.has(path))pages.set(path,{...base,path,name:path,file:{...base.file,path,name:path}});fieldCaches.set(path,{frontmatter:{status:phase}});}
+ index.neighbours=(page,role)=>page.path==='A.md'&&role==='child'?assignments.map(([path])=>({page:pages.get(path),role,relationType:1,typeDefinition:'Related',linkDirection:1})):[];
+ index.getNeighborhood=path=>({center:pages.get(path),parents:[],children:index.neighbours(pages.get(path),'child'),leftFriends:[],rightFriends:[],siblings:[]});
+ const preset={...M.FACET_TEMPLATES.wuxing,blueprint:false,regionWidth:320,regionHeight:400};settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:preset});
+ const a=await mount(M.wuXingViewDefinition),before={...work},modifier=settings.hoverHighlightRequiresAlt;
+ const paths=()=>[...a.container.querySelectorAll('.kplex-edge-hit')].map(path=>[path.dataset.kplexEdgeId,path.getAttribute('d')]).sort(([x],[y])=>x.localeCompare(y)),original=JSON.stringify(paths()),camera=a.container.querySelector('.kplex-camera').style.transform;
+ const cards=[...a.container.querySelectorAll('.kplex-thought')],rects=JSON.stringify(cards.map(card=>card.style.cssText));
+ check(a.container.querySelectorAll('[data-kplex-blueprint-route]').length===assignments.length,'All visible cross-phase note links already follow the invisible guide');
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings,{field:'presets',path:['wuxing','blueprint']},{kind:'set',value:true});a.props.settings={...settings};a.props.paintSettings=a.props.settings;a.render();await wait();
+ check(JSON.stringify(paths())===original&&a.container.querySelector('.kplex-camera').style.transform===camera,'Opening the guide reveals existing geometry without changing routes or camera');
+ check(cards.every((card,i)=>card===[...a.container.querySelectorAll('.kplex-thought')][i])&&JSON.stringify(cards.map(card=>card.style.cssText))===rects,'Guide paint cannot relocate or remount notes');
+ const reference=[...a.container.querySelectorAll('[data-kplex-blueprint-kind]')].filter(line=>line.dataset.kplexBlueprintSource==='water'||line.dataset.kplexBlueprintTarget==='water'),routes=[...a.container.querySelectorAll('[data-kplex-blueprint-route] .kplex-edge-visible')];
+ const samples=routes.map(path=>{const length=path.getTotalLength();return Array.from({length:Math.ceil(length)+1},(_,i)=>path.getPointAtLength(Math.min(i,length)));});
+ for(const line of reference){const start={x:Number(line.getAttribute('x1')),y:Number(line.getAttribute('y1'))},end={x:Number(line.getAttribute('x2')),y:Number(line.getAttribute('y2'))};check(samples.some(points=>[.25,.5,.75].every(t=>points.some(p=>Math.hypot(p.x-start.x-(end.x-start.x)*t,p.y-start.y-(end.y-start.y)*t)<=3.6))),'Actual note curves share the central span of every corresponding guide chord within a few pixels');}
+ const chosen=routes[0],other=routes[1],p=chosen.getPointAtLength(chosen.getTotalLength()*.45),screen=new DOMPoint(p.x,p.y).matrixTransform(chosen.getScreenCTM()),hit=other.closest('.kplex-edge').querySelector('.kplex-edge-hit');
+ hit.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse',altKey:true,clientX:screen.x,clientY:screen.y}));await wait();
+ check(chosen.closest('.kplex-edge').classList.contains('is-highlighted'),'Hover selects the painted route nearest the pointer rather than the topmost wide hit path');
+ hit.dispatchEvent(new PointerEvent('pointerout',{bubbles:true,pointerType:'mouse'}));await wait();
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings,{field:'presets',path:['wuxing','blueprint']},{kind:'set',value:false});a.props.settings={...settings};a.props.paintSettings=a.props.settings;a.render();await wait();
+ check(JSON.stringify(paths())===original&&!a.container.querySelector('[data-kplex-blueprint]'),'Hiding the guide retains exactly the same paths');
+ check(settings.hoverHighlightRequiresAlt===modifier,'Routing cannot rewrite the saved modifier preference');check(work.body===before.body&&work.scans===before.scans&&work.acquisitions===before.acquisitions,'Routing and guide changes use only the existing scene');
+ a.close();plugin.actionManager.dispose();style.remove();return true;})()`),true)}finally{await host.cleanup()}
+});

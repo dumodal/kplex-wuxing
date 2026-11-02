@@ -30,14 +30,14 @@
  * Their first current local preparation may fit once; manual/restored cameras and live editors win.
  * File-location menu actions share captured action targets and delegate to guarded native APIs.
  * Markdown and PNG export detach only the committed presentation; their dialogs own no graph reader.
- * Personal Wu Xing keeps saved connector styles against a contrasting solid reference layer;
+ * Personal Wu Xing routes cross-phase trunks along the hidden reference frame, retaining saved connector styles;
  * hover activation preferences remain owned by shared settings.
  * File and folder Open menus share native reveal capabilities; captured folder incarnations cannot transfer to a same-path replacement.
  */
 import { wheelCamera } from "./components/wheelCamera";
 import {editorOverlayClip, editorOverlayFrame} from "./editorOverlayFrame";
 import {edgeViewportClip, edgeViewportEndpoints, revealRowScrollTop, editorToolbarInsets} from "./plexViews/areaVisibility";
-import {floatingEdgeRoutes, type FloatingEdgeRoute} from "./plexViews/floatingEdgeRouting";
+import {floatingEdgeRoutes, floatingEdgeAtPoint, type FloatingEdgeRoute} from "./plexViews/floatingEdgeRouting";
 import {ontologyConfiguration} from "../core/contracts/ontologyConfiguration";
 import {hasDirectionalCaption,directionalRelationCaption} from "../core/plex/directionalRelationCaption";
 import { connectionActionAllowed, tagMembershipPair } from "./structuralConnectionActions";
@@ -610,7 +610,7 @@ function filterNeighborhoodForLenses(
 }
 
 /** Paint admitted connectors and explicit ancestor continuations. Personal Wu Xing consumes
- * precomputed nearest-border curves; all views retain saved connector styles. Other views use
+ * precomputed blueprint-aligned curves and nearest-border local branches; all views retain saved connector styles. Other views use
  * semantic-gate geometry. Hidden endpoints
  * lose arrowheads/captions; boundary marks never become node or relationship-edit targets. */
 function Edge({
@@ -678,7 +678,7 @@ function Edge({
 
   const resolvedCrossLinkOpacity = edge.isCrossLink && !highlighted ? crossLinkOpacity : undefined;
 
-  const content = <g data-kplex-floating-route={floatingConnections || undefined} className={`kplex-edge${edge.isCrossLink ? " is-cross-link" : ""}${passive ? " is-hover-peek" : ""}${highlighted ? " is-highlighted" : ""}${dimmed ? " is-dimmed" : ""}`}>
+  const content = <g data-kplex-blueprint-route={Boolean(floatingRoute?.blueprint) || undefined} data-kplex-floating-route={floatingConnections || undefined} className={`kplex-edge${edge.isCrossLink ? " is-cross-link" : ""}${passive ? " is-hover-peek" : ""}${highlighted ? " is-highlighted" : ""}${dimmed ? " is-dimmed" : ""}`}>
     <g className="kplex-edge-paint">
       <path
         className="kplex-edge-visible"
@@ -1335,6 +1335,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const reframeSidecarViewport = useRef<() => void>(/** Deferred native transitions use only the latest composed scene/settings. */ () => {});
   const fitCurrentScene = useRef<() => void>(/** Native resize callbacks must wait for the first composed scene fit. */ () => {});
   const [hover, setHover] = useState<HoverState>(null);
+  const hoveredFloatingEdge = useRef<string | null>(null);
   const [crossLinkPeek, setCrossLinkPeek] = useState<Exclude<HoverState, { kind: "edge" }>>(null);
   const hoverHighlight = useRef<HoverHighlight<Exclude<HoverState, null>> | null>(null);
   const hoverPreview = useRef<HoverPreview | null>(null);
@@ -1474,6 +1475,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   };
 
   const clearHoverIntent = (clearActive = false) => {
+    hoveredFloatingEdge.current = null;
     hoverPreview.current?.clear();
     hoverHighlight.current?.clear(clearActive);
     clearEdgeTooltip();
@@ -1500,6 +1502,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
       publish: /** Connector hover and untrusted/touch candidates retain ordinary highlighting only. */ target => setCrossLinkPeek(target?.kind === "node" || target?.kind === "gate" ? target : null),
     });
     hoverHighlight.current = intent;
+    hoveredFloatingEdge.current = null;
     setHover(null);
     const release = bindHoverHighlight(element, intent);
     const releaseVisibility = plugin.subscribeKplexVisibility(/** Hidden native leaves cannot retain stationary mouse candidates. */ () => {
@@ -3250,8 +3253,22 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const floatingRoutes = useMemo(/** Personal Wu Xing binds smooth curves to actual card edges;
    * one scene-owned plan is reused by visible paint and hit targets without changing semantics. */ () => {
     if (!personalWuXing) return null;
-    return floatingEdgeRoutes(paintedEdges, renderedNodeMap, /** Existing area geometry owns row visibility. */ node => node.areaId ? scene.zoneViewports[node.areaId] : undefined);
-  }, [personalWuXing, paintedEdges, renderedNodeMap, scene.zoneViewports]);
+    return floatingEdgeRoutes(paintedEdges, renderedNodeMap, /** Existing area geometry owns row visibility. */ node => node.areaId ? scene.zoneViewports[node.areaId] : undefined, scene.areas);
+  }, [personalWuXing, paintedEdges, renderedNodeMap, scene.zoneViewports, scene.areas]);
+
+  /** Resolve the nearest painted bundle member rather than whichever wide SVG hit path is last.
+   * Camera conversion and the saved hover activation policy retain their existing owners. */
+  const edgeAtPointer = (fallback: PositionedEdge, event: {clientX: number; clientY: number}): PositionedEdge => {
+    if (!personalWuXing || !floatingRoutes) return fallback;
+    const id = floatingEdgeAtPoint(floatingRoutes, toWorld(event.clientX, event.clientY), 10 / camera.current.scale);
+    return id ? paintedEdges.find(edge => edge.id === id) ?? fallback : fallback;
+  };
+  /** Retarget the existing delayed owner only when the nearest visible bundle member changes. */
+  const moveRoutedEdgeHover = (edge: PositionedEdge, event: PointerEvent<SVGPathElement>): void => {
+    const selected = edgeAtPointer(edge, event);
+    if (personalWuXing && hoveredFloatingEdge.current !== selected.id) {hoveredFloatingEdge.current = selected.id;scheduleEdgeHover(selected, event);}
+    else moveEdgeHover(selected, event);
+  };
 
   const interaction = useMemo(() => {
     const edgeIds = new Set<string>();
@@ -6001,13 +6018,13 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
             || (finding ? matchesOntologyFind(findQuery, edge.style.showLabel ? relationLabel(edge.typeDefinition) ?? undefined : undefined) : interaction.edgeIds.has(edge.id)))}
           dimmed={connectDrag ? connectBlockedEdgeIds.has(edge.id) : !finding && hover !== null && !interaction.edgeIds.has(edge.id)}
           passive={Boolean(crossLinkPeek && !showCrossLinks && edge.isCrossLink)}
-          onHover={(event) => { if (!connectDrag && !nodeDrag) scheduleEdgeHover(edge, event); }}
-          onMove={(event) => { if (!connectDrag && !nodeDrag) moveEdgeHover(edge, event); }}
+          onHover={(event) => { if (!connectDrag && !nodeDrag) {const selected = edgeAtPointer(edge, event);hoveredFloatingEdge.current = selected.id;scheduleEdgeHover(selected, event);} }}
+          onMove={(event) => { if (!connectDrag && !nodeDrag) moveRoutedEdgeHover(edge, event); }}
           onLeave={() => { if (!connectDrag && !nodeDrag) clearHoverIntent(true); }}
           onContextMenu={(event) => {
             event.preventDefault();
             event.stopPropagation();
-            showEdgeContextMenuAt(edge, event.clientX, event.clientY);
+            showEdgeContextMenuAt(edgeAtPointer(edge, event), event.clientX, event.clientY);
           }}
         />)}
         {expandedConnectors.map((connector) => <g key={`expanded-edge:${connector.key}`} className={`kplex-expanded-connector${expandedConnectorDimmed(connector) ? " is-dimmed" : ""}`}><g className="kplex-edge-paint"><path

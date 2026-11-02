@@ -20,8 +20,9 @@ export type WuXingBlueprintLink = Readonly<{source: WuXingPhase; target: WuXingP
   kind: "generating" | "regulating"; start: ViewPoint; end: ViewPoint}>;
 
 /** Intersect the directed center ray with both existing frames; bounded padding keeps arrowheads
- * outside each frame without reversing short connectors between closely spaced regions. */
-function frameLink(a: ViewRect, b: ViewRect): Readonly<{start: ViewPoint; end: ViewPoint}> | null {
+ * outside each frame without reversing short connectors between closely spaced regions. The
+ * optional guide and always-active note router share this geometry independently of visibility. */
+export function wuXingFrameLink(a: ViewRect, b: ViewRect): Readonly<{start: ViewPoint; end: ViewPoint}> | null {
   const source = {x: a.x + a.width / 2, y: a.y + a.height / 2};
   const target = {x: b.x + b.width / 2, y: b.y + b.height / 2};
   const dx = target.x - source.x, dy = target.y - source.y, distance = Math.hypot(dx, dy);
@@ -47,7 +48,7 @@ export function wuXingBlueprint(decorations: readonly PlexDecoration[], presetId
   }
   const links: WuXingBlueprintLink[] = [];
   for (const step of [1, 2] as const) for (let index = 0; index < phases.length; index++) {
-    const source = phases[index], target = phases[(index + step) % phases.length], segment = frameLink(source.bounds, target.bounds);
+    const source = phases[index], target = phases[(index + step) % phases.length], segment = wuXingFrameLink(source.bounds, target.bounds);
     if (segment) links.push({source: source.phase, target: target.phase, kind: step === 1 ? "generating" : "regulating", ...segment});
   }
   const left = Math.min(...phases.map(/** The legend follows the full framework rather than attention. */ row => row.bounds.x));
