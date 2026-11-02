@@ -30,7 +30,7 @@
  * Their first current local preparation may fit once; manual/restored cameras and live editors win.
  * File-location menu actions share captured action targets and delegate to guarded native APIs.
  * Markdown and PNG export detach only the committed presentation; their dialogs own no graph reader.
- * Personal Wu Xing weakly orients short cross-phase curves using the hidden reference frame, retaining saved connector styles;
+ * Personal Wu Xing uses vertical rims except the parallel Water/Fire pair and allows lines behind other notes, retaining saved connector styles;
  * hover activation preferences remain owned by shared settings.
  * File and folder Open menus share native reveal capabilities; captured folder incarnations cannot transfer to a same-path replacement.
  */
@@ -113,6 +113,7 @@ import {viewLabel} from "./plexViews/labels";
 import {ViewDecorations, viewDecorationCounts} from "./plexViews/ViewDecorations";
 import {facetLibrary} from "../core/plex/views/facets/configuration";
 import {facetState, resolveFacetPreset} from "../core/plex/views/facets/state";
+import {facetAreaId} from "../core/plex/views/facets/projection";
 import {facetIsWuXing} from "../core/plex/views/facets/presentation";
 import {WuXingBlueprint} from "./plexViews/wuxing/WuXingBlueprint";
 import {wuXingBlueprint} from "../core/plex/views/wuxing/blueprint";
@@ -610,7 +611,7 @@ function filterNeighborhoodForLenses(
 }
 
 /** Paint admitted connectors and explicit ancestor continuations. Personal Wu Xing consumes
- * precomputed short curves with gentle frame orientation; all views retain saved connector styles. Other views use
+ * precomputed curves between phase-facing rims; all views retain saved connector styles. Other views use
  * semantic-gate geometry. Hidden endpoints
  * lose arrowheads/captions; boundary marks never become node or relationship-edit targets. */
 function Edge({
@@ -3253,8 +3254,10 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   const floatingRoutes = useMemo(/** Personal Wu Xing binds smooth curves to actual card edges;
    * one scene-owned plan is reused by visible paint and hit targets without changing semantics. */ () => {
     if (!personalWuXing) return null;
-    return floatingEdgeRoutes(paintedEdges, renderedNodeMap, /** Existing area geometry owns row visibility. */ node => node.areaId ? scene.zoneViewports[node.areaId] : undefined, scene.areas);
-  }, [personalWuXing, paintedEdges, renderedNodeMap, scene.zoneViewports, scene.areas]);
+    const presetId = visibilitySelection?.id ?? "wuxing";
+    return floatingEdgeRoutes(paintedEdges, renderedNodeMap, /** Existing area geometry owns row visibility. */ node => node.areaId ? scene.zoneViewports[node.areaId] : undefined,
+      scene.areas, [facetAreaId(presetId, "category", "water"), facetAreaId(presetId, "category", "fire")]);
+  }, [personalWuXing, paintedEdges, renderedNodeMap, scene.zoneViewports, scene.areas, visibilitySelection?.id]);
 
   /** Resolve the nearest painted bundle member rather than whichever wide SVG hit path is last.
    * Camera conversion and the saved hover activation policy retain their existing owners. */

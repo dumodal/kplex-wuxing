@@ -499,9 +499,11 @@ for(const relationRole of ['parent','child']) test('floating Wu Xing '+relationR
   for(const group of routes()){const path=group.querySelector('.kplex-edge-visible').getAttribute('d');check(!/[LQHV]/.test(path),'Floating paths contain only smooth cubic segments');check(path===group.querySelector('.kplex-edge-hit').getAttribute('d'),'Visible and interactive paths use identical geometry')}
   const rails=routes().map(group=>group.querySelector('.kplex-edge-visible').getAttribute('d'));check(new Set(rails).size===rails.length,'No two visible paths coincide');
   const cards=[...a.container.querySelectorAll('.kplex-thought')].filter(node=>{const clip=node.closest('.kplex-zone-scroll');if(!clip)return true;const r=node.getBoundingClientRect(),c=clip.getBoundingClientRect();return r.bottom>c.top&&r.top<c.bottom}).map(node=>{const r=node.getBoundingClientRect(),clip=node.closest('.kplex-zone-scroll')?.getBoundingClientRect();return {path:node.dataset.kplexPath,left:Math.max(r.left,clip?.left??-Infinity),top:Math.max(r.top,clip?.top??-Infinity),right:Math.min(r.right,clip?.right??Infinity),bottom:Math.min(r.bottom,clip?.bottom??Infinity)}});
+  const source=a.container.querySelector('[data-kplex-path="A.md"]').getBoundingClientRect();
   for(const group of routes()){
-   const path=group.querySelector('.kplex-edge-visible'),length=path.getTotalLength(),matrix=path.getScreenCTM();
-   for(let i=1;i<100;i++){const p=path.getPointAtLength(length*i/100),point=new DOMPoint(p.x,p.y).matrixTransform(matrix);check(!cards.some(card=>point.x>card.left+2&&point.x<card.right-2&&point.y>card.top+2&&point.y<card.bottom-2),'A floating curve never crosses a visible note body: '+JSON.stringify({edge:group.querySelector('.kplex-edge-hit').dataset.kplexEdgeId,point:{x:point.x,y:point.y},cards:cards.filter(card=>point.x>card.left+2&&point.x<card.right-2&&point.y>card.top+2&&point.y<card.bottom-2).map(card=>({path:card.path,left:card.left,top:card.top,right:card.right,bottom:card.bottom}))}))}
+   const path=group.querySelector('.kplex-edge-visible'),length=path.getTotalLength(),matrix=path.getScreenCTM(),start=path.getPointAtLength(0),end=path.getPointAtLength(length),from=new DOMPoint(start.x,start.y).matrixTransform(matrix),to=new DOMPoint(end.x,end.y).matrixTransform(matrix);
+   check(Math.abs(from.y-(source.top-4))<2&&from.x>=source.left&&from.x<=source.right,'Water leaves its upper rim for every visible Wood note regardless of semantic role');
+   check(cards.filter(card=>paths.includes(card.path)).some(card=>to.x>=card.left-2&&to.x<=card.right+2&&to.y>=card.bottom-2&&to.y<=card.bottom+6),'Wood is approached at the lower visible rim instead of a side detour');
   }
  };
  check(a.container.querySelectorAll('[data-kplex-gate], .kplex-gate-count').length===0,'Personal Wu Xing has no fixed direction gates or counts');inspect();a.render();await wait();check(JSON.stringify(geometry())===positions&&a.container.querySelector('.kplex-camera').style.transform===camera,'Ordinary publication keeps every node and camera');
@@ -566,7 +568,7 @@ test('Wu Xing keeps note link styles and explains solid guide cycles with a pent
  a.close();plugin.actionManager.dispose();style.remove();return true;})()`),true)}finally{await host.cleanup()}
 });
 
-test('hidden blueprint gently orients natural curves without snapping and guide toggles preserve them',async()=>{
+test('phase-facing rims allow occlusion without snapping and guide toggles preserve their curves',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
  const assignments=[['B.md','wood'],['C.md','wood'],['D.md','fire'],['E.md','earth'],['F.md','metal']];
@@ -577,11 +579,14 @@ test('hidden blueprint gently orients natural curves without snapping and guide 
  const a=await mount(M.wuXingViewDefinition),before={...work},modifier=settings.hoverHighlightRequiresAlt;
  const paths=()=>[...a.container.querySelectorAll('.kplex-edge-hit')].map(path=>[path.dataset.kplexEdgeId,path.getAttribute('d')]).sort(([x],[y])=>x.localeCompare(y)),original=JSON.stringify(paths()),camera=a.container.querySelector('.kplex-camera').style.transform;
  const cards=[...a.container.querySelectorAll('.kplex-thought')],rects=JSON.stringify(cards.map(card=>card.style.cssText));
- check(a.container.querySelectorAll('[data-kplex-blueprint-route]').length>0,'Some unobstructed cross-phase note links use gentle frame orientation');
+ check(a.container.querySelectorAll('[data-kplex-blueprint-route]').length===assignments.length,'All assigned phase links use the phase-facing physical rims');
  settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings,{field:'presets',path:['wuxing','blueprint']},{kind:'set',value:true});a.props.settings={...settings};a.props.paintSettings=a.props.settings;a.render();await wait();
  check(JSON.stringify(paths())===original&&a.container.querySelector('.kplex-camera').style.transform===camera,'Opening the guide reveals existing geometry without changing routes or camera');
  check(cards.every((card,i)=>card===[...a.container.querySelectorAll('.kplex-thought')][i])&&JSON.stringify(cards.map(card=>card.style.cssText))===rects,'Guide paint cannot relocate or remount notes');
  const reference=[...a.container.querySelectorAll('[data-kplex-blueprint-kind]')].filter(line=>line.dataset.kplexBlueprintSource==='water'||line.dataset.kplexBlueprintTarget==='water'),routes=[...a.container.querySelectorAll('[data-kplex-floating-route] .kplex-edge-visible')];
+ const sourceBox=a.container.querySelector('[data-kplex-path="A.md"]').getBoundingClientRect(),starts=routes.map(path=>{const p=path.getPointAtLength(0);return new DOMPoint(p.x,p.y).matrixTransform(path.getScreenCTM());});
+ check(starts.filter(p=>Math.abs(p.y-(sourceBox.top-4))<2).length===2&&starts.filter(p=>Math.abs(p.y-(sourceBox.bottom+4))<2).length===2,'Both Wood connections use the upper rim; Earth and Metal use the lower rim');
+ check(starts.filter(p=>Math.abs(p.x-(sourceBox.right+4))<2).length===1,'Only parallel Water/Fire uses the side rim');
  const samples=routes.map(path=>{const length=path.getTotalLength();return Array.from({length:Math.ceil(length)+1},(_,i)=>path.getPointAtLength(Math.min(i,length)));});
  check(reference.some(line=>{const x=(Number(line.getAttribute('x1'))+Number(line.getAttribute('x2')))/2,y=(Number(line.getAttribute('y1'))+Number(line.getAttribute('y2')))/2;return samples.every(points=>points.every(p=>Math.hypot(p.x-x,p.y-y)>18));}),'Natural note curves are free to remain away from the exact reference chords');
  const chosen=routes[0],other=routes[1],p=chosen.getPointAtLength(chosen.getTotalLength()*.45),screen=new DOMPoint(p.x,p.y).matrixTransform(chosen.getScreenCTM()),hit=other.closest('.kplex-edge').querySelector('.kplex-edge-hit');
@@ -591,5 +596,18 @@ test('hidden blueprint gently orients natural curves without snapping and guide 
  settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings,{field:'presets',path:['wuxing','blueprint']},{kind:'set',value:false});a.props.settings={...settings};a.props.paintSettings=a.props.settings;a.render();await wait();
  check(JSON.stringify(paths())===original&&!a.container.querySelector('[data-kplex-blueprint]'),'Hiding the guide retains exactly the same paths');
  check(settings.hoverHighlightRequiresAlt===modifier,'Routing cannot rewrite the saved modifier preference');check(work.body===before.body&&work.scans===before.scans&&work.acquisitions===before.acquisitions,'Routing and guide changes use only the existing scene');
+ a.close();plugin.actionManager.dispose();style.remove();return true;})()`),true)}finally{await host.cleanup()}
+});
+
+test('same-phase lines may pass behind cards while the actual card retains pointer ownership',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ settings.allowAutozoom=true;pages.get('B.md').name='Intervening same-phase note with a long label';pages.get('C.md').name='Lower same-phase note with a long label';const preset={...M.FACET_TEMPLATES.wuxing,regionWidth:320,regionHeight:420,blueprint:false};settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:preset});
+ const a=await mount(M.wuXingViewDefinition);await a.ports.current.implementations['view.fit'].execute({});await wait();
+ const b=['B.md','C.md'].map(path=>a.container.querySelector('[data-kplex-path="'+path+'"]')).sort((a,b)=>a.getBoundingClientRect().top-b.getBoundingClientRect().top)[0],body=b.getBoundingClientRect(),paths=[...a.container.querySelectorAll('.kplex-edge-visible')],path=paths.sort((a,b)=>b.getTotalLength()-a.getTotalLength())[0],matrix=path.getScreenCTM(),length=path.getTotalLength();
+ let covered=null;for(let i=1;i<200;i++){const p=path.getPointAtLength(length*i/200),screen=new DOMPoint(p.x,p.y).matrixTransform(matrix);if(screen.x>body.left+5&&screen.x<body.right-5&&screen.y>body.top+5&&screen.y<body.bottom-5){covered=screen;break;}}
+ check(covered,'The longer relation stays vertical behind the intervening note rather than escaping to a side');
+ check(document.elementFromPoint(covered.x,covered.y)?.closest('.kplex-thought')===b,'The visible card owns paint and pointer input over the covered line');
+ check(path.getAttribute('d')===path.closest('.kplex-edge').querySelector('.kplex-edge-hit').getAttribute('d'),'Occlusion does not introduce separate hit geometry');
  a.close();plugin.actionManager.dispose();style.remove();return true;})()`),true)}finally{await host.cleanup()}
 });

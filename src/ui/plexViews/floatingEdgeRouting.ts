@@ -1,17 +1,17 @@
 /** Paint-only smooth routing for personal Wu Xing. Measured card borders and visible obstacles
- * determine short border-to-border paths; the hidden frame only biases curve direction gently. Semantic roles/ports,
+ * determine fallback paths. Assigned phases use vertical card rims, except the parallel Water/Fire pair;
+ * overlaps and note occlusion are intentional paint behavior. Semantic roles/ports,
  * canonical edges, card spacing and host camera remain untouched. */
 import type {GateSide, PositionedEdge, PositionedNode} from "../../types";
 import type {PlexArea} from "../../core/plex/views/contracts";
-import {wuXingFrameLink} from "../../core/plex/views/wuxing/blueprint";
 import {edgePhysicalOccurrence, type SceneViewport} from "./scene";
 import {edgeViewportEndpoints, type ViewportEdgeEndpoint} from "./areaVisibility";
 
 type Point = Readonly<{x: number; y: number}>;
 type Cubic = Readonly<{a: Point; c1: Point; c2: Point; b: Point}>;
-type Obstacle = Readonly<{id: string; left: number; top: number; right: number; bottom: number; radius?: number}>;
+type Obstacle = Readonly<{id: string; left: number; top: number; right: number; bottom: number}>;
 export type FloatingEdgeRoute = Readonly<{d: string; midpoint: Point; curves: readonly Cubic[];
-  blueprint?: Readonly<{sourceArea: string; targetArea: string; direction: Point; strength: number}>;
+  blueprint?: Readonly<{sourceArea: string; targetArea: string; orientation: "vertical" | "horizontal"}>;
   endpoints: Readonly<{source: ViewportEdgeEndpoint; target: ViewportEdgeEndpoint}>}>;
 type Candidate = FloatingEdgeRoute;
 
@@ -93,33 +93,17 @@ function candidate(source: PositionedNode, target: PositionedNode, sourceArea?: 
   return {d, curves, endpoints, midpoint: curves.length === 1 ? pointAt(curves[0], 0.5) : curves[0].b};
 }
 
-/** Slab intersection catches long chords through thin card bodies between sampling points. */
-function intersectsRect(a: Point, b: Point, left: number, top: number, right: number, bottom: number): boolean {
+/** Exact segment/expanded-rectangle intersection over a sampled curve chord. Slab clipping also
+ * catches a long chord crossing a thin card between sample points. */
+function intersects(a: Point, b: Point, obstacle: Obstacle): boolean {
   let low = 0, high = 1;
-  for (const [start, delta, min, max] of [[a.x, b.x - a.x, left, right], [a.y, b.y - a.y, top, bottom]]) {
+  for (const [start, delta, min, max] of [[a.x, b.x - a.x, obstacle.left - 3, obstacle.right + 3], [a.y, b.y - a.y, obstacle.top - 3, obstacle.bottom + 3]]) {
     if (Math.abs(delta) < 1e-9) {if (start < min || start > max) return false;continue;}
     const first = (min - start) / delta, second = (max - start) / delta;
     low = Math.max(low, Math.min(first, second));high = Math.min(high, Math.max(first, second));
     if (low > high) return false;
   }
   return true;
-}
-
-/** Endpoint cards keep their rounded outline, so an actual rounded-corner contact is not falsely
- * rejected as inside a rectangular bounding box. Other blockers retain conservative rectangles. */
-function intersects(a: Point, b: Point, obstacle: Obstacle): boolean {
-  const left = obstacle.left - 3, right = obstacle.right + 3, top = obstacle.top - 3, bottom = obstacle.bottom + 3;
-  if (!intersectsRect(a, b, left, top, right, bottom)) return false;
-  if (!obstacle.radius) return true;
-  const radius = Math.min(obstacle.radius + 3, (right - left) / 2, (bottom - top) / 2);
-  if (intersectsRect(a, b, left + radius, top, right - radius, bottom)
-    || intersectsRect(a, b, left, top + radius, right, bottom - radius)) return true;
-  const dx = b.x - a.x, dy = b.y - a.y, length = dx * dx + dy * dy;
-  for (const x of [left + radius, right - radius]) for (const y of [top + radius, bottom - radius]) {
-    const t = length ? Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / length)) : 0;
-    if ((a.x + t * dx - x) ** 2 + (a.y + t * dy - y) ** 2 <= radius * radius) return true;
-  }
-  return false;
 }
 
 /** Sample once per candidate; only obstacles overlapping its control hull need chord checks. */
@@ -234,44 +218,50 @@ function routeAround(source: PositionedNode, target: PositionedNode, obstacles: 
   return best;
 }
 
-/** Gently orient an unobstructed short curve toward the phase-frame direction. Actual nearest
- * card contacts stay fixed; there are no frame portals, mandatory shared spans or extra turns.
- * Card avoidance and small distance/deviation budgets take precedence over this weak preference. */
-function softBlueprintRoute(base: FloatingEdgeRoute, edge: PositionedEdge, source: PositionedNode, target: PositionedNode,
-  obstacles: readonly Obstacle[], areas: readonly Pick<PlexArea, "id" | "bounds">[]): FloatingEdgeRoute {
-  if (base.curves.length !== 1 || base.endpoints.source.continued || base.endpoints.target.continued
-    || !source.areaId || !target.areaId || source.areaId === target.areaId) return base;
-  const sourceFrame = areas.find(/** Read measured membership without inferring a semantic category. */ area => area.id === source.areaId)?.bounds;
-  const targetFrame = areas.find(/** The guide supplies an orientation, never a routing checkpoint. */ area => area.id === target.areaId)?.bounds;
-  if (!sourceFrame || !targetFrame) return base;
-  const span = wuXingFrameLink(sourceFrame, targetFrame);if (!span) return base;
-  const dx = span.end.x - span.start.x, dy = span.end.y - span.start.y, length = Math.hypot(dx, dy);
-  if (!length) return base;
-  const direction = {x: dx / length, y: dy / length}, curve = base.curves[0];
-  const chord = {x: curve.b.x - curve.a.x, y: curve.b.y - curve.a.y}, distance = Math.hypot(chord.x, chord.y);
-  if (!distance || (direction.x * chord.x + direction.y * chord.y) / distance < 0.2) return base;
-  const sourceId = edgePhysicalOccurrence(edge, "source"), targetId = edgePhysicalOccurrence(edge, "target");
-  const bodies = obstacles.map(/** Rounded endpoint contacts remain outside the real card silhouette. */ obstacle => {
-    const node = obstacle.id === sourceId ? source : obstacle.id === targetId ? target : undefined;
-    return node ? {...obstacle, radius: Math.min(node.role === "center" ? 22 : 16, node.width / 2, node.height / 2)} : obstacle;
-  });
-  const original = score(base, bodies);if (original.hits.length) return base;
-  const sourceHandle = Math.hypot(curve.c1.x - curve.a.x, curve.c1.y - curve.a.y), targetHandle = Math.hypot(curve.c2.x - curve.b.x, curve.c2.y - curve.b.y);
-  for (const strength of [0.22, 0.11, 0.055]) {
-    const next: Cubic = {...curve,
-      c1: {x: curve.c1.x + strength * (curve.a.x + direction.x * sourceHandle - curve.c1.x), y: curve.c1.y + strength * (curve.a.y + direction.y * sourceHandle - curve.c1.y)},
-      c2: {x: curve.c2.x + strength * (curve.b.x - direction.x * targetHandle - curve.c2.x), y: curve.c2.y + strength * (curve.b.y - direction.y * targetHandle - curve.c2.y)}};
-    const route: FloatingEdgeRoute = {...base, curves: [next], midpoint: pointAt(next, 0.5),
-      blueprint: {sourceArea: source.areaId, targetArea: target.areaId, direction, strength},
-      d: `M ${next.a.x} ${next.a.y} C ${next.c1.x} ${next.c1.y}, ${next.c2.x} ${next.c2.y}, ${next.b.x} ${next.b.y}`};
-    const result = score(route, bodies);
-    if (result.hits.length || result.length > original.length + Math.min(12, original.length * 0.03)) continue;
-    if ([0.1, 0.25, 0.5, 0.75, 0.9].some(/** The frame must never drag a curve back onto its exact outline. */ t => {
-      const a = pointAt(curve, t), b = pointAt(next, t);return Math.hypot(a.x - b.x, a.y - b.y) > Math.min(18, distance * 0.04);
-    })) continue;
-    return route;
+/** Select a continuous flat-rim point in the actual counterpart's direction. The side is a
+ * physical drawing choice only; it never rewrites the edge's semantic role or canonical port. */
+function rimContact(node: PositionedNode, other: PositionedNode, side: GateSide): Readonly<{point: Point; normal: Point; port: GateSide}> {
+  const halfWidth = node.width / 2 + 4, halfHeight = node.height / 2 + 4;
+  const radius = Math.min(node.role === "center" ? 22 : 16, halfWidth, halfHeight);
+  if (side === "top" || side === "bottom") {
+    const ratio = Math.min(1, halfHeight / (Math.abs(other.y - node.y) || halfHeight));
+    const x = node.x + Math.max(-halfWidth + radius, Math.min(halfWidth - radius, (other.x - node.x) * ratio));
+    const sign = side === "top" ? -1 : 1;
+    return {point: {x, y: node.y + sign * halfHeight}, normal: {x: 0, y: sign}, port: side};
   }
-  return base;
+  const ratio = Math.min(1, halfWidth / (Math.abs(other.x - node.x) || halfWidth));
+  const y = node.y + Math.max(-halfHeight + radius, Math.min(halfHeight - radius, (other.y - node.y) * ratio));
+  const sign = side === "left" ? -1 : 1;
+  return {point: {x: node.x + sign * halfWidth, y}, normal: {x: sign, y: 0}, port: side};
+}
+
+/** Assigned phase connections keep one smooth curve behind cards, permitting overlaps and
+ * partial occlusion. Frame height chooses upper/lower rims; only an explicitly supplied parallel
+ * Water/Fire pair uses side rims. No note body can force a sideways departure or frame waypoint. */
+function phaseOrientedRoute(source: PositionedNode, target: PositionedNode, areas: readonly Pick<PlexArea, "id" | "bounds">[],
+  horizontalPair: readonly [string, string] | undefined, sourceArea?: SceneViewport, targetArea?: SceneViewport):
+  Readonly<{assigned: boolean; route: FloatingEdgeRoute | null}> {
+  const sourceFrame = areas.find(/** Exact measured membership supplies physical frame geometry. */ area => area.id === source.areaId)?.bounds;
+  const targetFrame = areas.find(/** No note identity or category is parsed from an opaque ID. */ area => area.id === target.areaId)?.bounds;
+  if (!sourceFrame || !targetFrame || !source.areaId || !target.areaId) return {assigned: false, route: null};
+  const frameY = targetFrame.y + targetFrame.height / 2 - sourceFrame.y - sourceFrame.height / 2;
+  const horizontal = source.areaId !== target.areaId && horizontalPair?.includes(source.areaId) === true
+    && horizontalPair.includes(target.areaId) && Math.abs(frameY) <= Math.min(sourceFrame.height, targetFrame.height) * 0.1;
+  const dy = source.areaId === target.areaId || Math.abs(frameY) < 1 ? target.y - source.y : frameY;
+  const dx = targetFrame.x + targetFrame.width / 2 - sourceFrame.x - sourceFrame.width / 2;
+  const fromSide: GateSide = horizontal ? dx >= 0 ? "right" : "left" : dy > 0 ? "bottom" : "top";
+  const toSide: GateSide = horizontal ? dx >= 0 ? "left" : "right" : dy < 0 ? "bottom" : "top";
+  const from = rimContact(source, target, fromSide), to = rimContact(target, source, toSide);
+  const endpoints = edgeViewportEndpoints(from.point, to.point, from.port, to.port, sourceArea, targetArea, {source, target});
+  if (!endpoints) return {assigned: true, route: null};
+  const a = endpoints.source.point, b = endpoints.target.point, distance = Math.hypot(b.x - a.x, b.y - a.y);
+  const axisDistance = horizontal ? Math.abs(b.x - a.x) : Math.abs(b.y - a.y);
+  const handle = Math.min(100, distance / 3, axisDistance ? axisDistance / 3 : distance / 6);
+  const curve: Cubic = {a, b, c1: {x: a.x + from.normal.x * handle, y: a.y + from.normal.y * handle},
+    c2: {x: b.x + to.normal.x * handle, y: b.y + to.normal.y * handle}};
+  return {assigned: true, route: {curves: [curve], endpoints, midpoint: pointAt(curve, 0.5),
+    blueprint: {sourceArea: source.areaId, targetArea: target.areaId, orientation: horizontal ? "horizontal" : "vertical"},
+    d: `M ${a.x} ${a.y} C ${curve.c1.x} ${curve.c1.y}, ${curve.c2.x} ${curve.c2.y}, ${b.x} ${b.y}`}};
 }
 
 /** Select the closest actually painted curve instead of whichever overlapping SVG hit path is
@@ -297,10 +287,10 @@ export function floatingEdgeAtPoint(routes: ReadonlyMap<string, FloatingEdgeRout
 }
 
 /** Prepare immutable curve paint once for the rendered scene. Hidden rows never supply routes
- * or obstacles; input order, semantic port assignment and hover state cannot change attachment.
- * The frame weakly biases clear cross-area curves while guide visibility stays paint-only. */
+ * or obstacles; input order, semantic port assignment and hover state cannot change attachment. */
 export function floatingEdgeRoutes(edges: readonly PositionedEdge[], nodes: ReadonlyMap<string, PositionedNode>,
-  viewportForNode: (node: PositionedNode) => SceneViewport | undefined, areas: readonly Pick<PlexArea, "id" | "bounds">[] = []): ReadonlyMap<string, FloatingEdgeRoute> {
+  viewportForNode: (node: PositionedNode) => SceneViewport | undefined, areas: readonly Pick<PlexArea, "id" | "bounds">[] = [],
+  horizontalPair?: readonly [string, string]): ReadonlyMap<string, FloatingEdgeRoute> {
   const obstacles: Obstacle[] = [];
   for (const [id, node] of nodes) {
     const area = viewportForNode(node), left = Math.max(node.x - node.width / 2, area?.left ?? -Infinity), right = Math.min(node.x + node.width / 2, area ? area.left + area.width : Infinity);
@@ -311,8 +301,9 @@ export function floatingEdgeRoutes(edges: readonly PositionedEdge[], nodes: Read
   for (const edge of edges) {
     const sourceId = edgePhysicalOccurrence(edge, "source"), targetId = edgePhysicalOccurrence(edge, "target"), source = nodes.get(sourceId), target = nodes.get(targetId);
     if (!source || !target || source === target) continue;
-    const route = routeAround(source, target, obstacles.filter(/** Endpoints own their outward border tangent; only other cards obstruct the span. */ obstacle => obstacle.id !== sourceId && obstacle.id !== targetId), viewportForNode(source), viewportForNode(target));
-    if (route) routes.set(edge.id, softBlueprintRoute(route, edge, source, target, obstacles, areas));
+    const phase = phaseOrientedRoute(source, target, areas, horizontalPair, viewportForNode(source), viewportForNode(target));
+    const route = phase.assigned ? phase.route : routeAround(source, target, obstacles.filter(/** Endpoints own their outward border tangent; only other cards obstruct the span. */ obstacle => obstacle.id !== sourceId && obstacle.id !== targetId), viewportForNode(source), viewportForNode(target));
+    if (route) routes.set(edge.id, route);
   }
   return routes;
 }
