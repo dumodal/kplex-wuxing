@@ -1,6 +1,78 @@
 ![K-PLEX Logo](docs/kplex-logo.png)
 
-# K-Plex
+# K-Plex Wu Xing · 五行关系探索
+
+[中文](#中文) · [English](#english)
+
+## 中文
+
+**让当前笔记参与关系，而不是独占中心。**
+
+这是基于 [Zsolt Viczian 的 K-Plex](https://github.com/zsviczian/kplex) 0.4.0 的个人实验分支，在 Obsidian 中用木、火、土、金、水组织当前笔记及其相邻笔记。五行在这里是一种探索和写作的参照，让已有关系呈现出空间，也为新的连接留下余地。
+
+### 当前版本
+
+- **当前笔记位于所属五行区域。** 它保留较大的卡片，并可使用所属五行的颜色描边；同一区域内，父笔记在其上方，子笔记在其下方。画面的几何中心保持不可见。
+- **一个可开关的五行指南。** 同时显示背景框、淡色底纹、五行释义和生克参考图；五边形与五角星图例位于整张图下方。隐藏指南不会改变笔记位置或连线。
+- **连线从笔记边缘自然延伸。** 五行视图隐藏了四个固定方向的连接门；跨区域连线通常从顶部或底部伸出，平行的水、火区域允许左右连接。连线可以重叠，也可以经过其他卡片背后，整体方向呼应五行布局。
+- **保留已有关系的含义。** 五行指南不会自动生成链接，也不会把所有笔记关系改成“生”或“克”。已有 ontology 和笔记中的关系记录仍是依据。
+
+| 五行 | 释义 · Phase qualities |
+| --- | --- |
+| 木 · Wood | Growth · Connection |
+| 火 · Fire | Visibility · Manifestation |
+| 土 · Earth | Integration · Consolidation |
+| 金 · Metal | Refinement · Regulation |
+| 水 · Water | Permeation · Flow |
+
+这些词是本实验采用的提示词，可以继续完善。背景指南中的 **Generates · Gives Rise To** 与 **Regulates · Challenges** 说明五行模型；前景中的笔记连线表达实际记录的关系，两者应分别理解。
+
+### 使用与边界
+
+在 **Views and lenses → Canvas view → Facets** 中选择 **Wu Xing** 预设；通过 **Show five-phase guide** 开关显示参照层，通过 **Use phase color for current note outline** 设置当前笔记描边。
+
+本视图使用预设中配置的五行归类。无法归类的当前笔记保留中央回退位置；个人五行预设隐藏单独的 Diagnostics 区及未归类的相邻笔记，其他 Facets 预设仍保留各自的诊断机制。
+
+目前可以通过连线菜单中的 **Connection details** 查看关系证据，并使用已有 ontology 工具补充关系。**直接在线上输入自由文字备注，以及汇总、回顾这些备注，尚未实现。**
+
+这是 Obsidian 插件的实验分支。GitHub 页面用于分享源代码和说明，并非可在浏览器中运行的编辑器。插件身份为 `kplex-wuxing`，可以与官方 `k-plex` 分别安装；请勿用本分支覆盖官方插件目录或已有设置。本次更新发布源代码与说明，未新增安装包。
+
+首次启动时，索引会继续在后台进行；文件名搜索和当前笔记已知的关系可先行使用。后续启动会复用本地缓存，大型库的完整校验可能需要更久。
+
+[反馈本分支的问题](https://github.com/dumodal/kplex-wuxing/issues) · [参与开发](CONTRIBUTING.md)
+
+## English
+
+**The current note participates in its relationships, within the map.**
+
+This is a personal experimental fork of [Zsolt Viczian's K-Plex](https://github.com/zsviczian/kplex), based on version 0.4.0. It arranges the current note and its neighbors within five regions in Obsidian: Wood, Fire, Earth, Metal and Water. The phases provide a reference for exploring relationships and continuing to write.
+
+### What's in this version
+
+- **The current note sits within its assigned phase.** A larger card and an optional phase-colored outline distinguish it. Within that phase, parents appear above it and children below it. The map retains an invisible geometric center.
+- **One optional five-phase guide.** Region frames, tints, phase descriptions and both reference cycles appear together. A pentagon and pentagram legend sits below the map. Hiding the guide preserves note positions and connections.
+- **Connections attach to note borders.** The personal Wu Xing view hides the four fixed directional gates. Connections between regions generally use the top or bottom border; the parallel Water and Fire regions allow side connections. Lines may overlap or pass behind cards, following the general orientation of the five-phase layout.
+- **Recorded relationships keep their meanings.** The guide does not create links or turn every note connection into a generating or regulating relationship. Existing ontology and relationship records remain the source of meaning.
+
+The [phase qualities above](#当前版本) are the working vocabulary for this experiment. **Generates · Gives Rise To** and **Regulates · Challenges** describe the reference model; the note connections represent recorded relationships. They are separate layers.
+
+### Using it and current limits
+
+Choose the **Wu Xing** preset under **Views and lenses → Canvas view → Facets**. Toggle **Show five-phase guide** for the reference layer and **Use phase color for current note outline** for the current note's border.
+
+The view uses the phase assignments configured in the preset. An unclassified current note retains a central fallback position. The personal Wu Xing preset hides the separate Diagnostics area and unclassified neighboring notes; other Facets presets retain their diagnostic behavior.
+
+Use a connection's **Connection details** menu to inspect relationship evidence and the existing ontology tools to specify relationships. **Free-text descriptions directly on connections, and collecting or reviewing those descriptions, are ideas for later; they are not implemented.**
+
+This fork runs inside Obsidian. GitHub hosts its source and documentation; it is not a browser-based editor. Its plugin ID is `kplex-wuxing`, separate from the official `k-plex`. Keep their installation folders and existing settings separate. This update publishes source and documentation; it does not add an installation package.
+
+[Report a fork-specific issue](https://github.com/dumodal/kplex-wuxing/issues) · [Contributing](CONTRIBUTING.md)
+
+## Inherited K-Plex features · 上游功能说明
+
+The following guide and screenshots describe the underlying K-Plex application. For the personal Wu Xing layout, the differences above take precedence, especially references below to a central note and four directional gates. Compass and other presets retain their own layouts.
+
+以下保留 K-Plex 的功能说明与截图。个人五行视图的差异以上文为准，尤其是下文提到的中央笔记和四向连接门。Compass 与其他预设保留各自的布局。
 
 > K-Plex makes filename search and the current note’s Obsidian-known relationships available while indexing continues. Later starts reuse the local graph cache; full validation can take longer on large vaults.
 
