@@ -566,7 +566,7 @@ test('Wu Xing keeps note link styles and explains solid guide cycles with a pent
  a.close();plugin.actionManager.dispose();style.remove();return true;})()`),true)}finally{await host.cleanup()}
 });
 
-test('hidden blueprint attracts visible cross-phase connections and toggling the guide preserves their exact curves',async()=>{
+test('hidden blueprint gently orients natural curves without snapping and guide toggles preserve them',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
  const assignments=[['B.md','wood'],['C.md','wood'],['D.md','fire'],['E.md','earth'],['F.md','metal']];
@@ -577,13 +577,13 @@ test('hidden blueprint attracts visible cross-phase connections and toggling the
  const a=await mount(M.wuXingViewDefinition),before={...work},modifier=settings.hoverHighlightRequiresAlt;
  const paths=()=>[...a.container.querySelectorAll('.kplex-edge-hit')].map(path=>[path.dataset.kplexEdgeId,path.getAttribute('d')]).sort(([x],[y])=>x.localeCompare(y)),original=JSON.stringify(paths()),camera=a.container.querySelector('.kplex-camera').style.transform;
  const cards=[...a.container.querySelectorAll('.kplex-thought')],rects=JSON.stringify(cards.map(card=>card.style.cssText));
- check(a.container.querySelectorAll('[data-kplex-blueprint-route]').length===assignments.length,'All visible cross-phase note links already follow the invisible guide');
+ check(a.container.querySelectorAll('[data-kplex-blueprint-route]').length>0,'Some unobstructed cross-phase note links use gentle frame orientation');
  settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings,{field:'presets',path:['wuxing','blueprint']},{kind:'set',value:true});a.props.settings={...settings};a.props.paintSettings=a.props.settings;a.render();await wait();
  check(JSON.stringify(paths())===original&&a.container.querySelector('.kplex-camera').style.transform===camera,'Opening the guide reveals existing geometry without changing routes or camera');
  check(cards.every((card,i)=>card===[...a.container.querySelectorAll('.kplex-thought')][i])&&JSON.stringify(cards.map(card=>card.style.cssText))===rects,'Guide paint cannot relocate or remount notes');
- const reference=[...a.container.querySelectorAll('[data-kplex-blueprint-kind]')].filter(line=>line.dataset.kplexBlueprintSource==='water'||line.dataset.kplexBlueprintTarget==='water'),routes=[...a.container.querySelectorAll('[data-kplex-blueprint-route] .kplex-edge-visible')];
+ const reference=[...a.container.querySelectorAll('[data-kplex-blueprint-kind]')].filter(line=>line.dataset.kplexBlueprintSource==='water'||line.dataset.kplexBlueprintTarget==='water'),routes=[...a.container.querySelectorAll('[data-kplex-floating-route] .kplex-edge-visible')];
  const samples=routes.map(path=>{const length=path.getTotalLength();return Array.from({length:Math.ceil(length)+1},(_,i)=>path.getPointAtLength(Math.min(i,length)));});
- for(const line of reference){const start={x:Number(line.getAttribute('x1')),y:Number(line.getAttribute('y1'))},end={x:Number(line.getAttribute('x2')),y:Number(line.getAttribute('y2'))};check(samples.some(points=>[.25,.5,.75].every(t=>points.some(p=>Math.hypot(p.x-start.x-(end.x-start.x)*t,p.y-start.y-(end.y-start.y)*t)<=3.6))),'Actual note curves share the central span of every corresponding guide chord within a few pixels');}
+ check(reference.some(line=>{const x=(Number(line.getAttribute('x1'))+Number(line.getAttribute('x2')))/2,y=(Number(line.getAttribute('y1'))+Number(line.getAttribute('y2')))/2;return samples.every(points=>points.every(p=>Math.hypot(p.x-x,p.y-y)>18));}),'Natural note curves are free to remain away from the exact reference chords');
  const chosen=routes[0],other=routes[1],p=chosen.getPointAtLength(chosen.getTotalLength()*.45),screen=new DOMPoint(p.x,p.y).matrixTransform(chosen.getScreenCTM()),hit=other.closest('.kplex-edge').querySelector('.kplex-edge-hit');
  hit.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse',altKey:true,clientX:screen.x,clientY:screen.y}));await wait();
  check(chosen.closest('.kplex-edge').classList.contains('is-highlighted'),'Hover selects the painted route nearest the pointer rather than the topmost wide hit path');

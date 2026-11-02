@@ -1,5 +1,5 @@
 /** Paint-only smooth routing for personal Wu Xing. Measured card borders and visible obstacles
- * attract cross-phase trunks to the hidden five-phase frame, with short local card branches. Semantic roles/ports,
+ * determine short border-to-border paths; the hidden frame only biases curve direction gently. Semantic roles/ports,
  * canonical edges, card spacing and host camera remain untouched. */
 import type {GateSide, PositionedEdge, PositionedNode} from "../../types";
 import type {PlexArea} from "../../core/plex/views/contracts";
@@ -11,10 +11,9 @@ type Point = Readonly<{x: number; y: number}>;
 type Cubic = Readonly<{a: Point; c1: Point; c2: Point; b: Point}>;
 type Obstacle = Readonly<{id: string; left: number; top: number; right: number; bottom: number; radius?: number}>;
 export type FloatingEdgeRoute = Readonly<{d: string; midpoint: Point; curves: readonly Cubic[];
-  blueprint?: Readonly<{sourceArea: string; targetArea: string; start: Point; end: Point; offset: number}>;
+  blueprint?: Readonly<{sourceArea: string; targetArea: string; direction: Point; strength: number}>;
   endpoints: Readonly<{source: ViewportEdgeEndpoint; target: ViewportEdgeEndpoint}>}>;
 type Candidate = FloatingEdgeRoute;
-type Contacts = Readonly<{source: ReturnType<typeof boundary>; target: ReturnType<typeof boundary>}>;
 
 /** Attach to the rounded card perimeter in the approach direction, with a small stroke gap.
  * The returned side is clipping vocabulary only; it never replaces the edge's semantic port. */
@@ -67,11 +66,11 @@ function pointAt(curve: Cubic, t: number): Point {
 /** Build only cubic segments, retaining source order and continuous tangents at an outer arc's
  * midpoint. Continuations still belong to the shared visible-endpoint policy. */
 function candidate(source: PositionedNode, target: PositionedNode, sourceArea?: SceneViewport, targetArea?: SceneViewport,
-  corridor?: Readonly<{axis: "x" | "y"; value: number}>, contacts?: Contacts): Candidate | null {
+  corridor?: Readonly<{axis: "x" | "y"; value: number}>): Candidate | null {
   const sourceAim = corridor ? corridor.axis === "x" ? {x: corridor.value, y: source.y} : {x: source.x, y: corridor.value} : target;
   const targetAim = corridor ? corridor.axis === "x" ? {x: corridor.value, y: target.y} : {x: target.x, y: corridor.value} : source;
-  const pair = corridor || contacts ? undefined : nearestPair(source, target);
-  const from = contacts?.source ?? pair?.source ?? boundary(source, sourceAim), to = contacts?.target ?? pair?.target ?? boundary(target, targetAim);
+  const pair = corridor ? undefined : nearestPair(source, target);
+  const from = pair?.source ?? boundary(source, sourceAim), to = pair?.target ?? boundary(target, targetAim);
   const endpoints = edgeViewportEndpoints(from.point, to.point, from.port, to.port, sourceArea, targetArea, {source, target});
   if (!endpoints) return null;
   const a = endpoints.source.point, b = endpoints.target.point;
@@ -143,9 +142,9 @@ function straightCubic(a: Point, b: Point): Cubic {
 
 /** Round only real obstacle turns. Short straight spans stay short; tangent joins contain no
  * right angles. The corner inset exceeds the maximum cut into a rounded turn. */
-function pathCandidate(source: PositionedNode, target: PositionedNode, corners: readonly Point[], sourceArea?: SceneViewport, targetArea?: SceneViewport, contacts?: Contacts): Candidate | null {
-  if (!corners.length) return candidate(source, target, sourceArea, targetArea, undefined, contacts);
-  const from = contacts?.source ?? nearestBoundary(source, corners[0]), to = contacts?.target ?? nearestBoundary(target, corners[corners.length - 1]);
+function pathCandidate(source: PositionedNode, target: PositionedNode, corners: readonly Point[], sourceArea?: SceneViewport, targetArea?: SceneViewport): Candidate | null {
+  if (!corners.length) return candidate(source, target, sourceArea, targetArea);
+  const from = nearestBoundary(source, corners[0]), to = nearestBoundary(target, corners[corners.length - 1]);
   const endpoints = edgeViewportEndpoints(from.point, to.point, from.port, to.port, sourceArea, targetArea, {source, target});if (!endpoints) return null;
   const points = [endpoints.source.point, ...corners, endpoints.target.point], curves: Cubic[] = [];let current = points[0];
   for (let index = 1; index < points.length - 1; index++) {
@@ -167,7 +166,7 @@ function pathCandidate(source: PositionedNode, target: PositionedNode, corners: 
 /** Find a short visible corner path around local blocking cards. Source and target are virtual
  * vertices: each first/last segment chooses its own nearest outline contact, rather than forcing
  * both ends to one side. At most32 blockers bound the local visibility graph to130 vertices. */
-function shortestCandidate(source: PositionedNode, target: PositionedNode, obstacles: readonly Obstacle[], blockers: readonly Obstacle[], sourceArea?: SceneViewport, targetArea?: SceneViewport, contacts?: Contacts): Candidate | null {
+function shortestCandidate(source: PositionedNode, target: PositionedNode, obstacles: readonly Obstacle[], blockers: readonly Obstacle[], sourceArea?: SceneViewport, targetArea?: SceneViewport): Candidate | null {
   const points: Point[] = [source, target];
   for (const item of [...blockers].sort(/** Stable card identity resolves equal-length alternatives. */ (a, b) => a.id.localeCompare(b.id)).slice(0, 32)) {
     for (const x of [item.left - 16, item.right + 16]) for (const y of [item.top - 16, item.bottom + 16]) points.push({x, y});
@@ -180,14 +179,14 @@ function shortestCandidate(source: PositionedNode, target: PositionedNode, obsta
     if (selected === 1) {
       const corners: Point[] = [];let cursor = previous[1];
       while (cursor > 1) {corners.push(points[cursor]);cursor = previous[cursor];}
-      corners.reverse();return pathCandidate(source, target, corners, sourceArea, targetArea, contacts);
+      corners.reverse();return pathCandidate(source, target, corners, sourceArea, targetArea);
     }
     visited.add(selected);
     for (let next = 1; next < points.length; next++) {
       if (next === selected || visited.has(next)) continue;
-      const pair = selected === 0 && next === 1 ? contacts ?? nearestPair(source, target) : undefined;
-      const a = pair?.source.point ?? (selected === 0 ? contacts?.source.point ?? nearestBoundary(source, points[next]).point : points[selected]);
-      const b = pair?.target.point ?? (next === 1 ? contacts?.target.point ?? nearestBoundary(target, points[selected]).point : points[next]);
+      const pair = selected === 0 && next === 1 ? nearestPair(source, target) : undefined;
+      const a = pair?.source.point ?? (selected === 0 ? nearestBoundary(source, points[next]).point : points[selected]);
+      const b = pair?.target.point ?? (next === 1 ? nearestBoundary(target, points[selected]).point : points[next]);
       if (obstacles.some(/** Routes may overlap other links, but visible card bodies remain obstacles. */ obstacle => intersects(a, b, obstacle))) continue;
       const distance = distances[selected] + Math.hypot(b.x - a.x, b.y - a.y);
       if (distance < distances[next] - 1e-6) {distances[next] = distance;previous[next] = selected;}
@@ -199,12 +198,12 @@ function shortestCandidate(source: PositionedNode, target: PositionedNode, obsta
 /** Prefer the nearest outline pair and then short visible paths around actual blocking cards.
  * Rounded-corner candidates compete by sampled length; broad outer arcs remain a bounded fallback
  * for dense scenes. Other links are never obstacles and may freely share any part of the route. */
-function routeAround(source: PositionedNode, target: PositionedNode, obstacles: readonly Obstacle[], sourceArea?: SceneViewport, targetArea?: SceneViewport, contacts?: Contacts): FloatingEdgeRoute | null {
-  const direct = candidate(source, target, sourceArea, targetArea, undefined, contacts);if (!direct) return null;
+function routeAround(source: PositionedNode, target: PositionedNode, obstacles: readonly Obstacle[], sourceArea?: SceneViewport, targetArea?: SceneViewport): FloatingEdgeRoute | null {
+  const direct = candidate(source, target, sourceArea, targetArea);if (!direct) return null;
   let best = direct, bestScore = score(direct, obstacles);if (!bestScore.hits.length) return best;
   const blockers = new Map(bestScore.hits.map(/** Retain only actual obstructing card identities. */ item => [item.id, item]));
   for (let attempt = 0; attempt < 4; attempt++) {
-    const shortest = shortestCandidate(source, target, obstacles, [...blockers.values()], sourceArea, targetArea, contacts);
+    const shortest = shortestCandidate(source, target, obstacles, [...blockers.values()], sourceArea, targetArea);
     if (shortest) {
       const result = score(shortest, obstacles);
       if (!result.hits.length) return !bestScore.hits.length && bestScore.length < result.length ? best : shortest;
@@ -224,7 +223,7 @@ function routeAround(source: PositionedNode, target: PositionedNode, obstacles: 
     }
     let clear: Candidate | null = null, clearLength = Infinity;
     for (const corridor of [{axis: "x" as const, value: left}, {axis: "x" as const, value: right}, {axis: "y" as const, value: top}, {axis: "y" as const, value: bottom}]) {
-      const next = candidate(source, target, sourceArea, targetArea, corridor, contacts);if (!next) continue;
+      const next = candidate(source, target, sourceArea, targetArea, corridor);if (!next) continue;
       const result = score(next, obstacles);
       if (!result.hits.length && result.length < clearLength) {clear = next;clearLength = result.length;}
       if (result.hits.length < bestScore.hits.length || result.hits.length === bestScore.hits.length && result.length < bestScore.length) {best = next;bestScore = result;}
@@ -235,60 +234,44 @@ function routeAround(source: PositionedNode, target: PositionedNode, obstacles: 
   return best;
 }
 
-/** Describe an exact paint contact without granting it semantic gate meaning. */
-function contact(point: Point, normal: Point): ReturnType<typeof boundary> {
-  return {point, normal, port: Math.abs(normal.x) > Math.abs(normal.y) ? normal.x < 0 ? "left" : "right" : normal.y < 0 ? "top" : "bottom"};
-}
-
-/** Keep one endpoint tangent aligned with its neighboring shared span or card outline. */
-function endpointTangent(curve: Cubic, normal: Point, start: boolean, limit: number): Cubic {
-  const point = start ? curve.a : curve.b, handle = Math.min(limit, Math.hypot(curve.b.x - curve.a.x, curve.b.y - curve.a.y) / 3);
-  const control = {x: point.x + normal.x * handle, y: point.y + normal.y * handle};
-  return start ? {...curve, c1: control} : {...curve, c2: control};
-}
-
-/** Pull a cross-phase connection toward the same frame-to-frame segment as the hidden guide.
- * Shared departures and a bounded stable micro-offset preserve identity without moving nodes;
- * local branches face the nearest frame portal rather than restoring fixed semantic ports. */
-function blueprintRoute(edge: PositionedEdge, source: PositionedNode, target: PositionedNode, obstacles: readonly Obstacle[],
-  areas: readonly Pick<PlexArea, "id" | "bounds">[], sourceArea?: SceneViewport, targetArea?: SceneViewport): FloatingEdgeRoute | null {
-  if (!source.areaId || !target.areaId || source.areaId === target.areaId) return null;
-  const sourceFrame = areas.find(/** Physical membership determines the existing frame only. */ area => area.id === source.areaId)?.bounds;
-  const targetFrame = areas.find(/** No category is inferred from note contents here. */ area => area.id === target.areaId)?.bounds;
-  if (!sourceFrame || !targetFrame) return null;
-  const span = wuXingFrameLink(sourceFrame, targetFrame);if (!span) return null;
-  const dx = targetFrame.x + targetFrame.width / 2 - sourceFrame.x - sourceFrame.width / 2;
-  const dy = targetFrame.y + targetFrame.height / 2 - sourceFrame.y - sourceFrame.height / 2, distance = Math.hypot(dx, dy);
-  if (!distance) return null;
-  const direction = {x: dx / distance, y: dy / distance}, reverse = {x: -direction.x, y: -direction.y};
-  const from = nearestBoundary(source, span.start), to = nearestBoundary(target, span.end);
-  const endpoints = edgeViewportEndpoints(from.point, to.point, from.port, to.port, sourceArea, targetArea, {source, target});if (!endpoints) return null;
-  let hash = 0;for (const character of edge.id) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
-  const offset = ((hash % 5) - 2) * 1.5, orientation = source.areaId < target.areaId ? 1 : -1;
-  const shift = {x: -direction.y * offset * orientation, y: direction.x * offset * orientation};
-  const start = {x: span.start.x + shift.x, y: span.start.y + shift.y}, end = {x: span.end.x + shift.x, y: span.end.y + shift.y};
-  if (endpoints.source.continued || endpoints.target.continued) return null;
+/** Gently orient an unobstructed short curve toward the phase-frame direction. Actual nearest
+ * card contacts stay fixed; there are no frame portals, mandatory shared spans or extra turns.
+ * Card avoidance and small distance/deviation budgets take precedence over this weak preference. */
+function softBlueprintRoute(base: FloatingEdgeRoute, edge: PositionedEdge, source: PositionedNode, target: PositionedNode,
+  obstacles: readonly Obstacle[], areas: readonly Pick<PlexArea, "id" | "bounds">[]): FloatingEdgeRoute {
+  if (base.curves.length !== 1 || base.endpoints.source.continued || base.endpoints.target.continued
+    || !source.areaId || !target.areaId || source.areaId === target.areaId) return base;
+  const sourceFrame = areas.find(/** Read measured membership without inferring a semantic category. */ area => area.id === source.areaId)?.bounds;
+  const targetFrame = areas.find(/** The guide supplies an orientation, never a routing checkpoint. */ area => area.id === target.areaId)?.bounds;
+  if (!sourceFrame || !targetFrame) return base;
+  const span = wuXingFrameLink(sourceFrame, targetFrame);if (!span) return base;
+  const dx = span.end.x - span.start.x, dy = span.end.y - span.start.y, length = Math.hypot(dx, dy);
+  if (!length) return base;
+  const direction = {x: dx / length, y: dy / length}, curve = base.curves[0];
+  const chord = {x: curve.b.x - curve.a.x, y: curve.b.y - curve.a.y}, distance = Math.hypot(chord.x, chord.y);
+  if (!distance || (direction.x * chord.x + direction.y * chord.y) / distance < 0.2) return base;
   const sourceId = edgePhysicalOccurrence(edge, "source"), targetId = edgePhysicalOccurrence(edge, "target");
-  const bodies = obstacles.map(/** Only the endpoint cards need exact rounded-corner clearance. */ obstacle => {
+  const bodies = obstacles.map(/** Rounded endpoint contacts remain outside the real card silhouette. */ obstacle => {
     const node = obstacle.id === sourceId ? source : obstacle.id === targetId ? target : undefined;
     return node ? {...obstacle, radius: Math.min(node.role === "center" ? 22 : 16, node.width / 2, node.height / 2)} : obstacle;
   });
-  const departure = routeAround(source, target, bodies, undefined, undefined, {source: {...from, point: endpoints.source.point}, target: contact(start, reverse)});
-  const arrival = routeAround(source, target, bodies, undefined, undefined, {source: contact(end, direction), target: {...to, point: endpoints.target.point}});
-  if (!departure || !arrival) return null;
-  // A portal's outgoing tangent can point at a nearby row. Shorten its handle only after checking
-  // the complete path, so smoothing never reintroduces a body intersection into a clear detour.
-  for (const limit of [12, 6, 3, 1]) {
-    const first = [...departure.curves], last = [...arrival.curves];
-    first[0] = endpointTangent(first[0], from.normal, true, limit);first[first.length - 1] = endpointTangent(first[first.length - 1], reverse, false, limit);
-    last[0] = endpointTangent(last[0], direction, true, limit);last[last.length - 1] = endpointTangent(last[last.length - 1], to.normal, false, limit);
-    const curves = [...first, straightCubic(start, end), ...last];
-    const route: FloatingEdgeRoute = {curves, endpoints, midpoint: {x: (start.x + end.x) / 2, y: (start.y + end.y) / 2},
-      blueprint: {sourceArea: source.areaId, targetArea: target.areaId, start, end, offset},
-      d: `M ${curves[0].a.x} ${curves[0].a.y} ${curves.map(/** Every card branch joins the shared blueprint span smoothly. */ curve => `C ${curve.c1.x} ${curve.c1.y}, ${curve.c2.x} ${curve.c2.y}, ${curve.b.x} ${curve.b.y}`).join(" ")}`};
-    if (!score(route, bodies).hits.length) return route;
+  const original = score(base, bodies);if (original.hits.length) return base;
+  const sourceHandle = Math.hypot(curve.c1.x - curve.a.x, curve.c1.y - curve.a.y), targetHandle = Math.hypot(curve.c2.x - curve.b.x, curve.c2.y - curve.b.y);
+  for (const strength of [0.22, 0.11, 0.055]) {
+    const next: Cubic = {...curve,
+      c1: {x: curve.c1.x + strength * (curve.a.x + direction.x * sourceHandle - curve.c1.x), y: curve.c1.y + strength * (curve.a.y + direction.y * sourceHandle - curve.c1.y)},
+      c2: {x: curve.c2.x + strength * (curve.b.x - direction.x * targetHandle - curve.c2.x), y: curve.c2.y + strength * (curve.b.y - direction.y * targetHandle - curve.c2.y)}};
+    const route: FloatingEdgeRoute = {...base, curves: [next], midpoint: pointAt(next, 0.5),
+      blueprint: {sourceArea: source.areaId, targetArea: target.areaId, direction, strength},
+      d: `M ${next.a.x} ${next.a.y} C ${next.c1.x} ${next.c1.y}, ${next.c2.x} ${next.c2.y}, ${next.b.x} ${next.b.y}`};
+    const result = score(route, bodies);
+    if (result.hits.length || result.length > original.length + Math.min(12, original.length * 0.03)) continue;
+    if ([0.1, 0.25, 0.5, 0.75, 0.9].some(/** The frame must never drag a curve back onto its exact outline. */ t => {
+      const a = pointAt(curve, t), b = pointAt(next, t);return Math.hypot(a.x - b.x, a.y - b.y) > Math.min(18, distance * 0.04);
+    })) continue;
+    return route;
   }
-  return null;
+  return base;
 }
 
 /** Select the closest actually painted curve instead of whichever overlapping SVG hit path is
@@ -315,8 +298,7 @@ export function floatingEdgeAtPoint(routes: ReadonlyMap<string, FloatingEdgeRout
 
 /** Prepare immutable curve paint once for the rendered scene. Hidden rows never supply routes
  * or obstacles; input order, semantic port assignment and hover state cannot change attachment.
- * Measured frames attract cross-area spans even with guide paint hidden. Missing/blocked frames
- * and same-area notes retain the established nearest-border planner. */
+ * The frame weakly biases clear cross-area curves while guide visibility stays paint-only. */
 export function floatingEdgeRoutes(edges: readonly PositionedEdge[], nodes: ReadonlyMap<string, PositionedNode>,
   viewportForNode: (node: PositionedNode) => SceneViewport | undefined, areas: readonly Pick<PlexArea, "id" | "bounds">[] = []): ReadonlyMap<string, FloatingEdgeRoute> {
   const obstacles: Obstacle[] = [];
@@ -329,8 +311,8 @@ export function floatingEdgeRoutes(edges: readonly PositionedEdge[], nodes: Read
   for (const edge of edges) {
     const sourceId = edgePhysicalOccurrence(edge, "source"), targetId = edgePhysicalOccurrence(edge, "target"), source = nodes.get(sourceId), target = nodes.get(targetId);
     if (!source || !target || source === target) continue;
-    const route = blueprintRoute(edge, source, target, obstacles, areas, viewportForNode(source), viewportForNode(target)) ?? routeAround(source, target, obstacles.filter(/** Endpoints own their outward border tangent; only other cards obstruct the span. */ obstacle => obstacle.id !== sourceId && obstacle.id !== targetId), viewportForNode(source), viewportForNode(target));
-    if (route) routes.set(edge.id, route);
+    const route = routeAround(source, target, obstacles.filter(/** Endpoints own their outward border tangent; only other cards obstruct the span. */ obstacle => obstacle.id !== sourceId && obstacle.id !== targetId), viewportForNode(source), viewportForNode(target));
+    if (route) routes.set(edge.id, softBlueprintRoute(route, edge, source, target, obstacles, areas));
   }
   return routes;
 }

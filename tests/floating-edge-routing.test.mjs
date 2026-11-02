@@ -50,39 +50,39 @@ test('overlapping projections use the perpendicular minimum and coincident links
  assert.equal(first.d,second.d,'Sharing a route is allowed and carries no length penalty');assert.equal(first.midpoint.x,first.endpoints.source.point.x);
 });
 
-test('hidden blueprint attracts cross-phase trunks and keeps separate hover identities at their shared departure',()=>{
- const source={...node('A',-600,-20,'center'),width:240,height:70,areaId:'water'};
- const peers=[520,610,700].map((y,i)=>({...node('B'+i,-300,y),height:40,areaId:'metal'}));
- const nodes=new Map([['A',source],...peers.map(row=>[row.occurrenceId,row])]),edges=peers.map((row,i)=>({...edge('a'+String.fromCharCode(98+i),row.occurrenceId)}));
- const areas=[{id:'water',bounds:{x:-780,y:-150,width:360,height:300}},{id:'metal',bounds:{x:-480,y:450,width:360,height:300}}],before=JSON.stringify({nodes:[...nodes],edges,areas});
- const routes=floatingEdgeRoutes(edges,nodes,()=>undefined,areas);assert.equal(routes.size,3);assert([...routes.values()].every(route=>route.blueprint),'All visible cross-phase routes follow the hidden frame');
- assert.equal(new Set([...routes.values()].map(route=>JSON.stringify(route.endpoints.source.point))).size,1,'Related phase members share the exact departure point');
- for(const route of routes.values()){assert.equal(route.endpoints.target.port,'top','Lower phase members use their upper-facing outline');assert(Math.abs(route.blueprint.offset)<=3,'Shared trunks stay within a few pixels of the reference');assert(!/[LQHV]/.test(route.d));}
- assert.equal(JSON.stringify({nodes:[...nodes],edges,areas}),before,'Blueprint attraction is paint only');
- const {exports:{floatingEdgeAtPoint}}=loadPortableModules(['src/ui/plexViews/floatingEdgeRouting.ts']);
- for(const [id,route]of routes){const p={x:(route.blueprint.start.x+route.blueprint.end.x)/2,y:(route.blueprint.start.y+route.blueprint.end.y)/2};assert.equal(floatingEdgeAtPoint(routes,p,1),id,'Tiny-offset trunks remain individually hoverable');}
-});
 
-test('all ten geometric phase spans are shared by opposite directions while same-phase and missing frames keep nearest routing',()=>{
- const areas=Array.from({length:5},(_,i)=>{const angle=-Math.PI/2+i*2*Math.PI/5;return{id:'phase'+i,bounds:{x:850*Math.cos(angle)-160,y:850*Math.sin(angle)-175,width:320,height:350}}});
- const all=areas.map((a,i)=>({...node('N'+i,a.bounds.x+160,a.bounds.y+175),areaId:a.id})),nodes=new Map(all.map(n=>[n.occurrenceId,n]));
- const links=[];for(let i=0;i<5;i++)for(let j=i+1;j<5;j++)links.push({...edge('pair'+i+j,'N'+j),sourceOccurrence:'N'+i});
- const routes=floatingEdgeRoutes(links,nodes,()=>undefined,areas);assert.equal(routes.size,10);assert([...routes.values()].every(r=>r.blueprint));
- for(const link of links){const route=routes.get(link.id),reverse=floatingEdgeRoutes([{...link,sourceOccurrence:link.targetOccurrence,targetOccurrence:link.sourceOccurrence}],nodes,()=>undefined,areas).get(link.id);assert(reverse.blueprint);for(const [a,b]of [[route.blueprint.start,reverse.blueprint.end],[route.blueprint.end,reverse.blueprint.start]])assert(Math.hypot(a.x-b.x,a.y-b.y)<1e-8,'Reversing semantic direction retains the same physical trunk');}
- const peer={...node('peer',all[0].x,all[0].y+90),areaId:all[0].areaId},localNodes=new Map([[all[0].occurrenceId,all[0]],['peer',peer]]),local=[{...edge('local','peer'),sourceOccurrence:all[0].occurrenceId}];
- assert.deepEqual(floatingEdgeRoutes(local,localNodes,()=>undefined,areas),floatingEdgeRoutes(local,localNodes,()=>undefined),'Same-phase notes retain the short local connection');
- assert.deepEqual(floatingEdgeRoutes(links,nodes,()=>undefined,[]),floatingEdgeRoutes(links,nodes,()=>undefined),'Missing guide frames preserve the established fallback');
- const snapshot=map=>[...map].sort(([a],[b])=>a.localeCompare(b));assert.deepEqual(snapshot(floatingEdgeRoutes([...links].reverse(),new Map([...nodes].reverse()),()=>undefined,[...areas].reverse())),snapshot(routes),'Input and paint order cannot change the hidden blueprint');
-});
+/** Sample real curve geometry for visual budgets and nearest-painted hover regression checks. */
+const sample=(c,t)=>{const u=1-t;return{x:u**3*c.a.x+3*u*u*t*c.c1.x+3*u*t*t*c.c2.x+t**3*c.b.x,y:u**3*c.a.y+3*u*u*t*c.c1.y+3*u*t*t*c.c2.y+t**3*c.b.y}};
+/** Approximate painted length independently of the router's score sampling. */
+const length=route=>{let total=0;for(const c of route.curves){let previous=c.a;for(let i=1;i<=120;i++){const p=sample(c,i/120);total+=Math.hypot(p.x-previous.x,p.y-previous.y);previous=p;}}return total;};
 
-test('blueprint branches remain smooth and outside visible note bodies and clipped rows never route',()=>{
+test('hidden frame is a weak orientation reference without mandatory portals or shared departures',()=>{
  const source={...node('A',-600,-20,'center'),width:240,height:70,areaId:'water'},peers=[520,610,700].map((y,i)=>({...node('B'+i,-300,y),height:40,areaId:'metal'}));
- const nodes=new Map([['A',source],...peers.map(n=>[n.occurrenceId,n])]),links=peers.map((n,i)=>edge('link'+i,n.occurrenceId)),areas=[{id:'water',bounds:{x:-780,y:-150,width:360,height:300}},{id:'metal',bounds:{x:-480,y:450,width:360,height:300}}];
- const routes=floatingEdgeRoutes(links,nodes,()=>undefined,areas);assert([...routes.values()].every(r=>r.blueprint));
- for(const route of routes.values())for(const [i,c]of route.curves.entries()){
-  for(let step=0;step<=120;step++){const t=step/120,u=1-t,p={x:u**3*c.a.x+3*u*u*t*c.c1.x+3*u*t*t*c.c2.x+t**3*c.b.x,y:u**3*c.a.y+3*u*u*t*c.c1.y+3*u*t*t*c.c2.y+t**3*c.b.y};for(const n of nodes.values())assert(!(p.x>n.x-n.width/2&&p.x<n.x+n.width/2&&p.y>n.y-n.height/2&&p.y<n.y+n.height/2),'Actual smooth curves cannot cut through any note body');}
-  if(i){const p=route.curves[i-1],a={x:p.b.x-p.c2.x,y:p.b.y-p.c2.y},b={x:c.c1.x-c.a.x,y:c.c1.y-c.a.y};assert((a.x*b.x+a.y*b.y)/(Math.hypot(a.x,a.y)*Math.hypot(b.x,b.y))>.99999,'Branch-to-trunk joins have continuous forward tangents');}
+ const nodes=new Map([['A',source],...peers.map(n=>[n.occurrenceId,n])]),edges=peers.map((n,i)=>edge('link'+i,n.occurrenceId)),areas=[{id:'water',bounds:{x:-780,y:-150,width:360,height:300}},{id:'metal',bounds:{x:-480,y:450,width:360,height:300}}],before=JSON.stringify({nodes:[...nodes],edges,areas});
+ const natural=floatingEdgeRoutes(edges,nodes,()=>undefined),routes=floatingEdgeRoutes(edges,nodes,()=>undefined,areas);assert.equal(routes.size,3);assert([...routes.values()].some(r=>r.blueprint),'The background still supplies gentle directional guidance');
+ for(const [id,route]of routes){const base=natural.get(id);assert.deepEqual(route.endpoints,base.endpoints,'Nearest actual card contacts stay fixed');assert.equal(route.curves.length,base.curves.length,'The guide cannot add a straight trunk or extra turns');assert(length(route)<=length(base)+Math.min(12,length(base)*.03)+.01,'The guide cannot produce a substantial detour');
+  if(route.blueprint){assert(route.blueprint.strength>0&&route.blueprint.strength<.3);for(let i=0;i<=120;i++){const a=sample(base.curves[0],i/120),b=sample(route.curves[0],i/120);assert(Math.hypot(a.x-b.x,a.y-b.y)<=18.1,'Guidance stays visually close to the natural curve');}}
+  else assert.deepEqual(route,base,'Obstacle detours keep their independent nearest-route geometry');
  }
- const viewport={key:'metal',left:-480,top:490,width:360,height:70,contentTop:490,contentHeight:600,initialScrollTop:0};
- const visible=floatingEdgeRoutes(links,nodes,n=>n.areaId==='metal'?viewport:undefined,areas);assert.equal(visible.size,1);assert(visible.get('link0').blueprint);
+ assert.equal(JSON.stringify({nodes:[...nodes],edges,areas}),before,'Soft guidance cannot move notes or edit semantic data');
+ const {exports:{floatingEdgeAtPoint}}=loadPortableModules(['src/ui/plexViews/floatingEdgeRouting.ts']);
+ for(const [id,route]of routes)assert.equal(floatingEdgeAtPoint(routes,route.midpoint,1),id,'Naturally separated curves remain individually hoverable');
+});
+
+test('all phase pairs use a reversible gentle direction while same-phase and missing frames remain natural',()=>{
+ const areas=Array.from({length:5},(_,i)=>{const a=-Math.PI/2+i*2*Math.PI/5;return{id:'phase'+i,bounds:{x:850*Math.cos(a)-160,y:850*Math.sin(a)-175,width:320,height:350}}}),all=areas.map((a,i)=>({...node('N'+i,a.bounds.x+160,a.bounds.y+175),areaId:a.id})),nodes=new Map(all.map(n=>[n.occurrenceId,n]));
+ const links=[];for(let i=0;i<5;i++)for(let j=i+1;j<5;j++)links.push({...edge('pair'+i+j,'N'+j),sourceOccurrence:'N'+i});
+ const routes=floatingEdgeRoutes(links,nodes,()=>undefined,areas);assert.equal(routes.size,10);assert([...routes.values()].every(r=>r.blueprint&&r.curves.length===1),'Clear phase pairs retain one natural Bezier rather than a three-part channel');
+ for(const link of links){const forward=routes.get(link.id),reverse=floatingEdgeRoutes([{...link,sourceOccurrence:link.targetOccurrence,targetOccurrence:link.sourceOccurrence}],nodes,()=>undefined,areas).get(link.id);assert(reverse.blueprint);assert(Math.hypot(forward.blueprint.direction.x+reverse.blueprint.direction.x,forward.blueprint.direction.y+reverse.blueprint.direction.y)<1e-8,'Reference orientation follows source/target direction without fixing contact sides');}
+ const peer={...node('peer',all[0].x,all[0].y+90),areaId:all[0].areaId},localNodes=new Map([[all[0].occurrenceId,all[0]],['peer',peer]]),local=[{...edge('local','peer'),sourceOccurrence:all[0].occurrenceId}];assert.deepEqual(floatingEdgeRoutes(local,localNodes,()=>undefined,areas),floatingEdgeRoutes(local,localNodes,()=>undefined));assert.deepEqual(floatingEdgeRoutes(links,nodes,()=>undefined,[]),floatingEdgeRoutes(links,nodes,()=>undefined));
+ const sorted=map=>[...map].sort(([a],[b])=>a.localeCompare(b));assert.deepEqual(sorted(floatingEdgeRoutes([...links].reverse(),new Map([...nodes].reverse()),()=>undefined,[...areas].reverse())),sorted(routes));
+});
+
+test('gentle direction bias retains clear bodies smooth detours and hidden-row suppression',()=>{
+ const source={...node('A',-600,-20,'center'),width:240,height:70,areaId:'water'},peers=[520,610,700].map((y,i)=>({...node('B'+i,-300,y),height:40,areaId:'metal'})),nodes=new Map([['A',source],...peers.map(n=>[n.occurrenceId,n])]),links=peers.map((n,i)=>edge('link'+i,n.occurrenceId)),areas=[{id:'water',bounds:{x:-780,y:-150,width:360,height:300}},{id:'metal',bounds:{x:-480,y:450,width:360,height:300}}];
+ for(const route of floatingEdgeRoutes(links,nodes,()=>undefined,areas).values())for(const [i,c]of route.curves.entries()){
+  for(let j=0;j<=120;j++){const p=sample(c,j/120);for(const n of nodes.values())assert(!(p.x>n.x-n.width/2&&p.x<n.x+n.width/2&&p.y>n.y-n.height/2&&p.y<n.y+n.height/2),'Smooth curves cannot cut through note bodies');}
+  if(i){const p=route.curves[i-1],a={x:p.b.x-p.c2.x,y:p.b.y-p.c2.y},b={x:c.c1.x-c.a.x,y:c.c1.y-c.a.y};assert((a.x*b.x+a.y*b.y)/(Math.hypot(a.x,a.y)*Math.hypot(b.x,b.y))>.99999,'Obstacle detours retain continuous tangents');}
+ }
+ const viewport={key:'metal',left:-480,top:490,width:360,height:70,contentTop:490,contentHeight:600,initialScrollTop:0};assert.equal(floatingEdgeRoutes(links,nodes,n=>n.areaId==='metal'?viewport:undefined,areas).size,1);
 });

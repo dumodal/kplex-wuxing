@@ -30,7 +30,7 @@
  * Their first current local preparation may fit once; manual/restored cameras and live editors win.
  * File-location menu actions share captured action targets and delegate to guarded native APIs.
  * Markdown and PNG export detach only the committed presentation; their dialogs own no graph reader.
- * Personal Wu Xing routes cross-phase trunks along the hidden reference frame, retaining saved connector styles;
+ * Personal Wu Xing weakly orients short cross-phase curves using the hidden reference frame, retaining saved connector styles;
  * hover activation preferences remain owned by shared settings.
  * File and folder Open menus share native reveal capabilities; captured folder incarnations cannot transfer to a same-path replacement.
  */
@@ -610,7 +610,7 @@ function filterNeighborhoodForLenses(
 }
 
 /** Paint admitted connectors and explicit ancestor continuations. Personal Wu Xing consumes
- * precomputed blueprint-aligned curves and nearest-border local branches; all views retain saved connector styles. Other views use
+ * precomputed short curves with gentle frame orientation; all views retain saved connector styles. Other views use
  * semantic-gate geometry. Hidden endpoints
  * lose arrowheads/captions; boundary marks never become node or relationship-edit targets. */
 function Edge({
