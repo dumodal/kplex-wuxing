@@ -297,3 +297,11 @@ test('one native Wu Xing guide switch replaces separate background controls and 
  const after=copy(disk.canvasViewSettings.wuxing.values.presets.wuxing);delete preset.blueprint;delete after.blueprint;equal(after,preset,'Guide off preserves all old display preferences and recognition mappings');close(m);
  `),true);
 });
+
+test('personal phase outline copy names the current note while generic preset wording stays unchanged',async()=>{
+ assert.equal(await scenario(`
+ const m=manager(),before=JSON.stringify(disk);let editor=edit(m,t('facets.presetWuXing'));
+ check(fields(editor,t('wuxing.currentNoteOutline')).length===1&&fields(editor,t('facets.centerOutline')).length===0,'Personal phase editor uses the current-note outline wording');close(editor);
+ editor=edit(m,'ARC');check(fields(editor,t('facets.centerOutline')).length===1&&fields(editor,t('wuxing.currentNoteOutline')).length===0,'Generic editor retains its category wording');close(editor);close(m);equal(JSON.stringify(disk),before,'Inspecting either label cannot change saved settings');
+ `),true);
+});

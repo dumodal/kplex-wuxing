@@ -246,11 +246,11 @@ test('Wu Xing reference meanings remain independent of focus and unavailable met
  const original=JSON.stringify([...fieldCaches]),a=await mount(M.wuXingViewDefinition),b=await mount(M.wuXingViewDefinition);
  const region=(surface,id)=>surface.container.querySelector('[data-kplex-decoration='+CSS.escape(JSON.stringify(['facets','wuxing','category',id]))+']');
  const label=(surface,id)=>surface.container.querySelector('[data-kplex-blueprint-phase='+id+'] .kplex-blueprint-meaning')?.getAttribute('aria-label');
- const phases=['wood','fire','earth','metal','water'],meaningSnapshot=JSON.stringify(phases.map(id=>label(a,id)));check(label(a,'wood')==='Growth · Emergence · Resilience'&&label(a,'metal')==='Precision · Refinement · Structure','Reference contains only fixed phase meanings');check(!a.container.querySelector('.kplex-blueprint-role'),'No relative-to-me guide labels');
+ const phases=['wood','fire','earth','metal','water'],meaningSnapshot=JSON.stringify(phases.map(id=>label(a,id)));check(label(a,'wood')==='Growth · Connection'&&label(a,'metal')==='Refinement · Regulation','Reference contains only fixed phase meanings');check(!a.container.querySelector('.kplex-blueprint-role'),'No relative-to-me guide labels');
  const bState=JSON.stringify(b.session.getState()),bCamera=b.container.querySelector('.kplex-camera').style.transform;
  a.props.activePath='B.md';a.render();await wait();
  check(JSON.stringify(phases.map(id=>label(a,id)))===meaningSnapshot,'Changing current note leaves phase meanings unchanged');
- check(label(b,'metal')==='Precision · Refinement · Structure'&&JSON.stringify(b.session.getState())===bState&&b.container.querySelector('.kplex-camera').style.transform===bCamera,'Other canvas is independent');
+ check(label(b,'metal')==='Refinement · Regulation'&&JSON.stringify(b.session.getState())===bState&&b.container.querySelector('.kplex-camera').style.transform===bCamera,'Other canvas is independent');
  const guides=[...a.container.querySelectorAll('[data-kplex-blueprint-kind]')];check(guides.length===10&&guides.every(row=>row.getAttribute('marker-end')),'Both cycles have decorative direction');
  check(a.container.querySelectorAll('[data-kplex-blueprint-kind=generating]').length===5&&a.container.querySelectorAll('[data-kplex-blueprint-kind=regulating]').length===5,'Cycle families stay distinct');
  const markers=[a,b].map(surface=>surface.container.querySelector('marker').id);check(markers[0]!==markers[1],'Per-canvas marker identities');
@@ -449,7 +449,7 @@ test('one blueprint switch shows all phase frames meanings and straight cycles w
  const before=JSON.stringify(geometry()),camera=a.container.querySelector('.kplex-camera').style.transform,source={body:work.body,scans:work.scans,acquisitions:work.acquisitions};
  check(getComputedStyle(center().querySelector('.kplex-node-badge')).visibility==='hidden','Duplicate Water chip is hidden even with the guide closed');
  await a.ports.current.implementations['view.layout-controls'].execute({});await wait();
- check(a.container.querySelectorAll('input[aria-label="Show five-phase guide"]').length===1,'Appearance has one complete-guide switch');
+ check(a.container.querySelectorAll('input[aria-label="Show five-phase guide"]').length===1,'Appearance has one complete-guide switch');check(a.container.querySelector('input[aria-label="Use phase color for current note outline"]'),'Personal outline control names the phase and current note');
  for(const label of ['Show guides','Regulating cycle guides','Hide group labels and counts','Hide group frames'])check(!a.container.querySelector('input[aria-label="'+label+'"]'),'No obsolete independent guide control: '+label);
  plugin.updateCanvasViewConfiguration=async(id,address,edit)=>{settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,settings.canvasViewSettings,id==='wuxing'?address:{},edit);a.props.settings={...settings};return {refreshPending:false}};
  for(const enabled of [true,false,true,false]){
@@ -562,8 +562,8 @@ test('Wu Xing keeps note link styles and explains solid guide cycles with a pent
  const labelBox=generating.getBBox(),starBox=star.getBBox(),starX=31;check(labelBox.x+labelBox.width<starBox.x+starX,'Longer generating explanation does not overlap the star');
  const vertices=shape=>Array.from({length:shape.points.numberOfItems},(_,i)=>{const p=shape.points.getItem(i);return[p.x,p.y]}),rp=vertices(ring),sp=vertices(star),lengths=points=>points.map((p,i)=>Math.hypot(p[0]-points[(i+1)%points.length][0],p[1]-points[(i+1)%points.length][1]));
  check(rp.length===5&&sp.length===5&&JSON.stringify([...rp].sort())===JSON.stringify([...sp].sort())&&Math.min(...lengths(sp))>Math.max(...lengths(rp)),'Pentagon follows adjacent vertices; pentagram connects the same five vertices across the interior');
- const meanings={wood:'Growth · Emergence · Resilience',fire:'Visibility · Manifestation · Radiance',earth:'Integration · Transformation · Assimilation',metal:'Precision · Refinement · Structure',water:'Flow · Circulation · Permeation'};
- for(const [phase,meaning]of Object.entries(meanings)){const text=a.container.querySelector('[data-kplex-blueprint-phase='+phase+'] .kplex-blueprint-meaning'),terms=[...text.querySelectorAll('tspan')];check(text.getAttribute('aria-label')===meaning&&terms.map(term=>term.textContent).join(' · ')===meaning,'Approved '+phase+' meanings are rendered, not only accessible labels');const clip=a.container.querySelector(text.parentElement.getAttribute('clip-path').slice(4,-1)+' rect'),bounds={x:clip.x.baseVal.value,y:clip.y.baseVal.value,width:clip.width.baseVal.value,height:clip.height.baseVal.value};check(terms.every(term=>{const ink=term.getBBox();return ink.x>=bounds.x-1&&ink.x+ink.width<=bounds.x+bounds.width+1&&ink.y>=bounds.y-1&&ink.y+ink.height<=bounds.y+bounds.height+1}),'Every '+phase+' term is visible inside its reserved header');}
+ const meanings={wood:'Growth · Connection',fire:'Visibility · Manifestation',earth:'Integration · Consolidation',metal:'Refinement · Regulation',water:'Permeation · Flow'};
+ for(const [phase,meaning]of Object.entries(meanings)){const text=a.container.querySelector('[data-kplex-blueprint-phase='+phase+'] .kplex-blueprint-meaning'),terms=[text];check(text.getAttribute('aria-label')===meaning&&text.textContent===meaning&&text.querySelectorAll('tspan').length===0,'Approved '+phase+' meanings are rendered, not only accessible labels');const clip=a.container.querySelector(text.parentElement.getAttribute('clip-path').slice(4,-1)+' rect'),bounds={x:clip.x.baseVal.value,y:clip.y.baseVal.value,width:clip.width.baseVal.value,height:clip.height.baseVal.value};check(terms.every(term=>{const ink=term.getBBox();return ink.x>=bounds.x-1&&ink.x+ink.width<=bounds.x+bounds.width+1&&ink.y>=bounds.y-1&&ink.y+ink.height<=bounds.y+bounds.height+1}),'Every '+phase+' term is visible inside its reserved header');}
  const generic={...preset};delete generic.interpretation;settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:generic});a.props.settings={...settings};a.props.paintSettings=a.props.settings;a.render();await wait();check([...a.container.querySelectorAll('.kplex-edge-visible')].every(line=>getComputedStyle(line).strokeDasharray!=='none'),'Generic Facets retains its configured dashed style');
  a.close();plugin.actionManager.dispose();style.remove();return true;})()`),true)}finally{await host.cleanup()}
 });
@@ -610,4 +610,17 @@ test('same-phase lines may pass behind cards while the actual card retains point
  check(document.elementFromPoint(covered.x,covered.y)?.closest('.kplex-thought')===b,'The visible card owns paint and pointer input over the covered line');
  check(path.getAttribute('d')===path.closest('.kplex-edge').querySelector('.kplex-edge-hit').getAttribute('d'),'Occlusion does not introduce separate hit geometry');
  a.close();plugin.actionManager.dispose();style.remove();return true;})()`),true)}finally{await host.cleanup()}
+});
+
+test('two phase qualities fit one line across locales and frame widths without moving note cards',async()=>{
+ const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
+ document.body.style.setProperty('--font-interface','-apple-system,BlinkMacSystemFont,sans-serif');
+ const preset={...M.FACET_TEMPLATES.wuxing,blueprint:true,regionWidth:200};settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:preset});
+ const a=await mount(M.wuXingViewDefinition),nodes=[...a.container.querySelectorAll('.kplex-thought')],positions=JSON.stringify(nodes.map(n=>n.style.cssText)),camera=a.container.querySelector('.kplex-camera').style.transform,saved=JSON.stringify(settings),before={...work};
+ for(const locale of ['en','de','es','fr','nl','ja','zh-TW','ru']){plugin.translator=M.createTranslator(locale);a.render();await wait();
+  for(const text of a.container.querySelectorAll('.kplex-blueprint-meaning')){const clip=a.container.querySelector(text.parentElement.getAttribute('clip-path').slice(4,-1)+' rect'),ink=text.getBBox();check(text.textContent.split(' · ').length===2&&!text.querySelector('tspan'),'Exactly two terms share one baseline in '+locale);check(ink.x>=clip.x.baseVal.value-1&&ink.x+ink.width<=clip.x.baseVal.value+clip.width.baseVal.value+1,'Both complete terms fit the narrow header in '+locale);check(Number.parseFloat(getComputedStyle(text).fontSize)===12,'Existing guide font size is retained');}
+ }
+ check(nodes.every((node,i)=>node===[...a.container.querySelectorAll('.kplex-thought')][i])&&JSON.stringify(nodes.map(n=>n.style.cssText))===positions&&a.container.querySelector('.kplex-camera').style.transform===camera,'One-line guide copy cannot move or remount note cards or camera');
+ check(JSON.stringify(settings)===saved&&work.body===before.body&&work.scans===before.scans&&work.acquisitions===before.acquisitions,'Copy and fitting do not write settings or acquire graph sources');a.close();plugin.actionManager.dispose();style.remove();return true;})()`),true)}finally{await host.cleanup()}
 });

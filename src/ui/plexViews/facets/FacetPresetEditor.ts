@@ -1,5 +1,6 @@
 /** Detached native preset draft. Categories retain stable IDs through rename/reorder; source
- * values, assignment and colors are explicit. Save commits one atomic entry through the host. */
+ * values, assignment and colors are explicit. Save commits one atomic entry through the host.
+ * Personal phases describe the current-note outline; generic presets retain category wording. */
 import {Setting, type App, type ButtonComponent} from "obsidian";
 import {StyleEditorModal, labelIconButton} from "../../StyleEditorModal";
 import {StyleColorControls} from "../../StyleColorControls";
@@ -113,7 +114,7 @@ export class FacetPresetEditor extends StyleEditorModal {
       new Setting(body).setName(t(label)).addToggle(input => input.setValue(this.draft[field] ?? false).onChange(value => {this.draft = {...this.draft, [field]: value};this.validate();}));
     if (facetIsWuXing(this.draft)) new Setting(body).setName(t("wuxing.blueprint.show")).setDesc(t("wuxing.blueprint.help")).addToggle(input => input
       .setValue(this.draft.blueprint ?? false).onChange(blueprint => {this.draft = {...this.draft, blueprint};this.validate();}));
-    new Setting(body).setName(t("facets.centerOutline")).addToggle(input => input
+    new Setting(body).setName(t(facetIsWuXing(this.draft) ? "wuxing.currentNoteOutline" : "facets.centerOutline")).addToggle(input => input
       .setValue(this.draft.centerOutline ?? false).onChange(centerOutline => {this.draft = {...this.draft, centerOutline};this.validate();}));
     if (!facetIsWuXing(this.draft)) renderFacetFlowSettings(body, /** Read current sibling layout/preset edits. */ () => this.draft,
       /** Guide settings stay inside the same atomic guarded preset Save. */ (preset, structural) => {

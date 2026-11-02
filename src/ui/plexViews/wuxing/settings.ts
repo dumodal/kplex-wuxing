@@ -1,4 +1,5 @@
-/** Facets UI contributions use the captured session and shared queued settings writer. */
+/** Facets UI contributions use the captured session and shared queued settings writer.
+ * Personal phase labels describe the current note while generic category wording stays intact. */
 import type {CanvasViewSettingsContribution} from "../settingsContributions";
 import type {CanvasViewContributionContext, CanvasViewChoice} from "../contributionContracts";
 import {facetLibrary} from "../../../core/plex/views/facets/configuration";
@@ -65,7 +66,7 @@ export const wuXingSettingsContribution: CanvasViewSettingsContribution = {
         {...address("hideGroups"), kind: "checkbox" as const, labelKey: "facets.hideGroups" as const},
         {...address("hideGroupBorders"), kind: "checkbox" as const, labelKey: "facets.hideGroupBorders" as const},
       ]),
-      {...address("centerOutline"), kind: "checkbox", labelKey: "facets.centerOutline"},
+      {...address("centerOutline"), kind: "checkbox", labelKey: facetIsWuXing(selected.preset) ? "wuxing.currentNoteOutline" : "facets.centerOutline"},
     ];
   },
 };

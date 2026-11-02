@@ -1,7 +1,7 @@
 /** One input-transparent reference layer. Existing category bounds and the invisible frame origin are
- * borrowed read-only. Three phase qualities fit the existing header; complete cycle symbols in
+ * borrowed read-only. Two phase qualities share one header baseline; complete cycle symbols in
  * the protected footer explain topology. These are presentation, never note layout or UI icons. */
-import {useId} from "react";
+import {useId, useLayoutEffect, useRef} from "react";
 import type {PlexDecoration} from "../../../core/plex/views/contracts";
 import type {FacetPreset} from "../../../core/plex/views/facets/contracts";
 import type {Translator} from "../../../lang";
@@ -21,9 +21,21 @@ function BlueprintText({label, x, y, className}: {label: string; x: number; y: n
       <tspan key={term} x={x} y={y + index * 14}>{term}</tspan>)}</text>;
 }
 
+/** Keep both phase qualities on one visible SVG baseline. A bounded local text measurement
+ * condenses only an overflowing label; card/frame sizes, font size and React state stay unchanged. */
+function BlueprintMeaning({label, x, y, width}: {label: string; x: number; y: number; width: number}) {
+  const ref = useRef<SVGTextElement>(null);
+  useLayoutEffect(/** Fit after text/width changes without scheduling another render or moving notes. */ () => {
+    const element = ref.current;if (!element) return;
+    element.removeAttribute("textLength");
+    if (element.getComputedTextLength() > width) element.setAttribute("textLength", String(width));
+  }, [label, width]);
+  return <text ref={ref} className="kplex-blueprint-meaning" aria-label={label} x={x} y={y} lengthAdjust="spacingAndGlyphs">{label}</text>;
+}
+
 /** Paint the focus-independent guide and its opaque footer below the complete phase frame.
- * Complete pentagon/pentagram symbols replace arrow samples. Three localized qualities stack
- * inside the existing header, retaining node packing. The footer stays above connectors. */
+ * Complete pentagon/pentagram symbols retain their stacked captions. Two localized phase qualities
+ * share one line inside the existing header, retaining packing. The footer stays above connectors. */
 export function WuXingBlueprint({decorations, presetId, preset, translate}: {
   decorations: readonly PlexDecoration[]; presetId: string; preset: FacetPreset; translate: Translator;
 }) {
@@ -46,7 +58,7 @@ export function WuXingBlueprint({decorations, presetId, preset, translate}: {
         <text className="kplex-blueprint-glyph" x={x + 25} y={y + 25} textAnchor="middle" dominantBaseline="central">{details.glyph}</text>
         <g clipPath={`url(#${clipId})`}>
           <text className="kplex-blueprint-name" x={x + 48} y={y + 21}>{canvasViewText(facetCategoryLabel(preset.categories[phase], phase), translate)}</text>
-          <BlueprintText className="kplex-blueprint-meaning" label={meaning} x={x + 48} y={y + 36} />
+          <BlueprintMeaning label={meaning} x={x + 48} y={y + 40} width={Math.max(1, bounds.width - 60)} />
         </g>
       </g>;
     })}
