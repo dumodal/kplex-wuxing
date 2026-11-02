@@ -245,12 +245,12 @@ test('Wu Xing reference meanings remain independent of focus and unavailable met
  settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing','blueprint']},{kind:'set',value:true});
  const original=JSON.stringify([...fieldCaches]),a=await mount(M.wuXingViewDefinition),b=await mount(M.wuXingViewDefinition);
  const region=(surface,id)=>surface.container.querySelector('[data-kplex-decoration='+CSS.escape(JSON.stringify(['facets','wuxing','category',id]))+']');
- const label=(surface,id)=>surface.container.querySelector('[data-kplex-blueprint-phase='+id+'] .kplex-blueprint-meaning')?.textContent;
- const phases=['wood','fire','earth','metal','water'],meaningSnapshot=JSON.stringify(phases.map(id=>label(a,id)));check(label(a,'wood')==='Growth · connections'&&label(a,'metal')==='Refinement · boundaries','Reference contains only fixed phase meanings');check(!a.container.querySelector('.kplex-blueprint-role'),'No relative-to-me guide labels');
+ const label=(surface,id)=>surface.container.querySelector('[data-kplex-blueprint-phase='+id+'] .kplex-blueprint-meaning')?.getAttribute('aria-label');
+ const phases=['wood','fire','earth','metal','water'],meaningSnapshot=JSON.stringify(phases.map(id=>label(a,id)));check(label(a,'wood')==='Growth · Emergence · Resilience'&&label(a,'metal')==='Precision · Refinement · Structure','Reference contains only fixed phase meanings');check(!a.container.querySelector('.kplex-blueprint-role'),'No relative-to-me guide labels');
  const bState=JSON.stringify(b.session.getState()),bCamera=b.container.querySelector('.kplex-camera').style.transform;
  a.props.activePath='B.md';a.render();await wait();
  check(JSON.stringify(phases.map(id=>label(a,id)))===meaningSnapshot,'Changing current note leaves phase meanings unchanged');
- check(label(b,'metal')==='Refinement · boundaries'&&JSON.stringify(b.session.getState())===bState&&b.container.querySelector('.kplex-camera').style.transform===bCamera,'Other canvas is independent');
+ check(label(b,'metal')==='Precision · Refinement · Structure'&&JSON.stringify(b.session.getState())===bState&&b.container.querySelector('.kplex-camera').style.transform===bCamera,'Other canvas is independent');
  const guides=[...a.container.querySelectorAll('[data-kplex-blueprint-kind]')];check(guides.length===10&&guides.every(row=>row.getAttribute('marker-end')),'Both cycles have decorative direction');
  check(a.container.querySelectorAll('[data-kplex-blueprint-kind=generating]').length===5&&a.container.querySelectorAll('[data-kplex-blueprint-kind=regulating]').length===5,'Cycle families stay distinct');
  const markers=[a,b].map(surface=>surface.container.querySelector('marker').id);check(markers[0]!==markers[1],'Per-canvas marker identities');
@@ -539,20 +539,26 @@ test('situated attention retains its DOM subtree and virtual camera through all 
  a.close();plugin.actionManager.dispose();check(events.size===0,'Canvas lifetimes retire');style.remove();return true;})()`),true)}finally{await host.cleanup()}
 });
 
-test('Wu Xing distinguishes the solid reference from solid note links without using dashes as phase meaning',async()=>{
+test('Wu Xing keeps note link styles and explains solid guide cycles with a pentagon and pentagram',async()=>{
  const host=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
  try{assert.equal(await host.evaluate(`(async()=>{${canvasSceneFixture}
  document.body.style.cssText='--background-primary:#ffffff;--background-secondary:#f5f5f5;--text-normal:#151515;--text-muted:#999999;--interactive-accent:#8758cc;--color-blue:#3399ff';
- const preset={...M.FACET_TEMPLATES.wuxing,blueprint:true};settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:preset});settings.baseLinkStyle={...settings.baseLinkStyle,strokeStyle:'dashed'};
+ const preset={...M.FACET_TEMPLATES.wuxing,blueprint:true};settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:preset});settings.baseLinkStyle={...settings.baseLinkStyle,strokeStyle:'dashed',strokeColor:'#999999ff'};
  const a=await mount(M.wuXingViewDefinition),guide=[...a.container.querySelectorAll('[data-kplex-blueprint-kind]')],notes=[...a.container.querySelectorAll('.kplex-edge-visible')],before={...work},saved=JSON.stringify(settings.baseLinkStyle);
  check(guide.length===10&&notes.length>0,'Both reference and real note links are present');
- check(guide.every(line=>getComputedStyle(line).strokeDasharray==='none'),'Both reference cycles use solid strokes');check(notes.every(line=>getComputedStyle(line).strokeDasharray==='none'),'Personal note links use solid strokes despite the saved dashed style');
+ check(guide.every(line=>getComputedStyle(line).strokeDasharray==='none'),'Both reference cycles use solid strokes');check(notes.every(line=>getComputedStyle(line).strokeDasharray==='7px, 7px'),'Personal note links retain the configured dashed style');
  check(guide.every(line=>getComputedStyle(line).stroke==='rgb(21, 21, 21)')&&notes.every(line=>getComputedStyle(line).stroke==='rgb(153, 153, 153)'),'Dark reference and lighter note links remain distinct');
- const group=a.container.querySelector('.kplex-edge'),hit=group.querySelector('.kplex-edge-hit');hit.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse',altKey:true,clientX:300,clientY:300}));await wait();await wait();
- check(group.classList.contains('is-highlighted')&&getComputedStyle(group.querySelector('.kplex-edge-visible')).stroke==='rgb(135, 88, 204)','Existing hover activation emphasizes the individual note edge');
+ const group=a.container.querySelector('.kplex-edge'),hit=group.querySelector('.kplex-edge-hit'),baseWidth=Number(notes[0].getAttribute('stroke-width'));hit.dispatchEvent(new PointerEvent('pointerover',{bubbles:true,pointerType:'mouse',altKey:true,clientX:300,clientY:300}));await wait();await wait();
+ check(group.classList.contains('is-highlighted')&&Number(group.querySelector('.kplex-edge-visible').getAttribute('stroke-width'))>baseWidth,'Existing hover activation emphasizes the individual note edge');
  hit.dispatchEvent(new PointerEvent('pointerout',{bubbles:true,pointerType:'mouse'}));await wait();document.body.style.setProperty('--text-normal','#eeeeee');document.body.style.setProperty('--text-muted','#888888');await wait();
  check(guide.every(line=>getComputedStyle(line).stroke==='rgb(238, 238, 238)'),'Reference contrast adapts to a dark theme');
  check(JSON.stringify(settings.baseLinkStyle)===saved,'Presentation does not rewrite the saved link style');check(work.body===before.body&&work.scans===before.scans&&work.acquisitions===before.acquisitions,'Line paint acquires no graph sources');
+ const footer=a.container.querySelector('.kplex-blueprint-legend'),ring=footer.querySelector('[data-kplex-blueprint-symbol=generating]'),star=footer.querySelector('[data-kplex-blueprint-symbol=regulating]');
+ check(ring?.tagName.toLowerCase()==='polygon'&&star?.tagName.toLowerCase()==='polygon'&&!footer.querySelector('line,[marker-end],[marker-start]'),'Guide uses complete cycle shapes instead of arrow samples');
+ const vertices=shape=>Array.from({length:shape.points.numberOfItems},(_,i)=>{const p=shape.points.getItem(i);return[p.x,p.y]}),rp=vertices(ring),sp=vertices(star),lengths=points=>points.map((p,i)=>Math.hypot(p[0]-points[(i+1)%points.length][0],p[1]-points[(i+1)%points.length][1]));
+ check(rp.length===5&&sp.length===5&&JSON.stringify([...rp].sort())===JSON.stringify([...sp].sort())&&Math.min(...lengths(sp))>Math.max(...lengths(rp)),'Pentagon follows adjacent vertices; pentagram connects the same five vertices across the interior');
+ const meanings={wood:'Growth · Emergence · Resilience',fire:'Visibility · Manifestation · Radiance',earth:'Integration · Transformation · Assimilation',metal:'Precision · Refinement · Structure',water:'Flow · Circulation · Permeation'};
+ for(const [phase,meaning]of Object.entries(meanings)){const text=a.container.querySelector('[data-kplex-blueprint-phase='+phase+'] .kplex-blueprint-meaning'),terms=[...text.querySelectorAll('tspan')];check(text.getAttribute('aria-label')===meaning&&terms.map(term=>term.textContent).join(' · ')===meaning,'Approved '+phase+' meanings are rendered, not only accessible labels');const clip=a.container.querySelector(text.parentElement.getAttribute('clip-path').slice(4,-1)+' rect'),bounds={x:clip.x.baseVal.value,y:clip.y.baseVal.value,width:clip.width.baseVal.value,height:clip.height.baseVal.value};check(terms.every(term=>{const ink=term.getBBox();return ink.x>=bounds.x-1&&ink.x+ink.width<=bounds.x+bounds.width+1&&ink.y>=bounds.y-1&&ink.y+ink.height<=bounds.y+bounds.height+1}),'Every '+phase+' term is visible inside its reserved header');}
  const generic={...preset};delete generic.interpretation;settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:generic});a.props.settings={...settings};a.props.paintSettings=a.props.settings;a.render();await wait();check([...a.container.querySelectorAll('.kplex-edge-visible')].every(line=>getComputedStyle(line).strokeDasharray!=='none'),'Generic Facets retains its configured dashed style');
  a.close();plugin.actionManager.dispose();style.remove();return true;})()`),true)}finally{await host.cleanup()}
 });

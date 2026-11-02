@@ -7,7 +7,7 @@ import {facetAreaId} from "../facets/projection";
 import {facetIsWuXing} from "../facets/presentation";
 
 export type WuXingPhase = typeof FACET_WUXING_CYCLE[number];
-/** Short personal activity cues, not subject categories or fixed attributes of an action. */
+/** Approved personal phase qualities, applicable beyond human actions; not fixed subject categories. */
 export const WUXING_BLUEPRINT_PHASES = {
   wood: {glyph: "木", meaning: "wuxing.blueprint.wood"},
   fire: {glyph: "火", meaning: "wuxing.blueprint.fire"},
