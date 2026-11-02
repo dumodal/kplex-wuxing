@@ -13,6 +13,14 @@ import {colorValueCss} from "../../../adapters/obsidian/colorPresentation";
 /** Shared phase vertices: adjacent traversal is the generating ring, two-step traversal its star. */
 const phaseVertices = ["0,-15", "14.27,-4.64", "8.82,12.14", "-8.82,12.14", "-14.27,-4.64"];
 
+/** Stack localized middle-dot-separated terms inside an existing guide footprint. The complete
+ * accessible label preserves reading order without measuring, resizing or moving any graph area. */
+function BlueprintText({label, x, y, className}: {label: string; x: number; y: number; className?: string}) {
+  return <text className={className} aria-label={label}>{label.split(" · ").map(
+    /** Each catalog term owns one visible baseline rather than stretching the guide frame. */ (term, index) =>
+      <tspan key={term} x={x} y={y + index * 14}>{term}</tspan>)}</text>;
+}
+
 /** Paint the focus-independent guide and its opaque footer below the complete phase frame.
  * Complete pentagon/pentagram symbols replace arrow samples. Three localized qualities stack
  * inside the existing header, retaining node packing. The footer stays above connectors. */
@@ -38,8 +46,7 @@ export function WuXingBlueprint({decorations, presetId, preset, translate}: {
         <text className="kplex-blueprint-glyph" x={x + 25} y={y + 25} textAnchor="middle" dominantBaseline="central">{details.glyph}</text>
         <g clipPath={`url(#${clipId})`}>
           <text className="kplex-blueprint-name" x={x + 48} y={y + 21}>{canvasViewText(facetCategoryLabel(preset.categories[phase], phase), translate)}</text>
-          <text className="kplex-blueprint-meaning" aria-label={meaning}>{meaning.split(" · ").map((term, index) =>
-            <tspan key={term} x={x + 48} y={y + 36 + index * 14}>{term}</tspan>)}</text>
+          <BlueprintText className="kplex-blueprint-meaning" label={meaning} x={x + 48} y={y + 36} />
         </g>
       </g>;
     })}
@@ -48,9 +55,9 @@ export function WuXingBlueprint({decorations, presetId, preset, translate}: {
       <rect data-kplex-guide-footer-bounds="true" x={-guide.legend.width / 2} y={-26} width={guide.legend.width} height={guide.legend.height} rx="12" />
       <text className="kplex-blueprint-title" textAnchor="middle" y={0}>{translate("wuxing.blueprint.title")}</text>
       <polygon className="kplex-blueprint-link is-generating" data-kplex-blueprint-symbol="generating" transform="translate(-149 22)" points={phaseVertices.join(" ")} />
-      <text x={-121} y={26}>{translate("wuxing.blueprint.generating")}</text>
+      <BlueprintText className="kplex-blueprint-cycle-caption is-generating" label={translate("wuxing.blueprint.generating")} x={-121} y={18} />
       <polygon className="kplex-blueprint-link is-regulating" data-kplex-blueprint-symbol="regulating" transform="translate(31 22)" points={[0, 2, 4, 1, 3].map(index => phaseVertices[index]).join(" ")} />
-      <text x={59} y={26}>{translate("wuxing.blueprint.regulating")}</text>
+      <BlueprintText className="kplex-blueprint-cycle-caption is-regulating" label={translate("wuxing.blueprint.regulating")} x={59} y={18} />
       <text className="kplex-blueprint-cue" textAnchor="middle" y={49}>{translate("wuxing.blueprint.cue")}</text>
     </g>
   </svg></>;
