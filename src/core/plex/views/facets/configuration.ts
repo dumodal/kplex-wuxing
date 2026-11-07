@@ -4,7 +4,8 @@ import type {PlexViewConfiguration, PlexViewConfigurationSchema} from "../config
 import {configurationRecord as record} from "../configurationValues";
 import {wuXingConfigurationSchema, wuXingConfiguration} from "../wuxing/configuration";
 import {FACET_TEMPLATES, FACET_TEMPLATE_ORDER} from "./templates";
-import {validFacetLibrary, validFacetOrder} from "./validation";
+import {isFacetPreset, validFacetLibrary, validFacetOrder} from "./validation";
+import {facetUsesWuXingBlueprint} from "./presentation";
 import type {FacetPreset, FacetPresetLibrary} from "./contracts";
 
 /** Convert exactly the old owned fields, retaining unknown values. Explicit aliases remain
@@ -40,6 +41,12 @@ export const facetsConfigurationSchema: PlexViewConfigurationSchema = {version: 
 export function facetLibrary(configuration?: PlexViewConfiguration): FacetPresetLibrary | null {
   if (configuration?.status === "unavailable") return null;
   const values = configuration?.values ?? {}, presets = values.presets ?? FACET_TEMPLATES, order = values.presetOrder ?? FACET_TEMPLATE_ORDER;
-  return validFacetLibrary(presets) && validFacetOrder(order) && record(presets)
-    ? {presets: {...FACET_TEMPLATES, ...presets}, order: [...order]} : null;
+  if (!validFacetLibrary(presets) || !validFacetOrder(order) || !record(presets)) return null;
+  // Earlier personal builds positioned focus and hid gates implicitly. Adopt the official
+  // per-preset flags only when absent; explicit false values and ordinary presets stay intact.
+  const inherited = {...FACET_TEMPLATES, ...presets};
+  return {presets: Object.fromEntries(Object.entries(inherited).map(([id, value]) => {
+    if (!isFacetPreset(value) || !facetUsesWuXingBlueprint(value)) return [id, value];
+    return [id, {...value, focusInCategory: value.focusInCategory ?? true, centerAnchoredLinks: value.centerAnchoredLinks ?? true}];
+  })), order: [...order]};
 }

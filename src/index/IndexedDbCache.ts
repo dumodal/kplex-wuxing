@@ -293,7 +293,7 @@ function safeDbName(vaultName: string): string {
     .map((value) => value.toString(16).padStart(2, "0"))
     .join("")
     .slice(0, 96);
-  return `k-plex-index-v1-${encoded || "vault"}`;
+  return `kplex-wuxing-index-v1-${encoded || "vault"}`;
 }
 
 /** Iterate container members without allocating another array proportional to a dense record. */
@@ -1424,12 +1424,11 @@ export class KplexIndexedDbCache {
 
   async clearLegacyLocalStorage(app: { saveLocalStorage(key: string, value: unknown): void }): Promise<void> {
     for (const key of [
-      "k-plex:index-body-cache:v1",
-      "k-plex:index-body-cache:v2",
-      "k-plex:index-cache:v1",
-      "k-plex:index-snapshot:v1",
-      "excalibrain:index-body-cache:v2",
-      "k-plex:mobile-diagnostics:v1",
+      "kplex-wuxing:index-body-cache:v1",
+      "kplex-wuxing:index-body-cache:v2",
+      "kplex-wuxing:index-cache:v1",
+      "kplex-wuxing:index-snapshot:v1",
+      "kplex-wuxing:mobile-diagnostics:v1",
     ]) {
       try { app.saveLocalStorage(key, null); } catch { /* migration only */ }
     }

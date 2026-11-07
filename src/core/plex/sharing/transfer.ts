@@ -58,10 +58,22 @@ export function applyPortableImport(plan: PreparedImport, state: SharingState): 
   for (const lens of additions) lenses.push({...lens, enabled: false});
   return {palette, lenses, ...(pkg.kind === "facets" ? {preset: pkg.preset} : {})};
 }
+/** Earlier personal builds kept local history/caption experiments alongside the preset.
+ * Preserve those stored values, but do not publish note-specific state as reusable configuration.
+ * Other unknown fields still reach the strict validator and remain explicit incompatibilities. */
+function portableFacetDefinition(preset: FacetPreset): FacetPreset {
+  if (typeof preset.blueprint !== "boolean") return preset;
+  const copy = {...preset};
+  for (const key of ["sizing", "showHistory", "relationshipCaptions", "arrangement"]) Reflect.deleteProperty(copy, key);
+  if (copy.diagnostics) {
+    const diagnostics = {...copy.diagnostics};Reflect.deleteProperty(diagnostics, "dock");copy.diagnostics = diagnostics;
+  }
+  return copy;
+}
 /** Normalize code-owned labels/help through host-supplied literals, never export translation keys or live activation. */
 export function exportFacetPackage(id: string, preset: FacetPreset, text: Readonly<{name: string; labels: Readonly<Record<string, string>>; helpMarkdown: string; locale?: string}>,
   palette: readonly SemanticColorPair[], lenses: readonly InstalledSharedLens[], selectedLensIds: readonly string[], aiContext: string, allowPrivate = false): PortablePackage {
-  const {nameKey: _nameKey, categories, ...rest} = preset;
+  const {nameKey: _nameKey, categories, ...rest} = portableFacetDefinition(preset);
   const value = {format: "kplex-preset", version: 1, kind: "facets", id, aiContext, preset: {...rest, name: text.name,
     categories: Object.fromEntries(Object.entries(categories).map(/** Export the effective label while keeping stable category identity. */ ([key, category]) => {
       const {labelKey: _labelKey, ...data} = category;return [key, {...data, label: text.labels[key] ?? data.label}];

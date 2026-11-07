@@ -1,0 +1,109 @@
+{
+  "format": "kplex-preset",
+  "version": 1,
+  "kind": "facets",
+  "id": "wuxing-local",
+  "preset": {
+    "version": 1,
+    "name": "Wu Xing · Local design",
+    "source": "property",
+    "field": "status",
+    "categories": {
+      "wood": {
+        "label": "Wood",
+        "color": "#2abb56ff",
+        "values": [
+          "🟢",
+          "🟢️",
+          "wood"
+        ],
+        "assignment": "🟢"
+      },
+      "fire": {
+        "label": "Fire",
+        "color": "#f95148ff",
+        "values": [
+          "🔴",
+          "🔴️",
+          "fire"
+        ],
+        "assignment": "🔴"
+      },
+      "earth": {
+        "label": "Earth",
+        "color": "#80716bff",
+        "values": [
+          "🟤",
+          "🟤️",
+          "earth"
+        ],
+        "assignment": "🟤"
+      },
+      "metal": {
+        "label": "Metal",
+        "color": "#ffde24ff",
+        "values": [
+          "🟡",
+          "🟡️",
+          "metal"
+        ],
+        "assignment": "🟡"
+      },
+      "water": {
+        "label": "Water",
+        "color": "#51adfbff",
+        "values": [
+          "🔵",
+          "🔵️",
+          "water"
+        ],
+        "assignment": "🔵"
+      }
+    },
+    "order": [
+      "wood",
+      "fire",
+      "earth",
+      "metal",
+      "water"
+    ],
+    "start": "wood",
+    "spacing": 56,
+    "regionWidth": 240,
+    "regionHeight": 340,
+    "guides": false,
+    "tints": true,
+    "conflictingColor": {
+      "kind": "theme",
+      "variable": "--color-orange"
+    },
+    "unassignedColor": {
+      "kind": "theme",
+      "variable": "--background-secondary"
+    },
+    "interpretation": "wuxing",
+    "relativeLabels": false,
+    "regulatingGuides": false,
+    "layout": "circular",
+    "flow": {
+      "caption": "",
+      "captionPosition": "middle",
+      "style": "none"
+    },
+    "diagnostics": {
+      "showEmpty": true,
+      "side": "bottom",
+      "combined": true
+    },
+    "flowOverrides": [],
+    "hideGroups": true,
+    "hideGroupBorders": true,
+    "centerOutline": true,
+    "blueprint": true,
+    "focusInCategory": true,
+    "centerAnchoredLinks": true,
+    "helpMarkdown": "# Wu Xing local design\n\nFive regions orient exploration around the active note. The optional guide is a reference model; actual note links retain their recorded meanings. This preset requires the Wu Xing integration fork.\n",
+    "helpSourceLocale": "en"
+  },
+  "aiContext": "Personal five-phase reference layer on the official Facets layout and straight node-center connections."
+}

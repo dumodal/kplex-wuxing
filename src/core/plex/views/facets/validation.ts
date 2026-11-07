@@ -37,6 +37,7 @@ export function isFacetPreset(value: unknown): value is FacetPreset {
   if (value.interpretation !== undefined && value.interpretation !== "wuxing"
     || value.relativeLabels !== undefined && typeof value.relativeLabels !== "boolean"
     || value.regulatingGuides !== undefined && typeof value.regulatingGuides !== "boolean") return false;
+  if (["blueprint", "centerOutline", "hideGroups", "hideGroupBorders"].some(field => value[field] !== undefined && typeof value[field] !== "boolean")) return false;
   if (value.layout !== undefined && !isFacetLayout(value.layout)
     || value.focusAnchor !== undefined && (typeof value.focusAnchor !== "string" || !["top", "bottom", "left", "right"].includes(value.focusAnchor))
     || value.reverse !== undefined && typeof value.reverse !== "boolean") return false;

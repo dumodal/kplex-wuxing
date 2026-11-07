@@ -7,6 +7,21 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const frenchTranslations = {
+  "facets.hideGroups": "Masquer les libellés et les compteurs des groupes",
+  "facets.hideGroupBorders": "Masquer les cadres des groupes",
+  "facets.centerOutline": "Utiliser la couleur de catégorie pour le contour central",
+  "wuxing.currentNoteOutline": "Utiliser la couleur de la phase pour le contour de la note actuelle",
+  "wuxing.blueprint.show": "Afficher le guide des cinq phases",
+  "wuxing.blueprint.title": "Guide des cinq phases",
+  "wuxing.blueprint.generating": "Engendre · Fait naître",
+  "wuxing.blueprint.regulating": "Régule · Met au défi",
+  "wuxing.blueprint.cue": "Guide du modèle · liens de notes distincts",
+  "wuxing.blueprint.wood": "Croissance · Connexion",
+  "wuxing.blueprint.fire": "Visibilité · Manifestation",
+  "wuxing.blueprint.earth": "Intégration · Consolidation",
+  "wuxing.blueprint.metal": "Affinage · Régulation",
+  "wuxing.blueprint.water": "Imprégnation · Flux",
+  "wuxing.blueprint.help": "Un seul guide avec les deux cycles, le sens des phases et les rôles relatifs. Le masquer conserve la position des notes.",
   "fileImport.folderLimits": "Importez des dossiers contenant au plus {entries} entrées et {depth} niveaux. Rien n’a été importé.",
   "fileImport.creatingFolder": "Création du dossier {path}…",
   "fileImport.copying": "Copie de {name} ({current}/{total})…",

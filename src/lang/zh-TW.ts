@@ -7,6 +7,21 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const traditionalChineseTranslations = {
+  "facets.hideGroups": "隱藏群組標籤與數量",
+  "facets.hideGroupBorders": "隱藏群組框線",
+  "facets.centerOutline": "以分類顏色描繪中心節點外框",
+  "wuxing.currentNoteOutline": "以五行顏色描繪目前筆記外框",
+  "wuxing.blueprint.show": "顯示五行指南",
+  "wuxing.blueprint.title": "五行指南",
+  "wuxing.blueprint.generating": "相生 · 衍生",
+  "wuxing.blueprint.regulating": "相剋 · 挑戰",
+  "wuxing.blueprint.cue": "指南描述五行關係，筆記連線另行顯示",
+  "wuxing.blueprint.wood": "生長 · 連接",
+  "wuxing.blueprint.fire": "可見性 · 顯現",
+  "wuxing.blueprint.earth": "整合 · 鞏固",
+  "wuxing.blueprint.metal": "提煉 · 調節",
+  "wuxing.blueprint.water": "滲透 · 流動",
+  "wuxing.blueprint.help": "同一張指南包含生剋關係、五行含義與相對角色；隱藏時不改變筆記位置。",
   "fileImport.folderLimits": "資料夾最多可含 {entries} 個項目及 {depth} 層。本次未匯入任何內容。",
   "fileImport.creatingFolder": "正在建立資料夾 {path}…",
   "fileImport.copying": "正在複製 {name}（{current}/{total}）…",

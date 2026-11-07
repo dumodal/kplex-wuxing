@@ -7,6 +7,21 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const germanTranslations = {
+  "facets.hideGroups": "Gruppenbeschriftungen und Anzahlen ausblenden",
+  "facets.hideGroupBorders": "Gruppenrahmen ausblenden",
+  "facets.centerOutline": "Kategoriefarbe für den Rahmen der Mitte verwenden",
+  "wuxing.currentNoteOutline": "Phasenfarbe für den Rahmen der aktuellen Notiz verwenden",
+  "wuxing.blueprint.show": "Fünf-Phasen-Leitfaden anzeigen",
+  "wuxing.blueprint.title": "Fünf-Phasen-Leitfaden",
+  "wuxing.blueprint.generating": "Erzeugt · Bringt hervor",
+  "wuxing.blueprint.regulating": "Reguliert · Fordert heraus",
+  "wuxing.blueprint.cue": "Modellhilfe · Notizverbindungen bleiben getrennt",
+  "wuxing.blueprint.wood": "Wachstum · Verbindung",
+  "wuxing.blueprint.fire": "Sichtbarkeit · Manifestation",
+  "wuxing.blueprint.earth": "Integration · Konsolidierung",
+  "wuxing.blueprint.metal": "Verfeinerung · Regulierung",
+  "wuxing.blueprint.water": "Durchdringung · Fluss",
+  "wuxing.blueprint.help": "Eine Referenzebene für beide Zyklen, Phasenbedeutungen und relative Rollen. Ausblenden ändert keine Notizpositionen.",
   "fileImport.folderLimits": "Ordner mit höchstens {entries} Einträgen und {depth} Ebenen importieren. Nichts wurde importiert.",
   "fileImport.creatingFolder": "Ordner {path} wird erstellt…",
   "fileImport.copying": "{name} wird kopiert ({current}/{total})…",

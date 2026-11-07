@@ -4165,3 +4165,32 @@ button.kplex-sidecar-unfold-plex:focus-visible,
   .kplex-form-options .setting-item:not(.kplex-form-field) > .setting-item-info,
   .kplex-form-options .setting-item:not(.kplex-form-field) > .setting-item-control { flex-basis: 100%; }
 }
+
+/* Visibility retains official measured areas, drop targets and header spacing. */
+.kplex-view-region.is-group-hidden > text,
+.kplex-zone-panel.is-group-hidden > .kplex-zone-tools { visibility: hidden; }
+.kplex-view-region.is-border-hidden > rect,
+.kplex-view-region.is-border-hidden > path { display: none; }
+
+/* The center outline carries its category color; retain the badge's measured reserve. */
+.kplex-thought[data-kplex-category-outline] > .kplex-node-badge { visibility: hidden; }
+
+/* One phase reference layer; paint never becomes a node, drop target or layout owner. */
+.kplex-thought[data-kplex-hide-category-badge] > .kplex-node-badge { visibility: hidden; }
+.kplex-wuxing-blueprint { font-family: var(--font-interface); color: var(--text-muted); }
+.kplex-wuxing-blueprint text { fill: var(--text-muted); font-family: var(--font-interface); }
+.kplex-wuxing-blueprint marker path { fill: var(--background-primary); stroke: var(--text-normal); stroke-width: 1; }
+/* Stroke contrast identifies the reference layer; cycle topology and labels identify meaning. */
+.kplex-blueprint-link { stroke: var(--text-normal); stroke-width: 1.5; fill: none; opacity: 0.9; stroke-dasharray: none; }
+.kplex-blueprint-phase circle { fill: var(--background-primary); stroke-width: 2; }
+.kplex-blueprint-glyph { font-size: 15px; }
+.kplex-blueprint-name { font-size: 14px; font-weight: 500; }
+.kplex-blueprint-meaning, .kplex-blueprint-legend text { font-size: 12px; }
+.kplex-blueprint-legend .kplex-blueprint-title { font-size: 13px; font-weight: 500; }
+.kplex-blueprint-legend .kplex-blueprint-cue { font-size: 11px; }
+
+/* One guide switch adds soft phase tints; ordinary Facets region paint is unchanged. */
+.kplex-view-decorations.is-soft-tinted .kplex-view-region > rect,
+.kplex-view-decorations.is-soft-tinted .kplex-view-region > path { fill-opacity: 0.12; stroke-opacity: 0.4; }
+.kplex-wuxing-guide-footer { z-index: 6; }
+.kplex-blueprint-legend > rect { fill: var(--background-primary); fill-opacity: 1; stroke: var(--background-modifier-border); stroke-width: 1; }

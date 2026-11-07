@@ -19,7 +19,7 @@ import {compileFacetRules} from "../../../core/plex/views/facets/rules";
 import {renderDiagnosticSettings} from "./diagnosticSettings";
 import {renderFacetLayoutSettings} from "./layoutSettings";
 import {renderAreaSizeSettings} from "./areaSizeSettings";
-import {FACET_DIAGNOSTIC_ORDER} from "../../../core/plex/views/facets/presentation";
+import {facetIsWuXing, facetUsesWuXingBlueprint, facetShowsDiagnostics, FACET_DIAGNOSTIC_ORDER} from "../../../core/plex/views/facets/presentation";
 import {renderFacetFlowSettings} from "./flowSettings";
 import {renderPresetHelpSettings} from "./helpSettings";
 import type {ClipboardSession} from "../../../application/ClipboardSession";
@@ -109,23 +109,31 @@ export class FacetPresetEditor extends StyleEditorModal {
         .setValue(this.draft[field] === true).onChange(/** Save/Cancel/stale-entry guards are shared with every other preset field. */ value => {
           if (this.canEdit() && this.owner()) {this.draft = {...this.draft, [field]: value};this.validate();}
         }));
+    if (facetIsWuXing(this.draft)) new Setting(body).setName(t("wuxing.blueprint.show")).setDesc(t("wuxing.blueprint.help")).addToggle(input => input
+      .setValue(this.draft.blueprint === true).onChange(blueprint => {
+        if (this.canEdit() && this.owner()) {this.draft = {...this.draft, blueprint};this.render();}
+      }));
+    if (facetUsesWuXingBlueprint(this.draft)) new Setting(body).setName(t("wuxing.currentNoteOutline")).addToggle(input => input
+      .setValue(this.draft.centerOutline === true).onChange(centerOutline => {
+        if (this.canEdit() && this.owner()) {this.draft = {...this.draft, centerOutline};this.validate();}
+      }));
     new Setting(body).setName(t("facets.start")).addDropdown(input => input.addOptions(Object.fromEntries(this.draft.order.map(id => [id, canvasViewText(facetCategoryLabel(this.draft.categories[id], id), t)])))
       .setValue(this.draft.start).onChange(start => {this.draft = {...this.draft, start};this.render();}));
     for (const [field, label, minimum, maximum, step] of [["spacing", "wuxing.spacing", 24, 200, 8],
       ["regionWidth", "wuxing.width", 200, 640, 20], ["regionHeight", "wuxing.height", 160, 600, 20]] as const)
       numberSlider(new Setting(body).setName(t(label)), {label: t(label), value: this.draft[field], min: minimum, max: maximum, step,
         onChange: value => {if (this.canEdit() && this.owner()) {this.draft = {...this.draft, [field]: value};this.validate();}}});
-    for (const [field, label] of [["guides", "wuxing.guides"], ["tints", "wuxing.tints"]] as const)
+    if (!facetUsesWuXingBlueprint(this.draft)) for (const [field, label] of [["guides", "wuxing.guides"], ["tints", "wuxing.tints"]] as const)
       new Setting(body).setName(t(label)).addToggle(input => input.setValue(this.draft[field]).onChange(value => {this.draft = {...this.draft, [field]: value};this.validate();}));
-    renderFacetFlowSettings(body, /** Read current sibling layout/preset edits. */ () => this.draft,
+    if (!facetUsesWuXingBlueprint(this.draft)) renderFacetFlowSettings(body, /** Read current sibling layout/preset edits. */ () => this.draft,
       /** Guide settings stay inside the same atomic guarded preset Save. */ (preset, structural) => {
         if (!this.canEdit()) return;this.draft = preset;if (structural) this.render();else this.validate();
       }, t, flowOpen);
-    renderDiagnosticSettings(body, /** Read current sibling edits before merging one dock control. */ () => this.draft.diagnostics, t, /** Retain all dock edits in this exact guarded native draft. */ (diagnostics, structural) => {
+    if (facetShowsDiagnostics(this.draft)) renderDiagnosticSettings(body, /** Read current sibling edits before merging one dock control. */ () => this.draft.diagnostics, t, /** Retain all dock edits in this exact guarded native draft. */ (diagnostics, structural) => {
       if (!this.canEdit()) return;
       this.draft = {...this.draft, diagnostics};if (structural) this.render();else this.validate();
     });
-    if (facetHasWuXingPhases(this.draft)) {
+    if (facetHasWuXingPhases(this.draft) && !facetUsesWuXingBlueprint(this.draft)) {
       new Setting(body).setName(t("facets.relativeLabels")).setDesc(t("facets.wuxingHelp")).addToggle(input => input
         .setValue(this.draft.interpretation === "wuxing" && this.draft.relativeLabels === true).onChange(relativeLabels => {
           this.draft = {...this.draft, interpretation: "wuxing", relativeLabels};this.validate();
@@ -142,9 +150,9 @@ export class FacetPresetEditor extends StyleEditorModal {
       this.draft = {...this.draft, order: [...this.draft.order, id], categories: {...this.draft.categories,
         [id]: {label: t("facets.newCategory"), values: [], color: {kind: "theme", variable: "--color-cyan"}}}};this.render();
     }));
-    for (const [field, label] of [["conflictingColor", "facets.conflicting"], ["unassignedColor", "facets.unassigned"]] as const)
+    if (facetShowsDiagnostics(this.draft)) for (const [field, label] of [["conflictingColor", "facets.conflicting"], ["unassignedColor", "facets.unassigned"]] as const)
       this.colors.add(body, t(label), {kind: "node", field: "backgroundColor"}, () => this.draft[field], color => {if (color !== undefined) this.draft = {...this.draft, [field]: color};this.validate();}, () => undefined);
-    for (const id of ["combined", ...FACET_DIAGNOSTIC_ORDER] as const) {
+    if (facetShowsDiagnostics(this.draft)) for (const id of ["combined", ...FACET_DIAGNOSTIC_ORDER] as const) {
       body.createEl("h4", {text: t(id === "combined" ? "facets.diagnostics" : id === "unresolved" ? "facets.cannotClassify" : `facets.${id}`)});
       renderAreaSizeSettings(body, "diagnostics", id, /** Exact values read the current detached draft. */ () => this.draft,
         /** Save remains the existing atomic preset operation. */ preset => {if (this.canEdit()) {this.draft = preset;this.validate();}}, t);

@@ -9,6 +9,21 @@
  * parameters remain unquoted regardless of their names. Locale catalogs inherit this classification.
  */
 export const englishCatalog = {
+  "facets.hideGroups": {"message": "Hide group labels and counts", "context": "Paint-only category visibility; official layout remains unchanged.", "params": []},
+  "facets.hideGroupBorders": {"message": "Hide group frames", "context": "Paint-only category visibility; official layout remains unchanged.", "params": []},
+  "facets.centerOutline": {"message": "Use category color for center outline", "context": "Optional neutral center-card fill with category-colored border and offset shadow.", "params": []},
+  "wuxing.currentNoteOutline": {"message": "Use phase color for current note outline", "context": "Personal five-phase view outline for the currently selected note, which sits in its phase rather than an abstract center.", "params": []},
+  "wuxing.blueprint.show": {"message": "Show five-phase guide", "context": "Unified personal five-phase background guide; activity cues are contextual, not fixed subject categories.", "params": []},
+  "wuxing.blueprint.title": {"message": "Five-phase guide", "context": "Unified personal five-phase background guide; activity cues are contextual, not fixed subject categories.", "params": []},
+  "wuxing.blueprint.generating": {"message": "Generates · Gives Rise To", "context": "Unified personal five-phase background guide; activity cues are contextual, not fixed subject categories.", "params": []},
+  "wuxing.blueprint.regulating": {"message": "Regulates · Challenges", "context": "Unified personal five-phase background guide; activity cues are contextual, not fixed subject categories.", "params": []},
+  "wuxing.blueprint.cue": {"message": "Model guide · note links stay separate", "context": "Unified personal five-phase background guide; activity cues are contextual, not fixed subject categories.", "params": []},
+  "wuxing.blueprint.wood": {"message": "Growth · Connection", "context": "Two personal phase qualities on one line; preserve the approved term order and middle-dot separator.", "params": []},
+  "wuxing.blueprint.fire": {"message": "Visibility · Manifestation", "context": "Two personal phase qualities on one line; preserve the approved term order and middle-dot separator.", "params": []},
+  "wuxing.blueprint.earth": {"message": "Integration · Consolidation", "context": "Two personal phase qualities on one line; preserve the approved term order and middle-dot separator.", "params": []},
+  "wuxing.blueprint.metal": {"message": "Refinement · Regulation", "context": "Two personal phase qualities on one line; preserve the approved term order and middle-dot separator.", "params": []},
+  "wuxing.blueprint.water": {"message": "Permeation · Flow", "context": "Two personal phase qualities on one line; preserve the approved term order and middle-dot separator.", "params": []},
+  "wuxing.blueprint.help": {"message": "One reference layer for both cycles, phase meanings and relative roles. Hiding it keeps note positions unchanged.", "context": "Explanation for the unified five-phase background guide.", "params": []},
   "fileImport.folderLimits": {"message":"Import folders with at most {entries} entries and {depth} levels. Nothing was imported.","context":"Import progress or missing periodic-pin action.","params":["entries","depth"],"referenceParams":[]},
   "fileImport.creatingFolder": {"message":"Creating folder {path}…","context":"Import progress or missing periodic-pin action.","params":["path"],"referenceParams":["path"]},
   "fileImport.copying": {"message":"Copying {name} ({current}/{total})…","context":"Import progress or missing periodic-pin action.","params":["name","current","total"],"referenceParams":["name"]},

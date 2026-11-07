@@ -129,3 +129,32 @@ test('portable package limits do not bypass the original stored-library bound',(
  assert.equal(M.validatePortablePackage({...pkg,preset:huge}).status,'valid','Package can be parsed for a useful preview');
  assert.throws(()=>M.editViewConfigurationAt(d,stored,{field:'presets',path:['too-large']},{kind:'set',value:huge}),/bound|configuration/i,'Actual queue admission still preserves16K cap');
 });
+
+
+test('personal guide preset exports imports and retains the official independent straight-link flags',()=>{
+ const preset={...M.FACET_TEMPLATES.wuxing,blueprint:true,centerOutline:true,hideGroups:true,hideGroupBorders:true,focusInCategory:true,centerAnchoredLinks:true};
+ const pkg=make('personal',preset);
+ assert.equal(M.validatePortablePackage(pkg).status,'valid');
+ const installed=M.applyPortableImport(M.preparePortableImport(pkg,choices('personal'),state()),state());
+ for(const field of ['blueprint','centerOutline','hideGroups','hideGroupBorders','focusInCategory','centerAnchoredLinks'])assert.equal(installed.preset[field],true);
+ const oldLocal={...preset,sizing:'content',arrangement:'scatter',showHistory:false,relationshipCaptions:{'private-note-pair':'private caption'},diagnostics:{combined:true,dock:true}};
+ const shared=make('old-local',oldLocal);
+ assert.equal(M.validatePortablePackage(shared).status,'valid');
+ assert.equal(shared.preset.relationshipCaptions,undefined);assert.equal(shared.preset.diagnostics.dock,undefined);
+ assert.equal(oldLocal.relationshipCaptions['private-note-pair'],'private caption','Export leaves stored note-specific state intact');
+ assert.throws(()=>make('unknown-future',{...oldLocal,unknownFutureField:true}),'Unknown future fields stay explicitly unsupported');
+ const provided=JSON.parse(readFileSync('presets/facets/wuxing-local.json','utf8'));
+ assert.equal(M.validatePortablePackage(provided).status,'valid');
+ assert.deepEqual(M.packagePrivacy(provided),[]);
+ const legacy={...M.FACET_TEMPLATES.wuxing,blueprint:true,unknownPersonalField:{retained:true}};
+ const library=M.facetLibrary({status:'available',values:{presets:{personal:legacy},presetOrder:['personal']}});
+ assert.equal(library.presets.personal.focusInCategory,true);assert.equal(library.presets.personal.centerAnchoredLinks,true);
+ assert.deepEqual(library.presets.personal.unknownPersonalField,{retained:true});
+ assert.equal(legacy.focusInCategory,undefined,'Read normalization must not modify stored data');
+ const explicit=M.facetLibrary({status:'available',values:{presets:{personal:{...legacy,focusInCategory:false,centerAnchoredLinks:false}},presetOrder:['personal']}});
+ assert.equal(explicit.presets.personal.focusInCategory,false);assert.equal(explicit.presets.personal.centerAnchoredLinks,false);
+ const standard=M.facetLibrary({status:'available',values:{}}).presets.wuxing;
+ assert.equal(standard.focusInCategory,undefined);assert.equal(standard.centerAnchoredLinks,undefined);
+ const unrelated=M.facetLibrary({status:'available',values:{presets:{custom:{...M.FACET_TEMPLATES['map-roles'],blueprint:false}},presetOrder:['custom']}}).presets.custom;
+ assert.equal(unrelated.focusInCategory,undefined);assert.equal(unrelated.centerAnchoredLinks,undefined);
+});

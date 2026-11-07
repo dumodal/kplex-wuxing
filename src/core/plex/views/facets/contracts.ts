@@ -23,6 +23,8 @@ export type FacetPreset = Readonly<{version: 1; name: string; nameKey?: string; 
   /** Optional model reading; ordered phase identities remain separate from geometry/order. */
   interpretation?: "wuxing"; relativeLabels?: boolean; regulatingGuides?: boolean;
   diagnostics?: FacetDiagnostics;
+  /** Optional personal reference-layer and card-paint controls; official routing stays independent. */
+  blueprint?: boolean; centerOutline?: boolean; hideGroups?: boolean; hideGroupBorders?: boolean;
   layout?: FacetLayout; focusAnchor?: FacetFocusAnchor; reverse?: boolean;
   /** Per-preset presentation only. Absence preserves the historical central focus and gates. */
   focusInCategory?: boolean; centerAnchoredLinks?: boolean;

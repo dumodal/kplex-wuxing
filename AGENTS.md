@@ -16,7 +16,7 @@ are mandatory; reusing a bare input without its shared field/layout is insuffici
 
 Develop **K-Plex (Knowledge Plex)** as a dedicated React application inside Obsidian. Preserve relationship semantics, ontology and graph/node/link styling when migrating data from its predecessor, [ExcaliBrain](https://github.com/zsviczian/excalibrain). K-Plex is an independent, standalone solution with additional features and no runtime dependency on the legacy plugin, Excalidraw or Dataview.
 
-The plugin ID is **`k-plex`** so K-Plex can coexist with legacy ExcaliBrain during migration.
+This is the Wu Xing integration fork based on official K-Plex 0.4.2. Its plugin ID is **`kplex-wuxing`**, view IDs are `kplex-wuxing-react-view` / `kplex-wuxing-sidepanel-view`, and its cache namespace is isolated from `k-plex`. Preserve these identities and official center-anchored straight-link routing. Personal blueprints are opt-in preset presentation. Source preparation does not authorize installing into a vault or changing live settings.
 
 ## Build contract
 

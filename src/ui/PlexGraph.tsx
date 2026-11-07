@@ -113,6 +113,11 @@ import {occurrenceKey, edgeOccurrence, edgePhysicalOccurrence, semanticSceneEdge
 import {createPlexSectionViewContext} from "./plexViews/sections";
 import {viewLabel} from "./plexViews/labels";
 import {ViewDecorations, viewDecorationCounts} from "./plexViews/ViewDecorations";
+import {facetLibrary} from "../core/plex/views/facets/configuration";
+import {facetState, resolveFacetPreset} from "../core/plex/views/facets/state";
+import {facetUsesWuXingBlueprint} from "../core/plex/views/facets/presentation";
+import {WuXingBlueprint} from "./plexViews/wuxing/WuXingBlueprint";
+import {wuXingBlueprint} from "../core/plex/views/wuxing/blueprint";
 import {createLegacyPropertyProvider} from "../adapters/obsidian/predicateContracts";
 import { DropAreaPreview } from "./components/DropAreaPreview";
 import { DoubleTapGesture } from "./components/DoubleTapGesture";
@@ -1151,7 +1156,14 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
   }, [areaSettingsMode, hasEditableAreas, onAreaSettingsModeChange]);
   const isEditorOccurrence = (node: PositionedNode): boolean => occurrenceEditorPolicy ? occurrenceKey(node) === boundEditorBinding?.occurrenceId : scene.editorOccurrence
     ? occurrenceKey(node) === scene.editorOccurrence : Boolean(classic && node.role === "center");
-  const framingOccurrence = (): PositionedNode | undefined => scene.frameOccurrence
+  const visibilityLibrary = viewDefinition.id === "wuxing" ? facetLibrary(readViewConfiguration(viewDefinition, settings.canvasViewSettings)) : null;
+  const visibilitySelection = visibilityLibrary ? resolveFacetPreset(visibilityLibrary, facetState(viewSession?.state)?.preset ?? "wuxing") : null;
+  const visibilityPreset = visibilitySelection?.preset ?? null;
+  const personalWuXing = !!visibilityPreset && facetUsesWuXingBlueprint(visibilityPreset);
+  const showBlueprint = personalWuXing && visibilityPreset.blueprint === true;
+  const blueprintLegendBounds = showBlueprint && scene.decorations && visibilityPreset
+    ? wuXingBlueprint(scene.decorations, visibilitySelection?.id ?? "wuxing", visibilityPreset)?.legend : undefined;
+  const framingOccurrence = (): PositionedNode | undefined => personalWuXing ? undefined : scene.frameOccurrence
     ? scene.nodes.find(node => occurrenceKey(node) === scene.frameOccurrence) : scene.nodes.find(node => node.role === "center");
   /** Resolve the current admitted root/entry, never a global active canvas or independent attention target. */
   const navigationNode = (): PositionedNode | undefined => scene.nodes.find(node => occurrenceKey(node) === (scene.projection?.root ?? scene.entryOccurrence))
@@ -2082,6 +2094,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         const bounds = decoration.caption?.bounds;if (bounds) includeRect(bounds.x - 4, bounds.y - 4, bounds.x + bounds.width + 4, bounds.y + bounds.height + 4);
       }
     }
+    if (blueprintLegendBounds) includeRect(blueprintLegendBounds.x - 12, blueprintLegendBounds.y - 12,
+      blueprintLegendBounds.x + blueprintLegendBounds.width + 12, blueprintLegendBounds.y + blueprintLegendBounds.height + 12);
     for (const badge of scene.badgeBounds ?? []) includeRect(badge.bounds.x - 4, badge.bounds.y - 4, badge.bounds.x + badge.bounds.width + 4, badge.bounds.y + badge.bounds.height + 4);
 
     if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
@@ -5454,6 +5468,8 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
         || (finding ? findNodePaths.has(baseNode.page.path) : interaction.nodePaths.has(baseNode.page.path)))}
       dimmed={!connectDrag && !finding && hover !== null && !interaction.nodePaths.has(baseNode.page.path)}
       highlightedGates={highlightedGates}
+      centerOutline={visibilityPreset?.centerOutline === true}
+      hideCategoryBadge={personalWuXing}
       hideGates={scene.projection?.connectionPresentation === "node-centers"}
       dragging={isDraggedNode(baseNode)}
       flair={activeNodeFlair === baseNode.page.path}
@@ -5570,7 +5586,7 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
     const displayedNodes = layout.nodes.filter((node) => !isDraggedNode(node));
     return <div
       key={zone}
-      className={`kplex-zone-panel kplex-zone-${zone}`}
+      className={`kplex-zone-panel kplex-zone-${zone}${(personalWuXing || visibilityPreset?.hideGroups) && zone.includes('"category"') ? " is-group-hidden" : ""}`}
       style={{ left: panel.left, top: panel.top, width: panel.width, height: panel.height }}
     >
       <div className="kplex-zone-tools" onPointerDown={(event: PointerEvent<HTMLDivElement>) => event.stopPropagation()}>
@@ -5940,8 +5956,9 @@ export function PlexGraph({ viewDefinition = classicViewDefinition, viewSession,
           void plugin.actionManager.dispatch({id: "editor.collapse", source: "toolbar", surfaceId: actionSurfaceId, args: {bindingId: boundEditorBinding.id}});
         }}>{translate("actions.editor.collapse")}</button>}</div>}
     <div ref={cameraElement} className="kplex-camera" style={{ transform: `translate(${camera.current.x}px, ${camera.current.y}px) scale(${camera.current.scale})` }}>
-      {scene.decorations && <ViewDecorations decorations={scene.decorations} translate={translate}
+      {scene.decorations && <ViewDecorations hideGroups={personalWuXing || visibilityPreset?.hideGroups === true} hideGroupBorders={personalWuXing ? !showBlueprint : visibilityPreset?.hideGroupBorders === true} neutralCategories={personalWuXing && !showBlueprint} softCategoryTints={showBlueprint} decorations={scene.decorations} translate={translate}
         counts={viewDecorationCounts(scene.decorations, scene.nodes, filterMatchedNodePaths, zoneDisplayLayouts)} />}
+      {showBlueprint && scene.decorations && visibilityPreset && <WuXingBlueprint decorations={scene.decorations} preset={visibilityPreset} presetId={visibilitySelection?.id ?? "wuxing"} translate={translate} />}
       <svg className="kplex-links" width="3200" height="2400" viewBox="-1600 -1200 3200 2400">
         <defs>
           <marker id="kplex-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto-start-reverse" markerUnits="strokeWidth"><path d="M1,1 L8,4.5 L1,8" fill="none" stroke="context-stroke" strokeWidth="1.4" /></marker>

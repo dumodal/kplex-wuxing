@@ -7,6 +7,21 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const spanishTranslations = {
+  "facets.hideGroups": "Ocultar etiquetas y recuentos de grupos",
+  "facets.hideGroupBorders": "Ocultar marcos de grupos",
+  "facets.centerOutline": "Usar el color de categoría en el borde central",
+  "wuxing.currentNoteOutline": "Usar el color de la fase para el contorno de la nota actual",
+  "wuxing.blueprint.show": "Mostrar guía de las cinco fases",
+  "wuxing.blueprint.title": "Guía de las cinco fases",
+  "wuxing.blueprint.generating": "Genera · Da origen",
+  "wuxing.blueprint.regulating": "Regula · Desafía",
+  "wuxing.blueprint.cue": "Guía del modelo · enlaces de notas aparte",
+  "wuxing.blueprint.wood": "Crecimiento · Conexión",
+  "wuxing.blueprint.fire": "Visibilidad · Manifestación",
+  "wuxing.blueprint.earth": "Integración · Consolidación",
+  "wuxing.blueprint.metal": "Refinamiento · Regulación",
+  "wuxing.blueprint.water": "Permeación · Flujo",
+  "wuxing.blueprint.help": "Una capa de referencia con ambos ciclos, significados y roles relativos. Ocultarla conserva las posiciones de las notas.",
   "fileImport.folderLimits": "Importa carpetas con hasta {entries} elementos y {depth} niveles. No se importó nada.",
   "fileImport.creatingFolder": "Creando carpeta {path}…",
   "fileImport.copying": "Copiando {name} ({current}/{total})…",

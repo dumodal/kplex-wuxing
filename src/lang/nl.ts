@@ -7,6 +7,21 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const dutchTranslations = {
+  "facets.hideGroups": "Groepslabels en aantallen verbergen",
+  "facets.hideGroupBorders": "Groepskaders verbergen",
+  "facets.centerOutline": "Categoriekleur voor de centrale rand gebruiken",
+  "wuxing.currentNoteOutline": "Fasekleur voor de rand van de huidige notitie gebruiken",
+  "wuxing.blueprint.show": "Vijffasengids tonen",
+  "wuxing.blueprint.title": "Vijffasengids",
+  "wuxing.blueprint.generating": "Voedt · Brengt voort",
+  "wuxing.blueprint.regulating": "Reguleert · Daagt uit",
+  "wuxing.blueprint.cue": "Modelgids · notitielinks blijven apart",
+  "wuxing.blueprint.wood": "Groei · Verbinding",
+  "wuxing.blueprint.fire": "Zichtbaarheid · Manifestatie",
+  "wuxing.blueprint.earth": "Integratie · Consolidatie",
+  "wuxing.blueprint.metal": "Verfijning · Regulering",
+  "wuxing.blueprint.water": "Doordringing · Stroming",
+  "wuxing.blueprint.help": "Eén gids voor beide cycli, fasebetekenissen en relatieve rollen. Verbergen verandert geen notitieposities.",
   "fileImport.folderLimits": "Importeer mappen met maximaal {entries} items en {depth} niveaus. Er is niets geïmporteerd.",
   "fileImport.creatingFolder": "Map {path} maken…",
   "fileImport.copying": "{name} kopiëren ({current}/{total})…",

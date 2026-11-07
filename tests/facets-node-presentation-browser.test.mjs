@@ -2,6 +2,7 @@
  * are finite fixtures; projection, measurement, scrolling, SVG endpoints and React lifetimes are production. */
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {readFileSync} from 'node:fs';
 import {chromiumHarness} from './support/browserTypeScript.mjs';
 import {plexViewBrowserModules} from './support/plexViewBrowser.mjs';
 import {canvasSceneFixture} from './support/canvasSceneFixture.mjs';
@@ -101,5 +102,44 @@ test('real scrolling resize crosslinks hover and navigation retain clipped cente
   ui.props.activePath='B.md';ui.render();await wait();check(focus(ui).length===1&&focus(ui)[0].closest('.kplex-zone-scroll'),'Navigation retains contained attention');verify(ui);
   check(work.body===before.body&&work.scans===before.scans,'Navigation stays within cache-only local facts');
  }finally{ui.close();plugin.actionManager.dispose();style.remove()}
+ return true})()`));}finally{await browser.cleanup()}
+});
+
+
+test('personal blueprint toggles preserve official straight note links and measured card positions',async()=>{
+ const browser=await chromiumHarness(output.outputFiles[0].text+';window.sourceModules=sourceModules;');
+ try{assert(await browser.evaluate(`(async()=>{${canvasSceneFixture}${checks}
+ const paint=document.createElement('style');paint.textContent=${JSON.stringify(readFileSync('styles.css','utf8'))};document.head.append(paint);
+ const preset={...M.FACET_TEMPLATES.wuxing,blueprint:false,centerOutline:true,focusInCategory:true,centerAnchoredLinks:true};
+ settings.canvasViewSettings=M.editViewConfigurationAt(M.wuXingViewDefinition,{}, {field:'presets',path:['wuxing']},{kind:'set',value:preset});
+ const ui=await mount(M.wuXingViewDefinition);
+ try{
+  const geometry=()=>cards(ui).map(card=>[card.dataset.kplexPath,card.style.left,card.style.top,card.style.width,card.style.height]);
+  const before=JSON.stringify(geometry()),camera=ui.container.querySelector('.kplex-camera').style.transform,source={...work};
+  check(focus(ui).length===1&&focus(ui)[0].closest('.kplex-zone-scroll'),'One active card belongs to its real region');
+  check(!ui.container.querySelector('[data-kplex-gate]'),'Official hidden-gate policy remains active');
+  check(focus(ui)[0].dataset.kplexCategoryOutline==='true','Current note retains phase outline');
+  check(!ui.container.querySelector('[data-kplex-blueprint]'),'Closed guide paints no blueprint');
+  verify(ui);
+  for(const enabled of [true,false,true]){
+   await update(ui,{...preset,blueprint:enabled});
+   check(!!ui.container.querySelector('[data-kplex-blueprint]')===enabled,'One switch owns the complete guide');
+   check(JSON.stringify(geometry())===before,'Guide never repacks cards');
+   check(ui.container.querySelector('.kplex-camera').style.transform===camera,'Guide never changes camera');
+   verify(ui);
+   if(enabled){
+    check(ui.container.querySelectorAll('[data-kplex-blueprint-phase]').length===5,'All five phase headers');
+    check(ui.container.querySelectorAll('[data-kplex-blueprint-kind]').length===10,'Both complete reference cycles');
+    check(ui.container.querySelectorAll('.kplex-blueprint-meaning').length===5,'One-line phase qualities');
+    const footer=ui.container.querySelector('[data-kplex-guide-footer] .kplex-blueprint-legend').getBoundingClientRect();
+    const regions=[...ui.container.querySelectorAll('.kplex-view-region')].map(row=>row.getBoundingClientRect());
+    check(footer.height>0&&footer.top>Math.max(...regions.map(row=>row.bottom)),'Legend sits below every phase frame');
+   }
+  }
+  await ui.ports.current.implementations['view.layout-controls'].execute({});await wait();
+  check(ui.container.querySelector('input[aria-label="Show five-phase guide"]'),'Unified native appearance control');
+  check(ui.container.querySelector('input[aria-label="Use phase color for current note outline"]'),'Current note outline setting');
+  check(work.body===source.body&&work.scans===source.scans&&work.acquisitions===source.acquisitions,'Paint toggles do no source work');
+ }finally{ui.close();paint.remove();plugin.actionManager.dispose();style.remove()}
  return true})()`));}finally{await browser.cleanup()}
 });

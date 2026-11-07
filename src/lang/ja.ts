@@ -7,6 +7,21 @@
 import { buildLocaleCatalog, type LocaleTranslationMap } from "./catalog";
 
 const japaneseTranslations = {
+  "facets.hideGroups": "グループ名と件数を非表示",
+  "facets.hideGroupBorders": "グループの枠を非表示",
+  "facets.centerOutline": "中央ノードの枠にカテゴリの色を使用",
+  "wuxing.currentNoteOutline": "現在のノートの枠に五行の色を使用",
+  "wuxing.blueprint.show": "五行ガイドを表示",
+  "wuxing.blueprint.title": "五行ガイド",
+  "wuxing.blueprint.generating": "相生 · 生み出す",
+  "wuxing.blueprint.regulating": "相克 · 挑む",
+  "wuxing.blueprint.cue": "モデルのガイド・ノート間のリンクとは別",
+  "wuxing.blueprint.wood": "成長 · つながり",
+  "wuxing.blueprint.fire": "可視性 · 顕現",
+  "wuxing.blueprint.earth": "統合 · 定着",
+  "wuxing.blueprint.metal": "洗練 · 調整",
+  "wuxing.blueprint.water": "浸透 · 流動",
+  "wuxing.blueprint.help": "相生・相克、五行の意味と相対的な役割を一枚に表示します。非表示にしてもノートの位置は変わりません。",
   "fileImport.folderLimits": "フォルダーは {entries} 項目、{depth} 階層までです。何もインポートしていません。",
   "fileImport.creatingFolder": "フォルダー {path} を作成中…",
   "fileImport.copying": "{name} をコピー中（{current}/{total}）…",
